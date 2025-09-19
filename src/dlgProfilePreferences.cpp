@@ -4680,3 +4680,11 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
         checkBox_showTabConnectionIndicators->setChecked(state);
     }
 }
+
+void dlgProfilePreferences::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit preferencesClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
+}

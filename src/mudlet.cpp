@@ -30,6 +30,7 @@
 
 #include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
+#include "DarkTheme.h"
 #include "EAction.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
@@ -1528,9 +1529,20 @@ void mudlet::slot_moduleManager()
     if (!moduleManager){
         moduleManager = new dlgModuleManager(this, pH);
         pH->mpModuleManager = moduleManager;
+        
+        // Set up focus restoration for when this module manager is closed
+        setupModuleManagerFocusRestoration(moduleManager);
     }
+    
     moduleManager->raise();
     moduleManager->show();
+    
+    // Force reposition after showing, since module manager is a singleton per profile
+    // that may restore its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(moduleManager, referenceWidget);
 }
 
 bool mudlet::openWebPage(const QString& path)
@@ -1556,10 +1568,21 @@ void mudlet::slot_packageManager()
     if (!packageManager) {
         packageManager = new dlgPackageManager(this, pH);
         pH->mpPackageManager = packageManager;
+        
+        // Set up focus restoration for when this package manager is closed
+        setupPackageManagerFocusRestoration(packageManager);
     }
+    
     packageManager->raise();
     packageManager->showNormal();
     packageManager->activateWindow();
+    
+    // Force reposition after showing, since package manager is a singleton per profile
+    // that may restore its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
 }
 
 void mudlet::slot_packageExporter()
@@ -1569,7 +1592,17 @@ void mudlet::slot_packageExporter()
         return;
     }
     auto d = new dlgPackageExporter(this, pH);
+    
+    // Set up focus restoration for when this package exporter is closed
+    setupPackageExporterFocusRestoration(d);
+    
     d->show();
+    
+    // Force reposition after showing to ensure correct screen placement
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(d, referenceWidget);
 }
 
 void mudlet::slot_closeCurrentProfile()
@@ -1927,6 +1960,14 @@ void mudlet::closeHost(const QString& name)
         // Remove from our tracking map
         mMainWindowDockWidgetMap.remove(mapKey);
         mMainWindowDockWidgetUserPreference.remove(mapKey);
+    }
+
+    // Clean up detached window mapping for this profile
+    if (mDetachedWindows.contains(name)) {
+#if defined(DEBUG_WINDOW_HANDLING)
+        qDebug() << "mudlet::closeHost: Removing detached window mapping for profile" << name;
+#endif
+        mDetachedWindows.remove(name);
     }
 
     mpTabBar->removeTab(name);
@@ -2950,10 +2991,37 @@ void mudlet::slot_showEditorDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->showCurrentTriggerItem();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
+    
+    // Force reposition after showing, since script editor is a singleton
+    // that may restore its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(pEditor, referenceWidget);
 }
 
 void mudlet::slot_showTriggerDialog()
@@ -2966,6 +3034,29 @@ void mudlet::slot_showTriggerDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
+    // Position dialog on the same screen as the main window for better multi-monitor UX
+    utils::positionDialogOnParentScreen(pEditor, this);
+    
     pEditor->slot_showTriggers();
     pEditor->raise();
     pEditor->showNormal();
@@ -2982,6 +3073,26 @@ void mudlet::slot_showAliasDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showAliases();
     pEditor->raise();
     pEditor->showNormal();
@@ -2998,10 +3109,187 @@ void mudlet::slot_showTimerDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showTimers();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
+}
+
+// Centralized focus restoration for script editor dialogs
+// This function handles focus restoration for both main window and detached windows
+void mudlet::restoreProfileFocus(const QString& profileName)
+{
+    // Small delay to ensure the dialog window is fully processed
+    QTimer::singleShot(50, [profileName]() {
+        auto mudletInstance = mudlet::self();
+        if (!mudletInstance) {
+            return;
+        }
+        
+        // Check if there are any detached windows for this profile
+        auto detachedWindows = mudletInstance->mDetachedWindows;
+        TDetachedWindow* detachedWindow = nullptr;
+        
+        for (auto window : detachedWindows) {
+            if (window && window->getProfileNames().contains(profileName)) {
+                detachedWindow = window;
+                break;
+            }
+        }
+        
+        if (detachedWindow) {
+            detachedWindow->show();
+            detachedWindow->raise();
+            detachedWindow->activateWindow();
+            detachedWindow->switchToProfile(profileName);
+        } else {
+            mudletInstance->show();
+            mudletInstance->raise();
+            mudletInstance->activateWindow();
+            
+            // Focus the specific profile in main window by finding its tab
+            for (int i = 0; i < mudletInstance->mpTabBar->count(); ++i) {
+                if (mudletInstance->mpTabBar->tabData(i).toString() == profileName) {
+                    mudletInstance->mpTabBar->setCurrentIndex(i);
+                    // Trigger tab change to ensure proper focus
+                    mudletInstance->slot_tabChanged(i);
+                    break;
+                }
+            }
+        }
+    });
+}
+
+void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow)
+{
+    if (!pEditor) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this editor
+    disconnect(pEditor, &dlgTriggerEditor::editorClosing, nullptr, nullptr);
+    
+    // Connect to our custom editorClosing signal which is emitted from closeEvent
+    connect(pEditor, &dlgTriggerEditor::editorClosing, [profileName, targetWindow]() {
+        // If a specific target window is provided (detached window), focus that
+        if (targetWindow) {
+            // Small delay to ensure the editor window is fully processed
+            QTimer::singleShot(50, [profileName, targetWindow]() {
+                targetWindow->show();
+                targetWindow->raise();
+                targetWindow->activateWindow();
+                
+                // For detached windows, we need to find and activate the specific profile tab
+                auto detachedWindow = qobject_cast<TDetachedWindow*>(targetWindow);
+                if (detachedWindow && !profileName.isEmpty()) {
+                    detachedWindow->switchToProfile(profileName);
+                }
+            });
+        } else {
+            // Use the common focus restoration logic
+            restoreProfileFocus(profileName);
+        }
+    });
+}
+
+void mudlet::setupNotepadFocusRestoration(dlgNotepad* pNotepad)
+{
+    if (!pNotepad) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this notepad
+    disconnect(pNotepad, &dlgNotepad::notepadClosing, nullptr, nullptr);
+    
+    // Connect to our custom notepadClosing signal which is emitted from closeEvent
+    connect(pNotepad, &dlgNotepad::notepadClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
+}
+
+void mudlet::setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager)
+{
+    if (!pPackageManager) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this package manager
+    disconnect(pPackageManager, &dlgPackageManager::packageManagerClosing, nullptr, nullptr);
+    
+    // Connect to our custom packageManagerClosing signal which is emitted from closeEvent
+    connect(pPackageManager, &dlgPackageManager::packageManagerClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
+}
+
+void mudlet::setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager)
+{
+    if (!pModuleManager) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this module manager
+    disconnect(pModuleManager, &dlgModuleManager::moduleManagerClosing, nullptr, nullptr);
+    
+    // Connect to our custom moduleManagerClosing signal which is emitted from closeEvent
+    connect(pModuleManager, &dlgModuleManager::moduleManagerClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
+}
+
+void mudlet::setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter)
+{
+    if (!pPackageExporter) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this package exporter
+    disconnect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, nullptr, nullptr);
+    
+    // Connect to our custom packageExporterClosing signal which is emitted from closeEvent
+    connect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
+}
+
+void mudlet::setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences)
+{
+    if (!pPreferences) {
+        return;
+    }
+    
+    // Disconnect any existing focus restoration connections for this preferences dialog
+    disconnect(pPreferences, &dlgProfilePreferences::preferencesClosing, nullptr, nullptr);
+    
+    // Connect to our custom preferencesClosing signal which is emitted from closeEvent
+    connect(pPreferences, &dlgProfilePreferences::preferencesClosing, [](const QString& profileName) {
+        // Use the common focus restoration logic
+        restoreProfileFocus(profileName);
+    });
 }
 
 void mudlet::slot_showScriptDialog()
@@ -3014,6 +3302,10 @@ void mudlet::slot_showScriptDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Use centralized focus restoration (no target window = main window)
+    setupEditorFocusRestoration(pEditor, pHost->getName(), nullptr);
+    
     pEditor->slot_showScripts();
     pEditor->raise();
     pEditor->showNormal();
@@ -3030,6 +3322,26 @@ void mudlet::slot_showKeyDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showKeys();
     pEditor->raise();
     pEditor->showNormal();
@@ -3046,6 +3358,26 @@ void mudlet::slot_showVariableDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showVariables();
     pEditor->raise();
     pEditor->showNormal();
@@ -3062,6 +3394,26 @@ void mudlet::slot_showActionDialog()
     if (!pEditor) {
         return;
     }
+    
+    // Set up focus restoration to return to this main window when the editor closes
+    connect(pEditor, &QObject::destroyed, this, [this]() {
+        QTimer::singleShot(50, this, [this]() {
+            // Activate the main window
+            this->show();
+            this->raise();
+            this->activateWindow();
+            
+            // Ensure the current profile tab is properly focused
+            if (mpTabBar && mpTabBar->currentIndex() >= 0) {
+                // Get the current console and give it focus
+                Host* currentHost = getActiveHost();
+                if (currentHost && currentHost->mpConsole) {
+                    currentHost->mpConsole->setFocus();
+                }
+            }
+        });
+    });
+    
     pEditor->slot_showActions();
     pEditor->raise();
     pEditor->showNormal();
@@ -3083,6 +3435,9 @@ void mudlet::showOptionsDialog(const QString& tab)
             mpDlgProfilePreferences = pPrefs;
         }
 
+        // Set up focus restoration for when this preferences dialog is closed
+        setupPreferencesFocusRestoration(pPrefs);
+
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
@@ -3097,8 +3452,16 @@ void mudlet::showOptionsDialog(const QString& tab)
         pPrefs->setStyleSheet(pHost->mProfileStyleSheet);
     }
     pPrefs->setTab(tab);
+    
     pPrefs->raise();
     pPrefs->show();
+    
+    // Force reposition after showing, since preferences dialog may be a singleton
+    // that restores its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
 }
 
 void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
@@ -3600,10 +3963,20 @@ void mudlet::slot_notes()
         pNotes->setWindowIcon(QIcon(qsl(":/icons/mudlet_notepad.png")));
         pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
         pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
+        
+        // Set up focus restoration for the notepad
+        setupNotepadFocusRestoration(pNotes);
     }
 
     pNotes->raise();
     pNotes->show();
+    
+    // Force reposition after showing, since notepad is a singleton per profile
+    // that may restore its position after being shown
+    Host* activeHost = getActiveHost();
+    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    utils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
 }
 
 // This opens a profile specific IRC client for that client so should only be
@@ -4016,9 +4389,19 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
         updateDetachedWindowToolbars();
         updateMainWindowTabIndicators();
+        
+        // Bring main window to focus when new profile connects
+        show();
+        raise();
+        activateWindow();
     } else {
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
+        
+        // Bring main window to focus when new profile loads offline
+        show();
+        raise();
+        activateWindow();
     }
 }
 
@@ -4368,6 +4751,15 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     connect(toggleToolbarAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
     
     contextMenu.addAction(toggleToolbarAction);
+    
+    // Add connection indicator toggle
+    QAction* connectionIndicatorToggleAction = new QAction(tr("Show Connection Indicators on Tabs"), &contextMenu);
+    connectionIndicatorToggleAction->setCheckable(true);
+    connectionIndicatorToggleAction->setChecked(showTabConnectionIndicators());
+    connect(connectionIndicatorToggleAction, &QAction::triggered, this, [this](bool checked) {
+        setShowTabConnectionIndicators(checked);
+    });
+    contextMenu.addAction(connectionIndicatorToggleAction);
     
     contextMenu.addSeparator();
     
@@ -5072,7 +5464,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name);
         pHost->setupIreDriverBugfix();
     }
 
@@ -5427,30 +5819,53 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
     }
 }
 
+bool mudlet::needsCustomDarkTheme()
+{
+#if defined(Q_OS_WINDOWS)
+    return QSysInfo::productVersion() == qsl("10");
+#elif defined(Q_OS_LINUX)
+    return true;
+#else
+    return false;
+#endif
+}
+
 void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 {
     if (state == mAppearance && !loading) {
         return;
     }
 
-    switch (state) {
-    case enums::Appearance::dark:
-        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
+    mDarkMode = false;
+    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark)) {
         mDarkMode = true;
-        break;
-    case enums::Appearance::light:
-        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
-        mDarkMode = false;
-        break;
-    case enums::Appearance::systemSetting:
-        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
-        mDarkMode = (QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark);
-        break;
     }
 
-    // Apply the AltFocusMenuBarDisable wrapper for both themes
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-    qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+    if (needsCustomDarkTheme()) {
+        if (mDarkMode) {
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+            qApp->setStyle(new DarkTheme);
+        } else {
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+            qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+        }
+    } else {
+        switch (state) {
+        case enums::Appearance::dark:
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
+            break;
+        case enums::Appearance::light:
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+            break;
+        case enums::Appearance::systemSetting:
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
+            break;
+        }
+        // Apply the AltFocusMenuBarDisable wrapper for Qt native themes
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+    }
+
     getHostManager().changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
@@ -6211,7 +6626,7 @@ void mudlet::refreshTabBar()
 
 //NOLINT(readability-convert-member-functions-to-static)
 // doesn't make sense to make it static since it modifies a class variable
-void mudlet::setupPreInstallPackages(const QString& gameUrl)
+void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName)
 {
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
@@ -6223,7 +6638,6 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/mpkg.mpackage"),                     {qsl("*")}},
         {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
-        {qsl(":/mudlet-tutorial.mpackage"),          {qsl("localhost")}},
         {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
                                                       qsl("mud.morgengrauen.info"),
                                                       qsl("mg.morgengrauen.info"),
@@ -6250,6 +6664,11 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
+    }
+
+    // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
+    if (profileName == qsl("Mudlet Tutorial") && gameUrl == qsl("localhost")) {
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-tutorial.mpackage"));
     }
 }
 

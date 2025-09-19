@@ -53,6 +53,9 @@ public:
     void restoreSettings();
     void setFont(const QFont &);
 
+signals:
+    void notepadClosing(const QString& profileName);
+
 private slots:
     void slot_textWritten();
     void slot_sendAll();
