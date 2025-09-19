@@ -419,7 +419,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpBufferSearchBox->setSizePolicy(sizePolicy);
     mpBufferSearchBox->setFont(font());
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
-    mpBufferSearchBox->setPlaceholderText("Search");
+    //: search bar placeholder text
+    mpBufferSearchBox->setPlaceholderText(tr("Search"));
     QPalette commandLinePalette;
     commandLinePalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     commandLinePalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
