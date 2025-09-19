@@ -613,7 +613,7 @@ please wait...</source>
     <message>
       <location filename="../src/dlgMapper.cpp" line="522"/>
       <source>render time: %1S</source>
-      <translation type="unfinished"/>
+      <translation>время рендеринга: %1S</translation>
     </message>
   </context>
   <context>
@@ -819,13 +819,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2784"/>
       <source>Export area to image...</source>
       <extracomment>2D Mapper context menu (area) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Экспорт области в изображение...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2786"/>
       <source>Export the current area as an image file</source>
       <extracomment>2D Mapper context menu (area) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Экспорт текущей области в виде файла изображения</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
@@ -1013,32 +1013,32 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="6045"/>
       <source>[MAP]: %1</source>
-      <translation type="unfinished"/>
+      <translation>[КАРТА]: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6075"/>
       <source>Unknown Area</source>
-      <translation type="unfinished"/>
+      <translation>Неизвестная зона</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6090"/>
       <source>area_%1.png</source>
-      <translation type="unfinished"/>
+      <translation>area_%1.png</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6095"/>
       <source>Export Area %1 to Image</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт области %1 в изображение</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6097"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tiff);;All Files (*)</source>
-      <translation type="unfinished"/>
+      <translation>Файлы изображения (*.png *.jpg *.jpeg *.bmp *.tiff);;Все файлы (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6110"/>
       <source>[MAP]: Export failed - %1</source>
-      <translation type="unfinished"/>
+      <translation>[MAP]: Сбой экспорта - %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="576"/>
@@ -1183,7 +1183,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="69"/>
       <location filename="../src/TCommandLine.cpp" line="1791"/>
       <source>Show password</source>
-      <translation type="unfinished"/>
+      <translation>Показать пароль</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="734"/>
@@ -1288,7 +1288,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TCommandLine.cpp" line="1787"/>
       <source>Hide password</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть пароль</translation>
     </message>
   </context>
   <context>
@@ -2034,13 +2034,13 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="403"/>
       <source>Install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules).</source>
       <extracomment>This explains the &quot;Module manager&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Установка и удаление (share- &amp; sync-able) коллекций элементов (модулей) Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="408"/>
       <source>Package &amp;exporter</source>
       <extracomment>This is an item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="410"/>
@@ -2052,37 +2052,37 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="415"/>
       <source>Record replay</source>
       <extracomment>This is an item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Записать повтор</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="422"/>
       <source>Toggle recording of replays.</source>
       <extracomment>This explains the &quot;Record replay&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Вкл/выкл запись повторов.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="427"/>
       <source>Record log</source>
       <extracomment>This is an item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Запись журнала</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="434"/>
       <source>Toggle logging facilities.</source>
       <extracomment>This explains the &quot;Record log&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Переключить средства ведения лога.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="439"/>
       <source>Emergency stop</source>
       <extracomment>This is an item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Аварийная остановка</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="442"/>
       <source>Toggle all triggers, aliases, timers, etc. on or off</source>
       <extracomment>This explains the &quot;Emergency stop&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Переключить все триггеры, алиасы, таймеры и т. д. вкл или выкл</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="448"/>
@@ -2100,25 +2100,25 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="454"/>
       <source>Configure setting for the Mudlet application globally and for the current profile.</source>
       <extracomment>This explains the &quot;Preferences&quot; item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Настройте параметры для приложения Mudlet глобально и для текущего профиля.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="459"/>
       <source>&amp;Timestamps</source>
       <extracomment>This is an item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&amp;Временные метки</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="462"/>
       <source>Toggle time stamps on the main console.</source>
       <extracomment>This explains the &quot;Timestamps&quot; item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Переключайте временные метки на главной консоли.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="472"/>
       <source>Mutes all media played.</source>
       <extracomment>This explains the &quot;Mute all media&quot; item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Выключает все воспроизводимые медиа.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="478"/>
@@ -2132,7 +2132,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="480"/>
       <source>Mutes media played by the Lua API and scripts.</source>
       <extracomment>This explains the &quot;Mute sounds from Mudlet (triggers, scripts, etc.)&quot; item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Выключает медиа-файлы и скрипты Lua.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="486"/>
@@ -2146,19 +2146,19 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="488"/>
       <source>Mutes media played by the game (MCMP, MSP).</source>
       <extracomment>This explains the &quot;Mute sounds from the game (MCMP, MSP)&quot; item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Выключает звук мультимедиа игры (MCMP, MSP).</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="498"/>
       <source>&amp;Fullscreen</source>
       <extracomment>This is an item in the &quot;Window&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&amp;Полный экран</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="506"/>
       <source>&amp;Multiview</source>
       <extracomment>This is an item in the &quot;Window&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&amp;Мультипросмотр</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="509"/>
@@ -2170,7 +2170,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="534"/>
       <source>Minimize this window</source>
       <extracomment>This explains the &quot;Minimize&quot; item in the &quot;Window&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Свернуть окно</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="540"/>
@@ -2188,7 +2188,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="545"/>
       <source>Opens the Mudlet manual in your web browser.</source>
       <extracomment>This explains the &quot;API Reference&quot; item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Открывает руководство Mudlet в вашем веб-браузере.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="550"/>
@@ -2212,13 +2212,13 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="559"/>
       <source>Open a link to Discord.</source>
       <extracomment>This explains the &quot;Discord&quot; item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Открыть ссылку на Discord.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="564"/>
       <source>Discord &amp;help channel</source>
       <extracomment>This is an item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&amp;Канал справки Discord</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="566"/>
@@ -2236,19 +2236,19 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="573"/>
       <source>Opens a connect to an IRC server (LiberaChat) in your system web-browser.</source>
       <extracomment>This explains the &quot;Live help chat&quot; item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Открывает подключение к серверу IRC (LiberaChat) в вашем системном браузере.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="578"/>
       <source>Online &amp;forum</source>
       <extracomment>This is an item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Онлайн и форум</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="580"/>
       <source>Opens the (on-line) Mudlet Forum in your system web-browser.</source>
       <extracomment>This explains the &quot;Online forum&quot; item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Открывает (on-line) форум Mudlet в вашем системном браузере.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="586"/>
@@ -2260,7 +2260,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="589"/>
       <source>About &amp;Mudlet</source>
       <extracomment>This is an item in the &quot;About&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>О &amp;Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="597"/>
@@ -2272,19 +2272,19 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="599"/>
       <source>Check for newer versions of Mudlet</source>
       <extracomment>This explains the &quot;Check for updates...&quot; item in the &quot;About&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Проверить наличие новых версий Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="604"/>
       <source>Show &amp;changelog</source>
       <extracomment>This is an item in the &quot;About&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Показать &amp;список изменений</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="606"/>
       <source>Show the changelog for this version</source>
       <extracomment>This explains the &quot;Show changelog&quot; item in the &quot;About&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Показать список изменений для этой версии</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="612"/>
