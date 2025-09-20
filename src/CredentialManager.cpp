@@ -48,7 +48,6 @@ CredentialManager::CredentialManager(QObject* parent)
     : QObject(parent)
     , mCurrentJob(nullptr)
     , mTimeoutTimer(nullptr)
-    , mIsDestroying(false)
 {
 }
 
