@@ -136,6 +136,7 @@ public:
 
 public slots:
     void slot_copySelectionToClipboard();
+    void slot_copySelectionToSearchBar();
     void slot_selectAll();
     void slot_scrollBarMoved(int);
     void slot_hScrollBarMoved(int);
