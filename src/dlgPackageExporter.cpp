@@ -1725,7 +1725,6 @@ void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
         TScript* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-
         auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
