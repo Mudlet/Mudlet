@@ -123,7 +123,47 @@ fi
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "--force" "--multimedia" "./mudlet.exe"
+
+echo ""
+echo "Deploying FFmpeg libraries for comprehensive audio codec support (OGG, Opus, etc.)..."
+# Based on successful patterns from qt/qtmultimedia and OBS Studio
+# FFmpeg DLLs must be co-located with Qt multimedia plugins for proper discovery
+
+# Ensure multimedia plugin directory exists
+mkdir -p ./multimedia
+
+# Copy FFmpeg libraries to multiple locations for reliable discovery
+# 1. Main application directory (for general Qt access)
+# 2. multimedia plugin directory (for plugin-specific loading)
+if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/avcodec.dll" ]; then
+    echo "Deploying FFmpeg libraries for OGG/Opus support..."
+    for dll in avcodec avformat avutil swresample swscale avfilter avdevice; do
+        if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/${dll}.dll" ]; then
+            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${dll}.dll" .
+            # Also copy to multimedia plugin directory for Qt multimedia plugin discovery
+            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${dll}.dll" ./multimedia/
+        elif [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/lib${dll}.dll" ]; then
+            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/lib${dll}.dll" .
+            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/lib${dll}.dll" ./multimedia/
+        fi
+    done
+    
+    # Copy any FFmpeg versioned DLLs (e.g., avcodec-61.dll, libavcodec-61.dll)
+    find "${MINGW_INTERNAL_BASE_DIR}/bin" -name "*avcodec*.dll" -o -name "*avformat*.dll" -o -name "*avutil*.dll" -o -name "*swresample*.dll" -o -name "*swscale*.dll" 2>/dev/null | while read dll; do
+        if [ -f "$dll" ]; then
+            cp -v -p "$dll" .
+            cp -v -p "$dll" ./multimedia/
+        fi
+    done
+    
+    echo "FFmpeg deployment completed - libraries available for Qt multimedia plugin"
+else
+    echo "WARNING: FFmpeg libraries not found at ${MINGW_INTERNAL_BASE_DIR}/bin/ - OGG/Opus support may not work"
+    echo "If you need OGG/Opus support, ensure FFmpeg is installed in your MINGW environment"
+fi
+
+echo ""
 
 # To determine which system libraries have to be copied in it requires
 # continually trying to run the executable on the target type system
