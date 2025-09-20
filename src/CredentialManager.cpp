@@ -488,7 +488,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
                 errorMessage = qsl("Both keychain and encrypted file storage failed. Keychain error: %1").arg(errorMessage);
             }
         } else {
-            qDebug() << "CredentialManager: Password stored to keychain";
+            qDebug() << "CredentialManager: Password stored to keychain service:" << service;
         }
         
         // Final validity check before calling callback
@@ -560,7 +560,7 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
             // Get password directly from keychain (keychain handles decryption)
             password = readJob->textData();
             // No additional decryption needed for keychain passwords
-            qDebug() << "CredentialManager: Retrieved password from keychain";
+            qDebug() << "CredentialManager: Retrieved password from keychain service:" << service;
         } else {
             // Keychain failed, try file storage fallback with specific error context
             QString errorContext;

@@ -41,6 +41,7 @@
 #include <QDir>
 #include <QRandomGenerator>
 #include <QSettings>
+#include <QTime>
 #include "post_guard.h"
 #include <chrono>
 #include <sstream>
@@ -955,12 +956,24 @@ QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
 void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 {
     if (!pItem) {
+        qDebug() << "dlgConnectionProfiles::slot_itemClicked() called with null item";
         return;
     }
 
-    slot_togglePasswordVisibility(false);
-
     const QString profile_name = pItem->data(csmNameRole).toString();
+
+    // Prevent rapid duplicate clicks on the same profile
+    static QString lastProfileClicked;
+    static QTime lastClickTime;
+    
+    if (profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
+        return;
+    }
+    
+    lastProfileClicked = profile_name;
+    lastClickTime = QTime::currentTime();
+
+    slot_togglePasswordVisibility(false);
 
     profile_name_entry->setText(profile_name);
 
@@ -1528,7 +1541,11 @@ void dlgConnectionProfiles::slot_copyProfile()
         discord_optin_checkBox->setChecked(false);
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
+        // Temporarily disconnect textChanged to avoid triggering save on programmatic setText
+        disconnect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
         character_password_entry->setText(oldPassword);
+        connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
+        
         if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
             writeSecurePassword(profile_name, oldPassword);
         }
@@ -2233,6 +2250,11 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 
     const QString profile_name = timer->property("profileName").toString();
 
+    // Prevent duplicate password loading operations for the same profile
+    if (mKeychainOperationInProgress) {
+        return;
+    }
+
     if (profile_name.isEmpty()) {
         return;
     }
@@ -2267,9 +2289,15 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 
                     if (success) {
                         // Keychain operation succeeded - set the password (even if empty)
+                        // Temporarily disconnect textChanged to avoid triggering save on programmatic setText
+                        disconnect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
                         character_password_entry->setText(retrievedPassword);
+                        connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
+                        
                         if (retrievedPassword.isEmpty()) {
                             qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
+                        } else {
+                            qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
                         }
                     } else {
                         // Fallback to QSettings only if keychain operation failed
@@ -2324,6 +2352,9 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
     const QString password = settings.value(qsl("password"), QString()).toString();
     const QString oldPassword = settings.value(qsl("login"), QString()).toString();
 
+    // Temporarily disconnect textChanged to avoid triggering save on programmatic setText
+    disconnect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
+    
     if (!password.isEmpty()) {
         character_password_entry->setText(password);
     } else if (!oldPassword.isEmpty()) {
@@ -2334,6 +2365,9 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
     } else {
         character_password_entry->setText(QString());
     }
+    
+    // Reconnect the signal
+    connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
 
     settings.endGroup();
 }
