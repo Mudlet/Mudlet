@@ -48,11 +48,15 @@ CredentialManager::CredentialManager(QObject* parent)
     : QObject(parent)
     , mCurrentJob(nullptr)
     , mTimeoutTimer(nullptr)
+    , mIsDestroying(false)
 {
 }
 
 CredentialManager::~CredentialManager()
 {
+    // Set destruction flag to prevent any new operations or callbacks
+    mIsDestroying = true;
+    
     // During destruction, we should NOT call callbacks as they may reference
     // objects that are being destroyed. Instead, just clean up without callbacks.
     
@@ -61,6 +65,7 @@ CredentialManager::~CredentialManager()
     mCurrentRetrievalCallback = nullptr;
     mCurrentAvailabilityCallback = nullptr;
     
+    // Clean up operations - this is safe even during application shutdown
     cleanupCurrentOperation();
 }
 
@@ -79,7 +84,18 @@ void CredentialManager::setupTimeout()
 void CredentialManager::cleanupTimeout()
 {
     if (mTimeoutTimer) {
+        // Safely stop and disconnect the timer
         mTimeoutTimer->stop();
+        
+        // If we're destroying or shutting down, avoid disconnect calls that might crash
+        if (!mIsDestroying && !QCoreApplication::closingDown()) {
+            // Safe to disconnect during normal operation
+            mTimeoutTimer->disconnect();
+        } else {
+            // During shutdown/destruction, just null the pointer and let Qt handle cleanup
+            // Note: we don't call disconnect() as the object graph may be partially destroyed
+        }
+        
         mTimeoutTimer->deleteLater();
         mTimeoutTimer = nullptr;
     }
@@ -106,8 +122,16 @@ void CredentialManager::cleanupCurrentOperation()
     cleanupTimeout();
     
     if (mCurrentJob) {
-        // Disconnect all signals to prevent callbacks after cleanup
-        mCurrentJob->disconnect();
+        // If we're destroying or shutting down, avoid disconnect calls that might crash
+        if (!mIsDestroying && !QCoreApplication::closingDown()) {
+            // Safe to disconnect during normal operation
+            mCurrentJob->disconnect();
+        } else {
+            // During shutdown/destruction, just null the pointer and let Qt handle cleanup
+            // Note: we don't call disconnect() as the object graph may be partially destroyed
+        }
+        
+        // Always safe to delete later, Qt handles this properly during shutdown
         mCurrentJob->deleteLater();
         mCurrentJob = nullptr;
     }
@@ -121,6 +145,12 @@ void CredentialManager::cleanupCurrentOperation()
 // Safety method to check if we should proceed with keychain operations
 bool CredentialManager::isOperationValid() const
 {
+    // Check if we're being destroyed
+    if (mIsDestroying) {
+        qDebug() << "CredentialManager: Operation invalid - object being destroyed";
+        return false;
+    }
+    
     // Check if application is shutting down
     if (QCoreApplication::closingDown()) {
         qDebug() << "CredentialManager: Operation invalid - application shutting down";
@@ -252,6 +282,8 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         
         // First try keychain
         auto fallbackCallback = [this, profileName, key, callback](bool keychainSuccess, const QString& keychainPassword, const QString& keychainError) {
+            qDebug() << "CredentialManager: Keychain result for profile" << profileName << "- success:" << keychainSuccess << "password empty:" << keychainPassword.isEmpty();
+            
             if (keychainSuccess && !keychainPassword.isEmpty()) {
                 // Keychain succeeded
                 if (callback) {
@@ -259,7 +291,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
                 }
             } else {
                 // Keychain failed, try legacy keychain format if this is a password request
-                if (key == "password") {
+                if (key == "password" || key == "character") {
                     qDebug() << "CredentialManager: Checking for legacy keychain format for profile" << profileName;
                     checkLegacyKeychainFormat(profileName, [this, profileName, key, callback, keychainError](bool legacySuccess, const QString& legacyPassword) {
                         if (legacySuccess && !legacyPassword.isEmpty()) {
@@ -586,6 +618,101 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
             }
             qDebug() << "CredentialManager:" << errorContext << ", trying fallback storage";
             
+            // Try legacy keychain format if this is a character password and service follows new format
+            if (account == "character" && service.startsWith("Mudlet-") && service.endsWith("-character")) {
+                // Extract profile name from service (format: "Mudlet-ProfileName-character")
+                QString profileName = service.mid(7); // Remove "Mudlet-" prefix
+                profileName.chop(10); // Remove "-character" suffix
+                
+                qDebug() << "CredentialManager: Checking for legacy keychain format for profile" << profileName;
+                
+                // Check legacy keychain format asynchronously
+                auto* legacyReadJob = new QKeychain::ReadPasswordJob("Mudlet profile", this);
+                legacyReadJob->setKey(profileName);
+                legacyReadJob->setAutoDelete(false);
+                
+                // Store the current callback and clear it to prevent double-calling
+                auto originalCallback = mCurrentRetrievalCallback;
+                mCurrentRetrievalCallback = nullptr;
+                
+                connect(legacyReadJob, &QKeychain::ReadPasswordJob::finished, this, [this, legacyReadJob, profileName, service, account, originalCallback, readJob]() {
+                    bool legacyFound = (legacyReadJob->error() == QKeychain::NoError);
+                    QString legacyPassword = legacyFound ? legacyReadJob->textData() : QString();
+                    
+                    if (legacyFound && !legacyPassword.isEmpty()) {
+                        qDebug() << "CredentialManager: Found legacy password for profile" << profileName;
+                        
+                        // Migrate to new format asynchronously
+                        qDebug() << "CredentialManager: Migrating legacy password to new format for profile" << profileName;
+                        
+                        // Extract original profile name and key from service name for migration
+                        QString originalProfileName = service.mid(7); // Remove "Mudlet-" prefix
+                        originalProfileName.chop(10); // Remove "-character" suffix
+                        
+                        // Store in new format
+                        auto* migrationManager = new CredentialManager();
+                        migrationManager->storePassword(originalProfileName, account, legacyPassword, 
+                            [migrationManager, profileName, originalCallback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
+                                if (migrationSuccess) {
+                                    qDebug() << "CredentialManager: Legacy migration successful for profile" << profileName;
+                                    
+                                    // Clean up legacy entry if migration succeeded
+#ifdef APP_VERSION
+                                    const QString currentVersion = QString(APP_VERSION);
+                                    const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
+                                    const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
+                                    
+                                    if (appVersion >= secureStorageVersion) {
+                                        // Clean up legacy entry asynchronously
+                                        auto* cleanupManager = new CredentialManager();
+                                        cleanupManager->deleteLegacyKeychainEntry(profileName);
+                                        cleanupManager->deleteLater();
+                                        qDebug() << "CredentialManager: Legacy cleanup initiated for version" << currentVersion;
+                                    } else {
+                                        qDebug() << "CredentialManager: Legacy cleanup skipped for version" << currentVersion;
+                                    }
+#else
+                                    qDebug() << "CredentialManager: Legacy cleanup skipped (test mode)";
+#endif
+                                } else {
+                                    qWarning() << "CredentialManager: Legacy migration failed for profile" << profileName << ":" << migrationError;
+                                }
+                                
+                                // Return the legacy password regardless of migration result
+                                if (originalCallback) {
+                                    originalCallback(true, legacyPassword, QString());
+                                }
+                                
+                                migrationManager->deleteLater();
+                            });
+                    } else {
+                        qDebug() << "CredentialManager: No legacy password found for profile" << profileName;
+                        
+                        // No legacy password, try file storage
+                        QString filePassword = retrieveCredentialFromFile(service, account);
+                        bool fileSuccess = !filePassword.isNull();
+                        QString finalError = fileSuccess ? QString() : qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(readJob->errorString());
+                        
+                        if (fileSuccess) {
+                            qDebug() << "CredentialManager: Retrieved password from encrypted file storage";
+                        }
+                        
+                        if (originalCallback && isOperationValid()) {
+                            originalCallback(fileSuccess, filePassword, finalError);
+                        }
+                    }
+                    
+                    legacyReadJob->deleteLater();
+                });
+                
+                legacyReadJob->start();
+                
+                // Early return to avoid the file storage check below
+                readJob->deleteLater();
+                return;
+            }
+            
+            // Not a character password or not new format, try file storage directly
             password = retrieveCredentialFromFile(service, account);
 
             if (!password.isNull()) {

@@ -129,6 +129,9 @@ private:
     CredentialCallback mCurrentCallback;
     CredentialRetrievalCallback mCurrentRetrievalCallback;
     AvailabilityCallback mCurrentAvailabilityCallback;
+    
+    // Destruction flag to prevent operations during cleanup
+    bool mIsDestroying;
 };
 
 #endif // MUDLET_CREDENTIALMANAGER_H

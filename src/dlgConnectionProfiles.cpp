@@ -624,13 +624,13 @@ void dlgConnectionProfiles::slot_saveName()
 
         // Check if there are orphaned keychain entries for this profile name
         auto* credManager = new CredentialManager(this);
-        credManager->retrieveCredential(newProfileName, "character",
+        credManager->retrievePassword(newProfileName, "character",
             [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl]
             (bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
                 Q_UNUSED(characterPassword)
                 Q_UNUSED(errorMessage)
 
-                credManager->retrieveCredential(newProfileName, "proxy",
+                credManager->retrievePassword(newProfileName, "proxy",
                     [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry]
                     (bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
                         Q_UNUSED(proxyPassword)
@@ -1372,7 +1372,7 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
 
-    credManager->retrieveCredential(profile, "character",
+    credManager->retrievePassword(profile, "character",
         [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
             if (success) {
                 callback(password);
@@ -2278,7 +2278,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     if (mudlet::self()->storingPasswordsSecurely()) {
         mKeychainOperationInProgress = true;
         auto* credManager = new CredentialManager(this);
-        credManager->retrieveCredential(profile_name, "character",
+        credManager->retrievePassword(profile_name, "character",
             [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
                 // Clear the operation flag first
                 mKeychainOperationInProgress = false;
