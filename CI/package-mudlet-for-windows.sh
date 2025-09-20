@@ -133,34 +133,81 @@ echo "Deploying FFmpeg libraries for comprehensive audio codec support (OGG, Opu
 # Ensure multimedia plugin directory exists
 mkdir -p ./multimedia
 
-# Copy FFmpeg libraries to multiple locations for reliable discovery
-# 1. Main application directory (for general Qt access)
-# 2. multimedia plugin directory (for plugin-specific loading)
-if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/avcodec.dll" ]; then
-    echo "Deploying FFmpeg libraries for OGG/Opus support..."
-    for dll in avcodec avformat avutil swresample swscale avfilter avdevice; do
-        if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/${dll}.dll" ]; then
-            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${dll}.dll" .
-            # Also copy to multimedia plugin directory for Qt multimedia plugin discovery
-            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/${dll}.dll" ./multimedia/
-        elif [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/lib${dll}.dll" ]; then
-            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/lib${dll}.dll" .
-            cp -v -p "${MINGW_INTERNAL_BASE_DIR}/bin/lib${dll}.dll" ./multimedia/
-        fi
-    done
-    
-    # Copy any FFmpeg versioned DLLs (e.g., avcodec-61.dll, libavcodec-61.dll)
-    find "${MINGW_INTERNAL_BASE_DIR}/bin" -name "*avcodec*.dll" -o -name "*avformat*.dll" -o -name "*avutil*.dll" -o -name "*swresample*.dll" -o -name "*swscale*.dll" 2>/dev/null | while read dll; do
-        if [ -f "$dll" ]; then
-            cp -v -p "$dll" .
-            cp -v -p "$dll" ./multimedia/
-        fi
-    done
-    
-    echo "FFmpeg deployment completed - libraries available for Qt multimedia plugin"
+# First, verify windeployqt actually deployed multimedia plugins
+echo "Checking multimedia plugin deployment..."
+if [ -d "./multimedia" ] && [ "$(ls -A ./multimedia 2>/dev/null)" ]; then
+    echo "Multimedia plugins found:"
+    ls -la ./multimedia/
 else
-    echo "WARNING: FFmpeg libraries not found at ${MINGW_INTERNAL_BASE_DIR}/bin/ - OGG/Opus support may not work"
-    echo "If you need OGG/Opus support, ensure FFmpeg is installed in your MINGW environment"
+    echo "WARNING: No multimedia plugins deployed by windeployqt - this may cause FFmpeg backend to fail"
+fi
+
+# Deploy FFmpeg libraries with comprehensive approach
+echo "Deploying FFmpeg libraries..."
+
+# Search for FFmpeg DLLs in multiple common locations
+FFMPEG_SEARCH_DIRS=(
+    "${MINGW_INTERNAL_BASE_DIR}/bin"
+    "${MINGW_INTERNAL_BASE_DIR}/lib" 
+    "/mingw64/bin"
+    "/mingw64/lib"
+)
+
+FFMPEG_FOUND=false
+
+for search_dir in "${FFMPEG_SEARCH_DIRS[@]}"; do
+    if [ -d "$search_dir" ]; then
+        echo "Searching for FFmpeg libraries in: $search_dir"
+        
+        # Look for both versioned and unversioned FFmpeg DLLs
+        for dll_pattern in "avcodec*.dll" "libavcodec*.dll" "avformat*.dll" "libavformat*.dll" "avutil*.dll" "libavutil*.dll" "swresample*.dll" "libswresample*.dll" "swscale*.dll" "libswscale*.dll"; do
+            for dll_file in "$search_dir"/$dll_pattern; do
+                if [ -f "$dll_file" ]; then
+                    dll_name=$(basename "$dll_file")
+                    echo "Found FFmpeg library: $dll_name"
+                    
+                    # Copy to main directory
+                    cp -v -p "$dll_file" .
+                    
+                    # Copy to multimedia plugin directory 
+                    cp -v -p "$dll_file" ./multimedia/
+                    
+                    FFMPEG_FOUND=true
+                fi
+            done
+        done
+        
+        # Also copy any additional FFmpeg dependencies
+        for extra_dll in "postproc*.dll" "libpostproc*.dll" "avfilter*.dll" "libavfilter*.dll" "avdevice*.dll" "libavdevice*.dll"; do
+            for dll_file in "$search_dir"/$extra_dll; do
+                if [ -f "$dll_file" ]; then
+                    dll_name=$(basename "$dll_file")
+                    echo "Found additional FFmpeg library: $dll_name"
+                    cp -v -p "$dll_file" .
+                    cp -v -p "$dll_file" ./multimedia/
+                fi
+            done
+        done
+    fi
+done
+
+if [ "$FFMPEG_FOUND" = true ]; then
+    echo "FFmpeg deployment completed - libraries deployed to both main and multimedia directories"
+    
+    # Additional step: Ensure all multimedia plugin dependencies are met
+    echo "Scanning multimedia plugins for additional dependencies..."
+    if [ -d "./multimedia" ]; then
+        "${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./multimedia/*.dll 2>/dev/null | grep -i "mingw\|clang\|ucrt" | cut -d ">" -f2 | cut -d "(" -f1 | sort | uniq | while read dep_dll; do
+            if [ -f "$dep_dll" ] && [ ! -f "./multimedia/$(basename "$dep_dll")" ]; then
+                echo "Copying additional multimedia plugin dependency: $(basename "$dep_dll")"
+                cp -v -p "$dep_dll" ./multimedia/
+            fi
+        done
+    fi
+else
+    echo "ERROR: No FFmpeg libraries found in any search location!"
+    echo "FFmpeg must be installed in the MINGW environment for OGG/Opus support"
+    echo "Try: pacman -S mingw-w64-x86_64-ffmpeg"
 fi
 
 echo ""

@@ -464,20 +464,26 @@ int main(int argc, char* argv[])
     {
         QString appDir = QCoreApplication::applicationDirPath();
         QString pluginPath = appDir + QLatin1String("/plugins/multimedia");
+        QString multimediaPath = appDir + QLatin1String("/multimedia");
         QString currentPath = QString::fromLocal8Bit(qgetenv("PATH"));
-        QString newPath = pluginPath + ";" + appDir + ";" + currentPath;
+        
+        // Add both possible plugin locations to PATH for DLL discovery
+        QString newPath = pluginPath + ";" + multimediaPath + ";" + appDir + ";" + currentPath;
         qputenv("PATH", newPath.toLocal8Bit());
-        qDebug().noquote() << "main(...) INFO - Added to PATH for FFmpeg DLL discovery:" << pluginPath;
+        qDebug().noquote() << "main(...) INFO - Added to PATH for FFmpeg DLL discovery:" << pluginPath << "and" << multimediaPath;
         
         // Add library paths for Qt to find plugins - critical for plugin loading
         QCoreApplication::addLibraryPath(appDir + "/plugins");
         QCoreApplication::addLibraryPath(appDir);
         qDebug().noquote() << "main(...) INFO - Added Qt library paths for plugin discovery";
         
-        // Enable multimedia plugin debugging if environment variable is set
-        if (qEnvironmentVariableIsSet("QT_MEDIA_PLUGINS")) {
-            qDebug().noquote() << "main(...) INFO - Qt multimedia plugin debugging enabled";
-        }
+        // Enable multimedia plugin debugging for troubleshooting
+        qputenv("QT_LOGGING_RULES", QByteArray("qt.multimedia.*=true"));
+        qDebug().noquote() << "main(...) INFO - Enabled Qt multimedia debugging for FFmpeg troubleshooting";
+        
+        // Force Qt to scan for plugins
+        QCoreApplication::addLibraryPath(appDir);
+        qDebug().noquote() << "main(...) INFO - Available Qt plugin paths:" << QCoreApplication::libraryPaths().join(", ");
     }
     // Prefer FFmpeg for comprehensive codec support (OGG, Opus, etc.), but allow fallback to WMF
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
