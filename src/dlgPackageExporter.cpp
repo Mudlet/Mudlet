@@ -1222,7 +1222,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         }
     }
 
-    if (!writer.exportPackage(mXmlPathFileName, false)) {
+    if (!writer.exportPackage(mXmlPathFileName, false, true)) {
         //: This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened
         displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".")
                              .arg(mXmlPathFileName.toHtmlEscaped()), false);
@@ -1725,6 +1725,7 @@ void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
         TScript* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
+
         auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
