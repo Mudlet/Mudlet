@@ -279,7 +279,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
                             
                             // Only clean up legacy entry if this version is >= 4.20.0
                             // This prevents breaking compatibility with older Mudlet versions
-                            #ifdef APP_VERSION
+#ifdef APP_VERSION
                             const QString currentVersion = QString(APP_VERSION);
                             const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
                             const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
@@ -291,10 +291,10 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
                             } else {
                                 qDebug() << "CredentialManager: Legacy cleanup skipped for version" << currentVersion;
                             }
-                            #else
+#else
                             // In test environment, preserve legacy entries for safety
                             qDebug() << "CredentialManager: Legacy cleanup skipped (test mode)";
-                            #endif
+#endif
                         } else {
                             // No legacy password found, try encrypted file storage
                             qDebug() << "CredentialManager: No legacy password found, using encrypted file storage for profile" << profileName;
