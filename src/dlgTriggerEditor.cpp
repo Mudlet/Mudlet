@@ -8610,7 +8610,7 @@ void dlgTriggerEditor::showIntro(const QString& desiredOption)
     for (const auto &[name, headline, contents] : introAddCurrentItem.options) {
         introTextOptions.append(
             (name != desiredOption)
-            ? qsl("<li><a href='%1'>%2</a></li>").arg(name, headline)
+            ? qsl("<li><a href='%1' style='color: inherit; text-decoration: underline;'>%2</a></li>").arg(name, headline)
             : qsl("<li><strong>%1</strong>%2</li>").arg(headline, contents));
     }
 

@@ -97,6 +97,7 @@ void TMap::mapClear()
     mNewMove = true;
     mVersion = mDefaultVersion;
     mUserData.clear();
+
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
     // whatever version was previously set/deduced
 
@@ -104,6 +105,12 @@ void TMap::mapClear()
     // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
     if (mpMapper) {
         mpMapper->updateAreaComboBox();
+
+        auto map = mpMapper->mp2dMap;
+        if (map) {
+            map->mMultiSelectionListWidget.clear();
+            map->mMultiSelectionListWidget.hide();
+        }
     }
 }
 

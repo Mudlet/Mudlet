@@ -26,7 +26,13 @@
 
 #include "pre_guard.h"
 #include "ui_notes_editor.h"
+#include <QCheckBox>
+#include <QCloseEvent>
+#include <QLabel>
+#include <QLineEdit>
 #include <QPointer>
+#include <QSettings>
+#include <QTimer>
 #include "post_guard.h"
 
 class Host;
@@ -43,6 +49,8 @@ public:
 
     void save();
     void restore();
+    void saveSettings();
+    void restoreSettings();
     void setFont(const QFont &);
 
 signals:
@@ -50,14 +58,30 @@ signals:
 
 private slots:
     void slot_textWritten();
+    void slot_sendAll();
+    void slot_sendLine();
+    void slot_sendSelection();
+    void slot_sendNextLine();
+    void slot_stopSending();
+    void slot_toggleSendControls(bool checked);
 
 private:
     void timerEvent(QTimerEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
     void restoreFile(const QString&, const bool);
+    void startSendingLines(const QStringList& lines);
 
     QPointer<Host> mpHost;
     bool mNeedToSave = false;
+    QAction* action_stop = nullptr;
+    QAction* action_prependText = nullptr;
+    QAction* action_prependTextLabel = nullptr;
+    QLabel* label_prependText = nullptr;
+    QLineEdit* lineEdit_prependText = nullptr;
+    QStringList mLinesToSend;
+    QTimer* mSendTimer = nullptr;
+    int mCurrentLineIndex = 0;
+
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

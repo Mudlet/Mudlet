@@ -30,6 +30,7 @@
 
 #include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
+#include "DarkTheme.h"
 #include "EAction.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
@@ -5818,30 +5819,53 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
     }
 }
 
+bool mudlet::needsCustomDarkTheme()
+{
+#if defined(Q_OS_WINDOWS)
+    return QSysInfo::productVersion() == qsl("10");
+#elif defined(Q_OS_LINUX)
+    return true;
+#else
+    return false;
+#endif
+}
+
 void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 {
     if (state == mAppearance && !loading) {
         return;
     }
 
-    switch (state) {
-    case enums::Appearance::dark:
-        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
+    mDarkMode = false;
+    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark)) {
         mDarkMode = true;
-        break;
-    case enums::Appearance::light:
-        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
-        mDarkMode = false;
-        break;
-    case enums::Appearance::systemSetting:
-        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
-        mDarkMode = (QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark);
-        break;
     }
 
-    // Apply the AltFocusMenuBarDisable wrapper for both themes
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-    qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+    if (needsCustomDarkTheme()) {
+        if (mDarkMode) {
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+            qApp->setStyle(new DarkTheme);
+        } else {
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+            qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+        }
+    } else {
+        switch (state) {
+        case enums::Appearance::dark:
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
+            break;
+        case enums::Appearance::light:
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+            break;
+        case enums::Appearance::systemSetting:
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
+            break;
+        }
+        // Apply the AltFocusMenuBarDisable wrapper for Qt native themes
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+    }
+
     getHostManager().changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
