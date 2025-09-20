@@ -90,9 +90,6 @@ void CredentialManager::cleanupTimeout()
         if (!mIsDestroying && !QCoreApplication::closingDown()) {
             // Safe to disconnect during normal operation
             mTimeoutTimer->disconnect();
-        } else {
-            // During shutdown/destruction, just null the pointer and let Qt handle cleanup
-            // Note: we don't call disconnect() as the object graph may be partially destroyed
         }
         
         mTimeoutTimer->deleteLater();
@@ -125,9 +122,6 @@ void CredentialManager::cleanupCurrentOperation()
         if (!mIsDestroying && !QCoreApplication::closingDown()) {
             // Safe to disconnect during normal operation
             mCurrentJob->disconnect();
-        } else {
-            // During shutdown/destruction, just null the pointer and let Qt handle cleanup
-            // Note: we don't call disconnect() as the object graph may be partially destroyed
         }
         
         // Always safe to delete later, Qt handles this properly during shutdown
