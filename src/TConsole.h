@@ -424,7 +424,6 @@ public slots:
     void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleTimeStamps(const bool);
     void slot_saveCommandSearchSettings();
-    void slot_restoreCommandSearchSettings();
 
 signals:
     void resized(QResizeEvent* event);
@@ -446,6 +445,7 @@ private slots:
 private:
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
+    void restoreCommandSearchSettings();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
