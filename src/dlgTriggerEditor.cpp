@@ -5,7 +5,7 @@
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -46,6 +46,7 @@
 #include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
 #include "mudlet.h"
+#include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
 
 #include "pre_guard.h"
@@ -55,6 +56,7 @@
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QShowEvent>
 #include <QToolBar>
 #include "post_guard.h"
 
@@ -1201,6 +1203,7 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
+    emit editorClosing();
     writeSettings();
     event->accept();
 }
@@ -1209,10 +1212,13 @@ void dlgTriggerEditor::readSettings()
 {
     QSettings& settings = *mudlet::getQSettings();
 
-    const QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
+    const QPoint savedPos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
-    move(pos);
+    
+    // Use smart positioning instead of blindly restoring saved position
+    // This ensures the dialog opens on the same screen as the active profile
+    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
 
@@ -1795,7 +1801,8 @@ void dlgTriggerEditor::searchKeys(const QString& text)
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || 
+               !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -7075,9 +7082,9 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     if (pT) {
         const QString name = pT->getName();
         QStringList eventHandlerList = pT->getEventHandlerList();
-        for (int i = 0; i < eventHandlerList.size(); i++) {
+        for (const QString& handler : eventHandlerList) {
             auto pItem = new QListWidgetItem(mpScriptsMainArea->listWidget_script_registered_event_handlers);
-            pItem->setText(eventHandlerList[i]);
+            pItem->setText(handler);
             mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
         }
         const QString script = pT->getScript();
@@ -8238,6 +8245,15 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
     saveOpenChanges();
 }
 
+void dlgTriggerEditor::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+    
+    // Always reposition the dialog to the correct screen when shown
+    // This ensures it follows the active profile, especially after reattachment
+    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+}
+
 void dlgTriggerEditor::changeView(EditorViewType view)
 {
     saveOpenChanges();
@@ -8594,7 +8610,7 @@ void dlgTriggerEditor::showIntro(const QString& desiredOption)
     for (const auto &[name, headline, contents] : introAddCurrentItem.options) {
         introTextOptions.append(
             (name != desiredOption)
-            ? qsl("<li><a href='%1'>%2</a></li>").arg(name, headline)
+            ? qsl("<li><a href='%1' style='color: inherit; text-decoration: underline;'>%2</a></li>").arg(name, headline)
             : qsl("<li><strong>%1</strong>%2</li>").arg(headline, contents));
     }
 
@@ -9952,14 +9968,14 @@ void dlgTriggerEditor::slot_pasteXml()
         
         QString originalClipboard = QApplication::clipboard()->text();
         
-        for (int i = 0; i < xmlPackages.size(); ++i) {
-            QString xmlItem = xmlPackages[i].trimmed();
-            if (xmlItem.isEmpty()) {
+        for (const QString& xmlItem : xmlPackages) {
+            QString xmlItemTrimmed = xmlItem.trimmed();
+            if (xmlItemTrimmed.isEmpty()) {
                 continue; // Skip empty items
             }
             
             // Temporarily set clipboard to single item
-            QApplication::clipboard()->setText(xmlItem);
+            QApplication::clipboard()->setText(xmlItemTrimmed);
             
             // Import this single item
             XMLimport itemReader(mpHost);

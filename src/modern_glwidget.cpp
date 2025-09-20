@@ -246,15 +246,26 @@ void ModernGLWidget::paintGL()
             return;
         }
         
-        // Check if room ID changed and start smooth transition
+        // Check if room ID changed and determine transition type
         if (mRID != mPreviousRID) {
-            // Room changed - start smooth transition
+            // Room changed - check if area also changed
             int targetAID = pRID->getArea();
             int targetX = pRID->x();
             int targetY = pRID->y();
             int targetZ = pRID->z();
 
-            startSmoothTransition(targetAID, targetX, targetY, targetZ);
+            if (targetAID != mPreviousAID) {
+                // Area changed - instant transition
+                mCameraController.setTarget(static_cast<float>(targetX), static_cast<float>(targetY), static_cast<float>(targetZ));
+                // Stop any ongoing smooth animation
+                if (mCameraSmoothAnimating) {
+                    mCameraAnimationTimer->stop();
+                    mCameraSmoothAnimating = false;
+                }
+            } else {
+                // Same area - smooth transition
+                startSmoothTransition(targetAID, targetX, targetY, targetZ);
+            }
         }
         // Instant update map (smooth transition only impacts camera position)
         mAID = pRID->getArea();
@@ -265,6 +276,7 @@ void ModernGLWidget::paintGL()
         mMapCenterY = oy;
         mMapCenterZ = oz;
         mPreviousRID = mRID; // Update tracking
+        mPreviousAID = mAID; // Update area tracking
 
 
     } else {

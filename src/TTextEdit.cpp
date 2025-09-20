@@ -1673,6 +1673,24 @@ void TTextEdit::searchSelectionOnline()
     QDesktopServices::openUrl(QUrl(url));
 }
 
+void TTextEdit::slot_copySelectionToSearchBar()
+{
+    if (!establishSelectedText()) {
+        return;
+    }
+
+    QString selectedText = getSelectedText(QChar::LineFeed).trimmed();
+
+    if (mudlet::self()->dactionInputLine->isChecked()) {
+        // If hidden then reveal as if pressed Alt-L
+        mudlet::self()->dactionInputLine->setChecked(false);
+        mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
+    }
+    mpConsole->mpBufferSearchBox->setText(selectedText);
+    mpConsole->mpBufferSearchBox->setFocus();
+    mpConsole->mpBufferSearchBox->selectAll();
+}
+
 QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTimestamps)
 {
     // mPA QPoint where selection started
@@ -1811,7 +1829,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         auto* actionCopyImage = new QAction(tr("Copy as image"), this);
         connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
 
-        QAction* action3 = new QAction(tr("Select All"), this);
+        QAction* action3 = new QAction(tr("Select all"), this);
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 

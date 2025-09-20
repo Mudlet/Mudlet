@@ -30,6 +30,7 @@
 #include <QDialog>
 #include <QFileInfo>
 #include <QTextEdit>
+#include <QCloseEvent>
 #include <zip.h>
 #include "post_guard.h"
 #include <zip.h>
@@ -54,7 +55,7 @@ public:
     Q_DISABLE_COPY(dlgPackageExporter)
     explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
-    
+
     // Methods to preselect items when opened from trigger editor
     void preselectTrigger(QTreeWidgetItem* item);
     void preselectTimer(QTreeWidgetItem* item);
@@ -62,7 +63,7 @@ public:
     void preselectScript(QTreeWidgetItem* item);
     void preselectAction(QTreeWidgetItem* item);
     void preselectKey(QTreeWidgetItem* item);
-    
+
     // Set module creation mode
     void setModuleCreationMode(bool isModule);
     void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
@@ -96,7 +97,7 @@ public:
     QString mXmlPathFileName;
     QString mPlainDescription;
     QStringList mDescriptionImages;
-    
+
     // Module creation mode flag
     bool mIsModuleCreationMode = false;
 
@@ -108,6 +109,7 @@ private slots:
     void slot_addDependency();
     void slot_removeDependency();
     void slot_importIcon();
+    void slot_removeIcon();
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();
@@ -117,6 +119,7 @@ private slots:
 
 protected:
     bool eventFilter(QObject* obj, QEvent* evt) override;
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void appendToDetails(const QString&, const QString&);
@@ -173,6 +176,7 @@ private:
 
 signals:
     void signal_exportLocationChanged(const QString& location);
+    void packageExporterClosing(const QString& profileName);
 };
 
 class dlgPackageExporterDescription : public QTextEdit

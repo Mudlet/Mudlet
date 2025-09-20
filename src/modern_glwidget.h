@@ -185,6 +185,7 @@ private:
     QEasingCurve mEasingCurve;
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0; // Track previous room ID to detect changes
+    int mPreviousAID = 0; // Track previous area ID to detect area changes
 
     // Private methods for modern OpenGL
     void updateMatrices();
