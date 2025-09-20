@@ -6087,7 +6087,7 @@ void T2DMap::slot_exportAreaToImage()
         defaultFileName = qsl("%1.png").arg(utils::sanitizeForPath(areaName));
     } else {
         // Fall back to area ID if no area name
-        defaultFileName = tr("area_%1.png").arg(mAreaID);
+        defaultFileName = qsl("area_%1.png").arg(mAreaID);
     }
     
     QString fullPath = qsl("%1/%2").arg(lastDir, defaultFileName);

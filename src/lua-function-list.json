@@ -448,7 +448,7 @@
     "setCommandBackgroundColor": "setCommandBackgroundColor([windowName], r, g, b, [transparency])",
     "setCommandForegroundColor": "setCommandForegroundColor([windowName], r, g, b, [transparency])",
     "setConfig": "setConfig(option, value)",
-    "setConsoleBufferSize": "setConsoleBufferSize([consoleName], linesLimit, sizeOfBatchDeletion, [useMaximum])",
+    "setConsoleBufferSize": "setConsoleBufferSize([consoleName], linesLimit, sizeOfBatchDeletion)",
     "setCustomEnvColor": "setCustomEnvColor(environmentID, r,g,b,a)",
     "setDiscordApplicationID": "setDiscordApplicationID(id)",
     "setDiscordDetail": "setDiscordDetail(text)",
