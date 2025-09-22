@@ -82,6 +82,10 @@ public:
         Overline = 0x8,               // 0000 0000 0000 0000 0000 0000 0000 1000
         // Replaces TCHAR_STRIKEOUT 32
         StrikeOut = 0x10,             // 0000 0000 0000 0000 0000 0000 0001 0000
+        // Extended underline styles for enhanced OSC 8 hyperlink support
+        UnderlineWavy = 0x400000,     // 0000 0000 0100 0000 0000 0000 0000 0000
+        UnderlineDotted = 0x800000,   // 0000 0000 1000 0000 0000 0000 0000 0000
+        UnderlineDashed = 0x1000000,  // 0000 0001 0000 0000 0000 0000 0000 0000
         // NOT a replacement for TCHAR_INVERSE, that is now covered by the
         // separate isSelected bool but they must be EX-ORed at the point of
         // painting the Character
@@ -116,7 +120,7 @@ public:
         // Mask for "any alternate font" - only the most significant one should
         // be used if more than one is set:
         AltFontMask = 0x1ff00,        // 0000 0000 0000 0001 1111 1111 0000 0000
-        TestMask = 0x3ffff,           // 0000 0000 0000 0011 1111 1111 1111 1111
+        TestMask = 0x1f3ffff,         // 0000 0001 1111 0011 1111 1111 1111 1111 (includes extended underline styles)
         // The remainder are internal use ones that do not related to SGR codes
         // that have been parsed from the incoming text.
         // Has been found in a search operation (currently Main Console only)
@@ -172,6 +176,26 @@ public:
     bool isReversed() const { return mFlags & Reverse; }
     bool isConcealed() const { return mFlags & Concealed; }
     bool isFound() const { return mFlags & Found; }
+    // Extended underline style accessors for enhanced OSC 8 hyperlink support
+    bool isUnderlineWavy() const { return mFlags & UnderlineWavy; }
+    bool isUnderlineDotted() const { return mFlags & UnderlineDotted; }
+    bool isUnderlineDashed() const { return mFlags & UnderlineDashed; }
+    
+    // Decoration color accessors
+    const QColor& underlineColor() const { return mUnderlineColor; }
+    const QColor& overlineColor() const { return mOverlineColor; }
+    const QColor& strikeoutColor() const { return mStrikeoutColor; }
+    bool hasCustomUnderlineColor() const { return mHasCustomUnderlineColor; }
+    bool hasCustomOverlineColor() const { return mHasCustomOverlineColor; }
+    bool hasCustomStrikeoutColor() const { return mHasCustomStrikeoutColor; }
+    
+    // Decoration color setters
+    void setUnderlineColor(const QColor& color) { mUnderlineColor = color; mHasCustomUnderlineColor = true; }
+    void setOverlineColor(const QColor& color) { mOverlineColor = color; mHasCustomOverlineColor = true; }
+    void setStrikeoutColor(const QColor& color) { mStrikeoutColor = color; mHasCustomStrikeoutColor = true; }
+    void clearCustomUnderlineColor() { mHasCustomUnderlineColor = false; }
+    void clearCustomOverlineColor() { mHasCustomOverlineColor = false; }
+    void clearCustomStrikeoutColor() { mHasCustomStrikeoutColor = false; }
     // Special case - if fast blink is set then do NOT say that blink is set to
     // preserve priority of the former over the latter:
     bool isBlinking() const { return (mFlags & FastBlink) ? false : (mFlags & Blink); }
@@ -233,6 +257,12 @@ public:
             return qsl("AltFont9");
         case Concealed:
             return qsl("Concealed");
+        case UnderlineWavy:
+            return qsl("UnderlineWavy");
+        case UnderlineDotted:
+            return qsl("UnderlineDotted");
+        case UnderlineDashed:
+            return qsl("UnderlineDashed");
         default:
             return qsl("Unknown");
         }
@@ -245,6 +275,14 @@ private:
     // Kept as a separate flag because it must often be handled separately
     bool mIsSelected = false;
     int mLinkIndex = 0;
+    
+    // Enhanced decoration color support for OSC 8 hyperlinks
+    QColor mUnderlineColor;
+    QColor mOverlineColor;
+    QColor mStrikeoutColor;
+    bool mHasCustomUnderlineColor = false;
+    bool mHasCustomOverlineColor = false;
+    bool mHasCustomStrikeoutColor = false;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
@@ -307,6 +345,9 @@ public:
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
     void appendLog(const QString &text);
+    
+    // OSC 8 hyperlink testing function - triggered by secret phrase
+    void injectOSC8TestSequences();
 
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
@@ -334,6 +375,35 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
+    // Enhanced OSC 8 hyperlink styling support
+    struct HyperlinkStyling {
+        QColor foregroundColor;
+        QColor backgroundColor;
+        bool hasForegroundColor = false;
+        bool hasBackgroundColor = false;
+        bool isBold = false;
+        bool isItalic = false;
+        bool isUnderlined = true; // Default hyperlink style
+        bool isStrikeOut = false;
+        bool isOverlined = false;
+        bool hasCustomStyling = false; // Tracks if any custom styling was provided
+        
+        // Extended text decoration support
+        enum UnderlineStyle {
+            UnderlineNone,
+            UnderlineSolid,     // Standard underline
+            UnderlineWavy,      // Squiggly/wavy underline
+            UnderlineDotted,    // Dotted underline  
+            UnderlineDashed     // Dashed underline
+        };
+        UnderlineStyle underlineStyle = UnderlineSolid;
+        QColor underlineColor;
+        QColor overlineColor;
+        QColor strikeoutColor;
+        bool hasUnderlineColor = false;
+        bool hasOverlineColor = false;
+        bool hasStrikeoutColor = false;
+    };
 
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
@@ -349,6 +419,15 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
+    
+    // Helper function for parsing URI query parameters in OSC 8 hyperlinks
+    QMap<QString, QString> parseUriQueryParameters(const QString& uri);
+    // Helper function for appending query parameters to URIs (handles existing params)
+    QString appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters);
+    // Helper function for parsing CSS-like style strings
+    void parseHyperlinkStyling(const QString& styleString, HyperlinkStyling& styling);
+    // Helper function for parsing color values (hex, named, rgb)
+    QColor parseColorValue(const QString& value);
 
 
     QPointer<TConsole> mpConsole;
@@ -430,6 +509,10 @@ private:
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    
+    // Enhanced OSC 8 hyperlink styling and menu support
+    HyperlinkStyling mCurrentHyperlinkStyling;
+    QStringList mCurrentHyperlinkMenu; // Format: "Label|Command|Label|Command..."
 };
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -493,13 +576,22 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
         presentAttributes << QLatin1String("AltFont9 (0x10000)");
     }
     if (attributes & TChar::Concealed) {
-        presentAttributes << QLatin1String("AltFont9 (0x20000)");
+        presentAttributes << QLatin1String("Concealed (0x20000)");
     }
     if (attributes & TChar::Found) {
         presentAttributes << QLatin1String("Found (0x100000)");
     }
     if (attributes & TChar::Echo) {
         presentAttributes << QLatin1String("Echo (0x200000)");
+    }
+    if (attributes & TChar::UnderlineWavy) {
+        presentAttributes << QLatin1String("UnderlineWavy (0x400000)");
+    }
+    if (attributes & TChar::UnderlineDotted) {
+        presentAttributes << QLatin1String("UnderlineDotted (0x800000)");
+    }
+    if (attributes & TChar::UnderlineDashed) {
+        presentAttributes << QLatin1String("UnderlineDashed (0x1000000)");
     }
     if (presentAttributes.isEmpty()) {
         result.append(QLatin1String("None (0x0))"));

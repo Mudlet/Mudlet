@@ -36,6 +36,7 @@
 
 #include "pre_guard.h"
 #include <chrono>
+#include <cmath>
 #include <QtEvents>
 #include <QtGlobal>
 #include <QAccessible>
@@ -47,6 +48,7 @@
 #include <QDesktopServices>
 #include <QHash>
 #include <QPainter>
+#include <QPainterPath>
 #include <QScrollBar>
 #include <QStringRef>
 #include <QTextBoundaryFinder>
@@ -635,20 +637,34 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
+    
+    // Check for advanced underline styles or custom decoration colors
+    const bool isUnderlineWavy = attributes & TChar::UnderlineWavy;
+    const bool isUnderlineDotted = attributes & TChar::UnderlineDotted;
+    const bool isUnderlineDashed = attributes & TChar::UnderlineDashed;
+    const bool hasAdvancedUnderline = isUnderlineWavy || isUnderlineDotted || isUnderlineDashed;
+    const bool hasCustomDecorationColors = charStyle.hasCustomUnderlineColor() || charStyle.hasCustomOverlineColor() || charStyle.hasCustomStrikeoutColor();
+    
+    // If we have advanced underline styles or custom decoration colors, disable Qt's built-in decorations
+    // and draw them manually later
+    const bool useQtUnderline = isUnderline && !hasAdvancedUnderline && !charStyle.hasCustomUnderlineColor();
+    const bool useQtOverline = isOverline && !charStyle.hasCustomOverlineColor();
+    const bool useQtStrikeOut = isStrikeOut && !charStyle.hasCustomStrikeoutColor();
+    
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
     if ((painter.font().bold() != isBold)
             || (painter.font().italic() != isItalics)
-            || (painter.font().overline() != isOverline)
-            || (painter.font().strikeOut() != isStrikeOut)
-            || (painter.font().underline() != isUnderline)) {
+            || (painter.font().overline() != useQtOverline)
+            || (painter.font().strikeOut() != useQtStrikeOut)
+            || (painter.font().underline() != useQtUnderline)) {
 
         QFont font = painter.font();
         font.setBold(isBold);
         font.setItalic(isItalics);
-        font.setOverline(isOverline);
-        font.setStrikeOut(isStrikeOut);
-        font.setUnderline(isUnderline);
+        font.setOverline(useQtOverline);
+        font.setStrikeOut(useQtStrikeOut);
+        font.setUnderline(useQtUnderline);
         painter.setFont(font);
     }
 
@@ -660,6 +676,143 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         painter.setPen(fgColor);
     }
     painter.drawText(textRect, Qt::AlignCenter|Qt::TextDontClip|Qt::TextSingleLine, grapheme);
+    
+    // Draw custom decorations (colored underlines, overlines, strikethrough)
+    drawCustomDecorations(painter, fgColor, textRect, charStyle);
+}
+
+void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, TChar& charStyle) const
+{
+    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
+    QFontMetrics fm(painter.font());
+    
+    // Calculate decoration positions
+    int underlineY = textRect.bottom() - 1;
+    int overlineY = textRect.top() + 1;
+    int strikeoutY = textRect.top() + textRect.height() / 2;
+    int lineWidth = 1;
+    
+    // Draw underline decorations
+    if (attributes & TChar::Underline) {
+        QColor underlineColor = charStyle.hasCustomUnderlineColor() ? charStyle.underlineColor() : defaultColor;
+        QPen pen(underlineColor);
+        pen.setWidth(lineWidth);
+        
+        bool isWavy = attributes & TChar::UnderlineWavy;
+        bool isDotted = attributes & TChar::UnderlineDotted;
+        bool isDashed = attributes & TChar::UnderlineDashed;
+        
+        if (isWavy) {
+            // Draw wavy underline
+            pen.setStyle(Qt::SolidLine);
+            painter.setPen(pen);
+            
+            const int amplitude = 1;
+            const int wavelength = 8;
+            QPainterPath wavePath;
+            
+            bool firstPoint = true;
+            for (int x = textRect.left(); x <= textRect.right(); x += 2) {
+                double phase = (x - textRect.left()) * 2.0 * M_PI / wavelength;
+                int y = underlineY + amplitude * sin(phase);
+                
+                if (firstPoint) {
+                    wavePath.moveTo(x, y);
+                    firstPoint = false;
+                } else {
+                    wavePath.lineTo(x, y);
+                }
+            }
+            painter.drawPath(wavePath);
+            
+        } else if (isDotted) {
+            pen.setStyle(Qt::DotLine);
+            painter.setPen(pen);
+            painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
+            
+        } else if (isDashed) {
+            pen.setStyle(Qt::DashLine);
+            painter.setPen(pen);
+            painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
+            
+        } else {
+            // Solid underline (only draw if we have custom color or advanced style)
+            if (charStyle.hasCustomUnderlineColor() || isWavy || isDotted || isDashed) {
+                pen.setStyle(Qt::SolidLine);
+                painter.setPen(pen);
+                painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
+            }
+        }
+    }
+    
+    // Draw overline decorations
+    if (attributes & TChar::Overline) {
+        QColor overlineColor = charStyle.hasCustomOverlineColor() ? charStyle.overlineColor() : defaultColor;
+        QPen pen(overlineColor);
+        pen.setWidth(lineWidth);
+        pen.setStyle(Qt::SolidLine);
+        painter.setPen(pen);
+        painter.drawLine(textRect.left(), overlineY, textRect.right(), overlineY);
+    }
+    
+    // Draw strikethrough decorations
+    if (attributes & TChar::StrikeOut) {
+        QColor strikeoutColor = charStyle.hasCustomStrikeoutColor() ? charStyle.strikeoutColor() : defaultColor;
+        QPen pen(strikeoutColor);
+        pen.setWidth(lineWidth);
+        pen.setStyle(Qt::SolidLine);
+        painter.setPen(pen);
+        painter.drawLine(textRect.left(), strikeoutY, textRect.right(), strikeoutY);
+    }
+}
+
+void TTextEdit::drawAdvancedUnderline(QPainter& painter, const QColor& color, const QRect& textRect, bool isWavy, bool isDotted, bool isDashed) const
+{
+    // Calculate underline position - similar to where Qt would place it
+    QFontMetrics fm(painter.font());
+    int underlineY = textRect.bottom() - 1; // Offset slightly above bottom edge
+    int lineWidth = 1; // Base line width
+    
+    // Set pen properties
+    QPen pen(color);
+    pen.setWidth(lineWidth);
+    
+    // Draw appropriate style
+    if (isWavy) {
+        // Draw a wavy line using sine wave
+        pen.setStyle(Qt::SolidLine);
+        painter.setPen(pen);
+        
+        const int amplitude = 1; // Wave height
+        const int wavelength = 8; // Wave frequency
+        QPainterPath wavePath;
+        
+        bool firstPoint = true;
+        for (int x = textRect.left(); x <= textRect.right(); x += 2) {
+            double phase = (x - textRect.left()) * 2.0 * M_PI / wavelength;
+            int y = underlineY + amplitude * sin(phase);
+            
+            if (firstPoint) {
+                wavePath.moveTo(x, y);
+                firstPoint = false;
+            } else {
+                wavePath.lineTo(x, y);
+            }
+        }
+        painter.drawPath(wavePath);
+        
+    } else if (isDotted) {
+        // Draw dotted line
+        pen.setStyle(Qt::DotLine);
+        painter.setPen(pen);
+        painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
+        
+    } else if (isDashed) {
+        // Draw dashed line
+        pen.setStyle(Qt::DashLine);
+        painter.setPen(pen);
+        painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
+    }
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const

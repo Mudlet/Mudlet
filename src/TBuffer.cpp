@@ -80,6 +80,12 @@ TChar::TChar(const TChar& copy)
 , mFlags(copy.mFlags)
 , mIsSelected(false)
 , mLinkIndex(copy.mLinkIndex)
+, mUnderlineColor(copy.mUnderlineColor)
+, mOverlineColor(copy.mOverlineColor)
+, mStrikeoutColor(copy.mStrikeoutColor)
+, mHasCustomUnderlineColor(copy.mHasCustomUnderlineColor)
+, mHasCustomOverlineColor(copy.mHasCustomOverlineColor)
+, mHasCustomStrikeoutColor(copy.mHasCustomStrikeoutColor)
 {
 }
 
@@ -955,7 +961,66 @@ COMMIT_LINE:
 
         if (mHyperlinkActive) {
             c.mLinkIndex = mCurrentHyperlinkLinkId;
-            c.mFlags |= TChar::Underline;
+            
+            // Apply enhanced hyperlink styling
+            if (mCurrentHyperlinkStyling.hasForegroundColor) {
+                c.mFgColor = mCurrentHyperlinkStyling.foregroundColor;
+            }
+            if (mCurrentHyperlinkStyling.hasBackgroundColor) {
+                c.mBgColor = mCurrentHyperlinkStyling.backgroundColor;
+            }
+            
+            // Apply text decorations
+            if (mCurrentHyperlinkStyling.isUnderlined) {
+                c.mFlags |= TChar::Underline;
+                
+                // Apply specific underline style based on underlineStyle enum
+                switch (mCurrentHyperlinkStyling.underlineStyle) {
+                    case HyperlinkStyling::UnderlineWavy:
+                        c.mFlags |= TChar::UnderlineWavy;
+                        break;
+                    case HyperlinkStyling::UnderlineDotted:
+                        c.mFlags |= TChar::UnderlineDotted;
+                        break;
+                    case HyperlinkStyling::UnderlineDashed:
+                        c.mFlags |= TChar::UnderlineDashed;
+                        break;
+                    case HyperlinkStyling::UnderlineSolid:
+                    case HyperlinkStyling::UnderlineNone:
+                    default:
+                        // Standard solid underline (no additional flags needed)
+                        break;
+                }
+            }
+            if (mCurrentHyperlinkStyling.isOverlined) {
+                c.mFlags |= TChar::Overline;
+            }
+            if (mCurrentHyperlinkStyling.isStrikeOut) {
+                c.mFlags |= TChar::StrikeOut;
+            }
+            
+            // Apply decoration colors - only for active decorations
+            if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
+                c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
+            }
+            if (mCurrentHyperlinkStyling.hasOverlineColor && mCurrentHyperlinkStyling.isOverlined) {
+                c.setOverlineColor(mCurrentHyperlinkStyling.overlineColor);
+            }
+            if (mCurrentHyperlinkStyling.hasStrikeoutColor && mCurrentHyperlinkStyling.isStrikeOut) {
+                c.setStrikeoutColor(mCurrentHyperlinkStyling.strikeoutColor);
+            }
+            
+            if (mCurrentHyperlinkStyling.isBold) {
+                c.mFlags |= TChar::Bold;
+            }
+            if (mCurrentHyperlinkStyling.isItalic) {
+                c.mFlags |= TChar::Italic;
+            }
+            
+            // If no custom styling was provided, apply default hyperlink underline
+            if (!mCurrentHyperlinkStyling.hasCustomStyling) {
+                c.mFlags |= TChar::Underline;
+            }
         }
 
         if (mpHost->mMxpClient.isInLinkMode()) {
@@ -2061,7 +2126,10 @@ void TBuffer::decodeOSC(const QString& sequence)
 
     const bool serverMayRedefineDefaultColors = pHost->getMayRedefineColors();
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
+    // Only log sequences that aren't just OSC 8 terminators to reduce noise
+    if (!(sequence.startsWith("8;;") && sequence.length() == 3)) {
+        qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
+    }
 #endif
     unsigned short const character = sequence.at(0).unicode();
     switch (character) {
@@ -2170,10 +2238,6 @@ void TBuffer::decodeOSC(const QString& sequence)
         break;
     case static_cast<quint8>('8'): {
         // Handle OSC 8 hyperlinks in the form: "8;params;URI"
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug().noquote() << "[OSC 8] Raw sequence: " << sequence;
-        qDebug().noquote() << "[OSC 8] Raw hex: " << sequence.toUtf8().toHex(' ');
-#endif
         QStringView rest = QStringView(sequence).mid(1);  // skip selector "8;"
         int firstSemi = rest.indexOf(';');
 
@@ -2200,11 +2264,17 @@ void TBuffer::decodeOSC(const QString& sequence)
 
         // OSC 8 ;; closes the hyperlink
         if ((param.isEmpty() && rawUrl.isEmpty())) {
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug().noquote() << "[OSC8] Hyperlink terminator - closing active hyperlink";
+#endif
             mCurrentHyperlinkUrl.clear();
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
             mCurrentHyperlinkLinkId = 0;
             mHyperlinkActive = false;
+            // Reset enhanced styling
+            mCurrentHyperlinkStyling = HyperlinkStyling();
+            mCurrentHyperlinkMenu.clear();
             break;
         }
 
@@ -2214,36 +2284,130 @@ void TBuffer::decodeOSC(const QString& sequence)
                 return;
             }
 
+            // Parse query parameters for enhanced functionality
+            QMap<QString, QString> queryParams = parseUriQueryParameters(rawUrl);
+            
+            // Extract styling parameters
+            if (queryParams.contains("style")) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Found style parameter, applying custom styling";
+#endif
+                parseHyperlinkStyling(queryParams.value("style"), mCurrentHyperlinkStyling);
+            } else {
+                mCurrentHyperlinkStyling = HyperlinkStyling(); // Reset to defaults
+            }
+            
+            // Extract menu parameters
+            if (queryParams.contains("menu")) {
+                QString menuString = queryParams.value("menu");
+                mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
+            } else {
+                mCurrentHyperlinkMenu.clear();
+            }
+            
+            // Extract custom tooltip parameter
+            QString customTooltip;
+            if (queryParams.contains("tooltip")) {
+                customTooltip = queryParams.value("tooltip");
+            }
+            
+            // Remove styling/menu/tooltip query parameters from URL for command processing
+            QString baseUrl = rawUrl;
+            QMap<QString, QString> allParams = parseUriQueryParameters(rawUrl);
+            
+            // For web URLs, preserve original parameters except our special ones
+            if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("ftp://")) {
+                // Remove our special parameters
+                allParams.remove("style");
+                allParams.remove("menu");
+                allParams.remove("tooltip");
+                
+                // Rebuild URL with only non-special parameters
+                int queryStart = baseUrl.indexOf('?');
+                if (queryStart != -1) {
+                    baseUrl = baseUrl.left(queryStart);
+                }
+                
+                // Only append parameters if there are any left
+                if (!allParams.isEmpty()) {
+                    baseUrl = appendQueryParameters(baseUrl, allParams);
+                }
+            } else {
+                // For send: and prompt: commands, remove all query parameters
+                int queryStart = baseUrl.indexOf('?');
+                if (queryStart != -1) {
+                    baseUrl = baseUrl.left(queryStart);
+                }
+            }
+
             QStringList command;
             QStringList hint;
 
-            if (rawUrl.startsWith("send:")) {
-                QString innerCommand = QUrl::fromPercentEncoding(rawUrl.mid(5).toUtf8());
+            if (baseUrl.startsWith("send:")) {
+                QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
                 command = { qsl("send([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
                 mCurrentHyperlinkUrl = innerCommand;
-            } else if (rawUrl.startsWith("prompt:")) {
-                QString innerCommand = QUrl::fromPercentEncoding(rawUrl.mid(7).toUtf8());
+            } else if (baseUrl.startsWith("prompt:")) {
+                QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
                 command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
                 mCurrentHyperlinkUrl = innerCommand;
             } else {
-                QUrl qurl(rawUrl);
+                QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
                 if (scheme == "http" || scheme == "https" || scheme == "ftp") {
-                    command = { qsl("openUrl([[%1]])").arg(rawUrl) };
-                    hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), rawUrl) };
-                    mCurrentHyperlinkUrl = rawUrl;
+                    command = { qsl("openUrl([[%1]])").arg(baseUrl) };
+                    hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl) };
+                    mCurrentHyperlinkUrl = baseUrl;
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
                 }
             }
 
+            // Handle menu functionality by extending commands and hints
+            if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 2) {
+                QStringList menuCommands = command; // Start with main command
+                QStringList menuHints = hint; // Start with main hint
+                
+                // Add a special tooltip hint for menu links
+                // Use custom tooltip if provided, otherwise use default
+                QString tooltipHint = customTooltip.isEmpty() ? QObject::tr("Right-click for menu") : customTooltip;
+                menuHints.prepend(tooltipHint);
+                
+                // Add menu items in pairs (label, command)
+                for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
+                    QString menuLabel = mCurrentHyperlinkMenu[i];
+                    QString menuCommand = mCurrentHyperlinkMenu[i + 1];
+                    
+                    // Determine command type based on prefix
+                    if (menuCommand.startsWith("send:")) {
+                        QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
+                        menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
+                        menuHints.append(qsl("%1: %2").arg(QObject::tr("Send"), innerCommand));
+                    } else if (menuCommand.startsWith("prompt:")) {
+                        QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
+                        menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
+                        menuHints.append(qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand));
+                    } else {
+                        // Treat as direct command
+                        menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
+                        menuHints.append(menuLabel);
+                    }
+                }
+                
+                command = menuCommands;
+                hint = menuHints;
+            }
+
             mCurrentHyperlinkCommand = command;
             mCurrentHyperlinkHint = hint;
             mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug().noquote() << "[OSC8] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
+#endif
             mHyperlinkActive = true;
         }
         break;
@@ -2251,6 +2415,265 @@ void TBuffer::decodeOSC(const QString& sequence)
     default:
         qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Unhandled <OSC>?...<ST> code, Mudlet will ignore it.";
     }
+}
+
+QString TBuffer::appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters)
+{
+    if (parameters.isEmpty()) {
+        return uri;
+    }
+    
+    QString result = uri;
+    bool hasExistingParams = uri.contains('?');
+    QString separator = hasExistingParams ? "&" : "?";
+    
+    QStringList paramStrings;
+    for (auto it = parameters.constBegin(); it != parameters.constEnd(); ++it) {
+        QString key = QUrl::toPercentEncoding(it.key());
+        QString value = QUrl::toPercentEncoding(it.value());
+        paramStrings.append(qsl("%1=%2").arg(key, value));
+    }
+    
+    if (!paramStrings.isEmpty()) {
+        result += separator + paramStrings.join("&");
+    }
+    
+    return result;
+}
+
+QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri)
+{
+    QMap<QString, QString> parameters;
+    
+    // Find the query string part after '?'
+    int queryStart = uri.indexOf('?');
+    if (queryStart == -1) {
+        return parameters; // No query parameters
+    }
+    
+    QString queryString = uri.mid(queryStart + 1);
+    
+    // Decode the query string first, since the server percent-encodes the entire URL
+    QString decodedQueryString = QUrl::fromPercentEncoding(queryString.toUtf8());
+    
+    // Split by '&' to get individual parameter pairs
+    QStringList paramPairs = decodedQueryString.split('&', Qt::SkipEmptyParts);
+    
+    for (const QString& pair : paramPairs) {
+        int equalPos = pair.indexOf('=');
+        if (equalPos == -1) {
+            // Parameter without value - no additional decoding needed since we already decoded the query string
+            parameters.insert(pair, QString());
+        } else {
+            // Parameter with value - no additional decoding needed since we already decoded the query string
+            QString key = pair.left(equalPos);
+            QString value = pair.mid(equalPos + 1);
+            parameters.insert(key, value);
+        }
+    }
+    
+    return parameters;
+}
+
+void TBuffer::parseHyperlinkStyling(const QString& styleString, HyperlinkStyling& styling)
+{
+    qDebug() << "[OSC8] parseHyperlinkStyling called with styleString:" << styleString;
+    
+    // Reset styling to defaults
+    styling = HyperlinkStyling();
+    
+    // Parse CSS-like style string: "property:value;property:value"
+    QStringList stylePairs = styleString.split(';', Qt::SkipEmptyParts);
+    
+    bool hasAnyCustomStyling = false;
+    bool textDecorationExplicitlySet = false;
+    
+    for (const QString& pair : stylePairs) {
+        QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
+        if (propertyValue.size() != 2) {
+            continue; // Skip malformed property
+        }
+        
+        QString property = propertyValue[0].trimmed().toLower();
+        QString value = propertyValue[1].trimmed();
+        
+        if (property == "color") {
+            QColor color = parseColorValue(value);
+            if (color.isValid()) {
+                styling.foregroundColor = color;
+                styling.hasForegroundColor = true;
+                hasAnyCustomStyling = true;
+            }
+        } else if (property == "background-color") {
+            QColor color = parseColorValue(value);
+            if (color.isValid()) {
+                styling.backgroundColor = color;
+                styling.hasBackgroundColor = true;
+                hasAnyCustomStyling = true;
+            }
+        } else if (property == "font-weight") {
+            styling.isBold = (value.toLower() == "bold");
+            hasAnyCustomStyling = true;
+        } else if (property == "font-style") {
+            styling.isItalic = (value.toLower() == "italic");
+            hasAnyCustomStyling = true;
+        } else if (property == "text-decoration") {
+            // Handle text-decoration with optional style: "underline", "underline wavy", "overline", "line-through", "none"
+            // Can also handle multiple values: "underline overline", "underline wavy red"
+            QStringList decorationParts = value.toLower().split(' ', Qt::SkipEmptyParts);
+            
+            // Reset decoration flags when text-decoration is explicitly set
+            styling.isUnderlined = false;
+            styling.isOverlined = false;
+            styling.isStrikeOut = false;
+            styling.underlineStyle = HyperlinkStyling::UnderlineNone;
+            
+            for (const QString& part : decorationParts) {
+                if (part == "underline") {
+                    styling.isUnderlined = true;
+                    styling.underlineStyle = HyperlinkStyling::UnderlineSolid;
+                } else if (part == "overline") {
+                    styling.isOverlined = true;
+                } else if (part == "line-through") {
+                    styling.isStrikeOut = true;
+                } else if (part == "none") {
+                    styling.isUnderlined = false;
+                    styling.isOverlined = false;
+                    styling.isStrikeOut = false;
+                    styling.underlineStyle = HyperlinkStyling::UnderlineNone;
+                } else if (part == "wavy" && styling.isUnderlined) {
+                    styling.underlineStyle = HyperlinkStyling::UnderlineWavy;
+                } else if (part == "dotted" && styling.isUnderlined) {
+                    styling.underlineStyle = HyperlinkStyling::UnderlineDotted;
+                } else if (part == "dashed" && styling.isUnderlined) {
+                    styling.underlineStyle = HyperlinkStyling::UnderlineDashed;
+                } else if (part == "solid" && styling.isUnderlined) {
+                    styling.underlineStyle = HyperlinkStyling::UnderlineSolid;
+                } else {
+                    // Check if it's a color for the decoration
+                    QColor decorationColor = parseColorValue(part);
+                    if (decorationColor.isValid()) {
+                        if (styling.isUnderlined) {
+                            styling.underlineColor = decorationColor;
+                            styling.hasUnderlineColor = true;
+#if defined(DEBUG_OSC_PROCESSING)
+                            qDebug() << "[OSC8] Set underline color to" << decorationColor.name();
+#endif
+                        } else if (styling.isOverlined) {
+                            styling.overlineColor = decorationColor;
+                            styling.hasOverlineColor = true;
+#if defined(DEBUG_OSC_PROCESSING)
+                            qDebug() << "[OSC8] Set overline color to" << decorationColor.name();
+#endif
+                        } else if (styling.isStrikeOut) {
+                            styling.strikeoutColor = decorationColor;
+                            styling.hasStrikeoutColor = true;
+#if defined(DEBUG_OSC_PROCESSING)
+                            qDebug() << "[OSC8] Set strikeout color to" << decorationColor.name();
+#endif
+                        }
+                    }
+                }
+            }
+            textDecorationExplicitlySet = true;
+            hasAnyCustomStyling = true;
+        } else if (property == "text-decoration-line") {
+            // CSS3 specific property for decoration lines
+            // Reset decoration flags when text-decoration-line is explicitly set
+            styling.isUnderlined = false;
+            styling.isOverlined = false;
+            styling.isStrikeOut = false;
+            
+            QStringList decorations = value.toLower().split(' ', Qt::SkipEmptyParts);
+            for (const QString& decoration : decorations) {
+                if (decoration == "underline") {
+                    styling.isUnderlined = true;
+                } else if (decoration == "overline") {
+                    styling.isOverlined = true;
+                } else if (decoration == "line-through") {
+                    styling.isStrikeOut = true;
+                } else if (decoration == "none") {
+                    styling.isUnderlined = false;
+                    styling.isOverlined = false;
+                    styling.isStrikeOut = false;
+                }
+            }
+            textDecorationExplicitlySet = true;
+            hasAnyCustomStyling = true;
+        } else if (property == "text-decoration-style") {
+            // CSS3 specific property for decoration style
+            QString decorationStyle = value.toLower();
+            if (decorationStyle == "wavy") {
+                styling.underlineStyle = HyperlinkStyling::UnderlineWavy;
+            } else if (decorationStyle == "dotted") {
+                styling.underlineStyle = HyperlinkStyling::UnderlineDotted;
+            } else if (decorationStyle == "dashed") {
+                styling.underlineStyle = HyperlinkStyling::UnderlineDashed;
+            } else if (decorationStyle == "solid") {
+                styling.underlineStyle = HyperlinkStyling::UnderlineSolid;
+            }
+            hasAnyCustomStyling = true;
+        } else if (property == "text-decoration-color") {
+            // CSS3 specific property for decoration color
+            QColor decorationColor = parseColorValue(value);
+            if (decorationColor.isValid()) {
+                // Store the color for all decoration types - we'll apply to active decorations later
+                styling.underlineColor = decorationColor;
+                styling.hasUnderlineColor = true;
+                styling.overlineColor = decorationColor;
+                styling.hasOverlineColor = true;
+                styling.strikeoutColor = decorationColor;
+                styling.hasStrikeoutColor = true;
+            }
+            hasAnyCustomStyling = true;
+        }
+    }
+    
+    // If custom styling was provided, mark it and disable default underline if text-decoration wasn't explicitly set
+    if (hasAnyCustomStyling) {
+        styling.hasCustomStyling = true;
+        // Only disable default underline if text-decoration wasn't explicitly specified
+        if (!textDecorationExplicitlySet) {
+            styling.isUnderlined = false;
+            styling.underlineStyle = HyperlinkStyling::UnderlineNone;
+        }
+    }
+}
+
+QColor TBuffer::parseColorValue(const QString& value)
+{
+    QString cleanValue = value.trimmed().toLower();
+    
+    // Handle hex colors: #rrggbb or #rgb
+    if (cleanValue.startsWith('#')) {
+        QColor color(cleanValue);
+        if (color.isValid()) {
+            return color;
+        }
+    }
+    
+    // Handle named colors
+    QColor namedColor(cleanValue);
+    if (namedColor.isValid()) {
+        return namedColor;
+    }
+    
+    // Handle rgb() format: rgb(255, 0, 0)
+    if (cleanValue.startsWith("rgb(") && cleanValue.endsWith(')')) {
+        QString rgbContent = cleanValue.mid(4, cleanValue.length() - 5);
+        QStringList components = rgbContent.split(',');
+        if (components.size() == 3) {
+            bool ok1, ok2, ok3;
+            int r = components[0].trimmed().toInt(&ok1);
+            int g = components[1].trimmed().toInt(&ok2);
+            int b = components[2].trimmed().toInt(&ok3);
+            if (ok1 && ok2 && ok3 && r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+                return QColor(r, g, b);
+            }
+        }
+    }
+    
+    return QColor(); // Invalid color
 }
 
 void TBuffer::resetColors()
@@ -2334,6 +2757,16 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (sub_end < 0) {
         return;
     }
+    
+    // Check for OSC 8 test trigger phrase (secret phrase from StickMUD)
+    if (text.contains("!test-osc8-hyperlinks")) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Trigger phrase detected, injecting test sequences";
+#endif
+        injectOSC8TestSequences();
+        return; // Don't display the trigger phrase itself
+    }
+    
     int lastLine = buffer.size() - 1;
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
@@ -4323,4 +4756,95 @@ void TBuffer::clearSearchHighlights()
             character.mFlags &= ~TChar::AttributeFlag::Found;
         }
     }
+}
+
+void TBuffer::injectOSC8TestSequences()
+{
+    // Inject comprehensive OSC 8 test sequences for testing hyperlink functionality
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] injectOSC8TestSequences() called - about to inject comprehensive test sequences";
+#endif
+
+    QString testOutput = "\n=== OSC 8 Hyperlink Test Suite ===\n\n";
+    
+    // Test 1: Basic send commands
+    testOutput += "1. Basic Commands (send:command):\n";
+    testOutput += "\x1b]8;;send:look\x1b\\[look]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:inventory\x1b\\[inv]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:who\x1b\\[who]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 2: Prompt commands  
+    testOutput += "2. Prompt Commands (prompt:command):\n";
+    testOutput += "\x1b]8;;prompt:say Hello!\x1b\\[say hello]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;prompt:tell player \x1b\\[tell]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 3: Web URLs
+    testOutput += "3. Web URLs (url?key=val):\n";
+    testOutput += "\x1b]8;;https://www.mudlet.org\x1b\\[Mudlet]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC8\x1b\\[OSC8]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 4: Styled hyperlinks
+    testOutput += "4. Colored Hyperlinks (send:command?style=color:#rrggbb):\n";
+    testOutput += "\x1b]8;;send:look?style=color:#ff4444\x1b\\[bright red link]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:inventory?style=color:#4488ff\x1b\\[bright blue link]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:who?style=color:#ff8800\x1b\\[bright orange link]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:time?style=color:#44ff44\x1b\\[bright green link]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 5: Background colors
+    testOutput += "5. Background Colors (send:command?style=color:<color>;background-color:#rrggbb):\n";
+    testOutput += "\x1b]8;;send:north?style=color:black;background-color:#ffff00\x1b\\[yellow bg]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:south?style=color:white;background-color:#666666\x1b\\[dark gray bg]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:east?style=color:white;background-color:#ff4444\x1b\\[red bg]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:west?style=color:black;background-color:#44ff44\x1b\\[green bg]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 6: Text decorations
+    testOutput += "6. Text Decorations: (send:command?style=text-decoration:<underline|overline|line-through>)\n";
+    testOutput += "\x1b]8;;send:cast?style=text-decoration:underline\x1b\\[underlined]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:cast?style=text-decoration:overline\x1b\\[overlined]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:cast?style=text-decoration:line-through\x1b\\[strikethrough]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 7: Underline styles
+    testOutput += "7. Underline Styles (send:spell?style=text-decoration:underline <wavy|dotted|dashed>):\n";
+    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline wavy\x1b\\[wavy underline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline dotted\x1b\\[dotted underline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline dashed\x1b\\[dashed underline]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 8: Colored Decorations
+    testOutput += "8. Colored Decorations (send:command?style=text-decoration:underline #rrggbb):\n";
+    testOutput += "\x1b]8;;send:attack?style=text-decoration:underline #ff0000\x1b\\[bright red underline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:defend?style=text-decoration:overline #0066ff\x1b\\[bright blue overline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:flee?style=text-decoration:line-through #00cc00\x1b\\[bright green strikethrough]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:magic?style=text-decoration:underline #ff00ff\x1b\\[bright magenta underline]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 9: Decoration color property
+    testOutput += "9. Decoration Color Property (send:command?style=text-decoration:<underline|overline|line-through>;text-decoration-color:#rrggbb):\n";
+    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline;text-decoration-color:#ff4444\x1b\\[bright red decoration]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:heal?style=text-decoration:overline;text-decoration-color:#4488ff\x1b\\[bright blue decoration]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:cure?style=text-decoration:line-through;text-decoration-color:#44ff44\x1b\\[bright green decoration]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 10: Combined styling
+    testOutput += "10. Combined Styling (send:command?style=color:#rrggbb;background-color:#rrggbb;text-decoration:<underline|overline|line-through> #rrggbb;font-weight:bold):\n";
+    testOutput += "\x1b]8;;send:combo1?style=color:#ffff00;background-color:#000080;text-decoration:underline #ff4444;font-weight:bold\x1b\\[yellow on blue]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:combo2?style=color:#000000;background-color:#ffff00;text-decoration:overline #ff0000;font-weight:bold\x1b\\[black on yellow]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:combo3?style=color:#ffffff;background-color:#cc0000;text-decoration:underline #44ff44\x1b\\[white on red]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 11: Menu support
+    testOutput += "11. Context Menus (send:command?menu=Option 1|send:opt1|Option 2|send:opt2&tooltip=Custom tooltip):\n";
+    testOutput += "\x1b]8;;send:test?menu=Option 1|send:opt1|Option 2|send:opt2|Separator|-|Help|send:help\x1b\\[right-click me]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:custom?menu=Attack|send:attack|Defend|send:defend&tooltip=Custom menu hint\x1b\\[custom tooltip]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:combat?menu=Fireball|send:cast fireball|Heal|send:cast heal&tooltip=Spell menu\x1b\\[spell menu]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 12: Edge cases
+    testOutput += "12. Edge Cases:\n";
+    testOutput += "\x1b]8;;send:empty?\x1b\\[empty style]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:invalid?style=invalid:value\x1b\\[invalid style]\x1b]8;;\x1b\\\n";
+    
+    testOutput += "\n=== End Test Suite ===\n\n";
+    
+    // Process the test output through the normal text processing pipeline
+    std::string testBytes = testOutput.toStdString();
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] About to process test sequences through translateToPlainText, length:" << testBytes.length();
+#endif
+    translateToPlainText(testBytes, true); // Mark as from server
 }
