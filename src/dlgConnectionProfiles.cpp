@@ -41,6 +41,7 @@
 #include <QDir>
 #include <QRandomGenerator>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QTime>
 #include "post_guard.h"
 #include <chrono>
@@ -1541,10 +1542,11 @@ void dlgConnectionProfiles::slot_copyProfile()
         discord_optin_checkBox->setChecked(false);
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
-        // Temporarily disconnect textChanged to avoid triggering save on programmatic setText
-        disconnect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
-        character_password_entry->setText(oldPassword);
-        connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
+        // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+        {
+            const QSignalBlocker blocker(character_password_entry);
+            character_password_entry->setText(oldPassword);
+        }
         
         if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
             writeSecurePassword(profile_name, oldPassword);
@@ -2289,10 +2291,11 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 
                     if (success) {
                         // Keychain operation succeeded - set the password (even if empty)
-                        // Temporarily disconnect textChanged to avoid triggering save on programmatic setText
-                        disconnect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
-                        character_password_entry->setText(retrievedPassword);
-                        connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
+                        // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+                        {
+                            const QSignalBlocker blocker(character_password_entry);
+                            character_password_entry->setText(retrievedPassword);
+                        }
                         
                         if (retrievedPassword.isEmpty()) {
                             qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
@@ -2352,22 +2355,21 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
     const QString password = settings.value(qsl("password"), QString()).toString();
     const QString oldPassword = settings.value(qsl("login"), QString()).toString();
 
-    // Temporarily disconnect textChanged to avoid triggering save on programmatic setText
-    disconnect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
-    
-    if (!password.isEmpty()) {
-        character_password_entry->setText(password);
-    } else if (!oldPassword.isEmpty()) {
-        // Migrate old password
-        character_password_entry->setText(oldPassword);
-        settings.setValue(qsl("password"), oldPassword);
-        settings.remove(qsl("login"));
-    } else {
-        character_password_entry->setText(QString());
+    // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+    {
+        const QSignalBlocker blocker(character_password_entry);
+        
+        if (!password.isEmpty()) {
+            character_password_entry->setText(password);
+        } else if (!oldPassword.isEmpty()) {
+            // Migrate old password
+            character_password_entry->setText(oldPassword);
+            settings.setValue(qsl("password"), oldPassword);
+            settings.remove(qsl("login"));
+        } else {
+            character_password_entry->setText(QString());
+        }
     }
-    
-    // Reconnect the signal
-    connect(character_password_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_passwordTextChanged);
 
     settings.endGroup();
 }

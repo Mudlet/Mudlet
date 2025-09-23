@@ -54,7 +54,7 @@ CredentialManager::CredentialManager(QObject* parent)
 CredentialManager::~CredentialManager()
 {
     // Set destruction flag to prevent any new operations or callbacks
-    mIsDestroying = true;
+    mShuttingDown = true;
     
     // During destruction, we should NOT call callbacks as they may reference
     // objects that are being destroyed. Instead, just clean up without callbacks.
@@ -87,7 +87,7 @@ void CredentialManager::cleanupTimeout()
         mTimeoutTimer->stop();
         
         // If we're destroying or shutting down, avoid disconnect calls that might crash
-        if (!mIsDestroying && !QCoreApplication::closingDown()) {
+        if (!mShuttingDown && !QCoreApplication::closingDown()) {
             // Safe to disconnect during normal operation
             mTimeoutTimer->disconnect();
         }
@@ -119,7 +119,7 @@ void CredentialManager::cleanupCurrentOperation()
     
     if (mCurrentJob) {
         // If we're destroying or shutting down, avoid disconnect calls that might crash
-        if (!mIsDestroying && !QCoreApplication::closingDown()) {
+        if (!mShuttingDown && !QCoreApplication::closingDown()) {
             // Safe to disconnect during normal operation
             mCurrentJob->disconnect();
         }
@@ -142,7 +142,7 @@ void CredentialManager::cleanupCurrentOperation()
 bool CredentialManager::isOperationValid() const
 {
     // Check if we're being destroyed
-    if (mIsDestroying) {
+    if (mShuttingDown) {
         qDebug() << "CredentialManager: Operation invalid - object being destroyed";
         return false;
     }
