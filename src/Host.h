@@ -589,8 +589,7 @@ public:
     // The first argument to QDateTime::toString(...) to generate a date/time
     // dependent filename unless it is empty in which case the above value is
     // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" has been
-    // changed to "yyyy-MM-dd#HH-mm-ss" and is set as a default in the
-    // constructor:
+    // changed to "yyyy-MM-dd#HH-mm-ss" as we always want a 24-hour clock.
     QString mLogFileNameFormat = QLatin1String("yyyy-MM-dd#HH-mm-ss");
 
     bool mResetProfile = false;
