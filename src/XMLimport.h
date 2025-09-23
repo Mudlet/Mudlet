@@ -125,8 +125,8 @@ private:
     bool gotScript = false;
     int module = 0;
     int mMaxRoomId = 0;
-    quint8 mVersionMajor = 1;
-    quint16 mVersionMinor = 0; // Cannot be a quint8 as that only allows x.255 for the decimal
+    quint8 mVersionMajor = 1; // 0 to 255
+    quint16 mVersionMinor = 0; // 0 to 999 for 3 digit decimal value. Cannot be a quint8 as that only allows x.255 for the decimal
 };
 
 #endif // MUDLET_XMLEXPORT_H
