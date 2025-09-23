@@ -283,7 +283,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mDoubleClickIgnore.insert('\'');
 
     // search engine load entries
-    mSearchEngineData = QMap<QString, QString>({{"Bing", "https://www.bing.com/search?q="}, {"DuckDuckGo", "https://duckduckgo.com/?q="}, {"Google", "https://www.google.com/search?q="}});
+    // clang-format off
+    mSearchEngineData = QMap<QString, QString>(
+        {
+            {"Bing",       "https://www.bing.com/search?q="},
+            {"DuckDuckGo", "https://duckduckgo.com/?q="},
+            {"Google",     "https://www.google.com/search?q="}
+        });
+    // clang-format on
 
     // These details are filled in by the dlgConnectionProfile class when that
     // is used to select a profile however when the profile is auto-loaded or
