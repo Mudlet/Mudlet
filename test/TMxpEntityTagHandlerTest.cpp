@@ -196,6 +196,56 @@ private slots:
         QCOMPARE(stub.mHints.size(), 1);
         QCOMPARE(stub.mHints[0], "examine");
     }
+    void testParserDoesNotFreezeOnAmpersand_data() {
+        QTest::addColumn<QString>("messageWithAmpersand");
+
+        QTest::newRow("no amp") << "abc";
+        QTest::newRow("solo amp") << "&\n";
+        QTest::newRow("amp followed by space") << "& followed by space\n";
+        QTest::newRow("amp at start no semicolon") << "&start\n";
+        QTest::newRow("amp + newline") << "line with &\nnext line\n";
+        QTest::newRow("amp + numbers") << "version &123;\n";
+        QTest::newRow("amp + special chars") << "weird &entity-._#;\n";
+        QTest::newRow("multiple consecutive amps") << "text &&&& more text\n";
+        QTest::newRow("only amps") << "&&&&\n";
+        QTest::newRow("amp + emoji") << "smile &😊;\n";
+    }
+
+    void testParserDoesNotFreezeOnAmpersand() {
+
+        TMxpStubClient          stub;
+        TMxpProcessor           mxpProcessor(&stub);
+        TMxpProcessingResult    lastResult = HANDLER_FALL_THROUGH;
+        QFETCH(QString, messageWithAmpersand);
+
+        for (char c : messageWithAmpersand.toStdString()) {
+            lastResult = mxpProcessor.processMxpInput(c, true);
+        }
+
+        QVERIFY(lastResult != HANDLER_NEXT_CHAR);
+    }
+
+    void testParserDoesNotFreezeOnUnescapedTagStart_data()
+    {
+        QTest::addColumn<QString>("input_string");
+
+        QTest::newRow("starts_with_less_than") << "<test<!EN ob \"lamp\">";
+        QTest::newRow("less_than_second_char") << "a<test<!EN ob \"lamp\">";
+        QTest::newRow("multiple_less_than_before_valid_tag") << "<<<randomtext<!EN ob \"lamp\">";
+    }
+
+    void testParserDoesNotFreezeOnUnescapedTagStart() {
+
+        TMxpStubClient  stub;
+        TMxpProcessor   mxpProcessor(&stub);
+        QFETCH(QString, input_string);
+
+        for (char c : input_string.toStdString()) {
+            mxpProcessor.processMxpInput(c, true);
+        }
+        QCOMPARE(mxpProcessor.getMxpTagProcessor().getEntityResolver().getResolution("&ob;"), "lamp");
+    }
+
 };
 
 #include "TMxpEntityTagHandlerTest.moc"
