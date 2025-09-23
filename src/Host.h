@@ -938,7 +938,7 @@ private:
     QColor mPlayerRoomInnerColor{Qt::white};
     // Percentage of the room size (actually width) for the outer diameter of
     // the circular marking, integer percentage clamped in the preferences
-    // between 200 and 50 - default 120:
+    // between 200 and 50:
     quint8 mPlayerRoomOuterDiameterPercentage = 120;
     // Percentage of the outer size for the inner diameter of the circular
     // marking, integer percentage clamped in the preferences between 83 and 0,
