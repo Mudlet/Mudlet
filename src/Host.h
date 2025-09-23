@@ -941,9 +941,8 @@ private:
     // between 200 and 50:
     quint8 mPlayerRoomOuterDiameterPercentage = 120;
     // Percentage of the outer size for the inner diameter of the circular
-    // marking, integer percentage clamped in the preferences between 83 and 0,
-    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
-    // one):
+    // marking, integer percentage clamped in the preferences between 83 and 0.
+    // NOT USED FOR "Original" style marking (the 0'th one):
     quint8 mPlayerRoomInnerDiameterPercentage = 70;
     // Whether the TTextEditor class should immediately report to debug output
     // any dodgy codepoints that it has problems with - if false it only reports
