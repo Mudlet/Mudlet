@@ -124,8 +124,11 @@ void CredentialManager::cleanupCurrentOperation()
             mCurrentJob->disconnect();
         }
         
-        // Always safe to delete later, Qt handles this properly during shutdown
-        mCurrentJob->deleteLater();
+        // Check if the job is still valid before calling deleteLater
+        if (mCurrentJob->thread() != nullptr) {
+            // Only call deleteLater if the object is still valid
+            mCurrentJob->deleteLater();
+        }
         mCurrentJob = nullptr;
     }
     
@@ -619,6 +622,9 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                 
                 qDebug() << "CredentialManager: Checking for legacy keychain format for profile" << profileName;
                 
+                // Capture the error string now while readJob is still valid
+                QString keychainError = readJob->errorString();
+                
                 // Check legacy keychain format asynchronously
                 auto* legacyReadJob = new QKeychain::ReadPasswordJob("Mudlet profile", this);
                 legacyReadJob->setKey(profileName);
@@ -628,7 +634,7 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                 auto originalCallback = mCurrentRetrievalCallback;
                 mCurrentRetrievalCallback = nullptr;
                 
-                connect(legacyReadJob, &QKeychain::ReadPasswordJob::finished, this, [this, legacyReadJob, profileName, service, account, originalCallback, readJob]() {
+                connect(legacyReadJob, &QKeychain::ReadPasswordJob::finished, this, [this, legacyReadJob, profileName, service, account, originalCallback, keychainError]() {
                     bool legacyFound = (legacyReadJob->error() == QKeychain::NoError);
                     QString legacyPassword = legacyFound ? legacyReadJob->textData() : QString();
                     
@@ -684,13 +690,13 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                         // No legacy password, try file storage
                         QString filePassword = retrieveCredentialFromFile(service, account);
                         bool fileSuccess = !filePassword.isNull();
-                        QString finalError = fileSuccess ? QString() : qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(readJob->errorString());
+                        QString finalError = fileSuccess ? QString() : qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(keychainError);
                         
                         if (fileSuccess) {
                             qDebug() << "CredentialManager: Retrieved password from encrypted file storage";
                         }
                         
-                        if (originalCallback && isOperationValid()) {
+                        if (originalCallback) {
                             originalCallback(fileSuccess, filePassword, finalError);
                         }
                     }
