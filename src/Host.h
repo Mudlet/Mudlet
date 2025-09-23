@@ -710,7 +710,7 @@ public:
 
     double mLineSize = 10.0;
     double mRoomSize = 0.5;
-    QSet<QString> mMapInfoContributors{QStringLiteral("Short")};
+    QSet<QString> mMapInfoContributors{qsl("Short")};
     bool mBubbleMode = false;
     bool mMapViewOnly = true;
     bool mShowRoomID = false;
