@@ -1,1 +1,1 @@
-../.ai/ai-instructions.md
+../docs/ai-instructions.md
