@@ -124,7 +124,7 @@ private:
     void deleteLegacyKeychainEntry(const QString& profileName);
     
     // Current operation state
-    QKeychain::Job* mCurrentJob;
+    QPointer<QKeychain::Job> mCurrentJob;
     QTimer* mTimeoutTimer;
     CredentialCallback mCurrentCallback;
     CredentialRetrievalCallback mCurrentRetrievalCallback;

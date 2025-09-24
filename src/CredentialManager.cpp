@@ -116,19 +116,15 @@ void CredentialManager::handleTimeout()
 void CredentialManager::cleanupCurrentOperation()
 {
     cleanupTimeout();
-    
+
     if (mCurrentJob) {
         // If we're destroying or shutting down, avoid disconnect calls that might crash
         if (!mShuttingDown && !QCoreApplication::closingDown()) {
             // Safe to disconnect during normal operation
             mCurrentJob->disconnect();
         }
-        
-        // Check if the job is still valid before calling deleteLater
-        if (mCurrentJob->thread() != nullptr) {
-            // Only call deleteLater if the object is still valid
-            mCurrentJob->deleteLater();
-        }
+
+        mCurrentJob->deleteLater();
         mCurrentJob = nullptr;
     }
     
