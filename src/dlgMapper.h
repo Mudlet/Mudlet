@@ -69,11 +69,11 @@ public slots:
     void slot_setMapperPanelVisible(bool panelVisible);
     void slot_roomSize(int size);
     void slot_exitSize(int size);
-    void slot_setRoomSize(int size);
-    void slot_setExitSize(int size);
     void slot_setShowRoomIds(bool showRoomIds);
     void slot_updateInfoContributors();
     void slot_switchArea(const int);
+    void slot_setupMapperMenu();
+    void slot_toggleUpperLowerLevels(bool enabled);
     
     static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
                             int roomID, int displayAreaId, int selectionSize, QColor& infoColor,

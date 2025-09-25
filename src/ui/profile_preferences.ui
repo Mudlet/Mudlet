@@ -2489,19 +2489,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_drawUpperLowerLevels">
-            <property name="toolTip">
-             <string>&lt;p&gt;When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Draw rooms on upper and lower levels</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
           <item row="3" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_mapSymbolsFont">
             <property name="text">
@@ -2523,6 +2510,70 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QPushButton" name="pushButton_showGlyphUsage">
             <property name="text">
              <string>Show symbol usage...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" alignment="Qt::AlignmentFlag::AlignRight">
+           <widget class="QLabel" name="label_roomSize">
+            <property name="text">
+             <string>Room size:</string>
+            </property>
+            <property name="buddy">
+             <cstring>spinBox_roomSize</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
+           <widget class="QSpinBox" name="spinBox_roomSize">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>11</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0" alignment="Qt::AlignmentFlag::AlignRight">
+           <widget class="QLabel" name="label_exitSize">
+            <property name="text">
+             <string>Exit size:</string>
+            </property>
+            <property name="buddy">
+             <cstring>spinBox_exitSize</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
+           <widget class="QSpinBox" name="spinBox_exitSize">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="minimum">
+             <number>2</number>
+            </property>
+            <property name="maximum">
+             <number>20</number>
+            </property>
+            <property name="value">
+             <number>7</number>
             </property>
            </widget>
           </item>

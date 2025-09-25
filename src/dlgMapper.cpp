@@ -28,6 +28,7 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mapInfoContributorManager.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QElapsedTimer>
@@ -78,8 +79,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     slot_toggleRoundRooms(mpHost->mBubbleMode);
     widget_3DControls->setVisible(false);
     widget_2DControls->setVisible(true);
-    spinBox_roomSize->setValue(mpHost->mRoomSize * 10);
-    spinBox_exitSize->setValue(mpHost->mLineSize);
 
     checkBox_showRoomIds->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
@@ -88,15 +87,13 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     checkBox_showRoomNames->setChecked(mpMap->getRoomNamesShown());
 
     widget_panel->setVisible(mpHost->mShowPanel);
-    connect(checkBox_roundRooms, &QAbstractButton::clicked, this, &dlgMapper::slot_toggleRoundRooms);
     connect(toolButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
     connect(toolButton_shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
     connect(toolButton_shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftLeft);
     connect(toolButton_shiftRight, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftRight);
     connect(toolButton_shiftUp, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftUp);
     connect(toolButton_shiftDown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftDown);
-    connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_exitSize);
-    connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
+    connect(toolButton_mapperMenu, &QToolButton::clicked, this, &dlgMapper::slot_setupMapperMenu);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 #if defined(INCLUDE_3DMAPPER)
@@ -316,17 +313,6 @@ void dlgMapper::slot_exitSize(int size)
     mp2dMap->update();
 }
 
-void dlgMapper::slot_setRoomSize(int size)
-{
-    dlgMapper::slot_roomSize(size);
-    spinBox_roomSize->setValue(size);
-}
-
-void dlgMapper::slot_setExitSize(int size)
-{
-    dlgMapper::slot_exitSize(size);
-    spinBox_exitSize->setValue(size);
-}
 
 void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
 {
@@ -336,9 +322,6 @@ void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
 
 void dlgMapper::slot_toggleRoundRooms(const bool state)
 {
-    if (checkBox_roundRooms->isChecked() != state) {
-        checkBox_roundRooms->setChecked(state);
-    }
     if (mp2dMap->mpHost->mBubbleMode != state) {
         mp2dMap->mpHost->mBubbleMode = state;
     }
@@ -564,4 +547,36 @@ int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffs
                     infoText);
     painter.restore();
     return mapInfoRect.height();
+}
+
+void dlgMapper::slot_setupMapperMenu()
+{
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto* upperLowerLevelsAction = new QAction(tr("Draw rooms on upper and lower levels"), this);
+    upperLowerLevelsAction->setCheckable(true);
+    upperLowerLevelsAction->setChecked(mudlet::self()->mDrawUpperLowerLevels);
+    upperLowerLevelsAction->setToolTip(tr("When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context."));
+
+    connect(upperLowerLevelsAction, &QAction::toggled, this, &dlgMapper::slot_toggleUpperLowerLevels);
+    menu->addAction(upperLowerLevelsAction);
+
+    auto* roundRoomsAction = new QAction(tr("Round rooms"), this);
+    roundRoomsAction->setCheckable(true);
+    roundRoomsAction->setChecked(mpHost->mBubbleMode);
+    roundRoomsAction->setToolTip(tr("When enabled, rooms will be drawn with round corners instead of square corners."));
+
+    connect(roundRoomsAction, &QAction::toggled, this, &dlgMapper::slot_toggleRoundRooms);
+    menu->addAction(roundRoomsAction);
+
+    menu->exec(toolButton_mapperMenu->mapToGlobal(toolButton_mapperMenu->rect().bottomLeft()));
+}
+
+void dlgMapper::slot_toggleUpperLowerLevels(bool enabled)
+{
+    mudlet::self()->mDrawUpperLowerLevels = enabled;
+    if (mp2dMap) {
+        mp2dMap->update();
+    }
 }

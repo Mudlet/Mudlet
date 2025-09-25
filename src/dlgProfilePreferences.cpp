@@ -654,7 +654,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
-    checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
@@ -1066,6 +1065,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
         connect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomOuterDiameter);
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter);
+
+        // Initialize room and exit size controls
+        spinBox_roomSize->setValue(pHost->mRoomSize * 10);
+        spinBox_exitSize->setValue(pHost->mLineSize);
+        connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_roomSizeChanged);
+        connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_exitSizeChanged);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -1414,6 +1419,8 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
     
@@ -1433,7 +1440,6 @@ void dlgProfilePreferences::clearHostDetails()
     mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
-    checkBox_drawUpperLowerLevels->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
@@ -2926,7 +2932,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMNES = mEnableMNES->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
-        mudlet::self()->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
         if (pHost->mpMap) {
             // Need to save the original value in case we change it in the line
             // following this one:
@@ -4681,6 +4686,28 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 {
     if (checkBox_showTabConnectionIndicators->isChecked() != state) {
         checkBox_showTabConnectionIndicators->setChecked(state);
+    }
+}
+
+void dlgProfilePreferences::slot_roomSizeChanged(int size)
+{
+    if (mpHost) {
+        mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(size);
+            mpHost->mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_exitSizeChanged(int size)
+{
+    if (mpHost) {
+        mpHost->mLineSize = size;
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->setExitSize(size);
+            mpHost->mpMap->mpMapper->mp2dMap->update();
+        }
     }
 }
 
