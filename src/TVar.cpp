@@ -37,50 +37,20 @@
  */
 
 TVar::TVar()
-: hidden(false)
-, pKey(nullptr)
-, pValue(nullptr)
-, saved(false)
-, reference(false)
-, parent(nullptr)
-, name(QString())
-, keyType(LUA_TNONE)
-, value(QString())
-, valueType(LUA_TNONE)
-, newKeyType(LUA_TNONE)
-, nName(QString())
 {
 }
 
 TVar::TVar(TVar* p)
-: hidden(false)
-, pKey(nullptr)
-, pValue(nullptr)
-, saved(false)
-, reference(false)
-, parent(p)
-, name(QString())
-, keyType(LUA_TNONE)
-, value(QString())
-, valueType(LUA_TNONE)
-, newKeyType(LUA_TNONE)
-, nName(QString())
+: parent(p)
 {
 }
 
 TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, const int vt)
-: hidden(false)
-, pKey(nullptr)
-, pValue(nullptr)
-, saved(false)
-, reference(false)
-, parent(p)
+: parent(p)
 , name(kName)
 , keyType(kt)
 , value(val)
 , valueType(vt)
-, newKeyType(LUA_TNONE)
-, nName(QString())
 {
 }
 
