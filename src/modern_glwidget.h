@@ -34,6 +34,8 @@
 #include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QMatrix4x4>
+#include <QVector3D>
+#include <QQuaternion>
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
@@ -118,6 +120,7 @@ private:
     QOpenGLBuffer mColorBuffer;
     QOpenGLBuffer mNormalBuffer;
     QOpenGLBuffer mIndexBuffer;
+    QOpenGLBuffer mInstanceBuffer;
     QOpenGLVertexArrayObject mVAO;
     
     // Geometry management
@@ -156,6 +159,8 @@ private:
     // hard coded to be a quarter (would be equivalent to a 2D room size setting
     // of "2.5"):
     float scale = 4;
+    // Room size reduction factor on the z-axis (stacks with scale -> 1/32)
+    float zFlattening = 8;
     int mShowTopLevels = 999999;
     int mShowBottomLevels = 999999;
     int mTargetRoomId = 0;
@@ -180,6 +185,7 @@ private:
     QEasingCurve mEasingCurve;
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0; // Track previous room ID to detect changes
+    int mPreviousAID = 0; // Track previous area ID to detect area changes
 
     // Private methods for modern OpenGL
     void updateMatrices();
@@ -189,6 +195,7 @@ private:
     void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
     void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
     void renderUpDownIndicators(TRoom* pRoom, float x, float y, float z);
+    void renderInOutIndicators(TRoom* pRoom, float x, float y, float z);
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();

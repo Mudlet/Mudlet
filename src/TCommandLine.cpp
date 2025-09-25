@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -182,8 +182,11 @@ bool TCommandLine::event(QEvent* event)
                 mudlet::self()->dactionInputLine->setChecked(false);
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
             }
+
+            mpConsole->mUpperPane->slot_copySelectionToSearchBar();
             mpConsole->mpBufferSearchBox->setFocus();
             mpConsole->mpBufferSearchBox->selectAll();
+
             ke->accept();
             return true;
         }
@@ -245,6 +248,11 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_Tab:
+            if (ke->modifiers() & Qt::AltModifier) {
+                // prevents ALT+TAB system switching auto refocusing to command line
+                return false;
+            }
+
             if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(ke->modifiers() & Qt::ControlModifier)) ||
                 (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (ke->modifiers() & Qt::ControlModifier))) {
                 mpHost->setCaretEnabled(true);
@@ -961,16 +969,16 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
-    for (int i = 0; i < commandList.size(); ++i) {
+    for (QString& command : commandList) {
         if (mType != MainCommandLine && mActionFunction) {
-            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, commandList.at(i));
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
-            mpHost->send(commandList.at(i));
+            mpHost->send(command);
         }
         // send command to your MiniConsole
         if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never){
             // This usage of commandList modifies the content!!!
-            mpConsole->printCommand(commandList[i]);
+            mpConsole->printCommand(command);
         }
     }
 

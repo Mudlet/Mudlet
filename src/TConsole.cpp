@@ -284,9 +284,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     layerCommandLine = new QWidget; //( mpMainFrame );//layer );
     layerCommandLine->setContentsMargins(0, 0, 0, 0);
-    layerCommandLine->setSizePolicy(sizePolicy2);
+    layerCommandLine->setSizePolicy(sizePolicy);
+
     layerCommandLine->setMaximumHeight(31);
     layerCommandLine->setMinimumHeight(31);
+    layerCommandLine->setMinimumWidth(300);
 
     layoutLayer2 = new QHBoxLayout(layerCommandLine);
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
@@ -305,7 +307,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
            mpButtonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
     buttonLayer->setObjectName(qsl("buttonLayer"));
-    auto layoutButtonLayer = new QGridLayout(buttonLayer);
+    auto layoutButtonLayer = new QHBoxLayout(buttonLayer);
     layoutButtonLayer->setObjectName(qsl("layoutButtonLayer"));
     layoutButtonLayer->setContentsMargins(0, 0, 0, 0);
     layoutButtonLayer->setSpacing(0);
@@ -414,11 +416,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
-    mpBufferSearchBox->setSizePolicy(sizePolicy5);
+    mpBufferSearchBox->setSizePolicy(sizePolicy);
     mpBufferSearchBox->setFont(font());
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
-    mpBufferSearchBox->setPlaceholderText("Search ...");
+    //: search bar placeholder text
+    mpBufferSearchBox->setPlaceholderText(tr("Search"));
     QPalette commandLinePalette;
     commandLinePalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     commandLinePalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -473,22 +475,33 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     layoutLayer2->addWidget(mpButtonMainLayer);
-    layoutButtonLayer->addWidget(mpBufferSearchBox, 0, 0, 0, 4);
-    layoutButtonLayer->addWidget(mpBufferSearchUp, 0, 5);
-    layoutButtonLayer->addWidget(mpBufferSearchDown, 0, 6);
-    layoutButtonLayer->addWidget(timeStampButton, 0, 7);
-    layoutButtonLayer->addWidget(replayButton, 0, 8);
-    layoutButtonLayer->addWidget(logButton, 0, 9);
-    layoutButtonLayer->addWidget(emergencyStop, 0, 10);
+    layoutButtonLayer->addWidget(mpBufferSearchBox);
+    layoutButtonLayer->addWidget(mpBufferSearchUp);
+    layoutButtonLayer->addWidget(mpBufferSearchDown);
+    layoutButtonLayer->addWidget(timeStampButton);
+    layoutButtonLayer->addWidget(replayButton);
+    layoutButtonLayer->addWidget(logButton);
+    layoutButtonLayer->addWidget(emergencyStop);
     if (mType == MainConsole) {
         // In fact a whole lot more could be inside this "if"!
-        layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
+        layoutButtonLayer->addWidget(mpLineEdit_networkLatency);
     }
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
     layerCommandLine->setAutoFillBackground(true);
 
-    centralLayout->addWidget(layerCommandLine);
+    commandSplitter = new QSplitter(Qt::Horizontal, this);
+    connect(commandSplitter, &QSplitter::splitterMoved, this, &TConsole::slot_saveCommandSearchSettings);
+    commandSplitter->addWidget(layerCommandLine);
+    commandSplitter->addWidget(mpButtonMainLayer);
+    commandSplitter->setStretchFactor(0, 3); // command line
+    commandSplitter->setStretchFactor(1, 1); // search layer
+
+    commandSplitter->setCollapsible(0, false); // command line cannot collapse
+    commandSplitter->setCollapsible(1, false); // search layer cannot collapse
+
+    centralLayout->addWidget(commandSplitter);
+    restoreCommandSearchSettings();
 
     QList<int> sizeList;
     sizeList << 6 << 2;
@@ -524,16 +537,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpBaseVFrame->layout()->setSpacing(0);
     mpBaseHFrame->layout()->setSpacing(0);
 
-
     buttonLayerSpacer->setMinimumHeight(0);
     buttonLayerSpacer->setMinimumWidth(100);
     buttonLayer->setMaximumHeight(31);
-    //buttonLayer->setMaximumWidth(31);
     buttonLayer->setMinimumWidth(400);
-    buttonLayer->setMaximumWidth(400);
-    mpButtonMainLayer->setMinimumWidth(400);
-    mpButtonMainLayer->setMaximumWidth(400);
-
+    mpButtonMainLayer->setMinimumWidth(150);
     mpButtonMainLayer->setAutoFillBackground(true);
     mpButtonMainLayer->setPalette(commandLinePalette);
 
@@ -2594,4 +2602,32 @@ void TConsole::slot_toggleTimeStamps(const bool state)
     if (mType & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole)) {
         raiseMudletResizeEvent();
     }
+}
+
+void TConsole::slot_saveCommandSearchSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    QSettings* pQSettings = mudlet::getQSettings();
+    if (!pQSettings) {
+        return;
+    }
+
+    pQSettings->setValue("commandSearchSplitterState", commandSplitter->saveState());
+}
+
+void TConsole::restoreCommandSearchSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    QSettings* pQSettings = mudlet::getQSettings();
+    if (!pQSettings) {
+        return;
+    }
+
+    commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
 }
