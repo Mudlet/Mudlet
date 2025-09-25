@@ -41,7 +41,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_top" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -71,7 +71,7 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QWidget" name="widget_5" native="true">
+       <widget class="QWidget" name="widget_topLeft" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -95,7 +95,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QListWidget" name="profiles_tree_widget">
+          <widget class="QListWidget" name="listWidget_profiles">
            <property name="minimumSize">
             <size>
              <width>365</width>
@@ -419,7 +419,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="widget_2" native="true">
+       <widget class="QWidget" name="widget_topRight" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -940,7 +940,7 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>profiles_tree_widget</tabstop>
+  <tabstop>listWidget_profiles</tabstop>
   <tabstop>welcome_message</tabstop>
   <tabstop>profile_name_entry</tabstop>
   <tabstop>host_name_entry</tabstop>

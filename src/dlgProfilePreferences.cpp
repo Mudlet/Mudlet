@@ -4,6 +4,7 @@
  *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -213,6 +214,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                               "will be run.</p>"
                                               "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
                                               "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                            "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                            "<p>This control has three settings:"
+                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                            "encodings of <b>Big5</b>/<b>Big5-HKSCS</b>, <b>GBK</b>, <b>GBK18030</b> or <b>EUC-KR</b> and 'narrow' for all others.</li></ul></p>"
+                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
+                                                            "full support for languages other than English.</i></p>"));
     checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
                                                "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
                                                "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
@@ -405,6 +418,8 @@ void dlgProfilePreferences::disableHostDetails()
 
     groupBox_wrapping->setEnabled(false);
 
+    groupBox_consoleBuffer->setEnabled(false);
+
     groupBox_doubleClick->setEnabled(false);
 
     // Some of groupBox_displayOptions are usable, so must pick out and
@@ -413,6 +428,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
     label_controlCharacterHandling->setEnabled(false);
     comboBox_controlCharacterHandling->setEnabled(false);
 
@@ -531,12 +547,15 @@ void dlgProfilePreferences::enableHostDetails()
 
     groupBox_wrapping->setEnabled(true);
 
+    groupBox_consoleBuffer->setEnabled(true);
+
     groupBox_doubleClick->setEnabled(true);
 
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
     label_controlCharacterHandling->setEnabled(true);
     comboBox_controlCharacterHandling->setEnabled(true);
 
@@ -659,6 +678,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         radioButton_userDictionary_common->setChecked(false);
     }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
@@ -778,6 +798,22 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     wrap_at_spinBox->setValue(pHost->mWrapAt);
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
+
+    console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
+    
+    // Set maximum buffer size based on system capabilities and update tooltip
+    if (pHost->mpConsole) {
+        const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+        console_buffer_size_spinBox->setMaximum(maxBufferSize);
+        checkBox_useMaxBufferSize->setToolTip(tr("<p>Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.</p>").arg(maxBufferSize));
+        
+        // If using max buffer size, disable the spinbox and set it to max
+        if (pHost->getUseMaxConsoleBufferSize()) {
+            console_buffer_size_spinBox->setValue(maxBufferSize);
+            console_buffer_size_spinBox->setEnabled(false);
+        }
+    }
 
     show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
@@ -1098,17 +1134,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 notificationAreaMessageBox->show();
                 //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
 
-                QList<QSslError> const sslErrors = pHost->mTelnet.getSslErrors();
-
-                for (int a = 0; a < sslErrors.count(); a++) {
-                    const QString thisError = qsl("<li>%1</li>").arg(sslErrors.at(a).errorString());
+                for (const QSslError& error : pHost->mTelnet.getSslErrors()) {
+                    const QString thisError = qsl("<li>%1</li>").arg(error.errorString());
                     notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
 
-                    if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
+                    if (error.error() == QSslError::SelfSignedCertificate) {
                         checkBox_self_signed->setStyleSheet(qsl("font-weight: bold; background: yellow"));
                         ssl_issuer_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
                     }
-                    if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
+                    if (error.error() == QSslError::CertificateExpired) {
                         checkBox_expired->setStyleSheet(qsl("font-weight: bold; background: yellow"));
                         ssl_expires_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
                     }
@@ -1249,6 +1283,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
     connect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeLargeAreaExitArrows);
     connect(checkBox_invertMapZoom, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeInvertMapZoom);
+    
+    // Console buffer settings
+    connect(checkBox_useMaxBufferSize, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleUseMaxBufferSize);
 
     //Shortcuts tab
     auto shortcutKeys = mudlet::self()->mpShortcutsManager->iterator();
@@ -1378,6 +1415,9 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
+    
+    // Console buffer settings
+    disconnect(checkBox_useMaxBufferSize, &QCheckBox::toggled, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -2837,6 +2877,30 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mWrapHangingIndentCount = hanging_indent_wrapped_spinBox->value();
+
+        // Save console buffer settings and apply them
+        const bool useMaxBuffer = checkBox_useMaxBufferSize->isChecked();
+        int newBufferSize;
+        
+        if (useMaxBuffer && pHost->mpConsole) {
+            newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+        } else {
+            newBufferSize = console_buffer_size_spinBox->value();
+        }
+        
+        // Calculate batch delete size as 5% of buffer size (minimum 100)
+        const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
+        
+        if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
+            pHost->setConsoleBufferSize(newBufferSize);
+            pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
+            
+            // Apply the new buffer size to the main console
+            if (pHost->mpConsole) {
+                pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
+            }
+        }
+
         pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(show_sent_text_combobox->currentIndex());
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
@@ -3019,7 +3083,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
+        pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
@@ -3200,17 +3264,12 @@ void dlgProfilePreferences::slot_setEncoding(const int newEncodingIndex)
     if (pHost) {
         pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
 
-        // When this was a tri-state checkbox setting we would store the
-        // partially checked setting (only, not the checked or unchecked values)
-        // into the Host class in order to cause the encoding to be checked so
-        // that it would determine what the (bool) Host::mWideAmbigousWidthGlyphs
-        // value should be.
-        // Since the control has been removed we now need to examine the value
-        // stored and if THAT equates to "Qt::PartiallyChecked" then do the same:
-        if (pHost->getWideAmbiguousEAsianGlyphsControlState()  == Qt::PartiallyChecked) {
-            // We are linking the Server encoding to this setting but we only
-            // need to refresh the setting for this if it is set to be automatic
-            // changed as necessary:
+        if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
+            // We are linking the Server encoding to this setting currently
+            // - eventually it would move to the locale/language control when it
+            // goes in, but we only need to change the setting for this if it is
+            // set to be automatic changed as necessary:
+
             pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
         }
     }
@@ -4477,6 +4536,27 @@ void dlgProfilePreferences::slot_changeWrapAt()
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
 }
 
+void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    
+    if (checked) {
+        // When max is enabled, set spinbox to max value and disable it
+        if (pHost->mpConsole) {
+            const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+            console_buffer_size_spinBox->setValue(maxBufferSize);
+        }
+        console_buffer_size_spinBox->setEnabled(false);
+    } else {
+        // When max is disabled, enable the spinbox and set to stored value
+        console_buffer_size_spinBox->setEnabled(true);
+        console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    }
+}
+
 void dlgProfilePreferences::slot_deleteMap()
 {
     Host* pHost = mpHost;
@@ -4599,4 +4679,12 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
     if (checkBox_showTabConnectionIndicators->isChecked() != state) {
         checkBox_showTabConnectionIndicators->setChecked(state);
     }
+}
+
+void dlgProfilePreferences::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit preferencesClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
 }
