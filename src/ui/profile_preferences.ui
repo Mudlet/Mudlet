@@ -2577,7 +2577,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="0" colspan="2">
+          <item row="7" column="0" colspan="2">
            <widget class="QWidget" name="widget_playerRoomStyle" native="true">
             <layout class="QGridLayout" name="gridLayout_widget_playerRoomStyle">
              <property name="leftMargin">
