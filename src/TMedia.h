@@ -41,9 +41,7 @@ using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
 class TMediaPlayer
 {
 public:
-    TMediaPlayer()
-    : mMediaData()
-    {}
+    TMediaPlayer() = default;
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
     : mpHost(pHost),
       mMediaData(mediaData),

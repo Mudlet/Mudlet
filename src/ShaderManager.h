@@ -62,8 +62,8 @@ private:
     bool detectDevelopmentMode();
 
     std::unique_ptr<QOpenGLShaderProgram> mShaderProgram;
-    QFileSystemWatcher* mFileWatcher;
-    QTimer* mReloadTimer;
+    QFileSystemWatcher* mFileWatcher{nullptr};
+    QTimer* mReloadTimer{nullptr};
     
     bool mDevelopmentMode;
     bool mInitialized;
