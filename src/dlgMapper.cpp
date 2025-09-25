@@ -78,13 +78,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     slot_toggleRoundRooms(mpHost->mBubbleMode);
     widget_3DControls->setVisible(false);
-    widget_2DControls->setVisible(true);
-
-    checkBox_showRoomIds->setChecked(mpHost->mShowRoomID);
+    
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
-    checkBox_showRoomNames->setVisible(mpMap->getRoomNamesPresent());
-    checkBox_showRoomNames->setChecked(mpMap->getRoomNamesShown());
 
     widget_panel->setVisible(mpHost->mShowPanel);
     connect(toolButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
@@ -97,19 +93,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 #if defined(INCLUDE_3DMAPPER)
-    connect(pushButton_3D, &QAbstractButton::clicked, this, &dlgMapper::slot_toggle3DView);
+    mIs3DMode = mpHost->mShow3DView;
     if (mpHost->mShow3DView) {
         slot_toggle3DView(true);
     }
-#else
-    pushButton_3D->hide();
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(checkBox_showRoomIds, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
-    connect(checkBox_showRoomNames, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
-#else
-    connect(checkBox_showRoomIds, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
-    connect(checkBox_showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
 #endif
 
     // Explicitly set the font otherwise it changes between the Application and
@@ -123,10 +110,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     // font:
     setFont(qApp->font());
     mpMap->restore16ColorSet();
-    auto menu = new QMenu(this);
-    pushButton_info->setMenu(menu);
     
-    connect(pushButton_exportArea, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_exportAreaToImage);
 
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
@@ -243,7 +227,7 @@ void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
-    pushButton_3D->setDown(is3DMode);
+    mIs3DMode = is3DMode;
     if (glWidget) {
         glWidget->update();
     } else {
@@ -283,21 +267,18 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     glWidget->setVisible(is3DMode);
     if (glWidget->isVisible()) {
         widget_3DControls->setVisible(true);
-        widget_2DControls->setVisible(false);
     } else {
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
             widget_3DControls->setVisible(false);
-            widget_2DControls->setVisible(true);
-        });
+                    });
     }
     mpHost->mShow3DView = is3DMode;
 #else
     Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);
     widget_3DControls->setVisible(false);
-    widget_2DControls->setVisible(true);
-#endif
+    #endif
 }
 
 void dlgMapper::slot_roomSize(int size)
@@ -316,7 +297,6 @@ void dlgMapper::slot_exitSize(int size)
 
 void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
 {
-    checkBox_showRoomIds->setChecked(showRoomIds);
     dlgMapper::slot_toggleShowRoomIDs(showRoomIds ? Qt::Checked : Qt::Unchecked);
 }
 
@@ -365,30 +345,7 @@ void dlgMapper::slot_switchArea(const int index)
 
 void dlgMapper::slot_updateInfoContributors()
 {
-    pushButton_info->menu()->clear();
-    //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
-    auto* clearAction = new QAction(tr("None"), pushButton_info);
-    pushButton_info->menu()->addAction(clearAction);
-    connect(clearAction, &QAction::triggered, this, [=, this]() {
-        for (auto action : pushButton_info->menu()->actions()) {
-            action->setChecked(false);
-        }
-    });
-
-    for (const auto& name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
-        auto* action = new QAction(name, pushButton_info);
-        action->setCheckable(true);
-        action->setChecked(mpHost->mMapInfoContributors.contains(name));
-        connect(action, &QAction::toggled, this, [=, this](bool isToggled) {
-            if (isToggled) {
-                mpHost->mMapInfoContributors.insert(name);
-            } else {
-                mpHost->mMapInfoContributors.remove(name);
-            }
-            mp2dMap->update();
-        });
-        pushButton_info->menu()->addAction(action);
-    }
+    updateInfoMenu();
     mp2dMap->update();
 }
 
@@ -570,6 +527,28 @@ void dlgMapper::slot_setupMapperMenu()
     connect(roundRoomsAction, &QAction::toggled, this, &dlgMapper::slot_toggleRoundRooms);
     menu->addAction(roundRoomsAction);
 
+    auto* showRoomIdsAction = new QAction(tr("Show room IDs"), this);
+    showRoomIdsAction->setCheckable(true);
+    showRoomIdsAction->setChecked(mpHost->mShowRoomID);
+    showRoomIdsAction->setToolTip(tr("When enabled, room IDs will be displayed on the map."));
+
+    connect(showRoomIdsAction, &QAction::toggled, this, &dlgMapper::slot_toggleShowRoomIDsFromMenu);
+    menu->addAction(showRoomIdsAction);
+
+#if defined(INCLUDE_3DMAPPER)
+    auto* show3DMapAction = new QAction(tr("Show map in 3D"), this);
+    show3DMapAction->setCheckable(true);
+    show3DMapAction->setChecked(mIs3DMode);
+    show3DMapAction->setToolTip(tr("When enabled, the map will be displayed in 3D mode."));
+    connect(show3DMapAction, &QAction::toggled, this, &dlgMapper::slot_toggle3DView);
+    menu->addAction(show3DMapAction);
+#endif
+
+    // Add separator and Info submenu
+    menu->addSeparator();
+    mpInfoMenu = menu->addMenu(tr("Info overlays"));
+    updateInfoMenu();
+
     menu->exec(toolButton_mapperMenu->mapToGlobal(toolButton_mapperMenu->rect().bottomLeft()));
 }
 
@@ -578,5 +557,45 @@ void dlgMapper::slot_toggleUpperLowerLevels(bool enabled)
     mudlet::self()->mDrawUpperLowerLevels = enabled;
     if (mp2dMap) {
         mp2dMap->update();
+    }
+}
+
+void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
+{
+    mp2dMap->mShowRoomID = enabled;
+    mp2dMap->mpHost->mShowRoomID = enabled;
+    mp2dMap->update();
+}
+
+void dlgMapper::updateInfoMenu()
+{
+    if (!mpInfoMenu) {
+        return;
+    }
+
+    mpInfoMenu->clear();
+
+    //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
+    auto* clearAction = new QAction(tr("None"), mpInfoMenu);
+    mpInfoMenu->addAction(clearAction);
+    connect(clearAction, &QAction::triggered, this, [=, this]() {
+        for (auto action : mpInfoMenu->actions()) {
+            action->setChecked(false);
+        }
+    });
+
+    for (const auto& name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
+        auto* action = new QAction(name, mpInfoMenu);
+        action->setCheckable(true);
+        action->setChecked(mpHost->mMapInfoContributors.contains(name));
+        connect(action, &QAction::toggled, this, [=, this](bool isToggled) {
+            if (isToggled) {
+                mpHost->mMapInfoContributors.insert(name);
+            } else {
+                mpHost->mMapInfoContributors.remove(name);
+            }
+            mp2dMap->update();
+        });
+        mpInfoMenu->addAction(action);
     }
 }
