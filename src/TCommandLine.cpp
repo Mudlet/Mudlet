@@ -138,6 +138,12 @@ void TCommandLine::processNormalKey(QEvent* event)
 
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
+    // Don't process keybindings if the host is closing down to prevent crashes
+    // when multiple profiles are closed quickly
+    if (mpHost && mpHost->isClosingDown()) {
+        return false;
+    }
+
     if (mpKeyUnit->processDataStream(static_cast<Qt::Key>(keyEvent->key()), static_cast<Qt::KeyboardModifiers>(keyEvent->modifiers()))) {
         keyEvent->accept();
         return true;
@@ -192,7 +198,7 @@ bool TCommandLine::event(QEvent* event)
         }
 
         // Shortcut for keypad keys
-        if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()))) {
+        if ((ke->modifiers() & Qt::KeypadModifier) && mpHost && !mpHost->isClosingDown() && mpKeyUnit->processDataStream(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()))) {
             ke->accept();
             return true;
 
