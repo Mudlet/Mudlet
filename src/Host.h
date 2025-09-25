@@ -527,11 +527,11 @@ public:
     bool mIsProfileLoadingSequence = false;
 
 
-    dlgTriggerEditor* mpEditorDialog;
+    dlgTriggerEditor* mpEditorDialog{nullptr};
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
-    dlgNotepad* mpNotePad;
+    dlgNotepad* mpNotePad{nullptr};
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {

@@ -39,7 +39,6 @@ const QString ROOM_UI_NAMESIZE = qsl("room.ui_nameSize");
 
 TRoomDB::TRoomDB(TMap* pMap)
 : mpMap(pMap)
-, mpTempRoomDeletionSet(nullptr)
 {
     // Ensure the default area is created, the area/areaName items that get
     // created here will get blown away when a map is loaded but that is expected...
