@@ -5623,7 +5623,7 @@ bool mudlet::migratePasswordsToSecureStorage()
     }
 
     if (!anyMigrationNeeded) {
-        qDebug() << "mudlet::migratePasswordsToSecureStorage() INFO - no migration needed.";
+        qDebug() << "mudlet::migratePasswordsToSecureStorage() INFO - no passwords found in profile data files to migrate.";
     }
 
     // Always emit the signal (either immediately or after migrations complete)
