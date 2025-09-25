@@ -35,14 +35,12 @@ bool TEntityHandler::handle(char c, bool resolveCustomEntities)
             mResult = mpEntityResolver.getResolution(mCurrentEntity, resolveCustomEntities, &entityType);
             mIsResolved = true;
             mCurrentEntity.clear();
-        }
-        else if (!isLegalNamedEntityChar) {
+        } else if (!isLegalNamedEntityChar) {
             mResult = mCurrentEntity;
             mIsResolved = true;
             entityType = ENTITY_TYPE_UNKNOWN;
             mCurrentEntity.clear();
-        }
-        else {
+        } else {
             mIsResolved = false;
             entityType = ENTITY_TYPE_UNKNOWN;
         }
