@@ -113,7 +113,7 @@ private:
     QMap<int, TArea*> areas;
     QMap<int, QString> areaNamesMap;
     TMap* mpMap;
-    QSet<int>* mpTempRoomDeletionSet; // Used during bulk room deletion
+    QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
     // Flag to prevent expensive individual cleanup during bulk destruction
     bool mBulkDeletionMode = false;
 

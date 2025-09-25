@@ -65,20 +65,20 @@ public:
     bool isReference();
 
 public:
-    bool hidden;
-    const void* pKey;
-    const void* pValue;
-    bool saved;
+    bool hidden = false;
+    const void* pKey = nullptr;
+    const void* pValue = nullptr;
+    bool saved = false;
 
 private:
-    bool reference;
+    bool reference = false;
     QList<TVar*> children;
-    TVar* parent;
+    TVar* parent = nullptr;
     QString name;
-    int keyType;
+    int keyType = LUA_TNONE;
     QString value;
-    int valueType;
-    int newKeyType;
+    int valueType = LUA_TNONE;
+    int newKeyType = LUA_TNONE;
     QString nName;
 };
 
