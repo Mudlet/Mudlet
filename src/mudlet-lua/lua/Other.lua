@@ -1298,7 +1298,8 @@ function getConfig(...)
     return result
   end
 
-  return oldgetConfig(args[1])
+  -- Pass all arguments to the C++ function to support enhanced API
+  return oldgetConfig(unpack(args))
 end
 
 function openMudletHomeDir()

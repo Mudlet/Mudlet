@@ -31,12 +31,10 @@ class TMediaData;
 class TMxpClient
 {
 protected:
-    TMxpContext* mpContext;
+    TMxpContext* mpContext = nullptr;
 
 public:
-    TMxpClient()
-    : mpContext(nullptr)
-    {}
+    TMxpClient() = default;
 
     virtual void initialize(TMxpContext* context) { mpContext = context; }
 

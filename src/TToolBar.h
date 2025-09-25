@@ -55,13 +55,13 @@ public:
     TAction* mpTAction;
 
 private:
-    bool mVerticalOrientation;
+    bool mVerticalOrientation = false;
     QWidget* mpWidget;
     QPointer<Host> mpHost;
     QString mName;
-    bool mRecordMove;
-    QGridLayout* mpLayout;
-    int mItemCount;
+    bool mRecordMove = false;
+    QGridLayout* mpLayout = nullptr;
+    int mItemCount = 0;
 
 public slots:
     void slot_pressed(bool);

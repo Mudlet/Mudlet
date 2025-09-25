@@ -112,7 +112,7 @@ private:
     QMap<int, TArea*> areas;
     QMap<int, QString> areaNamesMap;
     TMap* mpMap;
-    QSet<int>* mpTempRoomDeletionSet; // Used during bulk room deletion
+    QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
 
     friend class TRoom;
     friend class XMLexport;
