@@ -213,7 +213,7 @@ jobs:
         buildCache: false
 
     - name: (Linux) Install latest Luarocks
-      uses: leafo/gh-actions-luarocks@v5
+      uses: leafo/gh-actions-luarocks@v6
       if: runner.os == 'Linux'
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
