@@ -44,7 +44,6 @@
 #include <QSaveFile>
 #include <QSplitter>
 #include <QVideoWidget>
-#include <QWidget>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -180,13 +179,6 @@ public:
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
-    enum SearchOption {
-        // Unset:
-        SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1
-    };
-    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
-
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
     ~TConsole() override;
@@ -301,8 +293,6 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
-    void setSearchOptions(const SearchOptions);
-    void setF3SearchEnabled(const bool enabled);
     void setProxyForFocus(TCommandLine*);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
     // Raises an event if the number of lines (in the
@@ -394,36 +384,19 @@ public:
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
     QToolButton* replayButton = nullptr;
-    QLineEdit* mpBufferSearchBox = nullptr;
-    QAction* mpAction_searchCaseSensitive = nullptr;
-    QToolButton* mpBufferSearchUp = nullptr;
-    QToolButton* mpBufferSearchDown = nullptr;
-    // The line on which the current search result has been found, or the next
-    // one is to start (currently only for the main console):
-    int mCurrentSearchResult = 0;
-    // Not used:
-    // QList<int> mSearchResults;
-    // The term that is currently being search for (currently only for the main
-    // console):
-    QString mSearchQuery;
     QWidget* mpButtonMainLayer = nullptr;
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
     QVideoWidget* mpVideoWidget = nullptr;
-    QSplitter* commandSplitter = nullptr;
 
 public slots:
-    void slot_searchBufferUp();
-    void slot_searchBufferDown();
     void slot_toggleReplayRecording();
     void slot_stopAllItems(bool);
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
-    void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleTimeStamps(const bool);
-    void slot_saveCommandSearchSettings();
 
 signals:
     void resized(QResizeEvent* event);
@@ -439,23 +412,13 @@ protected:
 
 private slots:
     void slot_adjustAccessibleNames();
-    void slot_clearSearchResults();
-    void focusOnSearchResultAndAnnounce(int searchX, int searchY);
 
 private:
-    void createSearchOptionIcon();
     void raiseFontChangeEvent();
-    void restoreCommandSearchSettings();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
-    SearchOptions mSearchOptions = SearchOptionNone;
-    QAction* mpAction_searchOptions = nullptr;
-    QIcon mIcon_searchOptions;
     bool mScrollingEnabled = true;
-    bool mF3SearchEnabled = false;
-    QPointer<QShortcut> mpSearchNextShortcut;
-    QPointer<QShortcut> mpSearchPrevShortcut;
     // The size of the TConsole in (normal) "character" cells:
     QSize mDimensions;
     // Whether to show (a 13 character by default) timestamp to the left of

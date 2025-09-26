@@ -47,7 +47,225 @@
 #include <QTextCodec>
 #include <QTextStream>
 #include <QPainter>
+#include <QSplitter>
 #include "post_guard.h"
+
+void TMainConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY)
+{
+    mpHost->setCaretEnabled(true);
+    mUpperPane->initializeCaret();
+    moveCursor(searchX, searchY);
+    mUpperPane->setCaretPosition(searchY, searchX);
+    mUpperPane->updateCaret();
+    mUpperPane->setFocusPolicy(Qt::StrongFocus);
+    mUpperPane->setFocusProxy(nullptr);
+    mUpperPane->setFocus();
+    mudlet::self()->announce(buffer.lineBuffer[searchY]);
+}
+
+void TMainConsole::slot_searchBufferUp()
+{
+    if (mpHost->getF3SearchEnabled()) {
+        buffer.clearSearchHighlights();
+    }
+
+    // The search term entry box is one widget that does not pass a mouse press
+    // event up to the main TConsole and thus does not cause the focus to shift
+    // to the profile's tab when in multi-view mode - so add a call to make that
+    // happen:
+    mudlet::self()->activateProfile(mpHost);
+
+    if (mSearchQuery != mpBufferSearchBox->text()) {
+        mSearchQuery = mpBufferSearchBox->text();
+        buffer.clearSearchHighlights();
+        mCurrentSearchResult = buffer.lineBuffer.size();
+    } else {
+        // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
+        mCurrentSearchResult = std::min<qsizetype>(mCurrentSearchResult, buffer.lineBuffer.size());
+    }
+    if (mSearchQuery.isEmpty() || buffer.lineBuffer.empty()) {
+        // Don't try and search for anything if the search term OR the console is empty:
+        return;
+    }
+
+    bool found = false;
+    for (int searchY = mCurrentSearchResult - 1; searchY >= 0; --searchY) {
+        int searchX = -1;
+        do {
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            if (searchX > -1) {
+                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
+                if (mpHost->getF3SearchEnabled()) {
+                    focusOnSearchResultAndAnnounce(searchX, searchY);
+                }
+                found = true;
+            }
+        } while (searchX > -1);
+
+        if (found) {
+            // Scroll to show the match
+            scrollUp(buffer.mCursorY - searchY - 3);
+            mUpperPane->forceUpdate();
+            mCurrentSearchResult = searchY;
+            return;
+        }
+    }
+    print(qsl("%1\n").arg(tr("No search results, sorry!")));
+}
+
+void TMainConsole::slot_searchBufferDown()
+{
+    if (mpHost->getF3SearchEnabled()) {
+        buffer.clearSearchHighlights();
+    }
+    if (mSearchQuery != mpBufferSearchBox->text()) {
+        mSearchQuery = mpBufferSearchBox->text();
+        buffer.clearSearchHighlights();
+        mCurrentSearchResult = -1;
+    }
+    if (mSearchQuery.isEmpty() || buffer.lineBuffer.empty()) {
+        // Don't try and search for anything if the search term OR the console is empty:
+        return;
+    }
+    if (mCurrentSearchResult >= buffer.lineBuffer.size() - 1) {
+        return;
+    }
+
+    bool found = false;
+    for (int searchY = mCurrentSearchResult + 1; searchY < buffer.lineBuffer.size(); ++searchY) {
+        int searchX = -1;
+        do {
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            if (searchX > -1) {
+                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
+                if (mpHost->getF3SearchEnabled()) {
+                    focusOnSearchResultAndAnnounce(searchX, searchY);
+                }
+                found = true;
+            }
+        } while (searchX > -1);
+
+        if (found) {
+            // Scroll to show the match
+            scrollUp(buffer.mCursorY - searchY - 3);
+            mUpperPane->forceUpdate();
+            mCurrentSearchResult = searchY;
+            return;
+        }
+    }
+    print(qsl("%1\n").arg(tr("No search results, sorry!")));
+}
+
+void TMainConsole::createSearchOptionIcon()
+{
+    // When we add new search options we must create icons for each combination
+    // beforehand - which is simpler than having to do code to combine the
+    // QPixMaps...
+    QIcon newIcon;
+    switch (mSearchOptions) {
+    // Each combination must be handled here
+    case SearchOptionCaseSensitive:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
+        break;
+
+    case SearchOptionNone:
+        // Use the grey icon as that is appropriate for the "No options set" case
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
+        break;
+
+    default:
+        // Don't grey out this one - is a diagnositic for an uncoded combination
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-unspecified.png"));
+    }
+
+    mIcon_searchOptions = newIcon;
+    mpAction_searchOptions->setIcon(newIcon);
+}
+
+void TMainConsole::setSearchOptions(const SearchOptions optionsState)
+{
+    mSearchOptions = optionsState;
+    if (mpAction_searchCaseSensitive) {
+        mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
+    }
+    createSearchOptionIcon();
+}
+
+void TMainConsole::slot_toggleSearchCaseSensitivity(const bool state)
+{
+    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
+        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
+        createSearchOptionIcon();
+        if (mpHost) {
+            mpHost->mBufferSearchOptions = mSearchOptions;
+        }
+    }
+}
+
+void TMainConsole::setF3SearchEnabled(const bool enabled)
+{
+    if (mF3SearchEnabled == enabled) {
+        // Don't do anything if the stored setting already matches the wanted one
+        return;
+    }
+
+    mF3SearchEnabled = enabled;
+    if (mF3SearchEnabled) {
+        // Create F3/Shift+F3 shortcuts for search navigation if needed
+        if (mpSearchNextShortcut.isNull()) {
+            mpSearchNextShortcut = new QShortcut(QKeySequence(Qt::Key_F3), this);
+        }
+        if (mpSearchPrevShortcut.isNull()) {
+            mpSearchPrevShortcut = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3), this);
+        }
+        connect(mpSearchNextShortcut, &QShortcut::activated, this, &TMainConsole::slot_searchBufferDown, Qt::UniqueConnection);
+        connect(mpSearchPrevShortcut, &QShortcut::activated, this, &TMainConsole::slot_searchBufferUp, Qt::UniqueConnection);
+    } else {
+        if (!mpSearchNextShortcut.isNull()) {
+            disconnect(mpSearchNextShortcut, &QShortcut::activated, this, &TMainConsole::slot_searchBufferDown);
+            mpSearchNextShortcut->deleteLater();
+        }
+        if (!mpSearchPrevShortcut.isNull()) {
+            disconnect(mpSearchPrevShortcut, &QShortcut::activated, this, &TMainConsole::slot_searchBufferUp);
+            mpSearchPrevShortcut->deleteLater();
+        }
+    }
+}
+
+void TMainConsole::slot_clearSearchResults()
+{
+    buffer.clearSearchHighlights();
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
+}
+
+void TMainConsole::restoreCommandSearchSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    QSettings* pQSettings = mudlet::getQSettings();
+    if (!pQSettings || !commandSplitter) {
+        return;
+    }
+
+    commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
+}
+
+void TMainConsole::slot_saveCommandSearchSettings()
+{
+    if (!mpHost || !commandSplitter) {
+        return;
+    }
+
+    QSettings* pQSettings = mudlet::getQSettings();
+    if (!pQSettings) {
+        return;
+    }
+
+    pQSettings->setValue("commandSearchSplitterState", commandSplitter->saveState());
+}
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)

@@ -43,7 +43,6 @@
 #include "pre_guard.h"
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
-#include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QScrollBar>
@@ -52,38 +51,33 @@
 #include <QTextCodec>
 #include <QPainter>
 #include "post_guard.h"
-
 const QString TConsole::cmLuaLineVariable("line");
 
 // A high-performance text widget with split screen ability for scrolling back
 // Contains two TTextEdits, and is backed by a TBuffer
 TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
-: QWidget(parent)
-, mpHost(pH)
-, mDisplayFontDetails(pH->fontsAntiAlias())
-, buffer(pH, this)
-, emergencyStop(new QToolButton)
-, mConsoleName(name)
-, mpBaseVFrame(new QWidget(this))
-, mpTopToolBar(new QWidget(mpBaseVFrame))
-, mpBaseHFrame(new QWidget(mpBaseVFrame))
-, mpLeftToolBar(new QWidget(mpBaseHFrame))
-, mpMainFrame(new QWidget(mpBaseHFrame))
-, mpRightToolBar(new QWidget(mpBaseHFrame))
-, mpMainDisplay(new QWidget(mpMainFrame))
-, mpScrollBar(new QScrollBar)
-, mpHScrollBar(new QScrollBar(Qt::Horizontal))
-, mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
-, mpBufferSearchBox(new QLineEdit)
-, mpBufferSearchUp(new QToolButton)
-, mpBufferSearchDown(new QToolButton)
-, mControlCharacter(pH->getControlCharacterMode())
-, mType(type)
+    : QWidget(parent)
+    , mpHost(pH)
+    , mDisplayFontDetails(pH->fontsAntiAlias())
+    , buffer(pH, this)
+    , emergencyStop(new QToolButton)
+    , mConsoleName(name)
+    , mpBaseVFrame(new QWidget(this))
+    , mpTopToolBar(new QWidget(mpBaseVFrame))
+    , mpBaseHFrame(new QWidget(mpBaseVFrame))
+    , mpLeftToolBar(new QWidget(mpBaseHFrame))
+    , mpMainFrame(new QWidget(mpBaseHFrame))
+    , mpRightToolBar(new QWidget(mpBaseHFrame))
+    , mpMainDisplay(new QWidget(mpMainFrame))
+    , mpScrollBar(new QScrollBar)
+    , mpHScrollBar(new QScrollBar(Qt::Horizontal))
+    , mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
+    , mControlCharacter(pH->getControlCharacterMode())
+    , mType(type)
 {
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
     quitShortcut->setContext(Qt::WidgetShortcut);
-
     if (mType == CentralDebugConsole) {
         // Probably will not show up as this is used inside a QMainWindow widget
         // which has its own title and icon set.
@@ -303,8 +297,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
 
     layoutButtonMainLayer->setSpacing(0);
-    /*mpButtonMainLayer->setMinimumHeight(31);
-           mpButtonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
     buttonLayer->setObjectName(qsl("buttonLayer"));
     auto layoutButtonLayer = new QHBoxLayout(buttonLayer);
@@ -406,106 +398,39 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
-    mpBufferSearchBox->setClearButtonEnabled(true);
-    for (auto child : mpBufferSearchBox->children()) {
-        auto *pAction_clear(qobject_cast<QAction *>(child));
-        if (pAction_clear && pAction_clear->objectName() == QLatin1String("_q_qlineeditclearaction")) {
-            connect(pAction_clear, &QAction::triggered, this, &TConsole::slot_clearSearchResults, Qt::QueuedConnection);
-            break;
+
+    if (mType == MainConsole) {
+        // For MainConsole, add command line and buttons directly
+        if (mpCommandLine) {
+            layoutLayer2->addWidget(mpCommandLine);
         }
-    }
-
-    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
-    mpBufferSearchBox->setSizePolicy(sizePolicy);
-    mpBufferSearchBox->setFont(font());
-    mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
-    //: search bar placeholder text
-    mpBufferSearchBox->setPlaceholderText(tr("Search"));
-    QPalette commandLinePalette;
-    commandLinePalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
-    commandLinePalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
-    commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-    mpBufferSearchBox->setToolTip(utils::richText(tr("Search buffer.")));
-    connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
-
-    mpAction_searchOptions = new QAction(tr("Search Options"), this);
-    mpAction_searchOptions->setObjectName(qsl("mpAction_searchOptions"));
-
-    QMenu* pMenu_searchOptions = new QMenu(tr("Search Options"), this);
-    pMenu_searchOptions->setObjectName(qsl("pMenu_searchOptions"));
-    pMenu_searchOptions->setToolTipsVisible(true);
-
-    mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
-    mpAction_searchCaseSensitive->setObjectName(qsl("mpAction_searchCaseSensitive"));
-    mpAction_searchCaseSensitive->setToolTip(utils::richText(tr("Match case precisely")));
-    mpAction_searchCaseSensitive->setCheckable(true);
-    pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
-
-    setSearchOptions(mSearchOptions);
-
-    connect(mpAction_searchCaseSensitive, &QAction::triggered, this, &TConsole::slot_toggleSearchCaseSensitivity);
-    mpAction_searchOptions->setMenu(pMenu_searchOptions);
-    mpBufferSearchBox->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
-
-    mpBufferSearchUp->setMinimumSize(QSize(30, 30));
-    mpBufferSearchUp->setMaximumSize(QSize(30, 30));
-    mpBufferSearchUp->setSizePolicy(sizePolicy5);
-    mpBufferSearchUp->setToolTip(utils::richText(tr("Earlier search result.")));
-    mpBufferSearchUp->setFocusPolicy(Qt::NoFocus);
-    mpBufferSearchUp->setIcon(QIcon(qsl(":/icons/export.png")));
-    connect(mpBufferSearchUp, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferUp);
-
-
-    mpBufferSearchDown->setMinimumSize(QSize(30, 30));
-    mpBufferSearchDown->setMaximumSize(QSize(30, 30));
-    mpBufferSearchDown->setSizePolicy(sizePolicy5);
-    mpBufferSearchDown->setFocusPolicy(Qt::NoFocus);
-    mpBufferSearchDown->setToolTip(utils::richText(tr("Later search result.")));
-    mpBufferSearchDown->setIcon(QIcon(qsl(":/icons/import.png")));
-    connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
-
-    if (mType == MainConsole) {
-        setF3SearchEnabled(mpHost->getF3SearchEnabled());
-    }
-
-    if (mpCommandLine) {
-        layoutLayer2->addWidget(mpCommandLine);
-    }
-
-    layoutLayer2->addWidget(mpButtonMainLayer);
-    layoutButtonLayer->addWidget(mpBufferSearchBox);
-    layoutButtonLayer->addWidget(mpBufferSearchUp);
-    layoutButtonLayer->addWidget(mpBufferSearchDown);
-    layoutButtonLayer->addWidget(timeStampButton);
-    layoutButtonLayer->addWidget(replayButton);
-    layoutButtonLayer->addWidget(logButton);
-    layoutButtonLayer->addWidget(emergencyStop);
-    if (mType == MainConsole) {
-        // In fact a whole lot more could be inside this "if"!
+        layoutLayer2->addWidget(mpButtonMainLayer);
+        layoutButtonLayer->addWidget(timeStampButton);
+        layoutButtonLayer->addWidget(replayButton);
+        layoutButtonLayer->addWidget(logButton);
+        layoutButtonLayer->addWidget(emergencyStop);
         layoutButtonLayer->addWidget(mpLineEdit_networkLatency);
+        
+        layoutLayer2->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(layer);
+        layerCommandLine->setAutoFillBackground(true);
+        centralLayout->addWidget(layerCommandLine);
+    } else {
+        // For non-MainConsole types, just add the command line directly
+        if (mpCommandLine) {
+            layoutLayer2->addWidget(mpCommandLine);
+        }
+        layoutLayer2->addWidget(mpButtonMainLayer);
+        layoutButtonLayer->addWidget(timeStampButton);
+        layoutButtonLayer->addWidget(replayButton);
+        layoutButtonLayer->addWidget(logButton);
+        layoutButtonLayer->addWidget(emergencyStop);
+        
+        layoutLayer2->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(layer);
+        layerCommandLine->setAutoFillBackground(true);
+        centralLayout->addWidget(layerCommandLine);
     }
-    layoutLayer2->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(layer);
-    layerCommandLine->setAutoFillBackground(true);
-
-    commandSplitter = new QSplitter(Qt::Horizontal, this);
-    connect(commandSplitter, &QSplitter::splitterMoved, this, &TConsole::slot_saveCommandSearchSettings);
-    commandSplitter->addWidget(layerCommandLine);
-    commandSplitter->addWidget(mpButtonMainLayer);
-    commandSplitter->setStretchFactor(0, 3); // command line
-    commandSplitter->setStretchFactor(1, 1); // search layer
-
-    commandSplitter->setCollapsible(0, false); // command line cannot collapse
-    commandSplitter->setCollapsible(1, false); // search layer cannot collapse
-
-    centralLayout->addWidget(commandSplitter);
-    restoreCommandSearchSettings();
-
-    QList<int> sizeList;
-    sizeList << 6 << 2;
-    splitter->setSizes(sizeList);
 
     mUpperPane->show();
     mLowerPane->hide();
@@ -1899,113 +1824,11 @@ void TConsole::slot_stopAllItems(bool b)
     }
 }
 
-void TConsole::focusOnSearchResultAndAnnounce(int searchX, int searchY)
-{
-    mpHost->setCaretEnabled(true);
-    mUpperPane->initializeCaret();
-    moveCursor(searchX, searchY);
-    mUpperPane->setCaretPosition(searchY, searchX);
-    mUpperPane->updateCaret();
-    mUpperPane->setFocusPolicy(Qt::StrongFocus);
-    mUpperPane->setFocusProxy(nullptr);
-    mUpperPane->setFocus();
-    mudlet::self()->announce(buffer.lineBuffer[searchY]);
-}
+// Search functionality moved to TMainConsole
 
-void TConsole::slot_searchBufferUp()
-{
-    if (mpHost->getF3SearchEnabled()) {
-        buffer.clearSearchHighlights();
-    }
+// Search functionality moved to TMainConsole
 
-    // The search term entry box is one widget that does not pass a mouse press
-    // event up to the main TConsole and thus does not cause the focus to shift
-    // to the profile's tab when in multi-view mode - so add a call to make that
-    // happen:
-    mudlet::self()->activateProfile(mpHost);
-
-    if (mSearchQuery != mpBufferSearchBox->text()) {
-        mSearchQuery = mpBufferSearchBox->text();
-        buffer.clearSearchHighlights();
-        mCurrentSearchResult = buffer.lineBuffer.size();
-    } else {
-        // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
-        mCurrentSearchResult = std::min<qsizetype>(mCurrentSearchResult, buffer.lineBuffer.size());
-    }
-    if (mSearchQuery.isEmpty() || buffer.lineBuffer.empty()) {
-        // Don't try and search for anything if the search term OR the console is empty:
-        return;
-    }
-
-    bool found = false;
-    for (int searchY = mCurrentSearchResult - 1; searchY >= 0; --searchY) {
-        int searchX = -1;
-        do {
-            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
-            if (searchX > -1) {
-                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
-                if (mpHost->getF3SearchEnabled()) {
-                    focusOnSearchResultAndAnnounce(searchX, searchY);
-                }
-                found = true;
-            }
-        } while (searchX > -1);
-
-        if (found) {
-
-            // Scroll to show the match
-            scrollUp(buffer.mCursorY - searchY - 3);
-            mUpperPane->forceUpdate();
-            mCurrentSearchResult = searchY;
-            return;
-        }
-    }
-    print(qsl("%1\n").arg(tr("No search results, sorry!")));
-}
-
-void TConsole::slot_searchBufferDown()
-{
-    if (mpHost->getF3SearchEnabled()) {
-        buffer.clearSearchHighlights();
-    }
-    if (mSearchQuery != mpBufferSearchBox->text()) {
-        mSearchQuery = mpBufferSearchBox->text();
-        buffer.clearSearchHighlights();
-        mCurrentSearchResult = buffer.lineBuffer.size();
-    }
-    if (mSearchQuery.isEmpty() || buffer.lineBuffer.empty()) {
-        // Don't try and search for anything if the search term OR the console is empty:
-        return;
-    }
-    if (mCurrentSearchResult >= buffer.lineBuffer.size()) {
-        return;
-    }
-
-    bool found = false;
-    for (int searchY = mCurrentSearchResult + 1; searchY < buffer.lineBuffer.size(); ++searchY) {
-        int searchX = -1;
-        do {
-            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
-            if (searchX > -1) {
-                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
-                if (mpHost->getF3SearchEnabled()) {
-                    focusOnSearchResultAndAnnounce(searchX, searchY);
-                }
-                found = true;
-            }
-        } while (searchX > -1);
-
-        if (found) {
-
-            // Scroll to show the match
-            scrollUp(buffer.mCursorY - searchY - 3);
-            mUpperPane->forceUpdate();
-            mCurrentSearchResult = searchY;
-            return;
-        }
-    }
-    print(qsl("%1\n").arg(tr("No search results, sorry!")));
-}
+// Search functionality moved to TMainConsole
 
 QSize TConsole::getMainWindowSize() const
 {
@@ -2399,89 +2222,15 @@ void TConsole::setCaretMode(bool enabled)
     }
 }
 
-void TConsole::createSearchOptionIcon()
-{
-    // When we add new search options we must create icons for each combination
-    // beforehand - which is simpler than having to do code to combine the
-    // QPixMaps...
-    QIcon newIcon;
-    switch (mSearchOptions) {
-    // Each combination must be handled here
-    case SearchOptionCaseSensitive:
-        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
-        break;
+// Search functionality moved to TMainConsole
 
-    case SearchOptionNone:
-        // Use the grey icon as that is appropriate for the "No options set" case
-        newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
-        break;
+// Search functionality moved to TMainConsole
 
-    default:
-        // Don't grey out this one - is a diagnositic for an uncoded combination
-        newIcon.addPixmap(QPixmap(":/icons/searchOptions-unspecified.png"));
-    }
+// Search functionality moved to TMainConsole
 
-    mIcon_searchOptions = newIcon;
-    mpAction_searchOptions->setIcon(newIcon);
-}
+// Search functionality moved to TMainConsole
 
-void TConsole::setSearchOptions(const SearchOptions optionsState)
-{
-    mSearchOptions = optionsState;
-    mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
-    createSearchOptionIcon();
-}
-
-void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
-{
-    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
-        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
-        createSearchOptionIcon();
-        mpHost->mBufferSearchOptions = mSearchOptions;
-    }
-}
-
-void TConsole::setF3SearchEnabled(const bool enabled)
-{
-    if (mType != MainConsole) {
-        // Don't do anything if we are NOT the main console:
-        return;
-    }
-
-    if (mF3SearchEnabled == enabled) {
-        // Don't do anything if the stored setting already matches the wanted one
-        return;
-    }
-
-    mF3SearchEnabled = enabled;
-    if (mF3SearchEnabled) {
-        // Create F3/Shift+F3 shortcuts for search navigation if needed
-        if (mpSearchNextShortcut.isNull()) {
-            mpSearchNextShortcut = new QShortcut(QKeySequence(Qt::Key_F3), this);
-        }
-        if (mpSearchPrevShortcut.isNull()) {
-            mpSearchPrevShortcut = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3), this);
-        }
-        connect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown, Qt::UniqueConnection);
-        connect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp, Qt::UniqueConnection);
-    } else {
-        if (!mpSearchNextShortcut.isNull()) {
-            disconnect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
-            mpSearchNextShortcut->deleteLater();
-        }
-        if (!mpSearchPrevShortcut.isNull()) {
-            disconnect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
-            mpSearchPrevShortcut->deleteLater();
-        }
-    }
-}
-
-void TConsole::slot_clearSearchResults()
-{
-    buffer.clearSearchHighlights();
-    mUpperPane->forceUpdate();
-    mLowerPane->forceUpdate();
-}
+// Search functionality moved to TMainConsole
 
 void TConsole::handleLinesOverflowEvent(const int lineCount)
 {
@@ -2604,30 +2353,14 @@ void TConsole::slot_toggleTimeStamps(const bool state)
     }
 }
 
-void TConsole::slot_saveCommandSearchSettings()
+~TConsole()
 {
-    if (!mpHost) {
-        return;
+    if (mpHost) {
+        mpHost->unregisterConsole(this);
     }
-
-    QSettings* pQSettings = mudlet::getQSettings();
-    if (!pQSettings) {
-        return;
+    if (mType == MainConsole) {
+        slot_saveCommandSearchSettings();
     }
+    delete mpBuffer;
 
     pQSettings->setValue("commandSearchSplitterState", commandSplitter->saveState());
-}
-
-void TConsole::restoreCommandSearchSettings()
-{
-    if (!mpHost) {
-        return;
-    }
-
-    QSettings* pQSettings = mudlet::getQSettings();
-    if (!pQSettings) {
-        return;
-    }
-
-    commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
-}

@@ -98,6 +98,44 @@ public:
                    : mpHunspell_profile)
                 : nullptr; }
     QSet<QString> getWordSet() const;
+
+    // Search functionality
+    enum SearchOption {
+        SearchOptionNone = 0x0,
+        SearchOptionCaseSensitive = 0x1
+    };
+    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
+
+    void setSearchOptions(const SearchOptions options);
+    void setF3SearchEnabled(bool enabled);
+    SearchOptions getSearchOptions() const { return mSearchOptions; }
+
+public slots:
+    void slot_searchBufferUp();
+    void slot_searchBufferDown();
+    void slot_toggleSearchCaseSensitivity(bool state);
+    void slot_clearSearchResults();
+    void slot_saveCommandSearchSettings();
+    void focusOnSearchResultAndAnnounce(int searchX, int searchY);
+
+private:
+    void createSearchOptionIcon();
+    void restoreCommandSearchSettings();
+
+    // Search-related members
+    QLineEdit* mpBufferSearchBox = nullptr;
+    QAction* mpAction_searchCaseSensitive = nullptr;
+    QToolButton* mpBufferSearchUp = nullptr;
+    QToolButton* mpBufferSearchDown = nullptr;
+    int mCurrentSearchResult = 0;
+    QString mSearchQuery;
+    SearchOptions mSearchOptions = SearchOptionNone;
+    QAction* mpAction_searchOptions = nullptr;
+    QIcon mIcon_searchOptions;
+    bool mF3SearchEnabled = false;
+    QPointer<QShortcut> mpSearchNextShortcut;
+    QPointer<QShortcut> mpSearchPrevShortcut;
+    QSplitter* commandSplitter = nullptr;
     QPair<bool, QString> addWordToSet(const QString&);
     QPair<bool, QString> removeWordFromSet(const QString&);
     bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
