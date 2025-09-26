@@ -206,7 +206,7 @@ jobs:
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
     - name: (Linux) Install Lua
-      uses: leafo/gh-actions-lua@v11
+      uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
       with:
         luaVersion: "5.1.5"
