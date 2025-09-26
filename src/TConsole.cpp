@@ -475,15 +475,15 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     layoutLayer2->addWidget(mpButtonMainLayer);
-    layoutButtonLayer->addWidget(mpBufferSearchBox);
-    layoutButtonLayer->addWidget(mpBufferSearchUp);
-    layoutButtonLayer->addWidget(mpBufferSearchDown);
-    layoutButtonLayer->addWidget(timeStampButton);
-    layoutButtonLayer->addWidget(replayButton);
-    layoutButtonLayer->addWidget(logButton);
-    layoutButtonLayer->addWidget(emergencyStop);
     if (mType == MainConsole) {
-        // In fact a whole lot more could be inside this "if"!
+        // All console control buttons should only be on MainConsole
+        layoutButtonLayer->addWidget(mpBufferSearchBox);
+        layoutButtonLayer->addWidget(mpBufferSearchUp);
+        layoutButtonLayer->addWidget(mpBufferSearchDown);
+        layoutButtonLayer->addWidget(timeStampButton);
+        layoutButtonLayer->addWidget(replayButton);
+        layoutButtonLayer->addWidget(logButton);
+        layoutButtonLayer->addWidget(emergencyStop);
         layoutButtonLayer->addWidget(mpLineEdit_networkLatency);
     }
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
