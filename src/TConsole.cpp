@@ -220,6 +220,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layer->setStyleSheet("QWidget#layer{background-color: rgba(0,0,0,0)}");
     layer->setContentsMargins(0, 0, 0, 0);
     layer->setSizePolicy(sizePolicy);
+    layer->setFocusPolicy(Qt::NoFocus);
 
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
@@ -235,6 +236,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     splitter->setContentsMargins(0, 0, 0, 0);
     splitter->setSizePolicy(sizePolicy);
     splitter->setHandleWidth(3);
+    splitter->setFocusPolicy(Qt::NoFocus);
     //QSplitter covers the background if not set to transparent and a new AppStyleSheet is set for example by DarkTheme
     auto styleSheet = qsl("QSplitter { background-color: rgba(0,0,0,0) }");
     splitter->setStyleSheet(styleSheet);
@@ -285,6 +287,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layerCommandLine = new QWidget; //( mpMainFrame );//layer );
     layerCommandLine->setContentsMargins(0, 0, 0, 0);
     layerCommandLine->setSizePolicy(sizePolicy);
+    layerCommandLine->setFocusPolicy(Qt::NoFocus);
 
     layerCommandLine->setMaximumHeight(31);
     layerCommandLine->setMinimumHeight(31);
@@ -494,6 +497,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layerCommandLine->setAutoFillBackground(true);
 
     commandSplitter = new QSplitter(Qt::Horizontal, this);
+    commandSplitter->setFocusPolicy(Qt::NoFocus);
     connect(commandSplitter, &QSplitter::splitterMoved, this, &TConsole::slot_saveCommandSearchSettings);
     commandSplitter->addWidget(layerCommandLine);
     commandSplitter->addWidget(mpButtonMainLayer);
