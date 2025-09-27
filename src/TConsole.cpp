@@ -301,7 +301,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpButtonMainLayer->setObjectName(qsl("mpButtonMainLayer"));
     mpButtonMainLayer->setSizePolicy(sizePolicy);
     mpButtonMainLayer->setContentsMargins(0, 0, 0, 0);
-    mpButtonMainLayer->setFocusPolicy(Qt::NoFocus);
     auto layoutButtonMainLayer = new QVBoxLayout(mpButtonMainLayer);
     layoutButtonMainLayer->setObjectName(qsl("layoutButtonMainLayer"));
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
@@ -311,7 +310,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
            mpButtonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
     buttonLayer->setObjectName(qsl("buttonLayer"));
-    buttonLayer->setFocusPolicy(Qt::NoFocus);
     auto layoutButtonLayer = new QHBoxLayout(buttonLayer);
     layoutButtonLayer->setObjectName(qsl("layoutButtonLayer"));
     layoutButtonLayer->setContentsMargins(0, 0, 0, 0);
@@ -319,7 +317,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     auto buttonLayerSpacer = new QWidget(buttonLayer);
     buttonLayerSpacer->setSizePolicy(sizePolicy4);
-    buttonLayerSpacer->setFocusPolicy(Qt::NoFocus);
     layoutButtonMainLayer->addWidget(buttonLayerSpacer);
     layoutButtonMainLayer->addWidget(buttonLayer);
 
@@ -424,7 +421,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy);
     mpBufferSearchBox->setFont(font());
-    mpBufferSearchBox->setFocusPolicy(Qt::NoFocus);
+    mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
     //: search bar placeholder text
     mpBufferSearchBox->setPlaceholderText(tr("Search"));
     QPalette commandLinePalette;
