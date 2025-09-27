@@ -71,12 +71,17 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 {
     bool isMatchFound = false;
     for (auto keyObject : mKeyRootNodeList) {
-        if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
-            if (!mRunAllKeyMatches) {
-                return true;
-            }
+        try {
+            if (keyObject && keyObject->match(key, modifiers, mRunAllKeyMatches)) {
+                if (!mRunAllKeyMatches) {
+                    return true;
+                }
 
-            isMatchFound = true;
+                isMatchFound = true;
+            }
+        } catch (...) {
+            // Skip corrupted key objects during destruction
+            continue;
         }
     }
 

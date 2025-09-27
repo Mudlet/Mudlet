@@ -144,9 +144,14 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
         return false;
     }
 
-    if (mpKeyUnit->processDataStream(static_cast<Qt::Key>(keyEvent->key()), static_cast<Qt::KeyboardModifiers>(keyEvent->modifiers()))) {
-        keyEvent->accept();
-        return true;
+    try {
+        if (mpKeyUnit->processDataStream(static_cast<Qt::Key>(keyEvent->key()), static_cast<Qt::KeyboardModifiers>(keyEvent->modifiers()))) {
+            keyEvent->accept();
+            return true;
+        }
+    } catch (...) {
+        // If the KeyUnit/Tree is corrupted during destruction, don't crash
+        return false;
     }
 
     return false;
@@ -198,10 +203,16 @@ bool TCommandLine::event(QEvent* event)
         }
 
         // Shortcut for keypad keys
-        if ((ke->modifiers() & Qt::KeypadModifier) && mpHost && !mpHost->isClosingDown() && mpKeyUnit->processDataStream(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()))) {
-            ke->accept();
-            return true;
-
+        if ((ke->modifiers() & Qt::KeypadModifier) && mpHost && !mpHost->isClosingDown()) {
+            try {
+                if (mpKeyUnit->processDataStream(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()))) {
+                    ke->accept();
+                    return true;
+                }
+            } catch (...) {
+                // If the KeyUnit/Tree is corrupted during destruction, don't crash
+                return true;
+            }
         }
 
         switch (ke->key()) {
