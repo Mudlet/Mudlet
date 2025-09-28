@@ -67,6 +67,56 @@ private slots:
             << false
             << false
             << 3;
+
+        QStringList attrs4 = {"class", "level", "race"};
+        QTest::newRow("Test4_MultipleAttrsAndFlag")
+            << "Player"
+            << R"(<!ELEMENT Player FLAG="Hero" ATT="CLASS=Warrior LEVEL=42 RACE=Elf">)"
+            << attrs4
+            << QString("Hero")
+            << false
+            << false
+            << 0;
+
+        QStringList attrs5;
+        QTest::newRow("Test5_EmptyFlag")
+            << "EmptyFlag"
+            << R"(<!ELEMENT EmptyFlag FLAG="">)"
+            << attrs5
+            << QString("")
+            << false
+            << false
+            << 0;
+
+        QStringList attrs6;
+        QTest::newRow("Test6_AutoClosingTag")
+            << "AutoClose"
+            << R"(<!ELEMENT AutoClose '<br/>' EMPTY>)"
+            << attrs6
+            << QString()
+            << false
+            << true
+            << 1;
+
+        QStringList attrs7;
+        QTest::newRow("Test7_NameWithDigitsAndUnderscore")
+            << "Enemy_123"
+            << R"(<!ELEMENT Enemy_123 FLAG="Dangerous">)"
+            << attrs7
+            << QString("Dangerous")
+            << false
+            << false
+            << 0;
+        
+        QStringList attrs8;
+        QTest::newRow("Test8_FlagWithChevronsAndAmpersand")
+            << "Weird"
+            << R"(<!ELEMENT Weird FLAG="Use <this> & that">)"
+            << attrs8
+            << QString("Use <this> & that")
+            << false
+            << false
+            << 0;
     }
 
     void testMxpElementRegistration()
@@ -107,6 +157,11 @@ private slots:
         QTest::newRow("multiple consecutive amps") << "text &&&& more text\n";
         QTest::newRow("only amps") << "&&&&\n";
         QTest::newRow("amp + emoji") << "smile &😊;\n";
+        QTest::newRow("html_entity") << "Hello &lt;World&gt;\r";
+        QTest::newRow("known_custom_entity") << "Use &custom;\r";
+        QTest::newRow("incomplete_entity") << "Broken &ent\r";
+        QTest::newRow("empty_entity") << "Edge case &;\r";
+        QTest::newRow("long_entity") << "&thisisaverylongentitynamethatmightbreak;\r";
     }
 
     void testParserDoesNotFreezeOnAmpersand()
@@ -130,6 +185,12 @@ private slots:
         QTest::newRow("starts_with_less_than") << "<test<!EN ob \"lamp\">";
         QTest::newRow("less_than_second_char") << "a<test<!EN ob \"lamp\">";
         QTest::newRow("multiple_less_than_before_valid_tag") << "<<<randomtext<!EN ob \"lamp\">";
+        QTest::newRow("unclosed_tag") << "<unclosed<!EN ob \"lamp\">";
+        QTest::newRow("closed_without_open") << "</ghost><!EN ob \"lamp\">";
+        QTest::newRow("mixed_with_text") << "foo<bar>baz<!EN ob \"lamp\">";
+        QTest::newRow("doctype_like") << "<!DOCTYPE fake><!EN ob \"lamp\">";
+        QTest::newRow("comment_tag") << "<!-- comment --><!EN ob \"lamp\">";
+        QTest::newRow("comment_with_less_than") << "<!-- this is a < comment -->\r<!EN ob \"lamp\">";
     }
 
     void testParserDoesNotFreezeOnUnescapedTagStart() {
