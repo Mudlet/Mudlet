@@ -89,6 +89,8 @@ public:
 
     inline bool isInsideTag() const { return mIsInsideTag; }
 
+    inline bool isQuotedSequence() const { return mIsQuotedSequence; }
+
     inline bool isTag() const { return !mIsText; }
 
     inline bool isText() const { return mIsText; }

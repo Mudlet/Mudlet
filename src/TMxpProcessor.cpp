@@ -152,7 +152,7 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
-    if (ch == '<' && mMxpTagBuilder.isInsideTag()) {
+    if (ch == '<' && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.isQuotedSequence()) {
             lastEntityValue = QStringLiteral("<") + QString::fromStdString(mMxpTagBuilder.getRawTagContent());
             mMxpTagBuilder.resetForNewTag();
             return HANDLER_INSERT_ENTITY_LIT;
