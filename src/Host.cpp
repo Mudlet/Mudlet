@@ -219,83 +219,13 @@ QString stopWatch::getElapsedDayTimeString() const
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
 , mLuaInterpreter(this, hostname, id)
-, commandLineMinimumHeight(30)
-, mAlertOnNewData(true)
-, mAllowToSendCommand(true)
-, mAutoClearCommandLineAfterSend(false)
-, mHighlightHistory(true)
-, mBlockScriptCompile(true)
-, mBlockStopWatchCreation(true)
-, mEchoLuaErrors(false)
-, mCommandSeparator(qsl(";;"))
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
-, mFORCE_GA_OFF(false)
-, mFORCE_NO_COMPRESSION(false)
-, mFORCE_SAVE_ON_EXIT(true)
-, mSslTsl(false)
-, mSslIgnoreExpired(false)
-, mSslIgnoreSelfSigned(false)
-, mSslIgnoreAll(false)
-, mUseProxy(false)
-, mProxyPort(0)
-, mIsProfileLoadingSequence(false)
-, mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
-, mpNotePad(nullptr)
-, mCommandEchoMode(CommandEchoMode::ScriptControl)
-, mIsCurrentLogFileInHtmlFormat(false)
-, mIsNextLogFileInHtmlFormat(false)
-, mIsLoggingTimestamps(false)
-, mLogFileNameFormat(QLatin1String("yyyy-MM-dd#HH-mm-ss")) // In the past we have used "yyyy-MM-dd#hh-mm-ss" but we always want a 24-hour clock
-, mResetProfile(false)
-, mScreenHeight(25)
-, mScreenWidth(90)
-, mTimeout(60)
-, mUSE_FORCE_LF_AFTER_PROMPT(false)
-, mUSE_IRE_DRIVER_BUGFIX(false)
-, mUSE_UNIX_EOL(false)
-, mWrapAt(100)
-, mWrapIndentCount(0)
-, mWrapHangingIndentCount(0)
-, mConsoleBufferSize(100000)
-, mUseMaxConsoleBufferSize(false)
-, mEditorAutoComplete(true)
-, mEditorTheme(QLatin1String("Mudlet"))
-, mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
-, mThemePreviewItemID(-1)
-, mThemePreviewType(QString())
-, mMapStrongHighlight(false)
-, mEnableSpellCheck(true)
-, mDiscordDisableServerSide(true)
-, mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
-, mLineSize(10.0)
-, mRoomSize(0.5)
-, mMapInfoContributors(QSet<QString>{"Short"})
-, mBubbleMode(false)
-, mShowRoomID(false)
-, mShowPanel(true)
-, mShow3DView(false)
-, mServerGUI_Package_version(QLatin1String("-1"))
-, mServerGUI_Package_name(QLatin1String("nothing"))
-, mAcceptServerGUI(true)
-, mAcceptServerMedia(true)
-, mCommandLineFgColor(Qt::darkGray)
-, mCommandLineBgColor(Qt::black)
-, mMapperUseAntiAlias(true)
-, mMapperShowRoomBorders(true)
-, mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
-, mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
-, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
-, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
-, mpDlgIRC(nullptr)
-, mpDlgProfilePreferences(nullptr)
-, mTutorialForCompactLineAlreadyShown(false)
-, mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -308,23 +238,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mLogin(login)
 , mPass(pass)
 , mPort(port)
-, mRetries(5)
-, mSaveProfileOnExit(false)
-, mHaveMapperScript(false)
-, mAutoAmbigousWidthGlyphsSetting(true)
-, mWideAmbigousWidthGlyphs(false)
-, mSGRCodeHasColSpaceId(false)
-, mServerMayRedefineColors(false)
-// DISABLED: - Prevent "None" option for user dictionary - changed to true and not changed anywhere else
-, mEnableUserDictionary(true)
-, mUseSharedDictionary(false)
-, mPlayerRoomStyle(0)
-, mPlayerRoomOuterColor(Qt::red)
-, mPlayerRoomInnerColor(Qt::white)
-, mPlayerRoomOuterDiameterPercentage(120)
-, mPlayerRoomInnerDiameterPercentage(70)
-, mDebugShowAllProblemCodepoints(false)
-, mCompactInputLine(false)
 {
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal));
@@ -352,7 +265,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (!mErrorLogFile.open(QIODevice::Append)) {
         qWarning() << "Host: failed to open error log file for appending:" << mErrorLogFile.errorString();
     }
-     /*
+    /*
      * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
      * since user-content can contain anything and someone else reviewing
      * such logs need not have the same default encoding which would be used
@@ -365,12 +278,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mDoubleClickIgnore.insert('\'');
 
     // search engine load entries
+    // clang-format off
     mSearchEngineData = QMap<QString, QString>(
-    {
-                    {"Bing",       "https://www.bing.com/search?q="},
-                    {"DuckDuckGo", "https://duckduckgo.com/?q="},
-                    {"Google",     "https://www.google.com/search?q="}
-    });
+        {
+            {"Bing",       "https://www.bing.com/search?q="},
+            {"DuckDuckGo", "https://duckduckgo.com/?q="},
+            {"Google",     "https://www.google.com/search?q="}
+        });
+    // clang-format on
 
     // These details are filled in by the dlgConnectionProfile class when that
     // is used to select a profile however when the profile is auto-loaded or
@@ -410,19 +325,17 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     if (mudlet::self()->smFirstLaunch) {
-        QTimer::singleShot(0, this, [this]() {
-            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
-        });
+        QTimer::singleShot(0, this, [this]() { mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game")); });
     }
 
-    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){
+    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this]() {
         purgeTimer.start(1min);
 
         if (getForceMXPProcessorOn()) {
             mMxpProcessor.disable();
         }
     });
-    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){
+    connect(&mTelnet, &cTelnet::signal_connected, this, [this]() {
         purgeTimer.stop();
 
         if (getForceMXPProcessorOn()) {

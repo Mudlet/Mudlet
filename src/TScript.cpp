@@ -30,22 +30,14 @@
 
 TScript::TScript( TScript * parent, Host * pHost )
 : Tree<TScript>( parent )
-, exportItem(true)
-, mModuleMasterFolder(false)
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
-, mModuleMember(false)
 {
 }
 
 TScript::TScript(const QString& name, Host * pHost )
 : Tree<TScript>(nullptr)
-, exportItem(true)
-, mModuleMasterFolder(false)
 , mName(name)
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
-, mModuleMember(false)
 {
 }
 

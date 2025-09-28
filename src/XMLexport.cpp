@@ -47,78 +47,36 @@
 
 XMLexport::XMLexport( Host * pH )
 : mpHost(pH)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TTrigger * pT )
-: mpHost(nullptr)
-, mpTrigger(pT)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(nullptr)
+: mpTrigger(pT)
 {
 }
 
 XMLexport::XMLexport( TTimer * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(pT)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(nullptr)
+: mpTimer(pT)
 {
 }
 
 XMLexport::XMLexport( TAlias * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(pT)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(nullptr)
+: mpAlias(pT)
 {
 }
 
 XMLexport::XMLexport( TAction * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(pT)
-, mpScript(nullptr)
-, mpKey(nullptr)
+: mpAction(pT)
 {
 }
 
 XMLexport::XMLexport( TScript * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(pT)
-, mpKey(nullptr)
+: mpScript(pT)
 {
 }
 
 XMLexport::XMLexport( TKey * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(pT)
+: mpKey(pT)
 {
 }
 
