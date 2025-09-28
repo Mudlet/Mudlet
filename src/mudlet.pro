@@ -746,6 +746,7 @@ HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    CredentialManager.h \
     ctelnet.h \
     DarkTheme.h \
     discord.h \
@@ -776,11 +777,12 @@ HEADERS += \
     dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
     EAction.h \
+    enums.h \
     exitstreewidget.h \
     FileOpenHandler.h \
+    FontManager.h \
     GifTracker.h \
     GMCPAuthenticator.h \
-    TrailingWhitespaceMarker.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
@@ -791,11 +793,10 @@ HEADERS += \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \
-    pre_guard.h \
     post_guard.h \
+    pre_guard.h \
     ScriptUnit.h \
     SecureStringUtils.h \
-    CredentialManager.h \
     ShortcutsManager.h \
     SingleLineTextEdit.h \
     T2DMap.h \
@@ -809,6 +810,7 @@ HEADERS += \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \
+    TDetachedWindow.h \
     TDockWidget.h \
     TEasyButtonBar.h \
     TEncodingTable.h \
@@ -834,27 +836,31 @@ HEADERS += \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
+    TMxpContext.h \
     TMxpCustomElementTagHandler.h \
-    TMxpFontTagHandler.h \
-    TMxpLinkTagHandler.h \
-    TMxpMusicTagHandler.h \
-    TMxpSoundTagHandler.h \
     TMxpElementDefinitionHandler.h \
     TMxpElementRegistry.h \
     TMxpEntityTagHandler.h \
-    TMxpContext.h \
+    TMxpEvent.h \
+    TMxpFontTagHandler.h \
     TMxpFormattingTagsHandler.h \
+    TMxpLinkTagHandler.h \
     TMxpMudlet.h \
+    TMxpMusicTagHandler.h \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
     TMxpSendTagHandler.h \
+    TMxpSoundTagHandler.h \
+    TMxpSupportTagHandler.h \
     TMxpTagHandler.h \
+    TMxpTagHandlerResult.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
-    TMxpSupportTagHandler.h \
     TMxpVarTagHandler.h \
     TMxpVersionTagHandler.h \
+    TrailingWhitespaceMarker.h \
     Tree.h \
+    TriggerHighlighter.h \
     TriggerUnit.h \
     TRoom.h \
     TRoomDB.h \
@@ -863,11 +869,10 @@ HEADERS += \
     TSplitter.h \
     TSplitterHandle.h \
     TStringUtils.h \
-    TriggerHighlighter.h \
     TTabBar.h \
-    TDetachedWindow.h \
     TTextCodec.h \
     TTextEdit.h \
+    TTextProperties.h \
     TTimer.h \
     TToolBar.h \
     TTreeWidget.h \
@@ -963,40 +968,49 @@ linux|macx|win32 {
 
 
 contains( DEFINES, INCLUDE_3DMAPPER ) {
-    HEADERS += glwidget.h \
-               modern_glwidget.h \
-               glwidget_integration.h \
-               CameraController.h \
-               GeometryManager.h \
-               RenderCommand.h \
-               RenderCommandQueue.h \
-               ResourceManager.h \
-               ShaderManager.h
-    SOURCES += glwidget.cpp \
-               modern_glwidget.cpp \
-               glwidget_integration.cpp \
-               CameraController.cpp \
-               GeometryManager.cpp \
-               RenderCommand.cpp \
-               RenderCommandQueue.cpp \
-               ResourceManager.cpp \
-               ShaderManager.cpp
-    
+    HEADERS += \
+        CameraController.h \
+        GeometryManager.h \
+        glwidget.h \
+        glwidget_integration.h \
+        modern_glwidget.h \
+        RenderCommand.h \
+        RenderCommandQueue.h \
+        ResourceManager.h \
+        ShaderManager.h
+
+    SOURCES += \
+        CameraController.cpp \
+        GeometryManager.cpp \
+        glwidget.cpp \
+        glwidget_integration.cpp \
+        modern_glwidget.cpp \
+        RenderCommand.cpp \
+        RenderCommandQueue.cpp \
+        ResourceManager.cpp \
+        ShaderManager.cpp
+
+    DISTFILES += \
+        ./shaders/fragment.glsl \
+        ./shaders/vertex.glsl
+
     # Enable shader hot-reloading when USE_SHADER_HOT_RELOAD is defined
     contains( DEFINES, USE_SHADER_HOT_RELOAD ) {
         DEFINES += MUDLET_SHADER_HOT_RELOAD=1
     }
-    
+
     !build_pass{
         message("The 3D mapper code with both OpenGL implementations is included in this configuration for runtime selection")
     }
-    
+
     QT += opengl
 
     win32 {
-        LIBS += -lopengl32 \
-                -lglu32
+        LIBS += \
+            -lopengl32 \
+            -lglu32
     }
+
 } else {
     !build_pass{
         message("The 3D mapper code is excluded from this configuration")
@@ -1670,6 +1684,7 @@ OTHER_FILES += \
     ../.github/repo-metadata.yml \
     ../.github/workflows/build-mudlet.yml \
     ../.github/workflows/build-mudlet-win.yml \
+    ../.github/workflows/check_pr_labels.yml \
     ../.github/workflows/clangtidy-diff-analysis.yml \
     ../.github/workflows/clangtidy-post-comments.yml \
     ../.github/workflows/codeql-analysis.yml \
@@ -1687,6 +1702,10 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
+    ../.imgbotconfig \
+    ../.vscode/c_cpp_properties.json \
+    ../.vscode/extensions.json \
+    ../.vscode/settings.json \
     ../AGENTS.md \
     ../CLAUDE.md \
     ../CI/build-mudlet-for-windows.sh \
@@ -1712,19 +1731,27 @@ OTHER_FILES += \
     ../CI/travis.validate_deployment.sh \
     ../CI/update-autocompletion.lua \
     ../CI/validate-deployment-for-windows.sh \
+    ../CPPLINT.cfg \
     ../dangerfile.js \
     ../docker/.env.template \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \
     ../docker/Dockerfile \
     ../docs/AI-ASSISTANTS.md \
+    ../docs/ai-instructions.md \
     ../docs/CODE_OF_CONDUCT.md \
     ../docs/CONTRIBUTING.md \
     ../docs/FUNDING.yml \
+    ../docs/GITHUB.yml \
+    ../docs/README.md \
     ../docs/SUPPORT.md \
+    ../template/cpp \
+    ../template/h \
+    ../template/README \
     ../test/CMakeLists.txt \
-    ../test/GUIConsoleTests.mpackage \
     ../test/CredentialManagerTest.cpp \
+    ../test/GUIConsoleTests.mpackage \
+    ../test/README.md \
     ../test/SecureStringUtilsTest.cpp \
     ../test/TEntityHandlerTest.cpp \
     ../test/TEntityResolverTest.cpp \
@@ -1737,6 +1764,7 @@ OTHER_FILES += \
     ../test/TMxpStubClient.h \
     ../test/TMxpTagParserTest.cpp \
     ../test/TMxpVersionTagTest.cpp \
+    ../UI-design-philosophy.md \
     mac-deploy.sh \
     mudlet-lua/genDoc.sh \
     mudlet-lua/lua/ldoc.css
@@ -1838,6 +1866,9 @@ DISTFILES += \
     ../COMPILE \
     ../COPYING \
     ../INSTALL \
+    ../icon_1024x1024.png \
+    ../icon_dev_1024x1024.png \
+    ../icon_ptb_1024x1024.png \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
@@ -1848,10 +1879,52 @@ DISTFILES += \
     .clang-format \
     CF-loader.xml \
     CMakeLists.txt \
+    de_AT_frami.aff \
+    de_AT_frami.dic \
+    de_CH_frami.aff \
+    de_CH_frami.dic \
+    de_DE_frami.aff \
+    de_DE_frami.dic \
+    deleteOldProfiles.mpackage \
+    deleteOldProfiles.xml \
+    echo.mpackage \
+    echo.xml \
+    el_GR.aff \
+    el_GR.dic \
+    en_GB.aff \
+    en_GB.dic \
+    en_US.aff \
+    en_US.dic \
+    enable-accessibility.mpackage \
+    es_ES.aff \
+    es_ES.dic \
+    fr.aff \
+    fr.dic \
+    it_IT.aff \
+    it_IT.dic \
+    lua-function-list.json \
+    MedBootstrap.xml \
     mg-loader.xml \
+    mpkg.mpackage \
     mudlet-lua/lua/generic-mapper/generic_mapper.xml \
     mudlet-lua/lua/generic-mapper/versions.lua \
     mudlet-lua/tests/DB.lua \
     mudlet-lua/tests/GUIUtils.lua \
     mudlet-lua/tests/Other.lua \
-    mudlet-lua/tests/README.md
+    mudlet-lua/tests/README.md \
+    mudlet-mapper.xml \
+    mudlet-tutorial.mpackage \
+    nl_NL.aff \
+    nl_NL.dic \
+    pl_PL.aff \
+    pl_PL.dic \
+    pt_PT.aff \
+    pt_PT.dic \
+    pt_BR.aff \
+    pt_BR.dic \
+    ru_RU.dic \
+    ru_RU.aff \
+    run-tests.mpackage \
+    run-tests.xml \
+    run-lua-code.mpackage \
+    run-lua-code.xml
