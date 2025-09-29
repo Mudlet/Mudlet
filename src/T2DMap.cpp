@@ -637,55 +637,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
                                                static_cast<qreal>(ry) - (static_cast<qreal>(mRoomHeight) / 2.0),
                                                static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight)));
 
-    QColor roomColor;
-    int roomEnvironment = pRoom->environment;
-    if (mpMap->mEnvColors.contains(roomEnvironment)) {
-        roomEnvironment = mpMap->mEnvColors[roomEnvironment];
-    } else {
-        if (!mpMap->mCustomEnvColors.contains(roomEnvironment)) {
-            roomEnvironment = mpHost->mNewRoomColor;
-        }
-    }
-    // clang-format off
-    switch (roomEnvironment) {
-    case 1:     roomColor = mpHost->mRed_2;             break;
-    case 2:     roomColor = mpHost->mGreen_2;           break;
-    case 3:     roomColor = mpHost->mYellow_2;          break;
-    case 4:     roomColor = mpHost->mBlue_2;            break;
-    case 5:     roomColor = mpHost->mMagenta_2;         break;
-    case 6:     roomColor = mpHost->mCyan_2;            break;
-    case 7:     roomColor = mpHost->mWhite_2;           break;
-    case 8:     roomColor = mpHost->mBlack_2;           break;
-    case 9:     roomColor = mpHost->mLightRed_2;        break;
-    case 10:    roomColor = mpHost->mLightGreen_2;      break;
-    case 11:    roomColor = mpHost->mLightYellow_2;     break;
-    case 12:    roomColor = mpHost->mLightBlue_2;       break;
-    case 13:    roomColor = mpHost->mLightMagenta_2;    break;
-    case 14:    roomColor = mpHost->mLightCyan_2;       break;
-    case 15:    roomColor = mpHost->mLightWhite_2;      break;
-    case 16:    roomColor = mpHost->mLightBlack_2;      break;
-    // clang-format on
-    default: //user defined room color
-        if (mpMap->mCustomEnvColors.contains(roomEnvironment)) {
-            roomColor = mpMap->mCustomEnvColors[roomEnvironment];
-        } else {
-            if (16 < roomEnvironment && roomEnvironment < 232) {
-                quint8 const base = roomEnvironment - 16;
-                quint8 r = base / 36;
-                quint8 g = (base - (r * 36)) / 6;
-                quint8 b = (base - (r * 36)) - (g * 6);
-
-                r = r == 0 ? 0 : (r - 1) * 40 + 95;
-                g = g == 0 ? 0 : (g - 1) * 40 + 95;
-                b = b == 0 ? 0 : (b - 1) * 40 + 95;
-                roomColor = QColor(r, g, b, 255);
-            } else if (231 < roomEnvironment && roomEnvironment < 256) {
-                quint8 const k = ((roomEnvironment - 232) * 10) + 8;
-                roomColor = QColor(k, k, k, 255);
-            }
-        }
-    }
-
+    QColor roomColor = calculateRoomColor(pRoom);
     const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
     QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
     selectionBg.setColorAt(0.25, roomColor);
@@ -1147,6 +1099,56 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
                 initiateSpeedWalk(speedWalkStartRoomId, it.key());
             }
         }
+    }
+}
+
+QColor T2DMap::calculateRoomColor(TRoom* pRoom) {
+    int roomEnvironment = pRoom->environment;
+    if (mpMap->mEnvColors.contains(roomEnvironment)) {
+        roomEnvironment = mpMap->mEnvColors[roomEnvironment];
+    } else if (!mpMap->mCustomEnvColors.contains(roomEnvironment)) {
+        return mpHost->mNewRoomColor;
+    }
+
+    // clang-format off
+    switch (roomEnvironment) {
+        case 1:     return mpHost->mRed_2;
+        case 2:     return mpHost->mGreen_2;
+        case 3:     return mpHost->mYellow_2;
+        case 4:     return mpHost->mBlue_2;
+        case 5:     return mpHost->mMagenta_2;
+        case 6:     return mpHost->mCyan_2;
+        case 7:     return mpHost->mWhite_2;
+        case 8:     return mpHost->mBlack_2;
+        case 9:     return mpHost->mLightRed_2;
+        case 10:    return mpHost->mLightGreen_2;
+        case 11:    return mpHost->mLightYellow_2;
+        case 12:    return mpHost->mLightBlue_2;
+        case 13:    return mpHost->mLightMagenta_2;
+        case 14:    return mpHost->mLightCyan_2;
+        case 15:    return mpHost->mLightWhite_2;
+        case 16:    return mpHost->mLightBlack_2;
+    }
+    // clang-format on
+    
+    //user defined room color
+    if (mpMap->mCustomEnvColors.contains(roomEnvironment)) {
+        return mpMap->mCustomEnvColors[roomEnvironment];
+    } 
+    if (16 < roomEnvironment && roomEnvironment < 232) {
+        quint8 const base = roomEnvironment - 16;
+        quint8 r = base / 36;
+        quint8 g = (base - (r * 36)) / 6;
+        quint8 b = (base - (r * 36)) - (g * 6);
+
+        r = r == 0 ? 0 : (r - 1) * 40 + 95;
+        g = g == 0 ? 0 : (g - 1) * 40 + 95;
+        b = b == 0 ? 0 : (b - 1) * 40 + 95;
+        return QColor(r, g, b, 255);
+    } 
+    if (231 < roomEnvironment && roomEnvironment < 256) {
+        quint8 const k = ((roomEnvironment - 232) * 10) + 8;
+        return QColor(k, k, k, 255);
     }
 }
 
