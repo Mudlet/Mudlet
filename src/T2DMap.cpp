@@ -637,7 +637,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
                                                static_cast<qreal>(ry) - (static_cast<qreal>(mRoomHeight) / 2.0),
                                                static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight)));
 
-    QColor roomColor = calculateRoomColor(pRoom);
+    QColor roomColor = calculateRoomColor(pRoom->environment);
     const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
     QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
     selectionBg.setColorAt(0.25, roomColor);
@@ -1102,8 +1102,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     }
 }
 
-QColor T2DMap::calculateRoomColor(TRoom* pRoom) {
-    int roomEnvironment = pRoom->environment;
+QColor T2DMap::calculateRoomColor(int roomEnvironment) {
     if (mpMap->mEnvColors.contains(roomEnvironment)) {
         roomEnvironment = mpMap->mEnvColors[roomEnvironment];
     } else if (!mpMap->mCustomEnvColors.contains(roomEnvironment)) {
