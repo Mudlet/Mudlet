@@ -2391,6 +2391,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
                         menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand));
+                    } else if (menuCommand == "-") {
+                        // Special case: "-" creates a menu separator
+                        menuCommands.append(QString());
+                        menuHints.append(QString());
                     } else {
                         // Treat as direct command
                         menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
