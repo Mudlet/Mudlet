@@ -643,7 +643,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         roomEnvironment = mpMap->mEnvColors[roomEnvironment];
     } else {
         if (!mpMap->mCustomEnvColors.contains(roomEnvironment)) {
-            roomEnvironment = 16;
+            roomEnvironment = mpHost->mNewRoomColor;
         }
     }
     // clang-format off
