@@ -206,14 +206,14 @@ jobs:
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
     - name: (Linux) Install Lua
-      uses: leafo/gh-actions-lua@v11
+      uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
       with:
         luaVersion: "5.1.5"
         buildCache: false
 
     - name: (Linux) Install latest Luarocks
-      uses: leafo/gh-actions-luarocks@v5
+      uses: leafo/gh-actions-luarocks@v6
       if: runner.os == 'Linux'
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
