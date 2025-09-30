@@ -11658,7 +11658,7 @@ TTreeWidget dlgTriggerEditor::getCurrentTreeWidget() {
     // clang-format on
 }
 
-void dlgTriggerEditor::slot_moveObjectUp() {
+void dlgTriggerEditor::moveObject(MoveDirection direction) {
     TTreeWidget* pTree = getCurrentTreeWidget();
     QTreeWidgetItem* pObject = pTree->currentItem();
     if (!pObject) {
@@ -11671,87 +11671,41 @@ void dlgTriggerEditor::slot_moveObjectUp() {
         return;
     }
 
+    int maxIndex = pParent ? pParent->ChildCount() - 1 : pParent->topLevelItemCount() - 1;
+    int newIndex;
+    // clang-format off
+    switch (direction) {
+        case MoveDirection::Up:     newIndex = std::max(index - 1, 0);        break;
+        case MoveDirection::Down:   newIndex = std::min(index + 1, maxIndex); break;
+        case MoveDirection::Top:    newIndex = 0;                             break;
+        case MoveDirection::Bottom: newIndex = maxIndex + 1;                  break;
+    }
+    // clang-format on
+
     if (pParent) {
         pParent->takeChild(index);
-        pParent->insertChild((std::max(index - 1, 0), pObject);
+        pParent->insertChild(newIndex, pObject);
     } else {
         pTree->takeTopLevelItem(index);
-        pTree->insertTopLevelItem((std::max(index - 1, 0), pObject);
+        pTree->insertTopLevelItem(newIndex, pObject);
     }
     pTree->setCurrentItem(pObject);
     pTree->scrollToItem(pObject);
+
+}
+
+void dlgTriggerEditor::slot_moveObjectUp() {
+    moveObject(MoveDirection::Up);
 }
 
 void dlgTriggerEditor::slot_moveObjectDown() {
-    TTreeWidget* pTree = getCurrentTreeWidget();
-    QTreeWidgetItem* pObject = pTree->currentItem();
-    if (!pObject) {
-        return;
-    }
-
-    QTreeWidgetItem* pParent = pObject->parent();
-    int index = pParent ? pParent->indexOfChild(pObject) : pTree->indexOfTopLevelItem(pObject);
-    if (index == -1) {
-        return;
-    }
-
-    if (pParent) {
-        int highestIndex = pParent->childCount() - 1; // child 1 has index 0, etc.
-        pParent->takeChild(index);
-        pParent->insertChild((std::min(index + 1, highestIndex), pObject); 
-    } else {
-        int highestIndex = pTree->topLevelItemCount() - 1;
-        pTree->takeTopLevelItem(index);
-        pTree->insertTopLevelItem((std::min(index + 1, highestIndex), pObject);
-    }
-    pTree->setCurrentItem(pObject);
-    pTree->scrollToItem(pObject);
+    moveObject(MoveDirection::Down);
 }
 
 void dlgTriggerEditor::slot_moveObjectTop() {
-    TTreeWidget* pTree = getCurrentTreeWidget();
-    QTreeWidgetItem* pObject = pTree->currentItem();
-    if (!pObject) {
-        return;
-    }
-
-    QTreeWidgetItem* pParent = pObject->parent();
-    int index = pParent ? pParent->indexOfChild(pObject) : pTree->indexOfTopLevelItem(pObject);
-    if (index == -1) {
-        return;
-    }
-
-    if (pParent) {
-        pParent->takeChild(index);
-        pParent->insertChild(0, pObject);
-    } else {
-        pTree->takeTopLevelItem(index);
-        pTree->insertTopLevelItem(0, pObject);
-    }
-    pTree->setCurrentItem(pObject);
-    pTree->scrollToItem(pObject);
+    moveObject(MoveDirection::Top);
 }
 
 void dlgTriggerEditor::slot_moveObjectBottom() {
-    TTreeWidget* pTree = getCurrentTreeWidget();
-    QTreeWidgetItem* pObject = pTree->currentItem();
-    if (!pObject) {
-        return;
-    }
-
-    QTreeWidgetItem* pParent = pObject->parent();
-    int index = pParent ? pParent->indexOfChild(pObject) : pTree->indexOfTopLevelItem(pObject);
-    if (index == -1) {
-        return;
-    }
-
-    if (pParent) {
-        pParent->takeChild(index);
-        pParent->addChild(pObject); 
-    } else {
-        pTree->takeTopLevelItem(index);
-        pTree->addTopLevelItem(pObject);
-    }
-    pTree->setCurrentItem(pObject);
-    pTree->scrollToItem(pObject);
+    moveObject(MoveDirection::Bottom);
 }

@@ -660,6 +660,13 @@ private:
     QString descNewFolder;
     QString descNewItem;
 
+    enum class MoveDirection {
+        Up,
+        Down,
+        Top,
+        Bottom
+    };
+    void moveObject(MoveDirection);
     TTreeWidget* getCurrentTreeWidget();
 };
 
