@@ -11641,7 +11641,7 @@ void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, bool 
     settings->setValue(key, hidden);
 }
 
-TTreeWidget dlgTriggerEditor::getCurrentTreeWidget() {
+TTreeWidget* dlgTriggerEditor::getCurrentTreeWidget() {
     // clang-format off
     switch (mCurrentView) {
         case EditorViewType::cmTriggerView: return treeWidget_triggers;
