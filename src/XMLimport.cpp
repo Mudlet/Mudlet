@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
