@@ -1110,9 +1110,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QShortcut* moveObjectDown = new QShortcut(QKeySequence("Alt+Down"), this);
     connect(moveObjectDown, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectDown);
     QShortcut* moveObjectTop = new QShortcut(QKeySequence("Alt+Home"), this);
-    connect(moveObjectUp, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectTop);
+    connect(moveObjectTop, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectTop);
     QShortcut* moveObjectBottom = new QShortcut(QKeySequence("Alt+End"), this);
-    connect(moveObjectUp, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectBottom);
+    connect(moveObjectBottom, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectBottom);
 
 }
 
@@ -11671,7 +11671,7 @@ void dlgTriggerEditor::moveObject(MoveDirection direction) {
         return;
     }
 
-    int maxIndex = pParent ? pParent->ChildCount() - 1 : pParent->topLevelItemCount() - 1;
+    int maxIndex = pParent ? pParent->childCount() - 1 : pTree->topLevelItemCount() - 1;
     int newIndex;
     // clang-format off
     switch (direction) {
@@ -11684,10 +11684,18 @@ void dlgTriggerEditor::moveObject(MoveDirection direction) {
 
     if (pParent) {
         pParent->takeChild(index);
-        pParent->insertChild(newIndex, pObject);
+        if (direction == MoveDirection::Bottom) {
+            pParent->addChild(pObject);
+        } else {
+            pParent->insertChild(newIndex, pObject);
+        }
     } else {
         pTree->takeTopLevelItem(index);
-        pTree->insertTopLevelItem(newIndex, pObject);
+        if (direction == MoveDirection::Bottom) {
+            pTree->addTopLevelItem(pObject);
+        } else {
+            pTree->insertTopLevelItem(newIndex - 1, pObject);
+        }
     }
     pTree->setCurrentItem(pObject);
     pTree->scrollToItem(pObject);
