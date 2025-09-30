@@ -7558,6 +7558,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
+    if (key == qsl("newRoomColor")) {
+        host.setNewRoomColor(getVerifiedString(L, __func__, 2, "value"));
+        return success();
+    }
 
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
@@ -7756,7 +7760,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
-        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } }
+        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
+        { qsl("newRoomColor"), [&](){ lua_pushstring(L, host.getNewRoomColor()); } }
     };
 
     auto it = configMap.find(key);

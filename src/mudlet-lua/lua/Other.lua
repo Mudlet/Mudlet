@@ -1284,6 +1284,7 @@ function getConfig(...)
       "specialForceMxpNegotiationOff",
       "specialForceMXPProcessorOn",      -- read-only in getConfig
       "versionInTTYPE",
+      "newRoomColor",
     }
     for _,v in ipairs(list) do
       result[v] = oldgetConfig(v)

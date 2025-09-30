@@ -686,6 +686,9 @@ public:
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
     QColor mNewRoomColor{QColorConstants::DarkRed};
 
+    QString getNewRoomColor() { return mNewRoomColor.name(); }
+    void setNewRoomColor(QString* s) { mNewRoomColor = QColor::fromString(s); }
+
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
