@@ -62,8 +62,20 @@ public:
     }
 
     // clang-format off
-    // games are to be added here in alphabetical order
+    // games are to be added here in alphabetical order, except the tutorial which should be first
     inline static const QList<GameDetail> scmDefaultGames = {
+            { qsl("Mudlet Tutorial"),
+            qsl("localhost"),
+            0,
+            false,
+            qsl("<a href='https://mudlet.org'>Website</a><br>"
+                "<a href='https://wiki.mudlet.org'>Wiki</a>"),
+            qsl(":/icons/mudlet-tutorial.png"),
+            qsl("Mudlet provides a simple tutorial to help you get familiar with playing MUDs using Mudlet."
+                 "\n\n"
+                 "You play a young adventurer who has recently graduated from the adventuring school.  "
+                 "You must aid the Sheriff in a series of tasks for the townfolk and become a local hero.")
+            },
             { qsl("Abandoned Realms"),
             qsl("abandonedrealms.com"),
             9000,
@@ -587,39 +599,6 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "minimize griefing and ensure that all kills have sufficient in-character cause."
                  "\n\n"
                  "What role will you play? The legend awaits!")},
-
-            {qsl("CoreMUD"),
-             qsl("coremud.org"),
-             4020,
-             true,
-             qsl("<a href='https://coremud.org/'>coremud.org</a>"),
-             qsl(":/icons/coremud_icon.jpg"),
-             qsl("Welcome to Core Mud, an interactive text MUD set on the planet formal star-charts "
-                 "refer to as Hermes 571-G, but that everyone in the know refers to simply as \"Core\"."
-                 "\n\n"
-                 "Core is one of the most distant settlements known to mankind, most famous for its "
-                 "lucrative yet oppressive mines, but more than mankind can be found here..."
-                 "\n\n"
-                 "Core is a diverse group of 9 races in total, all vying for recognition or profits, "
-                 "or both, working for The Company, the megalithic entity running the colony itself."
-                 "\n\n"
-                 "To The Company, everything is secondary to profits."
-                 "\n\n"
-                 "It is up to you to determine how best to survive in this environment, whether that "
-                 "be through combat training, superior mining skills, or technical prowess."
-                 "\n\n"
-                 "Core MUD is always free to play and features a fun and supportive atmosphere. "
-                 "Roleplaying is encouraged but not mandatory."
-                 "\n\n"
-                 "Mining is your primary source of income, but there are multiple ways to scrape "
-                 "together a few credits... or a few million."
-                 "\n\n"
-                 "Core Mud also features an economy which is player-driven.  Players own "
-                 "merchandise shops featuring energy weaponry or useful tools, pubs featuring "
-                 "assorted alcoholic (of course) and non-alcoholic beverages, and clinics for "
-                 "healing, to name a few."
-                 "\n\n"
-                 "Come join us today!")},
 
             {qsl("Multi-Users in Middle-earth"),
              qsl("mume.org"),

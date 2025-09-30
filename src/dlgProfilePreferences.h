@@ -41,6 +41,7 @@
 #include <QDoubleSpinBox>
 #include <QFontDialog>
 #include <QMap>
+#include <QCloseEvent>
 #include "post_guard.h"
 
 class Host;
@@ -168,6 +169,7 @@ private slots:
     void slot_enableDarkEditor(const QString&);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
+    void slot_toggleUseMaxBufferSize(bool checked);
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_changeInvertMapZoom(const bool);
@@ -183,6 +185,10 @@ signals:
     void signal_themeUpdateCompleted();
     void signal_preferencesSaved();
     void signal_resetMainWindowShortcutsToDefaults();
+    void preferencesClosing(const QString& profileName);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void setColors();
