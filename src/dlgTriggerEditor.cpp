@@ -1105,6 +1105,15 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         startTimer(mAutosaveInterval * 1min);
     }
 
+    QShortcut* moveObjectUp = new QShortcut(QKeySequence("Alt+Up"), this);
+    connect(moveObjectUp, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectUp);
+    QShortcut* moveObjectDown = new QShortcut(QKeySequence("Alt+Down"), this);
+    connect(moveObjectDown, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectDown);
+    QShortcut* moveObjectTop = new QShortcut(QKeySequence("Alt+Home"), this);
+    connect(moveObjectUp, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectTop);
+    QShortcut* moveObjectBottom = new QShortcut(QKeySequence("Alt+End"), this);
+    connect(moveObjectUp, &QShortcut::activated, this, &dlgTriggerEditor::slot_moveObjectBottom);
+
 }
 
 void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
@@ -11630,4 +11639,119 @@ void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, bool 
     QSettings* settings = mudlet::getQSettings();
     const QString key = qsl("Editor/banner_permanently_hidden/%1").arg(QString::fromLatin1(enumName).toLower());
     settings->setValue(key, hidden);
+}
+
+TTreeWidget dlgTriggerEditor::getCurrentTreeWidget() {
+    // clang-format off
+    switch (mCurrentView) {
+        case EditorViewType::cmTriggerView: return treeWidget_triggers;
+        case EditorViewType::cmTimerView:   return treeWidget_timers;
+        case EditorViewType::cmAliasView:   return treeWidget_aliases;
+        case EditorViewType::cmScriptView:  return treeWidget_scripts;
+        case EditorViewType::cmActionView:  return treeWidget_actions;
+        case EditorViewType::cmKeysView:    return treeWidget_keys;
+        case EditorViewType::cmVarsView:    return treeWidget_variables;
+        case EditorViewType::cmUnknownView: // fallthrough;
+        default: 
+            return nullptr;
+    }
+    // clang-format on
+}
+
+void dlgTriggerEditor::slot_moveObjectUp() {
+    TTreeWidget* pTree = getCurrentTreeWidget();
+    QTreeWidgetItem* pObject = pTree->currentItem();
+    if (!pObject) {
+        return;
+    }
+
+    QTreeWidgetItem* pParent = pObject->parent();
+    int index = pParent ? pParent->indexOfChild(pObject) : pTree->indexOfTopLevelItem(pObject);
+    if (index == -1) {
+        return;
+    }
+
+    if (pParent) {
+        pParent->takeChild(index);
+        pParent->insertChild((std::max(index - 1, 0), pObject);
+    } else {
+        pTree->takeTopLevelItem(index);
+        pTree->insertTopLevelItem((std::max(index - 1, 0), pObject);
+    }
+    pTree->setCurrentItem(pObject);
+    pTree->scrollToItem(pObject);
+}
+
+void dlgTriggerEditor::slot_moveObjectDown() {
+    TTreeWidget* pTree = getCurrentTreeWidget();
+    QTreeWidgetItem* pObject = pTree->currentItem();
+    if (!pObject) {
+        return;
+    }
+
+    QTreeWidgetItem* pParent = pObject->parent();
+    int index = pParent ? pParent->indexOfChild(pObject) : pTree->indexOfTopLevelItem(pObject);
+    if (index == -1) {
+        return;
+    }
+
+    if (pParent) {
+        int highestIndex = pParent->childCount() - 1; // child 1 has index 0, etc.
+        pParent->takeChild(index);
+        pParent->insertChild((std::min(index + 1, highestIndex), pObject); 
+    } else {
+        int highestIndex = pTree->topLevelItemCount() - 1;
+        pTree->takeTopLevelItem(index);
+        pTree->insertTopLevelItem((std::min(index + 1, highestIndex), pObject);
+    }
+    pTree->setCurrentItem(pObject);
+    pTree->scrollToItem(pObject);
+}
+
+void dlgTriggerEditor::slot_moveObjectTop() {
+    TTreeWidget* pTree = getCurrentTreeWidget();
+    QTreeWidgetItem* pObject = pTree->currentItem();
+    if (!pObject) {
+        return;
+    }
+
+    QTreeWidgetItem* pParent = pObject->parent();
+    int index = pParent ? pParent->indexOfChild(pObject) : pTree->indexOfTopLevelItem(pObject);
+    if (index == -1) {
+        return;
+    }
+
+    if (pParent) {
+        pParent->takeChild(index);
+        pParent->insertChild(0, pObject);
+    } else {
+        pTree->takeTopLevelItem(index);
+        pTree->insertTopLevelItem(0, pObject);
+    }
+    pTree->setCurrentItem(pObject);
+    pTree->scrollToItem(pObject);
+}
+
+void dlgTriggerEditor::slot_moveObjectBottom() {
+    TTreeWidget* pTree = getCurrentTreeWidget();
+    QTreeWidgetItem* pObject = pTree->currentItem();
+    if (!pObject) {
+        return;
+    }
+
+    QTreeWidgetItem* pParent = pObject->parent();
+    int index = pParent ? pParent->indexOfChild(pObject) : pTree->indexOfTopLevelItem(pObject);
+    if (index == -1) {
+        return;
+    }
+
+    if (pParent) {
+        pParent->takeChild(index);
+        pParent->addChild(pObject); 
+    } else {
+        pTree->takeTopLevelItem(index);
+        pTree->addTopLevelItem(pObject);
+    }
+    pTree->setCurrentItem(pObject);
+    pTree->scrollToItem(pObject);
 }

@@ -7,7 +7,7 @@
  *   Copyright (C) 2017-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2015-2018, 2020, 2022-2023 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -324,6 +324,11 @@ private slots:
     void slot_searchSplitterMoved(const int pos, const int index);
     void slot_clickedMessageBox(const QString&);
     void slot_bannerDismissClicked();
+    void slot_moveObjectUp();
+    void slot_moveObjectDown();
+    void slot_moveObjectTop();
+    void slot_moveObjectBottom();
+
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -654,6 +659,8 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
+
+    TTreeWidget* getCurrentTreeWidget();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
