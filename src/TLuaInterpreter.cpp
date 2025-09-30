@@ -7761,7 +7761,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         } },
         { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
         { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
-        { qsl("newRoomColor"), [&](){ lua_pushstring(L, host.getNewRoomColor()); } }
+        { qsl("newRoomColor"), [&](){ lua_pushstring(L, host.getNewRoomColor().toUtf8().constData()); } }
     };
 
     auto it = configMap.find(key);
