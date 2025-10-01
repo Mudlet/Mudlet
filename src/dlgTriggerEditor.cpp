@@ -8919,7 +8919,7 @@ void dlgTriggerEditor::slot_sourceReplace()
 {
     auto controller = mpSourceEditorEdbee->controller();
     auto replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
-    for (int i = 0; i < controller->textSelection()->rangeCount(); i++) {
+    for (size_t i = 0; i < controller->textSelection()->rangeCount(); i++) {
         auto &range = controller->textSelection()->range(i);
         if (mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
             slot_sourceFindNext();
@@ -8930,7 +8930,7 @@ void dlgTriggerEditor::slot_sourceReplace()
             continue;
         }
         mpSourceEditorEdbee->textDocument()->replace(range.anchor(), range.length(), replaceText);
-        range.setLength(mpSourceEditorFindArea->lineEdit_replaceText->text().length());
+        range.setLength(static_cast<size_t>(mpSourceEditorFindArea->lineEdit_replaceText->text().length()));
     }
 }
 
