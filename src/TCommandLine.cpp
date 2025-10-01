@@ -163,6 +163,12 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 // event propagation to the parent widget stops.
 bool TCommandLine::event(QEvent* event)
 {
+    // Don't process events if the host is closing down to prevent crashes
+    // when multiple profiles are closed quickly
+    if (!mpHost || mpHost->isClosingDown()) {
+        return QPlainTextEdit::event(event);
+    }
+    
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
         auto* ke = dynamic_cast<QKeyEvent*>(event);
