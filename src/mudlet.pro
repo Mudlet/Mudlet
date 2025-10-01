@@ -721,6 +721,7 @@ SOURCES += \
     TMxpVarTagHandler.cpp \
     TriggerHighlighter.cpp \
     TriggerUnit.cpp \
+    UndoCommands.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
     TScript.cpp \
@@ -856,6 +857,7 @@ HEADERS += \
     TMxpVersionTagHandler.h \
     Tree.h \
     TriggerUnit.h \
+    UndoCommands.h \
     TRoom.h \
     TRoomDB.h \
     TScript.h \

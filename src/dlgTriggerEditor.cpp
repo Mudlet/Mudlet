@@ -364,14 +364,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
-    // Add undo/redo shortcuts
-    QShortcut *undoShortcut = new QShortcut(QKeySequence::Undo, this);
-    undoShortcut->setContext(Qt::WidgetWithChildrenShortcut);
-    connect(undoShortcut, &QShortcut::activated, mpSourceEditorEdbee->controller(), &edbee::TextEditorController::undo);
-
-    QShortcut *redoShortcut = new QShortcut(QKeySequence::Redo, this);
-    redoShortcut->setContext(Qt::WidgetWithChildrenShortcut);
-    connect(redoShortcut, &QShortcut::activated, mpSourceEditorEdbee->controller(), &edbee::TextEditorController::redo);
 
     // Update the editor preferences
     connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
@@ -748,6 +740,16 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
+    mUndoStack = new QUndoStack(this);
+    mUndoAction = mUndoStack->createUndoAction(this, tr("&Undo"));
+    mUndoAction->setIcon(QIcon(":/icons/edit-undo.png"));
+    mUndoAction->setShortcuts(QKeySequence::Undo);
+    mRedoAction = mUndoStack->createRedoAction(this, tr("&Redo"));
+    mRedoAction->setIcon(QIcon(":/icons/edit-redo.png"));
+    mRedoAction->setShortcuts(QKeySequence::Redo);
+    toolBar->addAction(mUndoAction);
+    toolBar->addAction(mRedoAction);
+    toolBar->addSeparator();
     toolBar->addAction(mSaveItem);
     //: This is the toolbar that is initially placed at the top of the editor.
     toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions").arg(hostName));
@@ -2890,10 +2892,22 @@ bool dlgTriggerEditor::showDeleteConfirmation(const QString& title, const QStrin
     return result == QMessageBox::Yes;
 }
 
-void dlgTriggerEditor::delete_alias()
+void dlgTriggerEditor::delete_alias(bool withUndo)
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_aliases->selectedItems();
     if (selectedItems.isEmpty()) {
+        return;
+    }
+
+    if (withUndo) {
+        mUndoStack->beginMacro(tr("delete aliases"));
+        for (QTreeWidgetItem* pItem : selectedItems) {
+            TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new DeleteAliasCommand(pT, this));
+            }
+        }
+        mUndoStack->endMacro();
         return;
     }
 
@@ -2963,16 +2977,28 @@ void dlgTriggerEditor::delete_alias()
     }
 }
 
-void dlgTriggerEditor::delete_action()
+void dlgTriggerEditor::delete_action(bool withUndo)
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_actions->selectedItems();
     if (selectedItems.isEmpty()) {
         return;
     }
 
+    if (withUndo) {
+        mUndoStack->beginMacro(tr("delete buttons"));
+        for (QTreeWidgetItem* pItem : selectedItems) {
+            TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new DeleteActionCommand(pT, this));
+            }
+        }
+        mUndoStack->endMacro();
+        return;
+    }
+
     QStringList itemNames;
     QList<TAction*> actionsToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3013,7 +3039,7 @@ void dlgTriggerEditor::delete_action()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             // if active, deactivate.
             if (pT->isActive()) {
@@ -3041,7 +3067,7 @@ void dlgTriggerEditor::delete_action()
         mpCurrentActionItem = nullptr;
         clearActionForm();
     }
-    
+
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -3127,16 +3153,28 @@ void dlgTriggerEditor::delete_variable()
     }
 }
 
-void dlgTriggerEditor::delete_script()
+void dlgTriggerEditor::delete_script(bool withUndo)
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_scripts->selectedItems();
     if (selectedItems.isEmpty()) {
         return;
     }
 
+    if (withUndo) {
+        mUndoStack->beginMacro(tr("delete scripts"));
+        for (QTreeWidgetItem* pItem : selectedItems) {
+            TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new DeleteScriptCommand(pT, this));
+            }
+        }
+        mUndoStack->endMacro();
+        return;
+    }
+
     QStringList itemNames;
     QList<TScript*> scriptsToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3177,7 +3215,7 @@ void dlgTriggerEditor::delete_script()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3207,9 +3245,21 @@ void dlgTriggerEditor::delete_key()
         return;
     }
 
+    if (withUndo) {
+        mUndoStack->beginMacro(tr("delete keys"));
+        for (QTreeWidgetItem* pItem : selectedItems) {
+            TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new DeleteKeyCommand(pT, this));
+            }
+        }
+        mUndoStack->endMacro();
+        return;
+    }
+
     QStringList itemNames;
     QList<TKey*> keysToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3250,7 +3300,7 @@ void dlgTriggerEditor::delete_key()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3273,16 +3323,28 @@ void dlgTriggerEditor::delete_key()
     }
 }
 
-void dlgTriggerEditor::delete_trigger()
+void dlgTriggerEditor::delete_trigger(bool withUndo)
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_triggers->selectedItems();
     if (selectedItems.isEmpty()) {
         return;
     }
 
+    if (withUndo) {
+        mUndoStack->beginMacro(tr("delete triggers"));
+        for (QTreeWidgetItem* pItem : selectedItems) {
+            TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new DeleteTriggerCommand(pT, this));
+            }
+        }
+        mUndoStack->endMacro();
+        return;
+    }
+
     QStringList itemNames;
     QList<TTrigger*> triggersToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3323,7 +3385,7 @@ void dlgTriggerEditor::delete_trigger()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3346,16 +3408,28 @@ void dlgTriggerEditor::delete_trigger()
     }
 }
 
-void dlgTriggerEditor::delete_timer()
+void dlgTriggerEditor::delete_timer(bool withUndo)
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_timers->selectedItems();
     if (selectedItems.isEmpty()) {
         return;
     }
 
+    if (withUndo) {
+        mUndoStack->beginMacro(tr("delete timers"));
+        for (QTreeWidgetItem* pItem : selectedItems) {
+            TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new DeleteTimerCommand(pT, this));
+            }
+        }
+        mUndoStack->endMacro();
+        return;
+    }
+
     QStringList itemNames;
     QList<TTimer*> timersToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3396,7 +3470,7 @@ void dlgTriggerEditor::delete_timer()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -4326,8 +4400,69 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
 }
 
 
-void dlgTriggerEditor::addTrigger(bool isFolder)
+void dlgTriggerEditor::delete_trigger_for_undo(TTrigger* trigger)
 {
+    if (!trigger) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_triggers);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == trigger->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        if (item->parent()) {
+            item->parent()->removeChild(item);
+        } else {
+            treeWidget_triggers->takeTopLevelItem(treeWidget_triggers->indexOfTopLevelItem(item));
+        }
+    }
+
+    mpHost->getTriggerUnit()->removeTrigger(trigger->getID());
+}
+
+void dlgTriggerEditor::addTrigger(TTrigger* trigger, TTrigger* parent, int row)
+{
+    mpHost->getTriggerUnit()->addTrigger(trigger);
+
+    QTreeWidgetItem* parentItem = nullptr;
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_triggers);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                parentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    } else {
+        parentItem = mpTriggerBaseItem;
+    }
+
+    if (parentItem) {
+        QStringList nameList;
+        nameList << trigger->getName();
+        QTreeWidgetItem* newItem = new QTreeWidgetItem(parentItem, nameList);
+        newItem->setData(0, Qt::UserRole, trigger->getID());
+        parentItem->insertChild(row, newItem);
+        updateTriggerView(trigger);
+        treeWidget_triggers->setCurrentItem(newItem);
+    }
+}
+
+TTrigger* dlgTriggerEditor::addTrigger(bool isFolder, TTrigger* parent, bool withUndo)
+{
+    if (withUndo) {
+        mUndoStack->push(new AddTriggerCommand(parent, isFolder, this));
+        return nullptr;
+    }
+
     saveTrigger();
 
     QString name = isFolder ? tr("New trigger group") : tr("New trigger");
@@ -4337,6 +4472,17 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     const QString script = "";
 
     QTreeWidgetItem* pParentItem = treeWidget_triggers->currentItem();
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_triggers);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                pParentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    }
+
     QTreeWidgetItem* pNewItem = nullptr;
     TTrigger* pNewTrigger = nullptr;
 
@@ -4356,7 +4502,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
                 pParentItem->parent()->insertChild(0, pNewItem);
             }
         }
-    } 
+    }
 
     if (!pNewTrigger) {
         // Fallback to insert a new root item
@@ -4367,7 +4513,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
 
     if (!pNewTrigger) {
-        return;
+        return nullptr;
     }
 
     // Initialize logic object properties
@@ -4383,7 +4529,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewTrigger->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
         qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
@@ -4410,11 +4556,17 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     mpCurrentTriggerItem = pNewItem;
     treeWidget_triggers->setCurrentItem(pNewItem);
     slot_triggerSelected(treeWidget_triggers->currentItem());
+    return pNewTrigger;
 }
 
 
-void dlgTriggerEditor::addTimer(bool isFolder)
+TTimer* dlgTriggerEditor::addTimer(bool isFolder, TTimer* parent, bool withUndo)
 {
+    if (withUndo) {
+        mUndoStack->push(new AddTimerCommand(parent, isFolder, this));
+        return nullptr;
+    }
+
     saveTimer();
 
     QString name = isFolder ? tr("New timer group") : tr("New timer");
@@ -4424,6 +4576,17 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     const QString script = "";
 
     QTreeWidgetItem* pParentItem = treeWidget_timers->currentItem();
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_timers);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                pParentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    }
+
     QTreeWidgetItem* pNewItem = nullptr;
     TTimer* pNewTimer = nullptr;
 
@@ -4441,9 +4604,9 @@ void dlgTriggerEditor::addTimer(bool isFolder)
                 pNewTimer = new TTimer(pParentTrigger->getParent(), mpHost);
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
-            } 
-        } 
-    } 
+            }
+        }
+    }
 
     if (!pNewTimer) {
         // Fallback to insert a new root item
@@ -4453,7 +4616,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     }
 
     if (!pNewTimer) {
-        return;
+        return nullptr;
     }
 
     // Initialize logic object properties
@@ -4466,8 +4629,8 @@ void dlgTriggerEditor::addTimer(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewTimer->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
@@ -4486,6 +4649,63 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem(pNewItem);
     slot_timerSelected(treeWidget_timers->currentItem());
+    return pNewTimer;
+}
+
+void dlgTriggerEditor::addTimer(TTimer* timer, TTimer* parent, int row)
+{
+    mpHost->getTimerUnit()->addTimer(timer);
+
+    QTreeWidgetItem* parentItem = nullptr;
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_timers);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                parentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    } else {
+        parentItem = mpTimerBaseItem;
+    }
+
+    if (parentItem) {
+        QStringList nameList;
+        nameList << timer->getName();
+        QTreeWidgetItem* newItem = new QTreeWidgetItem(parentItem, nameList);
+        newItem->setData(0, Qt::UserRole, timer->getID());
+        parentItem->insertChild(row, newItem);
+        updateTimerView(timer);
+        treeWidget_timers->setCurrentItem(newItem);
+    }
+}
+
+void dlgTriggerEditor::delete_timer_for_undo(TTimer* timer)
+{
+    if (!timer) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_timers);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == timer->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        if (item->parent()) {
+            item->parent()->removeChild(item);
+        } else {
+            treeWidget_timers->takeTopLevelItem(treeWidget_timers->indexOfTopLevelItem(item));
+        }
+    }
+
+    mpHost->getTimerUnit()->removeTimer(timer->getID());
 }
 
 void dlgTriggerEditor::addVar(bool isFolder)
@@ -4557,8 +4777,13 @@ void dlgTriggerEditor::addVar(bool isFolder)
     slot_variableSelected(treeWidget_variables->currentItem());
 }
 
-void dlgTriggerEditor::addKey(bool isFolder)
+TKey* dlgTriggerEditor::addKey(bool isFolder, TKey* parent, bool withUndo)
 {
+    if (withUndo) {
+        mUndoStack->push(new AddKeyCommand(parent, isFolder, this));
+        return nullptr;
+    }
+
     saveKey();
 
     QString name = isFolder? tr("New key group") : tr("New key");
@@ -4566,6 +4791,17 @@ void dlgTriggerEditor::addKey(bool isFolder)
     const QString script = "";
 
     QTreeWidgetItem* pParentItem = treeWidget_keys->currentItem();
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_keys);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                pParentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    }
+
     QTreeWidgetItem* pNewItem = nullptr;
     TKey* pNewKey = nullptr;
 
@@ -4584,9 +4820,9 @@ void dlgTriggerEditor::addKey(bool isFolder)
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
             }
-        } 
-    } 
-    
+        }
+    }
+
     if (!pNewKey) {
         // Fallback to insert a new root item
         pNewKey = new TKey(name, mpHost);
@@ -4595,7 +4831,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     }
 
     if (!pNewKey) {
-        return;
+        return nullptr;
     }
 
     // Initialize logic object properties
@@ -4609,8 +4845,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewKey->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
@@ -4628,11 +4864,73 @@ void dlgTriggerEditor::addKey(bool isFolder)
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem(pNewItem);
     slot_keySelected(treeWidget_keys->currentItem());
+    return pNewKey;
+}
+
+void dlgTriggerEditor::addKey(TKey* key, TKey* parent, int row)
+{
+    mpHost->getKeyUnit()->addKey(key);
+
+    QTreeWidgetItem* parentItem = nullptr;
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_keys);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                parentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    } else {
+        parentItem = mpKeyBaseItem;
+    }
+
+    if (parentItem) {
+        QStringList nameList;
+        nameList << key->getName();
+        QTreeWidgetItem* newItem = new QTreeWidgetItem(parentItem, nameList);
+        newItem->setData(0, Qt::UserRole, key->getID());
+        parentItem->insertChild(row, newItem);
+        updateKeyView(key);
+        treeWidget_keys->setCurrentItem(newItem);
+    }
+}
+
+void dlgTriggerEditor::delete_key_for_undo(TKey* key)
+{
+    if (!key) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_keys);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == key->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        if (item->parent()) {
+            item->parent()->removeChild(item);
+        } else {
+            treeWidget_keys->takeTopLevelItem(treeWidget_keys->indexOfTopLevelItem(item));
+        }
+    }
+
+    mpHost->getKeyUnit()->removeKey(key->getID());
 }
 
 
-void dlgTriggerEditor::addAlias(bool isFolder)
+TAlias* dlgTriggerEditor::addAlias(bool isFolder, TAlias* parent, bool withUndo)
 {
+    if (withUndo) {
+        mUndoStack->push(new AddAliasCommand(parent, isFolder, this));
+        return nullptr;
+    }
+
     saveAlias();
 
     QString name = isFolder ? tr("New alias group") : tr("New alias");
@@ -4642,6 +4940,17 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     const QString script = "";
 
     QTreeWidgetItem* pParentItem = treeWidget_aliases->currentItem();
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_aliases);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                pParentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    }
+
     QTreeWidgetItem* pNewItem = nullptr;
     TAlias* pNewAlias = nullptr;
 
@@ -4660,8 +4969,8 @@ void dlgTriggerEditor::addAlias(bool isFolder)
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
             }
-        } 
-    } 
+        }
+    }
 
     if (!pNewAlias) {
         //insert a new root item
@@ -4672,7 +4981,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     }
 
     if (!pNewAlias) {
-        return;
+        return nullptr;
     }
 
     // Initialize logic object properties
@@ -4686,11 +4995,11 @@ void dlgTriggerEditor::addAlias(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewAlias->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
-    
+
     // Expand parent if applicable
     if (pParentItem) {
         pParentItem->setExpanded(true);
@@ -4704,15 +5013,77 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     clearDocument(mpSourceEditorEdbee); // New Alias
     mpAliasMainArea->lineEdit_alias_name->setText(name);
     mpAliasMainArea->label_idNumber->setText(QString::number(pNewAlias->getID()));
-    
+
     // Finalize selection
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
     slot_aliasSelected(treeWidget_aliases->currentItem());
+    return pNewAlias;
 }
 
-void dlgTriggerEditor::addAction(bool isFolder)
+void dlgTriggerEditor::addAlias(TAlias* alias, TAlias* parent, int row)
 {
+    mpHost->getAliasUnit()->addAlias(alias);
+
+    QTreeWidgetItem* parentItem = nullptr;
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_aliases);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                parentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    } else {
+        parentItem = mpAliasBaseItem;
+    }
+
+    if (parentItem) {
+        QStringList nameList;
+        nameList << alias->getName();
+        QTreeWidgetItem* newItem = new QTreeWidgetItem(parentItem, nameList);
+        newItem->setData(0, Qt::UserRole, alias->getID());
+        parentItem->insertChild(row, newItem);
+        updateAliasView(alias);
+        treeWidget_aliases->setCurrentItem(newItem);
+    }
+}
+
+void dlgTriggerEditor::delete_alias_for_undo(TAlias* alias)
+{
+    if (!alias) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_aliases);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == alias->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        if (item->parent()) {
+            item->parent()->removeChild(item);
+        } else {
+            treeWidget_aliases->takeTopLevelItem(treeWidget_aliases->indexOfTopLevelItem(item));
+        }
+    }
+
+    mpHost->getAliasUnit()->removeAlias(alias->getID());
+}
+
+TAction* dlgTriggerEditor::addAction(bool isFolder, TAction* parent, bool withUndo)
+{
+    if (withUndo) {
+        mUndoStack->push(new AddActionCommand(parent, isFolder, this));
+        return nullptr;
+    }
+
     saveAction();
 
     QString name = isFolder ? tr("New menu") : tr("New button");
@@ -4722,6 +5093,17 @@ void dlgTriggerEditor::addAction(bool isFolder)
     const QString script = "";
 
     QTreeWidgetItem* pParentItem = treeWidget_actions->currentItem();
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_actions);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                pParentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    }
+
     QTreeWidgetItem* pNewItem = nullptr;
     QPointer<TAction> pNewAction = nullptr;
 
@@ -4767,8 +5149,8 @@ void dlgTriggerEditor::addAction(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewAction->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
@@ -4787,22 +5169,95 @@ void dlgTriggerEditor::addAction(bool isFolder)
     pNewAction->setDataSaved();
 
     mpHost->getActionUnit()->updateToolbar();
-    
+
     // Finalize selection
     mpCurrentActionItem = pNewItem;
     treeWidget_actions->setCurrentItem(pNewItem);
     slot_actionSelected(treeWidget_actions->currentItem());
+    return pNewAction;
+}
+
+void dlgTriggerEditor::addAction(TAction* action, TAction* parent, int row)
+{
+    mpHost->getActionUnit()->addAction(action);
+
+    QTreeWidgetItem* parentItem = nullptr;
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_actions);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                parentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    } else {
+        parentItem = mpActionBaseItem;
+    }
+
+    if (parentItem) {
+        QStringList nameList;
+        nameList << action->getName();
+        QTreeWidgetItem* newItem = new QTreeWidgetItem(parentItem, nameList);
+        newItem->setData(0, Qt::UserRole, action->getID());
+        parentItem->insertChild(row, newItem);
+        updateActionView(action);
+        treeWidget_actions->setCurrentItem(newItem);
+    }
+}
+
+void dlgTriggerEditor::delete_action_for_undo(TAction* action)
+{
+    if (!action) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_actions);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == action->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        if (item->parent()) {
+            item->parent()->removeChild(item);
+        } else {
+            treeWidget_actions->takeTopLevelItem(treeWidget_actions->indexOfTopLevelItem(item));
+        }
+    }
+
+    mpHost->getActionUnit()->removeAction(action->getID());
 }
 
 
-void dlgTriggerEditor::addScript(bool isFolder)
+TScript* dlgTriggerEditor::addScript(bool isFolder, TScript* parent, bool withUndo)
 {
+    if (withUndo) {
+        mUndoStack->push(new AddScriptCommand(parent, isFolder, this));
+        return nullptr;
+    }
+
     saveScript();
     QString name = isFolder ? tr("New script group") : tr("New script");
     QStringList nameList = { name };
     const QString script;
 
     QTreeWidgetItem* pParentItem = treeWidget_scripts->currentItem();
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_scripts);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                pParentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    }
+
     QTreeWidgetItem* pNewItem = nullptr;
     TScript* pNewScript = nullptr;
 
@@ -4820,10 +5275,10 @@ void dlgTriggerEditor::addScript(bool isFolder)
                 pNewScript = new TScript(pParentTrigger->getParent(), mpHost);
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
-            } 
+            }
         }
-    } 
-    
+    }
+
     if (!pNewScript) {
         // Fallback to insert a new root item
         pNewScript = new TScript(name, mpHost);
@@ -4832,7 +5287,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     }
 
     if (!pNewScript) {
-        return;
+        return nullptr;
     }
 
     // Initialize logic object properties
@@ -4844,8 +5299,8 @@ void dlgTriggerEditor::addScript(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewScript->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
@@ -4864,6 +5319,63 @@ void dlgTriggerEditor::addScript(bool isFolder)
     mpCurrentScriptItem = pNewItem;
     treeWidget_scripts->setCurrentItem(pNewItem);
     slot_scriptsSelected(treeWidget_scripts->currentItem());
+    return pNewScript;
+}
+
+void dlgTriggerEditor::addScript(TScript* script, TScript* parent, int row)
+{
+    mpHost->getScriptUnit()->addScript(script);
+
+    QTreeWidgetItem* parentItem = nullptr;
+    if (parent) {
+        QTreeWidgetItemIterator it(treeWidget_scripts);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parent->getID()) {
+                parentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    } else {
+        parentItem = mpScriptsBaseItem;
+    }
+
+    if (parentItem) {
+        QStringList nameList;
+        nameList << script->getName();
+        QTreeWidgetItem* newItem = new QTreeWidgetItem(parentItem, nameList);
+        newItem->setData(0, Qt::UserRole, script->getID());
+        parentItem->insertChild(row, newItem);
+        updateScriptView(script);
+        treeWidget_scripts->setCurrentItem(newItem);
+    }
+}
+
+void dlgTriggerEditor::delete_script_for_undo(TScript* script)
+{
+    if (!script) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_scripts);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == script->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        if (item->parent()) {
+            item->parent()->removeChild(item);
+        } else {
+            treeWidget_scripts->takeTopLevelItem(treeWidget_scripts->indexOfTopLevelItem(item));
+        }
+    }
+
+    mpHost->getScriptUnit()->removeScript(script->getID());
 }
 
 void dlgTriggerEditor::selectTriggerByID(int id)
@@ -5079,7 +5591,7 @@ void dlgTriggerEditor::saveTrigger()
     if (!pItem) {
         return;
     }
-    
+
     // Additional safety check: ensure the item's parent is still valid
     // and that the item is still part of the tree widget
     if (!pItem->parent() || pItem->treeWidget() != treeWidget_triggers) {
@@ -5139,153 +5651,68 @@ void dlgTriggerEditor::saveTrigger()
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (pT) {
-        pT->setName(name);
-        pT->setCommand(command);
-        pT->setRegexCodeList(patterns, patternKinds);
+        mUndoStack->beginMacro(tr("Change Trigger Properties"));
 
-        pT->setScript(script);
-        pT->setIsMultiline(isMultiline);
-        pT->mPerlSlashGOption = mpTriggersMainArea->checkBox_perlSlashGOption->isChecked();
-        pT->mFilterTrigger = mpTriggersMainArea->checkBox_filterTrigger->isChecked();
-        if (mpTriggersMainArea->spinBox_lineMargin->value() >= 0) {
-            pT->setConditionLineDelta(mpTriggersMainArea->spinBox_lineMargin->value());
+        if (pT->getName() != name) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::Name, pT->getName(), name, this));
         }
-        pT->mStayOpen = mpTriggersMainArea->spinBox_stayOpen->value();
-        pT->mSoundTrigger = mpTriggersMainArea->groupBox_soundTrigger->isChecked();
-        pT->setSound(mpTriggersMainArea->lineEdit_soundFile->text());
+        if (pT->getCommand() != command) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::Command, pT->getCommand(), command, this));
+        }
+
+        QList<QVariant> oldPatterns;
+        oldPatterns << QVariant(pT->getPatternsList()) << QVariant(pT->getRegexCodePropertyList());
+        QList<QVariant> newPatterns;
+        newPatterns << QVariant(patterns) << QVariant(patternKinds);
+        if (oldPatterns != newPatterns) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::Patterns, oldPatterns, newPatterns, this));
+        }
+
+        if (pT->getScript() != script) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::Script, pT->getScript(), script, this));
+        }
+        if (pT->isMultiline() != isMultiline) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::IsMultiline, pT->isMultiline(), isMultiline, this));
+        }
+        if (pT->mPerlSlashGOption != mpTriggersMainArea->checkBox_perlSlashGOption->isChecked()) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::PerlSlashGOption, pT->mPerlSlashGOption, mpTriggersMainArea->checkBox_perlSlashGOption->isChecked(), this));
+        }
+        if (pT->mFilterTrigger != mpTriggersMainArea->checkBox_filterTrigger->isChecked()) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::FilterTrigger, pT->mFilterTrigger, mpTriggersMainArea->checkBox_filterTrigger->isChecked(), this));
+        }
+        if (pT->getConditionLineDelta() != mpTriggersMainArea->spinBox_lineMargin->value()) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::ConditionLineDelta, pT->getConditionLineDelta(), mpTriggersMainArea->spinBox_lineMargin->value(), this));
+        }
+        if (pT->mStayOpen != mpTriggersMainArea->spinBox_stayOpen->value()) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::StayOpen, pT->mStayOpen, mpTriggersMainArea->spinBox_stayOpen->value(), this));
+        }
+        if (pT->mSoundTrigger != mpTriggersMainArea->groupBox_soundTrigger->isChecked()) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::SoundTrigger, pT->mSoundTrigger, mpTriggersMainArea->groupBox_soundTrigger->isChecked(), this));
+        }
+        if (pT->mSoundFile != mpTriggersMainArea->lineEdit_soundFile->text()) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::SoundFile, pT->mSoundFile, mpTriggersMainArea->lineEdit_soundFile->text(), this));
+        }
+        if (pT->isColorizerTrigger() != mpTriggersMainArea->groupBox_triggerColorizer->isChecked()) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::IsColorizerTrigger, pT->isColorizerTrigger(), mpTriggersMainArea->groupBox_triggerColorizer->isChecked(), this));
+        }
 
         QColor fgColor(QColorConstants::Transparent);
         QColor bgColor(QColorConstants::Transparent);
         if (!mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString().isEmpty()) {
             fgColor = QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString());
         }
-        pT->setColorizerFgColor(fgColor);
+        if (pT->getFgColor() != fgColor) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::FgColor, pT->getFgColor(), fgColor, this));
+        }
+
         if (!mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString().isEmpty()) {
             bgColor = QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString());
         }
-        pT->setColorizerBgColor(bgColor);
-        pT->setIsColorizerTrigger(mpTriggersMainArea->groupBox_triggerColorizer->isChecked());
-        QIcon icon;
-        QString itemDescription;
-        if (pT->isFilterChain()) {
-            if (pT->isActive()) {
-                itemDescription = descActiveFilterChain;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactiveFilterChain;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-        } else if (pT->isFolder()) {
-            if (!pT->mPackageName.isEmpty()) {
-                if (pT->isActive()) {
-                    itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveFolder;
-                }
-            } else if (pT->isActive()) {
-                itemDescription = descActiveFolder;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactiveFolder;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-        } else {
-            if (pT->isActive()) {
-                itemDescription = descActive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
+        if (pT->getBgColor() != bgColor) {
+            mUndoStack->push(new ChangeTriggerPropertyCommand(pT, ChangeTriggerPropertyCommand::BgColor, pT->getBgColor(), bgColor, this));
         }
-        if (pT->state()) {
-            clearEditorNotification();
 
-            if (pT->checkIfNew()) {
-                if (pT->isFolder()) {
-                    if (pT->shouldBeActive()) {
-                        itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
-                    }
-                } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
-                        itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    }
-                }
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-
-                // Only enable truly new triggers, not existing disabled ones being loaded
-                if (pT->shouldBeActive()) {
-                    pT->setIsActive(true);
-                }
-                pT->unmarkAsNew();
-            } else {
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-            }
-        } else {
-            QIcon iconError;
-            pItem->setText(0, name);
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = descError;
-            pItem->setIcon(0, iconError);
-            pT->setIsActive(false);
-            showError(pT->getError());
-        }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        mUndoStack->endMacro();
     }
 }
 
@@ -5295,7 +5722,7 @@ void dlgTriggerEditor::saveTimer()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_timers) {
         return;
@@ -5304,110 +5731,32 @@ void dlgTriggerEditor::saveTimer()
     mpTimersMainArea->trimName();
     const QString name = mpTimersMainArea->lineEdit_timer_name->text();
     const QString script = mpSourceEditorEdbeeDocument->text();
-
+    const QString command = mpTimersMainArea->lineEdit_timer_command->text();
+    const int hours = mpTimersMainArea->timeEdit_timer_hours->time().hour();
+    const int minutes = mpTimersMainArea->timeEdit_timer_minutes->time().minute();
+    const int secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
+    const int msecs = mpTimersMainArea->timeEdit_timer_msecs->time().msec();
+    const QTime time(hours, minutes, secs, msecs);
 
     const int timerID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
-        pT->setName(name);
-        const QString command = mpTimersMainArea->lineEdit_timer_command->text();
-        const int hours = mpTimersMainArea->timeEdit_timer_hours->time().hour();
-        const int minutes = mpTimersMainArea->timeEdit_timer_minutes->time().minute();
-        const int secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
-        const int msecs = mpTimersMainArea->timeEdit_timer_msecs->time().msec();
-        const QTime time(hours, minutes, secs, msecs);
-        pT->setTime(time);
-        pT->setCommand(command);
-        pT->setName(name);
-        pT->setScript(script);
+        mUndoStack->beginMacro(tr("Change Timer Properties"));
 
-        QIcon icon;
-        QString itemDescription;
-        if (pT->isFolder()) {
-            if (!pT->mPackageName.isEmpty()) {
-                if (pT->isActive()) {
-                    itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveFolder;
-                }
-            } else {
-                if (pT->shouldBeActive()) {
-                    itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    itemDescription = descInactiveFolder;
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
-                    }
-                }
-            }
-        } else if (pT->isOffsetTimer()) {
-            if (pT->shouldBeActive()) {
-                itemDescription = descActiveOffsetTimer;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactiveOffsetTimer;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-        } else {
-            if (pT->shouldBeActive()) {
-                itemDescription = descActive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-                pT->setIsActive(true);
-            } else {
-                itemDescription = descInactive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
+        if (pT->getName() != name) {
+            mUndoStack->push(new ChangeTimerPropertyCommand(pT, ChangeTimerPropertyCommand::Name, pT->getName(), name, this));
+        }
+        if (pT->getCommand() != command) {
+            mUndoStack->push(new ChangeTimerPropertyCommand(pT, ChangeTimerPropertyCommand::Command, pT->getCommand(), command, this));
+        }
+        if (pT->getScript() != script) {
+            mUndoStack->push(new ChangeTimerPropertyCommand(pT, ChangeTimerPropertyCommand::Script, pT->getScript(), script, this));
+        }
+        if (pT->getTime() != time) {
+            mUndoStack->push(new ChangeTimerPropertyCommand(pT, ChangeTimerPropertyCommand::Time, pT->getTime(), time, this));
         }
 
-        if (pT->state()) {
-            clearEditorNotification();
-
-            // don't activate new timers by default - might be annoying
-            pItem->setIcon(0, icon);
-            pItem->setText(0, name);
-
-        } else {
-            QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = descError;
-            pItem->setIcon(0, iconError);
-            pItem->setText(0, name);
-            showError(pT->getError());
-        }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        mUndoStack->endMacro();
     }
 }
 
@@ -5417,7 +5766,7 @@ void dlgTriggerEditor::saveAlias()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_aliases) {
         return;
@@ -5455,115 +5804,22 @@ void dlgTriggerEditor::saveAlias()
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
-        pT->setName(name);
-        pT->setCommand(substitution);
-        pT->setRegexCode(regex); // This could generate an error state if regex does not compile
-        pT->setScript(script);
+        mUndoStack->beginMacro(tr("Change Alias Properties"));
 
-        QIcon icon;
-        QString itemDescription;
-        if (pT->isFolder()) {
-            if (!pT->mPackageName.isEmpty()) {
-                if (pT->isActive()) {
-                    itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveFolder;
-                }
-            } else if (pT->isActive()) {
-                itemDescription = descActiveFolder;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactiveFolder;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-        } else {
-            if (pT->isActive()) {
-                itemDescription = descActive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
+        if (pT->getName() != name) {
+            mUndoStack->push(new ChangeAliasPropertyCommand(pT, ChangeAliasPropertyCommand::Name, pT->getName(), name, this));
+        }
+        if (pT->getCommand() != substitution) {
+            mUndoStack->push(new ChangeAliasPropertyCommand(pT, ChangeAliasPropertyCommand::Command, pT->getCommand(), substitution, this));
+        }
+        if (pT->getRegexCode() != regex) {
+            mUndoStack->push(new ChangeAliasPropertyCommand(pT, ChangeAliasPropertyCommand::RegexCode, pT->getRegexCode(), regex, this));
+        }
+        if (pT->getScript() != script) {
+            mUndoStack->push(new ChangeAliasPropertyCommand(pT, ChangeAliasPropertyCommand::Script, pT->getScript(), script, this));
         }
 
-        if (pT->state()) {
-            clearEditorNotification();
-
-            if (pT->checkIfNew()) {
-                if (pT->isFolder()) {
-                    if (pT->shouldBeActive()) {
-                        itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
-                    }
-                } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
-                        itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    }
-                }
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-
-                // Only enable truly new aliases, not existing disabled ones being loaded
-                if (pT->shouldBeActive()) {
-                    pT->setIsActive(true);
-                }
-                pT->unmarkAsNew();
-            } else {
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-            }
-        } else {
-            QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = descError;
-            pItem->setIcon(0, iconError);
-            pItem->setText(0, name);
-            showError(pT->getError());
-        }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        mUndoStack->endMacro();
     }
 }
 
@@ -5573,7 +5829,7 @@ void dlgTriggerEditor::saveAction()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_actions) {
         return;
@@ -5581,146 +5837,61 @@ void dlgTriggerEditor::saveAction()
 
     mpActionsMainArea->trimName();
     const QString name = mpActionsMainArea->lineEdit_action_name->text();
-    const QString icon = mpActionsMainArea->lineEdit_action_icon->text();
+    const QString icon_text = mpActionsMainArea->lineEdit_action_icon->text();
     const QString commandDown = mpActionsMainArea->lineEdit_action_button_command_down->text();
     const QString commandUp = mpActionsMainArea->lineEdit_action_button_command_up->text();
     const QString script = mpSourceEditorEdbeeDocument->text();
-    // currentIndex() can return -1 if no setting was previously made - need to fixup:
     const int rotation = qMax(0, mpActionsMainArea->comboBox_action_button_rotation->currentIndex());
     const int columns = mpActionsMainArea->spinBox_action_bar_columns->text().toInt();
     const bool isChecked = mpActionsMainArea->checkBox_action_button_isPushDown->isChecked();
-    // bottom location is no longer supported i.e. location = 1 = 0 = location top
-    // currentIndex() can return -1 if no setting was previously made - need to fixup:
     int location = qMax(0, mpActionsMainArea->comboBox_action_bar_location->currentIndex());
     if (location > 0) {
         location++;
     }
-
-    // currentIndex() can return -1 if no setting was previously made - need to fixup:
     const int orientation = qMax(0, mpActionsMainArea->comboBox_action_bar_orientation->currentIndex());
+    const QString css = mpActionsMainArea->plainTextEdit_action_css->toPlainText();
 
-    // This is an unnecessary level of indentation but has been retained to
-    // reduce the noise in a git commit/diff caused by the removal of a
-    // redundant "if( pITem )" - can be removed next time the file is modified
     const int actionID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
-        // Check if data has been changed before it gets updated.
-        bool actionDataChanged = false;
-        if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->plainTextEdit_action_css->toPlainText()) {
-            actionDataChanged = true;
+        mUndoStack->beginMacro(tr("Change Button Properties"));
+
+        if (pA->getName() != name) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::Name, pA->getName(), name, this));
+        }
+        if (pA->getIcon() != icon_text) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::Icon, pA->getIcon(), icon_text, this));
+        }
+        if (pA->getScript() != script) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::Script, pA->getScript(), script, this));
+        }
+        if (pA->getCommandButtonDown() != commandDown) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::CommandDown, pA->getCommandButtonDown(), commandDown, this));
+        }
+        if (pA->getCommandButtonUp() != commandUp) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::CommandUp, pA->getCommandButtonUp(), commandUp, this));
+        }
+        if (pA->isPushDownButton() != isChecked) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::IsPushDownButton, pA->isPushDownButton(), isChecked, this));
+        }
+        if (pA->mLocation != location) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::Location, pA->mLocation, location, this));
+        }
+        if (pA->mOrientation != orientation) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::Orientation, pA->mOrientation, orientation, this));
+        }
+        if (pA->getButtonRotation() != rotation) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::Rotation, pA->getButtonRotation(), rotation, this));
+        }
+        if (pA->getButtonColumns() != columns) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::Columns, pA->getButtonColumns(), columns, this));
+        }
+        if (pA->css != css) {
+            mUndoStack->push(new ChangeActionPropertyCommand(pA, ChangeActionPropertyCommand::Css, pA->css, css, this));
         }
 
-        // Do not change anything for a module master folder - it won't "take"
-        if (pA->mPackageName.isEmpty()) {
-            pA->setName(name);
-            pA->setIcon(icon);
-            pA->setScript(script);
-            pA->setCommandButtonDown(commandDown);
-            pA->setCommandButtonUp(commandUp);
-            pA->setIsPushDownButton(isChecked);
-            pA->mLocation = location;
-            pA->mOrientation = orientation;
-            pA->setIsActive(pA->shouldBeActive());
-            pA->setButtonRotation(rotation);
-            pA->setButtonColumns(columns);
-            pA->mUseCustomLayout = false;
-            pA->css = mpActionsMainArea->plainTextEdit_action_css->toPlainText();
-        }
-
-        QIcon icon;
-        QString itemDescription;
-        const bool itemActive = pA->isActive();
-        if (pA->isFolder()) {
-            itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
-            if (!pA->mPackageName.isEmpty()) {
-                // Has a package name so is a module master folder
-                if (itemActive) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            } else if (!pA->getParent() || !pA->getParent()->mPackageName.isEmpty()) {
-                // No parent or it has a parent with a package name so is a toolbar
-                if (itemActive) {
-                    if (pA->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            } else {
-                // Else must be a menu
-                if (itemActive) {
-                    if (pA->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-        } else {
-            // Is a button
-            if (itemActive) {
-                itemDescription = descActive;
-                if (pA->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = descInactive;
-            }
-        }
-
-        if (pA->state()) {
-            clearEditorNotification();
-
-            pItem->setIcon(0, icon);
-            pItem->setText(0, name);
-        } else {
-            QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = descError;
-            pItem->setIcon(0, iconError);
-            pItem->setText(0, name);
-            showError(pA->getError());
-        }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-
-        // If not active, don't bother raising the TToolBar for this save.
-        if (!pA->shouldBeActive()) {
-            pA->setDataSaved();
-        }
-
-        if (actionDataChanged) {
-            pA->setDataChanged();
-        }
-
-        // if the action has a TToolBar instance with a script error, hide that toolbar.
-        if (pA->mpToolBar && !pA->state()) {
-            pA->mpToolBar->hide();
-        }
-
-        // if the action location is changed, make sure the old toolbar instance is hidden.
-        if (pA->mLocation == 4 && pA->mpEasyButtonBar) {
-            pA->mpEasyButtonBar->hide();
-        }
-        if (pA->mLocation != 4 && pA->mpToolBar) {
-            pA->mpToolBar->hide();
-        }
+        mUndoStack->endMacro();
     }
-
-    mpHost->getActionUnit()->updateToolbar();
-    mudlet::self()->processEventLoopHack();
 }
 
 void dlgTriggerEditor::writeScript(int id)
@@ -5755,7 +5926,7 @@ void dlgTriggerEditor::saveScript()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_scripts) {
         return;
@@ -5765,129 +5936,31 @@ void dlgTriggerEditor::saveScript()
     const QString name = mpScriptsMainArea->lineEdit_script_name->text();
     const QString script = mpSourceEditorEdbeeDocument->text();
     mpScriptsMainAreaEditHandlerItem = nullptr;
-    QList<QListWidgetItem*> itemList;
-    for (int i = 0; i < mpScriptsMainArea->listWidget_script_registered_event_handlers->count(); i++) {
-        QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->item(i);
-        itemList << pItem;
-    }
     QStringList handlerList;
-    for (auto& listWidgetItem : itemList) {
-        if (listWidgetItem->text().isEmpty()) {
-            continue;
+    for (int i = 0; i < mpScriptsMainArea->listWidget_script_registered_event_handlers->count(); i++) {
+        QListWidgetItem* item = mpScriptsMainArea->listWidget_script_registered_event_handlers->item(i);
+        if (!item->text().isEmpty()) {
+            handlerList << item->text();
         }
-        handlerList << listWidgetItem->text();
     }
 
     const int scriptID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
-    if (!pT) {
-        return;
+    if (pT) {
+        mUndoStack->beginMacro(tr("Change Script Properties"));
+
+        if (pT->getName() != name) {
+            mUndoStack->push(new ChangeScriptPropertyCommand(pT, ChangeScriptPropertyCommand::Name, pT->getName(), name, this));
+        }
+        if (pT->getScript() != script) {
+            mUndoStack->push(new ChangeScriptPropertyCommand(pT, ChangeScriptPropertyCommand::Script, pT->getScript(), script, this));
+        }
+        if (pT->getEventHandlerList() != handlerList) {
+            mUndoStack->push(new ChangeScriptPropertyCommand(pT, ChangeScriptPropertyCommand::EventHandlerList, pT->getEventHandlerList(), handlerList, this));
+        }
+
+        mUndoStack->endMacro();
     }
-
-    pT->setName(name);
-    pT->setEventHandlerList(handlerList);
-    pT->setScript(script);
-
-    pT->compileAll();
-    mpHost->getTriggerUnit()->doCleanup();
-    QIcon icon;
-    QString itemDescription;
-    const bool itemActive = pT->isActive();
-    if (pT->isFolder()) {
-        itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
-        if (!pT->mPackageName.isEmpty()) {
-            if (itemActive) {
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-            }
-        } else {
-            if (itemActive) {
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
-            }
-        }
-    } else {
-        if (itemActive) {
-            itemDescription = descActive;
-            if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-            } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = descInactiveParent.arg(itemDescription);
-            }
-        } else {
-            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = descInactive;
-        }
-    }
-
-    if (pT->state()) {
-        if (auto error = pT->getLoadingError(); error) {
-            showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
-                           "possibly by another script. The error was:%2%3")
-                                .arg(qsl("<br>"), error.value()));
-        } else {
-            clearEditorNotification();
-        }
-
-        if (pT->checkIfNew()) {
-            if (pT->isFolder()) {
-                itemDescription = descActiveFolder;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                // Set visual appearance based on actual active state, not "new" status
-                if (pT->isActive()) {
-                    itemDescription = descActive;
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    itemDescription = descInactive;
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-            pItem->setIcon(0, icon);
-            pItem->setText(0, name);
-
-            // Only enable truly new scripts, not existing disabled ones being loaded
-            if (pT->shouldBeActive()) {
-                pT->setIsActive(true);
-            }
-            pT->unmarkAsNew();
-        } else {
-            pItem->setIcon(0, icon);
-            pItem->setText(0, name);
-        }
-
-    } else {
-        QIcon iconError;
-        iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = descError;
-        pItem->setIcon(0, iconError);
-        pItem->setText(0, name);
-        showError(pT->getError());
-    }
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
 void dlgTriggerEditor::clearEditorNotification() const
@@ -5931,202 +6004,50 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
 
 void dlgTriggerEditor::saveVar()
 {
-    // We can enter this function if:
-    // we click on a variable without having one selected ( no parent )
-    // we click on a variable from another variable
-    // we click on a variable from having the top-most element selected ( parent but parent is not a variable/table )
-    // we click on a variable from the same variable (such as a double click)
-    // we add a new variable
-    // we switch away from a variable (so we are saving the old variable)
-
     if (!mpCurrentVarItem) {
         return;
     }
+
     QTreeWidgetItem* pItem = mpCurrentVarItem;
     if (!pItem->parent()) {
         return;
     }
+
     auto* luaInterface = mpHost->getLuaInterface();
     auto* varUnit = luaInterface->getVarUnit();
     TVar* variable = varUnit->getWVar(pItem);
-    bool newVar = false;
-    if (!variable) {
-        newVar = true;
+    bool newVar = !variable;
+    if (newVar) {
         variable = varUnit->getTVar(pItem);
     }
     if (!variable) {
         return;
     }
+
     const QString newName = mpVarsMainArea->lineEdit_var_name->text();
     QString newValue = mpSourceEditorEdbeeDocument->text();
     if (newName.isEmpty()) {
         slot_variableSelected(pItem);
         return;
     }
+
     mChangingVar = true;
     int uiNameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
     int uiValueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
-    if ((uiNameType == LUA_TNUMBER || uiNameType == LUA_TSTRING) && newVar) {
-        uiNameType = LUA_TNONE;
-    }
-    //check variable recasting
-    const int varRecast = canRecast(pItem, uiNameType, uiValueType);
-    if ((uiNameType == -1) || (variable && uiNameType != variable->getKeyType())) {
-        if (QString(newName).toInt()) {
-            uiNameType = LUA_TNUMBER;
-        } else {
-            uiNameType = LUA_TSTRING;
+
+    if (newVar) {
+        mUndoStack->push(new AddVariableCommand(variable, newName, newValue, uiNameType, uiValueType, this));
+    } else {
+        mUndoStack->beginMacro(tr("Change Variable Properties"));
+        if (variable->getName() != newName || variable->getKeyType() != uiNameType) {
+            mUndoStack->push(new ChangeVariablePropertyCommand(variable, ChangeVariablePropertyCommand::Name, QVariantList{variable->getName(), variable->getKeyType()}, QVariantList{newName, uiNameType}, this));
         }
-    }
-    if ((uiValueType != LUA_TTABLE) && (uiValueType == -1)) {
-        if (newValue.toInt()) {
-            uiValueType = LUA_TNUMBER;
-        } else if (newValue.toLower() == "true" || newValue.toLower() == "false") {
-            uiValueType = LUA_TBOOLEAN;
-        } else {
-            uiValueType = LUA_TSTRING;
+        if (variable->getValue() != newValue || variable->getValueType() != uiValueType) {
+            mUndoStack->push(new ChangeVariablePropertyCommand(variable, ChangeVariablePropertyCommand::Value, QVariantList{variable->getValue(), variable->getValueType()}, QVariantList{newValue, uiValueType}, this));
         }
+        mUndoStack->endMacro();
     }
-    if (varRecast == 2) {
-        //we sometimes get in here from new variables
-        if (newVar) {
-            //we're making this var
-            variable = varUnit->getTVar(pItem);
-            if (!variable) {
-                variable = new TVar();
-            }
-            variable->setName(newName, uiNameType);
-            variable->setValue(newValue, uiValueType);
-            luaInterface->createVar(variable);
-            varUnit->addVariable(variable);
-            varUnit->addTreeItem(pItem, variable);
-            varUnit->removeTempVar(pItem);
-            varUnit->getBase()->addChild(variable);
-            pItem->setText(0, newName);
-            mpCurrentVarItem = nullptr;
-        } else if (variable) {
-            if (newName == variable->getName() && (variable->getValueType() == LUA_TTABLE && newValue == variable->getValue())) {
-                //no change made
-            } else {
-                //we're trying to rename it/recast it
-                int change = 0;
-                if (newName != variable->getName() || uiNameType != variable->getKeyType()) {
-                    //let's make sure the nametype works
-                    if (variable->getKeyType() == LUA_TNUMBER && newName.toInt()) {
-                        uiNameType = LUA_TNUMBER;
-                    } else {
-                        uiNameType = LUA_TSTRING;
-                    }
-                    change = change | 0x1;
-                }
-                variable->setNewName(newName, uiNameType);
-                if (variable->getValueType() != LUA_TTABLE && (newValue != variable->getValue() || uiValueType != variable->getValueType())) {
-                    //let's check again
-                    if (variable->getValueType() == LUA_TTABLE) {
-                        //HEIKO: obvious logic error used to be valueType == LUA_TABLE
-                        uiValueType = LUA_TTABLE;
-                    } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
-                        uiValueType = LUA_TNUMBER;
-                    } else if (uiValueType == LUA_TBOOLEAN && (newValue.toLower() == "true" || newValue.toLower() == "false")) {
-                        uiValueType = LUA_TBOOLEAN;
-                    } else {
-                        uiValueType = LUA_TSTRING; //nope, you don't agree, you lose your value
-                    }
-                    variable->setValue(newValue, uiValueType);
-                    change = change | 0x2;
-                }
-                if (change) {
-                    if (change & 0x1 || newVar) {
-                        luaInterface->renameVar(variable);
-                    }
-                    if ((variable->getValueType() != LUA_TTABLE && change & 0x2) || newVar) {
-                        luaInterface->setValue(variable);
-                    }
-                    pItem->setText(0, newName);
-                    mpCurrentVarItem = nullptr;
-                } else {
-                    variable->clearNewName();
-                }
-            }
-        }
-    } else if (varRecast == 1) { //recast it
-        TVar* var = varUnit->getWVar(pItem);
-        if (newVar) {
-            //we're making this var
-            var = varUnit->getTVar(pItem);
-            var->setName(newName, uiNameType);
-            var->setValue(newValue, uiValueType);
-            luaInterface->createVar(var);
-            varUnit->addVariable(var);
-            varUnit->addTreeItem(pItem, var);
-            pItem->setText(0, newName);
-            mpCurrentVarItem = nullptr;
-        } else if (var) {
-            //we're trying to rename it/recast it
-            int change = 0;
-            if (newName != var->getName() || uiNameType != var->getKeyType()) {
-                //let's make sure the nametype works
-                if (uiNameType == LUA_TSTRING) {
-                    //do nothing, we can always make key to string
-                } else if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
-                    uiNameType = LUA_TNUMBER;
-                } else {
-                    uiNameType = LUA_TSTRING;
-                }
-                var->setNewName(newName, uiNameType);
-                change = change | 0x1;
-            }
-            if (newValue != var->getValue() || uiValueType != var->getValueType()) {
-                //let's check again
-                if (uiValueType == LUA_TTABLE) {
-                    newValue = "{}";
-                } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
-                    uiValueType = LUA_TNUMBER;
-                } else if (uiValueType == LUA_TBOOLEAN && (newValue.toLower() == QLatin1String("true") || newValue.toLower() == QLatin1String("false"))) {
-                    uiValueType = LUA_TBOOLEAN;
-                } else {
-                    uiValueType = LUA_TSTRING; //nope, you don't agree, you lose your value
-                }
-                var->setValue(newValue, uiValueType);
-                change = change | 0x2;
-            }
-            if (change) {
-                if (change & 0x1 || newVar) {
-                    luaInterface->renameVar(var);
-                }
-                if (change & 0x2 || newVar) {
-                    luaInterface->setValue(var);
-                }
-                pItem->setText(0, newName);
-                mpCurrentVarItem = nullptr;
-            }
-        }
-    }
-    //redo this here in case we changed type
-    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-    pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
-    if (!varUnit->shouldSave(variable)) {
-        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
-        pItem->setForeground(0, QBrush(QColor("grey")));
-        pItem->setToolTip(0, QString());
-        pItem->setCheckState(0, Qt::Unchecked);
-    } else if (varUnit->isSaved(variable)) {
-        pItem->setCheckState(0, Qt::Checked);
-    }
-    pItem->setData(0, Qt::UserRole, variable->getValueType());
-    QIcon icon;
-    switch (variable->getValueType()) {
-    case 5:
-        icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
-        break;
-    case 6:
-        icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
-        break;
-    default:
-        icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
-        break;
-    }
-    pItem->setIcon(0, icon);
+
     mChangingVar = false;
     slot_variableSelected(pItem);
 }
@@ -6137,7 +6058,7 @@ void dlgTriggerEditor::saveKey()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_keys) {
         return;
@@ -6151,117 +6072,22 @@ void dlgTriggerEditor::saveKey()
     const QString command = mpKeysMainArea->lineEdit_key_command->text();
     const QString script = mpSourceEditorEdbeeDocument->text();
 
-
-    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
-    TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
+    const int keyID = pItem->data(0, Qt::UserRole).toInt();
+    TKey* pT = mpHost->getKeyUnit()->getKey(keyID);
     if (pT) {
-        const QString old_name = pT->getName();
-        pItem->setText(0, name);
-        pT->setName(name);
-        pT->setCommand(command);
-        pT->setScript(script);
+        mUndoStack->beginMacro(tr("Change Key Properties"));
 
-        QIcon icon;
-        QString itemDescription;
-        const bool itemActive = pT->isActive();
-        if (pT->isFolder()) {
-            itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
-            if (!pT->mPackageName.isEmpty()) {
-                if (itemActive) {
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            } else if (itemActive) {
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactiveFolder;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
-        } else {
-            if (itemActive) {
-                itemDescription = descActive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = descInactiveParent.arg(itemDescription);
-                }
-            } else {
-                itemDescription = descInactive;
-                if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
-                }
-            }
+        if (pT->getName() != name) {
+            mUndoStack->push(new ChangeKeyPropertyCommand(pT, ChangeKeyPropertyCommand::Name, pT->getName(), name, this));
+        }
+        if (pT->getCommand() != command) {
+            mUndoStack->push(new ChangeKeyPropertyCommand(pT, ChangeKeyPropertyCommand::Command, pT->getCommand(), command, this));
+        }
+        if (pT->getScript() != script) {
+            mUndoStack->push(new ChangeKeyPropertyCommand(pT, ChangeKeyPropertyCommand::Script, pT->getScript(), script, this));
         }
 
-        if (pT->state()) {
-            clearEditorNotification();
-            if (old_name == tr("New key")) {
-                if (pT->isFolder()) {
-                    if (pT->shouldBeActive()) {
-                        itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
-                    }
-                } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
-                        itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    }
-                }
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-
-                // Only enable truly new keys, not existing disabled ones being loaded
-                if (pT->shouldBeActive()) {
-                    pT->setIsActive(true);
-                }
-            } else {
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-            }
-        } else {
-            QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = descError;
-            pItem->setIcon(0, iconError);
-            pItem->setText(0, name);
-            showError(pT->getError());
-        }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        mUndoStack->endMacro();
     }
 }
 
@@ -8783,34 +8609,22 @@ void dlgTriggerEditor::slot_addNewItem()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        addTrigger(false); //add normal trigger
-        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
-        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
+        addTrigger(false, nullptr, true);
         break;
     case EditorViewType::cmTimerView:
-        addTimer(false); //add normal timer
-        mpTimersMainArea->lineEdit_timer_name->setFocus();
-        mpTimersMainArea->lineEdit_timer_name->selectAll();
+        addTimer(false, nullptr, true);
         break;
     case EditorViewType::cmAliasView:
-        addAlias(false); //add normal alias
-        mpAliasMainArea->lineEdit_alias_name->setFocus();
-        mpAliasMainArea->lineEdit_alias_name->selectAll();
+        addAlias(false, nullptr, true);
         break;
     case EditorViewType::cmScriptView:
-        addScript(false); //add normal script
-        mpScriptsMainArea->lineEdit_script_name->setFocus();
-        mpScriptsMainArea->lineEdit_script_name->selectAll();
+        addScript(false, nullptr, true);
         break;
     case EditorViewType::cmActionView:
-        addAction(false); //add normal action
-        mpActionsMainArea->lineEdit_action_name->setFocus();
-        mpActionsMainArea->lineEdit_action_name->selectAll();
+        addAction(false, nullptr, true);
         break;
     case EditorViewType::cmKeysView:
-        addKey(false); //add normal key
-        mpKeysMainArea->lineEdit_key_name->setFocus();
-        mpKeysMainArea->lineEdit_key_name->selectAll();
+        addKey(false, nullptr, true);
         break;
     case EditorViewType::cmVarsView:
         addVar(false); //add variable
@@ -8818,7 +8632,7 @@ void dlgTriggerEditor::slot_addNewItem()
         // variables start without a default name
         break;
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_addNewGroup() undefined view";
     }
 }
 
@@ -8826,34 +8640,22 @@ void dlgTriggerEditor::slot_addNewGroup()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        addTrigger(true); //add trigger group
-        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
-        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
+        addTrigger(true, nullptr, true);
         break;
     case EditorViewType::cmTimerView:
-        addTimer(true); //add timer group
-        mpTimersMainArea->lineEdit_timer_name->setFocus();
-        mpTimersMainArea->lineEdit_timer_name->selectAll();
+        addTimer(true, nullptr, true);
         break;
     case EditorViewType::cmAliasView:
-        addAlias(true); //add alias group
-        mpAliasMainArea->lineEdit_alias_name->setFocus();
-        mpAliasMainArea->lineEdit_alias_name->selectAll();
+        addAlias(true, nullptr, true);
         break;
     case EditorViewType::cmScriptView:
-        addScript(true); //add script group
-        mpScriptsMainArea->lineEdit_script_name->setFocus();
-        mpScriptsMainArea->lineEdit_script_name->selectAll();
+        addScript(true, nullptr, true);
         break;
     case EditorViewType::cmActionView:
-        addAction(true); //add action group
-        mpActionsMainArea->lineEdit_action_name->setFocus();
-        mpActionsMainArea->lineEdit_action_name->selectAll();
+        addAction(true, nullptr, true);
         break;
     case EditorViewType::cmKeysView:
-        addKey(true); //add keys group
-        mpKeysMainArea->lineEdit_key_name->setFocus();
-        mpKeysMainArea->lineEdit_key_name->selectAll();
+        addKey(true, nullptr, true);
         break;
     case EditorViewType::cmVarsView:
         addVar(true); // add lua table
@@ -8869,26 +8671,74 @@ void dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        activeToggle_trigger();
+    {
+        QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
+        if (pItem) {
+            TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new ActivateTriggerCommand(pT, this));
+            }
+        }
         break;
+    }
     case EditorViewType::cmTimerView:
-        activeToggle_timer();
+    {
+        QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
+        if (pItem) {
+            TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new ActivateTimerCommand(pT, this));
+            }
+        }
         break;
+    }
     case EditorViewType::cmAliasView:
-        activeToggle_alias();
+    {
+        QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
+        if (pItem) {
+            TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new ActivateAliasCommand(pT, this));
+            }
+        }
         break;
+    }
     case EditorViewType::cmScriptView:
-        activeToggle_script();
+    {
+        QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
+        if (pItem) {
+            TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new ActivateScriptCommand(pT, this));
+            }
+        }
         break;
+    }
     case EditorViewType::cmActionView:
-        activeToggle_action();
+    {
+        QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
+        if (pItem) {
+            TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new ActivateActionCommand(pT, this));
+            }
+        }
         break;
+    }
     case EditorViewType::cmKeysView:
-        activeToggle_key();
+    {
+        QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
+        if (pItem) {
+            TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+            if (pT) {
+                mUndoStack->push(new ActivateKeyCommand(pT, this));
+            }
+        }
         break;
+    }
 
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag() undefined view";
     }
 }
 
@@ -8987,28 +8837,28 @@ void dlgTriggerEditor::slot_deleteItemOrGroup()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        delete_trigger();
+        delete_trigger(true);
         break;
     case EditorViewType::cmTimerView:
-        delete_timer();
+        delete_timer(true);
         break;
     case EditorViewType::cmAliasView:
-        delete_alias();
+        delete_alias(true);
         break;
     case EditorViewType::cmScriptView:
-        delete_script();
+        delete_script(true);
         break;
     case EditorViewType::cmActionView:
-        delete_action();
+        delete_action(true);
         break;
     case EditorViewType::cmKeysView:
-        delete_key();
+        delete_key(true);
         break;
     case EditorViewType::cmVarsView:
         delete_variable();
         break;
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_deleteItemOrGroup() undefined view";
     }
 }
 
@@ -11648,4 +11498,661 @@ void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, bool 
     QSettings* settings = mudlet::getQSettings();
     const QString key = qsl("Editor/banner_permanently_hidden/%1").arg(QString::fromLatin1(enumName).toLower());
     settings->setValue(key, hidden);
+}
+
+void dlgTriggerEditor::updateTriggerView(TTrigger* trigger)
+{
+    if (!trigger) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_triggers);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == trigger->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QIcon icon;
+        QString itemDescription;
+        if (trigger->isFilterChain()) {
+            if (trigger->isActive()) {
+                itemDescription = descActiveFilterChain;
+                if (trigger->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactiveFilterChain;
+                if (trigger->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else if (trigger->isFolder()) {
+            if (trigger->isActive()) {
+                itemDescription = descActiveFolder;
+                if (trigger->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactiveFolder;
+                if (trigger->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else {
+            if (trigger->isActive()) {
+                itemDescription = descActive;
+                if (trigger->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactive;
+                if (trigger->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        }
+        if (!trigger->state()) {
+            icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            itemDescription = descError;
+        }
+        item->setIcon(0, icon);
+        item->setText(0, trigger->getName());
+        item->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        if (item->childCount() > 0) {
+            children_icon_triggers(item);
+        }
+    }
+
+    if (mpCurrentTriggerItem == item) {
+        slot_triggerSelected(item);
+    }
+}
+
+int dlgTriggerEditor::getTriggerRow(TTrigger* trigger)
+{
+    if (!trigger) {
+        return -1;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_triggers);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == trigger->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QTreeWidgetItem* parent = item->parent();
+        if (parent && parent != mpTriggerBaseItem) {
+            return parent->indexOfChild(item);
+        } else {
+            return mpTriggerBaseItem->indexOfChild(item);
+        }
+    }
+
+    return -1;
+}
+
+void dlgTriggerEditor::updateActionView(TAction* action)
+{
+    if (!action) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_actions);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == action->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QIcon icon;
+        QString itemDescription;
+        const bool itemActive = action->isActive();
+        if (action->isFolder()) {
+            itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
+            if (!action->mPackageName.isEmpty()) {
+                // Has a package name so is a module master folder
+                if (itemActive) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            } else if (!action->getParent() || (action->getParent() && !action->getParent()->mPackageName.isEmpty())) {
+                // We are a top-level folder with no parent
+                // OR: We have a parent and that IS a module master folder
+                // THUS: We are a toolbar
+                if (itemActive) {
+                    if (action->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
+                    }
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            } else {
+                // We must be a MENU
+                if (itemActive) {
+                    if (action->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
+                    }
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else {
+            // We are a BUTTON
+            if (itemActive) {
+                itemDescription = descActive;
+                if (action->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactive;
+                if (action->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        }
+        if (!action->state()) {
+            icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            itemDescription = descError;
+        }
+        item->setIcon(0, icon);
+        item->setText(0, action->getName());
+        item->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        if (item->childCount() > 0) {
+            children_icon_action(item);
+        }
+    }
+
+    if (mpCurrentActionItem == item) {
+        slot_actionSelected(item);
+    }
+}
+
+int dlgTriggerEditor::getActionRow(TAction* action)
+{
+    if (!action) {
+        return -1;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_actions);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == action->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QTreeWidgetItem* parent = item->parent();
+        if (parent && parent != mpActionBaseItem) {
+            return parent->indexOfChild(item);
+        } else {
+            return mpActionBaseItem->indexOfChild(item);
+        }
+    }
+
+    return -1;
+}
+
+void dlgTriggerEditor::updateKeyView(TKey* key)
+{
+    if (!key) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_keys);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == key->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QIcon icon;
+        QString itemDescription;
+        if (key->isFolder()) {
+            if (key->isActive()) {
+                itemDescription = descActiveFolder;
+                if (key->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactiveFolder;
+                if (key->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else {
+            if (key->isActive()) {
+                itemDescription = descActive;
+                if (key->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactive;
+                if (key->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        }
+        if (!key->state()) {
+            icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            itemDescription = descError;
+        }
+        item->setIcon(0, icon);
+        item->setText(0, key->getName());
+        item->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        if (item->childCount() > 0) {
+            children_icon_key(item);
+        }
+    }
+
+    if (mpCurrentKeyItem == item) {
+        slot_keySelected(item);
+    }
+}
+
+int dlgTriggerEditor::getKeyRow(TKey* key)
+{
+    if (!key) {
+        return -1;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_keys);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == key->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QTreeWidgetItem* parent = item->parent();
+        if (parent && parent != mpKeyBaseItem) {
+            return parent->indexOfChild(item);
+        } else {
+            return mpKeyBaseItem->indexOfChild(item);
+        }
+    }
+
+    return -1;
+}
+
+void dlgTriggerEditor::updateScriptView(TScript* script)
+{
+    if (!script) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_scripts);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == script->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QIcon icon;
+        QString itemDescription;
+        if (script->isFolder()) {
+            if (script->isActive()) {
+                itemDescription = descActiveFolder;
+                if (script->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactiveFolder;
+                if (script->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else {
+            if (script->isActive()) {
+                itemDescription = descActive;
+                if (script->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactive;
+                if (script->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        }
+        if (!script->state()) {
+            icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            itemDescription = descError;
+        }
+        item->setIcon(0, icon);
+        item->setText(0, script->getName());
+        item->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        if (item->childCount() > 0) {
+            children_icon_script(item);
+        }
+    }
+
+    if (mpCurrentScriptItem == item) {
+        slot_scriptsSelected(item);
+    }
+}
+
+int dlgTriggerEditor::getScriptRow(TScript* script)
+{
+    if (!script) {
+        return -1;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_scripts);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == script->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QTreeWidgetItem* parent = item->parent();
+        if (parent && parent != mpScriptsBaseItem) {
+            return parent->indexOfChild(item);
+        } else {
+            return mpScriptsBaseItem->indexOfChild(item);
+        }
+    }
+
+    return -1;
+}
+
+void dlgTriggerEditor::updateTimerView(TTimer* timer)
+{
+    if (!timer) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_timers);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == timer->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QIcon icon;
+        QString itemDescription;
+        if (timer->isFolder()) {
+            if (timer->isActive()) {
+                itemDescription = descActiveFolder;
+                if (timer->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactiveFolder;
+                if (timer->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else {
+            if (timer->isOffsetTimer()) {
+                if (timer->shouldBeActive()) {
+                    itemDescription = descActiveOffsetTimer;
+                    if (timer->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
+                    }
+                } else {
+                    itemDescription = descInactiveOffsetTimer;
+                    if (timer->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
+            } else {
+                if (timer->shouldBeActive()) {
+                    itemDescription = descActive;
+                    if (timer->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
+                    }
+                } else {
+                    itemDescription = descInactive;
+                    if (timer->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
+            }
+        }
+        if (!timer->state()) {
+            icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            itemDescription = descError;
+        }
+        item->setIcon(0, icon);
+        item->setText(0, timer->getName());
+        item->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        if (item->childCount() > 0) {
+            children_icon_timer(item);
+        }
+    }
+
+    if (mpCurrentTimerItem == item) {
+        slot_timerSelected(item);
+    }
+}
+
+int dlgTriggerEditor::getTimerRow(TTimer* timer)
+{
+    if (!timer) {
+        return -1;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_timers);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == timer->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QTreeWidgetItem* parent = item->parent();
+        if (parent && parent != mpTimerBaseItem) {
+            return parent->indexOfChild(item);
+        } else {
+            return mpTimerBaseItem->indexOfChild(item);
+        }
+    }
+
+    return -1;
+}
+
+void dlgTriggerEditor::updateAliasView(TAlias* alias)
+{
+    if (!alias) {
+        return;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_aliases);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == alias->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QIcon icon;
+        QString itemDescription;
+        if (alias->isFolder()) {
+            if (alias->isActive()) {
+                itemDescription = descActiveFolder;
+                if (alias->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactiveFolder;
+                if (alias->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else {
+            if (alias->isActive()) {
+                itemDescription = descActive;
+                if (alias->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
+            } else {
+                itemDescription = descInactive;
+                if (alias->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        }
+        if (!alias->state()) {
+            icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            itemDescription = descError;
+        }
+        item->setIcon(0, icon);
+        item->setText(0, alias->getName());
+        item->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        if (item->childCount() > 0) {
+            children_icon_alias(item);
+        }
+    }
+
+    if (mpCurrentAliasItem == item) {
+        slot_aliasSelected(item);
+    }
+}
+
+int dlgTriggerEditor::getAliasRow(TAlias* alias)
+{
+    if (!alias) {
+        return -1;
+    }
+
+    QTreeWidgetItem* item = nullptr;
+    QTreeWidgetItemIterator it(treeWidget_aliases);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == alias->getID()) {
+            item = *it;
+            break;
+        }
+        ++it;
+    }
+
+    if (item) {
+        QTreeWidgetItem* parent = item->parent();
+        if (parent && parent != mpAliasBaseItem) {
+            return parent->indexOfChild(item);
+        } else {
+            return mpAliasBaseItem->indexOfChild(item);
+        }
+    }
+
+    return -1;
 }

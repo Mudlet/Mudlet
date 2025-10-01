@@ -47,6 +47,7 @@
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
 #include "SingleLineTextEdit.h"
+#include "UndoCommands.h"
 
 #include "pre_guard.h"
 #include <QDialog>
@@ -55,6 +56,7 @@
 #include <QScrollArea>
 #include <QTreeWidget>
 #include <QDesktopServices>
+#include <QUndoStack>
 #include "post_guard.h"
 
 // Edbee editor includes
@@ -219,12 +221,12 @@ public:
     void activeToggle_script();
     void activeToggle_timer();
     void activeToggle_trigger();
-    void delete_action();
-    void delete_alias();
-    void delete_key();
-    void delete_script();
-    void delete_timer();
-    void delete_trigger();
+    void delete_action(bool withUndo = true);
+    void delete_alias(bool withUndo = true);
+    void delete_key(bool withUndo = true);
+    void delete_script(bool withUndo = true);
+    void delete_timer(bool withUndo = true);
+    void delete_trigger(bool withUndo = true);
     void delete_variable();
     void setSearchOptions(const SearchOptions);
     void setEditorShowBidi(const bool);
@@ -346,9 +348,37 @@ private:
     void readSettings();
     void writeSettings();
     void addScript(bool);
-    void addAlias(bool);
-    void addTimer(bool);
-    void addTrigger(bool);
+    TScript* addScript(bool isFolder, TScript* parent = nullptr, bool withUndo = true);
+    void addScript(TScript* script, TScript* parent, int row);
+    void delete_script_for_undo(TScript* script);
+    int getScriptRow(TScript* script);
+    void updateScriptView(TScript* script);
+    TAlias* addAlias(bool isFolder, TAlias* parent = nullptr, bool withUndo = true);
+    void addAlias(TAlias* alias, TAlias* parent, int row);
+    void delete_alias_for_undo(TAlias* alias);
+    int getAliasRow(TAlias* alias);
+    void updateAliasView(TAlias* alias);
+    TKey* addKey(bool isFolder, TKey* parent = nullptr, bool withUndo = true);
+    void addKey(TKey* key, TKey* parent, int row);
+    void delete_key_for_undo(TKey* key);
+    int getKeyRow(TKey* key);
+    void updateKeyView(TKey* key);
+    TAction* addAction(bool isFolder, TAction* parent = nullptr, bool withUndo = true);
+    void addAction(TAction* action, TAction* parent, int row);
+    void delete_action_for_undo(TAction* action);
+    int getActionRow(TAction* action);
+    void updateActionView(TAction* action);
+    TTimer* addTimer(bool isFolder, TTimer* parent = nullptr, bool withUndo = true);
+    void addTimer(TTimer* timer, TTimer* parent, int row);
+    void delete_timer_for_undo(TTimer* timer);
+    int getTimerRow(TTimer* timer);
+    void updateTimerView(TTimer* timer);
+    TTrigger* addTrigger(bool isFolder, TTrigger* parent = nullptr, bool withUndo = true);
+    void addTrigger(TTrigger* trigger, TTrigger* parent, int row);
+    void delete_trigger(bool withUndo = true);
+    void delete_trigger_for_undo(TTrigger* trigger);
+    int getTriggerRow(TTrigger* trigger);
+    void updateTriggerView(TTrigger* trigger);
     void addAction(bool);
     void addKey(bool);
     void timerEvent(QTimerEvent *event) override;
@@ -560,6 +590,10 @@ private:
     QAction* mDeleteItem = nullptr;
     QAction* mAddGroup = nullptr;
     QAction* mSaveItem = nullptr;
+
+    QUndoStack* mUndoStack = nullptr;
+    QAction* mUndoAction = nullptr;
+    QAction* mRedoAction = nullptr;
 
     SearchOptions mSearchOptions = SearchOptionNone;
     QSplitter* searchSplitter;
