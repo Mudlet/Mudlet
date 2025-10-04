@@ -577,7 +577,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
                         const TChar::AttributeFlags attributeFlags =
-                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                                ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
                                 | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
@@ -746,7 +746,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // There is no further MXP or Codeset evaluation
 
                         const TChar::AttributeFlags attributeFlags =
-                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                                ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
                                 | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
@@ -802,7 +802,7 @@ COMMIT_LINE:
                     continue;
                 } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
                     const TChar::AttributeFlags attributeFlags =
-                            ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold(): false) ? TChar::Bold : TChar::None)
+                            ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
                             | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                             | (mOverline ? TChar::Overline : TChar::None)
                             | (mReverse ? TChar::Reverse : TChar::None)
@@ -956,7 +956,7 @@ COMMIT_LINE:
         }
 
         const TChar::AttributeFlags attributeFlags =
-                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
                 | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                 | (mOverline ? TChar::Overline : TChar::None)
                 | (mReverse ? TChar::Reverse : TChar::None)
@@ -973,6 +973,18 @@ COMMIT_LINE:
 
         if (mHyperlinkActive) {
             c.mLinkIndex = mCurrentHyperlinkLinkId;
+            
+            // Store the original ANSI-formatted character before applying CSS styling
+            // This is needed for ANSI base restoration when pseudo-classes are inactive
+            if (!mLinkOriginalCharacters.contains(mCurrentHyperlinkLinkId)) {
+                mLinkOriginalCharacters[mCurrentHyperlinkLinkId] = c;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug().nospace().noquote() << "TBuffer::translateToPlainText(): Stored original character for link " << mCurrentHyperlinkLinkId 
+                                              << " with ANSI colors: fg=" << c.mFgColor.name() 
+                                              << " bg=" << c.mBgColor.name()
+                                              << " flags=" << c.mFlags;
+#endif
+            }
             
             // Apply enhanced hyperlink styling
             if (mCurrentHyperlinkStyling.hasForegroundColor) {
@@ -2529,7 +2541,9 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri)
 
 void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling)
 {
+#if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] parseHyperlinkStyling called with styleString:" << styleString;
+#endif
     
     // Reset styling to defaults
     styling = Mudlet::HyperlinkStyling();
@@ -2554,11 +2568,19 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
         }
         
         // Parse base properties if any exist
-        if (!remainingStyle.trimmed().isEmpty()) {
+        // Filter out strings that are only semicolons and whitespace
+        QString filteredBase = remainingStyle;
+        filteredBase.remove(';');
+        filteredBase = filteredBase.trimmed();
+        
+        if (!filteredBase.isEmpty()) {
             baseProperties = remainingStyle.trimmed();
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC8] Found base properties:" << baseProperties;
 #endif
+            // Mark that we have base styling (not just pseudo-class styling)
+            styling.hasBaseCustomStyling = true;
+            
             // Parse base properties as simple CSS
             QStringList basePairs = baseProperties.split(';', Qt::SkipEmptyParts);
             for (const QString& pair : basePairs) {
@@ -2981,6 +3003,11 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         lineBuffer.back().append(thisChar);
         const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(styling);
+        
+        // Note: Original character storage for ANSI-styled OSC 8 links happens in 
+        // translateToPlainText() where the TChar is created with ANSI formatting 
+        // before CSS styling is applied
+        
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
@@ -5083,6 +5110,55 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "║  All states follow WCAG 2.1 accessibility guidelines               ║\n";
     testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
     
+    // NEW: ANSI Base + Pseudo-Class Overlay Tests
+    testOutput += "╔════════════════════════════════════════════════════════════════════╗\n";
+    testOutput += "║      ANSI Base Formatting with CSS Pseudo-Class Overlays           ║\n";
+    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    
+    // Test 21: ANSI colored text with :hover overlay (no base CSS)
+    testOutput += "21. ANSI Red Text with Yellow Hover (no base CSS):\n";
+    testOutput += "   \x1b[31;1m\x1b]8;;send:ansi1?style=:hover{color:#ffff00;font-weight:bold}\x1b\\[Hover to turn yellow]\x1b]8;;\x1b\\\x1b[0m (should be red, then yellow on hover)\n\n";
+    
+    // Test 22: ANSI cyan+bold with red background on :active
+    testOutput += "22. ANSI Cyan Bold with Red Background on Active:\n";
+    testOutput += "   \x1b[36;1m\x1b]8;;send:ansi2?style=:hover{color:#88ffff};:active{background:#ff0000;color:#ffffff}\x1b\\[Click and hold me]\x1b]8;;\x1b\\\x1b[0m (cyan→light cyan→white on red)\n\n";
+    
+    // Test 23: ANSI green with multiple pseudo-class states
+    testOutput += "23. ANSI Green with Multiple States:\n";
+    testOutput += "   \x1b[32m\x1b]8;;send:ansi3?style=:hover{color:#00ff00;text-decoration:underline};:active{color:#ffff00;background:#006600};:focus{color:#88ff88;text-decoration:underline wavy}\x1b\\[Try hover, click, and Tab focus]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    
+    // Test 24: ANSI yellow background preserved with text color changes
+    testOutput += "24. ANSI Black on Yellow Background:\n";
+    testOutput += "   \x1b[30;43m\x1b]8;;send:ansi4?style=:hover{color:#ff6600;font-weight:bold}\x1b\\[Black→orange on yellow]\x1b]8;;\x1b\\\x1b[0m (background preserved)\n\n";
+    
+    // Test 25: ANSI underlined text with hover color change
+    testOutput += "25. ANSI Underlined Blue with Hover:\n";
+    testOutput += "   \x1b[34;4m\x1b]8;;send:ansi5?style=:hover{color:#6699ff;text-decoration:underline #ff0000}\x1b\\[Blue underline→light blue with red underline]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    
+    // Test 26: Complex ANSI (bright magenta, bold, italic) with CSS states
+    testOutput += "26. ANSI Bright Magenta Bold Italic with States:\n";
+    testOutput += "   \x1b[95;1;3m\x1b]8;;send:ansi6?style=:hover{color:#ffaaff;background:#440044};:active{color:#ffffff;background:#880088}\x1b\\[Styled ANSI with CSS]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    
+    // Test 27: Real-world navigation example with ANSI colors
+    testOutput += "27. Navigation with ANSI Colors + Interactive States:\n";
+    testOutput += "   \x1b[96;1m\x1b]8;;send:north?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[North]\x1b]8;;\x1b\\\x1b[0m ";
+    testOutput += "\x1b[96;1m\x1b]8;;send:south?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[South]\x1b]8;;\x1b\\\x1b[0m ";
+    testOutput += "\x1b[96;1m\x1b]8;;send:east?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[East]\x1b]8;;\x1b\\\x1b[0m ";
+    testOutput += "\x1b[96;1m\x1b]8;;send:west?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[West]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    
+    // Test 28: Demonstrating ANSI preservation across all states
+    testOutput += "28. ANSI Preservation Test (Red Bold):\n";
+    testOutput += "   Normal: \x1b[31;1m\x1b]8;;send:ansi7?style=:hover{color:#ff8888};:active{color:#ffcccc};:focus{text-decoration:underline}\x1b\\[Red in all states]\x1b]8;;\x1b\\\x1b[0m\n";
+    testOutput += "   (Base ANSI red maintained, only intensity changes on hover/active)\n\n";
+    
+    testOutput += "╔════════════════════════════════════════════════════════════════════╗\n";
+    testOutput += "║  ANSI Base + CSS Pseudo-Class Feature Highlights:                  ║\n";
+    testOutput += "║  • ANSI formatting acts as the base/default appearance             ║\n";
+    testOutput += "║  • CSS pseudo-classes (:hover, :active, :focus) overlay on top     ║\n";
+    testOutput += "║  • Base ANSI restored when returning to default/visited state      ║\n";
+    testOutput += "║  • Enables modern interactivity without losing MUD aesthetics      ║\n";
+    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    
     // Process the test output through the normal text processing pipeline
     std::string testBytes = testOutput.toStdString();
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5186,6 +5262,19 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
         effective.isOverlined = stateStyle->isOverlined;
         effective.underlineStyle = stateStyle->underlineStyle;
         effective.hasCustomStyling = true;
+    }
+    
+    // CRITICAL: Even if the current state doesn't have custom styling, we need to mark
+    // that the link has SOME pseudo-class styling so updateLinkCharacters() processes it.
+    // This ensures ANSI base links with only :hover (but no :link) styling get updated.
+    if (!effective.hasCustomStyling) {
+        // Check if ANY pseudo-class state has custom styling
+        if (linkStyle.hasCustomStyling || visitedStyle.hasCustomStyling || 
+            hoverStyle.hasCustomStyling || activeStyle.hasCustomStyling ||
+            focusStyle.hasCustomStyling || focusVisibleStyle.hasCustomStyling ||
+            anyLinkStyle.hasCustomStyling) {
+            effective.hasCustomStyling = true;
+        }
     }
     
     return effective;
@@ -5531,6 +5620,7 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
     styling.isStrikeOut = effective.isStrikeOut;
     styling.isOverlined = effective.isOverlined;
     styling.underlineStyle = effective.underlineStyle;
+    styling.hasCustomStyling = effective.hasCustomStyling; // CRITICAL: Copy hasCustomStyling flag
     
     return styling;
 }
@@ -5669,8 +5759,26 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     // Get the effective styling for this link's current state
     Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
     
+    // IMPORTANT: If this link has no custom CSS styling at all (neither base nor pseudo-class),
+    // don't modify the characters. This preserves ANSI formatting for links without any CSS.
+    if (!effectiveStyling.hasCustomStyling) {
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Updating characters for link" << linkIndex << "with new styling";
+        qDebug() << "[OSC8] Link" << linkIndex << "has no custom styling - preserving ANSI formatting";
+#endif
+        return; // Don't modify characters - preserve original ANSI formatting
+    }
+    
+    // Check if we should use ANSI base with pseudo-class overlays:
+    // - Has pseudo-class styling (hasCustomStyling = true)
+    // - But NO base CSS styling (hasBaseCustomStyling = false)
+    // - And we're in default/visited state (not hover/active/focus)
+    bool useAnsiBase = !effectiveStyling.hasBaseCustomStyling && 
+                       (effectiveStyling.currentState == Mudlet::HyperlinkStyling::StateDefault ||
+                        effectiveStyling.currentState == Mudlet::HyperlinkStyling::StateVisited);
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling
+             << "currentState:" << effectiveStyling.currentState << "useAnsiBase:" << useAnsiBase;
 #endif
     
     // Iterate through all lines in the buffer
@@ -5680,6 +5788,36 @@ void TBuffer::updateLinkCharacters(int linkIndex)
             // Check if this character belongs to the link we're updating
             if (tchar.linkIndex() == linkIndex) {
                 // Apply the effective styling to this character
+                
+                // If we should use ANSI base (no base CSS but in default/visited state),
+                // restore the original ANSI colors and formatting as a BASE,
+                // then let pseudo-class CSS styling override it
+                if (useAnsiBase && mLinkOriginalCharacters.contains(linkIndex)) {
+                    TChar originalChar = mLinkOriginalCharacters.value(linkIndex);
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC8] Restoring ANSI base for link" << linkIndex
+                             << "- Original FgColor:" << originalChar.mFgColor.name()
+                             << "Original BgColor:" << originalChar.mBgColor.name()
+                             << "Original Bold:" << bool(originalChar.mFlags & TChar::Bold)
+                             << "Current FgColor:" << tchar.mFgColor.name()
+                             << "Current Bold:" << bool(tchar.mFlags & TChar::Bold);
+#endif
+                    // Restore ANSI base - these will be overridden below if CSS specifies them
+                    tchar.mFgColor = originalChar.mFgColor;
+                    tchar.mBgColor = originalChar.mBgColor;
+                    tchar.mFlags = originalChar.mFlags; // Restore ALL ANSI formatting flags including decorations
+                    
+                    // Clear any custom decoration colors that were applied by CSS pseudo-classes
+                    // ANSI doesn't support custom decoration colors, so we clear them when restoring ANSI base
+                    tchar.clearCustomUnderlineColor();
+                    tchar.clearCustomOverlineColor();
+                    tchar.clearCustomStrikeoutColor();
+                    
+                    // DON'T continue here - let the CSS pseudo-class styling below override the ANSI base
+                    // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting
+                }
+                
+                // Apply CSS styling
                 
                 // Update foreground color
                 if (effectiveStyling.hasForegroundColor) {
@@ -5694,7 +5832,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     tchar.mBgColor = mLinkOriginalBackgrounds.value(linkIndex, mBackGroundColor);
                 }
                 
-                // Update text decorations
+                // Update text decorations (only for CSS styling, not ANSI-base)
                 if (effectiveStyling.isUnderlined) {
                     tchar.mFlags |= TChar::Underline;
                     

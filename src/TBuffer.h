@@ -69,6 +69,7 @@ struct HyperlinkStyling {
     bool isStrikeOut = false;
     bool isOverlined = false;
     bool hasCustomStyling = false; // Tracks if any custom styling was provided
+    bool hasBaseCustomStyling = false; // Tracks if base (non-pseudo-class) styling was provided
     
     // Extended text decoration support
     enum UnderlineStyle {
@@ -599,6 +600,7 @@ private:
     QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
     QMap<int, bool> mVisitedLinks; // Track which links have been visited (base state)
     QMap<int, QColor> mLinkOriginalBackgrounds; // Track original background color per link
+    QMap<int, TChar> mLinkOriginalCharacters; // Track original ANSI formatting per link
     int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
     int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
     int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
