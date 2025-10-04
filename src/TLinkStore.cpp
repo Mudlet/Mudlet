@@ -20,6 +20,7 @@
 
 #include "TLinkStore.h"
 #if !defined(LinkStore_Test)
+#include "TBuffer.h"  // For Mudlet::HyperlinkStyling definition
 #include "Host.h"
 #endif
 
@@ -53,3 +54,15 @@ void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
         }
     }
 }
+
+#if !defined(LinkStore_Test)
+void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
+{
+    mStylingStore[id] = styling;
+}
+
+Mudlet::HyperlinkStyling TLinkStore::getStyling(int id) const
+{
+    return mStylingStore.value(id, Mudlet::HyperlinkStyling());
+}
+#endif

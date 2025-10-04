@@ -248,6 +248,29 @@ private:
 
     // skip over the following characters when searching for a word
     const QStringList mCtrlSelectionIgnores = {" ", ".", ",", ";", ":", "\"", "'", "`", "!", "?", "\\", "/", "|", "~", "*", "(", ")", "[", "]", "{", "}", "<", ">"};
+    
+    // OSC 8 Link State Tracking for CSS pseudo-classes
+    struct LinkTrackingInfo {
+        int lineIndex = -1;
+        int charIndex = -1;
+        int linkIndex = 0;
+        QString linkUrl;
+        Mudlet::HyperlinkStyling::LinkState currentState = Mudlet::HyperlinkStyling::StateDefault;
+        bool isKeyboardFocused = false;
+        QTimer* focusVisibleTimer = nullptr;  // Timer for focus-visible detection
+    };
+    
+    LinkTrackingInfo mCurrentLink;
+    LinkTrackingInfo mHoveredLink;
+    LinkTrackingInfo mActiveLink;
+    QSet<QString> mVisitedLinks;  // Track visited URLs (privacy-safe subset)
+    
+    // CSS Link State Management Methods
+    void updateLinkState(int lineIndex, int charIndex, Mudlet::HyperlinkStyling::LinkState newState);
+    void clearLinkStates();
+    bool isLinkVisited(const QString& url) const;
+    void markLinkAsVisited(const QString& url);
+    void applyLinkStateStyling(TChar& character, const LinkTrackingInfo& linkInfo) const;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

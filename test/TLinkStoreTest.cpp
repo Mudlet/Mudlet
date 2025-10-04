@@ -1,4 +1,6 @@
 #include <TLinkStore.h>
+// Note: TBuffer.h not needed for basic TLinkStore tests
+// Forward declare Mudlet::HyperlinkStyling if needed in future
 #include <QtTest/QtTest>
 
 class TLinkStoreTest : public QObject {

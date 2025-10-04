@@ -988,17 +988,17 @@ COMMIT_LINE:
                 
                 // Apply specific underline style based on underlineStyle enum
                 switch (mCurrentHyperlinkStyling.underlineStyle) {
-                    case HyperlinkStyling::UnderlineWavy:
+                    case Mudlet::HyperlinkStyling::UnderlineWavy:
                         c.mFlags |= TChar::UnderlineWavy;
                         break;
-                    case HyperlinkStyling::UnderlineDotted:
+                    case Mudlet::HyperlinkStyling::UnderlineDotted:
                         c.mFlags |= TChar::UnderlineDotted;
                         break;
-                    case HyperlinkStyling::UnderlineDashed:
+                    case Mudlet::HyperlinkStyling::UnderlineDashed:
                         c.mFlags |= TChar::UnderlineDashed;
                         break;
-                    case HyperlinkStyling::UnderlineSolid:
-                    case HyperlinkStyling::UnderlineNone:
+                    case Mudlet::HyperlinkStyling::UnderlineSolid:
+                    case Mudlet::HyperlinkStyling::UnderlineNone:
                     default:
                         // Standard solid underline (no additional flags needed)
                         break;
@@ -2310,7 +2310,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             mCurrentHyperlinkLinkId = 0;
             mHyperlinkActive = false;
             // Reset enhanced styling
-            mCurrentHyperlinkStyling = HyperlinkStyling();
+            mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
             mCurrentHyperlinkMenu.clear();
             break;
         }
@@ -2331,7 +2331,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
                 parseHyperlinkStyling(queryParams.value("style"), mCurrentHyperlinkStyling);
             } else {
-                mCurrentHyperlinkStyling = HyperlinkStyling(); // Reset to defaults
+                mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling(); // Reset to defaults
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] No style parameter provided, using defaults (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
 #endif
@@ -2449,6 +2449,14 @@ void TBuffer::decodeOSC(const QString& sequence)
             mCurrentHyperlinkCommand = command;
             mCurrentHyperlinkHint = hint;
             mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
+            
+            // Store the styling for this link so it can be retrieved later
+            mLinkStore.setStyling(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling);
+            
+            // Store the original background color for this link so we can restore it later
+            // when the link styling doesn't specify a background
+            mLinkOriginalBackgrounds[mCurrentHyperlinkLinkId] = mBackGroundColor;
+            
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug().noquote() << "[OSC8] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
 #endif
@@ -2519,14 +2527,144 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri)
     return parameters;
 }
 
-void TBuffer::parseHyperlinkStyling(const QString& styleString, HyperlinkStyling& styling)
+void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling)
 {
     qDebug() << "[OSC8] parseHyperlinkStyling called with styleString:" << styleString;
     
     // Reset styling to defaults
-    styling = HyperlinkStyling();
+    styling = Mudlet::HyperlinkStyling();
     
-    // Parse CSS-like style string: "property:value;property:value"
+    // Check if this is a CSS selector with pseudo-classes
+    // Format: "property:value;:pseudo-class{property:value;property:value}:pseudo-class{...}"
+    // or just: ":pseudo-class{property:value;property:value}:pseudo-class{...}"
+    if (styleString.contains('{') && styleString.contains('}')) {
+        // First, extract and parse any base properties (properties not in pseudo-classes)
+        // These are properties that come before any pseudo-class or between pseudo-classes
+        QString baseProperties;
+        QRegularExpression pseudoClassRegex(R"(:([\w-]+)\s*\{([^}]*)\})");
+        
+        // Extract base properties by removing all pseudo-class blocks
+        QString remainingStyle = styleString;
+        QRegularExpressionMatchIterator matches = pseudoClassRegex.globalMatch(styleString);
+        
+        // Remove pseudo-class blocks to get base properties
+        while (matches.hasNext()) {
+            QRegularExpressionMatch match = matches.next();
+            remainingStyle.replace(match.captured(0), "");
+        }
+        
+        // Parse base properties if any exist
+        if (!remainingStyle.trimmed().isEmpty()) {
+            baseProperties = remainingStyle.trimmed();
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC8] Found base properties:" << baseProperties;
+#endif
+            // Parse base properties as simple CSS
+            QStringList basePairs = baseProperties.split(';', Qt::SkipEmptyParts);
+            for (const QString& pair : basePairs) {
+                QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
+                if (propertyValue.size() != 2) {
+                    continue;
+                }
+                QString property = propertyValue[0].trimmed().toLower();
+                QString value = propertyValue[1].trimmed();
+                
+                // Apply base properties to the default state
+                if (property == "color") {
+                    QColor color = parseColorValue(value);
+                    if (color.isValid()) {
+                        styling.foregroundColor = color;
+                        styling.hasForegroundColor = true;
+                        styling.hasCustomStyling = true;
+                    }
+                } else if (property == "background-color" || property == "background") {
+                    QColor color = parseColorValue(value);
+                    if (color.isValid()) {
+                        styling.backgroundColor = color;
+                        styling.hasBackgroundColor = true;
+                        styling.hasCustomStyling = true;
+                    }
+                } else if (property == "font-weight") {
+                    styling.isBold = (value.toLower() == "bold");
+                    styling.hasCustomStyling = true;
+                } else if (property == "font-style") {
+                    styling.isItalic = (value.toLower() == "italic");
+                    styling.hasCustomStyling = true;
+                }
+            }
+        }
+        
+        // Now parse pseudo-class specific styles
+        matches = pseudoClassRegex.globalMatch(styleString);
+        while (matches.hasNext()) {
+            QRegularExpressionMatch match = matches.next();
+            QString pseudoClass = ":" + match.captured(1);
+            QString properties = match.captured(2);
+            
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC8] Found pseudo-class:" << pseudoClass << "with properties:" << properties;
+#endif
+            
+            parseHyperlinkStateStyle(pseudoClass, properties, styling);
+        }
+        
+        // If no base styling was provided, but we have :link or :any-link styles,
+        // use them as the default/base state since links need a default appearance
+        if (!styling.hasCustomStyling) {
+            // First try :any-link (applies to both :link and :visited)
+            if (styling.anyLinkStyle.hasCustomStyling) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] No base styling found, using :any-link as default";
+#endif
+                styling.foregroundColor = styling.anyLinkStyle.foregroundColor;
+                styling.backgroundColor = styling.anyLinkStyle.backgroundColor;
+                styling.underlineColor = styling.anyLinkStyle.underlineColor;
+                styling.overlineColor = styling.anyLinkStyle.overlineColor;
+                styling.strikeoutColor = styling.anyLinkStyle.strikeoutColor;
+                styling.hasForegroundColor = styling.anyLinkStyle.hasForegroundColor;
+                styling.hasBackgroundColor = styling.anyLinkStyle.hasBackgroundColor;
+                styling.hasUnderlineColor = styling.anyLinkStyle.hasUnderlineColor;
+                styling.hasOverlineColor = styling.anyLinkStyle.hasOverlineColor;
+                styling.hasStrikeoutColor = styling.anyLinkStyle.hasStrikeoutColor;
+                styling.isBold = styling.anyLinkStyle.isBold;
+                styling.isItalic = styling.anyLinkStyle.isItalic;
+                styling.isUnderlined = styling.anyLinkStyle.isUnderlined;
+                styling.isStrikeOut = styling.anyLinkStyle.isStrikeOut;
+                styling.isOverlined = styling.anyLinkStyle.isOverlined;
+                styling.underlineStyle = styling.anyLinkStyle.underlineStyle;
+                styling.hasCustomStyling = true;
+            }
+            // Fall back to :link style
+            else if (styling.linkStyle.hasCustomStyling) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] No base styling found, using :link as default";
+#endif
+                styling.foregroundColor = styling.linkStyle.foregroundColor;
+                styling.backgroundColor = styling.linkStyle.backgroundColor;
+                styling.underlineColor = styling.linkStyle.underlineColor;
+                styling.overlineColor = styling.linkStyle.overlineColor;
+                styling.strikeoutColor = styling.linkStyle.strikeoutColor;
+                styling.hasForegroundColor = styling.linkStyle.hasForegroundColor;
+                styling.hasBackgroundColor = styling.linkStyle.hasBackgroundColor;
+                styling.hasUnderlineColor = styling.linkStyle.hasUnderlineColor;
+                styling.hasOverlineColor = styling.linkStyle.hasOverlineColor;
+                styling.hasStrikeoutColor = styling.linkStyle.hasStrikeoutColor;
+                styling.isBold = styling.linkStyle.isBold;
+                styling.isItalic = styling.linkStyle.isItalic;
+                styling.isUnderlined = styling.linkStyle.isUnderlined;
+                styling.isStrikeOut = styling.linkStyle.isStrikeOut;
+                styling.isOverlined = styling.linkStyle.isOverlined;
+                styling.underlineStyle = styling.linkStyle.underlineStyle;
+                styling.hasCustomStyling = true;
+            }
+        }
+        
+        // Apply accessibility enhancements
+        applyAccessibilityEnhancements(styling);
+        return;
+    }
+    
+    // Fallback: Parse as simple CSS-like style string: "property:value;property:value"
     QStringList stylePairs = styleString.split(';', Qt::SkipEmptyParts);
     
     bool hasAnyCustomStyling = false;
@@ -2570,12 +2708,12 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, HyperlinkStyling
             styling.isUnderlined = false;
             styling.isOverlined = false;
             styling.isStrikeOut = false;
-            styling.underlineStyle = HyperlinkStyling::UnderlineNone;
+            styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
             
             for (const QString& part : decorationParts) {
                 if (part == "underline") {
                     styling.isUnderlined = true;
-                    styling.underlineStyle = HyperlinkStyling::UnderlineSolid;
+                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
                 } else if (part == "overline") {
                     styling.isOverlined = true;
                 } else if (part == "line-through") {
@@ -2584,15 +2722,15 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, HyperlinkStyling
                     styling.isUnderlined = false;
                     styling.isOverlined = false;
                     styling.isStrikeOut = false;
-                    styling.underlineStyle = HyperlinkStyling::UnderlineNone;
+                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
                 } else if (part == "wavy" && styling.isUnderlined) {
-                    styling.underlineStyle = HyperlinkStyling::UnderlineWavy;
+                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
                 } else if (part == "dotted" && styling.isUnderlined) {
-                    styling.underlineStyle = HyperlinkStyling::UnderlineDotted;
+                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
                 } else if (part == "dashed" && styling.isUnderlined) {
-                    styling.underlineStyle = HyperlinkStyling::UnderlineDashed;
+                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDashed;
                 } else if (part == "solid" && styling.isUnderlined) {
-                    styling.underlineStyle = HyperlinkStyling::UnderlineSolid;
+                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
                 } else {
                     // Check if it's a color for the decoration
                     QColor decorationColor = parseColorValue(part);
@@ -2648,13 +2786,13 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, HyperlinkStyling
             // CSS3 specific property for decoration style
             QString decorationStyle = value.toLower();
             if (decorationStyle == "wavy") {
-                styling.underlineStyle = HyperlinkStyling::UnderlineWavy;
+                styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
             } else if (decorationStyle == "dotted") {
-                styling.underlineStyle = HyperlinkStyling::UnderlineDotted;
+                styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
             } else if (decorationStyle == "dashed") {
-                styling.underlineStyle = HyperlinkStyling::UnderlineDashed;
+                styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDashed;
             } else if (decorationStyle == "solid") {
-                styling.underlineStyle = HyperlinkStyling::UnderlineSolid;
+                styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
             }
             hasAnyCustomStyling = true;
         } else if (property == "text-decoration-color") {
@@ -2679,7 +2817,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, HyperlinkStyling
         // Only disable default underline if text-decoration wasn't explicitly specified
         if (!textDecorationExplicitlySet) {
             styling.isUnderlined = false;
-            styling.underlineStyle = HyperlinkStyling::UnderlineNone;
+            styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
         }
     }
 }
@@ -4881,9 +5019,69 @@ void TBuffer::injectOSC8TestSequences()
     // Test 12: Edge cases
     testOutput += "12. Edge Cases:\n";
     testOutput += "\x1b]8;;send:empty?\x1b\\[empty style]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:invalid?style=invalid:value\x1b\\[invalid style]\x1b]8;;\x1b\\\n";
+    testOutput += "\x1b]8;;send:invalid?style=invalid:value\x1b\\[invalid style]\x1b]8;;\x1b\\\n\n";
     
-    testOutput += "\n=== End Test Suite ===\n\n";
+    testOutput += "=== End Basic Test Suite ===\n\n";
+    
+    // NEW: CSS Pseudo-Class State Tests
+    testOutput += "\n╔════════════════════════════════════════════════════════════════════╗\n";
+    testOutput += "║           CSS Link States & Pseudo-Classes Test Suite              ║\n";
+    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    
+    // Test 13: CSS Pseudo-Classes - :link and :visited
+    testOutput += "13. CSS :link and :visited States:\n";
+    testOutput += "   \x1b]8;;send:unvisited?style=:link{color:#0088ff;text-decoration:underline}\x1b\\[unvisited link (bright blue)]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:visited?style=:visited{color:#bb66dd}\x1b\\[visited link (purple)]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 14: CSS :hover State
+    testOutput += "14. CSS :hover State (hover to see effect):\n";
+    testOutput += "   \x1b]8;;send:hover1?style=color:#00aaff;:hover{color:#ffdd00;background:#004488;font-weight:bold}\x1b\\[Hover me (blue→gold on navy)]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:hover2?style=color:#00aaff;:hover{color:#ff6600;background:#e6f2ff;text-decoration:underline;font-weight:bold}\x1b\\[Hover me (blue→orange on light blue)]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:hover3?style=color:#00cc66;:hover{color:#00ff88;text-decoration:underline wavy;font-weight:bold}\x1b\\[Hover me (green with wavy underline)]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 15: CSS :active State  
+    testOutput += "15. CSS :active State (click and hold to see effect):\n";
+    testOutput += "   \x1b]8;;send:active1?style=color:#00cc66;:hover{color:#00ff88;text-decoration:underline wavy};:active{color:#ffffff;background:#dd0000;font-weight:bold}\x1b\\[Click me (green→white on red)]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:active2?style=color:#88dd88;font-weight:bold;:hover{color:#ffffff;background:#00aa00;text-decoration:overline};:active{color:#ffff88;background:#006600}\x1b\\[Click me (complex states)]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 16: CSS :focus and :focus-visible States
+    testOutput += "16. CSS :focus and :focus-visible States (Tab to navigate):\n";
+    testOutput += "   \x1b]8;;send:focus1?style=color:#0088ff;:focus{color:#ff6600;text-decoration:underline;font-weight:bold}\x1b\\[Tab to focus me]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:focus2?style=color:#00aaff;:focus-visible{color:#cc5500;background:#ffffcc;text-decoration:underline wavy;font-weight:bold}\x1b\\[Keyboard focus visible]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:focus3?style=color:#0088ff;:focus-visible{background:#ffffdd;font-weight:bold}\x1b\\[Accessible focus indicator]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 17: CSS :any-link Pseudo-Class
+    testOutput += "17. CSS :any-link State (applies to both :link and :visited):\n";
+    testOutput += "   \x1b]8;;send:anylink1?style=:any-link{color:#0088ff;text-decoration:underline;font-weight:bold};:hover{color:#ff6600}\x1b\\[Any link state]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:anylink2?style=:any-link{color:#00aadd;font-weight:bold;text-decoration:underline dotted};:hover{color:#ff8800;text-decoration:underline solid}\x1b\\[Dotted→solid underline]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 18: Combined State Cascade
+    testOutput += "18. Combined State Cascade (multiple pseudo-classes):\n";
+    testOutput += "   \x1b]8;;send:cascade1?style=:link{color:#0088ff};:visited{color:#bb66dd};:hover{color:#ff6600;background:#e6f2ff;font-weight:bold};:active{color:#ffffff;background:#dd0000}\x1b\\[Full state cascade]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:cascade2?style=color:#cc8844;:hover{color:#ffdd00;background:#664400;text-decoration:underline dotted;font-weight:bold};:active{color:#ffaa00;background:#000000}\x1b\\[Brown→yellow→orange]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 19: Accessibility Features
+    testOutput += "19. Accessibility Features:\n";
+    testOutput += "   \x1b]8;;send:a11y1?style=color:#0088ff;:focus-visible{text-decoration:underline;font-weight:bold};:hover{color:#ff6600;text-decoration:underline}\x1b\\[High contrast focus]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:a11y2?style=:link{color:#0088ff;text-decoration:underline};:visited{color:#bb66dd;text-decoration:underline}\x1b\\[WCAG AA compliant]\x1b]8;;\x1b\\\n";
+    testOutput += "   \x1b]8;;send:a11y3?style=:any-link{color:#0088ff;font-weight:bold};:focus-visible{background:#ffffcc;color:#000000;font-weight:bold}\x1b\\[Keyboard navigation]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 20: Real-World Navigation Examples
+    testOutput += "20. Real-World Examples:\n";
+    testOutput += "   Navigation: \x1b]8;;send:north?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[North]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:south?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[South]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:east?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[East]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:west?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[West]\x1b]8;;\x1b\\\n";
+    testOutput += "   Actions: \x1b]8;;send:attack?style=color:#ff5555;font-weight:bold;:hover{color:#ff8888;text-decoration:underline};:active{background:#cc0000;color:#ffffff}\x1b\\[Attack]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:defend?style=color:#55dd55;font-weight:bold;:hover{color:#88ff88;text-decoration:underline};:active{background:#00aa00;color:#ffffff}\x1b\\[Defend]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:flee?style=color:#ffdd55;font-weight:bold;:hover{color:#ffff88;text-decoration:underline};:active{background:#ccaa00;color:#000000}\x1b\\[Flee]\x1b]8;;\x1b\\\n\n";
+    
+    testOutput += "╔════════════════════════════════════════════════════════════════════╗\n";
+    testOutput += "║  Try hovering and clicking to test mouse interactions!             ║\n";
+    testOutput += "║  Enable caret mode (Tab) then use arrow keys to navigate links     ║\n";
+    testOutput += "║  Press Enter/Space to activate a focused link                      ║\n";
+    testOutput += "║  All states follow WCAG 2.1 accessibility guidelines               ║\n";
+    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
     
     // Process the test output through the normal text processing pipeline
     std::string testBytes = testOutput.toStdString();
@@ -4891,4 +5089,673 @@ void TBuffer::injectOSC8TestSequences()
     qDebug() << "[OSC8] About to process test sequences through translateToPlainText, length:" << testBytes.length();
 #endif
     translateToPlainText(testBytes, true); // Mark as from server
+}
+
+// ============================================================================
+// CSS Link States Implementation with Accessibility Best Practices
+// ============================================================================
+
+Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle() const
+{
+    Mudlet::HyperlinkStyling::StateStyle effective;
+    
+    // Start with base/default styling
+    effective.foregroundColor = foregroundColor;
+    effective.backgroundColor = backgroundColor;
+    effective.underlineColor = underlineColor;
+    effective.overlineColor = overlineColor;
+    effective.strikeoutColor = strikeoutColor;
+    effective.hasForegroundColor = hasForegroundColor;
+    effective.hasBackgroundColor = hasBackgroundColor;
+    effective.hasUnderlineColor = hasUnderlineColor;
+    effective.hasOverlineColor = hasOverlineColor;
+    effective.hasStrikeoutColor = hasStrikeoutColor;
+    effective.isBold = isBold;
+    effective.isItalic = isItalic;
+    effective.isUnderlined = isUnderlined;
+    effective.isStrikeOut = isStrikeOut;
+    effective.isOverlined = isOverlined;
+    effective.underlineStyle = underlineStyle;
+    
+    // Apply :any-link styles (applies to both :link and :visited)
+    if (anyLinkStyle.hasCustomStyling) {
+        if (anyLinkStyle.hasForegroundColor) effective.foregroundColor = anyLinkStyle.foregroundColor;
+        if (anyLinkStyle.hasBackgroundColor) effective.backgroundColor = anyLinkStyle.backgroundColor;
+        if (anyLinkStyle.hasUnderlineColor) effective.underlineColor = anyLinkStyle.underlineColor;
+        if (anyLinkStyle.hasOverlineColor) effective.overlineColor = anyLinkStyle.overlineColor;
+        if (anyLinkStyle.hasStrikeoutColor) effective.strikeoutColor = anyLinkStyle.strikeoutColor;
+        effective.isBold = anyLinkStyle.isBold;
+        effective.isItalic = anyLinkStyle.isItalic;
+        effective.isUnderlined = anyLinkStyle.isUnderlined;
+        effective.isStrikeOut = anyLinkStyle.isStrikeOut;
+        effective.isOverlined = anyLinkStyle.isOverlined;
+        effective.underlineStyle = anyLinkStyle.underlineStyle;
+    }
+    
+    // Apply state-specific styles with proper cascade order
+    const StateStyle* stateStyle = nullptr;
+    
+    switch (currentState) {
+        case StateVisited:
+            if (visitedStyle.hasCustomStyling) stateStyle = &visitedStyle;
+            break;
+        case StateHover:
+            if (hoverStyle.hasCustomStyling) stateStyle = &hoverStyle;
+            break;
+        case StateActive:
+            if (activeStyle.hasCustomStyling) stateStyle = &activeStyle;
+            break;
+        case StateFocus:
+            if (focusStyle.hasCustomStyling) stateStyle = &focusStyle;
+            break;
+        case StateFocusVisible:
+            if (focusVisibleStyle.hasCustomStyling) stateStyle = &focusVisibleStyle;
+            break;
+        case StateDefault:
+        default:
+            if (linkStyle.hasCustomStyling) stateStyle = &linkStyle;
+            break;
+    }
+    
+    // Apply the selected state style
+    if (stateStyle) {
+        if (stateStyle->hasForegroundColor) {
+            effective.foregroundColor = stateStyle->foregroundColor;
+            effective.hasForegroundColor = true;
+        }
+        if (stateStyle->hasBackgroundColor) {
+            effective.backgroundColor = stateStyle->backgroundColor;
+            effective.hasBackgroundColor = true;
+        }
+        if (stateStyle->hasUnderlineColor) {
+            effective.underlineColor = stateStyle->underlineColor;
+            effective.hasUnderlineColor = true;
+        }
+        if (stateStyle->hasOverlineColor) {
+            effective.overlineColor = stateStyle->overlineColor;
+            effective.hasOverlineColor = true;
+        }
+        if (stateStyle->hasStrikeoutColor) {
+            effective.strikeoutColor = stateStyle->strikeoutColor;
+            effective.hasStrikeoutColor = true;
+        }
+        effective.isBold = stateStyle->isBold;
+        effective.isItalic = stateStyle->isItalic;
+        effective.isUnderlined = stateStyle->isUnderlined;
+        effective.isStrikeOut = stateStyle->isStrikeOut;
+        effective.isOverlined = stateStyle->isOverlined;
+        effective.underlineStyle = stateStyle->underlineStyle;
+        effective.hasCustomStyling = true;
+    }
+    
+    return effective;
+}
+
+void Mudlet::HyperlinkStyling::updateState(Mudlet::HyperlinkStyling::LinkState newState)
+{
+    Mudlet::HyperlinkStyling::LinkState previousState = currentState;
+    currentState = newState;
+    
+    // Update individual state flags for easy access
+    isHovered = (newState == Mudlet::HyperlinkStyling::StateHover);
+    isActive = (newState == Mudlet::HyperlinkStyling::StateActive);
+    isFocused = (newState == Mudlet::HyperlinkStyling::StateFocus || newState == Mudlet::HyperlinkStyling::StateFocusVisible);
+    isFocusVisible = (newState == Mudlet::HyperlinkStyling::StateFocusVisible);
+    
+    // Debug output for state changes
+#if defined(DEBUG_OSC_PROCESSING)
+    QStringList stateNames = {
+        "StateDefault", "StateVisited", "StateHover", 
+        "StateActive", "StateFocus", "StateFocusVisible"
+    };
+    if (previousState != newState) {
+        qDebug() << "[OSC8] Link state changed from" << stateNames[previousState] 
+                 << "to" << stateNames[newState];
+    }
+#endif
+}
+
+bool Mudlet::HyperlinkStyling::shouldShowFocusRing() const
+{
+    // Show focus ring for keyboard focus or when :focus-visible is explicitly styled
+    return (isFocusVisible && hasKeyboardFocus) || 
+           (isFocused && focusVisibleStyle.hasCustomStyling);
+}
+
+void TBuffer::parseHyperlinkStateStyle(const QString& pseudoClass, const QString& styleString, Mudlet::HyperlinkStyling& styling)
+{
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] parseHyperlinkStateStyle called with pseudoClass:" << pseudoClass 
+             << "styleString:" << styleString;
+#endif
+    
+    QString cleanPseudoClass = pseudoClass.trimmed().toLower();
+    Mudlet::HyperlinkStyling::StateStyle* targetStyle = nullptr;
+    
+    // Map pseudo-class selectors to appropriate state styles
+    if (cleanPseudoClass == ":link") {
+        targetStyle = &styling.linkStyle;
+    } else if (cleanPseudoClass == ":visited") {
+        targetStyle = &styling.visitedStyle;
+    } else if (cleanPseudoClass == ":hover") {
+        targetStyle = &styling.hoverStyle;
+    } else if (cleanPseudoClass == ":active") {
+        targetStyle = &styling.activeStyle;
+    } else if (cleanPseudoClass == ":focus") {
+        targetStyle = &styling.focusStyle;
+    } else if (cleanPseudoClass == ":focus-visible") {
+        targetStyle = &styling.focusVisibleStyle;
+    } else if (cleanPseudoClass == ":any-link") {
+        targetStyle = &styling.anyLinkStyle;
+    } else {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Unknown pseudo-class:" << cleanPseudoClass;
+#endif
+        return;
+    }
+    
+    if (targetStyle) {
+        parseStateStyleProperties(styleString, *targetStyle);
+        applyAccessibilityEnhancements(styling);
+    }
+}
+
+void TBuffer::parseStateStyleProperties(const QString& styleString, Mudlet::HyperlinkStyling::StateStyle& stateStyle)
+{
+    // Parse CSS-like style string: "property:value;property:value"
+    QStringList stylePairs = styleString.split(';', Qt::SkipEmptyParts);
+    
+    bool hasAnyCustomStyling = false;
+    
+    for (const QString& pair : stylePairs) {
+        QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
+        if (propertyValue.size() != 2) {
+            continue; // Skip malformed property
+        }
+        
+        QString property = propertyValue[0].trimmed().toLower();
+        QString value = propertyValue[1].trimmed();
+        
+        if (property == "color") {
+            QColor color = parseColorValue(value);
+            if (color.isValid()) {
+                stateStyle.foregroundColor = color;
+                stateStyle.hasForegroundColor = true;
+                hasAnyCustomStyling = true;
+            }
+        } else if (property == "background" || property == "background-color") {
+            // Support both "background" and "background-color" properties
+            QColor color = parseColorValue(value);
+            if (color.isValid()) {
+                stateStyle.backgroundColor = color;
+                stateStyle.hasBackgroundColor = true;
+                hasAnyCustomStyling = true;
+            }
+        } else if (property == "font-weight") {
+            stateStyle.isBold = (value.toLower() == "bold" || value == "700" || value.toInt() >= 700);
+            hasAnyCustomStyling = true;
+        } else if (property == "font-style") {
+            stateStyle.isItalic = (value.toLower() == "italic");
+            hasAnyCustomStyling = true;
+        } else if (property == "text-decoration") {
+            // Handle text-decoration with optional style
+            QStringList decorationParts = value.toLower().split(' ', Qt::SkipEmptyParts);
+            
+            // Reset decoration flags
+            stateStyle.isUnderlined = false;
+            stateStyle.isOverlined = false;
+            stateStyle.isStrikeOut = false;
+            stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
+            
+            for (const QString& part : decorationParts) {
+                if (part == "underline") {
+                    stateStyle.isUnderlined = true;
+                    stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
+                } else if (part == "overline") {
+                    stateStyle.isOverlined = true;
+                } else if (part == "line-through") {
+                    stateStyle.isStrikeOut = true;
+                } else if (part == "none") {
+                    stateStyle.isUnderlined = false;
+                    stateStyle.isOverlined = false;
+                    stateStyle.isStrikeOut = false;
+                } else if (part == "wavy" && stateStyle.isUnderlined) {
+                    stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
+                } else if (part == "dotted" && stateStyle.isUnderlined) {
+                    stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
+                } else if (part == "dashed" && stateStyle.isUnderlined) {
+                    stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDashed;
+                } else {
+                    // Check if it's a color for the decoration
+                    QColor decorationColor = parseColorValue(part);
+                    if (decorationColor.isValid()) {
+                        if (stateStyle.isUnderlined) {
+                            stateStyle.underlineColor = decorationColor;
+                            stateStyle.hasUnderlineColor = true;
+                        } else if (stateStyle.isOverlined) {
+                            stateStyle.overlineColor = decorationColor;
+                            stateStyle.hasOverlineColor = true;
+                        } else if (stateStyle.isStrikeOut) {
+                            stateStyle.strikeoutColor = decorationColor;
+                            stateStyle.hasStrikeoutColor = true;
+                        }
+                    }
+                }
+            }
+            hasAnyCustomStyling = true;
+        } else if (property == "text-decoration-color") {
+            QColor decorationColor = parseColorValue(value);
+            if (decorationColor.isValid()) {
+                stateStyle.underlineColor = decorationColor;
+                stateStyle.hasUnderlineColor = true;
+                stateStyle.overlineColor = decorationColor;
+                stateStyle.hasOverlineColor = true;
+                stateStyle.strikeoutColor = decorationColor;
+                stateStyle.hasStrikeoutColor = true;
+                hasAnyCustomStyling = true;
+            }
+        }
+        // Add support for accessibility-specific properties
+        else if (property == "forced-color-adjust") {
+            stateStyle.respectsSystemColors = (value.toLower() != "none");
+            hasAnyCustomStyling = true;
+        } else if (property == "-mudlet-high-contrast") {
+            stateStyle.isHighContrast = (value.toLower() == "auto" || value.toLower() == "true");
+            hasAnyCustomStyling = true;
+        }
+    }
+    
+    stateStyle.hasCustomStyling = hasAnyCustomStyling;
+}
+
+void TBuffer::applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling)
+{
+    bool isHighContrast = isHighContrastMode();
+    bool respectSystemColors = shouldRespectSystemColors();
+    
+    // Apply high contrast adjustments if needed
+    if (isHighContrast && styling.supportsHighContrast) {
+        // Ensure sufficient contrast for all states
+        auto enhanceContrast = [](Mudlet::HyperlinkStyling::StateStyle& style) {
+            if (style.hasCustomStyling) {
+                // For high contrast mode, ensure text is either very light or very dark
+                if (style.hasForegroundColor) {
+                    QColor fg = style.foregroundColor;
+                    int lightness = fg.lightness();
+                    if (lightness > 128) {
+                        style.foregroundColor = QColor(255, 255, 255); // Pure white
+                    } else {
+                        style.foregroundColor = QColor(0, 0, 0); // Pure black
+                    }
+                }
+                
+                // Ensure decorations are visible in high contrast
+                if (style.isUnderlined && !style.hasUnderlineColor) {
+                    style.underlineColor = style.hasForegroundColor ? style.foregroundColor : QColor(0, 0, 255);
+                    style.hasUnderlineColor = true;
+                }
+                
+                style.isHighContrast = true;
+            }
+        };
+        
+        enhanceContrast(styling.linkStyle);
+        enhanceContrast(styling.visitedStyle);
+        enhanceContrast(styling.hoverStyle);
+        enhanceContrast(styling.activeStyle);
+        enhanceContrast(styling.focusStyle);
+        enhanceContrast(styling.focusVisibleStyle);
+        enhanceContrast(styling.anyLinkStyle);
+    }
+    
+    // Apply system color respect if needed
+    if (respectSystemColors && styling.respectsSystemTheme) {
+        // This would integrate with Qt's system colors
+        // For now, we mark that system colors should be respected
+        auto respectSystem = [](Mudlet::HyperlinkStyling::StateStyle& style) {
+            style.respectsSystemColors = true;
+        };
+        
+        respectSystem(styling.linkStyle);
+        respectSystem(styling.visitedStyle);
+        respectSystem(styling.hoverStyle);
+        respectSystem(styling.activeStyle);
+        respectSystem(styling.focusStyle);
+        respectSystem(styling.focusVisibleStyle);
+        respectSystem(styling.anyLinkStyle);
+    }
+    
+    // Ensure focus states are appropriately visible
+    if (!styling.focusStyle.hasCustomStyling && !styling.focusVisibleStyle.hasCustomStyling) {
+        // Provide default focus styling for accessibility
+        styling.focusStyle.hasCustomStyling = true;
+        styling.focusStyle.isUnderlined = true;
+        styling.focusStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
+        styling.focusStyle.hasUnderlineColor = true;
+        styling.focusStyle.underlineColor = QColor(0, 120, 215); // Windows accent blue
+        
+        styling.focusVisibleStyle = styling.focusStyle; // Copy focus style to focus-visible
+    }
+}
+
+bool TBuffer::isHighContrastMode() const
+{
+    // Check if the system is in high contrast mode
+    // This is a simplified implementation - in production, you'd check system settings
+#ifdef Q_OS_WIN
+    // On Windows, check for high contrast theme
+    return GetSystemMetrics(SM_CXBORDER) > 1;
+#elif defined(Q_OS_MAC)
+    // On macOS, check for increased contrast setting
+    // This would require platform-specific code
+    return false;
+#else
+    // On Linux, check environment variables or desktop settings
+    QString highContrast = qgetenv("QT_SCALE_FACTOR");
+    return !highContrast.isEmpty() && highContrast.toDouble() > 1.25;
+#endif
+}
+
+bool TBuffer::shouldRespectSystemColors() const
+{
+    // Check if we should respect system color schemes
+    // This could be based on user preferences or system settings
+    return true; // Default to respecting system colors for accessibility
+}
+
+// Link state management methods for interactive pseudo-classes
+void TBuffer::setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState state)
+{
+    if (linkIndex <= 0) {
+        return; // Invalid link index
+    }
+    
+    mLinkStates[linkIndex] = state;
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    QString stateName;
+    switch (state) {
+        case Mudlet::HyperlinkStyling::StateDefault: stateName = "Default"; break;
+        case Mudlet::HyperlinkStyling::StateVisited: stateName = "Visited"; break;
+        case Mudlet::HyperlinkStyling::StateHover: stateName = "Hover"; break;
+        case Mudlet::HyperlinkStyling::StateActive: stateName = "Active"; break;
+        case Mudlet::HyperlinkStyling::StateFocus: stateName = "Focus"; break;
+        case Mudlet::HyperlinkStyling::StateFocusVisible: stateName = "FocusVisible"; break;
+    }
+    qDebug() << "[OSC8] Link" << linkIndex << "state changed to:" << stateName;
+#endif
+}
+
+Mudlet::HyperlinkStyling::LinkState TBuffer::getLinkState(int linkIndex) const
+{
+    if (linkIndex <= 0) {
+        return Mudlet::HyperlinkStyling::StateDefault;
+    }
+    
+    return mLinkStates.value(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+}
+
+Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) const
+{
+    if (linkIndex <= 0) {
+        return Mudlet::HyperlinkStyling(); // Return default styling
+    }
+    
+    // Get the stored styling for this link from mLinkStore
+    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+    
+    // Update the current state based on tracked state
+    styling.currentState = getLinkState(linkIndex);
+    
+    // The HyperlinkStyling::getEffectiveStyle() method will compute the 
+    // effective styling based on currentState, cascading from base -> :any-link -> state-specific
+    // However, for rendering we need to apply it to the base styling properties
+    // so the rendering code can use it directly
+    
+    auto effective = styling.getEffectiveStyle();
+    
+    // Copy effective state back to base properties for rendering
+    styling.foregroundColor = effective.foregroundColor;
+    styling.backgroundColor = effective.backgroundColor;
+    styling.underlineColor = effective.underlineColor;
+    styling.overlineColor = effective.overlineColor;
+    styling.strikeoutColor = effective.strikeoutColor;
+    styling.hasForegroundColor = effective.hasForegroundColor;
+    styling.hasBackgroundColor = effective.hasBackgroundColor;
+    styling.hasUnderlineColor = effective.hasUnderlineColor;
+    styling.hasOverlineColor = effective.hasOverlineColor;
+    styling.hasStrikeoutColor = effective.hasStrikeoutColor;
+    styling.isBold = effective.isBold;
+    styling.isItalic = effective.isItalic;
+    styling.isUnderlined = effective.isUnderlined;
+    styling.isStrikeOut = effective.isStrikeOut;
+    styling.isOverlined = effective.isOverlined;
+    styling.underlineStyle = effective.underlineStyle;
+    
+    return styling;
+}
+
+void TBuffer::setHoveredLink(int linkIndex)
+{
+    int previousHoveredLink = mCurrentHoveredLinkIndex;
+    mCurrentHoveredLinkIndex = linkIndex;
+    
+    // Reset previous hovered link to its base state (default or visited)
+    if (previousHoveredLink > 0 && previousHoveredLink != linkIndex) {
+        auto currentState = getLinkState(previousHoveredLink);
+        if (currentState == Mudlet::HyperlinkStyling::StateHover) {
+            // Return to visited state if it was visited, otherwise to default
+            if (isLinkVisited(previousHoveredLink)) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateVisited);
+            } else {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDefault);
+            }
+            updateLinkCharacters(previousHoveredLink); // Update displayed characters
+        }
+    }
+    
+    // Set new link to hover state
+    if (linkIndex > 0) {
+        auto currentState = getLinkState(linkIndex);
+        // Don't override active state with hover
+        // But we can hover over visited links to show hover styling
+        if (currentState != Mudlet::HyperlinkStyling::StateActive) {
+            setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateHover);
+            updateLinkCharacters(linkIndex); // Update displayed characters
+        }
+    }
+}
+
+void TBuffer::setActiveLink(int linkIndex)
+{
+    int previousActiveLink = mCurrentActiveLinkIndex;
+    mCurrentActiveLinkIndex = linkIndex;
+    
+    // Reset previous active link
+    if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
+        // Check current state to preserve visited links
+        Mudlet::HyperlinkStyling::LinkState currentState = getLinkState(previousActiveLink);
+        
+        // Return to hover if it's still hovered
+        if (previousActiveLink == mCurrentHoveredLinkIndex) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
+        } 
+        // Check base state: visited or default
+        else if (isLinkVisited(previousActiveLink)) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateVisited);
+        }
+        // Otherwise return to default
+        else {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDefault);
+        }
+        updateLinkCharacters(previousActiveLink); // Update displayed characters
+    }
+    
+    // Set new link to active state
+    if (linkIndex > 0) {
+        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateActive);
+        updateLinkCharacters(linkIndex); // Update displayed characters
+    }
+}
+
+void TBuffer::setFocusedLink(int linkIndex)
+{
+    int previousFocusedLink = mCurrentFocusedLinkIndex;
+    mCurrentFocusedLinkIndex = linkIndex;
+    
+    // Reset previous focused link
+    if (previousFocusedLink > 0 && previousFocusedLink != linkIndex) {
+        setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDefault);
+    }
+    
+    // Set new link to focus state
+    if (linkIndex > 0) {
+        // Determine if focus came from keyboard (would use StateFocusVisible)
+        // For now, we use StateFocus
+        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocus);
+    }
+}
+
+void TBuffer::markLinkAsVisited(int linkIndex)
+{
+    if (linkIndex > 0) {
+        mVisitedLinks[linkIndex] = true;
+        
+        // If the link is not in an interactive state (hover/active/focus), 
+        // update it to visited state immediately
+        auto currentState = getLinkState(linkIndex);
+        if (currentState == Mudlet::HyperlinkStyling::StateDefault) {
+            setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateVisited);
+            updateLinkCharacters(linkIndex);
+        }
+        
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Link" << linkIndex << "marked as visited";
+#endif
+    }
+}
+
+bool TBuffer::isLinkVisited(int linkIndex) const
+{
+    return mVisitedLinks.value(linkIndex, false);
+}
+
+int TBuffer::getLinkIndexAt(int line, int column) const
+{
+    // Validate line bounds
+    if (line < 0 || line >= lineBuffer.size()) {
+        return 0;
+    }
+    
+    const auto& bufferLine = buffer.at(line);
+    
+    // Validate column bounds
+    if (column < 0 || column >= bufferLine.size()) {
+        return 0;
+    }
+    
+    // Return the link index at this position
+    return bufferLine.at(column).linkIndex();
+}
+
+// Update all TChar objects in the buffer that have the specified linkIndex
+// with the effective styling for the current state
+void TBuffer::updateLinkCharacters(int linkIndex)
+{
+    if (linkIndex <= 0) {
+        return;
+    }
+    
+    // Get the effective styling for this link's current state
+    Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Updating characters for link" << linkIndex << "with new styling";
+#endif
+    
+    // Iterate through all lines in the buffer
+    for (auto& line : buffer) {
+        // Iterate through all characters in the line
+        for (auto& tchar : line) {
+            // Check if this character belongs to the link we're updating
+            if (tchar.linkIndex() == linkIndex) {
+                // Apply the effective styling to this character
+                
+                // Update foreground color
+                if (effectiveStyling.hasForegroundColor) {
+                    tchar.mFgColor = effectiveStyling.foregroundColor;
+                }
+                
+                // Update background color - restore original if not specified in styling
+                if (effectiveStyling.hasBackgroundColor) {
+                    tchar.mBgColor = effectiveStyling.backgroundColor;
+                } else {
+                    // Restore the original background color from when the link was created
+                    tchar.mBgColor = mLinkOriginalBackgrounds.value(linkIndex, mBackGroundColor);
+                }
+                
+                // Update text decorations
+                if (effectiveStyling.isUnderlined) {
+                    tchar.mFlags |= TChar::Underline;
+                    
+                    // Apply underline style
+                    // First clear any existing underline style flags
+                    tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
+                    
+                    switch (effectiveStyling.underlineStyle) {
+                        case Mudlet::HyperlinkStyling::UnderlineWavy:
+                            tchar.mFlags |= TChar::UnderlineWavy;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDotted:
+                            tchar.mFlags |= TChar::UnderlineDotted;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDashed:
+                            tchar.mFlags |= TChar::UnderlineDashed;
+                            break;
+                        default:
+                            break;
+                    }
+                } else {
+                    tchar.mFlags &= ~TChar::Underline;
+                    tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
+                }
+                
+                if (effectiveStyling.isOverlined) {
+                    tchar.mFlags |= TChar::Overline;
+                } else {
+                    tchar.mFlags &= ~TChar::Overline;
+                }
+                
+                if (effectiveStyling.isStrikeOut) {
+                    tchar.mFlags |= TChar::StrikeOut;
+                } else {
+                    tchar.mFlags &= ~TChar::StrikeOut;
+                }
+                
+                // Apply decoration colors
+                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
+                    tchar.setUnderlineColor(effectiveStyling.underlineColor);
+                }
+                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
+                    tchar.setOverlineColor(effectiveStyling.overlineColor);
+                }
+                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
+                    tchar.setStrikeoutColor(effectiveStyling.strikeoutColor);
+                }
+                
+                // Update bold and italic
+                if (effectiveStyling.isBold) {
+                    tchar.mFlags |= TChar::Bold;
+                } else {
+                    tchar.mFlags &= ~TChar::Bold;
+                }
+                
+                if (effectiveStyling.isItalic) {
+                    tchar.mFlags |= TChar::Italic;
+                } else {
+                    tchar.mFlags &= ~TChar::Italic;
+                }
+            }
+        }
+    }
 }

@@ -1267,14 +1267,28 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
     if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
         if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
             if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
+                int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
+                
                 setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
-                QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+                QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
+                QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
                 // If a special tooltip hint was given, use that one.
                 QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
+                
+                // Update hover state for CSS pseudo-class support
+                if (mpBuffer->getHoveredLink() != linkIndex) {
+                    mpBuffer->setHoveredLink(linkIndex);
+                    forceUpdate(); // Trigger re-render with new hover state
+                }
             } else {
                 setCursor(Qt::IBeamCursor);
                 QToolTip::hideText();
+                
+                // Clear hover state if we're not over a link
+                if (mpBuffer->getHoveredLink() != 0) {
+                    mpBuffer->setHoveredLink(0);
+                    forceUpdate(); // Trigger re-render
+                }
             }
         }
     }
@@ -1436,16 +1450,26 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOfbounds) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
-                    QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    int luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex()).value(0, false);
+                    int linkIndex = mpBuffer->buffer.at(y).at(x).linkIndex();
+                    QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
+                    int luaReference = mpBuffer->mLinkStore.getReference(linkIndex).value(0, false);
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
+                        
+                        // Set active state for CSS pseudo-class support
+                        mpBuffer->setActiveLink(linkIndex);
+                        forceUpdate(); // Trigger re-render with active state
+                        
                         if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
                         } else {
                             mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoLink"));
                         }
+                        
+                        // Mark link as visited after execution (will update to visited state)
+                        mpBuffer->markLinkAsVisited(linkIndex);
+                        
                         return;
                     }
                 }
@@ -1887,6 +1911,12 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
         mCtrlSelecting = false;
+        
+        // Clear active state on mouse release
+        if (mpBuffer->getActiveLink() != 0) {
+            mpBuffer->setActiveLink(0);
+            forceUpdate(); // Trigger re-render
+        }
     }
     if (event->button() == Qt::RightButton) {
         int y = (eventPos.y() / mFontHeight) + imageTopLine();
@@ -2907,6 +2937,20 @@ void TTextEdit::setCaretPosition(int line, int column)
         return;
     }
 
+    // Check if the caret has landed on a link and update focus state
+    int linkIndex = mpBuffer->getLinkIndexAt(line, column);
+    if (linkIndex > 0) {
+        // Caret is on a link - set it as focused (keyboard navigation)
+        if (mpBuffer->getFocusedLink() != linkIndex) {
+            mpBuffer->setFocusedLink(linkIndex);
+        }
+    } else {
+        // Caret is not on a link - clear any focused link
+        if (mpBuffer->getFocusedLink() != 0) {
+            mpBuffer->setFocusedLink(0);
+        }
+    }
+
     updateCaret();
 }
 
@@ -3157,6 +3201,31 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         case Qt::Key_PageDown:
             newCaretLine = std::min<qsizetype>(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
             break;
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+        case Qt::Key_Space: {
+            // Activate the focused link when Enter or Space is pressed in caret mode
+            int focusedLink = mpBuffer->getFocusedLink();
+            if (focusedLink > 0) {
+                // Get the link commands and execute them
+                QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
+                if (!commands.isEmpty()) {
+                    // Mark the link as visited
+                    mpBuffer->markLinkAsVisited(focusedLink);
+                    
+                    // Execute the command(s)
+                    for (const auto& cmd : commands) {
+                        mpHost->send(cmd);
+                    }
+                    
+                    // Don't move the caret for this key press
+                    QWidget::keyPressEvent(event);
+                    return;
+                }
+            }
+            // If no link is focused or it has no command, handle normally
+            break;
+        }
         case Qt::Key_C:
             if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
                 if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {

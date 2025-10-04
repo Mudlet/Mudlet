@@ -53,6 +53,108 @@ class Host;
 class QTextCodec;
 class TConsole;
 
+// Enhanced OSC 8 hyperlink styling support with CSS link states
+// Defined in Mudlet namespace to avoid circular dependencies
+namespace Mudlet {
+
+struct HyperlinkStyling {
+    // Base styling properties
+    QColor foregroundColor;
+    QColor backgroundColor;
+    bool hasForegroundColor = false;
+    bool hasBackgroundColor = false;
+    bool isBold = false;
+    bool isItalic = false;
+    bool isUnderlined = false; // OSC 8 hyperlinks default to no underline (unlike other Mudlet hyperlinks)
+    bool isStrikeOut = false;
+    bool isOverlined = false;
+    bool hasCustomStyling = false; // Tracks if any custom styling was provided
+    
+    // Extended text decoration support
+    enum UnderlineStyle {
+        UnderlineNone,
+        UnderlineSolid,     // Standard underline
+        UnderlineWavy,      // Squiggly/wavy underline
+        UnderlineDotted,    // Dotted underline  
+        UnderlineDashed     // Dashed underline
+    };
+    UnderlineStyle underlineStyle = UnderlineSolid;
+    QColor underlineColor;
+    QColor overlineColor;
+    QColor strikeoutColor;
+    bool hasUnderlineColor = false;
+    bool hasOverlineColor = false;
+    bool hasStrikeoutColor = false;
+    
+    // CSS Link State Support with Accessibility
+    enum LinkState {
+        StateDefault,       // Default/unvisited (:link)
+        StateVisited,       // Visited link (:visited)
+        StateHover,         // Mouse hover (:hover)
+        StateActive,        // Mouse down/active (:active)
+        StateFocus,         // Keyboard focus (:focus)
+        StateFocusVisible   // Visible keyboard focus (:focus-visible)
+    };
+    
+    // State-specific styling containers
+    struct StateStyle {
+        QColor foregroundColor;
+        QColor backgroundColor;
+        QColor underlineColor;
+        QColor overlineColor;
+        QColor strikeoutColor;
+        bool hasForegroundColor = false;
+        bool hasBackgroundColor = false;
+        bool hasUnderlineColor = false;
+        bool hasOverlineColor = false;
+        bool hasStrikeoutColor = false;
+        bool isBold = false;
+        bool isItalic = false;
+        bool isUnderlined = false;
+        bool isStrikeOut = false;
+        bool isOverlined = false;
+        UnderlineStyle underlineStyle = UnderlineSolid;
+        bool hasCustomStyling = false;
+        
+        // Accessibility properties
+        bool isHighContrast = false;      // High contrast mode support
+        bool respectsSystemColors = true;  // Honor system color schemes
+        bool isAnimationReduced = false;   // Respect prefers-reduced-motion
+    };
+    
+    // State-specific styles
+    StateStyle linkStyle;           // :link (unvisited)
+    StateStyle visitedStyle;        // :visited 
+    StateStyle hoverStyle;          // :hover
+    StateStyle activeStyle;         // :active
+    StateStyle focusStyle;          // :focus
+    StateStyle focusVisibleStyle;   // :focus-visible
+    StateStyle anyLinkStyle;        // :any-link (applies to both :link and :visited)
+    
+    // State tracking
+    LinkState currentState = StateDefault;
+    bool isVisited = false;
+    bool isHovered = false;
+    bool isActive = false;
+    bool isFocused = false;
+    bool isFocusVisible = false;
+    bool hasKeyboardFocus = false;   // True if focus came from keyboard
+    
+    // Accessibility features
+    bool supportsHighContrast = true;
+    bool respectsSystemTheme = true;
+    bool hasAccessibleLabel = false;
+    QString accessibleLabel;          // Screen reader description
+    QString accessibleHint;           // Additional context for screen readers
+    
+    // Methods to get effective styling for current state
+    StateStyle getEffectiveStyle() const;
+    void updateState(LinkState newState);
+    bool shouldShowFocusRing() const;
+};
+
+} // namespace Mudlet
+
 class WrapInfo
 {
     friend class TBuffer;
@@ -375,36 +477,6 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
-    // Enhanced OSC 8 hyperlink styling support
-    struct HyperlinkStyling {
-        QColor foregroundColor;
-        QColor backgroundColor;
-        bool hasForegroundColor = false;
-        bool hasBackgroundColor = false;
-        bool isBold = false;
-        bool isItalic = false;
-        bool isUnderlined = false; // OSC 8 hyperlinks default to no underline (unlike other Mudlet hyperlinks)
-        bool isStrikeOut = false;
-        bool isOverlined = false;
-        bool hasCustomStyling = false; // Tracks if any custom styling was provided
-        
-        // Extended text decoration support
-        enum UnderlineStyle {
-            UnderlineNone,
-            UnderlineSolid,     // Standard underline
-            UnderlineWavy,      // Squiggly/wavy underline
-            UnderlineDotted,    // Dotted underline  
-            UnderlineDashed     // Dashed underline
-        };
-        UnderlineStyle underlineStyle = UnderlineSolid;
-        QColor underlineColor;
-        QColor overlineColor;
-        QColor strikeoutColor;
-        bool hasUnderlineColor = false;
-        bool hasOverlineColor = false;
-        bool hasStrikeoutColor = false;
-    };
-
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
@@ -425,9 +497,15 @@ private:
     // Helper function for appending query parameters to URIs (handles existing params)
     QString appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters);
     // Helper function for parsing CSS-like style strings
-    void parseHyperlinkStyling(const QString& styleString, HyperlinkStyling& styling);
+    void parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing color values (hex, named, rgb)
     QColor parseColorValue(const QString& value);
+    // CSS Link State parsing and management
+    void parseHyperlinkStateStyle(const QString& pseudoClass, const QString& styleString, Mudlet::HyperlinkStyling& styling);
+    void parseStateStyleProperties(const QString& styleString, Mudlet::HyperlinkStyling::StateStyle& stateStyle);
+    void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
+    bool isHighContrastMode() const;
+    bool shouldRespectSystemColors() const;
 
 
     QPointer<TConsole> mpConsole;
@@ -514,8 +592,35 @@ private:
     bool mHyperlinkActive = false;
     
     // Enhanced OSC 8 hyperlink styling and menu support
-    HyperlinkStyling mCurrentHyperlinkStyling;
+    Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
     QStringList mCurrentHyperlinkMenu; // Format: "Label|Command|Label|Command..."
+    
+    // Link state tracking for interactive pseudo-classes
+    QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
+    QMap<int, bool> mVisitedLinks; // Track which links have been visited (base state)
+    QMap<int, QColor> mLinkOriginalBackgrounds; // Track original background color per link
+    int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
+    int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
+    int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
+    
+public:
+    // Methods for link state management (used by TTextEdit event handlers)
+    void setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState state);
+    Mudlet::HyperlinkStyling::LinkState getLinkState(int linkIndex) const;
+    Mudlet::HyperlinkStyling getEffectiveHyperlinkStyling(int linkIndex) const;
+    void setHoveredLink(int linkIndex);
+    void setActiveLink(int linkIndex);
+    void setFocusedLink(int linkIndex);
+    void markLinkAsVisited(int linkIndex); // Mark a link as visited (base state)
+    bool isLinkVisited(int linkIndex) const; // Check if link has been visited
+    int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
+    int getActiveLink() const { return mCurrentActiveLinkIndex; }
+    int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
+    int getLinkIndexAt(int line, int column) const; // Get link index at specific position
+    
+private:
+    // Update all TChar objects that belong to a specific link with effective styling
+    void updateLinkCharacters(int linkIndex);
 };
 
 #ifndef QT_NO_DEBUG_STREAM
