@@ -373,14 +373,12 @@ private:
     void delete_timer_for_undo(TTimer* timer);
     int getTimerRow(TTimer* timer);
     void updateTimerView(TTimer* timer);
+
     TTrigger* addTrigger(bool isFolder, TTrigger* parent = nullptr, bool withUndo = true);
     void addTrigger(TTrigger* trigger, TTrigger* parent, int row);
-    void delete_trigger(bool withUndo = true);
     void delete_trigger_for_undo(TTrigger* trigger);
     int getTriggerRow(TTrigger* trigger);
     void updateTriggerView(TTrigger* trigger);
-    void addAction(bool);
-    void addKey(bool);
     void timerEvent(QTimerEvent *event) override;
 
     void selectTriggerByID(int id);
