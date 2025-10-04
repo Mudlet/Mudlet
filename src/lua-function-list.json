@@ -203,7 +203,7 @@
     "getLabelFormat": "formatTable = getLabelFormat(labelName)",
     "getLabelSizeHint": "width, height = getLabelSizeHint(labelName)",
     "getLabelStyleSheet": "getLabelStyleSheet(labelName)",
-    "getLastLineNumber": "getLastLineNumber(windowName)",
+    "getLastLineNumber": "getLastLineNumber([windowName])",
     "getLineCount": "getLineCount([windowName])",
     "getLineNumber": "getLineNumber([windowName])",
     "getLines": "getLines([windowName,] from_line_number, to_line_number)",
