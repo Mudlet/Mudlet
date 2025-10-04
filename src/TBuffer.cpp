@@ -583,6 +583,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                 | (mReverse ? TChar::Reverse : TChar::None)
                                 | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
                                 | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
+                                | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
+                                | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
+                                | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
                                 | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
                                 | (TChar::alternateFontFlag(mAltFont))
                                 | (mConcealed ? TChar::Concealed : TChar::None);
@@ -748,7 +751,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
                                 | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
+                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
+                                | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
+                                | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
+                                | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None);
 
                         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
@@ -802,6 +808,9 @@ COMMIT_LINE:
                             | (mReverse ? TChar::Reverse : TChar::None)
                             | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
                             | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
+                            | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
+                            | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
+                            | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
                             | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
                             | (TChar::alternateFontFlag(mAltFont))
                             | (mConcealed ? TChar::Concealed : TChar::None);
@@ -953,6 +962,9 @@ COMMIT_LINE:
                 | (mReverse ? TChar::Reverse : TChar::None)
                 | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
                 | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
+                | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
+                | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
+                | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
                 | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
                 | (TChar::alternateFontFlag(mAltFont))
                 | (mConcealed ? TChar::Concealed : TChar::None);
@@ -1017,10 +1029,8 @@ COMMIT_LINE:
                 c.mFlags |= TChar::Italic;
             }
             
-            // If no custom styling was provided, apply default hyperlink underline
-            if (!mCurrentHyperlinkStyling.hasCustomStyling) {
-                c.mFlags |= TChar::Underline;
-            }
+            // Only apply underline if explicitly set in styling (respects OSC 8 default of no underline)
+            // Note: This differs from other Mudlet hyperlinks which default to underlined
         }
 
         if (mpHost->mMxpClient.isInLinkMode()) {
@@ -1594,19 +1604,40 @@ void TBuffer::decodeSGR(const QString& sequence)
                 switch (value) {
                 case 0: // Underline off
                     mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
-                case 1: // Underline on
+                case 1: // Underline on (solid)
                     mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
-                case 2: // Double underline - not supported, treat as single
-                    [[fallthrough]];
-                case 3: // Wavey underline - not supported, treat as single
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unsupported underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a one!";
+                case 2: // Dashed underline
                     mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = true;
+                    break;
+                case 3: // Dotted underline
+                    mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = true;
+                    mUnderlineDashed = false;
+                    break;
+                case 4: // Wavy underline
+                    mUnderline = true;
+                    mUnderlineWavy = true;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
                 default: // Something unexpected
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a zero!";
                     mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
                 }
             } else if (parameterElements.at(0) == QLatin1String("3")) {
@@ -1662,6 +1693,9 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mReverse = false;
                     mStrikeOut = false;
                     mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     mBlink = false;
                     mFastBlink = false;
                     mConcealed = false;
@@ -1753,6 +1787,9 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 24:
                     mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
                 case 25:
                     mBlink = false;
@@ -2295,6 +2332,9 @@ void TBuffer::decodeOSC(const QString& sequence)
                 parseHyperlinkStyling(queryParams.value("style"), mCurrentHyperlinkStyling);
             } else {
                 mCurrentHyperlinkStyling = HyperlinkStyling(); // Reset to defaults
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] No style parameter provided, using defaults (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
+#endif
             }
             
             // Extract menu parameters

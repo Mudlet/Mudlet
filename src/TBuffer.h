@@ -383,7 +383,7 @@ public:
         bool hasBackgroundColor = false;
         bool isBold = false;
         bool isItalic = false;
-        bool isUnderlined = true; // Default hyperlink style
+        bool isUnderlined = false; // OSC 8 hyperlinks default to no underline (unlike other Mudlet hyperlinks)
         bool isStrikeOut = false;
         bool isOverlined = false;
         bool hasCustomStyling = false; // Tracks if any custom styling was provided
@@ -478,6 +478,9 @@ private:
     bool mReverse = false;
     bool mStrikeOut = false;
     bool mUnderline = false;
+    bool mUnderlineWavy = false;
+    bool mUnderlineDotted = false;
+    bool mUnderlineDashed = false;
     // If BOTH of these ever get set than only mFastBlink is to be considered
     // set - when setting one ensure the other is reset:
     bool mBlink = false;
