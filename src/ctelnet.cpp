@@ -1198,22 +1198,22 @@ QString cTelnet::getNewEnvironOSCHyperlinks()
 
 QString cTelnet::getNewEnvironOSCHyperlinksSend()
 {
-    return mpHost->mSupportOSCHyperlinksSend ? qsl("1") : qsl("0");
+    return (mpHost->mSupportOSCHyperlinks && mpHost->mSupportOSCHyperlinksSend) ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPrompt()
 {
-    return mpHost->mSupportOSCHyperlinksPrompt ? qsl("1") : qsl("0");
+    return (mpHost->mSupportOSCHyperlinks && mpHost->mSupportOSCHyperlinksPrompt) ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyle()
 {
-    return mpHost->mSupportOSCHyperlinksStyle ? qsl("1") : qsl("0");
+    return (mpHost->mSupportOSCHyperlinks && mpHost->mSupportOSCHyperlinksStyle) ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksMenu()
 {
-    return mpHost->mSupportOSCHyperlinksMenu ? qsl("1") : qsl("0");
+    return (mpHost->mSupportOSCHyperlinks && mpHost->mSupportOSCHyperlinksMenu) ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironScreenReader()
