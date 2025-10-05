@@ -2287,6 +2287,10 @@ void TBuffer::decodeOSC(const QString& sequence)
         break;
     case static_cast<quint8>('8'): {
         // Handle OSC 8 hyperlinks in the form: "8;params;URI"
+        if (!mpHost || !mpHost->mSupportOSCHyperlinks) {
+            return;
+        }
+        
         QStringView rest = QStringView(sequence).mid(1);  // skip selector "8;"
         int firstSemi = rest.indexOf(';');
 
@@ -2336,7 +2340,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             QMap<QString, QString> queryParams = parseUriQueryParameters(rawUrl);
             
             // Extract styling parameters
-            if (queryParams.contains(qsl("style"))) {
+            if (mpHost->mSupportOSCHyperlinksStyle && queryParams.contains(qsl("style"))) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Found style parameter, applying custom styling";
 #endif
@@ -2349,7 +2353,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
             
             // Extract menu parameters
-            if (queryParams.contains(qsl("menu"))) {
+            if (mpHost->mSupportOSCHyperlinksMenu && queryParams.contains(qsl("menu"))) {
                 QString menuString = queryParams.value(qsl("menu"));
                 mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
             } else {
@@ -2396,10 +2400,18 @@ void TBuffer::decodeOSC(const QString& sequence)
             QStringList hint;
 
             if (baseUrl.startsWith(qsl("send:"))) {
+                if (!mpHost->mSupportOSCHyperlinksSend) {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - send: scheme disabled in profile settings";
+                    return;
+                }
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
                 command = { qsl("send([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
+                if (!mpHost->mSupportOSCHyperlinksPrompt) {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - prompt: scheme disabled in profile settings";
+                    return;
+                }
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
                 command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
@@ -2433,19 +2445,35 @@ void TBuffer::decodeOSC(const QString& sequence)
                     
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
+                        if (!mpHost->mSupportOSCHyperlinksSend) {
+                            continue; // Skip this menu item if send: is disabled
+                        }
+
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
                         menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Send"), innerCommand));
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
+                        if (!mpHost->mSupportOSCHyperlinksPrompt) {
+                            continue; // Skip this menu item if prompt: is disabled
+                        }
+
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
                         menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand));
                     } else if (menuCommand == qsl("-")) {
-                        // Special case: "-" creates a menu separator
+                        // Special case: "-" creates a menu separator (only if menus are supported)
+                        if (!mpHost->mSupportOSCHyperlinksMenu) {
+                            continue; // Skip separator if menus are disabled
+                        }
+
                         menuCommands.append(QString());
                         menuHints.append(QString());
                     } else {
-                        // Treat as direct command
+                        // Treat as direct command (uses send, so check the flag)
+                        if (!mpHost->mSupportOSCHyperlinksSend) {
+                            continue; // Skip this menu item if send: is disabled
+                        }
+
                         menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
                         menuHints.append(menuLabel);
                     }

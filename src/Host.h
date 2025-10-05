@@ -758,6 +758,13 @@ public:
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
 
+    // OSC 8 hyperlink feature flags
+    bool mSupportOSCHyperlinks = true;
+    bool mSupportOSCHyperlinksSend = true;
+    bool mSupportOSCHyperlinksPrompt = true;
+    bool mSupportOSCHyperlinksStyle = true;
+    bool mSupportOSCHyperlinksMenu = true;
+
     enum class BlankLineBehaviour {
         Show,
         Hide,
