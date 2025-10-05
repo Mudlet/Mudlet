@@ -4968,189 +4968,274 @@ void TBuffer::injectOSC8TestSequences()
     qDebug() << "[OSC8] injectOSC8TestSequences() called - about to inject comprehensive test sequences";
 #endif
 
-    QString testOutput = "\n=== OSC 8 Hyperlink Test Suite ===\n\n";
+    QString testOutput = "\n╔════════════════════════════════════════════════════════════════════╗\n";
+    testOutput += "║              OSC 8 Enhanced Hyperlink Test Suite                   ║\n";
+    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 1: Basic Link Types
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "┌─── SECTION 1: Basic Link Types ───────────────────────────────────┐\n\n";
     
     // Test 1: Basic send commands
-    testOutput += "1. Basic Commands (send:command):\n";
-    testOutput += "\x1b]8;;send:look\x1b\\[look]\x1b]8;;\x1b\\ ";
+    // Format: ESC ]8;;<command>ESC\<text>ESC]8;;ESC\
+    // send:command - executes the command immediately when clicked
+    testOutput += "1. Send Commands (immediate execution):\n";
+    testOutput += "   Syntax: send:<command>\n";
+    testOutput += "   Example: \x1b]8;;send:look\x1b\\[look]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:inventory\x1b\\[inv]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:who\x1b\\[who]\x1b]8;;\x1b\\\n\n";
     
-    // Test 2: Prompt commands  
-    testOutput += "2. Prompt Commands (prompt:command):\n";
-    testOutput += "\x1b]8;;prompt:say Hello!\x1b\\[say hello]\x1b]8;;\x1b\\ ";
+    // Test 2: Prompt commands
+    // prompt:command - puts the command in the input line for user to edit/send
+    testOutput += "2. Prompt Commands (populate command line):\n";
+    testOutput += "   Syntax: prompt:<command>\n";
+    testOutput += "   Example: \x1b]8;;prompt:say Hello!\x1b\\[say hello]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;prompt:tell player \x1b\\[tell]\x1b]8;;\x1b\\\n\n";
     
     // Test 3: Web URLs
-    testOutput += "3. Web URLs (url?key=val):\n";
-    testOutput += "\x1b]8;;https://www.mudlet.org\x1b\\[Mudlet]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC8\x1b\\[OSC8]\x1b]8;;\x1b\\\n\n";
+    // Standard HTTP(S) URLs open in browser
+    testOutput += "3. Web URLs (open in browser):\n";
+    testOutput += "   Syntax: https://<url> or http://<url>\n";
+    testOutput += "   Example: \x1b]8;;https://www.mudlet.org\x1b\\[Mudlet]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC8\x1b\\[OSC8 Docs]\x1b]8;;\x1b\\\n\n";
     
-    // Test 4: Styled hyperlinks
-    testOutput += "4. Colored Hyperlinks (send:command?style=color:#rrggbb):\n";
-    testOutput += "\x1b]8;;send:look?style=color:#ff4444\x1b\\[bright red link]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:inventory?style=color:#4488ff\x1b\\[bright blue link]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:who?style=color:#ff8800\x1b\\[bright orange link]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:time?style=color:#44ff44\x1b\\[bright green link]\x1b]8;;\x1b\\\n\n";
+    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 2: Basic Styling (CSS-like)
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "┌─── SECTION 2: Basic Styling (Static Appearance) ─────────────────┐\n\n";
+    
+    // Test 4: Text color
+    // style parameter uses CSS-like syntax: property:value
+    testOutput += "4. Text Color:\n";
+    testOutput += "   Syntax: ?style=color:#rrggbb (hex RGB)\n";
+    testOutput += "   Example: \x1b]8;;send:look?style=color:#ff4444\x1b\\[bright red]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:inventory?style=color:#4488ff\x1b\\[bright blue]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:who?style=color:#ff8800\x1b\\[bright orange]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:time?style=color:#44ff44\x1b\\[bright green]\x1b]8;;\x1b\\\n\n";
     
     // Test 5: Background colors
-    testOutput += "5. Background Colors (send:command?style=color:<color>;background-color:#rrggbb):\n";
-    testOutput += "\x1b]8;;send:north?style=color:black;background-color:#ffff00\x1b\\[yellow bg]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:south?style=color:white;background-color:#666666\x1b\\[dark gray bg]\x1b]8;;\x1b\\ ";
+    // Multiple CSS properties separated by semicolons
+    testOutput += "5. Background Colors:\n";
+    testOutput += "   Syntax: ?style=color:<color>;background-color:#rrggbb\n";
+    testOutput += "   Example: \x1b]8;;send:north?style=color:black;background-color:#ffff00\x1b\\[yellow bg]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:south?style=color:white;background-color:#666666\x1b\\[gray bg]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:east?style=color:white;background-color:#ff4444\x1b\\[red bg]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:west?style=color:black;background-color:#44ff44\x1b\\[green bg]\x1b]8;;\x1b\\\n\n";
     
     // Test 6: Text decorations
-    testOutput += "6. Text Decorations: (send:command?style=text-decoration:<underline|overline|line-through>)\n";
-    testOutput += "\x1b]8;;send:cast?style=text-decoration:underline\x1b\\[underlined]\x1b]8;;\x1b\\ ";
+    // Three decoration types: underline, overline, line-through
+    testOutput += "6. Text Decorations:\n";
+    testOutput += "   Syntax: ?style=text-decoration:<underline|overline|line-through>\n";
+    testOutput += "   Example: \x1b]8;;send:cast?style=text-decoration:underline\x1b\\[underlined]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:cast?style=text-decoration:overline\x1b\\[overlined]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:cast?style=text-decoration:line-through\x1b\\[strikethrough]\x1b]8;;\x1b\\\n\n";
     
     // Test 7: Underline styles
-    testOutput += "7. Underline Styles (send:spell?style=text-decoration:underline <wavy|dotted|dashed>):\n";
-    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline wavy\x1b\\[wavy underline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline dotted\x1b\\[dotted underline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline dashed\x1b\\[dashed underline]\x1b]8;;\x1b\\\n\n";
+    // Advanced decoration styles: solid (default), wavy, dotted, dashed
+    testOutput += "7. Underline Styles:\n";
+    testOutput += "   Syntax: ?style=text-decoration:underline <wavy|dotted|dashed>\n";
+    testOutput += "   Example: \x1b]8;;send:spell?style=text-decoration:underline wavy\x1b\\[wavy]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline dotted\x1b\\[dotted]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline dashed\x1b\\[dashed]\x1b]8;;\x1b\\\n\n";
     
-    // Test 8: Colored Decorations
-    testOutput += "8. Colored Decorations (send:command?style=text-decoration:underline #rrggbb):\n";
-    testOutput += "\x1b]8;;send:attack?style=text-decoration:underline #ff0000\x1b\\[bright red underline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:defend?style=text-decoration:overline #0066ff\x1b\\[bright blue overline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:flee?style=text-decoration:line-through #00cc00\x1b\\[bright green strikethrough]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:magic?style=text-decoration:underline #ff00ff\x1b\\[bright magenta underline]\x1b]8;;\x1b\\\n\n";
+    // Test 8: Colored decorations
+    // Decoration color can be specified inline with the decoration type
+    testOutput += "8. Colored Decorations:\n";
+    testOutput += "   Syntax: ?style=text-decoration:<type> #rrggbb\n";
+    testOutput += "   Example: \x1b]8;;send:attack?style=text-decoration:underline #ff0000\x1b\\[red underline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:defend?style=text-decoration:overline #0066ff\x1b\\[blue overline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:flee?style=text-decoration:line-through #00cc00\x1b\\[green strikethrough]\x1b]8;;\x1b\\\n\n";
     
     // Test 9: Decoration color property
-    testOutput += "9. Decoration Color Property (send:command?style=text-decoration:<underline|overline|line-through>;text-decoration-color:#rrggbb):\n";
-    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline;text-decoration-color:#ff4444\x1b\\[bright red decoration]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:heal?style=text-decoration:overline;text-decoration-color:#4488ff\x1b\\[bright blue decoration]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:cure?style=text-decoration:line-through;text-decoration-color:#44ff44\x1b\\[bright green decoration]\x1b]8;;\x1b\\\n\n";
+    // Alternative syntax using separate text-decoration-color property
+    testOutput += "9. Decoration Color Property (Alternative Syntax):\n";
+    testOutput += "   Syntax: ?style=text-decoration:<type>;text-decoration-color:#rrggbb\n";
+    testOutput += "   Example: \x1b]8;;send:spell?style=text-decoration:underline;text-decoration-color:#ff4444\x1b\\[red decoration]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:heal?style=text-decoration:overline;text-decoration-color:#4488ff\x1b\\[blue decoration]\x1b]8;;\x1b\\\n\n";
     
     // Test 10: Combined styling
-    testOutput += "10. Combined Styling (send:command?style=color:#rrggbb;background-color:#rrggbb;text-decoration:<underline|overline|line-through> #rrggbb;font-weight:bold):\n";
-    testOutput += "\x1b]8;;send:combo1?style=color:#ffff00;background-color:#000080;text-decoration:underline #ff4444;font-weight:bold\x1b\\[yellow on blue]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:combo2?style=color:#000000;background-color:#ffff00;text-decoration:overline #ff0000;font-weight:bold\x1b\\[black on yellow]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:combo3?style=color:#ffffff;background-color:#cc0000;text-decoration:underline #44ff44\x1b\\[white on red]\x1b]8;;\x1b\\\n\n";
+    // Multiple properties can be combined
+    testOutput += "10. Combined Styling:\n";
+    testOutput += "    Syntax: Multiple properties separated by semicolons\n";
+    testOutput += "    Example: \x1b]8;;send:combo1?style=color:#ffff00;background-color:#000080;text-decoration:underline #ff4444;font-weight:bold\x1b\\[yellow on navy]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:combo2?style=color:#000000;background-color:#ffff00;text-decoration:overline #ff0000;font-weight:bold\x1b\\[black on yellow]\x1b]8;;\x1b\\\n\n";
     
-    // Test 11: Menu support
-    testOutput += "11. Context Menus (send:command?menu=Option 1|send:opt1|Option 2|send:opt2&tooltip=Custom tooltip):\n";
-    testOutput += "\x1b]8;;send:test?menu=Option 1|send:opt1|Option 2|send:opt2|Separator|-|Help|send:help\x1b\\[right-click me]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:custom?menu=Attack|send:attack|Defend|send:defend&tooltip=Custom menu hint\x1b\\[custom tooltip]\x1b]8;;\x1b\\ ";
+    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 3: Interactive Features
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "┌─── SECTION 3: Interactive Features ───────────────────────────────┐\n\n";
+    
+    // Test 11: Context menus
+    // menu parameter format: Label|command|Label|command...
+    // Use - as command for separators
+    testOutput += "11. Context Menus (Right-Click):\n";
+    testOutput += "    Syntax: ?menu=Label1|command1|Label2|command2&tooltip=hint\n";
+    testOutput += "    Separator: Label|-\n";
+    testOutput += "    Example: \x1b]8;;send:test?menu=Option 1|send:opt1|Option 2|send:opt2|Separator|-|Help|send:help\x1b\\[right-click me]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:combat?menu=Fireball|send:cast fireball|Heal|send:cast heal&tooltip=Spell menu\x1b\\[spell menu]\x1b]8;;\x1b\\\n\n";
     
     // Test 12: Edge cases
-    testOutput += "12. Edge Cases:\n";
-    testOutput += "\x1b]8;;send:empty?\x1b\\[empty style]\x1b]8;;\x1b\\ ";
+    testOutput += "12. Edge Cases (Error Handling):\n";
+    testOutput += "    Empty or invalid styles are gracefully ignored\n";
+    testOutput += "    Example: \x1b]8;;send:empty?\x1b\\[empty style]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:invalid?style=invalid:value\x1b\\[invalid style]\x1b]8;;\x1b\\\n\n";
     
-    testOutput += "=== End Basic Test Suite ===\n\n";
+    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
     
-    // NEW: CSS Pseudo-Class State Tests
-    testOutput += "\n╔════════════════════════════════════════════════════════════════════╗\n";
-    testOutput += "║           CSS Link States & Pseudo-Classes Test Suite              ║\n";
-    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 4: CSS Pseudo-Classes (Interactive States)
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "┌─── SECTION 4: CSS Pseudo-Classes (Interactive States) ───────────┐\n\n";
+    testOutput += "CSS pseudo-classes enable different appearances based on link state:\n";
+    testOutput += "• :link       - unvisited link (default appearance)\n";
+    testOutput += "• :visited    - previously clicked link\n";
+    testOutput += "• :hover      - mouse cursor over link\n";
+    testOutput += "• :active     - link being clicked (mouse down)\n";
+    testOutput += "• :focus      - link has keyboard focus (Tab navigation)\n";
+    testOutput += "• :any-link   - applies to both :link and :visited states\n\n";
     
-    // Test 13: CSS Pseudo-Classes - :link and :visited
-    testOutput += "13. CSS :link and :visited States:\n";
-    testOutput += "   \x1b]8;;send:unvisited?style=:link{color:#0088ff;text-decoration:underline}\x1b\\[unvisited link (bright blue)]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:visited?style=:visited{color:#bb66dd}\x1b\\[visited link (purple)]\x1b]8;;\x1b\\\n\n";
+    // Test 13: :link and :visited states
+    testOutput += "13. :link and :visited States:\n";
+    testOutput += "    Syntax: ?style=:link{<properties>};:visited{<properties>}\n";
+    testOutput += "    Example: \x1b]8;;send:unvisited?style=:link{color:#0088ff;text-decoration:underline}\x1b\\[unvisited (bright blue)]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:visited?style=:visited{color:#bb66dd}\x1b\\[visited (purple)]\x1b]8;;\x1b\\\n";
+    testOutput += "    → Click links to see :visited state take effect\n\n";
     
-    // Test 14: CSS :hover State
-    testOutput += "14. CSS :hover State (hover to see effect):\n";
-    testOutput += "   \x1b]8;;send:hover1?style=color:#00aaff;:hover{color:#ffdd00;background:#004488;font-weight:bold}\x1b\\[Hover me (blue→gold on navy)]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:hover2?style=color:#00aaff;:hover{color:#ff6600;background:#e6f2ff;text-decoration:underline;font-weight:bold}\x1b\\[Hover me (blue→orange on light blue)]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:hover3?style=color:#00cc66;:hover{color:#00ff88;text-decoration:underline wavy;font-weight:bold}\x1b\\[Hover me (green with wavy underline)]\x1b]8;;\x1b\\\n\n";
+    // Test 14: :hover state
+    testOutput += "14. :hover State (Mouse Interaction):\n";
+    testOutput += "    Syntax: ?style=<base>;:hover{<properties>}\n";
+    testOutput += "    Example: \x1b]8;;send:hover1?style=color:#00aaff;:hover{color:#ffdd00;background:#004488;font-weight:bold}\x1b\\[Hover me (blue→gold on navy)]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:hover2?style=color:#00aaff;:hover{color:#ff6600;background:#e6f2ff;text-decoration:underline;font-weight:bold}\x1b\\[Hover me (blue→orange)]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:hover3?style=color:#00cc66;:hover{color:#00ff88;text-decoration:underline wavy;font-weight:bold}\x1b\\[Hover me (wavy underline)]\x1b]8;;\x1b\\\n";
+    testOutput += "    → Move mouse over links to see hover effects\n\n";
     
-    // Test 15: CSS :active State  
-    testOutput += "15. CSS :active State (click and hold to see effect):\n";
-    testOutput += "   \x1b]8;;send:active1?style=color:#00cc66;:hover{color:#00ff88;text-decoration:underline wavy};:active{color:#ffffff;background:#dd0000;font-weight:bold}\x1b\\[Click me (green→white on red)]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:active2?style=color:#88dd88;font-weight:bold;:hover{color:#ffffff;background:#00aa00;text-decoration:overline};:active{color:#ffff88;background:#006600}\x1b\\[Click me (complex states)]\x1b]8;;\x1b\\\n\n";
+    // Test 15: :active state
+    testOutput += "15. :active State (Click Feedback):\n";
+    testOutput += "    Syntax: ?style=<base>;:hover{<hover>};:active{<active>}\n";
+    testOutput += "    Example: \x1b]8;;send:active1?style=color:#00cc66;:hover{color:#00ff88;text-decoration:underline wavy};:active{color:#ffffff;background:#dd0000;font-weight:bold}\x1b\\[Click and hold (green→white on red)]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:active2?style=color:#88dd88;font-weight:bold;:hover{color:#ffffff;background:#00aa00;text-decoration:overline};:active{color:#ffff88;background:#006600}\x1b\\[Complex state transitions]\x1b]8;;\x1b\\\n";
+    testOutput += "    → Click and hold to see active state\n\n";
     
-    // Test 16: CSS :focus and :focus-visible States
-    testOutput += "16. CSS :focus and :focus-visible States (Tab to navigate):\n";
-    testOutput += "   \x1b]8;;send:focus1?style=color:#0088ff;:focus{color:#ff6600;text-decoration:underline;font-weight:bold}\x1b\\[Tab to focus me]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:focus2?style=color:#00aaff;:focus-visible{color:#cc5500;background:#ffffcc;text-decoration:underline wavy;font-weight:bold}\x1b\\[Keyboard focus visible]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:focus3?style=color:#0088ff;:focus-visible{background:#ffffdd;font-weight:bold}\x1b\\[Accessible focus indicator]\x1b]8;;\x1b\\\n\n";
+    // Test 16: :focus and :focus-visible
+    testOutput += "16. :focus and :focus-visible States (Keyboard Navigation):\n";
+    testOutput += "    Syntax: ?style=<base>;:focus{<focus>};:focus-visible{<focus-visible>}\n";
+    testOutput += "    :focus          - any focus (mouse or keyboard)\n";
+    testOutput += "    :focus-visible  - keyboard focus only (accessibility)\n";
+    testOutput += "    Example: \x1b]8;;send:focus1?style=color:#0088ff;:focus{color:#ff6600;text-decoration:underline;font-weight:bold}\x1b\\[Tab to focus]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:focus2?style=color:#00aaff;:focus-visible{color:#cc5500;background:#ffffcc;text-decoration:underline wavy;font-weight:bold}\x1b\\[Keyboard focus indicator]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:focus3?style=color:#0088ff;:focus-visible{background:#ffffdd;font-weight:bold}\x1b\\[Accessible focus]\x1b]8;;\x1b\\\n";
+    testOutput += "    → Enable caret mode (Tab), use arrow keys to navigate\n\n";
     
-    // Test 17: CSS :any-link Pseudo-Class
-    testOutput += "17. CSS :any-link State (applies to both :link and :visited):\n";
-    testOutput += "   \x1b]8;;send:anylink1?style=:any-link{color:#0088ff;text-decoration:underline;font-weight:bold};:hover{color:#ff6600}\x1b\\[Any link state]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:anylink2?style=:any-link{color:#00aadd;font-weight:bold;text-decoration:underline dotted};:hover{color:#ff8800;text-decoration:underline solid}\x1b\\[Dotted→solid underline]\x1b]8;;\x1b\\\n\n";
+    // Test 17: :any-link pseudo-class
+    testOutput += "17. :any-link Pseudo-Class (Unified Link Styling):\n";
+    testOutput += "    Syntax: ?style=:any-link{<properties>}\n";
+    testOutput += "    Applies to both :link and :visited states\n";
+    testOutput += "    Example: \x1b]8;;send:anylink1?style=:any-link{color:#0088ff;text-decoration:underline;font-weight:bold};:hover{color:#ff6600}\x1b\\[Any link state]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:anylink2?style=:any-link{color:#00aadd;font-weight:bold;text-decoration:underline dotted};:hover{color:#ff8800;text-decoration:underline solid}\x1b\\[Dotted→solid]\x1b]8;;\x1b\\\n\n";
     
-    // Test 18: Combined State Cascade
-    testOutput += "18. Combined State Cascade (multiple pseudo-classes):\n";
-    testOutput += "   \x1b]8;;send:cascade1?style=:link{color:#0088ff};:visited{color:#bb66dd};:hover{color:#ff6600;background:#e6f2ff;font-weight:bold};:active{color:#ffffff;background:#dd0000}\x1b\\[Full state cascade]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:cascade2?style=color:#cc8844;:hover{color:#ffdd00;background:#664400;text-decoration:underline dotted;font-weight:bold};:active{color:#ffaa00;background:#000000}\x1b\\[Brown→yellow→orange]\x1b]8;;\x1b\\\n\n";
+    // Test 18: State cascade
+    testOutput += "18. Full State Cascade (All Pseudo-Classes):\n";
+    testOutput += "    Syntax: Combine all pseudo-classes for complete interactivity\n";
+    testOutput += "    Example: \x1b]8;;send:cascade1?style=:link{color:#0088ff};:visited{color:#bb66dd};:hover{color:#ff6600;background:#e6f2ff;font-weight:bold};:active{color:#ffffff;background:#dd0000}\x1b\\[Full cascade]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:cascade2?style=color:#cc8844;:hover{color:#ffdd00;background:#664400;text-decoration:underline dotted;font-weight:bold};:active{color:#ffaa00;background:#000000}\x1b\\[Brown→yellow→orange]\x1b]8;;\x1b\\\n";
+    testOutput += "    → Try clicking, hovering, and tabbing to see all states\n\n";
     
-    // Test 19: Accessibility Features
-    testOutput += "19. Accessibility Features:\n";
-    testOutput += "   \x1b]8;;send:a11y1?style=color:#0088ff;:focus-visible{text-decoration:underline;font-weight:bold};:hover{color:#ff6600;text-decoration:underline}\x1b\\[High contrast focus]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:a11y2?style=:link{color:#0088ff;text-decoration:underline};:visited{color:#bb66dd;text-decoration:underline}\x1b\\[WCAG AA compliant]\x1b]8;;\x1b\\\n";
-    testOutput += "   \x1b]8;;send:a11y3?style=:any-link{color:#0088ff;font-weight:bold};:focus-visible{background:#ffffcc;color:#000000;font-weight:bold}\x1b\\[Keyboard navigation]\x1b]8;;\x1b\\\n\n";
+    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
     
-    // Test 20: Real-World Navigation Examples
-    testOutput += "20. Real-World Examples:\n";
-    testOutput += "   Navigation: \x1b]8;;send:north?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[North]\x1b]8;;\x1b\\ ";
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 5: Real-World Examples
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "┌─── SECTION 5: Real-World Examples ────────────────────────────────┐\n\n";
+    
+    // Test 19: Accessibility features
+    testOutput += "19. Accessibility-Focused Links (WCAG 2.1 Compliant):\n";
+    testOutput += "    High contrast colors, clear focus indicators, keyboard navigation\n";
+    testOutput += "    Example: \x1b]8;;send:a11y1?style=color:#0088ff;:focus-visible{text-decoration:underline;font-weight:bold};:hover{color:#ff6600;text-decoration:underline}\x1b\\[High contrast focus]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:a11y2?style=:link{color:#0088ff;text-decoration:underline};:visited{color:#bb66dd;text-decoration:underline}\x1b\\[Always underlined]\x1b]8;;\x1b\\\n";
+    testOutput += "             \x1b]8;;send:a11y3?style=:any-link{color:#0088ff;font-weight:bold};:focus-visible{background:#ffffcc;color:#000000;font-weight:bold}\x1b\\[Keyboard friendly]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 20: Navigation links
+    testOutput += "20. MUD Navigation Links (Consistent Theme):\n";
+    testOutput += "    Base: Bright cyan, Hover: Light cyan with underline, Active: White on blue\n";
+    testOutput += "    Example: \x1b]8;;send:north?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[North]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:south?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[South]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:east?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[East]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:west?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[West]\x1b]8;;\x1b\\\n";
-    testOutput += "   Actions: \x1b]8;;send:attack?style=color:#ff5555;font-weight:bold;:hover{color:#ff8888;text-decoration:underline};:active{background:#cc0000;color:#ffffff}\x1b\\[Attack]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:west?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[West]\x1b]8;;\x1b\\\n\n";
+    
+    // Test 21: Action links with semantic colors
+    testOutput += "21. Combat Action Links (Semantic Color Coding):\n";
+    testOutput += "    Attack: Red, Defend: Green, Flee: Yellow (with interactive states)\n";
+    testOutput += "    Example: \x1b]8;;send:attack?style=color:#ff5555;font-weight:bold;:hover{color:#ff8888;text-decoration:underline};:active{background:#cc0000;color:#ffffff}\x1b\\[Attack]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:defend?style=color:#55dd55;font-weight:bold;:hover{color:#88ff88;text-decoration:underline};:active{background:#00aa00;color:#ffffff}\x1b\\[Defend]\x1b]8;;\x1b\\ ";
     testOutput += "\x1b]8;;send:flee?style=color:#ffdd55;font-weight:bold;:hover{color:#ffff88;text-decoration:underline};:active{background:#ccaa00;color:#000000}\x1b\\[Flee]\x1b]8;;\x1b\\\n\n";
     
-    testOutput += "╔════════════════════════════════════════════════════════════════════╗\n";
-    testOutput += "║  Try hovering and clicking to test mouse interactions!             ║\n";
-    testOutput += "║  Enable caret mode (Tab) then use arrow keys to navigate links     ║\n";
-    testOutput += "║  Press Enter/Space to activate a focused link                      ║\n";
-    testOutput += "║  All states follow WCAG 2.1 accessibility guidelines               ║\n";
-    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
     
-    // NEW: ANSI Base + Pseudo-Class Overlay Tests
-    testOutput += "╔════════════════════════════════════════════════════════════════════╗\n";
-    testOutput += "║      ANSI Base Formatting with CSS Pseudo-Class Overlays           ║\n";
-    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 6: ANSI Integration (Hybrid Styling)
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "┌─── SECTION 6: ANSI + CSS Hybrid Styling ──────────────────────────┐\n\n";
+    testOutput += "ANSI escape sequences set the base appearance,\n";
+    testOutput += "CSS pseudo-classes add interactive overlays.\n";
+    testOutput += "Format: ANSI-sequence + OSC8-with-pseudo-classes\n\n";
     
-    // Test 21: ANSI colored text with :hover overlay (no base CSS)
-    testOutput += "21. ANSI Red Text with Yellow Hover (no base CSS):\n";
-    testOutput += "   \x1b[31;1m\x1b]8;;send:ansi1?style=:hover{color:#ffff00;font-weight:bold}\x1b\\[Hover to turn yellow]\x1b]8;;\x1b\\\x1b[0m (should be red, then yellow on hover)\n\n";
+    // Test 22: ANSI base with hover
+    testOutput += "22. ANSI Base Color with CSS Hover:\n";
+    testOutput += "    ANSI sets default, CSS :hover changes on mouse-over\n";
+    testOutput += "    Example: \x1b[31;1m\x1b]8;;send:ansi1?style=:hover{color:#ffff00;font-weight:bold}\x1b\\[Red→Yellow on hover]\x1b]8;;\x1b\\\x1b[0m\n\n";
     
-    // Test 22: ANSI cyan+bold with red background on :active
-    testOutput += "22. ANSI Cyan Bold with Red Background on Active:\n";
-    testOutput += "   \x1b[36;1m\x1b]8;;send:ansi2?style=:hover{color:#88ffff};:active{background:#ff0000;color:#ffffff}\x1b\\[Click and hold me]\x1b]8;;\x1b\\\x1b[0m (cyan→light cyan→white on red)\n\n";
+    // Test 23: ANSI cyan with multiple states
+    testOutput += "23. ANSI Cyan with Multi-State Overlay:\n";
+    testOutput += "    Base: ANSI cyan, Hover: Light cyan, Active: White on red, Focus: Wavy underline\n";
+    testOutput += "    Example: \x1b[36;1m\x1b]8;;send:ansi2?style=:hover{color:#88ffff};:active{background:#ff0000;color:#ffffff}\x1b\\[Click and hold]\x1b]8;;\x1b\\\x1b[0m\n\n";
     
-    // Test 23: ANSI green with multiple pseudo-class states
-    testOutput += "23. ANSI Green with Multiple States:\n";
-    testOutput += "   \x1b[32m\x1b]8;;send:ansi3?style=:hover{color:#00ff00;text-decoration:underline};:active{color:#ffff00;background:#006600};:focus{color:#88ff88;text-decoration:underline wavy}\x1b\\[Try hover, click, and Tab focus]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    // Test 24: ANSI green with complete cascade
+    testOutput += "24. ANSI Green with Full State Cascade:\n";
+    testOutput += "    Example: \x1b[32m\x1b]8;;send:ansi3?style=:hover{color:#00ff00;text-decoration:underline};:active{color:#ffff00;background:#006600};:focus{color:#88ff88;text-decoration:underline wavy}\x1b\\[Hover/Click/Tab]\x1b]8;;\x1b\\\x1b[0m\n\n";
     
-    // Test 24: ANSI yellow background preserved with text color changes
-    testOutput += "24. ANSI Black on Yellow Background:\n";
-    testOutput += "   \x1b[30;43m\x1b]8;;send:ansi4?style=:hover{color:#ff6600;font-weight:bold}\x1b\\[Black→orange on yellow]\x1b]8;;\x1b\\\x1b[0m (background preserved)\n\n";
+    // Test 25: ANSI background preservation
+    testOutput += "25. ANSI Background Preservation:\n";
+    testOutput += "    ANSI background persists, only text color changes on hover\n";
+    testOutput += "    Example: \x1b[30;43m\x1b]8;;send:ansi4?style=:hover{color:#ff6600;font-weight:bold}\x1b\\[Black→Orange on yellow]\x1b]8;;\x1b\\\x1b[0m\n\n";
     
-    // Test 25: ANSI underlined text with hover color change
-    testOutput += "25. ANSI Underlined Blue with Hover:\n";
-    testOutput += "   \x1b[34;4m\x1b]8;;send:ansi5?style=:hover{color:#6699ff;text-decoration:underline #ff0000}\x1b\\[Blue underline→light blue with red underline]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    // Test 26: ANSI underline with CSS decoration
+    testOutput += "26. ANSI Underline with CSS Decoration Color:\n";
+    testOutput += "    Example: \x1b[34;4m\x1b]8;;send:ansi5?style=:hover{color:#6699ff;text-decoration:underline #ff0000}\x1b\\[Blue→Light blue (red underline)]\x1b]8;;\x1b\\\x1b[0m\n\n";
     
-    // Test 26: Complex ANSI (bright magenta, bold, italic) with CSS states
-    testOutput += "26. ANSI Bright Magenta Bold Italic with States:\n";
-    testOutput += "   \x1b[95;1;3m\x1b]8;;send:ansi6?style=:hover{color:#ffaaff;background:#440044};:active{color:#ffffff;background:#880088}\x1b\\[Styled ANSI with CSS]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    // Test 27: Complex ANSI styling
+    testOutput += "27. Complex ANSI (Bold+Italic+Bright Magenta) with CSS:\n";
+    testOutput += "    Example: \x1b[95;1;3m\x1b]8;;send:ansi6?style=:hover{color:#ffaaff;background:#440044};:active{color:#ffffff;background:#880088}\x1b\\[Styled ANSI]\x1b]8;;\x1b\\\x1b[0m\n\n";
     
-    // Test 27: Real-world navigation example with ANSI colors
-    testOutput += "27. Navigation with ANSI Colors + Interactive States:\n";
-    testOutput += "   \x1b[96;1m\x1b]8;;send:north?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[North]\x1b]8;;\x1b\\\x1b[0m ";
+    // Test 28: Navigation with ANSI
+    testOutput += "28. Consistent Navigation with ANSI Base:\n";
+    testOutput += "    Example: \x1b[96;1m\x1b]8;;send:north?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[North]\x1b]8;;\x1b\\\x1b[0m ";
     testOutput += "\x1b[96;1m\x1b]8;;send:south?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[South]\x1b]8;;\x1b\\\x1b[0m ";
     testOutput += "\x1b[96;1m\x1b]8;;send:east?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[East]\x1b]8;;\x1b\\\x1b[0m ";
     testOutput += "\x1b[96;1m\x1b]8;;send:west?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[West]\x1b]8;;\x1b\\\x1b[0m\n\n";
     
-    // Test 28: Demonstrating ANSI preservation across all states
-    testOutput += "28. ANSI Preservation Test (Red Bold):\n";
-    testOutput += "   Normal: \x1b[31;1m\x1b]8;;send:ansi7?style=:hover{color:#ff8888};:active{color:#ffcccc};:focus{text-decoration:underline}\x1b\\[Red in all states]\x1b]8;;\x1b\\\x1b[0m\n";
-    testOutput += "   (Base ANSI red maintained, only intensity changes on hover/active)\n\n";
+    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
     
+    // Final instructions
     testOutput += "╔════════════════════════════════════════════════════════════════════╗\n";
-    testOutput += "║  ANSI Base + CSS Pseudo-Class Feature Highlights:                  ║\n";
-    testOutput += "║  • ANSI formatting acts as the base/default appearance             ║\n";
-    testOutput += "║  • CSS pseudo-classes (:hover, :active, :focus) overlay on top     ║\n";
-    testOutput += "║  • Base ANSI restored when returning to default/visited state      ║\n";
-    testOutput += "║  • Enables modern interactivity without losing MUD aesthetics      ║\n";
+    testOutput += "║                         Testing Tips                               ║\n";
+    testOutput += "╠════════════════════════════════════════════════════════════════════╣\n";
+    testOutput += "║ Mouse:    Hover links to see :hover effects                        ║\n";
+    testOutput += "║           Click to see :active (hold) and :visited (after release) ║\n";
+    testOutput += "║           Right-click links with menus for context menu            ║\n";
+    testOutput += "║                                                                    ║\n";
+    testOutput += "║ Keyboard: Press Tab to enable caret/keyboard navigation mode       ║\n";
+    testOutput += "║           Use arrow keys to move between links                     ║\n";
+    testOutput += "║           Press Enter or Space to activate focused link            ║\n";
+    testOutput += "║           Watch for :focus and :focus-visible indicators           ║\n";
+    testOutput += "║                                                                    ║\n";
+    testOutput += "║ Features: All pseudo-classes follow WCAG 2.1 guidelines            ║\n";
+    testOutput += "║           ANSI + CSS hybrid styling for MUD aesthetics             ║\n";
+    testOutput += "║           Full state cascade for modern web-like interactivity     ║\n";
     testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
     
     // Process the test output through the normal text processing pipeline
