@@ -1191,6 +1191,31 @@ QString cTelnet::getNewEnvironOSCColorPalette()
     return qsl("1");
 }
 
+QString cTelnet::getNewEnvironOSCHyperlinks()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksSend()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksPrompt()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksStyle()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksMenu()
+{
+    return qsl("1");
+}
+
 QString cTelnet::getNewEnvironScreenReader()
 {
     return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
@@ -1249,6 +1274,11 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserVar, getNewEnviron256Colors()));
     newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserVar, getNewEnvironUTF8()));
     newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserVar, getNewEnvironOSCColorPalette()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS"), qMakePair(isUserVar, getNewEnvironOSCHyperlinks()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SEND"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSend()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_PROMPT"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksPrompt()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_STYLE"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksStyle()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_MENU"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksMenu()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));

@@ -2580,6 +2580,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
             
             // Parse base properties as simple CSS
             QStringList basePairs = baseProperties.split(';', Qt::SkipEmptyParts);
+
             for (const QString& pair : basePairs) {
                 QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
 
@@ -2591,25 +2592,25 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
                 QString value = propertyValue[1].trimmed();
                 
                 // Apply base properties to the default state
-                if (property == "color") {
+                if (property == qsl("color")) {
                     QColor color = parseColorValue(value);
                     if (color.isValid()) {
                         styling.foregroundColor = color;
                         styling.hasForegroundColor = true;
                         styling.hasCustomStyling = true;
                     }
-                } else if (property == "background-color" || property == "background") {
+                } else if (property == qsl("background-color") || property == qsl("background")) {
                     QColor color = parseColorValue(value);
                     if (color.isValid()) {
                         styling.backgroundColor = color;
                         styling.hasBackgroundColor = true;
                         styling.hasCustomStyling = true;
                     }
-                } else if (property == "font-weight") {
-                    styling.isBold = (value.toLower() == "bold");
+                } else if (property == qsl("font-weight")) {
+                    styling.isBold = (value.toLower() == qsl("bold"));
                     styling.hasCustomStyling = true;
-                } else if (property == "font-style") {
-                    styling.isItalic = (value.toLower() == "italic");
+                } else if (property == qsl("font-style")) {
+                    styling.isItalic = (value.toLower() == qsl("italic"));
                     styling.hasCustomStyling = true;
                 }
             }
@@ -2693,6 +2694,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
     
     for (const QString& pair : stylePairs) {
         QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
+
         if (propertyValue.size() != 2) {
             continue; // Skip malformed property
         }
@@ -2710,6 +2712,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
             }
         } else if (property == "background-color") {
             QColor color = parseColorValue(value);
+
             if (color.isValid()) {
                 styling.backgroundColor = color;
                 styling.hasBackgroundColor = true;
@@ -2756,6 +2759,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
                 } else {
                     // Check if it's a color for the decoration
                     QColor decorationColor = parseColorValue(part);
+
                     if (decorationColor.isValid()) {
                         if (styling.isUnderlined) {
                             styling.underlineColor = decorationColor;
@@ -2834,6 +2838,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
                 styling.strikeoutColor = decorationColor;
                 styling.hasStrikeoutColor = true;
             }
+
             hasAnyCustomStyling = true;
         }
     }
@@ -2876,20 +2881,25 @@ QColor TBuffer::parseColorValue(const QString& value)
     if (cleanValue.startsWith("rgb(") && cleanValue.endsWith(')')) {
         QString rgbContent = cleanValue.mid(4, cleanValue.length() - 5);
         QStringList components = rgbContent.split(',');
+
         if (components.size() == 3) {
             auto parseComponent = [](const QString& comp, bool& ok) -> int {
                 QString trimmed = comp.trimmed();
+
                 if (trimmed.endsWith('%')) {
                     // Percentage value: convert 0-100% to 0-255
                     trimmed.chop(1); // Remove '%'
                     double percent = trimmed.toDouble(&ok);
+
                     if (ok && percent >= 0.0 && percent <= 100.0) {
                         return qRound(percent * 2.55);
                     }
+
                     return -1;
                 } else {
                     // Integer value: 0-255
                     int value = trimmed.toInt(&ok);
+
                     if (ok && value >= 0 && value <= 255) {
                         return value;
                     }
