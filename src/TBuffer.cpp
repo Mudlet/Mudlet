@@ -5546,15 +5546,12 @@ void TBuffer::setActiveLink(int linkIndex)
         // Return to hover if it's still hovered
         if (previousActiveLink == mCurrentHoveredLinkIndex) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
-        } 
-        // Check base state: visited or default
-        else if (isLinkVisited(previousActiveLink)) {
+        } else if (isLinkVisited(previousActiveLink)) {  // Check base state: visited or default
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateVisited);
-        }
-        // Otherwise return to default
-        else {
+        } else {  // Otherwise return to default
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDefault);
         }
+
         updateLinkCharacters(previousActiveLink); // Update displayed characters
     }
     
