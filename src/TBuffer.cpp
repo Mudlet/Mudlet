@@ -2853,7 +2853,8 @@ QColor TBuffer::parseColorValue(const QString& value)
 {
     QString cleanValue = value.trimmed().toLower();
     
-    // Handle hex colors: #rrggbb or #rgb
+    // Handle hex colors: #rrggbb (6-digit) or #rgb (3-digit shorthand)
+    // Qt's QColor constructor automatically expands 3-digit format (e.g., #f00 -> #ff0000)
     if (cleanValue.startsWith('#')) {
         QColor color(cleanValue);
 
@@ -2869,16 +2870,39 @@ QColor TBuffer::parseColorValue(const QString& value)
         return namedColor;
     }
     
-    // Handle rgb() format: rgb(255, 0, 0)
+    // Handle rgb() format: rgb(255, 0, 0) or rgb(100%, 0%, 0%)
+    // Supports both integer (0-255) and percentage (0%-100%) values
+    // Spaces after commas are optional: rgb(255,0,0) works too
     if (cleanValue.startsWith("rgb(") && cleanValue.endsWith(')')) {
         QString rgbContent = cleanValue.mid(4, cleanValue.length() - 5);
         QStringList components = rgbContent.split(',');
         if (components.size() == 3) {
+            auto parseComponent = [](const QString& comp, bool& ok) -> int {
+                QString trimmed = comp.trimmed();
+                if (trimmed.endsWith('%')) {
+                    // Percentage value: convert 0-100% to 0-255
+                    trimmed.chop(1); // Remove '%'
+                    double percent = trimmed.toDouble(&ok);
+                    if (ok && percent >= 0.0 && percent <= 100.0) {
+                        return qRound(percent * 2.55);
+                    }
+                    return -1;
+                } else {
+                    // Integer value: 0-255
+                    int value = trimmed.toInt(&ok);
+                    if (ok && value >= 0 && value <= 255) {
+                        return value;
+                    }
+                    return -1;
+                }
+            };
+            
             bool ok1, ok2, ok3;
-            int r = components[0].trimmed().toInt(&ok1);
-            int g = components[1].trimmed().toInt(&ok2);
-            int b = components[2].trimmed().toInt(&ok3);
-            if (ok1 && ok2 && ok3 && r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+            int r = parseComponent(components[0], ok1);
+            int g = parseComponent(components[1], ok2);
+            int b = parseComponent(components[2], ok3);
+            
+            if (ok1 && ok2 && ok3 && r >= 0 && g >= 0 && b >= 0) {
                 return QColor(r, g, b);
             }
         }
