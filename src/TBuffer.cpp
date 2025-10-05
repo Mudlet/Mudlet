@@ -2655,9 +2655,8 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
                 styling.isOverlined = styling.anyLinkStyle.isOverlined;
                 styling.underlineStyle = styling.anyLinkStyle.underlineStyle;
                 styling.hasCustomStyling = true;
-            }
-            // Fall back to :link style
-            else if (styling.linkStyle.hasCustomStyling) {
+            } else if (styling.linkStyle.hasCustomStyling) {
+                // Fall back to :link style
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] No base styling found, using :link as default";
 #endif
@@ -5443,9 +5442,8 @@ void TBuffer::parseStateStyleProperties(const QString& styleString, Mudlet::Hype
                 stateStyle.hasStrikeoutColor = true;
                 hasAnyCustomStyling = true;
             }
-        }
-        // Add support for accessibility-specific properties
-        else if (property == "forced-color-adjust") {
+        } else if (property == "forced-color-adjust") {
+            // Add support for accessibility-specific properties
             stateStyle.respectsSystemColors = (value.toLower() != "none");
             hasAnyCustomStyling = true;
         } else if (property == "-mudlet-high-contrast") {
@@ -5579,50 +5577,50 @@ Mudlet::HyperlinkStyling::LinkState TBuffer::getLinkState(int linkIndex) const
 {
     if (linkIndex <= 0) {
         return Mudlet::HyperlinkStyling::StateDefault;
+    } else {
+        return mLinkStates.value(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
     }
-    
-    return mLinkStates.value(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
 }
 
 Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) const
 {
     if (linkIndex <= 0) {
         return Mudlet::HyperlinkStyling(); // Return default styling
+    } else {
+        // Get the stored styling for this link from mLinkStore
+        Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+        
+        // Update the current state based on tracked state
+        styling.currentState = getLinkState(linkIndex);
+        
+        // The HyperlinkStyling::getEffectiveStyle() method will compute the 
+        // effective styling based on currentState, cascading from base -> :any-link -> state-specific
+        // However, for rendering we need to apply it to the base styling properties
+        // so the rendering code can use it directly
+        
+        auto effective = styling.getEffectiveStyle();
+        
+        // Copy effective state back to base properties for rendering
+        styling.foregroundColor = effective.foregroundColor;
+        styling.backgroundColor = effective.backgroundColor;
+        styling.underlineColor = effective.underlineColor;
+        styling.overlineColor = effective.overlineColor;
+        styling.strikeoutColor = effective.strikeoutColor;
+        styling.hasForegroundColor = effective.hasForegroundColor;
+        styling.hasBackgroundColor = effective.hasBackgroundColor;
+        styling.hasUnderlineColor = effective.hasUnderlineColor;
+        styling.hasOverlineColor = effective.hasOverlineColor;
+        styling.hasStrikeoutColor = effective.hasStrikeoutColor;
+        styling.isBold = effective.isBold;
+        styling.isItalic = effective.isItalic;
+        styling.isUnderlined = effective.isUnderlined;
+        styling.isStrikeOut = effective.isStrikeOut;
+        styling.isOverlined = effective.isOverlined;
+        styling.underlineStyle = effective.underlineStyle;
+        styling.hasCustomStyling = effective.hasCustomStyling; // CRITICAL: Copy hasCustomStyling flag
+        
+        return styling;
     }
-    
-    // Get the stored styling for this link from mLinkStore
-    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
-    
-    // Update the current state based on tracked state
-    styling.currentState = getLinkState(linkIndex);
-    
-    // The HyperlinkStyling::getEffectiveStyle() method will compute the 
-    // effective styling based on currentState, cascading from base -> :any-link -> state-specific
-    // However, for rendering we need to apply it to the base styling properties
-    // so the rendering code can use it directly
-    
-    auto effective = styling.getEffectiveStyle();
-    
-    // Copy effective state back to base properties for rendering
-    styling.foregroundColor = effective.foregroundColor;
-    styling.backgroundColor = effective.backgroundColor;
-    styling.underlineColor = effective.underlineColor;
-    styling.overlineColor = effective.overlineColor;
-    styling.strikeoutColor = effective.strikeoutColor;
-    styling.hasForegroundColor = effective.hasForegroundColor;
-    styling.hasBackgroundColor = effective.hasBackgroundColor;
-    styling.hasUnderlineColor = effective.hasUnderlineColor;
-    styling.hasOverlineColor = effective.hasOverlineColor;
-    styling.hasStrikeoutColor = effective.hasStrikeoutColor;
-    styling.isBold = effective.isBold;
-    styling.isItalic = effective.isItalic;
-    styling.isUnderlined = effective.isUnderlined;
-    styling.isStrikeOut = effective.isStrikeOut;
-    styling.isOverlined = effective.isOverlined;
-    styling.underlineStyle = effective.underlineStyle;
-    styling.hasCustomStyling = effective.hasCustomStyling; // CRITICAL: Copy hasCustomStyling flag
-    
-    return styling;
 }
 
 void TBuffer::setHoveredLink(int linkIndex)

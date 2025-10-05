@@ -32,7 +32,7 @@ class Host;
 // Forward declarations - HyperlinkStyling is defined in TBuffer.h
 // but we need to refer to it here, so we use a namespace-level forward declaration
 namespace Mudlet {
-    struct HyperlinkStyling;
+struct HyperlinkStyling;
 }
 
 // Keep together lists of links and hints associated
