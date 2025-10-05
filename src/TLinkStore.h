@@ -57,7 +57,6 @@ public:
     int getCurrentLinkID() const { return mLinkID; }
 
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
-    void setCurrentLinks(const QStringList& links) { mLinkStore[mLinkID] = links; }
     
 #if !defined(LinkStore_Test)
     // OSC 8 hyperlink styling storage and retrieval

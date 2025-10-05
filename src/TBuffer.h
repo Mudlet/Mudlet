@@ -116,11 +116,6 @@ struct HyperlinkStyling {
         bool isOverlined = false;
         UnderlineStyle underlineStyle = UnderlineSolid;
         bool hasCustomStyling = false;
-        
-        // Accessibility properties
-        bool isHighContrast = false;      // High contrast mode support
-        bool respectsSystemColors = true;  // Honor system color schemes
-        bool isAnimationReduced = false;   // Respect prefers-reduced-motion
     };
     
     // State-specific styles
@@ -134,24 +129,9 @@ struct HyperlinkStyling {
     
     // State tracking
     LinkState currentState = StateDefault;
-    bool isVisited = false;
-    bool isHovered = false;
-    bool isActive = false;
-    bool isFocused = false;
-    bool isFocusVisible = false;
-    bool hasKeyboardFocus = false;   // True if focus came from keyboard
-    
-    // Accessibility features
-    bool supportsHighContrast = true;
-    bool respectsSystemTheme = true;
-    bool hasAccessibleLabel = false;
-    QString accessibleLabel;          // Screen reader description
-    QString accessibleHint;           // Additional context for screen readers
     
     // Methods to get effective styling for current state
     StateStyle getEffectiveStyle() const;
-    void updateState(LinkState newState);
-    bool shouldShowFocusRing() const;
 };
 
 } // namespace Mudlet
@@ -505,8 +485,6 @@ private:
     void parseHyperlinkStateStyle(const QString& pseudoClass, const QString& styleString, Mudlet::HyperlinkStyling& styling);
     void parseStateStyleProperties(const QString& styleString, Mudlet::HyperlinkStyling::StateStyle& stateStyle);
     void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
-    bool isHighContrastMode() const;
-    bool shouldRespectSystemColors() const;
 
 
     QPointer<TConsole> mpConsole;
@@ -586,7 +564,6 @@ private:
     QTextCodec* mMainIncomingCodec = nullptr;
 
     // OSC 8 hyperlink tracking
-    QString mCurrentHyperlinkUrl;
     QStringList mCurrentHyperlinkCommand;
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;

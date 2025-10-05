@@ -2316,7 +2316,6 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug().noquote() << "[OSC8] Hyperlink terminator - closing active hyperlink";
 #endif
-            mCurrentHyperlinkUrl.clear();
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
             mCurrentHyperlinkLinkId = 0;
@@ -2399,12 +2398,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
                 command = { qsl("send([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
-                mCurrentHyperlinkUrl = innerCommand;
             } else if (baseUrl.startsWith("prompt:")) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
                 command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
-                mCurrentHyperlinkUrl = innerCommand;
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
@@ -2412,7 +2409,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                 if (scheme == "http" || scheme == "https" || scheme == "ftp") {
                     command = { qsl("openUrl([[%1]])").arg(baseUrl) };
                     hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl) };
-                    mCurrentHyperlinkUrl = baseUrl;
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -3593,7 +3589,6 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
 void TBuffer::clear()
 {
-    mCurrentHyperlinkUrl.clear();
     mCurrentHyperlinkCommand.clear();
     mCurrentHyperlinkHint.clear();
     mCurrentHyperlinkLinkId = 0;
@@ -5279,37 +5274,6 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     return effective;
 }
 
-void Mudlet::HyperlinkStyling::updateState(Mudlet::HyperlinkStyling::LinkState newState)
-{
-    Mudlet::HyperlinkStyling::LinkState previousState = currentState;
-    currentState = newState;
-    
-    // Update individual state flags for easy access
-    isHovered = (newState == Mudlet::HyperlinkStyling::StateHover);
-    isActive = (newState == Mudlet::HyperlinkStyling::StateActive);
-    isFocused = (newState == Mudlet::HyperlinkStyling::StateFocus || newState == Mudlet::HyperlinkStyling::StateFocusVisible);
-    isFocusVisible = (newState == Mudlet::HyperlinkStyling::StateFocusVisible);
-    
-    // Debug output for state changes
-#if defined(DEBUG_OSC_PROCESSING)
-    QStringList stateNames = {
-        "StateDefault", "StateVisited", "StateHover", 
-        "StateActive", "StateFocus", "StateFocusVisible"
-    };
-    if (previousState != newState) {
-        qDebug() << "[OSC8] Link state changed from" << stateNames[previousState] 
-                 << "to" << stateNames[newState];
-    }
-#endif
-}
-
-bool Mudlet::HyperlinkStyling::shouldShowFocusRing() const
-{
-    // Show focus ring for keyboard focus or when :focus-visible is explicitly styled
-    return (isFocusVisible && hasKeyboardFocus) || 
-           (isFocused && focusVisibleStyle.hasCustomStyling);
-}
-
 void TBuffer::parseHyperlinkStateStyle(const QString& pseudoClass, const QString& styleString, Mudlet::HyperlinkStyling& styling)
 {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5442,13 +5406,6 @@ void TBuffer::parseStateStyleProperties(const QString& styleString, Mudlet::Hype
                 stateStyle.hasStrikeoutColor = true;
                 hasAnyCustomStyling = true;
             }
-        } else if (property == "forced-color-adjust") {
-            // Add support for accessibility-specific properties
-            stateStyle.respectsSystemColors = (value.toLower() != "none");
-            hasAnyCustomStyling = true;
-        } else if (property == "-mudlet-high-contrast") {
-            stateStyle.isHighContrast = (value.toLower() == "auto" || value.toLower() == "true");
-            hasAnyCustomStyling = true;
         }
     }
     
@@ -5457,61 +5414,6 @@ void TBuffer::parseStateStyleProperties(const QString& styleString, Mudlet::Hype
 
 void TBuffer::applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling)
 {
-    bool isHighContrast = isHighContrastMode();
-    bool respectSystemColors = shouldRespectSystemColors();
-    
-    // Apply high contrast adjustments if needed
-    if (isHighContrast && styling.supportsHighContrast) {
-        // Ensure sufficient contrast for all states
-        auto enhanceContrast = [](Mudlet::HyperlinkStyling::StateStyle& style) {
-            if (style.hasCustomStyling) {
-                // For high contrast mode, ensure text is either very light or very dark
-                if (style.hasForegroundColor) {
-                    QColor fg = style.foregroundColor;
-                    int lightness = fg.lightness();
-                    if (lightness > 128) {
-                        style.foregroundColor = QColor(255, 255, 255); // Pure white
-                    } else {
-                        style.foregroundColor = QColor(0, 0, 0); // Pure black
-                    }
-                }
-                
-                // Ensure decorations are visible in high contrast
-                if (style.isUnderlined && !style.hasUnderlineColor) {
-                    style.underlineColor = style.hasForegroundColor ? style.foregroundColor : QColor(0, 0, 255);
-                    style.hasUnderlineColor = true;
-                }
-                
-                style.isHighContrast = true;
-            }
-        };
-        
-        enhanceContrast(styling.linkStyle);
-        enhanceContrast(styling.visitedStyle);
-        enhanceContrast(styling.hoverStyle);
-        enhanceContrast(styling.activeStyle);
-        enhanceContrast(styling.focusStyle);
-        enhanceContrast(styling.focusVisibleStyle);
-        enhanceContrast(styling.anyLinkStyle);
-    }
-    
-    // Apply system color respect if needed
-    if (respectSystemColors && styling.respectsSystemTheme) {
-        // This would integrate with Qt's system colors
-        // For now, we mark that system colors should be respected
-        auto respectSystem = [](Mudlet::HyperlinkStyling::StateStyle& style) {
-            style.respectsSystemColors = true;
-        };
-        
-        respectSystem(styling.linkStyle);
-        respectSystem(styling.visitedStyle);
-        respectSystem(styling.hoverStyle);
-        respectSystem(styling.activeStyle);
-        respectSystem(styling.focusStyle);
-        respectSystem(styling.focusVisibleStyle);
-        respectSystem(styling.anyLinkStyle);
-    }
-    
     // Ensure focus states are appropriately visible
     if (!styling.focusStyle.hasCustomStyling && !styling.focusVisibleStyle.hasCustomStyling) {
         // Provide default focus styling for accessibility
@@ -5525,30 +5427,7 @@ void TBuffer::applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling)
     }
 }
 
-bool TBuffer::isHighContrastMode() const
-{
-    // Check if the system is in high contrast mode
-    // This is a simplified implementation - in production, you'd check system settings
-#ifdef Q_OS_WIN
-    // On Windows, check for high contrast theme
-    return GetSystemMetrics(SM_CXBORDER) > 1;
-#elif defined(Q_OS_MAC)
-    // On macOS, check for increased contrast setting
-    // This would require platform-specific code
-    return false;
-#else
-    // On Linux, check environment variables or desktop settings
-    QString highContrast = qgetenv("QT_SCALE_FACTOR");
-    return !highContrast.isEmpty() && highContrast.toDouble() > 1.25;
-#endif
-}
 
-bool TBuffer::shouldRespectSystemColors() const
-{
-    // Check if we should respect system color schemes
-    // This could be based on user preferences or system settings
-    return true; // Default to respecting system colors for accessibility
-}
 
 // Link state management methods for interactive pseudo-classes
 void TBuffer::setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState state)
