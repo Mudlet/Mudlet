@@ -65,7 +65,6 @@ public:
     int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, const int, TChar&) const;
     void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
     void drawCustomDecorations(QPainter&, const QColor&, const QRect&, TChar&) const;
-    void drawAdvancedUnderline(QPainter&, const QColor&, const QRect&, bool isWavy, bool isDotted, bool isDashed) const;
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);

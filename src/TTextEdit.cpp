@@ -751,55 +751,6 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     }
 }
 
-void TTextEdit::drawAdvancedUnderline(QPainter& painter, const QColor& color, const QRect& textRect, bool isWavy, bool isDotted, bool isDashed) const
-{
-    // Calculate underline position - similar to where Qt would place it
-    QFontMetrics fm(painter.font());
-    int underlineY = textRect.bottom() - 1; // Offset slightly above bottom edge
-    int lineWidth = 1; // Base line width
-    
-    // Set pen properties
-    QPen pen(color);
-    pen.setWidth(lineWidth);
-    
-    // Draw appropriate style
-    if (isWavy) {
-        // Draw a wavy line using sine wave
-        pen.setStyle(Qt::SolidLine);
-        painter.setPen(pen);
-        
-        const int amplitude = 1; // Wave height
-        const int wavelength = 8; // Wave frequency
-        QPainterPath wavePath;
-        
-        bool firstPoint = true;
-        for (int x = textRect.left(); x <= textRect.right(); x += 2) {
-            double phase = (x - textRect.left()) * 2.0 * M_PI / wavelength;
-            int y = underlineY + amplitude * sin(phase);
-            
-            if (firstPoint) {
-                wavePath.moveTo(x, y);
-                firstPoint = false;
-            } else {
-                wavePath.lineTo(x, y);
-            }
-        }
-        painter.drawPath(wavePath);
-        
-    } else if (isDotted) {
-        // Draw dotted line
-        pen.setStyle(Qt::DotLine);
-        painter.setPen(pen);
-        painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
-        
-    } else if (isDashed) {
-        // Draw dashed line
-        pen.setStyle(Qt::DashLine);
-        painter.setPen(pen);
-        painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
-    }
-}
-
 int TTextEdit::getGraphemeWidth(uint unicode) const
 {
 #if defined(DEBUG_CODEPOINT_PROBLEMS)

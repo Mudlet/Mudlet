@@ -2336,11 +2336,11 @@ void TBuffer::decodeOSC(const QString& sequence)
             QMap<QString, QString> queryParams = parseUriQueryParameters(rawUrl);
             
             // Extract styling parameters
-            if (queryParams.contains("style")) {
+            if (queryParams.contains(qsl("style"))) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Found style parameter, applying custom styling";
 #endif
-                parseHyperlinkStyling(queryParams.value("style"), mCurrentHyperlinkStyling);
+                parseHyperlinkStyling(queryParams.value(qsl("style")), mCurrentHyperlinkStyling);
             } else {
                 mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling(); // Reset to defaults
 #if defined(DEBUG_OSC_PROCESSING)
@@ -2349,8 +2349,8 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
             
             // Extract menu parameters
-            if (queryParams.contains("menu")) {
-                QString menuString = queryParams.value("menu");
+            if (queryParams.contains(qsl("menu"))) {
+                QString menuString = queryParams.value(qsl("menu"));
                 mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
             } else {
                 mCurrentHyperlinkMenu.clear();
@@ -2358,8 +2358,9 @@ void TBuffer::decodeOSC(const QString& sequence)
             
             // Extract custom tooltip parameter
             QString customTooltip;
-            if (queryParams.contains("tooltip")) {
-                customTooltip = queryParams.value("tooltip");
+
+            if (queryParams.contains(qsl("tooltip"))) {
+                customTooltip = queryParams.value(qsl("tooltip"));
             }
             
             // Remove styling/menu/tooltip query parameters from URL for command processing
@@ -2367,12 +2368,12 @@ void TBuffer::decodeOSC(const QString& sequence)
             QMap<QString, QString> allParams = parseUriQueryParameters(rawUrl);
             
             // For web URLs, preserve original parameters except our special ones
-            if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("ftp://")) {
+            if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
                 // Remove our special parameters
-                allParams.remove("style");
-                allParams.remove("menu");
-                allParams.remove("tooltip");
-                
+                allParams.remove(qsl("style"));
+                allParams.remove(qsl("menu"));
+                allParams.remove(qsl("tooltip"));
+
                 // Rebuild URL with only non-special parameters
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
@@ -2394,11 +2395,11 @@ void TBuffer::decodeOSC(const QString& sequence)
             QStringList command;
             QStringList hint;
 
-            if (baseUrl.startsWith("send:")) {
+            if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
                 command = { qsl("send([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
-            } else if (baseUrl.startsWith("prompt:")) {
+            } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
                 command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
@@ -2406,7 +2407,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
-                if (scheme == "http" || scheme == "https" || scheme == "ftp") {
+                if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
                     command = { qsl("openUrl([[%1]])").arg(baseUrl) };
                     hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl) };
                 } else {
@@ -2431,15 +2432,15 @@ void TBuffer::decodeOSC(const QString& sequence)
                     QString menuCommand = mCurrentHyperlinkMenu[i + 1];
                     
                     // Determine command type based on prefix
-                    if (menuCommand.startsWith("send:")) {
+                    if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
                         menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Send"), innerCommand));
-                    } else if (menuCommand.startsWith("prompt:")) {
+                    } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
                         menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand));
-                    } else if (menuCommand == "-") {
+                    } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
@@ -2484,8 +2485,8 @@ QString TBuffer::appendQueryParameters(const QString& uri, const QMap<QString, Q
     }
     
     QString result = uri;
-    bool hasExistingParams = uri.contains('?');
-    QString separator = hasExistingParams ? "&" : "?";
+    bool hasExistingParams = uri.contains(qsl("?"));
+    QString separator = hasExistingParams ? qsl("&") : qsl("?");
     
     QStringList paramStrings;
     for (auto it = parameters.constBegin(); it != parameters.constEnd(); ++it) {
@@ -2495,7 +2496,7 @@ QString TBuffer::appendQueryParameters(const QString& uri, const QMap<QString, Q
     }
     
     if (!paramStrings.isEmpty()) {
-        result += separator + paramStrings.join("&");
+        result += separator + paramStrings.join(qsl("&"));
     }
     
     return result;
@@ -2581,9 +2582,11 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
             QStringList basePairs = baseProperties.split(';', Qt::SkipEmptyParts);
             for (const QString& pair : basePairs) {
                 QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
+
                 if (propertyValue.size() != 2) {
                     continue;
                 }
+
                 QString property = propertyValue[0].trimmed().toLower();
                 QString value = propertyValue[1].trimmed();
                 
@@ -2614,6 +2617,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
         
         // Now parse pseudo-class specific styles
         matches = pseudoClassRegex.globalMatch(styleString);
+
         while (matches.hasNext()) {
             QRegularExpressionMatch match = matches.next();
             QString pseudoClass = ":" + match.captured(1);
@@ -2698,6 +2702,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
         
         if (property == "color") {
             QColor color = parseColorValue(value);
+
             if (color.isValid()) {
                 styling.foregroundColor = color;
                 styling.hasForegroundColor = true;
@@ -2774,6 +2779,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
                     }
                 }
             }
+
             textDecorationExplicitlySet = true;
             hasAnyCustomStyling = true;
         } else if (property == "text-decoration-line") {
@@ -2784,6 +2790,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
             styling.isStrikeOut = false;
             
             QStringList decorations = value.toLower().split(' ', Qt::SkipEmptyParts);
+
             for (const QString& decoration : decorations) {
                 if (decoration == "underline") {
                     styling.isUnderlined = true;
@@ -2797,11 +2804,13 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
                     styling.isStrikeOut = false;
                 }
             }
+
             textDecorationExplicitlySet = true;
             hasAnyCustomStyling = true;
         } else if (property == "text-decoration-style") {
             // CSS3 specific property for decoration style
             QString decorationStyle = value.toLower();
+
             if (decorationStyle == "wavy") {
                 styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
             } else if (decorationStyle == "dotted") {
@@ -2815,6 +2824,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
         } else if (property == "text-decoration-color") {
             // CSS3 specific property for decoration color
             QColor decorationColor = parseColorValue(value);
+
             if (decorationColor.isValid()) {
                 // Store the color for all decoration types - we'll apply to active decorations later
                 styling.underlineColor = decorationColor;
@@ -2846,6 +2856,7 @@ QColor TBuffer::parseColorValue(const QString& value)
     // Handle hex colors: #rrggbb or #rgb
     if (cleanValue.startsWith('#')) {
         QColor color(cleanValue);
+
         if (color.isValid()) {
             return color;
         }
@@ -2853,6 +2864,7 @@ QColor TBuffer::parseColorValue(const QString& value)
     
     // Handle named colors
     QColor namedColor(cleanValue);
+
     if (namedColor.isValid()) {
         return namedColor;
     }
