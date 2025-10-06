@@ -27,6 +27,7 @@
 #include <QPair>
 #include <QString>
 #include <QStringList>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 #include <functional>

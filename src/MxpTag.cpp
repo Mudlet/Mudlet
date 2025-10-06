@@ -74,44 +74,36 @@ bool MxpTag::isNamed(const QString& tagName) const
 
 QString MxpEndTag::toString() const
 {
-    QString result;
-    result.append("</");
-    result.append(name);
-    result.append(">");
-    return result;
+    return qsl("</%1>").arg(name);
 }
 
 QString MxpStartTag::toString() const
 {
     QString result;
-    result.append('<');
-    result.append(name);
+    result = '<' % name;
+
     for (const auto& attrName : mAttrsNames) {
-        result.append(' ');
-        if (attrName.contains(" ") || attrName.contains("<")) {
-            result.append('"');
-            result.append(attrName);
-            result.append('"');
+        result = result % ' ';
+
+        // Need to quote the attribute name if it contains space or '<'
+        if (attrName.contains(' ') || attrName.contains('<')) {
+            result = result % qsl("\"%1\"").arg(attrName);
         } else {
-            result.append(attrName);
+            result = result % attrName;
         }
 
         const auto& attr = getAttribute(attrName);
         if (attr.hasValue()) {
-            result.append('=');
-
             const auto& val = attr.getValue();
-            result.append('"');
-            result.append(val);
-            result.append('"');
+            result = result % '=' % qsl("\"%1\"").arg(val);
         }
     }
 
     if (mIsEmpty) {
-        result.append(" /");
+        result = result % " /";
     }
 
-    result.append('>');
+    result = result % '>';
 
     return result;
 }
