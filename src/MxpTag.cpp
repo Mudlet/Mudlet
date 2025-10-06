@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -79,30 +80,30 @@ QString MxpEndTag::toString() const
 
 QString MxpStartTag::toString() const
 {
-    auto result = '<' % name;
+    QString result = qsl("<") + name;
 
     for (const auto& attrName : mAttrsNames) {
-        result = result % ' ';
+        result += ' ';
 
         // Need to quote the attribute name if it contains space or '<'
         if (attrName.contains(' ') || attrName.contains('<')) {
-            result = result % qsl("\"%1\"").arg(attrName);
+            result += qsl("\"%1\"").arg(attrName);
         } else {
-            result = result % attrName;
+            result += attrName;
         }
 
         const auto& attr = getAttribute(attrName);
         if (attr.hasValue()) {
             const auto& val = attr.getValue();
-            result = result % '=' % qsl("\"%1\"").arg(val);
+            result += qsl("=\"%1\"").arg(val);
         }
     }
 
     if (mIsEmpty) {
-        result = result % " /";
+        result += qsl(" /");
     }
 
-    result = result % '>';
+    result += qsl(">");
 
     return result;
 }
