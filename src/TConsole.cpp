@@ -545,7 +545,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     buttonLayerSpacer->setMinimumWidth(100);
     buttonLayer->setMaximumHeight(31);
     buttonLayer->setMinimumWidth(400);
-    mpButtonMainLayer->setMinimumWidth(150);
+    mpButtonMainLayer->setMinimumWidth(400);
     mpButtonMainLayer->setAutoFillBackground(true);
     mpButtonMainLayer->setPalette(commandLinePalette);
 
