@@ -79,8 +79,7 @@ QString MxpEndTag::toString() const
 
 QString MxpStartTag::toString() const
 {
-    auto result;
-    result = '<' % name;
+    auto result = '<' % name;
 
     for (const auto& attrName : mAttrsNames) {
         result = result % ' ';
