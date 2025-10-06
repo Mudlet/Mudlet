@@ -723,11 +723,11 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
-    setBoolAttributeWithDefault(qsl("supportOSCHyperlinks"), pHost->mSupportOSCHyperlinks, true);
-    setBoolAttributeWithDefault(qsl("supportOSCHyperlinksSend"), pHost->mSupportOSCHyperlinksSend, true);
-    setBoolAttributeWithDefault(qsl("supportOSCHyperlinksPrompt"), pHost->mSupportOSCHyperlinksPrompt, true);
-    setBoolAttributeWithDefault(qsl("supportOSCHyperlinksStyle"), pHost->mSupportOSCHyperlinksStyle, true);
-    setBoolAttributeWithDefault(qsl("supportOSCHyperlinksMenu"), pHost->mSupportOSCHyperlinksMenu, true);
+    setBoolAttributeWithDefault(qsl("supportHyperlinks"), pHost->mSupportHyperlinks, true);
+    setBoolAttributeWithDefault(qsl("supportHyperlinksSend"), pHost->mSupportHyperlinksSend, true);
+    setBoolAttributeWithDefault(qsl("supportHyperlinksPrompt"), pHost->mSupportHyperlinksPrompt, true);
+    setBoolAttributeWithDefault(qsl("supportHyperlinksStyle"), pHost->mSupportHyperlinksStyle, true);
+    setBoolAttributeWithDefault(qsl("supportHyperlinksMenu"), pHost->mSupportHyperlinksMenu, true);
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);

@@ -785,28 +785,28 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_enableClosedCaption->setChecked(pHost->mEnableClosedCaption);
     connect(checkBox_enableClosedCaption, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableClosedCaption);
 
-    // OSC 8 Hyperlink support checkboxes
-    checkBox_supportOSCHyperlinks->setChecked(pHost->mSupportOSCHyperlinks);
-    connect(checkBox_supportOSCHyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportOSCHyperlinks);
+    // Hyperlink support checkboxes (OSC 8 and MXP)
+    checkBox_supportHyperlinks->setChecked(pHost->mSupportHyperlinks);
+    connect(checkBox_supportHyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportHyperlinks);
 
-    checkBox_supportOSCHyperlinksSend->setChecked(pHost->mSupportOSCHyperlinksSend);
-    connect(checkBox_supportOSCHyperlinksSend, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportOSCHyperlinksSend);
+    checkBox_supportHyperlinksSend->setChecked(pHost->mSupportHyperlinksSend);
+    connect(checkBox_supportHyperlinksSend, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportHyperlinksSend);
 
-    checkBox_supportOSCHyperlinksPrompt->setChecked(pHost->mSupportOSCHyperlinksPrompt);
-    connect(checkBox_supportOSCHyperlinksPrompt, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportOSCHyperlinksPrompt);
+    checkBox_supportHyperlinksPrompt->setChecked(pHost->mSupportHyperlinksPrompt);
+    connect(checkBox_supportHyperlinksPrompt, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportHyperlinksPrompt);
 
-    checkBox_supportOSCHyperlinksStyle->setChecked(pHost->mSupportOSCHyperlinksStyle);
-    connect(checkBox_supportOSCHyperlinksStyle, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportOSCHyperlinksStyle);
+    checkBox_supportHyperlinksStyle->setChecked(pHost->mSupportHyperlinksStyle);
+    connect(checkBox_supportHyperlinksStyle, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportHyperlinksStyle);
 
-    checkBox_supportOSCHyperlinksMenu->setChecked(pHost->mSupportOSCHyperlinksMenu);
-    connect(checkBox_supportOSCHyperlinksMenu, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportOSCHyperlinksMenu);
+    checkBox_supportHyperlinksMenu->setChecked(pHost->mSupportHyperlinksMenu);
+    connect(checkBox_supportHyperlinksMenu, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleSupportHyperlinksMenu);
 
     // Enable/disable secondary checkboxes based on main checkbox
-    const bool hyperlinksEnabled = pHost->mSupportOSCHyperlinks;
-    checkBox_supportOSCHyperlinksSend->setEnabled(hyperlinksEnabled);
-    checkBox_supportOSCHyperlinksPrompt->setEnabled(hyperlinksEnabled);
-    checkBox_supportOSCHyperlinksStyle->setEnabled(hyperlinksEnabled);
-    checkBox_supportOSCHyperlinksMenu->setEnabled(hyperlinksEnabled);
+    const bool hyperlinksEnabled = pHost->mSupportHyperlinks;
+    checkBox_supportHyperlinksSend->setEnabled(hyperlinksEnabled);
+    checkBox_supportHyperlinksPrompt->setEnabled(hyperlinksEnabled);
+    checkBox_supportHyperlinksStyle->setEnabled(hyperlinksEnabled);
+    checkBox_supportHyperlinksMenu->setEnabled(hyperlinksEnabled);
 
     // Block signals before setting initial state to prevent toggled signal
     checkBox_f3SearchEnabled->blockSignals(true);
@@ -1543,15 +1543,15 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
-    checkBox_supportOSCHyperlinks->setChecked(false);
-    checkBox_supportOSCHyperlinksSend->setChecked(false);
-    checkBox_supportOSCHyperlinksSend->setEnabled(false);
-    checkBox_supportOSCHyperlinksPrompt->setChecked(false);
-    checkBox_supportOSCHyperlinksPrompt->setEnabled(false);
-    checkBox_supportOSCHyperlinksStyle->setChecked(false);
-    checkBox_supportOSCHyperlinksStyle->setEnabled(false);
-    checkBox_supportOSCHyperlinksMenu->setChecked(false);
-    checkBox_supportOSCHyperlinksMenu->setEnabled(false);
+    checkBox_supportHyperlinks->setChecked(false);
+    checkBox_supportHyperlinksSend->setChecked(false);
+    checkBox_supportHyperlinksSend->setEnabled(false);
+    checkBox_supportHyperlinksPrompt->setChecked(false);
+    checkBox_supportHyperlinksPrompt->setEnabled(false);
+    checkBox_supportHyperlinksStyle->setChecked(false);
+    checkBox_supportHyperlinksStyle->setEnabled(false);
+    checkBox_supportHyperlinksMenu->setChecked(false);
+    checkBox_supportHyperlinksMenu->setEnabled(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -4557,7 +4557,7 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     }
 }
 
-void dlgProfilePreferences::slot_toggleSupportOSCHyperlinks(const bool state)
+void dlgProfilePreferences::slot_toggleSupportHyperlinks(const bool state)
 {
     Host* pHost = mpHost;
 
@@ -4565,33 +4565,33 @@ void dlgProfilePreferences::slot_toggleSupportOSCHyperlinks(const bool state)
         return;
     }
 
-    if (pHost->mSupportOSCHyperlinks != state) {
-        pHost->mSupportOSCHyperlinks = state;
+    if (pHost->mSupportHyperlinks != state) {
+        pHost->mSupportHyperlinks = state;
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("OSC_HYPERLINKS"));
     }
 
     // Enable/disable and update secondary checkboxes based on main checkbox state
-    checkBox_supportOSCHyperlinksSend->setEnabled(state);
-    checkBox_supportOSCHyperlinksPrompt->setEnabled(state);
-    checkBox_supportOSCHyperlinksStyle->setEnabled(state);
-    checkBox_supportOSCHyperlinksMenu->setEnabled(state);
+    checkBox_supportHyperlinksSend->setEnabled(state);
+    checkBox_supportHyperlinksPrompt->setEnabled(state);
+    checkBox_supportHyperlinksStyle->setEnabled(state);
+    checkBox_supportHyperlinksMenu->setEnabled(state);
 
     if (!state) {
         // When disabling hyperlinks, uncheck all secondary options
-        checkBox_supportOSCHyperlinksSend->setChecked(false);
-        checkBox_supportOSCHyperlinksPrompt->setChecked(false);
-        checkBox_supportOSCHyperlinksStyle->setChecked(false);
-        checkBox_supportOSCHyperlinksMenu->setChecked(false);
+        checkBox_supportHyperlinksSend->setChecked(false);
+        checkBox_supportHyperlinksPrompt->setChecked(false);
+        checkBox_supportHyperlinksStyle->setChecked(false);
+        checkBox_supportHyperlinksMenu->setChecked(false);
     } else {
         // When enabling hyperlinks, restore secondary options from Host settings
-        checkBox_supportOSCHyperlinksSend->setChecked(pHost->mSupportOSCHyperlinksSend);
-        checkBox_supportOSCHyperlinksPrompt->setChecked(pHost->mSupportOSCHyperlinksPrompt);
-        checkBox_supportOSCHyperlinksStyle->setChecked(pHost->mSupportOSCHyperlinksStyle);
-        checkBox_supportOSCHyperlinksMenu->setChecked(pHost->mSupportOSCHyperlinksMenu);
+        checkBox_supportHyperlinksSend->setChecked(pHost->mSupportHyperlinksSend);
+        checkBox_supportHyperlinksPrompt->setChecked(pHost->mSupportHyperlinksPrompt);
+        checkBox_supportHyperlinksStyle->setChecked(pHost->mSupportHyperlinksStyle);
+        checkBox_supportHyperlinksMenu->setChecked(pHost->mSupportHyperlinksMenu);
     }
 }
 
-void dlgProfilePreferences::slot_toggleSupportOSCHyperlinksSend(const bool state)
+void dlgProfilePreferences::slot_toggleSupportHyperlinksSend(const bool state)
 {
     Host* pHost = mpHost;
 
@@ -4599,13 +4599,13 @@ void dlgProfilePreferences::slot_toggleSupportOSCHyperlinksSend(const bool state
         return;
     }
 
-    if (pHost->mSupportOSCHyperlinksSend != state) {
-        pHost->mSupportOSCHyperlinksSend = state;
+    if (pHost->mSupportHyperlinksSend != state) {
+        pHost->mSupportHyperlinksSend = state;
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("OSC_HYPERLINKS_SEND"));
     }
 }
 
-void dlgProfilePreferences::slot_toggleSupportOSCHyperlinksPrompt(const bool state)
+void dlgProfilePreferences::slot_toggleSupportHyperlinksPrompt(const bool state)
 {
     Host* pHost = mpHost;
 
@@ -4613,13 +4613,13 @@ void dlgProfilePreferences::slot_toggleSupportOSCHyperlinksPrompt(const bool sta
         return;
     }
 
-    if (pHost->mSupportOSCHyperlinksPrompt != state) {
-        pHost->mSupportOSCHyperlinksPrompt = state;
+    if (pHost->mSupportHyperlinksPrompt != state) {
+        pHost->mSupportHyperlinksPrompt = state;
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("OSC_HYPERLINKS_PROMPT"));
     }
 }
 
-void dlgProfilePreferences::slot_toggleSupportOSCHyperlinksStyle(const bool state)
+void dlgProfilePreferences::slot_toggleSupportHyperlinksStyle(const bool state)
 {
     Host* pHost = mpHost;
 
@@ -4627,13 +4627,13 @@ void dlgProfilePreferences::slot_toggleSupportOSCHyperlinksStyle(const bool stat
         return;
     }
 
-    if (pHost->mSupportOSCHyperlinksStyle != state) {
-        pHost->mSupportOSCHyperlinksStyle = state;
+    if (pHost->mSupportHyperlinksStyle != state) {
+        pHost->mSupportHyperlinksStyle = state;
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("OSC_HYPERLINKS_STYLE"));
     }
 }
 
-void dlgProfilePreferences::slot_toggleSupportOSCHyperlinksMenu(const bool state)
+void dlgProfilePreferences::slot_toggleSupportHyperlinksMenu(const bool state)
 {
     Host* pHost = mpHost;
 
@@ -4641,8 +4641,8 @@ void dlgProfilePreferences::slot_toggleSupportOSCHyperlinksMenu(const bool state
         return;
     }
 
-    if (pHost->mSupportOSCHyperlinksMenu != state) {
-        pHost->mSupportOSCHyperlinksMenu = state;
+    if (pHost->mSupportHyperlinksMenu != state) {
+        pHost->mSupportHyperlinksMenu = state;
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("OSC_HYPERLINKS_MENU"));
     }
 }

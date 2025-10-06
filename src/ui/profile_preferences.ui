@@ -1361,7 +1361,7 @@ you can use it but there could be issues with aligning columns of text</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_hyperlinks">
           <item row="0" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_supportOSCHyperlinks">
+           <widget class="QCheckBox" name="checkBox_supportHyperlinks">
             <property name="toolTip">
              <string>&lt;p&gt;Enable clickable links in game text. Uncheck to disable all hyperlink features.&lt;/p&gt;</string>
             </property>
@@ -1378,7 +1378,7 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_supportOSCHyperlinksSend">
+           <widget class="QCheckBox" name="checkBox_supportHyperlinksSend">
             <property name="toolTip">
              <string>&lt;p&gt;Allow links that send commands when clicked.&lt;/p&gt;</string>
             </property>
@@ -1388,7 +1388,7 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_supportOSCHyperlinksStyle">
+           <widget class="QCheckBox" name="checkBox_supportHyperlinksStyle">
             <property name="toolTip">
              <string>&lt;p&gt;Allow links to have custom colors and styling.&lt;/p&gt;</string>
             </property>
@@ -1398,7 +1398,7 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="3" column="0">
-           <widget class="QCheckBox" name="checkBox_supportOSCHyperlinksPrompt">
+           <widget class="QCheckBox" name="checkBox_supportHyperlinksPrompt">
             <property name="toolTip">
              <string>&lt;p&gt;Allow links that fill the command line when clicked.&lt;/p&gt;</string>
             </property>
@@ -1408,7 +1408,7 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QCheckBox" name="checkBox_supportOSCHyperlinksMenu">
+           <widget class="QCheckBox" name="checkBox_supportHyperlinksMenu">
             <property name="toolTip">
              <string>&lt;p&gt;Allow links with right-click menus.&lt;/p&gt;</string>
             </property>
@@ -4626,11 +4626,11 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>console_buffer_size_spinBox</tabstop>
   <tabstop>checkBox_useMaxBufferSize</tabstop>
   <tabstop>doubleclick_ignore_lineedit</tabstop>
-  <tabstop>checkBox_supportOSCHyperlinks</tabstop>
-  <tabstop>checkBox_supportOSCHyperlinksSend</tabstop>
-  <tabstop>checkBox_supportOSCHyperlinksStyle</tabstop>
-  <tabstop>checkBox_supportOSCHyperlinksPrompt</tabstop>
-  <tabstop>checkBox_supportOSCHyperlinksMenu</tabstop>
+  <tabstop>checkBox_supportHyperlinks</tabstop>
+  <tabstop>checkBox_supportHyperlinksSend</tabstop>
+  <tabstop>checkBox_supportHyperlinksStyle</tabstop>
+  <tabstop>checkBox_supportHyperlinksPrompt</tabstop>
+  <tabstop>checkBox_supportHyperlinksMenu</tabstop>
   <tabstop>checkBox_USE_IRE_DRIVER_BUGFIX</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>

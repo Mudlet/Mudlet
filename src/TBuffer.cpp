@@ -2287,7 +2287,7 @@ void TBuffer::decodeOSC(const QString& sequence)
         break;
     case static_cast<quint8>('8'): {
         // Handle OSC 8 hyperlinks in the form: "8;params;URI"
-        if (!mpHost || !mpHost->mSupportOSCHyperlinks) {
+        if (!mpHost || !mpHost->mSupportHyperlinks) {
             return;
         }
         
@@ -2340,7 +2340,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             QMap<QString, QString> queryParams = parseUriQueryParameters(rawUrl);
             
             // Extract styling parameters
-            if (mpHost->mSupportOSCHyperlinksStyle && queryParams.contains(qsl("style"))) {
+            if (mpHost->mSupportHyperlinksStyle && queryParams.contains(qsl("style"))) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Found style parameter, applying custom styling";
 #endif
@@ -2353,7 +2353,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
             
             // Extract menu parameters
-            if (mpHost->mSupportOSCHyperlinksMenu && queryParams.contains(qsl("menu"))) {
+            if (mpHost->mSupportHyperlinksMenu && queryParams.contains(qsl("menu"))) {
                 QString menuString = queryParams.value(qsl("menu"));
                 mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
             } else {
@@ -2400,7 +2400,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             QStringList hint;
 
             if (baseUrl.startsWith(qsl("send:"))) {
-                if (!mpHost->mSupportOSCHyperlinksSend) {
+                if (!mpHost->mSupportHyperlinksSend) {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - send: scheme disabled in profile settings";
                     return;
                 }
@@ -2408,7 +2408,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 command = { qsl("send([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
-                if (!mpHost->mSupportOSCHyperlinksPrompt) {
+                if (!mpHost->mSupportHyperlinksPrompt) {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - prompt: scheme disabled in profile settings";
                     return;
                 }
@@ -2445,7 +2445,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
-                        if (!mpHost->mSupportOSCHyperlinksSend) {
+                        if (!mpHost->mSupportHyperlinksSend) {
                             continue; // Skip this menu item if send: is disabled
                         }
 
@@ -2453,7 +2453,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Send"), innerCommand));
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
-                        if (!mpHost->mSupportOSCHyperlinksPrompt) {
+                        if (!mpHost->mSupportHyperlinksPrompt) {
                             continue; // Skip this menu item if prompt: is disabled
                         }
 
@@ -2462,7 +2462,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand));
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator (only if menus are supported)
-                        if (!mpHost->mSupportOSCHyperlinksMenu) {
+                        if (!mpHost->mSupportHyperlinksMenu) {
                             continue; // Skip separator if menus are disabled
                         }
 
@@ -2470,7 +2470,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(QString());
                     } else {
                         // Treat as direct command (uses send, so check the flag)
-                        if (!mpHost->mSupportOSCHyperlinksSend) {
+                        if (!mpHost->mSupportHyperlinksSend) {
                             continue; // Skip this menu item if send: is disabled
                         }
 

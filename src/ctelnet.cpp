@@ -1193,27 +1193,27 @@ QString cTelnet::getNewEnvironOSCColorPalette()
 
 QString cTelnet::getNewEnvironOSCHyperlinks()
 {
-    return mpHost->mSupportOSCHyperlinks ? qsl("1") : qsl("0");
+    return mpHost->mSupportHyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSend()
 {
-    return (mpHost->mSupportOSCHyperlinks && mpHost->mSupportOSCHyperlinksSend) ? qsl("1") : qsl("0");
+    return (mpHost->mSupportHyperlinks && mpHost->mSupportHyperlinksSend) ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPrompt()
 {
-    return (mpHost->mSupportOSCHyperlinks && mpHost->mSupportOSCHyperlinksPrompt) ? qsl("1") : qsl("0");
+    return (mpHost->mSupportHyperlinks && mpHost->mSupportHyperlinksPrompt) ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyle()
 {
-    return (mpHost->mSupportOSCHyperlinks && mpHost->mSupportOSCHyperlinksStyle) ? qsl("1") : qsl("0");
+    return (mpHost->mSupportHyperlinks && mpHost->mSupportHyperlinksStyle) ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksMenu()
 {
-    return (mpHost->mSupportOSCHyperlinks && mpHost->mSupportOSCHyperlinksMenu) ? qsl("1") : qsl("0");
+    return (mpHost->mSupportHyperlinks && mpHost->mSupportHyperlinksMenu) ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironScreenReader()

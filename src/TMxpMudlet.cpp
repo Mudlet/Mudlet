@@ -75,7 +75,7 @@ int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
     }
 
     // If hyperlinks are completely disabled, don't create any links
-    if (!mpHost->mSupportOSCHyperlinks) {
+    if (!mpHost->mSupportHyperlinks) {
         return 0;
     }
 
@@ -96,12 +96,12 @@ int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
         const QString& link = links.at(i);
         
         // Check if this is a send command
-        if (link.startsWith(qsl("send(")) && !mpHost->mSupportOSCHyperlinksSend) {
+        if (link.startsWith(qsl("send(")) && !mpHost->mSupportHyperlinksSend) {
             continue; // Skip this link - send commands are disabled
         }
         
         // Check if this is a prompt command
-        if (link.startsWith(qsl("printCmdLine")) && !mpHost->mSupportOSCHyperlinksPrompt) {
+        if (link.startsWith(qsl("printCmdLine")) && !mpHost->mSupportHyperlinksPrompt) {
             continue; // Skip this link - prompt commands are disabled
         }
         
@@ -121,7 +121,7 @@ int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
     }
 
     // If menus are disabled but we have multiple links, only keep the first
-    if (!mpHost->mSupportOSCHyperlinksMenu && filteredLinks.size() > 1) {
+    if (!mpHost->mSupportHyperlinksMenu && filteredLinks.size() > 1) {
         filteredLinks = QStringList{ filteredLinks.first() };
         
         if (hasTooltip && filteredHints.size() > 1) {

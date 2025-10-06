@@ -167,11 +167,11 @@ private slots:
     void slot_changeControlCharacterHandling();
     void slot_enableDarkEditor(const QString&);
     void slot_toggleAdvertiseScreenReader(const bool);
-    void slot_toggleSupportOSCHyperlinks(const bool);
-    void slot_toggleSupportOSCHyperlinksSend(const bool);
-    void slot_toggleSupportOSCHyperlinksPrompt(const bool);
-    void slot_toggleSupportOSCHyperlinksStyle(const bool);
-    void slot_toggleSupportOSCHyperlinksMenu(const bool);
+    void slot_toggleSupportHyperlinks(const bool);
+    void slot_toggleSupportHyperlinksSend(const bool);
+    void slot_toggleSupportHyperlinksPrompt(const bool);
+    void slot_toggleSupportHyperlinksStyle(const bool);
+    void slot_toggleSupportHyperlinksMenu(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
     void slot_deleteMap();
