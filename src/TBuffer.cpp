@@ -2287,9 +2287,6 @@ void TBuffer::decodeOSC(const QString& sequence)
         break;
     case static_cast<quint8>('8'): {
         // Handle OSC 8 hyperlinks in the form: "8;params;URI"
-        if (!mpHost || !mpHost->mSupportHyperlinks) {
-            return;
-        }
         
         QStringView rest = QStringView(sequence).mid(1);  // skip selector "8;"
         int firstSemi = rest.indexOf(';');
@@ -2337,10 +2334,13 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
 
             // Parse query parameters for enhanced functionality
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC8] Raw URL for parameter parsing:" << rawUrl;
+#endif
             QMap<QString, QString> queryParams = parseUriQueryParameters(rawUrl);
             
             // Extract styling parameters
-            if (mpHost->mSupportHyperlinksStyle && queryParams.contains(qsl("style"))) {
+            if (queryParams.contains(qsl("style"))) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Found style parameter, applying custom styling";
 #endif
@@ -2353,11 +2353,19 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
             
             // Extract menu parameters
-            if (mpHost->mSupportHyperlinksMenu && queryParams.contains(qsl("menu"))) {
+            if (queryParams.contains(qsl("menu"))) {
                 QString menuString = queryParams.value(qsl("menu"));
                 mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Menu parameter found:" << menuString;
+                qDebug() << "[OSC8] Menu items parsed:" << mCurrentHyperlinkMenu;
+                qDebug() << "[OSC8] Menu items count:" << mCurrentHyperlinkMenu.size();
+#endif
             } else {
                 mCurrentHyperlinkMenu.clear();
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] No menu parameter found";
+#endif
             }
             
             // Extract custom tooltip parameter
@@ -2400,18 +2408,10 @@ void TBuffer::decodeOSC(const QString& sequence)
             QStringList hint;
 
             if (baseUrl.startsWith(qsl("send:"))) {
-                if (!mpHost->mSupportHyperlinksSend) {
-                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - send: scheme disabled in profile settings";
-                    return;
-                }
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
                 command = { qsl("send([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
-                if (!mpHost->mSupportHyperlinksPrompt) {
-                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - prompt: scheme disabled in profile settings";
-                    return;
-                }
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
                 command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
                 hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
@@ -2430,6 +2430,9 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             // Handle menu functionality by extending commands and hints
             if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 2) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
+#endif
                 QStringList menuCommands = command; // Start with main command
                 QStringList menuHints = hint; // Start with main hint
                 
@@ -2445,35 +2448,19 @@ void TBuffer::decodeOSC(const QString& sequence)
                     
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
-                        if (!mpHost->mSupportHyperlinksSend) {
-                            continue; // Skip this menu item if send: is disabled
-                        }
-
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
                         menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Send"), innerCommand));
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
-                        if (!mpHost->mSupportHyperlinksPrompt) {
-                            continue; // Skip this menu item if prompt: is disabled
-                        }
-
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
                         menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
                         menuHints.append(qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand));
                     } else if (menuCommand == qsl("-")) {
-                        // Special case: "-" creates a menu separator (only if menus are supported)
-                        if (!mpHost->mSupportHyperlinksMenu) {
-                            continue; // Skip separator if menus are disabled
-                        }
-
+                        // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
                     } else {
-                        // Treat as direct command (uses send, so check the flag)
-                        if (!mpHost->mSupportHyperlinksSend) {
-                            continue; // Skip this menu item if send: is disabled
-                        }
-
+                        // Treat as direct command
                         menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
                         menuHints.append(menuLabel);
                     }
@@ -2481,6 +2468,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                 
                 command = menuCommands;
                 hint = menuHints;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Final menu commands:" << command;
+                qDebug() << "[OSC8] Final menu hints:" << hint;
+#endif
             }
 
             mCurrentHyperlinkCommand = command;
@@ -2534,16 +2525,29 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri)
 {
     QMap<QString, QString> parameters;
     
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] parseUriQueryParameters called with uri:" << uri;
+#endif
+    
     // Find the query string part after '?'
     int queryStart = uri.indexOf('?');
     if (queryStart == -1) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] No query parameters found in URI";
+#endif
         return parameters; // No query parameters
     }
     
     QString queryString = uri.mid(queryStart + 1);
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Query string:" << queryString;
+#endif
     
     // Decode the query string first, since the server percent-encodes the entire URL
     QString decodedQueryString = QUrl::fromPercentEncoding(queryString.toUtf8());
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Decoded query string:" << decodedQueryString;
+#endif
     
     // Split by '&' to get individual parameter pairs
     QStringList paramPairs = decodedQueryString.split('&', Qt::SkipEmptyParts);
@@ -2560,6 +2564,10 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri)
             parameters.insert(key, value);
         }
     }
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Parsed parameters:" << parameters;
+#endif
     
     return parameters;
 }

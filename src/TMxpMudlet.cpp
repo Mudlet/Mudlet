@@ -68,72 +68,7 @@ void TMxpMudlet::popColor(QList<QColor>& stack)
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
-    // If Host is not available (shouldn't happen in production, but defensive),
-    // just pass through to maintain backward compatibility
-    if (!mpHost) {
-        return getLinkStore().addLinks(links, hints, mpHost);
-    }
-
-    // If hyperlinks are completely disabled, don't create any links
-    if (!mpHost->mSupportHyperlinks) {
-        return 0;
-    }
-
-    // Filter links based on feature flags
-    QStringList filteredLinks;
-    QStringList filteredHints;
-
-    // Check if there's a tooltip hint (more hints than links)
-    bool hasTooltip = hints.size() > links.size();
-    int hintOffset = hasTooltip ? 1 : 0;
-
-    // If there's a tooltip, preserve it
-    if (hasTooltip) {
-        filteredHints.append(hints.at(0)); // Add tooltip at index 0
-    }
-
-    for (int i = 0; i < links.size(); ++i) {
-        const QString& link = links.at(i);
-        
-        // Check if this is a send command
-        if (link.startsWith(qsl("send(")) && !mpHost->mSupportHyperlinksSend) {
-            continue; // Skip this link - send commands are disabled
-        }
-        
-        // Check if this is a prompt command
-        if (link.startsWith(qsl("printCmdLine")) && !mpHost->mSupportHyperlinksPrompt) {
-            continue; // Skip this link - prompt commands are disabled
-        }
-        
-        // If we get here, this link type is allowed
-        filteredLinks.append(link);
-        
-        // Append corresponding hint if available (accounting for tooltip offset)
-        int hintIndex = i + hintOffset;
-        if (hintIndex < hints.size()) {
-            filteredHints.append(hints.at(hintIndex));
-        }
-    }
-
-    // If all links were filtered out, don't create a link
-    if (filteredLinks.isEmpty()) {
-        return 0;
-    }
-
-    // If menus are disabled but we have multiple links, only keep the first
-    if (!mpHost->mSupportHyperlinksMenu && filteredLinks.size() > 1) {
-        filteredLinks = QStringList{ filteredLinks.first() };
-        
-        if (hasTooltip && filteredHints.size() > 1) {
-            // Discard tooltip and keep the first command hint
-            filteredHints = QStringList{ filteredHints.at(1) };
-        } else if (!filteredHints.isEmpty()) {
-            // No tooltip, just keep first hint
-            filteredHints = QStringList{ filteredHints.first() };
-        }
-    }
-
-    return getLinkStore().addLinks(filteredLinks, filteredHints, mpHost);
+    return getLinkStore().addLinks(links, hints, mpHost);
 }
 
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)

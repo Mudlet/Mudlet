@@ -1193,27 +1193,27 @@ QString cTelnet::getNewEnvironOSCColorPalette()
 
 QString cTelnet::getNewEnvironOSCHyperlinks()
 {
-    return mpHost->mSupportHyperlinks ? qsl("1") : qsl("0");
+    return qsl("1");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSend()
 {
-    return (mpHost->mSupportHyperlinks && mpHost->mSupportHyperlinksSend) ? qsl("1") : qsl("0");
+    return qsl("1");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPrompt()
 {
-    return (mpHost->mSupportHyperlinks && mpHost->mSupportHyperlinksPrompt) ? qsl("1") : qsl("0");
+    return qsl("1");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyle()
 {
-    return (mpHost->mSupportHyperlinks && mpHost->mSupportHyperlinksStyle) ? qsl("1") : qsl("0");
+    return qsl("1");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksMenu()
 {
-    return (mpHost->mSupportHyperlinks && mpHost->mSupportHyperlinksMenu) ? qsl("1") : qsl("0");
+    return qsl("1");
 }
 
 QString cTelnet::getNewEnvironScreenReader()
