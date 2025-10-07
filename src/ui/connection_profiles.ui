@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>760</width>
+    <width>950</width>
     <height>682</height>
    </rect>
   </property>
@@ -428,7 +428,7 @@
         </property>
         <property name="minimumSize">
          <size>
-          <width>340</width>
+          <width>500</width>
           <height>0</height>
          </size>
         </property>
@@ -488,6 +488,12 @@
             <layout class="QGridLayout" name="gridLayout">
              <item row="0" column="0">
               <widget class="QLabel" name="label_profileName">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="text">
                 <string>Profile name:</string>
                </property>
