@@ -122,14 +122,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     te_parent->mPlainDescription = ui->textEdit_description->toPlainText();
 
     ui->packageList->addItem(tr("update installed package"));
-    ui->DependencyList->addItem(tr("add dependencies"));
-    ui->packageList->addItems(mpHost->mInstalledPackages);
-    ui->DependencyList->addItems(mpHost->mInstalledPackages);
-    auto modules = mpHost->mInstalledModules;
-    for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
-        ui->packageList->addItem(moduleName);
-        ui->DependencyList->addItem(moduleName);
-    }
+
+    populateDependencies();
 
     listTriggers();
     listAliases();
@@ -431,6 +425,19 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
     return {true, QString()};
 }
 
+void dlgPackageExporter::populateDependencies()
+{
+    ui->DependencyList->clear();
+    ui->DependencyList->addItem(tr("add dependencies"));
+    ui->packageList->addItems(mpHost->mInstalledPackages);
+    ui->DependencyList->addItems(mpHost->mInstalledPackages);
+    auto modules = mpHost->mInstalledModules;
+    for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
+        ui->packageList->addItem(moduleName);
+        ui->DependencyList->addItem(moduleName);
+    }
+}
+
 void dlgPackageExporter::slot_addDependency()
 {
     auto text = ui->DependencyList->currentText();
@@ -539,12 +546,12 @@ void dlgPackageExporter::slot_packageChanged(int index)
     ui->textEdit_description->setMarkdown(description);
     const QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
+    populateDependencies(); // available dependencies, as opposed to required ones which is next
     const QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
     ui->comboBox_dependencies->clear();
     if (!dependencies.at(0).isEmpty()) {
         ui->comboBox_dependencies->addItems(dependencies);
     }
-
     //get files and folders from package
     ui->listWidget_addedFiles->clear();
     const QFileInfo info(qsl("%1/%2/").arg(packagePath, packageName));
