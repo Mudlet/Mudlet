@@ -2447,15 +2447,13 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
 #endif
-                QStringList menuCommands = command; // Start with main command
-                QStringList menuHints = hint; // Start with main hint
-                
-                // Add a special tooltip hint for menu links
-                // Use custom tooltip if provided, otherwise use default
-                QString tooltipHint = customTooltip.isEmpty() ? QObject::tr("Right-click for menu") : customTooltip;
-                menuHints.prepend(tooltipHint);
+                QStringList menuCommands;
+                QStringList menuHints;
                 
                 // Add menu items in pairs (label, command)
+                // The first menu item becomes the primary left-click action (index 0)
+                // All items (including first) appear in the right-click menu (index 1+)
+                bool isFirstItem = true;
                 for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
                     QString menuLabel = mCurrentHyperlinkMenu[i];
                     QString menuCommand = mCurrentHyperlinkMenu[i + 1];
@@ -2464,11 +2462,11 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
                         menuCommands.append(qsl("send([[%1]])").arg(innerCommand));
-                        menuHints.append(qsl("%1: %2").arg(QObject::tr("Send"), innerCommand));
+                        menuHints.append(menuLabel);
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
                         menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
-                        menuHints.append(qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand));
+                        menuHints.append(menuLabel);
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
@@ -2478,6 +2476,23 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
                         menuHints.append(menuLabel);
                     }
+                    isFirstItem = false;
+                }
+                
+                // Set the tooltip for the link (what shows on hover)
+                // Use custom tooltip if provided, otherwise use the first menu item's label
+                QString linkTooltip;
+                if (!customTooltip.isEmpty()) {
+                    linkTooltip = customTooltip;
+                } else if (!menuHints.isEmpty()) {
+                    linkTooltip = menuHints.first(); // Use first menu item label as tooltip
+                } else {
+                    linkTooltip = QObject::tr("Right-click for menu");
+                }
+                
+                // Replace the first hint (tooltip) but keep the command as primary action
+                if (!menuHints.isEmpty()) {
+                    menuHints[0] = linkTooltip;
                 }
                 
                 command = menuCommands;
@@ -5235,12 +5250,12 @@ void TBuffer::injectOSC8TestSequences()
     // 4. MENUS: Right-click power! 🎯
     // ═══════════════════════════════════════════════════════════════════
     testOutput += "🎯 MENUS: Right-click for context menus\n";
-    testOutput += "   JSON: {\"menu\":[{\"Label\":\"command\"}, {\"Item 2\":\"send:item2\"}]}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:simple?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\\x1b\\\\[Simple Menu (2 items)]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:simple?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\x1b\\[Simple Menu (2 items)]\x1b]8;;\x1b\\\n\n";
+    testOutput += "   JSON: {\"menu\":[{\"Primary Action\":\"send:primary\"}, {\"Item 2\":\"send:item2\"}]}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:dummy?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Simple Action\":\"send:simple\"},{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\\x1b\\\\[Simple Menu (3 items)]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:dummy?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Simple Action\":\"send:simple\"},{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\x1b\\[Simple Menu (3 items)]\x1b]8;;\x1b\\\n\n";
     testOutput += "   JSON: {\"menu\":[{\"Action\":\"command\"}, \"-\", {\"Help\":\"send:help\"}]}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:advanced?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\\x1b\\\\[Advanced Menu (with separator)]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:advanced?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\x1b\\[Advanced Menu (with separator)]\x1b]8;;\x1b\\\n\n";
+    testOutput += "   OSC8: \\x1b]8;;send:dummy2?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\\x1b\\\\[Advanced Menu (with separator)]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:dummy2?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\x1b\\[Advanced Menu (with separator)]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
     // 5. TOOLTIPS: Helpful hints 💬
