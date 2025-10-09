@@ -475,6 +475,11 @@ private:
     
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
     QMap<QString, QString> parseUriQueryParameters(const QString& uri);
+    // Helper function for parsing JSON format hyperlink configuration
+    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters);
+    // Helper functions for JSON to CSS conversion
+    QString jsonStyleObjectToCss(const QJsonObject& styleObj);
+    QString jsonMenuArrayToString(const QJsonArray& menuArray);
     // Helper function for appending query parameters to URIs (handles existing params)
     QString appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters);
     // Helper function for parsing CSS-like style strings

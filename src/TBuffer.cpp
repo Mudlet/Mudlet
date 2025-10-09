@@ -30,6 +30,11 @@
 #include "widechar_width.h"
 
 #include "pre_guard.h"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QRegularExpression>
@@ -2428,6 +2433,15 @@ void TBuffer::decodeOSC(const QString& sequence)
                 }
             }
 
+            // Add standalone tooltip support (for links without menus)
+            if (!customTooltip.isEmpty() && (mCurrentHyperlinkMenu.isEmpty() || mCurrentHyperlinkMenu.size() < 2)) {
+                // Replace the default hint with the custom tooltip
+                hint = { customTooltip };
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Added standalone tooltip:" << customTooltip;
+#endif
+            }
+
             // Handle menu functionality by extending commands and hints
             if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 2) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -2549,27 +2563,159 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri)
     qDebug() << "[OSC8] Decoded query string:" << decodedQueryString;
 #endif
     
-    // Split by '&' to get individual parameter pairs
-    QStringList paramPairs = decodedQueryString.split('&', Qt::SkipEmptyParts);
-    
-    for (const QString& pair : paramPairs) {
-        int equalPos = pair.indexOf('=');
-        if (equalPos == -1) {
-            // Parameter without value - no additional decoding needed since we already decoded the query string
-            parameters.insert(pair, QString());
-        } else {
-            // Parameter with value - no additional decoding needed since we already decoded the query string
-            QString key = pair.left(equalPos);
-            QString value = pair.mid(equalPos + 1);
-            parameters.insert(key, value);
-        }
+    // Only process JSON config parameters - no legacy CSS support
+    if (decodedQueryString.startsWith(qsl("config={"))) {
+        QString jsonString = decodedQueryString.mid(7); // Remove "config="
+        parseJsonHyperlinkConfig(jsonString, parameters);
     }
     
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Parsed parameters:" << parameters;
+    qDebug() << "[OSC8] Parsed JSON parameters:" << parameters;
 #endif
     
     return parameters;
+}
+
+bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters)
+{
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
+#endif
+
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
+    
+    if (parseError.error != QJsonParseError::NoError) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] JSON parse error:" << parseError.errorString();
+#endif
+        return false;
+    }
+    
+    if (!doc.isObject()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] JSON root is not an object";
+#endif
+        return false;
+    }
+    
+    QJsonObject root = doc.object();
+    
+    // Parse style object
+    if (root.contains(qsl("style")) && root[qsl("style")].isObject()) {
+        QJsonObject styleObj = root[qsl("style")].toObject();
+        QString cssStyleString = jsonStyleObjectToCss(styleObj);
+        if (!cssStyleString.isEmpty()) {
+            parameters.insert(qsl("style"), cssStyleString);
+        }
+    }
+    
+    // Parse menu array
+    if (root.contains(qsl("menu")) && root[qsl("menu")].isArray()) {
+        QJsonArray menuArray = root[qsl("menu")].toArray();
+        QString menuString = jsonMenuArrayToString(menuArray);
+        if (!menuString.isEmpty()) {
+            parameters.insert(qsl("menu"), menuString);
+        }
+    }
+    
+    // Parse tooltip string
+    if (root.contains(qsl("tooltip")) && root[qsl("tooltip")].isString()) {
+        parameters.insert(qsl("tooltip"), root[qsl("tooltip")].toString());
+    }
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] JSON converted to parameters:" << parameters;
+#endif
+    
+    return true;
+}
+
+QString TBuffer::jsonStyleObjectToCss(const QJsonObject& styleObj)
+{
+    QStringList cssProperties;
+    
+    // Basic style properties
+    if (styleObj.contains(qsl("color")) && styleObj[qsl("color")].isString()) {
+        cssProperties << qsl("color:") + styleObj[qsl("color")].toString();
+    }
+    
+    if (styleObj.contains(qsl("bg")) && styleObj[qsl("bg")].isString()) {
+        cssProperties << qsl("background-color:") + styleObj[qsl("bg")].toString();
+    }
+    
+    if (styleObj.contains(qsl("bold")) && styleObj[qsl("bold")].isBool() && styleObj[qsl("bold")].toBool()) {
+        cssProperties << qsl("font-weight:bold");
+    }
+    
+    if (styleObj.contains(qsl("italic")) && styleObj[qsl("italic")].isBool() && styleObj[qsl("italic")].toBool()) {
+        cssProperties << qsl("font-style:italic");
+    }
+    
+    // Text decorations - handle both boolean and string values
+    if (styleObj.contains(qsl("underline"))) {
+        QJsonValue underlineVal = styleObj[qsl("underline")];
+        if (underlineVal.isBool() && underlineVal.toBool()) {
+            cssProperties << qsl("text-decoration:underline");
+        } else if (underlineVal.isString()) {
+            cssProperties << qsl("text-decoration:underline ") + underlineVal.toString();
+        }
+    }
+    
+    if (styleObj.contains(qsl("overline"))) {
+        QJsonValue overlineVal = styleObj[qsl("overline")];
+        if (overlineVal.isBool() && overlineVal.toBool()) {
+            cssProperties << qsl("text-decoration:overline");
+        } else if (overlineVal.isString()) {
+            cssProperties << qsl("text-decoration:overline ") + overlineVal.toString();
+        }
+    }
+    
+    if (styleObj.contains(qsl("strikethrough"))) {
+        QJsonValue strikeVal = styleObj[qsl("strikethrough")];
+        if (strikeVal.isBool() && strikeVal.toBool()) {
+            cssProperties << qsl("text-decoration:line-through");
+        } else if (strikeVal.isString()) {
+            cssProperties << qsl("text-decoration:line-through ") + strikeVal.toString();
+        }
+    }
+    
+    // Pseudo-class states
+    QStringList pseudoClasses = {qsl("hover"), qsl("active"), qsl("visited"), qsl("link"), qsl("focus"), qsl("focus-visible"), qsl("any-link")};
+    
+    for (const QString& pseudoClass : pseudoClasses) {
+        if (styleObj.contains(pseudoClass) && styleObj[pseudoClass].isObject()) {
+            QJsonObject pseudoObj = styleObj[pseudoClass].toObject();
+            QString pseudoCss = jsonStyleObjectToCss(pseudoObj);
+            if (!pseudoCss.isEmpty()) {
+                cssProperties << qsl(":") + pseudoClass + qsl("{") + pseudoCss + qsl("}");
+            }
+        }
+    }
+    
+    return cssProperties.join(qsl(";"));
+}
+
+QString TBuffer::jsonMenuArrayToString(const QJsonArray& menuArray)
+{
+    QStringList menuItems;
+    
+    for (const QJsonValue& item : menuArray) {
+        if (item.isString() && item.toString() == qsl("-")) {
+            // Separator
+            menuItems << qsl("Separator|-");
+        } else if (item.isObject()) {
+            QJsonObject menuObj = item.toObject();
+            // Each menu object should have one key-value pair: label -> command
+            for (auto it = menuObj.begin(); it != menuObj.end(); ++it) {
+                if (it.value().isString()) {
+                    menuItems << it.key() + qsl("|") + it.value().toString();
+                }
+            }
+        }
+    }
+    
+    return menuItems.join(qsl("|"));
 }
 
 void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling)
@@ -5045,280 +5191,119 @@ void TBuffer::clearSearchHighlights()
 
 void TBuffer::injectOSC8TestSequences()
 {
-    // Inject comprehensive OSC 8 test sequences for testing hyperlink functionality
+    // Inject simple, progressive JSON OSC 8 test sequences
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] injectOSC8TestSequences() called - about to inject comprehensive test sequences";
+    qDebug() << "[OSC8] injectOSC8TestSequences() called - JSON-only format";
 #endif
 
     QString testOutput = "\n╔════════════════════════════════════════════════════════════════════╗\n";
-    testOutput += "║              OSC 8 Enhanced Hyperlink Test Suite                   ║\n";
+    testOutput += "║                    OSC 8 JSON Hyperlinks - SIMPLE & POWERFUL       ║\n";
     testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // SECTION 1: Basic Link Types
+    // 1. COLORS: High contrast colors that work on any background 🎨
     // ═══════════════════════════════════════════════════════════════════
-    testOutput += "┌─── SECTION 1: Basic Link Types ───────────────────────────────────┐\n\n";
-    
-    // Test 1: Basic send commands
-    // Format: ESC ]8;;<command>ESC\<text>ESC]8;;ESC\
-    // send:command - executes the command immediately when clicked
-    testOutput += "1. Send Commands (immediate execution):\n";
-    testOutput += "   Syntax: send:<command>\n";
-    testOutput += "   Example: \x1b]8;;send:look\x1b\\[look]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:inventory\x1b\\[inv]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:who\x1b\\[who]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 2: Prompt commands
-    // prompt:command - puts the command in the input line for user to edit/send
-    testOutput += "2. Prompt Commands (populate command line):\n";
-    testOutput += "   Syntax: prompt:<command>\n";
-    testOutput += "   Example: \x1b]8;;prompt:say Hello!\x1b\\[say hello]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;prompt:tell player \x1b\\[tell]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 3: Web URLs
-    // Standard HTTP(S) URLs open in browser
-    testOutput += "3. Web URLs (open in browser):\n";
-    testOutput += "   Syntax: https://<url> or http://<url>\n";
-    testOutput += "   Example: \x1b]8;;https://www.mudlet.org\x1b\\[Mudlet]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC8\x1b\\[OSC8 Docs]\x1b]8;;\x1b\\\n\n";
-    
-    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
+    testOutput += "🎨 COLORS: Works on light AND dark backgrounds\n";
+    testOutput += "   JSON: {\"style\":{\"color\":\"#cc0000\"}}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:red?config={\"style\":{\"color\":\"#cc0000\"}}\\x1b\\\\[Red Link]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:red?config={\"style\":{\"color\":\"#cc0000\"}}\x1b\\[Red Link]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:blue?config={\"style\":{\"color\":\"#0066cc\"}}\x1b\\[Blue Link]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:green?config={\"style\":{\"color\":\"#006600\"}}\x1b\\[Green Link]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:purple?config={\"style\":{\"color\":\"#6600cc\"}}\x1b\\[Purple Link]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // SECTION 2: Basic Styling (CSS-like)
+    // 2. FORMATTING: Bold, italic, underline 💪
     // ═══════════════════════════════════════════════════════════════════
-    testOutput += "┌─── SECTION 2: Basic Styling (Static Appearance) ─────────────────┐\n\n";
-    
-    // Test 4: Text color
-    // style parameter uses CSS-like syntax: property:value
-    testOutput += "4. Text Color:\n";
-    testOutput += "   Syntax: ?style=color:#rrggbb (hex RGB)\n";
-    testOutput += "   Example: \x1b]8;;send:look?style=color:#ff4444\x1b\\[bright red]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:inventory?style=color:#4488ff\x1b\\[bright blue]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:who?style=color:#ff8800\x1b\\[bright orange]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:time?style=color:#44ff44\x1b\\[bright green]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 5: Background colors
-    // Multiple CSS properties separated by semicolons
-    testOutput += "5. Background Colors:\n";
-    testOutput += "   Syntax: ?style=color:<color>;background-color:#rrggbb\n";
-    testOutput += "   Example: \x1b]8;;send:north?style=color:black;background-color:#ffff00\x1b\\[yellow bg]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:south?style=color:white;background-color:#666666\x1b\\[gray bg]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:east?style=color:white;background-color:#ff4444\x1b\\[red bg]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:west?style=color:black;background-color:#44ff44\x1b\\[green bg]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 6: Text decorations
-    // Three decoration types: underline, overline, line-through
-    testOutput += "6. Text Decorations:\n";
-    testOutput += "   Syntax: ?style=text-decoration:<underline|overline|line-through>\n";
-    testOutput += "   Example: \x1b]8;;send:cast?style=text-decoration:underline\x1b\\[underlined]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:cast?style=text-decoration:overline\x1b\\[overlined]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:cast?style=text-decoration:line-through\x1b\\[strikethrough]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 7: Underline styles
-    // Advanced decoration styles: solid (default), wavy, dotted, dashed
-    testOutput += "7. Underline Styles:\n";
-    testOutput += "   Syntax: ?style=text-decoration:underline <wavy|dotted|dashed>\n";
-    testOutput += "   Example: \x1b]8;;send:spell?style=text-decoration:underline wavy\x1b\\[wavy]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline dotted\x1b\\[dotted]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:spell?style=text-decoration:underline dashed\x1b\\[dashed]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 8: Colored decorations
-    // Decoration color can be specified inline with the decoration type
-    testOutput += "8. Colored Decorations:\n";
-    testOutput += "   Syntax: ?style=text-decoration:<type> #rrggbb\n";
-    testOutput += "   Example: \x1b]8;;send:attack?style=text-decoration:underline #ff0000\x1b\\[red underline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:defend?style=text-decoration:overline #0066ff\x1b\\[blue overline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:flee?style=text-decoration:line-through #00cc00\x1b\\[green strikethrough]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 9: Decoration color property
-    // Alternative syntax using separate text-decoration-color property
-    testOutput += "9. Decoration Color Property (Alternative Syntax):\n";
-    testOutput += "   Syntax: ?style=text-decoration:<type>;text-decoration-color:#rrggbb\n";
-    testOutput += "   Example: \x1b]8;;send:spell?style=text-decoration:underline;text-decoration-color:#ff4444\x1b\\[red decoration]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:heal?style=text-decoration:overline;text-decoration-color:#4488ff\x1b\\[blue decoration]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 10: Combined styling
-    // Multiple properties can be combined
-    testOutput += "10. Combined Styling:\n";
-    testOutput += "    Syntax: Multiple properties separated by semicolons\n";
-    testOutput += "    Example: \x1b]8;;send:combo1?style=color:#ffff00;background-color:#000080;text-decoration:underline #ff4444;font-weight:bold\x1b\\[yellow on navy]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:combo2?style=color:#000000;background-color:#ffff00;text-decoration:overline #ff0000;font-weight:bold\x1b\\[black on yellow]\x1b]8;;\x1b\\\n\n";
-    
-    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
+    testOutput += "💪 FORMATTING: Text styles\n";
+    testOutput += "   JSON: {\"style\":{\"bold\":true, \"italic\":true, \"underline\":true}}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:bold?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true}}\\x1b\\\\[Bold Red]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:bold?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true}}\x1b\\[Bold Red]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:italic?config={\"style\":{\"color\":\"#0066cc\",\"italic\":true}}\x1b\\[Italic Blue]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:underline?config={\"style\":{\"color\":\"#006600\",\"underline\":true}}\x1b\\[Underlined]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:combo?config={\"style\":{\"color\":\"#6600cc\",\"bold\":true,\"italic\":true,\"underline\":true}}\x1b\\[All Three!]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // SECTION 3: Interactive Features
+    // 3. HOVER: Interactive feedback 💫
     // ═══════════════════════════════════════════════════════════════════
-    testOutput += "┌─── SECTION 3: Interactive Features ───────────────────────────────┐\n\n";
-    
-    // Test 11: Context menus
-    // menu parameter format: Label|command|Label|command...
-    // Use - as command for separators
-    testOutput += "11. Context Menus (Right-Click):\n";
-    testOutput += "    Syntax: ?menu=Label1|command1|Label2|command2&tooltip=hint\n";
-    testOutput += "    Separator: Label|-\n";
-    testOutput += "    Example: \x1b]8;;send:test?menu=Option 1|send:opt1|Option 2|send:opt2|Separator|-|Help|send:help\x1b\\[right-click me]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:combat?menu=Fireball|send:cast fireball|Heal|send:cast heal&tooltip=Spell menu\x1b\\[spell menu]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 12: Edge cases
-    testOutput += "12. Edge Cases (Error Handling):\n";
-    testOutput += "    Empty or invalid styles are gracefully ignored\n";
-    testOutput += "    Example: \x1b]8;;send:empty?\x1b\\[empty style]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:invalid?style=invalid:value\x1b\\[invalid style]\x1b]8;;\x1b\\\n\n";
-    
-    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
+    testOutput += "💫 HOVER: Links that respond to your mouse\n";
+    testOutput += "   JSON: {\"style\":{\"color\":\"#cc0000\",\"hover\":{\"color\":\"#ff3333\",\"bold\":true}}}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:hover1?config={\"style\":{\"color\":\"#cc0000\",\"hover\":{\"color\":\"#ff3333\",\"bold\":true}}}\\x1b\\\\[Hover turns bold!]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:hover1?config={\"style\":{\"color\":\"#cc0000\",\"hover\":{\"color\":\"#ff3333\",\"bold\":true}}}\x1b\\[Hover turns bold!]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:hover2?config={\"style\":{\"color\":\"#0066cc\",\"hover\":{\"bg\":\"#ffff00\",\"color\":\"#000000\"}}}\x1b\\[Hover highlights!]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // SECTION 4: CSS Pseudo-Classes (Interactive States)
+    // 4. MENUS: Right-click power! 🎯
     // ═══════════════════════════════════════════════════════════════════
-    testOutput += "┌─── SECTION 4: CSS Pseudo-Classes (Interactive States) ───────────┐\n\n";
-    testOutput += "CSS pseudo-classes enable different appearances based on link state:\n";
-    testOutput += "• :link       - unvisited link (default appearance)\n";
-    testOutput += "• :visited    - previously clicked link\n";
-    testOutput += "• :hover      - mouse cursor over link\n";
-    testOutput += "• :active     - link being clicked (mouse down)\n";
-    testOutput += "• :focus      - link has keyboard focus (Tab navigation)\n";
-    testOutput += "• :any-link   - applies to both :link and :visited states\n\n";
-    
-    // Test 13: :link and :visited states
-    testOutput += "13. :link and :visited States:\n";
-    testOutput += "    Syntax: ?style=:link{<properties>};:visited{<properties>}\n";
-    testOutput += "    Example: \x1b]8;;send:unvisited?style=:link{color:#0088ff;text-decoration:underline}\x1b\\[unvisited (bright blue)]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:visited?style=:visited{color:#bb66dd}\x1b\\[visited (purple)]\x1b]8;;\x1b\\\n";
-    testOutput += "    → Click links to see :visited state take effect\n\n";
-    
-    // Test 14: :hover state
-    testOutput += "14. :hover State (Mouse Interaction):\n";
-    testOutput += "    Syntax: ?style=<base>;:hover{<properties>}\n";
-    testOutput += "    Example: \x1b]8;;send:hover1?style=color:#00aaff;:hover{color:#ffdd00;background:#004488;font-weight:bold}\x1b\\[Hover me (blue→gold on navy)]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:hover2?style=color:#00aaff;:hover{color:#ff6600;background:#e6f2ff;text-decoration:underline;font-weight:bold}\x1b\\[Hover me (blue→orange)]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:hover3?style=color:#00cc66;:hover{color:#00ff88;text-decoration:underline wavy;font-weight:bold}\x1b\\[Hover me (wavy underline)]\x1b]8;;\x1b\\\n";
-    testOutput += "    → Move mouse over links to see hover effects\n\n";
-    
-    // Test 15: :active state
-    testOutput += "15. :active State (Click Feedback):\n";
-    testOutput += "    Syntax: ?style=<base>;:hover{<hover>};:active{<active>}\n";
-    testOutput += "    Example: \x1b]8;;send:active1?style=color:#00cc66;:hover{color:#00ff88;text-decoration:underline wavy};:active{color:#ffffff;background:#dd0000;font-weight:bold}\x1b\\[Click and hold (green→white on red)]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:active2?style=color:#88dd88;font-weight:bold;:hover{color:#ffffff;background:#00aa00;text-decoration:overline};:active{color:#ffff88;background:#006600}\x1b\\[Complex state transitions]\x1b]8;;\x1b\\\n";
-    testOutput += "    → Click and hold to see active state\n\n";
-    
-    // Test 16: :focus and :focus-visible
-    testOutput += "16. :focus and :focus-visible States (Keyboard Navigation):\n";
-    testOutput += "    Syntax: ?style=<base>;:focus{<focus>};:focus-visible{<focus-visible>}\n";
-    testOutput += "    :focus          - any focus (mouse or keyboard)\n";
-    testOutput += "    :focus-visible  - keyboard focus only (accessibility)\n";
-    testOutput += "    Example: \x1b]8;;send:focus1?style=color:#0088ff;:focus{color:#ff6600;text-decoration:underline;font-weight:bold}\x1b\\[Tab to focus]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:focus2?style=color:#00aaff;:focus-visible{color:#cc5500;background:#ffffcc;text-decoration:underline wavy;font-weight:bold}\x1b\\[Keyboard focus indicator]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:focus3?style=color:#0088ff;:focus-visible{background:#ffffdd;font-weight:bold}\x1b\\[Accessible focus]\x1b]8;;\x1b\\\n";
-    testOutput += "    → Enable caret mode (Tab), use arrow keys to navigate\n\n";
-    
-    // Test 17: :any-link pseudo-class
-    testOutput += "17. :any-link Pseudo-Class (Unified Link Styling):\n";
-    testOutput += "    Syntax: ?style=:any-link{<properties>}\n";
-    testOutput += "    Applies to both :link and :visited states\n";
-    testOutput += "    Example: \x1b]8;;send:anylink1?style=:any-link{color:#0088ff;text-decoration:underline;font-weight:bold};:hover{color:#ff6600}\x1b\\[Any link state]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:anylink2?style=:any-link{color:#00aadd;font-weight:bold;text-decoration:underline dotted};:hover{color:#ff8800;text-decoration:underline solid}\x1b\\[Dotted→solid]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 18: State cascade
-    testOutput += "18. Full State Cascade (All Pseudo-Classes):\n";
-    testOutput += "    Syntax: Combine all pseudo-classes for complete interactivity\n";
-    testOutput += "    Example: \x1b]8;;send:cascade1?style=:link{color:#0088ff};:visited{color:#bb66dd};:hover{color:#ff6600;background:#e6f2ff;font-weight:bold};:active{color:#ffffff;background:#dd0000}\x1b\\[Full cascade]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:cascade2?style=color:#cc8844;:hover{color:#ffdd00;background:#664400;text-decoration:underline dotted;font-weight:bold};:active{color:#ffaa00;background:#000000}\x1b\\[Brown→yellow→orange]\x1b]8;;\x1b\\\n";
-    testOutput += "    → Try clicking, hovering, and tabbing to see all states\n\n";
-    
-    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
+    testOutput += "🎯 MENUS: Right-click for context menus\n";
+    testOutput += "   JSON: {\"menu\":[{\"Label\":\"command\"}, {\"Item 2\":\"send:item2\"}]}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:simple?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\\x1b\\\\[Simple Menu (2 items)]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:simple?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\x1b\\[Simple Menu (2 items)]\x1b]8;;\x1b\\\n\n";
+    testOutput += "   JSON: {\"menu\":[{\"Action\":\"command\"}, \"-\", {\"Help\":\"send:help\"}]}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:advanced?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\\x1b\\\\[Advanced Menu (with separator)]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:advanced?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\x1b\\[Advanced Menu (with separator)]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // SECTION 5: Real-World Examples
+    // 5. TOOLTIPS: Helpful hints 💬
     // ═══════════════════════════════════════════════════════════════════
-    testOutput += "┌─── SECTION 5: Real-World Examples ────────────────────────────────┐\n\n";
-    
-    // Test 19: Accessibility features
-    testOutput += "19. Accessibility-Focused Links (WCAG 2.1 Compliant):\n";
-    testOutput += "    High contrast colors, clear focus indicators, keyboard navigation\n";
-    testOutput += "    Example: \x1b]8;;send:a11y1?style=color:#0088ff;:focus-visible{text-decoration:underline;font-weight:bold};:hover{color:#ff6600;text-decoration:underline}\x1b\\[High contrast focus]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:a11y2?style=:link{color:#0088ff;text-decoration:underline};:visited{color:#bb66dd;text-decoration:underline}\x1b\\[Always underlined]\x1b]8;;\x1b\\\n";
-    testOutput += "             \x1b]8;;send:a11y3?style=:any-link{color:#0088ff;font-weight:bold};:focus-visible{background:#ffffcc;color:#000000;font-weight:bold}\x1b\\[Keyboard friendly]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 20: Navigation links
-    testOutput += "20. MUD Navigation Links (Consistent Theme):\n";
-    testOutput += "    Base: Bright cyan, Hover: Light cyan with underline, Active: White on blue\n";
-    testOutput += "    Example: \x1b]8;;send:north?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[North]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:south?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[South]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:east?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[East]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:west?style=:any-link{color:#5599ff;font-weight:bold};:hover{color:#aaddff;text-decoration:underline};:active{color:#ffffff;background:#3366cc}\x1b\\[West]\x1b]8;;\x1b\\\n\n";
-    
-    // Test 21: Action links with semantic colors
-    testOutput += "21. Combat Action Links (Semantic Color Coding):\n";
-    testOutput += "    Attack: Red, Defend: Green, Flee: Yellow (with interactive states)\n";
-    testOutput += "    Example: \x1b]8;;send:attack?style=color:#ff5555;font-weight:bold;:hover{color:#ff8888;text-decoration:underline};:active{background:#cc0000;color:#ffffff}\x1b\\[Attack]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:defend?style=color:#55dd55;font-weight:bold;:hover{color:#88ff88;text-decoration:underline};:active{background:#00aa00;color:#ffffff}\x1b\\[Defend]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:flee?style=color:#ffdd55;font-weight:bold;:hover{color:#ffff88;text-decoration:underline};:active{background:#ccaa00;color:#000000}\x1b\\[Flee]\x1b]8;;\x1b\\\n\n";
-    
-    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
+    testOutput += "💬 TOOLTIPS: Hover for helpful information\n";
+    testOutput += "   JSON: {\"style\":{\"color\":\"#9900cc\"},\"tooltip\":\"Fireball: 25 mana, 8-12 damage\"}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:spell1?config={\"style\":{\"color\":\"#9900cc\"},\"tooltip\":\"Fireball: 25 mana, 8-12 damage\"}\\x1b\\\\[Fireball Spell]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:spell1?config={\"style\":{\"color\":\"#9900cc\"},\"tooltip\":\"Fireball: 25 mana, 8-12 damage\"}\x1b\\[Fireball Spell]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:potion?config={\"style\":{\"color\":\"#cc0066\",\"italic\":true},\"tooltip\":\"Health Potion: Restores 50 HP\"}\x1b\\[Health Potion]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // SECTION 6: ANSI Integration (Hybrid Styling)
+    // 6. BACKGROUNDS: Highlight important things 🌟
     // ═══════════════════════════════════════════════════════════════════
-    testOutput += "┌─── SECTION 6: ANSI + CSS Hybrid Styling ──────────────────────────┐\n\n";
-    testOutput += "ANSI escape sequences set the base appearance,\n";
-    testOutput += "CSS pseudo-classes add interactive overlays.\n";
-    testOutput += "Format: ANSI-sequence + OSC8-with-pseudo-classes\n\n";
+    testOutput += "🌟 BACKGROUNDS: Make things stand out\n";
+    testOutput += "   JSON: {\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:warning?config={\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\\x1b\\\\[⚠️ Warning]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:warning?config={\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\x1b\\[⚠️ Warning]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:error?config={\"style\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\[❌ Error]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:success?config={\"style\":{\"bg\":\"#006600\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\[✅ Success]\x1b]8;;\x1b\\\n\n";
     
-    // Test 22: ANSI base with hover
-    testOutput += "22. ANSI Base Color with CSS Hover:\n";
-    testOutput += "    ANSI sets default, CSS :hover changes on mouse-over\n";
-    testOutput += "    Example: \x1b[31;1m\x1b]8;;send:ansi1?style=:hover{color:#ffff00;font-weight:bold}\x1b\\[Red→Yellow on hover]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    // ═══════════════════════════════════════════════════════════════════
+    // 7. COMPLETE: Everything together! ⭐
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "⭐ COMPLETE: Style + Hover + Menu + Tooltip\n";
+    testOutput += "   JSON: {\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\\x1b\\\\[🗡️ Flaming Sword]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\x1b\\[🗡️ Flaming Sword]\x1b]8;;\x1b\\\n\n";
     
-    // Test 23: ANSI cyan with multiple states
-    testOutput += "23. ANSI Cyan with Multi-State Overlay:\n";
-    testOutput += "    Base: ANSI cyan, Hover: Light cyan, Active: White on red, Focus: Wavy underline\n";
-    testOutput += "    Example: \x1b[36;1m\x1b]8;;send:ansi2?style=:hover{color:#88ffff};:active{background:#ff0000;color:#ffffff}\x1b\\[Click and hold]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    // ═══════════════════════════════════════════════════════════════════
+    // 8. REAL WORLD: Common MUD scenarios ⚡
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "⚡ REAL WORLD EXAMPLES:\n\n";
     
-    // Test 24: ANSI green with complete cascade
-    testOutput += "24. ANSI Green with Full State Cascade:\n";
-    testOutput += "    Example: \x1b[32m\x1b]8;;send:ansi3?style=:hover{color:#00ff00;text-decoration:underline};:active{color:#ffff00;background:#006600};:focus{color:#88ff88;text-decoration:underline wavy}\x1b\\[Hover/Click/Tab]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    testOutput += "Navigation: \x1b]8;;send:north?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\[North]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:south?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\[South]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:east?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\[East]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:west?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\[West]\x1b]8;;\x1b\\\n\n";
     
-    // Test 25: ANSI background preservation
-    testOutput += "25. ANSI Background Preservation:\n";
-    testOutput += "    ANSI background persists, only text color changes on hover\n";
-    testOutput += "    Example: \x1b[30;43m\x1b]8;;send:ansi4?style=:hover{color:#ff6600;font-weight:bold}\x1b\\[Black→Orange on yellow]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    testOutput += "Combat: \x1b]8;;send:attack?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true,\"hover\":{\"bg\":\"#ffcccc\",\"color\":\"#000000\"}},\"menu\":[{\"Quick Strike\":\"send:quick\"},{\"Power Attack\":\"send:power\"},\"-\",{\"Feint\":\"send:feint\"}]}\x1b\\[⚔️ Attack]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:defend?config={\"style\":{\"color\":\"#006600\",\"bold\":true,\"hover\":{\"bg\":\"#ccffcc\",\"color\":\"#000000\"}},\"tooltip\":\"Defensive stance - reduces damage by 50%\"}\x1b\\[🛡️ Defend]\x1b]8;;\x1b\\\n\n";
     
-    // Test 26: ANSI underline with CSS decoration
-    testOutput += "26. ANSI Underline with CSS Decoration Color:\n";
-    testOutput += "    Example: \x1b[34;4m\x1b]8;;send:ansi5?style=:hover{color:#6699ff;text-decoration:underline #ff0000}\x1b\\[Blue→Light blue (red underline)]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    testOutput += "RPG Items: \x1b]8;;send:examine?config={\"style\":{\"color\":\"#cc6600\",\"italic\":true,\"hover\":{\"bg\":\"#ffe6cc\",\"color\":\"#000000\"}},\"tooltip\":\"Magic sword with fire enchantment\"}\x1b\\[🗡️ Flaming Blade]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:bag?config={\"style\":{\"color\":\"#6600cc\",\"hover\":{\"color\":\"#9933ff\",\"underline\":true}},\"menu\":[{\"Open\":\"send:open\"},{\"Sort\":\"send:sort\"},\"-\",{\"Drop\":\"send:drop\"}]}\x1b\\[🎒 Backpack]\x1b]8;;\x1b\\\n\n";
     
-    // Test 27: Complex ANSI styling
-    testOutput += "27. Complex ANSI (Bold+Italic+Bright Magenta) with CSS:\n";
-    testOutput += "    Example: \x1b[95;1;3m\x1b]8;;send:ansi6?style=:hover{color:#ffaaff;background:#440044};:active{color:#ffffff;background:#880088}\x1b\\[Styled ANSI]\x1b]8;;\x1b\\\x1b[0m\n\n";
+    // ═══════════════════════════════════════════════════════════════════
+    // 9. ADVANCED: Special effects 🚀
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "🚀 ADVANCED: Special decorations and states\n";
+    testOutput += "   JSON: {\"style\":{\"underline\":\"wavy #cc0066\", \"active\":{\"bg\":\"#ffcc00\"}}}\n";
+    testOutput += "   \x1b]8;;send:wavy?config={\"style\":{\"color\":\"#6600cc\",\"underline\":\"wavy #cc0066\"}}\x1b\\[Wavy Underline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:dotted?config={\"style\":{\"color\":\"#cc6600\",\"underline\":\"dotted #006600\"}}\x1b\\[Dotted Underline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:active?config={\"style\":{\"color\":\"#006699\",\"bold\":true,\"hover\":{\"color\":\"#0099cc\"},\"active\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\"}}}\x1b\\[Click & Hold!]\x1b]8;;\x1b\\\n\n";
     
-    // Test 28: Navigation with ANSI
-    testOutput += "28. Consistent Navigation with ANSI Base:\n";
-    testOutput += "    Example: \x1b[96;1m\x1b]8;;send:north?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[North]\x1b]8;;\x1b\\\x1b[0m ";
-    testOutput += "\x1b[96;1m\x1b]8;;send:south?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[South]\x1b]8;;\x1b\\\x1b[0m ";
-    testOutput += "\x1b[96;1m\x1b]8;;send:east?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[East]\x1b]8;;\x1b\\\x1b[0m ";
-    testOutput += "\x1b[96;1m\x1b]8;;send:west?style=:hover{color:#ffffff;background:#0088aa;text-decoration:underline};:active{background:#006688}\x1b\\[West]\x1b]8;;\x1b\\\x1b[0m\n\n";
-    
-    testOutput += "└────────────────────────────────────────────────────────────────────┘\n\n";
-    
-    // Final instructions
-    testOutput += "╔════════════════════════════════════════════════════════════════════╗\n";
-    testOutput += "║                         Testing Tips                               ║\n";
-    testOutput += "╠════════════════════════════════════════════════════════════════════╣\n";
-    testOutput += "║ Mouse:    Hover links to see :hover effects                        ║\n";
-    testOutput += "║           Click to see :active (hold) and :visited (after release) ║\n";
-    testOutput += "║           Right-click links with menus for context menu            ║\n";
-    testOutput += "║                                                                    ║\n";
-    testOutput += "║ Keyboard: Press Tab to enable caret/keyboard navigation mode       ║\n";
-    testOutput += "║           Use arrow keys to move between links                     ║\n";
-    testOutput += "║           Press Enter or Space to activate focused link            ║\n";
-    testOutput += "║           Watch for :focus and :focus-visible indicators           ║\n";
-    testOutput += "║                                                                    ║\n";
-    testOutput += "║ Features: All pseudo-classes follow WCAG 2.1 guidelines            ║\n";
-    testOutput += "║           ANSI + CSS hybrid styling for MUD aesthetics             ║\n";
-    testOutput += "║           Full state cascade for modern web-like interactivity     ║\n";
-    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    // ═══════════════════════════════════════════════════════════════════
+    // THAT'S IT! Simple JSON configuration ✨
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "✨ OSC 8 Format: Easy, powerful, and clean!\n\n";
+    testOutput += "OSC8 Syntax: \\x1b]8;;URI?config={JSON}\\x1b\\\\[Link Text]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "JSON Config: ?config={\"style\":{...}, \"menu\":[...], \"tooltip\":\"...\"}\n";
+    testOutput += "• style: CSS-like properties (color, bg, bold, italic, underline, hover, active, focus)\n";
+    testOutput += "• menu: Array of objects like [{\"Label\":\"command\"}, \"-\", {\"Help\":\"send:help\"}]\n";
+    testOutput += "• tooltip: Helpful text that appears on hover\n\n";
+    testOutput += "Click any link above to test! Right-click for menus! 🚀\n\n";
     
     // Process the test output through the normal text processing pipeline
     std::string testBytes = testOutput.toStdString();
