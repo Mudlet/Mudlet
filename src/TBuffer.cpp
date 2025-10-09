@@ -2697,6 +2697,11 @@ QString TBuffer::jsonStyleObjectToCss(const QJsonObject& styleObj)
         }
     }
     
+    // Text decoration color
+    if (styleObj.contains(qsl("text-decoration-color")) && styleObj[qsl("text-decoration-color")].isString()) {
+        cssProperties << qsl("text-decoration-color:") + styleObj[qsl("text-decoration-color")].toString();
+    }
+    
     // Pseudo-class states
     QStringList pseudoClasses = {qsl("hover"), qsl("active"), qsl("visited"), qsl("link"), qsl("focus"), qsl("focus-visible"), qsl("any-link")};
     
@@ -5240,7 +5245,19 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "\x1b]8;;send:combo?config={\"style\":{\"color\":\"#6600cc\",\"bold\":true,\"italic\":true,\"underline\":true}}\x1b\\[All Three!]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // 3. HOVER: Interactive feedback 💫
+    // 3. DECORATION COLORS: Colorize underlines, overlines, strikethrough 🌈
+    // ═══════════════════════════════════════════════════════════════════
+    testOutput += "🌈 DECORATION COLORS: Add colors to underlines, overlines, and strikethrough\n";
+    testOutput += "   JSON: {\"style\":{\"underline\":true, \"text-decoration-color\":\"red\"}}\n";
+    testOutput += "   OSC8: \\x1b]8;;send:redline?config={\"style\":{\"underline\":true,\"text-decoration-color\":\"red\"}}\\x1b\\\\[Red Underline]\\x1b]8;;\\x1b\\\\\n";
+    testOutput += "   \x1b]8;;send:redline?config={\"style\":{\"underline\":true,\"text-decoration-color\":\"red\"}}\x1b\\[Red Underline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:blueover?config={\"style\":{\"overline\":true,\"text-decoration-color\":\"#0066ff\"}}\x1b\\[Blue Overline]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:greenwave?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"green\"}}\x1b\\[Green Wavy]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:purplestrike?config={\"style\":{\"strikethrough\":true,\"text-decoration-color\":\"purple\"}}\x1b\\[Purple Strike]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:mixeddeco?config={\"style\":{\"underline\":true,\"overline\":true,\"text-decoration-color\":\"orange\",\"color\":\"blue\"}}\x1b\\[Mixed Decorations]\x1b]8;;\x1b\\\n\n";
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // 4. HOVER: Interactive feedback 💫
     // ═══════════════════════════════════════════════════════════════════
     testOutput += "💫 HOVER: Links that respond to your mouse\n";
     testOutput += "   JSON: {\"style\":{\"color\":\"#cc0000\",\"hover\":{\"color\":\"#ff3333\",\"bold\":true}}}\n";
@@ -5249,7 +5266,7 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "\x1b]8;;send:hover2?config={\"style\":{\"color\":\"#0066cc\",\"hover\":{\"bg\":\"#ffff00\",\"color\":\"#000000\"}}}\x1b\\[Hover highlights!]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // 4. MENUS: Right-click power! 🎯
+    // 5. MENUS: Right-click power! 🎯
     // ═══════════════════════════════════════════════════════════════════
     testOutput += "🎯 MENUS: Right-click for context menus\n";
     testOutput += "   JSON: {\"menu\":[{\"Primary Action\":\"send:primary\"}, {\"Item 2\":\"send:item2\"}]}\n";
@@ -5261,7 +5278,7 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "   \x1b]8;;send:dummy2?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\x1b\\[Advanced Menu (tooltip: \"Right-click for menu\")]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // 5. TOOLTIPS: Helpful hints 💬
+    // 6. TOOLTIPS: Helpful hints 💬
     // ═══════════════════════════════════════════════════════════════════
     testOutput += "💬 TOOLTIPS: Hover for helpful information\n";
     testOutput += "   JSON: {\"style\":{\"color\":\"#9900cc\"},\"tooltip\":\"Fireball: 25 mana, 8-12 damage\"}\n";
@@ -5270,7 +5287,7 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "\x1b]8;;send:potion?config={\"style\":{\"color\":\"#cc0066\",\"italic\":true},\"tooltip\":\"Health Potion: Restores 50 HP\"}\x1b\\[Health Potion]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // 6. BACKGROUNDS: Highlight important things 🌟
+    // 7. BACKGROUNDS: Highlight important things 🌟
     // ═══════════════════════════════════════════════════════════════════
     testOutput += "🌟 BACKGROUNDS: Make things stand out\n";
     testOutput += "   JSON: {\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\n";
@@ -5280,7 +5297,7 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "\x1b]8;;send:success?config={\"style\":{\"bg\":\"#006600\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\[✅ Success]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // 7. COMPLETE: Everything together! ⭐
+    // 8. COMPLETE: Everything together! ⭐
     // ═══════════════════════════════════════════════════════════════════
     testOutput += "⭐ COMPLETE: Style + Hover + Menu + Tooltip\n";
     testOutput += "   JSON: {\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\n";
@@ -5288,7 +5305,7 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "   \x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\x1b\\[🗡️ Flaming Sword]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // 8. REAL WORLD: Common MUD scenarios ⚡
+    // 9. REAL WORLD: Common MUD scenarios ⚡
     // ═══════════════════════════════════════════════════════════════════
     testOutput += "⚡ REAL WORLD EXAMPLES:\n\n";
     
@@ -5304,7 +5321,7 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "\x1b]8;;send:bag?config={\"style\":{\"color\":\"#6600cc\",\"hover\":{\"color\":\"#9933ff\",\"underline\":true}},\"menu\":[{\"Open\":\"send:open\"},{\"Sort\":\"send:sort\"},\"-\",{\"Drop\":\"send:drop\"}]}\x1b\\[🎒 Backpack]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
-    // 9. ADVANCED: Special effects 🚀
+    // 10. ADVANCED: Special effects 🚀
     // ═══════════════════════════════════════════════════════════════════
     testOutput += "🚀 ADVANCED: Special decorations and states\n";
     testOutput += "   JSON: {\"style\":{\"underline\":\"wavy #cc0066\", \"active\":{\"bg\":\"#ffcc00\"}}}\n";
@@ -5319,6 +5336,7 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "OSC8 Syntax: \\x1b]8;;URI?config={JSON}\\x1b\\\\[Link Text]\\x1b]8;;\\x1b\\\\\n";
     testOutput += "JSON Config: ?config={\"style\":{...}, \"menu\":[...], \"tooltip\":\"...\"}\n";
     testOutput += "• style: CSS-like properties (color, bg, bold, italic, underline, hover, active, focus)\n";
+    testOutput += "  - text-decoration-color: Sets color for underline/overline/strikethrough decorations\n";
     testOutput += "• menu: Array of objects like [{\"Label\":\"command\"}, \"-\", {\"Help\":\"send:help\"}]\n";
     testOutput += "• tooltip: Helpful text that appears on hover\n\n";
     testOutput += "Click any link above to test! Right-click for menus! 🚀\n\n";
