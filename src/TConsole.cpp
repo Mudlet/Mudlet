@@ -642,6 +642,12 @@ void TConsole::resizeEvent(QResizeEvent* event)
         return;
     }
 
+    // prevents the command line from being hidden
+    if (layoutLayer2) {
+        layoutLayer2->invalidate();
+        layoutLayer2->activate();
+    }
+
     if (mType & (MainConsole|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
