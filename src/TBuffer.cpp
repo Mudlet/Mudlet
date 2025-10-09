@@ -2480,23 +2480,25 @@ void TBuffer::decodeOSC(const QString& sequence)
                 }
                 
                 // Set the tooltip for the link (what shows on hover)
-                // Use custom tooltip if provided, otherwise use the first menu item's label
+                // Use custom tooltip if provided, otherwise show "Right-click for menu" message
                 QString linkTooltip;
                 if (!customTooltip.isEmpty()) {
+                    // Custom tooltip explicitly provided
                     linkTooltip = customTooltip;
-                } else if (!menuHints.isEmpty()) {
-                    linkTooltip = menuHints.first(); // Use first menu item label as tooltip
                 } else {
+                    // Default tooltip for menu links
                     linkTooltip = QObject::tr("Right-click for menu");
                 }
                 
-                // Replace the first hint (tooltip) but keep the command as primary action
-                if (!menuHints.isEmpty()) {
-                    menuHints[0] = linkTooltip;
-                }
+                // For menus, we need tooltip as first hint, then menu labels
+                // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
+                // But menu labels are available for right-click menu display
+                QStringList finalHints;
+                finalHints.append(linkTooltip); // First: tooltip for hover
+                finalHints.append(menuHints);   // Rest: menu labels for right-click menu
                 
                 command = menuCommands;
-                hint = menuHints;
+                hint = finalHints;
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Final menu commands:" << command;
                 qDebug() << "[OSC8] Final menu hints:" << hint;
@@ -5252,10 +5254,11 @@ void TBuffer::injectOSC8TestSequences()
     testOutput += "🎯 MENUS: Right-click for context menus\n";
     testOutput += "   JSON: {\"menu\":[{\"Primary Action\":\"send:primary\"}, {\"Item 2\":\"send:item2\"}]}\n";
     testOutput += "   OSC8: \\x1b]8;;send:dummy?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Simple Action\":\"send:simple\"},{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\\x1b\\\\[Simple Menu (3 items)]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:dummy?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Simple Action\":\"send:simple\"},{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\x1b\\[Simple Menu (3 items)]\x1b]8;;\x1b\\\n\n";
+    testOutput += "   \x1b]8;;send:dummy?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Simple Action\":\"send:simple\"},{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\x1b\\[Simple Menu (tooltip: \"Right-click for menu\")]\x1b]8;;\x1b\\ ";
+    testOutput += "\x1b]8;;send:dummy3?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Custom Action\":\"send:custom\"},{\"Other\":\"send:other\"}],\"tooltip\":\"Custom tooltip overrides default\"}\x1b\\[Menu with Custom Tooltip]\x1b]8;;\x1b\\\n\n";
     testOutput += "   JSON: {\"menu\":[{\"Action\":\"command\"}, \"-\", {\"Help\":\"send:help\"}]}\n";
     testOutput += "   OSC8: \\x1b]8;;send:dummy2?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\\x1b\\\\[Advanced Menu (with separator)]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:dummy2?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\x1b\\[Advanced Menu (with separator)]\x1b]8;;\x1b\\\n\n";
+    testOutput += "   \x1b]8;;send:dummy2?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\x1b\\[Advanced Menu (tooltip: \"Right-click for menu\")]\x1b]8;;\x1b\\\n\n";
     
     // ═══════════════════════════════════════════════════════════════════
     // 5. TOOLTIPS: Helpful hints 💬
