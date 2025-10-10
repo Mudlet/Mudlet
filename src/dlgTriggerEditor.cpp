@@ -8654,6 +8654,11 @@ void dlgTriggerEditor::showError(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+
+    // Reconnect close button to normal hide behavior (not banner dismiss)
+    disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
@@ -8666,6 +8671,11 @@ void dlgTriggerEditor::showWarning(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+
+    // Reconnect close button to normal hide behavior (not banner dismiss)
+    disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
