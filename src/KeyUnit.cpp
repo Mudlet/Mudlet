@@ -72,21 +72,16 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
     bool isMatchFound = false;
     for (auto keyObject : mKeyRootNodeList) {
         // Skip null or invalid key objects during profile closing/destruction
-        if (!keyObject || !keyObject->mpHost || keyObject->mpHost->isClosingDown()) {
+        // Skip null or invalid key objects during profile closing/destruction
+        if (!keyObject || !keyObject->isActive() || (keyObject->mpHost && keyObject->mpHost->isClosingDown())) {
             continue;
         }
 
-        try {
-            if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
-                if (!mRunAllKeyMatches) {
-                    return true;
-                }
-
-                isMatchFound = true;
+        if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
+            if (!mRunAllKeyMatches) {
+                return true;
             }
-        } catch (...) {
-            // Skip corrupted key objects during destruction
-            continue;
+            isMatchFound = true;
         }
     }
 
