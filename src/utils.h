@@ -28,6 +28,8 @@
 #include <QDir>
 #include <QRegularExpression>
 #include <QString>
+#include <QScreen>
+#include <QWidget>
 #include "post_guard.h"
 
 #define qsl(s) QStringLiteral(s)
@@ -91,6 +93,104 @@ public:
             sanitized = sanitized.left(50);
         }
         return sanitized;
+    }
+
+    // Position a dialog on the same screen as its parent window
+    // This improves multi-monitor UX by keeping dialogs with their parent windows
+    static void positionDialogOnParentScreen(QWidget* dialog, QWidget* parent)
+    {
+        if (!dialog || !parent) {
+            return;
+        }
+        
+        // Get the screen containing the parent window
+        // Use mapToGlobal to get the actual screen position of the parent widget
+        QPoint parentPos = parent->mapToGlobal(parent->rect().center());
+        const QScreen* parentScreen = QApplication::screenAt(parentPos);
+        if (!parentScreen) {
+            // Fallback to parent's screen property if screenAt fails
+            parentScreen = parent->screen();
+        }
+        
+        if (parentScreen) {
+            // Get the current screen of the dialog to see if it needs repositioning
+            // Use the dialog's current geometry center for more accurate screen detection
+            QPoint dialogCenter = dialog->mapToGlobal(dialog->rect().center());
+            const QScreen* dialogScreen = QApplication::screenAt(dialogCenter);
+            
+            // If the dialog is not visible or not yet positioned, or if it's on the wrong screen,
+            // then reposition it. This handles cases where the dialog retains old positions.
+            if (!dialog->isVisible() || !dialogScreen || dialogScreen != parentScreen) {
+                centerDialogOnScreen(dialog, parentScreen);
+            }
+        }
+    }
+    
+    // Position a dialog on the same screen as the active profile's console
+    // This version considers the actual console widget position for better accuracy
+    static void positionDialogOnActiveProfileScreen(QWidget* dialog, QWidget* parentWindow, QWidget* activeConsole)
+    {
+        if (!dialog) {
+            return;
+        }
+        
+        // Prefer the active console position if available, otherwise fall back to parent window
+        QWidget* referenceWidget = activeConsole ? activeConsole : parentWindow;
+        if (referenceWidget) {
+            positionDialogOnParentScreen(dialog, referenceWidget);
+        }
+    }
+    
+    // Force reposition a dialog on the specified screen, regardless of current position
+    // This is useful for singleton dialogs that may retain old positions
+    static void forceRepositionDialogOnParentScreen(QWidget* dialog, QWidget* parent)
+    {
+        if (!dialog || !parent) {
+            return;
+        }
+        
+        // Get the screen containing the parent window
+        QPoint parentPos = parent->mapToGlobal(parent->rect().center());
+        const QScreen* parentScreen = QApplication::screenAt(parentPos);
+        if (!parentScreen) {
+            parentScreen = parent->screen();
+        }
+        
+        if (parentScreen) {
+            // Always reposition, regardless of current dialog position
+            centerDialogOnScreen(dialog, parentScreen);
+        }
+    }
+
+    // Position a dialog in the center of the specified screen
+    static void centerDialogOnScreen(QWidget* dialog, const QScreen* screen)
+    {
+        if (!dialog || !screen) {
+            return;
+        }
+        
+        const QRect screenGeometry = screen->availableGeometry();
+        
+        // Ensure dialog has a size first
+        if (dialog->size().isEmpty()) {
+            dialog->adjustSize();
+        }
+        
+        // Calculate center position
+        const QSize dialogSize = dialog->size();
+        const QPoint centerPoint = screenGeometry.center();
+        const QPoint newPos(
+            centerPoint.x() - dialogSize.width() / 2,
+            centerPoint.y() - dialogSize.height() / 2);
+        
+        // Ensure dialog stays within screen bounds
+        QPoint constrainedPos = newPos;
+        constrainedPos.setX(qMax(screenGeometry.left(), 
+                                qMin(newPos.x(), screenGeometry.right() - dialogSize.width())));
+        constrainedPos.setY(qMax(screenGeometry.top(), 
+                                qMin(newPos.y(), screenGeometry.bottom() - dialogSize.height())));
+        
+        dialog->move(constrainedPos);
     }
 };
 

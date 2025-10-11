@@ -1244,6 +1244,85 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_consoleBuffer">
+         <property name="title">
+          <string>Scrollback</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_groupBox_consoleBuffer">
+          <item>
+           <widget class="QFrame" name="frame_console_buffer_size">
+            <property name="frameShape">
+             <enum>QFrame::Shape::NoFrame</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_frame_console_buffer_size">
+             <item>
+              <widget class="QLabel" name="label_console_buffer_size_spinBox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>200</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>&lt;p&gt;Maximum number of lines to keep in the console buffer. When exceeded, older lines are removed in batches.&lt;/p&gt;</string>
+               </property>
+               <property name="text">
+                <string>Main display size:</string>
+               </property>
+               <property name="buddy">
+                <cstring>console_buffer_size_spinBox</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="console_buffer_size_spinBox">
+               <property name="toolTip">
+                <string>&lt;p&gt;Maximum number of lines to keep in the console buffer. Minimum is 100 lines.&lt;/p&gt;</string>
+               </property>
+               <property name="minimum">
+                <number>100</number>
+               </property>
+               <property name="maximum">
+                <number>2147483647</number>
+               </property>
+               <property name="value">
+                <number>10000</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_console_buffer_lines">
+               <property name="text">
+                <string>lines</string>
+               </property>
+               <property name="buddy">
+                <cstring>console_buffer_size_spinBox</cstring>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_useMaxBufferSize">
+            <property name="toolTip">
+             <string>&lt;p&gt;Use the maximum buffer size your system can handle. This will be calculated based on available memory.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Use maximum lines possible</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_doubleClick">
          <property name="title">
           <string>Double-click</string>
@@ -4478,6 +4557,8 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>wrap_at_spinBox</tabstop>
   <tabstop>indent_wrapped_spinBox</tabstop>
   <tabstop>hanging_indent_wrapped_spinBox</tabstop>
+  <tabstop>console_buffer_size_spinBox</tabstop>
+  <tabstop>checkBox_useMaxBufferSize</tabstop>
   <tabstop>doubleclick_ignore_lineedit</tabstop>
   <tabstop>checkBox_USE_IRE_DRIVER_BUGFIX</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>

@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGPACKAGEMANAGER_H
-#define MUDLET_DLGPACKAGEMANAGER_H
-
 /***************************************************************************
- *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,43 +17,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#ifndef MUDLET_DARKTHEME_H
+#define MUDLET_DARKTHEME_H
 
-#include "Host.h"
+#include <QProxyStyle>
+#include <QStyleFactory>
 
-#include "pre_guard.h"
-#include "ui_package_manager.h"
-#include <QDialog>
-#include <QTableWidget>
-#include <QTextBrowser>
-#include "post_guard.h"
+#include "utils.h"
 
-class Host;
-
-
-class dlgPackageManager : public QDialog, public Ui::package_manager
+class DarkTheme : public QProxyStyle
 {
     Q_OBJECT
 
 public:
-    Q_DISABLE_COPY(dlgPackageManager)
-    explicit dlgPackageManager(QWidget* parent, Host*);
-    ~dlgPackageManager() override;
-    void resetPackageTable();
-
-signals:
-    void packageManagerClosing(const QString& profileName);
-
-private slots:
-    void slot_installPackage();
-    void slot_removePackages();
-    void slot_itemClicked(QTableWidgetItem*);
-    void slot_toggleRemoveButton();
-
-private:
-    void closeEvent(QCloseEvent* event) override;
-    void fillAdditionalDetails(const QMap<QString, QString>&);
-
-    Host* mpHost = nullptr;
+    DarkTheme();
+    explicit DarkTheme(QStyle* style);
+    void polish(QPalette& palette) override;
 };
 
-#endif
+#endif // end MUDLET_DARKTHEME_H

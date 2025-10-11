@@ -36,7 +36,7 @@ signals:
 * additionally, use [clazy]([url](https://github.com/KDE/clazy)) for linting as well
 * use braces {} around all statements (ie, `if`'s and so on), even if they are one line
 * use `qsl()` to wrap Qt strings, this ensures they're created at compile time
-* at the same time, don't use a blank `qsl("")` - use `QString()` in that case ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
+* at the same time, don't use a blank `qsl("")` - use `QString()` in that case
 * escape dynamic label information with .toHtmlEscaped() to ensure safe display ([example](https://github.com/Mudlet/Mudlet/pull/6807/files)).
 
 # Internationalization do's and don'ts

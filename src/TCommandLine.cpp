@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -138,6 +138,12 @@ void TCommandLine::processNormalKey(QEvent* event)
 
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
+    // Don't process keybindings if the host is closing down to prevent crashes
+    // when multiple profiles are closed quickly
+    if (mpHost && mpHost->isClosingDown()) {
+        return false;
+    }
+
     if (mpKeyUnit->processDataStream(static_cast<Qt::Key>(keyEvent->key()), static_cast<Qt::KeyboardModifiers>(keyEvent->modifiers()))) {
         keyEvent->accept();
         return true;
@@ -152,6 +158,12 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 // event propagation to the parent widget stops.
 bool TCommandLine::event(QEvent* event)
 {
+    // Don't process events if the host is closing down to prevent crashes
+    // when multiple profiles are closed quickly
+    if (!mpHost || mpHost->isClosingDown()) {
+        return QPlainTextEdit::event(event);
+    }
+    
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
         auto* ke = dynamic_cast<QKeyEvent*>(event);
@@ -182,17 +194,20 @@ bool TCommandLine::event(QEvent* event)
                 mudlet::self()->dactionInputLine->setChecked(false);
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
             }
+
+            mpConsole->mUpperPane->slot_copySelectionToSearchBar();
             mpConsole->mpBufferSearchBox->setFocus();
             mpConsole->mpBufferSearchBox->selectAll();
+
             ke->accept();
             return true;
         }
 
         // Shortcut for keypad keys
-        if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()))) {
+        if ((ke->modifiers() & Qt::KeypadModifier) &&
+            mpKeyUnit->processDataStream(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()))) {
             ke->accept();
             return true;
-
         }
 
         switch (ke->key()) {
@@ -966,16 +981,16 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
-    for (int i = 0; i < commandList.size(); ++i) {
+    for (QString& command : commandList) {
         if (mType != MainCommandLine && mActionFunction) {
-            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, commandList.at(i));
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
-            mpHost->send(commandList.at(i));
+            mpHost->send(command);
         }
         // send command to your MiniConsole
         if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never){
             // This usage of commandList modifies the content!!!
-            mpConsole->printCommand(commandList[i]);
+            mpConsole->printCommand(command);
         }
     }
 

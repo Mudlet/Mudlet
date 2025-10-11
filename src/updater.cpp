@@ -38,7 +38,6 @@ using namespace std::chrono_literals;
 // mac: handled completely outside of Mudlet by Sparkle
 
 Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObject(parent)
-, updateDialog(nullptr)
 , mpInstallOrRestart(new QPushButton(tr("Update")))
 , mUpdateInstalled(false)
 {

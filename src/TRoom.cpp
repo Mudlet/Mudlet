@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2016, 2018, 2020-2021, 2023 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -2100,10 +2101,8 @@ void TRoom::writeJsonCustomExitLine(QJsonObject& exitObj, const QString& directi
 
     QJsonObject customLineObj;
     QJsonArray customLinePointsArray;
-    const QList<QPointF> points{customLines.value(directionString)};
-    for (int i = 0, total = points.count(); i < total; ++i) {
+    for (const QPointF point : customLines.value(directionString)) {
         QJsonArray customLinePointCoordinateArray;
-        const QPointF point{points.at(i)};
         customLinePointCoordinateArray.append(static_cast<double>(point.x()));
         customLinePointCoordinateArray.append(static_cast<double>(point.y()));
         // We might wish to consider storing a z in the future to accommodate 3D
@@ -2151,8 +2150,8 @@ void TRoom::readJsonCustomExitLine(const QJsonObject& exitObj, const QString& di
     }
 
     QList<QPointF> points;
-    for (int i = 0, total = customLinePointsArray.count(); i < total; ++i) {
-        const QJsonArray customLinePointCoordinateArray = customLinePointsArray.at(i).toArray();
+    for (const auto& coordinates : customLinePointsArray) {
+        const QJsonArray customLinePointCoordinateArray = coordinates.toArray();
         if (customLinePointCoordinateArray.size() == 2 && customLinePointCoordinateArray.at(0).isDouble() && customLinePointCoordinateArray.at(1).isDouble()) {
             const QPointF point{customLinePointCoordinateArray.at(0).toDouble(), customLinePointCoordinateArray.at(1).toDouble()};
 
