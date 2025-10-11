@@ -108,7 +108,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
-    connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
+    connect(ui->pushButton_addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
+    connect(ui->pushButton_removeDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_removeDependency);
     connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_importIcon);
     connect(ui->pushButton_removeIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_removeIcon);
     connect(mCancelButton, &QPushButton::clicked, this, &dlgPackageExporter::slot_cancelExport);
