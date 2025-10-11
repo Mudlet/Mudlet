@@ -64,6 +64,7 @@ set(mudlet_SRCS
     dlgColorTrigger.cpp
     dlgComposer.cpp
     dlgConnectionProfiles.cpp
+    dlgCrashReportConsent.cpp
     dlgIRC.cpp
     dlgKeysMainArea.cpp
     dlgMapLabel.cpp
@@ -245,6 +246,7 @@ set(mudlet_HDRS
     dlgColorTrigger.h
     dlgComposer.h
     dlgConnectionProfiles.h
+    dlgCrashReportConsent.h
     dlgIRC.h
     dlgKeysMainArea.h
     dlgMapLabel.h
@@ -722,6 +724,20 @@ endif()
 target_compile_options(mudlet PRIVATE -Wno-deprecated)
 
 # *nix "make install" provision:
+if(APPLE)
+  install(
+    TARGETS crashpad_handler
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/Mudlet.app/Contents/MacOS"
+  )
+endif()
+
+if(WIN32)
+  install(
+    TARGETS crashpad_handler
+    DESTINATION "${CMAKE_INSTALL_PREFIX}"
+  )
+endif()
+
 if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values

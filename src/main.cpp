@@ -41,8 +41,10 @@
 #include <QStringList>
 #include <QTranslator>
 #include "post_guard.h"
+#include <sentry.h>
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
+#include "dlgCrashReportConsent.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 
@@ -272,6 +274,84 @@ int main(int argc, char* argv[])
     // Detect config path before any files are read
     mudlet::self()->setupConfig();
 
+    QSettings* settings = mudlet::getQSettings();
+    const QString sentryDbPath = mudlet::getMudletPath(enums::mudletPathType::mainPath);
+    QFile lastCrashFile(sentryDbPath + "/.sentry-native/last_crash");
+    QString feedbackToSubmit;
+    bool consentGiven = false;
+
+    if (lastCrashFile.exists() && !settings->value("crashReportConsentAsked").toBool()) {
+        dlgCrashReportConsent dialog;
+        if (dialog.exec() == QDialog::Accepted) {
+            settings->setValue("enableCrashReporting", true);
+            mudlet::self()->mEnableCrashReporting = true;
+            feedbackToSubmit = dialog.getFeedback();
+            consentGiven = true;
+        } else {
+            settings->setValue("enableCrashReporting", false);
+            mudlet::self()->mEnableCrashReporting = false;
+            // Clean up crash report so it's not sent later
+            QDir sentryDbDir(sentryDbPath + "/.sentry-native");
+            if (sentryDbDir.exists()) {
+                sentryDbDir.removeRecursively();
+            }
+        }
+        settings->setValue("crashReportConsentAsked", true);
+    }
+
+    if (mudlet::self()->developmentVersion ||
+        mudlet::self()->publicTestVersion ||
+        mudlet::self()->mEnableCrashReporting) {
+        sentry_options_t* options = sentry_options_new();
+        sentry_options_set_dsn(
+            options,
+            "YOUR_SENTRY_DSN_HERE"); // TODO: Replace with actual DSN
+        sentry_options_set_database_path(
+            options, (sentryDbPath + "/.sentry-native").toStdString().c_str());
+        sentry_options_set_release(options,
+                                   app->applicationVersion().toStdString().c_str());
+#ifdef QT_DEBUG
+        sentry_options_set_debug(options, 1);
+#endif
+        // In order to associate user feedback with a crash that just happened, we need
+        // to get the event_id of the crash. However, the feedback is collected after
+        // the application restarts. This before_send callback saves the event_id to a
+        // file just before the crash report is sent. On the next startup, the
+        // application reads this file to associate the user's feedback with the
+        // correct crash event.
+        sentry_options_set_before_send(options, [](sentry_value_t event, void* hint, void* closure) {
+            (void)hint;
+            (void)closure;
+            sentry_uuid_t event_id = sentry_value_get_event_id(event);
+            QFile eventIdFile(mudlet::getMudletPath(enums::mudletPathType::mainPath) + "/.sentry-native/last_event_id");
+            if (eventIdFile.open(QIODevice::WriteOnly)) {
+                char uuid_str[37];
+                sentry_uuid_as_string(&event_id, uuid_str);
+                eventIdFile.write(uuid_str);
+            }
+            return event;
+        }, nullptr);
+
+        sentry_init(options);
+
+        if (consentGiven && !feedbackToSubmit.isEmpty()) {
+            QFile eventIdFile(mudlet::getMudletPath(enums::mudletPathType::mainPath) + "/.sentry-native/last_event_id");
+            if (eventIdFile.open(QIODevice::ReadOnly)) {
+                QByteArray eventIdBytes = eventIdFile.readAll();
+                sentry_uuid_t event_id = sentry_uuid_from_string(eventIdBytes.constData());
+                sentry_value_t user_feedback = sentry_value_new_user_feedback(
+                    &event_id,
+                    "",
+                    "",
+                    feedbackToSubmit.toStdString().c_str()
+                );
+                sentry_capture_feedback(user_feedback);
+                eventIdFile.remove();
+            }
+        }
+        auto sentryClose = qScopeGuard([] { sentry_close(); });
+    }
+
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
     // The third (and fourth if provided) arguments are used to populate the
@@ -310,6 +390,11 @@ int main(int argc, char* argv[])
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
 
+#if defined(QT_DEBUG)
+    const QCommandLineOption crashTest(QStringList() << qsl("crash"), qsl("Trigger a crash for testing purposes"));
+    parser.addOption(crashTest);
+#endif
+
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
@@ -329,6 +414,12 @@ int main(int argc, char* argv[])
         // --squirrel-firstrun for example is given for launch at end of install process.
         std::cout << QCoreApplication::translate("main", "Warning: %1\n").arg(parser.errorText()).toStdString();
     }
+
+#if defined(QT_DEBUG)
+    if (parser.isSet(crashTest)) {
+        sentry_crash();
+    }
+#endif
 
     if (parser.isSet(showHelp)) {
         // Do "help" action

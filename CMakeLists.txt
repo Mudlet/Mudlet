@@ -220,6 +220,14 @@ add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(3rdparty/qt-tags-widget)
 add_subdirectory(translations/translated)
+
+# Sentry integration
+set(SENTRY_INTEGRATION_QT ON CACHE BOOL "Enable Sentry Qt integration")
+if(WIN32 OR APPLE)
+  set(SENTRY_BACKEND "crashpad" CACHE STRING "The Sentry backend to use")
+endif()
+add_subdirectory(3rdparty/sentry-native)
+
 add_subdirectory(src)
 add_subdirectory(test)
 
