@@ -429,9 +429,6 @@ public:
     void logRemainingOutput();
     void appendLog(const QString &text);
     
-    // OSC 8 hyperlink testing function - triggered by secret phrase
-    void injectOSC8TestSequences();
-    
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
 

@@ -3206,16 +3206,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (sub_end < 0) {
         return;
     }
-    
-    // Check for OSC 8 test trigger phrase (secret phrase from StickMUD)
-    if (text.contains("!test-osc8-hyperlinks")) {
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Trigger phrase detected, injecting test sequences";
-#endif
-        injectOSC8TestSequences();
-        return; // Don't display the trigger phrase itself
-    }
-    
+        
     // Check for OSC 8 documentation examples trigger phrase
     if (text.contains("!osc8-docs")) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5220,144 +5211,6 @@ void TBuffer::clearSearchHighlights()
     }
 }
 
-void TBuffer::injectOSC8TestSequences()
-{
-    // Inject simple, progressive JSON OSC 8 test sequences
-#if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] injectOSC8TestSequences() called - JSON-only format";
-#endif
-
-    QString testOutput = "\n╔════════════════════════════════════════════════════════════════════╗\n";
-    testOutput += "║                    OSC 8 JSON Hyperlinks - SIMPLE & POWERFUL       ║\n";
-    testOutput += "╚════════════════════════════════════════════════════════════════════╝\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 1. COLORS: High contrast colors that work on any background 🎨
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "🎨 COLORS: Works on light AND dark backgrounds\n";
-    testOutput += "   JSON: {\"style\":{\"color\":\"#cc0000\"}}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:red?config={\"style\":{\"color\":\"#cc0000\"}}\\x1b\\\\[Red Link]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:red?config={\"style\":{\"color\":\"#cc0000\"}}\x1b\\[Red Link]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:blue?config={\"style\":{\"color\":\"#0066cc\"}}\x1b\\[Blue Link]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:green?config={\"style\":{\"color\":\"#006600\"}}\x1b\\[Green Link]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:purple?config={\"style\":{\"color\":\"#6600cc\"}}\x1b\\[Purple Link]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 2. FORMATTING: Bold, italic, underline 💪
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "💪 FORMATTING: Text styles\n";
-    testOutput += "   JSON: {\"style\":{\"bold\":true, \"italic\":true, \"underline\":true}}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:bold?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true}}\\x1b\\\\[Bold Red]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:bold?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true}}\x1b\\[Bold Red]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:italic?config={\"style\":{\"color\":\"#0066cc\",\"italic\":true}}\x1b\\[Italic Blue]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:underline?config={\"style\":{\"color\":\"#006600\",\"underline\":true}}\x1b\\[Underlined]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:combo?config={\"style\":{\"color\":\"#6600cc\",\"bold\":true,\"italic\":true,\"underline\":true}}\x1b\\[All Three!]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 3. DECORATION COLORS: Colorize underlines, overlines, strikethrough 🌈
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "🌈 DECORATION COLORS: Add colors to underlines, overlines, and strikethrough\n";
-    testOutput += "   JSON: {\"style\":{\"underline\":true, \"text-decoration-color\":\"red\"}}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:redline?config={\"style\":{\"underline\":true,\"text-decoration-color\":\"red\"}}\\x1b\\\\[Red Underline]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:redline?config={\"style\":{\"underline\":true,\"text-decoration-color\":\"red\"}}\x1b\\[Red Underline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:blueover?config={\"style\":{\"overline\":true,\"text-decoration-color\":\"#0066ff\"}}\x1b\\[Blue Overline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:greenwave?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"green\"}}\x1b\\[Green Wavy]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:purplestrike?config={\"style\":{\"strikethrough\":true,\"text-decoration-color\":\"purple\"}}\x1b\\[Purple Strike]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:mixeddeco?config={\"style\":{\"underline\":true,\"overline\":true,\"text-decoration-color\":\"orange\",\"color\":\"blue\"}}\x1b\\[Mixed Decorations]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 4. HOVER: Interactive feedback 💫
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "💫 HOVER: Links that respond to your mouse\n";
-    testOutput += "   JSON: {\"style\":{\"color\":\"#cc0000\",\"hover\":{\"color\":\"#ff3333\",\"bold\":true}}}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:hover1?config={\"style\":{\"color\":\"#cc0000\",\"hover\":{\"color\":\"#ff3333\",\"bold\":true}}}\\x1b\\\\[Hover turns bold!]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:hover1?config={\"style\":{\"color\":\"#cc0000\",\"hover\":{\"color\":\"#ff3333\",\"bold\":true}}}\x1b\\[Hover turns bold!]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:hover2?config={\"style\":{\"color\":\"#0066cc\",\"hover\":{\"bg\":\"#ffff00\",\"color\":\"#000000\"}}}\x1b\\[Hover highlights!]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 5. MENUS: Right-click power! 🎯
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "🎯 MENUS: Right-click for context menus\n";
-    testOutput += "   JSON: {\"menu\":[{\"Primary Action\":\"send:primary\"}, {\"Item 2\":\"send:item2\"}]}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:dummy?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Simple Action\":\"send:simple\"},{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\\x1b\\\\[Simple Menu (3 items)]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:dummy?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Simple Action\":\"send:simple\"},{\"View Details\":\"send:view\"},{\"Edit Item\":\"send:edit\"}]}\x1b\\[Simple Menu (tooltip: \"Right-click for menu\")]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:dummy3?config={\"style\":{\"color\":\"#cc6600\"},\"menu\":[{\"Custom Action\":\"send:custom\"},{\"Other\":\"send:other\"}],\"tooltip\":\"Custom tooltip overrides default\"}\x1b\\[Menu with Custom Tooltip]\x1b]8;;\x1b\\\n\n";
-    testOutput += "   JSON: {\"menu\":[{\"Action\":\"command\"}, \"-\", {\"Help\":\"send:help\"}]}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:dummy2?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\\x1b\\\\[Advanced Menu (with separator)]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:dummy2?config={\"style\":{\"color\":\"#006699\",\"bold\":true},\"menu\":[{\"Quick Attack\":\"send:attack quick\"},{\"Power Strike\":\"send:attack power\"},\"-\",{\"Flee Battle\":\"send:flee\"},{\"Call for Help\":\"send:help\"}]}\x1b\\[Advanced Menu (tooltip: \"Right-click for menu\")]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 6. TOOLTIPS: Helpful hints 💬
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "💬 TOOLTIPS: Hover for helpful information\n";
-    testOutput += "   JSON: {\"style\":{\"color\":\"#9900cc\"},\"tooltip\":\"Fireball: 25 mana, 8-12 damage\"}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:spell1?config={\"style\":{\"color\":\"#9900cc\"},\"tooltip\":\"Fireball: 25 mana, 8-12 damage\"}\\x1b\\\\[Fireball Spell]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:spell1?config={\"style\":{\"color\":\"#9900cc\"},\"tooltip\":\"Fireball: 25 mana, 8-12 damage\"}\x1b\\[Fireball Spell]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:potion?config={\"style\":{\"color\":\"#cc0066\",\"italic\":true},\"tooltip\":\"Health Potion: Restores 50 HP\"}\x1b\\[Health Potion]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 7. BACKGROUNDS: Highlight important things 🌟
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "🌟 BACKGROUNDS: Make things stand out\n";
-    testOutput += "   JSON: {\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:warning?config={\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\\x1b\\\\[⚠️ Warning]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:warning?config={\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\x1b\\[⚠️ Warning]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:error?config={\"style\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\[❌ Error]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:success?config={\"style\":{\"bg\":\"#006600\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\[✅ Success]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 8. COMPLETE: Everything together! ⭐
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "⭐ COMPLETE: Style + Hover + Menu + Tooltip\n";
-    testOutput += "   JSON: {\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\n";
-    testOutput += "   OSC8: \\x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\\x1b\\\\[🗡️ Flaming Sword]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "   \x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\x1b\\[🗡️ Flaming Sword]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 9. REAL WORLD: Common MUD scenarios ⚡
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "⚡ REAL WORLD EXAMPLES:\n\n";
-    
-    testOutput += "Navigation: \x1b]8;;send:north?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\[North]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:south?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\[South]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:east?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\[East]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:west?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\[West]\x1b]8;;\x1b\\\n\n";
-    
-    testOutput += "Combat: \x1b]8;;send:attack?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true,\"hover\":{\"bg\":\"#ffcccc\",\"color\":\"#000000\"}},\"menu\":[{\"Quick Strike\":\"send:quick\"},{\"Power Attack\":\"send:power\"},\"-\",{\"Feint\":\"send:feint\"}]}\x1b\\[⚔️ Attack]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:defend?config={\"style\":{\"color\":\"#006600\",\"bold\":true,\"hover\":{\"bg\":\"#ccffcc\",\"color\":\"#000000\"}},\"tooltip\":\"Defensive stance - reduces damage by 50%\"}\x1b\\[🛡️ Defend]\x1b]8;;\x1b\\\n\n";
-    
-    testOutput += "RPG Items: \x1b]8;;send:examine?config={\"style\":{\"color\":\"#cc6600\",\"italic\":true,\"hover\":{\"bg\":\"#ffe6cc\",\"color\":\"#000000\"}},\"tooltip\":\"Magic sword with fire enchantment\"}\x1b\\[🗡️ Flaming Blade]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:bag?config={\"style\":{\"color\":\"#6600cc\",\"hover\":{\"color\":\"#9933ff\",\"underline\":true}},\"menu\":[{\"Open\":\"send:open\"},{\"Sort\":\"send:sort\"},\"-\",{\"Drop\":\"send:drop\"}]}\x1b\\[🎒 Backpack]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // 10. ADVANCED: Special effects 🚀
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "🚀 ADVANCED: Special decorations and states\n";
-    testOutput += "   JSON: {\"style\":{\"underline\":\"wavy #cc0066\", \"active\":{\"bg\":\"#ffcc00\"}}}\n";
-    testOutput += "   \x1b]8;;send:wavy?config={\"style\":{\"color\":\"#6600cc\",\"underline\":\"wavy #cc0066\"}}\x1b\\[Wavy Underline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:dotted?config={\"style\":{\"color\":\"#cc6600\",\"underline\":\"dotted #006600\"}}\x1b\\[Dotted Underline]\x1b]8;;\x1b\\ ";
-    testOutput += "\x1b]8;;send:active?config={\"style\":{\"color\":\"#006699\",\"bold\":true,\"hover\":{\"color\":\"#0099cc\"},\"active\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\"}}}\x1b\\[Click & Hold!]\x1b]8;;\x1b\\\n\n";
-    
-    // ═══════════════════════════════════════════════════════════════════
-    // THAT'S IT! Simple JSON configuration ✨
-    // ═══════════════════════════════════════════════════════════════════
-    testOutput += "✨ OSC 8 Format: Easy, powerful, and clean!\n\n";
-    testOutput += "OSC8 Syntax: \\x1b]8;;URI?config={JSON}\\x1b\\\\[Link Text]\\x1b]8;;\\x1b\\\\\n";
-    testOutput += "JSON Config: ?config={\"style\":{...}, \"menu\":[...], \"tooltip\":\"...\"}\n";
-    testOutput += "• style: CSS-like properties (color, bg, bold, italic, underline, hover, active, focus)\n";
-    testOutput += "  - text-decoration-color: Sets color for underline/overline/strikethrough decorations\n";
-    testOutput += "• menu: Array of objects like [{\"Label\":\"command\"}, \"-\", {\"Help\":\"send:help\"}]\n";
-    testOutput += "• tooltip: Helpful text that appears on hover\n\n";
-    testOutput += "Click any link above to test! Right-click for menus! 🚀\n\n";
-    
-    // Process the test output through the normal text processing pipeline
-    std::string testBytes = testOutput.toStdString();
-#if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] About to process test sequences through translateToPlainText, length:" << testBytes.length();
-#endif
-    translateToPlainText(testBytes, true); // Mark as from server
-}
-
 void TBuffer::injectOSC8DocumentationExamples()
 {
     // Inject OSC 8 hyperlink examples matching the documentation structure
@@ -5529,8 +5382,7 @@ void TBuffer::injectOSC8DocumentationExamples()
     // Summary
     // ═══════════════════════════════════════════════════════════════════
     output += "══════════════════════════════════════════════════════════════════════\n\n";
-    output += "💡 TIP: Use 'say !test-osc8-hyperlinks' for the full interactive test suite\n\n";
-    output += "Documentation: https://wiki.mudlet.org/w/Manual:Technical_Manual#OSC_8\n";
+    output += "Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8\n";
     output += "All examples above are clickable - try them!\n\n";
     
     // Process the output through the normal text processing pipeline
