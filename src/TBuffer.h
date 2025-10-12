@@ -431,6 +431,9 @@ public:
     
     // OSC 8 hyperlink testing function - triggered by secret phrase
     void injectOSC8TestSequences();
+    
+    // OSC 8 hyperlink documentation examples - triggered by secret phrase
+    void injectOSC8DocumentationExamples();
 
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
