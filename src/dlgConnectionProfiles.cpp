@@ -1241,8 +1241,8 @@ void dlgConnectionProfiles::fillout_form()
         }
 #endif
     } else {
-        pItem = new QListWidgetItem();
         for (const QString& onlyShownPredefinedProfile : onlyShownPredefinedProfiles) {
+            pItem = new QListWidgetItem();
             auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
             setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
         }
@@ -2043,7 +2043,6 @@ void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name
 
 void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QString& mudServer, const QString& serverDescription, const QString& iconFileName)
 {
-    pItem = new QListWidgetItem();
     setItemName(pItem, mudServer);
 
     listWidget_profiles->addItem(pItem);

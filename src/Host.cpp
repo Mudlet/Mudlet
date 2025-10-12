@@ -372,6 +372,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    // Mark the host as closing down to prevent keybinding processing during destruction
+    mIsClosingDown = true;
+
+    // This needs to be cleared here while the Host object is still valid,
+    // otherwise it'll be cleared when the Host object is being destroyed,
+    // which can lead to a crash when closing multiple profiles at once.
+    mpLastCommandLineUsed.clear();
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
