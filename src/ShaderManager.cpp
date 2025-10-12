@@ -33,8 +33,6 @@
 
 ShaderManager::ShaderManager(ResourceManager* resourceManager, QObject* parent)
     : QObject(parent)
-    , mFileWatcher(nullptr)
-    , mReloadTimer(nullptr)
     , mDevelopmentMode(false)
     , mInitialized(false)
     , mUniformMVP(-1)

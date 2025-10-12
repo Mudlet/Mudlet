@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -74,44 +75,35 @@ bool MxpTag::isNamed(const QString& tagName) const
 
 QString MxpEndTag::toString() const
 {
-    QString result;
-    result.append("</");
-    result.append(name);
-    result.append(">");
-    return result;
+    return qsl("</%1>").arg(name);
 }
 
 QString MxpStartTag::toString() const
 {
-    QString result;
-    result.append('<');
-    result.append(name);
+    QString result = qsl("<") + name;
+
     for (const auto& attrName : mAttrsNames) {
-        result.append(' ');
-        if (attrName.contains(" ") || attrName.contains("<")) {
-            result.append('"');
-            result.append(attrName);
-            result.append('"');
+        result += ' ';
+
+        // Need to quote the attribute name if it contains space or '<'
+        if (attrName.contains(' ') || attrName.contains('<')) {
+            result += qsl("\"%1\"").arg(attrName);
         } else {
-            result.append(attrName);
+            result += attrName;
         }
 
         const auto& attr = getAttribute(attrName);
         if (attr.hasValue()) {
-            result.append('=');
-
             const auto& val = attr.getValue();
-            result.append('"');
-            result.append(val);
-            result.append('"');
+            result += qsl("=\"%1\"").arg(val);
         }
     }
 
     if (mIsEmpty) {
-        result.append(" /");
+        result += qsl(" /");
     }
 
-    result.append('>');
+    result += qsl(">");
 
     return result;
 }

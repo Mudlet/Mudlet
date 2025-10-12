@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,32 +36,21 @@ void markQString(QString* text)
 
     // Trim text, check first and last character for ^ or $
     QString trimmedText = text->trimmed();
-    if (trimmedText.length() == 0) {
+    if (trimmedText.isEmpty()) {
         return;
     }
 
     // Mark leading spaces before ^ with a middle dot
-    if (trimmedText.at(0) == '^') {
-        for (int i = 0; i < text->length(); i++){
-            if (text->at(i) == ' '){
-                text->replace(i, 1, middleDot);
-            } else {
-                break;
-            }
-        }
+    if (trimmedText.front() == '^') {
+        auto firstNonSpace = std::find_if_not(text->begin(), text->end(), [](QChar c) {return c == QChar(' '); });
+        std::replace(text->begin(), firstNonSpace, QChar(' '), middleDot);
     }
 
     // Mark trailing spaces after $ with a middle dot
-    if (trimmedText.at(trimmedText.length()-1) == '$') {
-        for (int i = text->length() - 1; i > -1; i--){
-            if (text->at(i) == ' '){
-                text->replace(i, 1, middleDot);
-            } else {
-                break;
-            }
-        }
+    if (trimmedText.back() == '$') {
+        auto lastNonSpace = std::find_if_not(text->rbegin(), text->rend(), [](QChar c) {return c == QChar(' '); });
+        std::replace(lastNonSpace, text->rend(), QChar(' '), middleDot);
     }
-
 }
 
 void markQLineEdit(QLineEdit* lineEdit)

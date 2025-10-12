@@ -42,6 +42,7 @@
 #include <QLabel>
 #include <QPointer>
 #include <QSaveFile>
+#include <QSplitter>
 #include <QVideoWidget>
 #include <QWidget>
 #include "post_guard.h"
@@ -411,6 +412,7 @@ public:
     bool mHScrollBarEnabled = false;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
     QVideoWidget* mpVideoWidget = nullptr;
+    QSplitter* commandSplitter = nullptr;
 
 public slots:
     void slot_searchBufferUp();
@@ -421,6 +423,7 @@ public slots:
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
     void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleTimeStamps(const bool);
+    void slot_saveCommandSearchSettings();
 
 signals:
     void resized(QResizeEvent* event);
@@ -442,6 +445,7 @@ private slots:
 private:
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
+    void restoreCommandSearchSettings();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;

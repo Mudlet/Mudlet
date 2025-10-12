@@ -65,8 +65,8 @@ public:
     bool checkIfNew();
     void unmarkAsNew();
 
-    bool exportItem;
-    bool mModuleMasterFolder;
+    bool exportItem = true;
+    bool mModuleMasterFolder = false;
     bool mIsNew = true;
 
 private:
@@ -75,9 +75,9 @@ private:
     QString mScript;
     QString mFuncName;
     QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled;
+    bool mNeedsToBeCompiled = true;
     QStringList mEventHandlerList;
-    bool mModuleMember;
+    bool mModuleMember = false;
     std::optional<QString> mLoadingError;
 };
 

@@ -7,7 +7,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
+ *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1157,8 +1157,8 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         }
 
         // else plain, raw ASCII, we hope!
-        for (int i = 0, total = dataQString.size(); i < total; ++i) {
-            if (dataQString.at(i).row() || dataQString.at(i).cell() > 127) {
+        for (const QChar c : dataQString) {
+            if (c.row() || c.cell() > 127) {
                 return warnArgumentValue(L, __func__, qsl(
                     "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of 'ASCII'")
                     .arg(data.constData()));

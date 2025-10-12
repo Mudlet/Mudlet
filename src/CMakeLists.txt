@@ -57,6 +57,7 @@ set(mudlet_SRCS
     AliasUnit.cpp
     AltFocusMenuBarDisable.cpp
     ctelnet.cpp
+    DarkTheme.cpp
     discord.cpp
     dlgAboutDialog.cpp
     dlgActionMainArea.cpp
@@ -238,6 +239,7 @@ set(mudlet_HDRS
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
+    DarkTheme.h
     discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h

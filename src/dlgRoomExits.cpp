@@ -3,6 +3,7 @@
  *   Copyright (C) 2013-2016, 2021 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1002,10 +1003,8 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
 
 void dlgRoomExits::setActionOnExit(QLineEdit* pExitLineEdit, QAction* pWantedAction) const
 {
-    auto pActions = pExitLineEdit->actions();
     bool found = false;
-    for (int index = 0, total = pActions.count(); index < total; ++index) {
-        auto pAction = pActions[index];
+    for (auto pAction : pExitLineEdit->actions()) {
         if (pAction && mAllExitActionsSet.contains(pAction)) {
             // This is one of the set we are looking for.
             if (pAction != pWantedAction) {
@@ -1028,9 +1027,7 @@ void dlgRoomExits::setActionOnExit(QLineEdit* pExitLineEdit, QAction* pWantedAct
 // icon on the ExitRoomID - this is actually only used for the special exits:
 QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
 {
-    auto pActions = pExitLineEdit->actions();
-    for (int index = 0, total = pActions.count(); index < total; ++index) {
-        auto pAction = pActions[index];
+    for (auto pAction : pExitLineEdit->actions()) {
         if (pAction && mAllExitActionsSet.contains(pAction)) {
             // This is one of the four we are looking for.
             return pAction;

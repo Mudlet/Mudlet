@@ -42,24 +42,6 @@
 
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
-, mPackageName(QString())
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpKey(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpVar(nullptr)
-, gotTrigger(false)
-, gotTimer(false)
-, gotAlias(false)
-, gotKey(false)
-, gotAction(false)
-, gotScript(false)
-, module(0)
-, mMaxRoomId(0)
-, mVersionMajor(1) // 0 to 255
-, mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
 }
 
@@ -1130,6 +1112,10 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mWrapIndentCount = readElementText().toInt();
             } else if (name() == qsl("wrapHangingIndentCount")) {
                 pHost->mWrapHangingIndentCount = readElementText().toInt();
+            } else if (name() == qsl("consoleBufferSize")) {
+                pHost->mConsoleBufferSize = readElementText().toInt();
+            } else if (name() == qsl("useMaxConsoleBufferSize")) {
+                pHost->mUseMaxConsoleBufferSize = (readElementText() == qsl("yes"));
             } else if (name() == qsl("mCommandSeparator")) {
                 pHost->mCommandSeparator = readElementText();
             } else if (name() == qsl("mCommandLineFgColor")) {
