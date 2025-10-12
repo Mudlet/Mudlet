@@ -298,7 +298,9 @@ private:
     QString getNewEnvironOSCHyperlinks();
     QString getNewEnvironOSCHyperlinksSend();
     QString getNewEnvironOSCHyperlinksPrompt();
-    QString getNewEnvironOSCHyperlinksStyle();
+    QString getNewEnvironOSCHyperlinksStyleBasic();
+    QString getNewEnvironOSCHyperlinksStyleStates();
+    QString getNewEnvironOSCHyperlinksTooltip();
     QString getNewEnvironOSCHyperlinksMenu();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
