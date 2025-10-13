@@ -79,6 +79,7 @@ public:
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     bool mRegisteredAnonymousLuaFunction = false;
+    QPointer<Host> mpHost;
 
 private:
     TKey() = default;
@@ -102,7 +103,6 @@ private:
 
     QString mScript;
     QString mFuncName;
-    QPointer<Host> mpHost;
     bool mNeedsToBeCompiled = true;
     bool mModuleMember = false;
 };

@@ -42,24 +42,6 @@
 
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
-, mPackageName(QString())
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpKey(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpVar(nullptr)
-, gotTrigger(false)
-, gotTimer(false)
-, gotAlias(false)
-, gotKey(false)
-, gotAction(false)
-, gotScript(false)
-, module(0)
-, mMaxRoomId(0)
-, mVersionMajor(1) // 0 to 255
-, mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
 }
 

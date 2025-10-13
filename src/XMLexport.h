@@ -93,12 +93,12 @@ public:
 
 private:
     QPointer<Host> mpHost;
-    TTrigger* mpTrigger;
-    TTimer* mpTimer;
-    TAlias* mpAlias;
-    TAction* mpAction;
-    TScript* mpScript;
-    TKey* mpKey;
+    TTrigger* mpTrigger{nullptr};
+    TTimer* mpTimer{nullptr};
+    TAlias* mpAlias{nullptr};
+    TAction* mpAction{nullptr};
+    TScript* mpScript{nullptr};
+    TKey* mpKey{nullptr};
     pugi::xml_document mExportDoc;
 
     void writeTriggerPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
