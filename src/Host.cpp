@@ -372,6 +372,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    // Mark the host as closing down to prevent keybinding processing during destruction
+    mIsClosingDown = true;
+
+    // This needs to be cleared here while the Host object is still valid,
+    // otherwise it'll be cleared when the Host object is being destroyed,
+    // which can lead to a crash when closing multiple profiles at once.
+    mpLastCommandLineUsed.clear();
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
@@ -4355,23 +4363,48 @@ void Host::setFocusOnHostActiveCommandLine()
     }
 
     mFocusTimerRunning = true;
-    QTimer::singleShot(0, this, [this]() {
+    
+    // Lambda to set focus on command line
+    auto setCommandLineFocus = [this]() {
         auto pCommandLine = activeCommandLine();
+        TCommandLine* targetCommandLine = nullptr;
+        
         if (pCommandLine) {
             pCommandLine->activateWindow();
             pCommandLine->console()->show();
             pCommandLine->console()->raise();
             pCommandLine->console()->repaint();
-            pCommandLine->setFocus(Qt::OtherFocusReason);
+            targetCommandLine = pCommandLine;
         } else {
             mpConsole->mpCommandLine->activateWindow();
             mpConsole->show();
             mpConsole->raise();
             mpConsole->repaint();
-            mpConsole->mpCommandLine->setFocus(Qt::OtherFocusReason);
+            targetCommandLine = mpConsole->mpCommandLine;
         }
+        
+        if (targetCommandLine) {
+            targetCommandLine->setFocus(Qt::OtherFocusReason);
+            
+            // For Steam Deck and other environments where focus might be unreliable,
+            // add additional focus attempts with slight delays
+            QTimer::singleShot(10, this, [targetCommandLine]() {
+                if (targetCommandLine && !targetCommandLine->hasFocus()) {
+                    targetCommandLine->setFocus(Qt::OtherFocusReason);
+                }
+            });
+            
+            QTimer::singleShot(50, this, [targetCommandLine]() {
+                if (targetCommandLine && !targetCommandLine->hasFocus()) {
+                    targetCommandLine->setFocus(Qt::OtherFocusReason);
+                }
+            });
+        }
+        
         mFocusTimerRunning = false;
-    });
+    };
+    
+    QTimer::singleShot(0, this, setCommandLineFocus);
 }
 
 void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
