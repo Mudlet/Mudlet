@@ -102,7 +102,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 #if defined(INCLUDE_3DMAPPER)
     connect(pushButton_3D, &QAbstractButton::clicked, this, &dlgMapper::slot_toggle3DView);
     if (mpHost->mShow3DView) {
-        slot_toggle3DView(true);
+        // Defer 3D view initialization until widget is fully constructed and added to parent
+        QTimer::singleShot(0ms, this, [this]() {
+            slot_toggle3DView(true);
+        });
     }
 #else
     pushButton_3D->hide();
