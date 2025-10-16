@@ -113,49 +113,27 @@ fi
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
-
-# To determine which system libraries have to be copied in it requires
-# continually trying to run the executable on the target type system
-# and adding in the libraries to the same directory and repeating that
-# until the executable actually starts to run. Alternatively running
-# ntldd ./mudlet.exe | grep "/mingw64" inside an Mingw63 shell as appropriate 
-# will produce the libraries that are likely to be needed below. Unfortunately
-# this process is a little recursive in that you may have to repeat the
-# process for individual librarys. For ones used by lua modules this
-# can manifest as being unable to "require" the library within lua
-# and doing the above "ntldd" check revealed that, for instance,
-# "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
-#
-echo ""
-echo "Examining Mudlet application to identify other needed libraries..."
-NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
-  | /usr/bin/grep -v "Qt6" \
-  | /usr/bin/grep -i "mingw" \
-  | /usr/bin/cut -d ">" -f2 \
-  | /usr/bin/cut -d "(" -f1 \
-  | /usr/bin/sort \
-  | /usr/bin/uniq)
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "--multimedia" "./mudlet.exe"
 
 echo ""
-echo "Copying these identified libraries..."
-for LIB in ${NEEDED_LIBS} ; do
-  cp -v -p "${LIB}" . ;
+echo "Examining Mudlet application and Qt plugins to identify other needed libraries..."
+# Note the "mingw64" will need to be modified if used for a different environment
+# than the MINGW64 one - but making the value to match against a bash variable
+# in this pipeline has proven impossible! - Slysven
+mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive ./mudlet.exe \
+  ./{generic,iconengines,imageformats,multimedia,networkinformation,platforms,styles,texttospeech,tls}/*.dll \
+  | /usr/bin/grep -v 'Qt6' \
+  | /usr/bin/grep 'mingw64' \
+  | /usr/bin/grep 'bin' \
+  | /usr/bin/cut -d '>' -f2 \
+  | /usr/bin/cut -d '(' -f1 \
+  | /usr/bin/sort -u)
+
+echo ""
+echo "Copying identified libraries from Mudlet executable and plugins..."
+for LIB in ${NEEDED_LIBS[@]}; do
+  cp -p -v -t . "$(/usr/bin/cygpath -au "${LIB}")"
 done
-
-echo ""
-echo "Copying other, known to be needed, libraries in..."
-# libjasper to libwebpdemux-2 are additional image format handlers that Qt can
-# use if they are present.
-# libsqlite3 and libyajl are needed by lua modules (luasql-sqlite3) and at Mudlet run time.
-cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libjasper.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libjpeg-8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libtiff-6.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libwebp-7.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libwebpdemux-2.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
 
 echo ""
 echo "Copying OpenSSL libraries in..."
@@ -164,7 +142,6 @@ echo "Copying OpenSSL libraries in..."
 cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
-
 
 echo ""
 echo "Copying discord-rpc library in..."
