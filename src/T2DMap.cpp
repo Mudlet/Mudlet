@@ -50,6 +50,7 @@
 
 #include "mapInfoContributorManager.h"
 
+
 // qsls cannot be shared so define a common instance to use when
 // there are multiple places where they are used within this file:
 
@@ -77,6 +78,55 @@ const QString& key_icon_line_dashDotDot = qsl(":/icons/dash-dot-dot-line.png");
 
 const QString& key_dialog_ok_apply = qsl("dialog-ok-apply");
 const QString& key_dialog_cancel = qsl("dialog-cancel");
+
+void T2DMap::registerInteractionHandler(IInteractionHandler* handler, int priority)
+{
+    mInteractionDispatcher.registerHandler(handler, priority);
+}
+
+void T2DMap::InteractionDispatcher::registerHandler(IInteractionHandler* handler, int priority)
+{
+    if (!handler) {
+        return;
+    }
+
+    for (auto iterator = mHandlers.begin(); iterator != mHandlers.end(); ++iterator) {
+        if (iterator->handler == handler) {
+            iterator = mHandlers.erase(iterator);
+            break;
+        }
+    }
+
+    HandlerEntry entry;
+    entry.priority = priority;
+    entry.handler = handler;
+
+    auto insertIterator = mHandlers.begin();
+    while (insertIterator != mHandlers.end() && insertIterator->priority >= priority) {
+        ++insertIterator;
+    }
+
+    mHandlers.insert(insertIterator, entry);
+}
+
+bool T2DMap::InteractionDispatcher::dispatch(MapInteractionContext& context) const
+{
+    for (const auto& entry : mHandlers) {
+        if (!entry.handler) {
+            continue;
+        }
+
+        if (!entry.handler->matches(context)) {
+            continue;
+        }
+
+        if (entry.handler->handle(context)) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 const QString& key_icon_dialog_ok_apply = qsl(":/icons/dialog-ok-apply.png");
 const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
@@ -2548,6 +2598,10 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 
     auto context = buildInteractionContext(event);
 
+    if (mInteractionDispatcher.dispatch(context)) {
+        return;
+    }
+
     if (context.isMoveLabelActive) {
         mMoveLabel = false;
     }
@@ -2991,6 +3045,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         return;
     }
     auto context = buildInteractionContext(event);
+
+    if (mInteractionDispatcher.dispatch(context)) {
+        return;
+    }
+
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
     if (context.buttons & Qt::LeftButton) {
@@ -4338,7 +4397,15 @@ void T2DMap::slot_setArea()
 
 void T2DMap::mouseMoveEvent(QMouseEvent* event)
 {
+    if (!mpMap) {
+        return;
+    }
+
     auto context = buildInteractionContext(event);
+
+    if (mInteractionDispatcher.dispatch(context)) {
+        return;
+    }
 
     if (mpMap->mLeftDown && !mpMap->m2DPanMode && (context.modifiers.testFlag(Qt::AltModifier) || context.isMapViewOnly)) {
         mpMap->m2DPanStart = context.widgetPositionF;

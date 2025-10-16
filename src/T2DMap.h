@@ -41,6 +41,8 @@
 #include <QtConcurrent>
 #include "post_guard.h"
 
+#include <QList>
+
 class Host;
 class TArea;
 class TMap;
@@ -72,6 +74,39 @@ public:
     void wheelEvent(QWheelEvent*) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
+
+    struct MapInteractionContext {
+        QMouseEvent* event = nullptr;
+        Qt::MouseButtons buttons = Qt::NoButton;
+        Qt::MouseButton button = Qt::NoButton;
+        Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+        QPoint widgetPosition;
+        QPointF widgetPositionF;
+        qreal mapX = 0.0;
+        qreal mapY = 0.0;
+        QPointF mapPoint;
+        TArea* area = nullptr;
+        const QSet<int>* multiSelectionSet = nullptr;
+        bool hasMultiSelection = false;
+        bool isMapViewOnly = false;
+        bool isMultiSelectionActive = false;
+        bool isSizingLabel = false;
+        bool isLabelHighlighted = false;
+        bool isRoomBeingMoved = false;
+        bool isMoveLabelActive = false;
+        bool isCustomLineDrawing = false;
+        bool isDialogLocked = false;
+    };
+
+    class IInteractionHandler
+    {
+    public:
+        virtual ~IInteractionHandler() = default;
+        virtual bool matches(const MapInteractionContext& context) const = 0;
+        virtual bool handle(MapInteractionContext& context) = 0;
+    };
+
+    void registerInteractionHandler(IInteractionHandler* handler, int priority);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
     // has been been changed to mMultiSelectionSet which cannot be accessed via
@@ -247,28 +282,22 @@ public slots:
     void slot_exportAreaToImage();
 
 private:
-    struct MapInteractionContext {
-        QMouseEvent* event = nullptr;
-        Qt::MouseButtons buttons = Qt::NoButton;
-        Qt::MouseButton button = Qt::NoButton;
-        Qt::KeyboardModifiers modifiers = Qt::NoModifier;
-        QPoint widgetPosition;
-        QPointF widgetPositionF;
-        qreal mapX = 0.0;
-        qreal mapY = 0.0;
-        QPointF mapPoint;
-        TArea* area = nullptr;
-        const QSet<int>* multiSelectionSet = nullptr;
-        bool hasMultiSelection = false;
-        bool isMapViewOnly = false;
-        bool isMultiSelectionActive = false;
-        bool isSizingLabel = false;
-        bool isLabelHighlighted = false;
-        bool isRoomBeingMoved = false;
-        bool isMoveLabelActive = false;
-        bool isCustomLineDrawing = false;
-        bool isDialogLocked = false;
+    class InteractionDispatcher
+    {
+    public:
+        void registerHandler(IInteractionHandler* handler, int priority);
+        bool dispatch(MapInteractionContext& context) const;
+
+    private:
+        struct HandlerEntry {
+            int priority = 0;
+            IInteractionHandler* handler = nullptr;
+        };
+
+        QList<HandlerEntry> mHandlers;
     };
+
+    InteractionDispatcher mInteractionDispatcher;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
 
