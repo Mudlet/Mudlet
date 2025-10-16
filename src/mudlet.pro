@@ -664,6 +664,7 @@ SOURCES += \
     ShortcutsManager.cpp \
     SingleLineTextEdit.cpp \
     T2DMap.cpp \
+    PanInteractionHandler.cpp \
     TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \
@@ -799,6 +800,7 @@ HEADERS += \
     ShortcutsManager.h \
     SingleLineTextEdit.h \
     T2DMap.h \
+    PanInteractionHandler.h \
     TAccessibleConsole.h \
     TAccessibleTextEdit.h \
     TAction.h \
