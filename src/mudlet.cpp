@@ -678,7 +678,7 @@ void mudlet::init()
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
     connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assignShortcutsFromProfile);
 
-    mpShortcutsManager = new ShortcutsManager();
+    mpShortcutsManager = new ShortcutsManager(this);
     mpShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &mKeySequenceTriggers);
     mpShortcutsManager->registerShortcut(qsl("Show Map"), tr("Show Map"), &mKeySequenceShowMap);
     mpShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &mKeySequenceInputLine);
@@ -5623,7 +5623,7 @@ bool mudlet::migratePasswordsToSecureStorage()
     }
 
     if (!anyMigrationNeeded) {
-        qDebug() << "mudlet::migratePasswordsToSecureStorage() INFO - no migration needed.";
+        qDebug() << "mudlet::migratePasswordsToSecureStorage() INFO - no passwords found in profile data files to migrate.";
     }
 
     // Always emit the signal (either immediately or after migrations complete)

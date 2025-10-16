@@ -33,12 +33,8 @@
 TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget(pW)
 , mpTAction(pA)
-, mVerticalOrientation(false)
 , mpWidget( new QWidget( this ) )
 , mpHost(pHost)
-, mRecordMove(false)
-, mpLayout(nullptr)
-, mItemCount(0)
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);

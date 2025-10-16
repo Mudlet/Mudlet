@@ -4,6 +4,7 @@
  *   Copyright (C) 2014, 2016, 2019-2021, 2023 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1089,14 +1090,14 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
         auto x = static_cast<float>(eventPos.x());
         auto y = static_cast<float>(height()) - static_cast<float>(eventPos.y()); // the opengl origin is at bottom left
         if ((mPanXStart - x) > 1.0f) {
-            if (event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) {
                 slot_shiftCameraRight();
             } else {
                 slot_shiftLeft();
             }
             mPanXStart = x;
         } else if ((mPanXStart - x) < -1.0f) {
-            if (event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) {
                 slot_shiftCameraLeft();
             } else {
                 slot_shiftRight();
@@ -1104,14 +1105,14 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
             mPanXStart = x;
         }
         if ((mPanYStart - y) > 1.0f) {
-            if (event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) {
                 slot_shiftCameraUp();
             } else {
                 slot_shiftUp();
             }
             mPanYStart = y;
         } else if ((mPanYStart - y) < -1.0f) {
-            if (event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) {
                 slot_shiftCameraDown();
             } else {
                 slot_shiftDown();

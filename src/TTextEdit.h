@@ -105,25 +105,25 @@ public:
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
-    int mCursorY;
-    int mCursorX;
+    int mCursorY = 0;
+    int mCursorX = 0;
 
     // Position of "caret", the cursor used for accessibility purposes.
-    int mCaretLine;
-    int mCaretColumn;
+    int mCaretLine = 0;
+    int mCaretColumn = 0;
     // If the current line is shorter than the previous one, hold here the
     // previous column value so that we can return to it if the next line is
     // long enough again.
-    int mOldCaretColumn;
+    int mOldCaretColumn = 0;
 
     QColor mFgColor;
-    bool mIsCommandPopup;
+    bool mIsCommandPopup = false;
     // If true, this TTextEdit is to display the last lines in
     // mpConsole.mpBuffer. This is always true for the lower main window panel
     // but it is RESET when the upper one is scrolled upwards. The name appears
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
-    bool mIsTailMode;
+    bool mIsTailMode = true;
     // The content to use for the current popup (link)
     // Key: is an index stored when the popup is created - this has been
     // changed from the previous "text to show for each popup" to avoid
@@ -176,7 +176,7 @@ private:
 
     int mFontHeight;
     int mFontWidth;
-    bool mForceUpdate;
+    bool mForceUpdate = false;
     const QColor mCaretColor = QColorConstants::Gray;
     const QColor mSearchHighlightFgColor = QColorConstants::Black;
     const QColor mSearchHighlightBgColor = QColorConstants::Yellow;
@@ -187,16 +187,16 @@ private:
     // which one this instance is:
     const bool mIsLowerPane;
     // last line offset rendered
-    int mLastRenderedOffset;
-    bool mMouseTracking;
+    int mLastRenderedOffset = 0;
+    bool mMouseTracking = false;
     // 1/2/3 for single/double/triple click seen so far
-    int  mMouseTrackLevel;
+    int  mMouseTrackLevel = 0;
     bool mCtrlSelecting {};
     // tracks status of the Shift key for keyboard-based selection
     bool mShiftSelection {};
     int mCtrlDragStartY {};
     QPoint mDragStart, mDragSelectionEnd;
-    int mOldScrollPos;
+    int mOldScrollPos = 0;
     // top-left point of the selection
     QPoint mPA;
     // bottom-right point of the selection
@@ -210,8 +210,8 @@ private:
     // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth = 100;
-    int mScreenOffset;
-    int mMaxHRange;
+    int mScreenOffset = 0;
+    int mMaxHRange = 0;
     QElapsedTimer mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
@@ -220,7 +220,7 @@ private:
     // there is no current mechanism to adjust this, sensible values will
     // probably be 1 (so that a tab is just treated as a space), 2, 4 and 8,
     // in the past it was typically 8 and this is what we'll use at present:
-    int mTabStopwidth;
+    int mTabStopwidth = 8;
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     bool mShowAllCodepointIssues = false;

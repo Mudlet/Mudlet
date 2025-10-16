@@ -42,8 +42,7 @@ extern "C" {
 static jmp_buf buf;
 
 LuaInterface::LuaInterface(lua_State* L)
-: depth()
-, mL(L)
+: mL(L)
 {
     varUnit.reset(new VarUnit());
     //set our panic function
