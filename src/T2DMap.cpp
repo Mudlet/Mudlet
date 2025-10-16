@@ -30,7 +30,9 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "LabelInteractionHandler.h"
 #include "PanInteractionHandler.h"
+#include "SelectionRectangleHandler.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -168,6 +170,12 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
+
+    mSelectionRectangleInteractionHandler = std::make_unique<SelectionRectangleHandler>(*this);
+    registerInteractionHandler(mSelectionRectangleInteractionHandler.get(), 200);
+
+    mLabelInteractionHandler = std::make_unique<LabelInteractionHandler>(*this);
+    registerInteractionHandler(mLabelInteractionHandler.get(), 150);
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
@@ -2606,22 +2614,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         return;
     }
 
-    if (context.isMoveLabelActive) {
-        mMoveLabel = false;
-    }
-
-    if (context.button == Qt::LeftButton) {
-        mMultiSelection = false; // End drag-to-select rectangle resizing
-        mHelpMsg.clear();
-        if (mSizeLabel) {
-            mSizeLabel = false;
-            const QRectF labelRect = mMultiRect;
-            createLabel(labelRect);
-        }
-        mMultiRect = QRect(0, 0, 0, 0);
-        update();
-        return;
-    }
+    // Left button release and label move clean-up are handled by interaction handlers.
 
     if (context.button == Qt::RightButton) {
         auto popup = new QMenu(this);
@@ -3157,111 +3150,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             setMouseTracking(false);
             mRoomBeingMoved = false;
-        } else {
-            mPopupMenu = false;
-            // Not in a context menu, so start selection mode - including drag to select if not in viewOnly mode
-            mMultiSelection = !mMapViewOnly;
-            mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
-            if (!mpMap->mpRoomDB->getRoom(mRoomID)) {
-                return;
-            }
-            TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
-            if (!pArea) {
-                return;
-            }
-            const float fx = ((xspan / 2.0) - mMapCenterX) * mRoomWidth;
-            const float fy = ((yspan / 2.0) - mMapCenterY) * mRoomHeight;
-
-            if (!context.modifiers.testFlag(Qt::ControlModifier)) {
-                if (!mMapViewOnly) {
-                    // If control key NOT down then clear selection, and put up helpful text
-                    //: 2D Mapper big, bottom of screen help message
-                    mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...");
-                }
-                mMultiSelectionSet.clear();
-            }
-
-            QSetIterator<int> itRoom(pArea->getAreaRooms());
-            while (itRoom.hasNext()) { // Scan to find rooms in selection
-                const int currentAreaRoom = itRoom.next();
-                TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
-                if (!room) {
-                    continue;
-                }
-                const int rx = room->x() * mRoomWidth + fx;
-                const int ry = room->y() * -1 * mRoomHeight + fy;
-                const int rz = room->z();
-
-                    const int mx = context.widgetPosition.x();
-                    const int my = context.widgetPosition.y();
-                    const int mz = mMapCenterZ;
-                    if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
-                        if (mMultiSelectionSet.contains(currentAreaRoom) && context.modifiers.testFlag(Qt::ControlModifier)) {
-                        mMultiSelectionSet.remove(currentAreaRoom);
-                    } else {
-                        mMultiSelectionSet.insert(currentAreaRoom);
-                    }
-
-                    if (!mMultiSelectionSet.empty()) {
-                        mMultiSelection = false;
-                    }
-                }
-            }
-            switch (mMultiSelectionSet.size()) {
-            case 0:
-                mMultiSelectionHighlightRoomId = 0;
-                break;
-            case 1:
-                mMultiSelection = false; // OK, found one room so stop
-                mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
-                mHelpMsg.clear();
-                break;
-            default:
-                mMultiSelection = false; // OK, found more than one room so stop
-                mHelpMsg.clear();
-                getCenterSelection();
-            }
-
-            // select labels (not in viewOnly mode)
-            if (!pArea->mMapLabels.isEmpty() && !mMapViewOnly) {
-                QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
-                while (itMapLabel.hasNext()) {
-                    itMapLabel.next();
-                    auto mapLabel = itMapLabel.value();
-                    if (mapLabel.pos.z() != mMapCenterZ) {
-                        continue;
-                    }
-
-                    QPointF labelPosition;
-                    const float labelX = mapLabel.pos.x() * mRoomWidth + mRX;
-                    const float labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
-
-                    labelPosition.setX(labelX);
-                    labelPosition.setY(labelY);
-                    const int mx = context.widgetPosition.x();
-                    const int my = context.widgetPosition.y();
-                    const QPoint click = QPoint(mx, my);
-                    const QRectF br = QRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
-                    if (br.contains(click)) {
-                        mapLabel.highlight = !mapLabel.highlight;
-                        mLabelHighlighted = mapLabel.highlight;
-                        pArea->mMapLabels[itMapLabel.key()] = mapLabel;
-                        update();
-                        return;
-                    }
-                }
-            }
-
-            mLabelHighlighted = false;
-            update();
-
-            if (mMultiSelection && !mMultiSelectionSet.empty() && context.modifiers.testFlag(Qt::ControlModifier)) {
-                // We were dragging multi-selection rectangle, we had selected at
-                // least one room and the user has <CTRL>-clicked with the mouse
-                // so switch off the dragging
-                mMultiSelection = false;
-                mHelpMsg.clear();
-            }
         }
     }
 
@@ -4415,146 +4303,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 
     mCustomLineSelectedPoint = -1;
 
-    //FIXME:
-    if (mLabelHighlighted) {
-        auto pA = mpMap->mpRoomDB->getArea(mAreaID);
-        if (pA && !pA->mMapLabels.isEmpty()) {
-            bool needUpdate = false;
-            bool needToSave = false;
-            QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
-            while (itMapLabel.hasNext()) {
-                itMapLabel.next();
-                auto mapLabel = itMapLabel.value();
-
-                if (qRound(mapLabel.pos.z()) != mMapCenterZ) {
-                    continue;
-                }
-                if (!mapLabel.highlight) {
-                    continue;
-                }
-                mapLabel.pos = QVector3D(static_cast<float>(context.mapX), static_cast<float>(context.mapY), static_cast<float>(mMapCenterZ));
-                pA->mMapLabels[itMapLabel.key()] = mapLabel;
-                needUpdate = true;
-                if (!mapLabel.temporary) {
-                    needToSave = true;
-                }
-            }
-            if (needUpdate) {
-                update();
-                if (needToSave) {
-                    mpMap->setUnsaved(__func__);
-                }
-            }
-        }
-    } else {
-        mMoveLabel = false;
-    }
-
-    if ((mMultiSelection && !mRoomBeingMoved) || mSizeLabel) {
-        //    (The drag to select (or size) rectangle is being actively resized and rooms are not being moved)
-        // OR (We are sizing up a label)
-        if (mNewMoveAction) {
-            mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
-            mNewMoveAction = false;
-        } else {
-            mMultiRect.setBottomLeft(context.widgetPosition);
-        }
-
-        if (!mpMap->mpRoomDB->getRoom(mRoomID)) {
-            return;
-        }
-        TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
-        if (!pArea) {
-            return;
-        }
-
-        if (!mSizeLabel) { // NOT sizing a label
-            mMultiSelectionSet.clear();
-            const float fx = xspan / 2.0f * mRoomWidth - mRoomWidth * static_cast<float>(mMapCenterX);
-            const float fy = yspan / 2.0f * mRoomHeight - mRoomHeight * static_cast<float>(mMapCenterY);
-            QSetIterator<int> itSelectedRoom(pArea->getAreaRooms());
-            while (itSelectedRoom.hasNext()) {
-                const int currentRoomId = itSelectedRoom.next();
-                TRoom* room = mpMap->mpRoomDB->getRoom(currentRoomId);
-                if (!room) {
-                    continue;
-                }
-
-                // copy rooms on all z-levels if the shift key is being pressed
-                // CHECK: Consider adding z-level to multi-selection Widget?
-                if ((room->z() != mMapCenterZ) && !context.modifiers.testFlag(Qt::ShiftModifier)) {
-                    continue;
-                }
-
-                const float rx = static_cast<float>(room->x()) * mRoomWidth  + fx;
-                const float ry = static_cast<float>(room->y() * -1) * mRoomHeight + fy;
-                QRectF dr;
-                if (pArea->gridMode) {
-                    dr = QRectF(static_cast<qreal>(rx - (mRoomWidth / 2.0f)), static_cast<qreal>(ry - (mRoomHeight / 2.0f)), static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight));
-                } else {
-                    dr = QRectF(static_cast<qreal>(rx - mRoomWidth * static_cast<float>(rSize / 2.0)), static_cast<qreal>(ry - mRoomHeight * static_cast<float>(rSize / 2.0)), static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
-                }
-                if (mMultiRect.contains(dr)) {
-                    mMultiSelectionSet.insert(currentRoomId);
-                }
-            }
-            switch (mMultiSelectionSet.size()) {
-            case 0:
-                mMultiSelectionHighlightRoomId = 0;
-                break;
-            case 1:
-                mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
-                break;
-            default:
-                getCenterSelection(); // Sets mMultiSelectionHighlightRoomId to (a) central room
-            }
-
-            if (mMultiSelectionSet.size() > 1) {
-                // We don't want to cause calls to slot_roomSelectionChanged() here!
-                mMultiSelectionListWidget.blockSignals(true);
-                // Save sorting state before we switch it off
-                mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
-                mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
-                mMultiSelectionListWidget.clear();
-                // Do NOT sort while inserting items!
-                mMultiSelectionListWidget.setSortingEnabled(false);
-                QSetIterator<int> itRoom = mMultiSelectionSet;
-                mIsSelectionUsingNames = false;
-                while (itRoom.hasNext()) {
-                    auto item = new QTreeWidgetItem;
-                    const int multiSelectionRoomId = itRoom.next();
-                    item->setText(0, qsl("%1").arg(multiSelectionRoomId, mMaxRoomIdDigits));
-                    item->setTextAlignment(0, Qt::AlignRight);
-                    TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
-                    if (pR_multiSelection) {
-                        const QString multiSelectionRoomName = pR_multiSelection->name;
-                        if (!multiSelectionRoomName.isEmpty()) {
-                            item->setText(1, multiSelectionRoomName);
-                            item->setTextAlignment(1, Qt::AlignLeft);
-                            mIsSelectionUsingNames = true;
-                        }
-                    }
-                    mMultiSelectionListWidget.addTopLevelItem(item);
-                }
-                mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
-                // Can't sort if nothing to sort on, switch to sorting by room number
-                if ((!mIsSelectionUsingNames) && mIsSelectionSortByNames && mIsSelectionSorting) {
-                    mIsSelectionSortByNames = false;
-                }
-                mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0, Qt::AscendingOrder);
-                mMultiSelectionListWidget.setSortingEnabled(mIsSelectionSorting);
-                resizeMultiSelectionWidget();
-                mMultiSelectionListWidget.selectAll();
-                mMultiSelectionListWidget.blockSignals(false);
-                mMultiSelectionListWidget.show();
-            } else {
-                mMultiSelectionListWidget.hide();
-            }
-        }
-
-        update();
-        return;
-    }
+    // Selection and label handling is delegated to interaction handlers.
 
     if (mRoomBeingMoved && !mSizeLabel && !mMultiSelectionSet.isEmpty()) {
         mMultiRect = QRect(0, 0, 0, 0);
