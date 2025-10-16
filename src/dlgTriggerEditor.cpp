@@ -1203,6 +1203,11 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
+    if (mIsGrabKey) {
+        mIsGrabKey = false;
+        setShortcuts();
+        QCoreApplication::instance()->removeEventFilter(this);
+    }
     emit editorClosing();
     writeSettings();
     event->accept();
