@@ -2941,6 +2941,19 @@ void mudlet::writeSettings()
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
     mpSettings->setValue("AI/modelPath", mAIModelPath);
     mpSettings->setValue("AI/autoStart", mAIAutoStart);
+
+    // Ensure settings are actually written to disk
+    settings.sync();
+    switch (settings.status()) {
+    case QSettings::NoError:
+        break;
+    case QSettings::FormatError:
+        qWarning() << "mudlet::writeSettings() ERROR - failed to save settings, reason: \"Format error\".";
+        break;
+    case QSettings::AccessError:
+        qWarning() << "mudlet::writeSettings() ERROR - failed to save settings, reason: \"Access error\" (file permissions or disk full).";
+        break;
+    }
 }
 
 void mudlet::slot_showConnectionDialog()
