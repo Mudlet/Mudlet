@@ -151,6 +151,7 @@ private:
     QString copyNewImagesToTmp(const QString& tempPath) const;
     static void cleanupUnusedImages(const QString& tempPath, const QString& plainDescription);
     void checkToEnableExportButton();
+    void populateDependencies();
 
     Ui::dlgPackageExporter* ui = nullptr;
     QPointer<Host> mpHost;

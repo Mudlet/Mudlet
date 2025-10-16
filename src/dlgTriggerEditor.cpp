@@ -7105,9 +7105,16 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
 {
     auto * sender = qobject_cast<TTreeWidget*>(QObject::sender());
     if (sender) {
-        QList<QTreeWidgetItem*> items = sender->selectedItems();
-        if (!items.empty()) {
-            QTreeWidgetItem* item = items.first();
+        QTreeWidgetItem* item = sender->currentItem();
+        if (!item) {
+            QList<QTreeWidgetItem*> items = sender->selectedItems();
+            if (items.empty()) {
+                return;
+            }
+            item = items.first();
+        }
+
+        if (item) {
             if (sender == treeWidget_scripts) {
                 slot_scriptsSelected(item);
             } else if (sender == treeWidget_keys) {
@@ -8654,6 +8661,11 @@ void dlgTriggerEditor::showError(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+
+    // Reconnect close button to normal hide behavior (not banner dismiss)
+    disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
@@ -8666,6 +8678,11 @@ void dlgTriggerEditor::showWarning(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+
+    // Reconnect close button to normal hide behavior (not banner dismiss)
+    disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
