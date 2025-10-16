@@ -45,6 +45,34 @@ TRoomDB::TRoomDB(TMap* pMap)
     addArea(-1, mpMap->getDefaultAreaName());
 }
 
+TRoomDB::~TRoomDB()
+{
+    mBulkDeletionMode = true;
+    
+    // Get all pointers before clearing containers to prevent lookup issues
+    QList<TRoom*> const roomList = getRoomPtrList();
+    QList<TArea*> const areaList = getAreaPtrList();
+    
+    // Clear all containers first - this prevents individual destructors
+    // from trying to remove themselves from the containers (O(n²) behavior)
+    rooms.clear();
+    areas.clear();
+    entranceMap.clear();
+    areaNamesMap.clear();
+    hashToRoomID.clear();
+    roomIDToHash.clear();
+    
+    // Now delete all objects - their destructors will see mBulkDeletionMode=true
+    // and skip the expensive cleanup operations
+    for (auto room : roomList) {
+        delete room;
+    }
+    for (auto area : areaList) {
+        delete area;
+    }
+
+}
+
 TRoom* TRoomDB::getRoom(int id)
 {
     if (id < 0) {
@@ -1088,23 +1116,35 @@ void TRoomDB::clearMapDB()
 {
     QElapsedTimer timer;
     timer.start();
+    
+    // Set bulk deletion mode to prevent expensive individual cleanup
+    mBulkDeletionMode = true;
+    
     QList<TRoom*> const rPtrL = getRoomPtrList();
+    QList<TArea*> const areaList = getAreaPtrList();
+    
+    // Clear all containers first - this prevents individual destructors
+    // from trying to remove themselves from the containers (O(n²) behavior)
     rooms.clear(); // Prevents any further use of TRoomDB::getRoom(int) !!!
+    areas.clear();
     entranceMap.clear();
     areaNamesMap.clear();
     hashToRoomID.clear();
     roomIDToHash.clear();
+    
+    // Now delete all objects - their destructors will see mBulkDeletionMode=true
+    // and skip the expensive cleanup operations
     for (auto room : rPtrL) {
-        delete room; // Uses the internally held value of the room Id
-                     // (TRoom::id) to call TRoomDB::__removeRoom(id)
+        delete room;
     }
-    //    assert(!rooms.size()); // Pointless as rooms.clear() will have achieved the test condition
 
-    QList<TArea*> const areaList = getAreaPtrList();
     for (auto area : areaList) {
         delete area;
     }
     assert(areas.empty());
+    
+    mBulkDeletionMode = false;
+    
     // Must now reinsert areaId -1 name = "Default Area"
     addArea(-1, mpMap->getDefaultAreaName());
     qDebug() << "TRoomDB::clearMapDB() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
