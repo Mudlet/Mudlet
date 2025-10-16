@@ -216,6 +216,7 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
     bool updateDisplayFont();
+    void cancelShortcutCaptures();
 
 
     QPointer<Host> mpHost;
