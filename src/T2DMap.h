@@ -299,6 +299,8 @@ private:
     };
 
     InteractionDispatcher mInteractionDispatcher;
+    std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
+    std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
