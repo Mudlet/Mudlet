@@ -108,6 +108,7 @@ set(mudlet_SRCS
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
+    PanInteractionHandler.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
@@ -290,6 +291,7 @@ set(mudlet_HDRS
     ShortcutsManager.h
     SingleLineTextEdit.h
     T2DMap.h
+    PanInteractionHandler.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h

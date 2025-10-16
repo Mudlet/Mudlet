@@ -42,6 +42,7 @@
 #include "post_guard.h"
 
 #include <QList>
+#include <memory>
 
 class Host;
 class TArea;
@@ -298,6 +299,7 @@ private:
     };
 
     InteractionDispatcher mInteractionDispatcher;
+    std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
 

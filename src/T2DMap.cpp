@@ -30,6 +30,7 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "PanInteractionHandler.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -167,6 +168,9 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
+
+    mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
+    registerInteractionHandler(mPanInteractionHandler.get(), 100);
 }
 
 void T2DMap::init()
@@ -2606,13 +2610,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         mMoveLabel = false;
     }
 
-    //move map with left mouse button + ALT (->
-    if (mpMap->mLeftDown) {
-        mpMap->mLeftDown = false;
-        mpMap->m2DPanMode = false;
-        unsetCursor();
-    }
-
     if (context.button == Qt::LeftButton) {
         mMultiSelection = false; // End drag-to-select rectangle resizing
         mHelpMsg.clear();
@@ -3053,12 +3050,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
     if (context.buttons & Qt::LeftButton) {
-        // move map with left mouse button + ALT, or just a left mouse button in viewOnly mode
-        if (context.modifiers.testFlag(Qt::AltModifier) || context.isMapViewOnly) {
-            setCursor(Qt::ClosedHandCursor);
-            mpMap->mLeftDown = true;
-        }
-
         // drawing new custom exit line
         if (context.isCustomLineDrawing) {
             if (context.isDialogLocked) {
@@ -4404,25 +4395,6 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
     auto context = buildInteractionContext(event);
 
     if (mInteractionDispatcher.dispatch(context)) {
-        return;
-    }
-
-    if (mpMap->mLeftDown && !mpMap->m2DPanMode && (context.modifiers.testFlag(Qt::AltModifier) || context.isMapViewOnly)) {
-        mpMap->m2DPanStart = context.widgetPositionF;
-        mpMap->m2DPanMode = true;
-    }
-    if (mpMap->m2DPanMode && (!context.modifiers.testFlag(Qt::AltModifier) && !context.isMapViewOnly)) {
-        mpMap->m2DPanMode = false;
-        mpMap->mLeftDown = false;
-    }
-    if (mpMap->m2DPanMode) {
-        const QPointF panNewPosition = context.widgetPositionF;
-        mShiftMode = true;
-        const QPointF movement = mpMap->m2DPanStart - panNewPosition;
-        mMapCenterX += movement.x() / mRoomWidth;
-        mMapCenterY += movement.y() / mRoomHeight;
-        mpMap->m2DPanStart = panNewPosition;
-        update();
         return;
     }
 
