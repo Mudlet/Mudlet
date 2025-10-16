@@ -42,11 +42,12 @@ jobs:
             gcc_compiler_version: 12
             qt: '6.9.0'
           - os: ubuntu-latest
-            buildname: 'ubuntu / clang'
+            buildname: 'ubuntu / clang / c++ tests + leak detection'
             triplet: x64-linux
             compiler: clang_64
             gcc_compiler_version: 10
             qt: '6.9.0'
+            run_tests: 'cpp'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
@@ -304,7 +305,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
-          -DUSE_SANITIZER=""
+          -DUSE_SANITIZER=${{ matrix.run_tests == 'cpp' && 'Address;Leak' || '' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
@@ -324,6 +325,13 @@ jobs:
 
     - name: check ccache stats post build
       run: ccache --show-stats
+
+    - name: (Linux) Run C++ tests with leak detection
+      if: runner.os == 'Linux' && matrix.run_tests == 'cpp'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+      env:
+        LSAN_OPTIONS: suppressions=${{github.workspace}}/asan-suppressions.txt:exitcode=1
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
