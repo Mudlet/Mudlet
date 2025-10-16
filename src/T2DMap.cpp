@@ -2546,7 +2546,9 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         return;
     }
 
-    if (mMoveLabel) {
+    auto context = buildInteractionContext(event);
+
+    if (context.isMoveLabelActive) {
         mMoveLabel = false;
     }
 
@@ -2557,7 +2559,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         unsetCursor();
     }
 
-    if (event->button() & Qt::LeftButton) {
+    if (context.button == Qt::LeftButton) {
         mMultiSelection = false; // End drag-to-select rectangle resizing
         mHelpMsg.clear();
         if (mSizeLabel) {
@@ -2570,7 +2572,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         return;
     }
 
-    if (event->button() & Qt::RightButton) {
+    if (context.button == Qt::RightButton) {
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true);
         popup->setAttribute(Qt::WA_DeleteOnClose);
@@ -2610,15 +2612,15 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                 popup->addAction(customLineFinish);
 
                 mPopupMenu = true;
-                popup->popup(mapToGlobal(event->pos()));
+                popup->popup(mapToGlobal(context.widgetPosition));
                 update();
                 return;
             }
         }
 
-        auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
-        if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
-            mMultiRect = QRect(event->pos(), event->pos());
+        auto* pArea = context.area;
+        if (!context.isLabelHighlighted && mCustomLineSelectedRoom == 0) {
+            mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
             const float fx = ((xspan / 2.0) - mMapCenterX) * mRoomWidth;
             const float fy = ((yspan / 2.0) - mMapCenterY) * mRoomHeight;
 
@@ -2634,11 +2636,11 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                     const int ry = room->y() * -1 * mRoomHeight + fy;
                     const int rz = room->z();
 
-                    const int mx = event->pos().x();
-                    const int my = event->pos().y();
+                    const int mx = context.widgetPosition.x();
+                    const int my = context.widgetPosition.y();
                     const int mz = mMapCenterZ;
                     if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
-                        if (mMultiSelectionSet.contains(currentAreaRoom) && event->modifiers().testFlag(Qt::ControlModifier)) {
+                        if (mMultiSelectionSet.contains(currentAreaRoom) && context.modifiers.testFlag(Qt::ControlModifier)) {
                             mMultiSelectionSet.remove(currentAreaRoom);
                         } else {
                             mMultiSelectionSet.insert(currentAreaRoom);
@@ -2678,7 +2680,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                 popup->addAction(loadMap);
 
                 mPopupMenu = true;
-                popup->popup(mapToGlobal(event->pos()));
+                popup->popup(mapToGlobal(context.widgetPosition));
                 return;
             }
             // Else there is a map - though it might not have ANY rooms!
@@ -2799,7 +2801,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 
             popup->addSeparator();
 
-            const QString viewModeItem = mMapViewOnly ?
+            const QString viewModeItem = context.isMapViewOnly ?
                 //: 2D Mapper context menu (room) item
                 tr("Switch to editing mode") :
                 //: 2D Mapper context menu (room) item
@@ -2988,25 +2990,26 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     if (!mpMap) {
         return;
     }
+    auto context = buildInteractionContext(event);
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
-    if (event->buttons() & Qt::LeftButton) {
+    if (context.buttons & Qt::LeftButton) {
         // move map with left mouse button + ALT, or just a left mouse button in viewOnly mode
-        if (event->modifiers().testFlag(Qt::AltModifier) || mMapViewOnly) {
+        if (context.modifiers.testFlag(Qt::AltModifier) || context.isMapViewOnly) {
             setCursor(Qt::ClosedHandCursor);
             mpMap->mLeftDown = true;
         }
 
         // drawing new custom exit line
-        if (mCustomLinesRoomFrom > 0) {
-            if (mDialogLock) {
+        if (context.isCustomLineDrawing) {
+            if (context.isDialogLocked) {
                 return; // Prevent any line drawing until ready
             }
 
             TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (room) {
-                const float mx = (event->pos().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-                const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mMapCenterY;
+                const float mx = static_cast<float>(context.mapX);
+                const float my = static_cast<float>(context.mapY);
                 // might be useful to have a snap to grid type option
                 room->customLines[mCustomLinesRoomExit].push_back(QPointF(mx, my));
                 room->calcRoomDimensions();
@@ -3016,13 +3019,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
 
         // check click on custom exit lines (not in viewOnly mode)
-        if (mMultiSelectionSet.isEmpty() && !mMapViewOnly) {
+        if (!context.hasMultiSelection && !context.isMapViewOnly) {
             // But NOT if got one or more rooms already selected!
-            TArea* pA = mpMap->mpRoomDB->getArea(mAreaID);
+            TArea* pA = context.area;
             if (pA) {
-                const float mx = (event->pos().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-                const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mMapCenterY;
-                const QPointF clickPoint = QPointF(mx, my);
+                const qreal mx = context.mapX;
+                const qreal my = context.mapY;
+                const QPointF clickPoint = context.mapPoint;
                 QSetIterator<int> itRoom = pA->rooms;
                 while (itRoom.hasNext()) {
                     const int currentRoomId = itRoom.next();
@@ -3098,7 +3101,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mCustomLineSelectedExit = "";
         }
 
-        if (mRoomBeingMoved) {
+        if (context.isRoomBeingMoved) {
             // Moving rooms so end that
             mPick = true;
 
@@ -3108,7 +3111,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mPopupMenu = false;
             // Not in a context menu, so start selection mode - including drag to select if not in viewOnly mode
             mMultiSelection = !mMapViewOnly;
-            mMultiRect = QRect(event->pos(), event->pos());
+            mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
             if (!mpMap->mpRoomDB->getRoom(mRoomID)) {
                 return;
             }
@@ -3119,7 +3122,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             const float fx = ((xspan / 2.0) - mMapCenterX) * mRoomWidth;
             const float fy = ((yspan / 2.0) - mMapCenterY) * mRoomHeight;
 
-            if (!event->modifiers().testFlag(Qt::ControlModifier)) {
+            if (!context.modifiers.testFlag(Qt::ControlModifier)) {
                 if (!mMapViewOnly) {
                     // If control key NOT down then clear selection, and put up helpful text
                     //: 2D Mapper big, bottom of screen help message
@@ -3139,11 +3142,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 const int ry = room->y() * -1 * mRoomHeight + fy;
                 const int rz = room->z();
 
-                const int mx = event->pos().x();
-                const int my = event->pos().y();
-                const int mz = mMapCenterZ;
-                if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
-                    if (mMultiSelectionSet.contains(currentAreaRoom) && event->modifiers().testFlag(Qt::ControlModifier)) {
+                    const int mx = context.widgetPosition.x();
+                    const int my = context.widgetPosition.y();
+                    const int mz = mMapCenterZ;
+                    if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
+                        if (mMultiSelectionSet.contains(currentAreaRoom) && context.modifiers.testFlag(Qt::ControlModifier)) {
                         mMultiSelectionSet.remove(currentAreaRoom);
                     } else {
                         mMultiSelectionSet.insert(currentAreaRoom);
@@ -3185,8 +3188,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
                     labelPosition.setX(labelX);
                     labelPosition.setY(labelY);
-                    const int mx = event->pos().x();
-                    const int my = event->pos().y();
+                    const int mx = context.widgetPosition.x();
+                    const int my = context.widgetPosition.y();
                     const QPoint click = QPoint(mx, my);
                     const QRectF br = QRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
                     if (br.contains(click)) {
@@ -3202,7 +3205,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mLabelHighlighted = false;
             update();
 
-            if (mMultiSelection && !mMultiSelectionSet.empty() && (event->modifiers().testFlag(Qt::ControlModifier))) {
+            if (mMultiSelection && !mMultiSelectionSet.empty() && context.modifiers.testFlag(Qt::ControlModifier)) {
                 // We were dragging multi-selection rectangle, we had selected at
                 // least one room and the user has <CTRL>-clicked with the mouse
                 // so switch off the dragging
@@ -3219,6 +3222,55 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
     updateSelectionWidget();
     update();
+}
+
+T2DMap::MapInteractionContext T2DMap::buildInteractionContext(QMouseEvent* event)
+{
+    MapInteractionContext context;
+    context.event = event;
+    context.isMapViewOnly = mMapViewOnly;
+    context.multiSelectionSet = &mMultiSelectionSet;
+    context.hasMultiSelection = !mMultiSelectionSet.isEmpty();
+    context.isMultiSelectionActive = mMultiSelection;
+    context.isSizingLabel = mSizeLabel;
+    context.isLabelHighlighted = mLabelHighlighted;
+    context.isRoomBeingMoved = mRoomBeingMoved;
+    context.isMoveLabelActive = mMoveLabel;
+    context.isCustomLineDrawing = mCustomLinesRoomFrom > 0;
+    context.isDialogLocked = mDialogLock;
+
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return context;
+    }
+
+    context.area = mpMap->mpRoomDB->getArea(mAreaID);
+
+    if (!event) {
+        return context;
+    }
+
+    context.buttons = event->buttons();
+    context.button = event->button();
+    context.modifiers = event->modifiers();
+    context.widgetPosition = event->pos();
+    context.widgetPositionF = event->position();
+
+    const qreal roomWidth = static_cast<qreal>(mRoomWidth);
+    const qreal roomHeight = static_cast<qreal>(mRoomHeight);
+    const qreal halfXSpan = static_cast<qreal>(xspan) / 2.0;
+    const qreal halfYSpan = static_cast<qreal>(yspan) / 2.0;
+
+    if (!qFuzzyIsNull(roomWidth)) {
+        context.mapX = static_cast<qreal>(context.widgetPosition.x()) / roomWidth + mMapCenterX - halfXSpan;
+    }
+
+    if (!qFuzzyIsNull(roomHeight)) {
+        context.mapY = halfYSpan - static_cast<qreal>(context.widgetPosition.y()) / roomHeight - mMapCenterY;
+    }
+
+    context.mapPoint = QPointF(context.mapX, context.mapY);
+
+    return context;
 }
 
 void T2DMap::updateSelectionWidget()
@@ -4286,16 +4338,18 @@ void T2DMap::slot_setArea()
 
 void T2DMap::mouseMoveEvent(QMouseEvent* event)
 {
-    if (mpMap->mLeftDown && !mpMap->m2DPanMode && (event->modifiers().testFlag(Qt::AltModifier) || mMapViewOnly)) {
-        mpMap->m2DPanStart = event->position();
+    auto context = buildInteractionContext(event);
+
+    if (mpMap->mLeftDown && !mpMap->m2DPanMode && (context.modifiers.testFlag(Qt::AltModifier) || context.isMapViewOnly)) {
+        mpMap->m2DPanStart = context.widgetPositionF;
         mpMap->m2DPanMode = true;
     }
-    if (mpMap->m2DPanMode && (!event->modifiers().testFlag(Qt::AltModifier) && !mMapViewOnly)) {
+    if (mpMap->m2DPanMode && (!context.modifiers.testFlag(Qt::AltModifier) && !context.isMapViewOnly)) {
         mpMap->m2DPanMode = false;
         mpMap->mLeftDown = false;
     }
     if (mpMap->m2DPanMode) {
-        const QPointF panNewPosition = event->position();
+        const QPointF panNewPosition = context.widgetPositionF;
         mShiftMode = true;
         const QPointF movement = mpMap->m2DPanStart - panNewPosition;
         mMapCenterX += movement.x() / mRoomWidth;
@@ -4310,10 +4364,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         if (room) {
             if (room->customLines.contains(mCustomLineSelectedExit)) {
                 if (room->customLines[mCustomLineSelectedExit].size() > mCustomLineSelectedPoint) {
-                    const qreal mx = static_cast<qreal>(event->pos().x()) / static_cast<qreal>(mRoomWidth) + mMapCenterX - static_cast<qreal>(xspan / 2.0f);
-                    const qreal my = static_cast<qreal>(yspan / 2.0f) - static_cast<qreal>(event->pos().y()) / static_cast<qreal>(mRoomHeight) - mMapCenterY;
-                    const QPointF pc = QPointF(mx, my);
-                    room->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = pc;
+                    room->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = context.mapPoint;
                     room->calcRoomDimensions();
                     repaint();
                     mpMap->setUnsaved(__func__);
@@ -4342,9 +4393,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 if (!mapLabel.highlight) {
                     continue;
                 }
-                const float mx = (static_cast<float>(event->pos().x()) / mRoomWidth) + static_cast<float>(mMapCenterX) -(xspan / 2.0f);
-                const float my = (yspan / 2.0f) - (static_cast<float>(event->pos().y()) / mRoomHeight) - static_cast<float>(mMapCenterY);
-                mapLabel.pos = QVector3D(mx, my, static_cast<float>(mMapCenterZ));
+                mapLabel.pos = QVector3D(static_cast<float>(context.mapX), static_cast<float>(context.mapY), static_cast<float>(mMapCenterZ));
                 pA->mMapLabels[itMapLabel.key()] = mapLabel;
                 needUpdate = true;
                 if (!mapLabel.temporary) {
@@ -4366,10 +4415,10 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         //    (The drag to select (or size) rectangle is being actively resized and rooms are not being moved)
         // OR (We are sizing up a label)
         if (mNewMoveAction) {
-            mMultiRect = QRect(event->pos(), event->pos());
+            mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
             mNewMoveAction = false;
         } else {
-            mMultiRect.setBottomLeft(event->pos());
+            mMultiRect.setBottomLeft(context.widgetPosition);
         }
 
         if (!mpMap->mpRoomDB->getRoom(mRoomID)) {
@@ -4394,7 +4443,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 
                 // copy rooms on all z-levels if the shift key is being pressed
                 // CHECK: Consider adding z-level to multi-selection Widget?
-                if ((room->z() != mMapCenterZ) && !(event->modifiers().testFlag(Qt::ShiftModifier))) {
+                if ((room->z() != mMapCenterZ) && !context.modifiers.testFlag(Qt::ShiftModifier)) {
                     continue;
                 }
 
@@ -4487,8 +4536,8 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             return;
         }
 
-        const int dx = qRound((event->pos().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0)) - room->x();
-        const int dy = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mMapCenterY) - room->y();
+        const int dx = qRound(context.mapX) - room->x();
+        const int dy = qRound(context.mapY) - room->y();
         QSetIterator<int> itRoom = mMultiSelectionSet;
         while (itRoom.hasNext()) {
             room = mpMap->mpRoomDB->getRoom(itRoom.next());

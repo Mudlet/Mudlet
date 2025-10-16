@@ -53,6 +53,7 @@ class QElapsedTimer;
 class QListWidgetItem;
 class QPushButton;
 class QTreeWidgetItem;
+class QMouseEvent;
 
 
 class T2DMap : public QWidget
@@ -246,6 +247,31 @@ public slots:
     void slot_exportAreaToImage();
 
 private:
+    struct MapInteractionContext {
+        QMouseEvent* event = nullptr;
+        Qt::MouseButtons buttons = Qt::NoButton;
+        Qt::MouseButton button = Qt::NoButton;
+        Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+        QPoint widgetPosition;
+        QPointF widgetPositionF;
+        qreal mapX = 0.0;
+        qreal mapY = 0.0;
+        QPointF mapPoint;
+        TArea* area = nullptr;
+        const QSet<int>* multiSelectionSet = nullptr;
+        bool hasMultiSelection = false;
+        bool isMapViewOnly = false;
+        bool isMultiSelectionActive = false;
+        bool isSizingLabel = false;
+        bool isLabelHighlighted = false;
+        bool isRoomBeingMoved = false;
+        bool isMoveLabelActive = false;
+        bool isCustomLineDrawing = false;
+        bool isDialogLocked = false;
+    };
+
+    MapInteractionContext buildInteractionContext(QMouseEvent* event);
+
     void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
