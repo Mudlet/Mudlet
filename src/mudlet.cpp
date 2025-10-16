@@ -1491,7 +1491,7 @@ void mudlet::loadTranslators(const QString& languageCode)
     }
 
     translation const currentTranslation = mTranslationsMap.value(languageCode);
-    QPointer<QTranslator> const pQtTranslator = new QTranslator;
+    QPointer<QTranslator> const pQtTranslator = new QTranslator(this);
     const QString qtTranslatorFileName = currentTranslation.getQtTranslationFileName();
     if (!qtTranslatorFileName.isEmpty()) {
         // Need to use load(fileName (e.g. {qt_xx_YY.qm"}, pathName) form - Qt
@@ -1506,7 +1506,7 @@ void mudlet::loadTranslators(const QString& languageCode)
         }
     }
 
-    QPointer<QTranslator> const pMudletTranslator = new QTranslator;
+    QPointer<QTranslator> const pMudletTranslator = new QTranslator(this);
     const QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
     if (!mudletTranslatorFileName.isEmpty()) {
         const bool isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
