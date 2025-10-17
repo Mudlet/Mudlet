@@ -34,6 +34,7 @@
 #include "map/handlers/PanInteractionHandler.h"
 #include "map/handlers/SelectionRectangleHandler.h"
 #include "map/handlers/CustomLineDrawHandler.h"
+#include "map/handlers/CustomLineEditHandler.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -174,6 +175,9 @@ T2DMap::T2DMap(QWidget* parent)
 
     mCustomLineDrawInteractionHandler = std::make_unique<CustomLineDrawHandler>(*this);
     registerInteractionHandler(mCustomLineDrawInteractionHandler.get(), 400);
+
+    mCustomLineEditInteractionHandler = std::make_unique<CustomLineEditHandler>(*this);
+    registerInteractionHandler(mCustomLineEditInteractionHandler.get(), 350);
 
     mSelectionRectangleInteractionHandler = std::make_unique<SelectionRectangleHandler>(*this);
     registerInteractionHandler(mSelectionRectangleInteractionHandler.get(), 200);
@@ -3047,89 +3051,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
     if (context.buttons & Qt::LeftButton) {
-        // check click on custom exit lines (not in viewOnly mode)
-        if (!context.hasMultiSelection && !context.isMapViewOnly) {
-            // But NOT if got one or more rooms already selected!
-            TArea* pA = context.area;
-            if (pA) {
-                const qreal mx = context.mapX;
-                const qreal my = context.mapY;
-                const QPointF clickPoint = context.mapPoint;
-                QSetIterator<int> itRoom = pA->rooms;
-                while (itRoom.hasNext()) {
-                    const int currentRoomId = itRoom.next();
-                    TRoom* room = mpMap->mpRoomDB->getRoom(currentRoomId);
-                    if (!room) {
-                        continue;
-                    }
-                    QMapIterator<QString, QList<QPointF>> lineIterator(room->customLines);
-                    while (lineIterator.hasNext()) {
-                        lineIterator.next();
-                        const QList<QPointF>& linePoints = lineIterator.value();
-                        if (!linePoints.empty()) {
-                            // The way this code is structured means that EARLIER
-                            // points are selected in preference to later ones!
-                            // This might not be intuitive to the users...
-                            float oldX, oldY, newX, newY;
-                            for (int pointIndex = 0; pointIndex < linePoints.size(); pointIndex++) {
-                                if (pointIndex == 0) {
-                                    // First segment of a custom line
-                                    // start it at the centre of the room
-                                    oldX = room->x();
-                                    oldY = room->y();
-                                    //FIXME: use exit direction to calculate start of line
-                                    newX = linePoints[0].x();
-                                    newY = linePoints[0].y();
-                                } else {
-                                    // Not the first segment of a custom line
-                                    // so start it at the end of the previous one
-                                    oldX = newX;
-                                    oldY = newY;
-                                    newX = linePoints[pointIndex].x();
-                                    newY = linePoints[pointIndex].y();
-                                }
-                                // End of each custom line segment is given
-
-                                // click auf einen edit - punkt
-                                if (mCustomLineSelectedRoom != 0) {
-                                    // We have already chosen a line to edit
-                                    if (fabs(mx - newX) <= 0.25 && fabs(my - newY) <= 0.25) {
-                                        // And this looks close enough to a point that we should edit it
-                                        mCustomLineSelectedPoint = pointIndex;
-                                        return;
-                                    }
-                                }
-
-                                // We have not previously chosen a line to edit
-                                const QLineF lineSegment = QLineF(oldX, oldY, newX, newY);
-                                const QLineF normalVector = lineSegment.normalVector();
-                                QLineF testLine1;
-                                testLine1.setP1(clickPoint);
-                                testLine1.setAngle(normalVector.angle());
-                                testLine1.setLength(0.1);
-                                QLineF testLine2;
-                                testLine2.setP1(clickPoint);
-                                testLine2.setAngle(normalVector.angle());
-                                testLine2.setLength(-0.1);
-                                QPointF intersectionPoint;
-                                if ((lineSegment.intersects(testLine1, &intersectionPoint) == QLineF::BoundedIntersection)
-                                    || (lineSegment.intersects(testLine2, &intersectionPoint) == QLineF::BoundedIntersection)) {
-                                    // Choose THIS line to edit as we have
-                                    // clicked close enough to it...
-                                    mCustomLineSelectedRoom = room->getId();
-                                    mCustomLineSelectedExit = lineIterator.key();
-                                    repaint();
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            mCustomLineSelectedRoom = 0;
-            mCustomLineSelectedExit = "";
-        }
-
         if (context.isRoomBeingMoved) {
             // Moving rooms so end that
             mPick = true;
@@ -4273,23 +4194,6 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
     if (mInteractionDispatcher.dispatch(context)) {
         return;
     }
-
-    if (mCustomLineSelectedRoom != 0 && mCustomLineSelectedPoint >= 0) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
-        if (room) {
-            if (room->customLines.contains(mCustomLineSelectedExit)) {
-                if (room->customLines[mCustomLineSelectedExit].size() > mCustomLineSelectedPoint) {
-                    room->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = context.mapPoint;
-                    room->calcRoomDimensions();
-                    repaint();
-                    mpMap->setUnsaved(__func__);
-                    return;
-                }
-            }
-        }
-    }
-
-    mCustomLineSelectedPoint = -1;
 
     // Selection and label handling is delegated to interaction handlers.
 
