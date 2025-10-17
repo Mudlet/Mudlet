@@ -2333,7 +2333,7 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
 
         if (!rawUrl.isEmpty()) {
-            if (rawUrl.length() > 2048) {
+            if (rawUrl.length() > 8192) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
             }
