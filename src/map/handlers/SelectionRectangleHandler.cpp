@@ -86,6 +86,8 @@ bool SelectionRectangleHandler::handleMousePress(T2DMap::MapInteractionContext& 
     const bool hasShift = context.modifiers.testFlag(Qt::ShiftModifier);
     const bool hasCtrl = context.modifiers.testFlag(Qt::ControlModifier);
 
+    mMapWidget.mMultiSelectionBaseSet = mMapWidget.mMultiSelectionSet;
+
     if (!hasCtrl) {
         if (!mMapWidget.mMapViewOnly) {
             mMapWidget.mHelpMsg = T2DMap::tr("Drag to select multiple rooms or labels, release to finish...");
@@ -177,9 +179,19 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
             }
         }
 
-        if (hasShift && !hasCtrl) {
+        if (hasShift) {
             mMapWidget.mMultiSelectionSet = mMapWidget.mMultiSelectionAnchorSet;
             mMapWidget.mMultiSelectionSet.unite(rectangleSelection);
+        } else if (hasCtrl) {
+            QSet<int> toggledSelection = mMapWidget.mMultiSelectionBaseSet;
+            for (int roomId : rectangleSelection) {
+                if (toggledSelection.contains(roomId)) {
+                    toggledSelection.remove(roomId);
+                } else {
+                    toggledSelection.insert(roomId);
+                }
+            }
+            mMapWidget.mMultiSelectionSet = toggledSelection;
         } else {
             mMapWidget.mMultiSelectionSet = rectangleSelection;
         }
@@ -217,6 +229,7 @@ bool SelectionRectangleHandler::handleMouseRelease(T2DMap::MapInteractionContext
     mMapWidget.mMultiSelection = false;
     mMapWidget.mHelpMsg.clear();
     mMapWidget.mMultiSelectionAnchorSet.clear();
+    mMapWidget.mMultiSelectionBaseSet.clear();
 
     if (mMapWidget.mSizeLabel) {
         mMapWidget.mSizeLabel = false;
