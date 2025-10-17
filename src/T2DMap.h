@@ -49,6 +49,9 @@ class TArea;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
+class CustomLineDrawContextMenuHandler;
+class CustomLineDrawHandler;
+class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
 
 class QCheckBox;
@@ -77,6 +80,9 @@ public:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
 
+    friend class CustomLineDrawContextMenuHandler;
+    friend class CustomLineDrawHandler;
+    friend class CustomLineEditContextMenuHandler;
     friend class CustomLineEditHandler;
 
     struct MapInteractionContext {
@@ -102,6 +108,9 @@ public:
         bool isDialogLocked = false;
         int customLinesRoomFrom = 0;
         QString customLinesRoomExit;
+        int customLineSelectedRoom = 0;
+        QString customLineSelectedExit;
+        int customLineSelectedPoint = -1;
     };
 
     class IInteractionHandler
@@ -304,7 +313,9 @@ private:
     };
 
     InteractionDispatcher mInteractionDispatcher;
+    std::unique_ptr<IInteractionHandler> mCustomLineDrawContextMenuHandler;
     std::unique_ptr<IInteractionHandler> mCustomLineDrawInteractionHandler;
+    std::unique_ptr<IInteractionHandler> mCustomLineEditContextMenuHandler;
     std::unique_ptr<IInteractionHandler> mCustomLineEditInteractionHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
