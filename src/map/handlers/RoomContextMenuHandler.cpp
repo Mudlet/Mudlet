@@ -56,6 +56,7 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
     auto* popup = new QMenu(&mMapWidget);
     popup->setToolTipsVisible(true);
     popup->setAttribute(Qt::WA_DeleteOnClose);
+    mMapWidget.registerContextMenu(popup);
 
     auto* roomDatabase = mMapWidget.mpMap->mpRoomDB;
     if (!roomDatabase || roomDatabase->isEmpty()) {
