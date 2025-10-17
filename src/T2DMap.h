@@ -43,6 +43,7 @@
 
 #include <QList>
 #include <memory>
+#include <optional>
 
 class Host;
 class TArea;
@@ -118,6 +119,8 @@ public:
         int customLineSelectedRoom = 0;
         QString customLineSelectedExit;
         int customLineSelectedPoint = -1;
+        bool hasClickedRoom = false;
+        int clickedRoomId = 0;
     };
 
     class IInteractionHandler
@@ -130,6 +133,7 @@ public:
 
     void registerInteractionHandler(IInteractionHandler* handler, int priority);
     void prepareSingleClickSelection(MapInteractionContext& context);
+    std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
