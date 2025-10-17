@@ -98,9 +98,47 @@ void T2DMap::registerInteractionHandler(IInteractionHandler* handler, int priori
     mInteractionDispatcher.registerHandler(handler, priority);
 }
 
+std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const
+{
+    if (!mpMap || !mpMap->mpRoomDB || !area) {
+        return std::nullopt;
+    }
+
+    const float fx = ((xspan / 2.0f) - mMapCenterX) * mRoomWidth;
+    const float fy = ((yspan / 2.0f) - mMapCenterY) * mRoomHeight;
+
+    const int mx = widgetPosition.x();
+    const int my = widgetPosition.y();
+    const int mz = mMapCenterZ;
+
+    QSetIterator<int> roomIterator(area->getAreaRooms());
+    while (roomIterator.hasNext()) {
+        const int roomId = roomIterator.next();
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+
+        const int rx = room->x() * mRoomWidth + fx;
+        const int ry = room->y() * -1 * mRoomHeight + fy;
+        const int rz = room->z();
+
+        if ((qAbs(mx - rx) < qRound(mRoomWidth * rSize / 2.0))
+            && (qAbs(my - ry) < qRound(mRoomHeight * rSize / 2.0))
+            && (mz == rz)) {
+            return roomId;
+        }
+    }
+
+    return std::nullopt;
+}
+
 void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
 {
     mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
+
+    context.hasClickedRoom = false;
+    context.clickedRoomId = 0;
 
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
@@ -108,6 +146,14 @@ void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
 
     auto* area = context.area;
     if (!area) {
+        return;
+    }
+
+    const auto clickedRoomId = roomIdAtWidgetPosition(context.widgetPosition, area);
+    context.hasClickedRoom = clickedRoomId.has_value();
+    context.clickedRoomId = clickedRoomId.value_or(0);
+
+    if (context.button == Qt::RightButton) {
         return;
     }
 
@@ -2776,6 +2822,8 @@ T2DMap::MapInteractionContext T2DMap::buildInteractionContext(QMouseEvent* event
     context.customLineSelectedRoom = mCustomLineSelectedRoom;
     context.customLineSelectedExit = mCustomLineSelectedExit;
     context.customLineSelectedPoint = mCustomLineSelectedPoint;
+    context.hasClickedRoom = false;
+    context.clickedRoomId = 0;
 
     if (!mpMap || !mpMap->mpRoomDB) {
         return context;
