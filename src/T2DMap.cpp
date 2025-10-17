@@ -2704,10 +2704,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     }
 
     auto context = buildInteractionContext(event);
-
-    if (mInteractionDispatcher.dispatch(context)) {
-        return;
-    }
+    mInteractionDispatcher.dispatch(context));
 }
 
 bool T2DMap::event(QEvent* event)
@@ -2747,9 +2744,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     }
     auto context = buildInteractionContext(event);
 
-    if (mInteractionDispatcher.dispatch(context)) {
-        return;
-    }
+    mInteractionDispatcher.dispatch(context);
 
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
@@ -3938,12 +3933,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
     }
 
     auto context = buildInteractionContext(event);
-
-    if (mInteractionDispatcher.dispatch(context)) {
-        return;
-    }
-
-    // Selection and label handling is delegated to interaction handlers.
+    mInteractionDispatcher.dispatch(context);
 }
 
 // Replacement for getTopLeftCenter - determines a room closest to geometrical
