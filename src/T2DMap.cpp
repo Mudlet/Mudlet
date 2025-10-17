@@ -53,15 +53,13 @@
 
 
 #include "pre_guard.h"
+#include <QtEvents>
+#include <QtUiTools>
 #include <QAction>
-#include <QApplication>
-#include <QCoreApplication>
 #include <QMap>
 #include <QMapIterator>
 #include <QMenu>
 #include <QStandardPaths>
-#include <QtEvents>
-#include <QtUiTools>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
@@ -234,23 +232,6 @@ void T2DMap::InteractionDispatcher::registerHandler(IInteractionHandler* handler
     mHandlers.insert(insertIterator, entry);
 }
 
-void T2DMap::registerContextMenu(QMenu* menu)
-{
-    if (!menu) {
-        return;
-    }
-
-    mActiveContextMenu = menu;
-
-    QObject::connect(menu, &QMenu::aboutToHide, this, [this]() {
-        mActiveContextMenu.clear();
-    });
-
-    QObject::connect(menu, &QObject::destroyed, this, [this]() {
-        mActiveContextMenu.clear();
-    });
-}
-
 bool T2DMap::InteractionDispatcher::dispatch(MapInteractionContext& context) const
 {
     for (const auto& entry : mHandlers) {
@@ -270,41 +251,6 @@ bool T2DMap::InteractionDispatcher::dispatch(MapInteractionContext& context) con
     return false;
 }
 
-bool T2DMap::eventFilter(QObject* watched, QEvent* event)
-{
-    if (mActiveContextMenu && event && event->type() == QEvent::MouseButtonPress) {
-        auto* mouseEvent = static_cast<QMouseEvent*>(event);
-        if (mouseEvent && mouseEvent->button() == Qt::RightButton) {
-            const QPoint globalPos = mouseEvent->globalPosition().toPoint();
-            const QPoint localPos = mapFromGlobal(globalPos);
-
-            if (rect().contains(localPos)) {
-                auto menu = mActiveContextMenu;
-                mActiveContextMenu.clear();
-
-                if (menu) {
-                    menu->close();
-                }
-
-                const QPointF localPosF(localPos);
-                const QPointF globalPosF(globalPos);
-
-                auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF,
-                    Qt::RightButton, Qt::RightButton, mouseEvent->modifiers());
-                auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF,
-                    Qt::RightButton, Qt::NoButton, mouseEvent->modifiers());
-
-                QCoreApplication::postEvent(this, pressEvent);
-                QCoreApplication::postEvent(this, releaseEvent);
-
-                return true;
-            }
-        }
-    }
-
-    return QObject::eventFilter(watched, event);
-}
-
 const QString& key_icon_dialog_ok_apply = qsl(":/icons/dialog-ok-apply.png");
 const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 
@@ -312,10 +258,6 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 {
-    if (auto* app = qApp) {
-        app->installEventFilter(this);
-    }
-
     mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -378,13 +320,6 @@ T2DMap::T2DMap(QWidget* parent)
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
-}
-
-T2DMap::~T2DMap()
-{
-    if (auto* app = qApp) {
-        app->removeEventFilter(this);
-    }
 }
 
 void T2DMap::init()

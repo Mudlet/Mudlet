@@ -52,7 +52,6 @@ bool CustomLineEditContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     auto popup = new QMenu(&mMapWidget);
     popup->setToolTipsVisible(true);
     popup->setAttribute(Qt::WA_DeleteOnClose);
-    mMapWidget.registerContextMenu(popup);
 
     //: 2D Mapper context menu (custom line editing) item
     auto addPoint = new QAction(T2DMap::tr("Add point"), &mMapWidget);

@@ -157,7 +157,6 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
         auto* popup = new QMenu(&mMapWidget);
         popup->setToolTipsVisible(true);
         popup->setAttribute(Qt::WA_DeleteOnClose);
-        mMapWidget.registerContextMenu(popup);
 
         //: 2D Mapper context menu (label) item
         auto* moveLabel = new QAction(mMapWidget.tr("Move"), popup);
