@@ -305,7 +305,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
-          "-DUSE_SANITIZER=${{ matrix.run_tests == 'cpp' && 'Address;Leak' || '' }}"
+          -DUSE_SANITIZER=${{ matrix.run_tests == 'cpp' && 'Address' || '' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
@@ -332,6 +332,7 @@ jobs:
       run: ctest --output-on-failure
       env:
         QT_QPA_PLATFORM: offscreen
+        ASAN_OPTIONS: detect_leaks=1
         LSAN_OPTIONS: suppressions=${{github.workspace}}/asan-suppressions.txt:exitcode=1
 
     - name: (macOS) Run C++ tests
