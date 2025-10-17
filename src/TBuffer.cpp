@@ -2669,32 +2669,51 @@ QString TBuffer::jsonStyleObjectToCss(const QJsonObject& styleObj)
         cssProperties << qsl("font-style:italic");
     }
     
-    // Text decorations - handle both boolean and string values
+    // Text decorations - combine multiple decorations into single CSS property
+    QStringList decorationParts;
+    QString underlineStyle = qsl("solid"); // Default underline style
+    
+    // Process underline
     if (styleObj.contains(qsl("underline"))) {
         QJsonValue underlineVal = styleObj[qsl("underline")];
         if (underlineVal.isBool() && underlineVal.toBool()) {
-            cssProperties << qsl("text-decoration:underline");
+            decorationParts << qsl("underline");
         } else if (underlineVal.isString()) {
-            cssProperties << qsl("text-decoration:underline ") + underlineVal.toString();
+            decorationParts << qsl("underline");
+            underlineStyle = underlineVal.toString(); // Store style for later
         }
     }
     
+    // Process overline
     if (styleObj.contains(qsl("overline"))) {
         QJsonValue overlineVal = styleObj[qsl("overline")];
         if (overlineVal.isBool() && overlineVal.toBool()) {
-            cssProperties << qsl("text-decoration:overline");
+            decorationParts << qsl("overline");
         } else if (overlineVal.isString()) {
-            cssProperties << qsl("text-decoration:overline ") + overlineVal.toString();
+            decorationParts << qsl("overline");
+            // Note: overline styles are currently limited to solid in the parser
         }
     }
     
+    // Process strikethrough
     if (styleObj.contains(qsl("strikethrough"))) {
         QJsonValue strikeVal = styleObj[qsl("strikethrough")];
         if (strikeVal.isBool() && strikeVal.toBool()) {
-            cssProperties << qsl("text-decoration:line-through");
+            decorationParts << qsl("line-through");
         } else if (strikeVal.isString()) {
-            cssProperties << qsl("text-decoration:line-through ") + strikeVal.toString();
+            decorationParts << qsl("line-through");
+            // Note: strikethrough styles are currently limited to solid in the parser
         }
+    }
+    
+    // Combine all decorations into a single CSS property
+    if (!decorationParts.isEmpty()) {
+        QString decorationValue = decorationParts.join(qsl(" "));
+        // Add underline style if it's not solid and underline is present
+        if (decorationParts.contains(qsl("underline")) && underlineStyle != qsl("solid")) {
+            decorationValue += qsl(" ") + underlineStyle;
+        }
+        cssProperties << qsl("text-decoration:") + decorationValue;
     }
     
     // Text decoration color
