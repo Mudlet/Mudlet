@@ -3158,6 +3158,7 @@ void T2DMap::slot_deleteLabel()
 
     bool updateNeeded = false;
     bool saveNeeded = false;
+    bool highlightRemoved = false;
     QMutableMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
@@ -3171,6 +3172,7 @@ void T2DMap::slot_deleteLabel()
             if (!label.temporary) {
                 saveNeeded = true;
             }
+            highlightRemoved = true;
         }
     }
 
@@ -3179,6 +3181,10 @@ void T2DMap::slot_deleteLabel()
         if (saveNeeded) {
             mpMap->setUnsaved(__func__);
         }
+    }
+
+    if (highlightRemoved) {
+        mLabelHighlighted = false;
     }
 }
 
