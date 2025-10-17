@@ -64,6 +64,7 @@ class QListWidgetItem;
 class QPushButton;
 class QTreeWidgetItem;
 class QMouseEvent;
+class QMenu;
 
 
 class T2DMap : public QWidget
@@ -129,6 +130,7 @@ public:
 
     void registerInteractionHandler(IInteractionHandler* handler, int priority);
     void prepareSingleClickSelection(MapInteractionContext& context);
+    void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
     // has been been changed to mMultiSelectionSet which cannot be accessed via

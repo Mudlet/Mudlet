@@ -55,6 +55,10 @@
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
+#include <QAction>
+#include <QMap>
+#include <QMapIterator>
+#include <QMenu>
 #include <QStandardPaths>
 #include "post_guard.h"
 
@@ -3228,6 +3232,58 @@ void T2DMap::slot_toggleMapViewOnly()
         mpHost->raiseEvent(mapModeEvent);
 
         update();
+    }
+}
+
+void T2DMap::populateUserContextMenus(QMenu& menu)
+{
+    QMap<QString, QMenu*> userMenus;
+    QMapIterator<QString, QStringList> menuIterator(mUserMenus);
+
+    while (menuIterator.hasNext()) {
+        menuIterator.next();
+        const QStringList menuInfo = menuIterator.value();
+        const QString displayName = menuInfo.value(1);
+        auto* userMenu = new QMenu(displayName, &menu);
+        userMenus.insert(menuIterator.key(), userMenu);
+    }
+
+    menuIterator.toFront();
+    while (menuIterator.hasNext()) {
+        menuIterator.next();
+        const QStringList menuInfo = menuIterator.value();
+        const QString menuParent = menuInfo.value(0);
+
+        if (auto* childMenu = userMenus.value(menuIterator.key(), nullptr)) {
+            if (menuParent.isEmpty()) {
+                menu.addMenu(childMenu);
+            } else if (auto* parentMenu = userMenus.value(menuParent, nullptr)) {
+                parentMenu->addMenu(childMenu);
+            }
+        }
+    }
+
+    QMapIterator<QString, QStringList> actionIterator(mUserActions);
+    while (actionIterator.hasNext()) {
+        actionIterator.next();
+        const QString uniqueName = actionIterator.key();
+        const QStringList actionInfo = actionIterator.value();
+        const QString menuParentKey = actionInfo.value(1);
+        const QString displayText = actionInfo.value(2);
+
+        auto* action = new QAction(displayText, &menu);
+        if (menuParentKey.isEmpty()) {
+            menu.addAction(action);
+        } else if (auto* parentMenu = userMenus.value(menuParentKey, nullptr)) {
+            parentMenu->addAction(action);
+        } else {
+            delete action;
+            continue;
+        }
+
+        QObject::connect(action, &QAction::triggered, this, [this, uniqueName](bool) {
+            slot_userAction(uniqueName);
+        });
     }
 }
 
