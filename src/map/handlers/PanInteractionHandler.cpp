@@ -1,4 +1,4 @@
-#include "PanInteractionHandler.h"
+#include "map/handlers/PanInteractionHandler.h"
 
 #include "TMap.h"
 

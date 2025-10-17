@@ -1,4 +1,4 @@
-#include "SelectionRectangleHandler.h"
+#include "map/handlers/SelectionRectangleHandler.h"
 
 #include "TArea.h"
 #include "TMap.h"
