@@ -33,6 +33,7 @@
 #include "LabelInteractionHandler.h"
 #include "PanInteractionHandler.h"
 #include "SelectionRectangleHandler.h"
+#include "map/handlers/CustomLineDrawHandler.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -170,6 +171,9 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
+
+    mCustomLineDrawInteractionHandler = std::make_unique<CustomLineDrawHandler>(*this);
+    registerInteractionHandler(mCustomLineDrawInteractionHandler.get(), 400);
 
     mSelectionRectangleInteractionHandler = std::make_unique<SelectionRectangleHandler>(*this);
     registerInteractionHandler(mSelectionRectangleInteractionHandler.get(), 200);
@@ -3043,24 +3047,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
     if (context.buttons & Qt::LeftButton) {
-        // drawing new custom exit line
-        if (context.isCustomLineDrawing) {
-            if (context.isDialogLocked) {
-                return; // Prevent any line drawing until ready
-            }
-
-            TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
-            if (room) {
-                const float mx = static_cast<float>(context.mapX);
-                const float my = static_cast<float>(context.mapY);
-                // might be useful to have a snap to grid type option
-                room->customLines[mCustomLinesRoomExit].push_back(QPointF(mx, my));
-                room->calcRoomDimensions();
-                repaint();
-                return;
-            }
-        }
-
         // check click on custom exit lines (not in viewOnly mode)
         if (!context.hasMultiSelection && !context.isMapViewOnly) {
             // But NOT if got one or more rooms already selected!
@@ -3176,6 +3162,8 @@ T2DMap::MapInteractionContext T2DMap::buildInteractionContext(QMouseEvent* event
     context.isMoveLabelActive = mMoveLabel;
     context.isCustomLineDrawing = mCustomLinesRoomFrom > 0;
     context.isDialogLocked = mDialogLock;
+    context.customLinesRoomFrom = mCustomLinesRoomFrom;
+    context.customLinesRoomExit = mCustomLinesRoomExit;
 
     if (!mpMap || !mpMap->mpRoomDB) {
         return context;

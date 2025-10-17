@@ -97,6 +97,8 @@ public:
         bool isMoveLabelActive = false;
         bool isCustomLineDrawing = false;
         bool isDialogLocked = false;
+        int customLinesRoomFrom = 0;
+        QString customLinesRoomExit;
     };
 
     class IInteractionHandler
@@ -299,6 +301,7 @@ private:
     };
 
     InteractionDispatcher mInteractionDispatcher;
+    std::unique_ptr<IInteractionHandler> mCustomLineDrawInteractionHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
