@@ -75,6 +75,7 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
+    ~T2DMap() override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     void paintEvent(QPaintEvent*) override;
@@ -132,6 +133,8 @@ public:
     };
 
     void registerInteractionHandler(IInteractionHandler* handler, int priority);
+    void registerContextMenu(QMenu* menu);
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void prepareSingleClickSelection(MapInteractionContext& context);
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
@@ -198,6 +201,7 @@ public:
 
     QRectF mMultiRect;
     bool mPopupMenu = false;
+    QPointer<QMenu> mActiveContextMenu;
     QSet<int> mMultiSelectionSet;
     bool mNewMoveAction = false;
     QRect mMapInfoRect;

@@ -56,6 +56,7 @@ bool CustomLineDrawContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     auto popup = new QMenu(&mMapWidget);
     popup->setToolTipsVisible(true);
     popup->setAttribute(Qt::WA_DeleteOnClose);
+    mMapWidget.registerContextMenu(popup);
 
     //: 2D Mapper context menu (drawing custom exit line) item
     auto customLineUndoLastPoint = new QAction(T2DMap::tr("Undo"), &mMapWidget);
