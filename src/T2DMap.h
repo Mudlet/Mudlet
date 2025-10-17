@@ -203,6 +203,7 @@ public:
     bool mPopupMenu = false;
     QPointer<QMenu> mActiveContextMenu;
     QSet<int> mMultiSelectionSet;
+    QSet<int> mMultiSelectionAnchorSet;
     bool mNewMoveAction = false;
     QRect mMapInfoRect;
     int mFontHeight = 20;
