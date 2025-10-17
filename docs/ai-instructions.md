@@ -48,6 +48,10 @@ QString objectName = qsl("timer(Host:%1)(TTimerId:%2)").arg(hostName, timerName)
 
 // Prefer QString for UI, tr() for user-visible strings
 QString displayText = tr("Connection failed: %1").arg(errorMessage);
+
+// Always add contextual comments for translators using //:
+//: Toast notification shown when user dismisses an editor tip banner
+QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 ```
 
 ### Memory management
@@ -142,16 +146,17 @@ cd /path/to/Mudlet/build
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet
 
-**Essential Build Commands:**
-
 ```bash
-# Build
+# cd to the right build directory
 cd /path/to/Mudlet/build
+
+# configure (only needed the first time)
 cmake ../ -G Ninja
-# wait up to 10mins for a build
+
+# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default:
 cmake --build .
 
-# Run
+# Run Mudlet - it's a visual, desktop application
 cd /path/to/Mudlet/build
 ./src/mudlet
 ```

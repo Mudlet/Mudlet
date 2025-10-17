@@ -49,6 +49,7 @@ class TRoomDB
 
 public:
     explicit TRoomDB(TMap*);
+    ~TRoomDB();
 
     TRoom* getRoom(int id);
     TArea* getArea(int id);
@@ -112,9 +113,12 @@ private:
     QMap<int, TArea*> areas;
     QMap<int, QString> areaNamesMap;
     TMap* mpMap;
-    QSet<int>* mpTempRoomDeletionSet; // Used during bulk room deletion
+    QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
+    // Flag to prevent expensive individual cleanup during bulk destruction
+    bool mBulkDeletionMode = false;
 
     friend class TRoom;
+    friend class TArea;
     friend class XMLexport;
     friend class XMLimport;
 };

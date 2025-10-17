@@ -34,7 +34,7 @@ class ShortcutsManager : public QObject
     Q_OBJECT
 
 public:
-    ShortcutsManager() = default;
+    explicit ShortcutsManager(QObject* parent = nullptr) : QObject(parent) {}
     ShortcutsManager(ShortcutsManager const&) = delete;
     ShortcutsManager& operator=(ShortcutsManager const&) = delete;
     ShortcutsManager(ShortcutsManager&&) = delete;

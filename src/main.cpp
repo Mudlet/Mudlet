@@ -141,7 +141,7 @@ QTranslator* loadTranslationsForCommandLine()
     }
     // We only need the Mudlet translations for the Command Line texts, no need
     // for any Qt ones:
-    QTranslator* pMudletTranslator = new QTranslator;
+    QTranslator* pMudletTranslator = new QTranslator(qApp);
     // If we allow the translations to be outside of the resource file inside
     // the application executable then this will have to be revised to handle
     // it:

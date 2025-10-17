@@ -22,13 +22,8 @@
 
 ShortcutsManager::~ShortcutsManager()
 {
-    QMutableMapIterator<QString, QKeySequence*> itShortcut(shortcuts);
-    while (itShortcut.hasNext()) {
-        itShortcut.next();
-        auto pKeySequence = itShortcut.value();
-        delete pKeySequence;
-        itShortcut.remove();
-    }
+    // Only delete the defaults map - these are heap-allocated copies we own.
+    // Do NOT delete the shortcuts map - those are pointers to mudlet's member variables.
     QMutableMapIterator<QString, QKeySequence*> itDefault(defaults);
     while (itDefault.hasNext()) {
         itDefault.next();
