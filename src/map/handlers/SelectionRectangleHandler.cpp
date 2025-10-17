@@ -82,9 +82,6 @@ bool SelectionRectangleHandler::handleMousePress(T2DMap::MapInteractionContext& 
         return true;
     }
 
-    const float fx = (static_cast<float>(mMapWidget.xspan) / 2.0f - static_cast<float>(mMapWidget.mMapCenterX)) * mMapWidget.mRoomWidth;
-    const float fy = (static_cast<float>(mMapWidget.yspan) / 2.0f - static_cast<float>(mMapWidget.mMapCenterY)) * mMapWidget.mRoomHeight;
-
     if (!context.modifiers.testFlag(Qt::ControlModifier)) {
         if (!mMapWidget.mMapViewOnly) {
             mMapWidget.mHelpMsg = T2DMap::tr("Drag to select multiple rooms or labels, release to finish...");
@@ -92,51 +89,10 @@ bool SelectionRectangleHandler::handleMousePress(T2DMap::MapInteractionContext& 
         mMapWidget.mMultiSelectionSet.clear();
     }
 
-    QSetIterator<int> itRoom(area->getAreaRooms());
-    while (itRoom.hasNext()) {
-        const int currentAreaRoom = itRoom.next();
-        TRoom* room = mMapWidget.mpMap->mpRoomDB->getRoom(currentAreaRoom);
-        if (!room) {
-            continue;
-        }
+    mMapWidget.prepareSingleClickSelection(context);
 
-        const int rx = room->x() * mMapWidget.mRoomWidth + fx;
-        const int ry = room->y() * -1 * mMapWidget.mRoomHeight + fy;
-        const int rz = room->z();
-
-        const int mx = context.widgetPosition.x();
-        const int my = context.widgetPosition.y();
-        const int mz = mMapWidget.mMapCenterZ;
-
-        if ((qAbs(mx - rx) < qRound(mMapWidget.mRoomWidth * mMapWidget.rSize / 2.0))
-            && (qAbs(my - ry) < qRound(mMapWidget.mRoomHeight * mMapWidget.rSize / 2.0))
-            && (mz == rz)) {
-            if (mMapWidget.mMultiSelectionSet.contains(currentAreaRoom) && context.modifiers.testFlag(Qt::ControlModifier)) {
-                mMapWidget.mMultiSelectionSet.remove(currentAreaRoom);
-            } else {
-                mMapWidget.mMultiSelectionSet.insert(currentAreaRoom);
-            }
-
-            if (!mMapWidget.mMultiSelectionSet.empty()) {
-                mMapWidget.mMultiSelection = false;
-            }
-        }
-    }
-
-    switch (mMapWidget.mMultiSelectionSet.size()) {
-    case 0:
-        mMapWidget.mMultiSelectionHighlightRoomId = 0;
-        break;
-    case 1:
-        mMapWidget.mMultiSelection = false;
-        mMapWidget.mMultiSelectionHighlightRoomId = *(mMapWidget.mMultiSelectionSet.begin());
+    if (!mMapWidget.mMultiSelectionSet.empty()) {
         mMapWidget.mHelpMsg.clear();
-        break;
-    default:
-        mMapWidget.mMultiSelection = false;
-        mMapWidget.mHelpMsg.clear();
-        mMapWidget.getCenterSelection();
-        break;
     }
 
     if (mMapWidget.mMultiSelection && !mMapWidget.mMultiSelectionSet.empty() && context.modifiers.testFlag(Qt::ControlModifier)) {

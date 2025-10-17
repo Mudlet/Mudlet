@@ -93,6 +93,69 @@ void T2DMap::registerInteractionHandler(IInteractionHandler* handler, int priori
     mInteractionDispatcher.registerHandler(handler, priority);
 }
 
+void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
+{
+    mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
+
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    auto* area = context.area;
+    if (!area) {
+        return;
+    }
+
+    const float fx = ((xspan / 2.0f) - mMapCenterX) * mRoomWidth;
+    const float fy = ((yspan / 2.0f) - mMapCenterY) * mRoomHeight;
+
+    QSetIterator<int> roomIterator(area->getAreaRooms());
+    while (roomIterator.hasNext()) {
+        const int roomId = roomIterator.next();
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+
+        const int rx = room->x() * mRoomWidth + fx;
+        const int ry = room->y() * -1 * mRoomHeight + fy;
+        const int rz = room->z();
+
+        const int mx = context.widgetPosition.x();
+        const int my = context.widgetPosition.y();
+        const int mz = mMapCenterZ;
+
+        if ((qAbs(mx - rx) < qRound(mRoomWidth * rSize / 2.0))
+            && (qAbs(my - ry) < qRound(mRoomHeight * rSize / 2.0))
+            && (mz == rz)) {
+            if (mMultiSelectionSet.contains(roomId) && context.modifiers.testFlag(Qt::ControlModifier)) {
+                mMultiSelectionSet.remove(roomId);
+            } else {
+                mMultiSelectionSet.insert(roomId);
+            }
+
+            if (!mMultiSelectionSet.empty()) {
+                mMultiSelection = false;
+            }
+        }
+    }
+
+    const int selectionSize = mMultiSelectionSet.size();
+    switch (selectionSize) {
+    case 0:
+        mMultiSelectionHighlightRoomId = 0;
+        break;
+    case 1:
+        mMultiSelection = false;
+        mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
+        break;
+    default:
+        mMultiSelection = false;
+        getCenterSelection();
+        break;
+    }
+}
+
 void T2DMap::InteractionDispatcher::registerHandler(IInteractionHandler* handler, int priority)
 {
     if (!handler) {
@@ -2647,52 +2710,9 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 
         auto* pArea = context.area;
         if (!context.isLabelHighlighted && mCustomLineSelectedRoom == 0) {
-            mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
-            const float fx = ((xspan / 2.0) - mMapCenterX) * mRoomWidth;
-            const float fy = ((yspan / 2.0) - mMapCenterY) * mRoomHeight;
-
-            if (pArea) {
-                QSetIterator<int> itRoom(pArea->getAreaRooms());
-                while (itRoom.hasNext()) { // Scan to find rooms in selection
-                    const int currentAreaRoom = itRoom.next();
-                    TRoom *room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
-                    if (!room) {
-                        continue;
-                    }
-                    const int rx = room->x() * mRoomWidth + fx;
-                    const int ry = room->y() * -1 * mRoomHeight + fy;
-                    const int rz = room->z();
-
-                    const int mx = context.widgetPosition.x();
-                    const int my = context.widgetPosition.y();
-                    const int mz = mMapCenterZ;
-                    if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
-                        if (mMultiSelectionSet.contains(currentAreaRoom) && context.modifiers.testFlag(Qt::ControlModifier)) {
-                            mMultiSelectionSet.remove(currentAreaRoom);
-                        } else {
-                            mMultiSelectionSet.insert(currentAreaRoom);
-                        }
-
-                        if (!mMultiSelectionSet.empty()) {
-                            mMultiSelection = false;
-                        }
-                    }
-                }
-            }
+            prepareSingleClickSelection(context);
 
             const int selectionSize = mMultiSelectionSet.size();
-            switch (selectionSize) {
-                case 0:
-                    mMultiSelectionHighlightRoomId = 0;
-                    break;
-                case 1:
-                    mMultiSelection = false; // OK, found one room so stop
-                    mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
-                    break;
-                default:
-                    mMultiSelection = false; // OK, found more than one room so stop
-                    getCenterSelection();
-            }
 
             if (!mpMap->mpRoomDB || mpMap->mpRoomDB->isEmpty()) {
                 // No map loaded
