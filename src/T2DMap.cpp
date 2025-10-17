@@ -56,8 +56,6 @@
 #include <QtEvents>
 #include <QtUiTools>
 #include <QStandardPaths>
-#include <QAction>
-#include <QMenu>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
@@ -2706,34 +2704,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     if (mInteractionDispatcher.dispatch(context)) {
         return;
     }
-
-    // Left button release and label move clean-up are handled by interaction handlers.
-
-    if (context.button == Qt::RightButton && mLabelHighlighted) {
-        auto popup = new QMenu(this);
-        popup->setToolTipsVisible(true);
-        popup->setAttribute(Qt::WA_DeleteOnClose);
-
-        //: 2D Mapper context menu (label) item
-        auto moveLabel = new QAction(tr("Move"), this);
-        //: 2D Mapper context menu item (label) tooltip
-        moveLabel->setToolTip(tr("Move label"));
-        connect(moveLabel, &QAction::triggered, this, &T2DMap::slot_moveLabel);
-        //: 2D Mapper context menu (label) item
-        auto deleteLabel = new QAction(tr("Delete"), this);
-        //: 2D Mapper context menu (label) item tooltip
-        deleteLabel->setToolTip(tr("Delete label"));
-        connect(deleteLabel, &QAction::triggered, this, &T2DMap::slot_deleteLabel);
-        popup->addAction(moveLabel);
-        popup->addAction(deleteLabel);
-
-        mPopupMenu = true;
-        popup->popup(mapToGlobal(context.widgetPosition));
-        update();
-
-        return;
-    }
-
 }
 
 bool T2DMap::event(QEvent* event)
