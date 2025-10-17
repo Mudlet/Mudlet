@@ -30,7 +30,8 @@ bool SelectionRectangleHandler::matches(const T2DMap::MapInteractionContext& con
     case QEvent::MouseButtonPress:
         return context.button == Qt::LeftButton
             && !context.isCustomLineDrawing
-            && !context.isRoomBeingMoved;
+            && !context.isRoomBeingMoved
+            && !context.modifiers.testFlag(Qt::AltModifier);
     case QEvent::MouseMove:
         return context.isMultiSelectionActive || context.isSizingLabel;
     case QEvent::MouseButtonRelease:
