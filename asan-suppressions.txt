@@ -12,7 +12,7 @@
 # Fontconfig library leaks
 # These are typically one-time initialization leaks in the font system
 # ==============================================================================
-leak:libfontconfig.so
+# leak:libfontconfig.so
 
 # ==============================================================================
 # Pango text rendering library leaks
