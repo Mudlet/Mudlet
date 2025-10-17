@@ -181,16 +181,8 @@ void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
         if ((qAbs(mx - rx) < qRound(mRoomWidth * rSize / 2.0))
             && (qAbs(my - ry) < qRound(mRoomHeight * rSize / 2.0))
             && (mz == rz)) {
-            const bool hasShift = context.modifiers.testFlag(Qt::ShiftModifier);
-            const bool hasCtrl = context.modifiers.testFlag(Qt::ControlModifier);
-            const bool isAlreadySelected = mMultiSelectionSet.contains(roomId);
-
-            if (hasCtrl) {
-                if (isAlreadySelected && !hasShift) {
-                    mMultiSelectionSet.remove(roomId);
-                } else {
-                    mMultiSelectionSet.insert(roomId);
-                }
+            if (mMultiSelectionSet.contains(roomId) && context.modifiers.testFlag(Qt::ControlModifier)) {
+                mMultiSelectionSet.remove(roomId);
             } else {
                 mMultiSelectionSet.insert(roomId);
             }
