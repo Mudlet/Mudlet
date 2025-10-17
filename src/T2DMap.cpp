@@ -34,6 +34,7 @@
 #include "map/handlers/CustomLineDrawHandler.h"
 #include "map/handlers/CustomLineEditContextMenuHandler.h"
 #include "map/handlers/CustomLineEditHandler.h"
+#include "map/handlers/RoomMoveActivationHandler.h"
 #include "map/handlers/LabelInteractionHandler.h"
 #include "map/handlers/PanInteractionHandler.h"
 #include "map/handlers/SelectionRectangleHandler.h"
@@ -186,6 +187,9 @@ T2DMap::T2DMap(QWidget* parent)
 
     mCustomLineEditInteractionHandler = std::make_unique<CustomLineEditHandler>(*this);
     registerInteractionHandler(mCustomLineEditInteractionHandler.get(), 350);
+
+    mRoomMoveActivationHandler = std::make_unique<RoomMoveActivationHandler>(*this);
+    registerInteractionHandler(mRoomMoveActivationHandler.get(), 300);
 
     mSelectionRectangleInteractionHandler = std::make_unique<SelectionRectangleHandler>(*this);
     registerInteractionHandler(mSelectionRectangleInteractionHandler.get(), 200);
@@ -2944,16 +2948,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
-    if (context.buttons & Qt::LeftButton) {
-        if (context.isRoomBeingMoved) {
-            // Moving rooms so end that
-            mPick = true;
-
-            setMouseTracking(false);
-            mRoomBeingMoved = false;
-        }
-    }
-
     TEvent sysMapWindowMousePressEvent{};
     sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
     sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
