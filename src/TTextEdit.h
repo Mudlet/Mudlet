@@ -45,6 +45,7 @@ class Host;
 class TConsole;
 class TChar;
 
+class QMenu;
 class QScrollBar;
 class QString;
 
@@ -133,6 +134,7 @@ public:
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
+    QPointer<QMenu> mActiveContextMenu;
 
 public slots:
     void slot_copySelectionToClipboard();
@@ -153,11 +155,14 @@ public slots:
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private slots:
     void slot_copySelectionToClipboardImage();
 
 private:
+    bool handleContextMenuRequest(const QPoint& widgetPos, const QPoint& globalPos);
+    void setActiveContextMenu(QMenu* menu);
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
