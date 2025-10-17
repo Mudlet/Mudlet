@@ -82,22 +82,38 @@ bool SelectionRectangleHandler::handleMousePress(T2DMap::MapInteractionContext& 
         return true;
     }
 
-    if (!context.modifiers.testFlag(Qt::ControlModifier)) {
+    const bool hasShift = context.modifiers.testFlag(Qt::ShiftModifier);
+    const bool hasCtrl = context.modifiers.testFlag(Qt::ControlModifier);
+
+    if (!hasCtrl) {
         if (!mMapWidget.mMapViewOnly) {
             mMapWidget.mHelpMsg = T2DMap::tr("Drag to select multiple rooms or labels, release to finish...");
+            mMapWidget.mHelpMsg += qsl(" ")
+                + T2DMap::tr("Hold Shift to add rooms or labels to your current selection.");
         }
-        mMapWidget.mMultiSelectionSet.clear();
+        if (!hasShift) {
+            mMapWidget.mMultiSelectionSet.clear();
+        }
+    }
+
+    if (!hasShift) {
+        mMapWidget.mMultiSelectionAnchorSet.clear();
     }
 
     mMapWidget.prepareSingleClickSelection(context);
+
+    if (hasShift) {
+        mMapWidget.mMultiSelectionAnchorSet = mMapWidget.mMultiSelectionSet;
+    }
 
     if (!mMapWidget.mMultiSelectionSet.empty()) {
         mMapWidget.mHelpMsg.clear();
     }
 
-    if (mMapWidget.mMultiSelection && !mMapWidget.mMultiSelectionSet.empty() && context.modifiers.testFlag(Qt::ControlModifier)) {
+    if (mMapWidget.mMultiSelection && !mMapWidget.mMultiSelectionSet.empty() && hasCtrl) {
         mMapWidget.mMultiSelection = false;
         mMapWidget.mHelpMsg.clear();
+        mMapWidget.mMultiSelectionAnchorSet.clear();
     }
 
     return false;
@@ -130,7 +146,9 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
     }
 
     if (!mMapWidget.mSizeLabel) {
-        mMapWidget.mMultiSelectionSet.clear();
+        const bool hasShift = context.modifiers.testFlag(Qt::ShiftModifier);
+        const bool hasCtrl = context.modifiers.testFlag(Qt::ControlModifier);
+        QSet<int> rectangleSelection;
         const float fx = mMapWidget.xspan / 2.0f * mMapWidget.mRoomWidth - mMapWidget.mRoomWidth * static_cast<float>(mMapWidget.mMapCenterX);
         const float fy = mMapWidget.yspan / 2.0f * mMapWidget.mRoomHeight - mMapWidget.mRoomHeight * static_cast<float>(mMapWidget.mMapCenterY);
         QSetIterator<int> itSelectedRoom(area->getAreaRooms());
@@ -141,7 +159,7 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
                 continue;
             }
 
-            if ((room->z() != mMapWidget.mMapCenterZ) && !context.modifiers.testFlag(Qt::ShiftModifier)) {
+            if ((room->z() != mMapWidget.mMapCenterZ) && !hasShift) {
                 continue;
             }
 
@@ -154,9 +172,17 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
                 dr = QRectF(static_cast<qreal>(rx - mMapWidget.mRoomWidth * static_cast<float>(mMapWidget.rSize / 2.0)), static_cast<qreal>(ry - mMapWidget.mRoomHeight * static_cast<float>(mMapWidget.rSize / 2.0)), static_cast<qreal>(mMapWidget.mRoomWidth) * mMapWidget.rSize, static_cast<qreal>(mMapWidget.mRoomHeight) * mMapWidget.rSize);
             }
             if (mMapWidget.mMultiRect.contains(dr)) {
-                mMapWidget.mMultiSelectionSet.insert(currentRoomId);
+                rectangleSelection.insert(currentRoomId);
             }
         }
+
+        if (hasShift && !hasCtrl) {
+            mMapWidget.mMultiSelectionSet = mMapWidget.mMultiSelectionAnchorSet;
+            mMapWidget.mMultiSelectionSet.unite(rectangleSelection);
+        } else {
+            mMapWidget.mMultiSelectionSet = rectangleSelection;
+        }
+
         switch (mMapWidget.mMultiSelectionSet.size()) {
         case 0:
             mMapWidget.mMultiSelectionHighlightRoomId = 0;
@@ -189,6 +215,7 @@ bool SelectionRectangleHandler::handleMouseRelease(T2DMap::MapInteractionContext
 
     mMapWidget.mMultiSelection = false;
     mMapWidget.mHelpMsg.clear();
+    mMapWidget.mMultiSelectionAnchorSet.clear();
 
     if (mMapWidget.mSizeLabel) {
         mMapWidget.mSizeLabel = false;
