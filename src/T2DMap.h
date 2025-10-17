@@ -54,6 +54,7 @@ class CustomLineDrawHandler;
 class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
 class RoomMoveActivationHandler;
+class RoomMoveDragHandler;
 
 class QCheckBox;
 class QComboBox;
@@ -319,6 +320,7 @@ private:
     std::unique_ptr<IInteractionHandler> mCustomLineEditContextMenuHandler;
     std::unique_ptr<IInteractionHandler> mCustomLineEditInteractionHandler;
     std::unique_ptr<IInteractionHandler> mRoomMoveActivationHandler;
+    std::unique_ptr<IInteractionHandler> mRoomMoveDragHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;

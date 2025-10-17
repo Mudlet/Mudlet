@@ -35,6 +35,7 @@
 #include "map/handlers/CustomLineEditContextMenuHandler.h"
 #include "map/handlers/CustomLineEditHandler.h"
 #include "map/handlers/RoomMoveActivationHandler.h"
+#include "map/handlers/RoomMoveDragHandler.h"
 #include "map/handlers/LabelInteractionHandler.h"
 #include "map/handlers/PanInteractionHandler.h"
 #include "map/handlers/SelectionRectangleHandler.h"
@@ -190,6 +191,9 @@ T2DMap::T2DMap(QWidget* parent)
 
     mRoomMoveActivationHandler = std::make_unique<RoomMoveActivationHandler>(*this);
     registerInteractionHandler(mRoomMoveActivationHandler.get(), 300);
+
+    mRoomMoveDragHandler = std::make_unique<RoomMoveDragHandler>(*this);
+    registerInteractionHandler(mRoomMoveDragHandler.get(), 290);
 
     mSelectionRectangleInteractionHandler = std::make_unique<SelectionRectangleHandler>(*this);
     registerInteractionHandler(mSelectionRectangleInteractionHandler.get(), 200);
@@ -4087,56 +4091,6 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
     }
 
     // Selection and label handling is delegated to interaction handlers.
-
-    if (mRoomBeingMoved && !mSizeLabel && !mMultiSelectionSet.isEmpty()) {
-        mMultiRect = QRect(0, 0, 0, 0);
-        if (!mpMap->mpRoomDB->getRoom(mRoomID)) {
-            return;
-        }
-        TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
-        if (!pArea) {
-            return;
-        }
-
-        if (!getCenterSelection()) {
-            return;
-        }
-
-        TRoom* room = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
-        if (!room) {
-            return;
-        }
-
-        const int dx = qRound(context.mapX) - room->x();
-        const int dy = qRound(context.mapY) - room->y();
-        QSetIterator<int> itRoom = mMultiSelectionSet;
-        while (itRoom.hasNext()) {
-            room = mpMap->mpRoomDB->getRoom(itRoom.next());
-            if (room) {
-                room->offset(dx, dy, 0);
-                // Previously we would move all the rooms to the same level as
-                // the center room but this is not really helpful as it
-                // squashes multiple levels of rooms all onto the same level!
-
-                QMapIterator<QString, QList<QPointF>> itk(room->customLines);
-                QMap<QString, QList<QPointF>> newMap;
-                while (itk.hasNext()) {
-                    itk.next();
-                    QList<QPointF> _pL = itk.value();
-                    for (auto& point : _pL) {
-                        const QPointF op = point;
-                        point.setX(static_cast<float>(op.x() + dx));
-                        point.setY(static_cast<float>(op.y() + dy));
-                    }
-                    newMap.insert(itk.key(), _pL);
-                }
-                room->customLines = newMap;
-                room->calcRoomDimensions();
-            }
-        }
-        repaint();
-        mpMap->setUnsaved(__func__);
-    }
 }
 
 // Replacement for getTopLeftCenter - determines a room closest to geometrical

@@ -113,6 +113,7 @@ set(mudlet_SRCS
     map/handlers/CustomLineEditContextMenuHandler.cpp
     map/handlers/CustomLineEditHandler.cpp
     map/handlers/RoomMoveActivationHandler.cpp
+    map/handlers/RoomMoveDragHandler.cpp
     map/handlers/LabelInteractionHandler.cpp
     map/handlers/PanInteractionHandler.cpp
     map/handlers/SelectionRectangleHandler.cpp
@@ -303,6 +304,7 @@ set(mudlet_HDRS
     map/handlers/CustomLineEditContextMenuHandler.h
     map/handlers/CustomLineEditHandler.h
     map/handlers/RoomMoveActivationHandler.h
+    map/handlers/RoomMoveDragHandler.h
     map/handlers/LabelInteractionHandler.h
     map/handlers/PanInteractionHandler.h
     map/handlers/SelectionRectangleHandler.h
