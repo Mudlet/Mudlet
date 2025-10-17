@@ -34,6 +34,7 @@
 #include "map/handlers/CustomLineDrawHandler.h"
 #include "map/handlers/CustomLineEditContextMenuHandler.h"
 #include "map/handlers/CustomLineEditHandler.h"
+#include "map/handlers/RoomContextMenuHandler.h"
 #include "map/handlers/RoomMoveActivationHandler.h"
 #include "map/handlers/RoomMoveDragHandler.h"
 #include "map/handlers/LabelInteractionHandler.h"
@@ -55,6 +56,8 @@
 #include <QtEvents>
 #include <QtUiTools>
 #include <QStandardPaths>
+#include <QAction>
+#include <QMenu>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
@@ -251,6 +254,9 @@ T2DMap::T2DMap(QWidget* parent)
 
     mCustomLineEditInteractionHandler = std::make_unique<CustomLineEditHandler>(*this);
     registerInteractionHandler(mCustomLineEditInteractionHandler.get(), 350);
+
+    mRoomContextMenuHandler = std::make_unique<RoomContextMenuHandler>(*this);
+    registerInteractionHandler(mRoomContextMenuHandler.get(), 340);
 
     mRoomMoveActivationHandler = std::make_unique<RoomMoveActivationHandler>(*this);
     registerInteractionHandler(mRoomMoveActivationHandler.get(), 300);
@@ -2703,230 +2709,31 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 
     // Left button release and label move clean-up are handled by interaction handlers.
 
-    if (context.button == Qt::RightButton) {
+    if (context.button == Qt::RightButton && mLabelHighlighted) {
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true);
         popup->setAttribute(Qt::WA_DeleteOnClose);
 
-        auto* pArea = context.area;
-        if (!context.isLabelHighlighted && mCustomLineSelectedRoom == 0) {
-            prepareSingleClickSelection(context);
+        //: 2D Mapper context menu (label) item
+        auto moveLabel = new QAction(tr("Move"), this);
+        //: 2D Mapper context menu item (label) tooltip
+        moveLabel->setToolTip(tr("Move label"));
+        connect(moveLabel, &QAction::triggered, this, &T2DMap::slot_moveLabel);
+        //: 2D Mapper context menu (label) item
+        auto deleteLabel = new QAction(tr("Delete"), this);
+        //: 2D Mapper context menu (label) item tooltip
+        deleteLabel->setToolTip(tr("Delete label"));
+        connect(deleteLabel, &QAction::triggered, this, &T2DMap::slot_deleteLabel);
+        popup->addAction(moveLabel);
+        popup->addAction(deleteLabel);
 
-            const int selectionSize = mMultiSelectionSet.size();
-
-            if (!mpMap->mpRoomDB || mpMap->mpRoomDB->isEmpty()) {
-                // No map loaded
-                //: 2D Mapper context menu (no map found) item
-                auto createMap = new QAction(tr("Create new map"), this);
-                connect(createMap, &QAction::triggered, this, &T2DMap::slot_newMap);
-                //: 2D Mapper context menu (no map found) item
-                auto loadMap = new QAction(tr("Load map"), this);
-                connect(loadMap, &QAction::triggered, this, &T2DMap::slot_loadMap);
-
-                popup->addAction(createMap);
-                popup->addAction(loadMap);
-
-                mPopupMenu = true;
-                popup->popup(mapToGlobal(context.widgetPosition));
-                return;
-            }
-            // Else there is a map - though it might not have ANY rooms!
-
-            if (!mMapViewOnly) {
-                if (selectionSize == 0) {
-                    auto [x, y] = getMousePosition();
-                    mContextMenuClickPosition = {x, y}; // Remember position of original right-click to create room there!
-                    //: Menu option to create a new room in the mapper
-                    mpCreateRoomAction = new QAction(tr("Create new room here"), this);
-                    connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
-                    popup->addAction(mpCreateRoomAction);
-                }
-
-                if (selectionSize > 0) {
-                    //: 2D Mapper context menu (room) item
-                    auto moveRoom = new QAction(tr("Move"), this);
-                    connect(moveRoom, &QAction::triggered, this, &T2DMap::slot_moveRoom);
-                    popup->addAction(moveRoom);
-                }
-
-                if (selectionSize > 0) {
-                    //: 2D Mapper context menu (room) item
-                    auto roomProperties = new QAction(tr("Configure room..."), this);
-                    //: 2D Mapper context menu (room) item tooltip
-                    roomProperties->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms")));
-                    connect(roomProperties, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(roomProperties);
-                }
-
-                if (selectionSize == 1) {
-                    //: 2D Mapper context menu (room) item
-                    auto roomExits = new QAction(tr("Set exits..."), this);
-                    connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
-                    popup->addAction(roomExits);
-                }
-
-                if (selectionSize == 1) {
-                    //: 2D Mapper context menu (room) item
-                    auto customExitLine = new QAction(tr("Create exit line..."), this);
-                    if (pArea && !pArea->gridMode) {
-                        //: 2D Mapper context menu (room) item tooltip (enabled state)
-                        customExitLine->setToolTip(utils::richText(tr("Replace an exit line with a custom line")));
-                        connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
-                    } else {
-                        // Disable custom exit lines in grid mode as they aren't visible anyway
-                        //: 2D Mapper context menu (room) item tooltip (disabled state)
-                        customExitLine->setToolTip(utils::richText(tr("Custom exit lines are not shown and are not editable in grid mode")));
-                        customExitLine->setEnabled(false);
-                    }
-                    popup->addAction(customExitLine);
-                }
-
-
-                if (selectionSize > 1) {
-                    //: 2D Mapper context menu (room) item
-                    auto spreadRooms = new QAction(tr("Spread..."), this);
-                    //: 2D Mapper context menu (room) item tooltip
-                    spreadRooms->setToolTip(utils::richText(tr("Increase map X-Y spacing for the selected group of rooms")));
-                    connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
-                    popup->addAction(spreadRooms);
-                }
-
-                if (selectionSize > 1) {
-                    //: 2D Mapper context menu (room) item
-                    auto shrinkRooms = new QAction(tr("Shrink..."), this);
-                    //: 2D Mapper context menu (room) item tooltip
-                    shrinkRooms->setToolTip(utils::richText(tr("Decrease map X-Y spacing for the selected group of rooms")));
-                    connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
-                    popup->addAction(shrinkRooms);
-                }
-
-                if (selectionSize > 0) {
-                    //: 2D Mapper context menu (room) item
-                    auto deleteRoom = new QAction(tr("Delete"), this);
-                    connect(deleteRoom, &QAction::triggered, this, &T2DMap::slot_deleteRoom);
-                    popup->addAction(deleteRoom);
-                }
-
-                if (selectionSize > 0) {
-                    //: 2D Mapper context menu (room) item
-                    auto moveRoomXY = new QAction(tr("Move to position..."), this);
-                    //: 2D Mapper context menu (room) item tooltip
-                    moveRoomXY->setToolTip(utils::richText(tr("Move selected room or group of rooms to the given coordinates in this area")));
-                    connect(moveRoomXY, &QAction::triggered, this, &T2DMap::slot_movePosition);
-                    popup->addAction(moveRoomXY);
-                }
-
-                if (selectionSize > 0) {
-                    //: 2D Mapper context menu (room) item
-                    auto roomArea = new QAction(tr("Move to area..."), this);
-                    connect(roomArea, &QAction::triggered, this, &T2DMap::slot_setArea);
-                    popup->addAction(roomArea);
-                }
-                //: 2D Mapper context menu (room) item
-                auto createLabel = new QAction(tr("Create label..."), this);
-                //: 2D Mapper context menu (room) item tooltip
-                createLabel->setToolTip(utils::richText(tr("Create label to show text or an image")));
-                connect(createLabel, &QAction::triggered, this, &T2DMap::slot_createLabel);
-                popup->addAction(createLabel);
-
-                //: 2D Mapper context menu (area) item
-                auto exportAreaImage = new QAction(tr("Export area to image..."), this);
-                //: 2D Mapper context menu (area) item tooltip
-                exportAreaImage->setToolTip(utils::richText(tr("Export the current area as an image file")));
-                connect(exportAreaImage, &QAction::triggered, this, &T2DMap::slot_exportAreaToImage);
-                popup->addAction(exportAreaImage);
-            }
-
-            if (selectionSize == 1) {
-                //: 2D Mapper context menu (room) item
-                auto setPlayerLocation = new QAction(tr("Set player location"), this);
-                //: 2D Mapper context menu (room) item tooltip (enabled state)
-                setPlayerLocation->setToolTip(utils::richText(tr("Set the player's current location to here")));
-                connect(setPlayerLocation, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
-                popup->addAction(setPlayerLocation);
-            }
-
-            popup->addSeparator();
-
-            const QString viewModeItem = context.isMapViewOnly ?
-                //: 2D Mapper context menu (room) item
-                tr("Switch to editing mode") :
-                //: 2D Mapper context menu (room) item
-                tr("Switch to viewing mode");
-            auto setMapViewOnly = new QAction(viewModeItem, this);
-            connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
-            popup->addAction(setMapViewOnly);
-
-        } else if (mLabelHighlighted) {
-            //: 2D Mapper context menu (label) item
-            auto moveLabel = new QAction(tr("Move"), this);
-            //: 2D Mapper context menu item (label) tooltip
-            moveLabel->setToolTip(tr("Move label"));
-            connect(moveLabel, &QAction::triggered, this, &T2DMap::slot_moveLabel);
-            //: 2D Mapper context menu (label) item
-            auto deleteLabel = new QAction(tr("Delete"), this);
-            //: 2D Mapper context menu (label) item tooltip
-            deleteLabel->setToolTip(tr("Delete label"));
-            connect(deleteLabel, &QAction::triggered, this, &T2DMap::slot_deleteLabel);
-            popup->addAction(moveLabel);
-            popup->addAction(deleteLabel);
-        }
-        //this is placed at the end since it is likely someone will want to hook anywhere
-        QMap<QString, QMenu*> userMenus;
-        QMapIterator<QString, QStringList> it(mUserMenus);
-        while (it.hasNext()) {
-            it.next();
-            QStringList menuInfo = it.value();
-            const QString displayName = menuInfo[1];
-            // Need to give the top-level context menu as the parent so the
-            // sub-menus get destroyed at the right time:
-            auto userMenu = new QMenu(displayName, popup);
-            userMenus.insert(it.key(), userMenu);
-        }
-        it.toFront();
-        while (it.hasNext()) {
-            //take care of nested menus now since they're all made
-            it.next();
-            QStringList menuInfo = it.value();
-            const QString menuParent = menuInfo[0];
-            if (menuParent.isEmpty()) { //parentless
-                popup->addMenu(userMenus[it.key()]);
-            } else { //has a parent
-                userMenus[menuParent]->addMenu(userMenus[it.key()]);
-            }
-        }
-        //add our actions
-        QMapIterator<QString, QStringList> it2(mUserActions);
-        auto mapper = new QSignalMapper(popup);
-
-        while (it2.hasNext()) {
-            it2.next();
-            QStringList actionInfo = it2.value();
-            auto action = new QAction(actionInfo.at(2), this);
-            if (actionInfo.at(1).isEmpty()) { //no parent
-                popup->addAction(action);
-            } else if (userMenus.contains(actionInfo.at(1))) {
-                userMenus[actionInfo[1]]->addAction(action);
-            } else {
-                delete action;
-                continue;
-            }
-            mapper->setMapping(action, it2.key());
-            // TODO: QSignalMapper is not completely compatible with the functor
-            // style of QObject::connect(...) - it has been declared obsolete
-            // and should be replaced with lambda functions to perform what the
-            // slot method did...
-            connect(action, &QAction::triggered, mapper, qOverload<>(&QSignalMapper::map));
-        }
-        // In relation to above "TODO" in the meantime we can handle things
-        // by a change to one of a group of newer signals with a specific
-        // signature:
-        connect(mapper, &QSignalMapper::mappedString, this, &T2DMap::slot_userAction);
-
-        // After all has been added, finally have Qt display the context menu as a whole
         mPopupMenu = true;
         popup->popup(mapToGlobal(context.widgetPosition));
+        update();
+
+        return;
     }
+
 }
 
 bool T2DMap::event(QEvent* event)
