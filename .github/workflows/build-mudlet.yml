@@ -331,6 +331,7 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
       env:
+        QT_QPA_PLATFORM: offscreen
         LSAN_OPTIONS: suppressions=${{github.workspace}}/asan-suppressions.txt:exitcode=1
 
     - name: (macOS) Run C++ tests
