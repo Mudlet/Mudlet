@@ -126,6 +126,7 @@ public:
     };
 
     void registerInteractionHandler(IInteractionHandler* handler, int priority);
+    void prepareSingleClickSelection(MapInteractionContext& context);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
     // has been been changed to mMultiSelectionSet which cannot be accessed via
