@@ -46,6 +46,7 @@ public:
     , mMaxID(0)
     , mModuleMember()
     {}
+    ~TriggerUnit();
 
     std::list<TTrigger*> getTriggerRootNodeList()
     {
