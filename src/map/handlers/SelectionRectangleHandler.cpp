@@ -119,6 +119,10 @@ bool SelectionRectangleHandler::handleMousePress(T2DMap::MapInteractionContext& 
         mMapWidget.mMultiSelectionAnchorSet.clear();
     }
 
+    if (!mMapWidget.mMapViewOnly && (hasShift || hasCtrl)) {
+        mMapWidget.mMultiSelection = true;
+    }
+
     return false;
 }
 
