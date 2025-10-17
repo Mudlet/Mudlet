@@ -1,6 +1,7 @@
 #include "map/handlers/CustomLineEditHandler.h"
 
 #include "TMap.h"
+#include "TArea.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 

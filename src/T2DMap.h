@@ -86,6 +86,8 @@ public:
     friend class CustomLineDrawHandler;
     friend class CustomLineEditContextMenuHandler;
     friend class CustomLineEditHandler;
+    friend class RoomMoveDragHandler;
+    friend class SelectionRectangleHandler;
 
     struct MapInteractionContext {
         QMouseEvent* event = nullptr;
