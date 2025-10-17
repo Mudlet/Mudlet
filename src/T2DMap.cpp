@@ -2704,7 +2704,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     }
 
     auto context = buildInteractionContext(event);
-    mInteractionDispatcher.dispatch(context));
+    mInteractionDispatcher.dispatch(context);
 }
 
 bool T2DMap::event(QEvent* event)
