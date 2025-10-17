@@ -1,4 +1,4 @@
-#include "LabelInteractionHandler.h"
+#include "map/handlers/LabelInteractionHandler.h"
 
 #include "TArea.h"
 #include "TMap.h"

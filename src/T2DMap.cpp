@@ -30,9 +30,9 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
-#include "LabelInteractionHandler.h"
-#include "PanInteractionHandler.h"
-#include "SelectionRectangleHandler.h"
+#include "map/handlers/LabelInteractionHandler.h"
+#include "map/handlers/PanInteractionHandler.h"
+#include "map/handlers/SelectionRectangleHandler.h"
 #include "map/handlers/CustomLineDrawHandler.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
