@@ -30,11 +30,13 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "map/handlers/CustomLineDrawContextMenuHandler.h"
+#include "map/handlers/CustomLineDrawHandler.h"
+#include "map/handlers/CustomLineEditContextMenuHandler.h"
+#include "map/handlers/CustomLineEditHandler.h"
 #include "map/handlers/LabelInteractionHandler.h"
 #include "map/handlers/PanInteractionHandler.h"
 #include "map/handlers/SelectionRectangleHandler.h"
-#include "map/handlers/CustomLineDrawHandler.h"
-#include "map/handlers/CustomLineEditHandler.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -173,8 +175,14 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
 
+    mCustomLineDrawContextMenuHandler = std::make_unique<CustomLineDrawContextMenuHandler>(*this);
+    registerInteractionHandler(mCustomLineDrawContextMenuHandler.get(), 450);
+
     mCustomLineDrawInteractionHandler = std::make_unique<CustomLineDrawHandler>(*this);
     registerInteractionHandler(mCustomLineDrawInteractionHandler.get(), 400);
+
+    mCustomLineEditContextMenuHandler = std::make_unique<CustomLineEditContextMenuHandler>(*this);
+    registerInteractionHandler(mCustomLineEditContextMenuHandler.get(), 360);
 
     mCustomLineEditInteractionHandler = std::make_unique<CustomLineEditHandler>(*this);
     registerInteractionHandler(mCustomLineEditInteractionHandler.get(), 350);
@@ -2629,47 +2637,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         popup->setToolTipsVisible(true);
         popup->setAttribute(Qt::WA_DeleteOnClose);
 
-        if (mCustomLinesRoomFrom > 0) {
-            if (mDialogLock) {
-                return;
-            }
-
-            TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
-            if (room) {
-                //: 2D Mapper context menu (drawing custom exit line) item
-                auto customLineUndoLastPoint = new QAction(tr("Undo"), this);
-                //: 2D Mapper context menu (drawing custom exit line) item tooltip
-                customLineUndoLastPoint->setToolTip(tr("Undo last point"));
-                if (room->customLines.value(mCustomLinesRoomExit).count() > 1) {
-                    connect(customLineUndoLastPoint, &QAction::triggered, this, &T2DMap::slot_undoCustomLineLastPoint);
-                } else {
-                    customLineUndoLastPoint->setEnabled(false);
-                }
-                //: 2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
-                auto customLineProperties = new QAction(tr("Properties"), this);
-                //: 2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
-                customLineProperties->setText(tr("properties..."));
-                //: 2D Mapper context menu (drawing custom exit line) item tooltip
-                customLineProperties->setToolTip(utils::richText(tr("Change the properties of this line")));
-                connect(customLineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
-                //: 2D Mapper context menu (drawing custom exit line) item
-                auto customLineFinish = new QAction(tr("Finish"), this);
-                //: 2D Mapper context menu (drawing custom exit line) item tooltip
-                customLineFinish->setToolTip(utils::richText(tr("Finish drawing this line")));
-                connect(customLineFinish, &QAction::triggered, this, &T2DMap::slot_doneCustomLine);
-
-                room->calcRoomDimensions();
-                popup->addAction(customLineUndoLastPoint);
-                popup->addAction(customLineProperties);
-                popup->addAction(customLineFinish);
-
-                mPopupMenu = true;
-                popup->popup(mapToGlobal(context.widgetPosition));
-                update();
-                return;
-            }
-        }
-
         auto* pArea = context.area;
         if (!context.isLabelHighlighted && mCustomLineSelectedRoom == 0) {
             mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
@@ -2875,79 +2842,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
             connect(deleteLabel, &QAction::triggered, this, &T2DMap::slot_deleteLabel);
             popup->addAction(moveLabel);
             popup->addAction(deleteLabel);
-        } else {
-            // seems that if we get here then we have right clicked on a selected custom line?
-            //            qDebug("T2DMap::mousePressEvent(): reached else case, mCustomLineSelectedRoom=%i, Exit=%s, Point=%i",
-            //                   mCustomLineSelectedRoom,
-            //                   qPrintable(mCustomLineSelectedExit),
-            //                   mCustomLineSelectedPoint);
-
-            if (mCustomLineSelectedRoom > 0) {
-                TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
-                if (room) {
-                    //: 2D Mapper context menu (custom line editing) item
-                    auto addPoint = new QAction(tr("Add point"), this);
-                    if (mCustomLineSelectedPoint > -1)
-                    // The first user manipulable point IS zero - line is
-                    // drawn to it from a point around room symbol dependent
-                    // on the exit direction - and we can now add even to it
-                    {
-                        connect(addPoint, &QAction::triggered, this, &T2DMap::slot_customLineAddPoint);
-                        //: 2D Mapper context menu (custom line editing) item tooltip (enabled state)
-                        addPoint->setToolTip(utils::richText(tr("Divide segment by adding a new point mid-way along")));
-                    } else {
-                        addPoint->setEnabled(false);
-                        //: 2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)
-                        addPoint->setToolTip(utils::richText(tr("Select a point first, then add a new point mid-way along the segment towards room")));
-                    }
-
-                    //: 2D Mapper context menu (custom line editing) item
-                    auto removePoint = new QAction(tr("Remove point"), this);
-                    // Permit this to be enabled if the current point is 0 or
-                    // greater, but not if there is no others
-                    if (mCustomLineSelectedPoint > -1) {
-                        if (room->customLines.value(mCustomLineSelectedExit).count() > 1) {
-                            connect(removePoint, &QAction::triggered, this, &T2DMap::slot_customLineRemovePoint);
-                            if ((mCustomLineSelectedPoint + 1) < room->customLines.value(mCustomLineSelectedExit).count()) {
-                                //: 2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)
-                                removePoint->setToolTip(utils::richText(tr("Merge pair of segments by removing this point")));
-
-                            } else {
-                                //: 2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)
-                                removePoint->setToolTip(utils::richText(tr("Remove last segment by removing this point")));
-                            }
-                        } else {
-                            removePoint->setEnabled(false);
-                            //: (2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action "delete line" should match the translation for that action))
-                            removePoint->setToolTip(utils::richText(tr(R"(use "delete line" to remove the only segment ending in an editable point)")));
-                        }
-                    } else {
-                        removePoint->setEnabled(false);
-                        //: 2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)
-                        removePoint->setToolTip(utils::richText(tr("Select a point first, then remove it")));
-                    }
-
-                    //: 2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)
-                    auto lineProperties = new QAction(tr("Properties"), this);
-                    // Changed separately, because the constructor silently copies the text elsewhere
-                    // (tooltip and/or object name IIRC) whereas the ellipsis is meant only for display
-                    //: 2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise
-                    lineProperties->setText(tr("properties..."));
-                    lineProperties->setToolTip(utils::richText(tr("Change the properties of this custom line")));
-                    connect(lineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
-
-                    //: 2D Mapper context menu (custom line editing) item
-                    auto deleteLine = new QAction(tr("Delete line"), this);
-                    //: 2D Mapper context menu (custom line editing) item tooltip
-                    deleteLine->setToolTip(utils::richText(tr("Delete all of this custom line")));
-                    connect(deleteLine, &QAction::triggered, this, &T2DMap::slot_deleteCustomExitLine);
-
-                    popup->addAction(addPoint);
-                    popup->addAction(removePoint);
-                    popup->addAction(lineProperties);
-                    popup->addAction(deleteLine);
-                }
-            }
         }
         //this is placed at the end since it is likely someone will want to hook anywhere
         QMap<QString, QMenu*> userMenus;
@@ -3003,7 +2897,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 
         // After all has been added, finally have Qt display the context menu as a whole
         mPopupMenu = true;
-        popup->popup(mapToGlobal(event->pos()));
+        popup->popup(mapToGlobal(context.widgetPosition));
     }
 }
 
@@ -3085,6 +2979,9 @@ T2DMap::MapInteractionContext T2DMap::buildInteractionContext(QMouseEvent* event
     context.isDialogLocked = mDialogLock;
     context.customLinesRoomFrom = mCustomLinesRoomFrom;
     context.customLinesRoomExit = mCustomLinesRoomExit;
+    context.customLineSelectedRoom = mCustomLineSelectedRoom;
+    context.customLineSelectedExit = mCustomLineSelectedExit;
+    context.customLineSelectedPoint = mCustomLineSelectedPoint;
 
     if (!mpMap || !mpMap->mpRoomDB) {
         return context;
