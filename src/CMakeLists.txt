@@ -109,6 +109,7 @@ set(mudlet_SRCS
     SingleLineTextEdit.cpp
     T2DMap.cpp
     map/handlers/CustomLineDrawHandler.cpp
+    map/handlers/CustomLineEditHandler.cpp
     map/handlers/LabelInteractionHandler.cpp
     map/handlers/PanInteractionHandler.cpp
     map/handlers/SelectionRectangleHandler.cpp
@@ -295,6 +296,7 @@ set(mudlet_HDRS
     SingleLineTextEdit.h
     T2DMap.h
     map/handlers/CustomLineDrawHandler.h
+    map/handlers/CustomLineEditHandler.h
     map/handlers/LabelInteractionHandler.h
     map/handlers/PanInteractionHandler.h
     map/handlers/SelectionRectangleHandler.h

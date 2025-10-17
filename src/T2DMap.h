@@ -49,6 +49,7 @@ class TArea;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
+class CustomLineEditHandler;
 
 class QCheckBox;
 class QComboBox;
@@ -75,6 +76,8 @@ public:
     void wheelEvent(QWheelEvent*) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
+
+    friend class CustomLineEditHandler;
 
     struct MapInteractionContext {
         QMouseEvent* event = nullptr;
@@ -302,6 +305,7 @@ private:
 
     InteractionDispatcher mInteractionDispatcher;
     std::unique_ptr<IInteractionHandler> mCustomLineDrawInteractionHandler;
+    std::unique_ptr<IInteractionHandler> mCustomLineEditInteractionHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
