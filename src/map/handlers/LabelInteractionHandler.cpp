@@ -28,23 +28,15 @@ bool LabelInteractionHandler::matches(const T2DMap::MapInteractionContext& conte
 
     switch (context.event->type()) {
     case QEvent::MouseButtonPress:
-        if (!context.area || context.isCustomLineDrawing) {
-            return false;
-        }
-
-        if (context.button == Qt::LeftButton) {
-            return !context.isMapViewOnly;
-        }
-
-        if (context.button == Qt::RightButton) {
-            return true;
-        }
-
-        return false;
+        return context.button == Qt::LeftButton
+            && !context.isMapViewOnly
+            && context.area
+            && !context.isCustomLineDrawing;
     case QEvent::MouseMove:
         return context.isLabelHighlighted || context.isMoveLabelActive;
     case QEvent::MouseButtonRelease:
-        return context.button == Qt::LeftButton && context.isMoveLabelActive;
+        return (context.button == Qt::LeftButton && context.isMoveLabelActive)
+            || (context.button == Qt::RightButton && context.isLabelHighlighted && context.area);
     default:
         return false;
     }
@@ -70,115 +62,38 @@ bool LabelInteractionHandler::handle(T2DMap::MapInteractionContext& context)
 
 bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& context) const
 {
+    if (context.button != Qt::LeftButton) {
+        return false;
+    }
+
     auto* area = context.area;
-    if (!area) {
-        if (context.button == Qt::RightButton) {
-            mMapWidget.mLabelHighlighted = false;
-            mMapWidget.update();
-        }
-        context.isLabelHighlighted = false;
+    if (!area || area->mMapLabels.isEmpty()) {
         return false;
     }
 
-    if (context.button == Qt::LeftButton) {
-        if (area->mMapLabels.isEmpty()) {
-            return false;
+    QMutableMapIterator<int, TMapLabel> iterator(area->mMapLabels);
+    while (iterator.hasNext()) {
+        iterator.next();
+        auto mapLabel = iterator.value();
+        if (mapLabel.pos.z() != mMapWidget.mMapCenterZ) {
+            continue;
         }
 
-        QMutableMapIterator<int, TMapLabel> iterator(area->mMapLabels);
-        while (iterator.hasNext()) {
-            iterator.next();
-            auto mapLabel = iterator.value();
-            if (mapLabel.pos.z() != mMapWidget.mMapCenterZ) {
-                continue;
-            }
-
-            const float labelX = mapLabel.pos.x() * mMapWidget.mRoomWidth + mMapWidget.mRX;
-            const float labelY = mapLabel.pos.y() * mMapWidget.mRoomHeight * -1 + mMapWidget.mRY;
-            const QPoint click = context.widgetPosition;
-            const QRectF boundingRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
-            if (boundingRect.contains(click)) {
-                mapLabel.highlight = !mapLabel.highlight;
-                mMapWidget.mLabelHighlighted = mapLabel.highlight;
-                context.isLabelHighlighted = mMapWidget.mLabelHighlighted;
-                iterator.setValue(mapLabel);
-                mMapWidget.update();
-                return true;
-            }
-        }
-
-        mMapWidget.mLabelHighlighted = false;
-        context.isLabelHighlighted = false;
-        mMapWidget.update();
-
-        return false;
-    }
-
-    if (context.button == Qt::RightButton) {
-        bool highlightChanged = false;
-        bool labelFound = false;
-
-        QMutableMapIterator<int, TMapLabel> iterator(area->mMapLabels);
-        while (iterator.hasNext()) {
-            iterator.next();
-            auto mapLabel = iterator.value();
-
-            const bool isSameZLevel = qRound(mapLabel.pos.z()) == mMapWidget.mMapCenterZ;
-            bool shouldHighlight = false;
-            if (isSameZLevel) {
-                const float labelX = mapLabel.pos.x() * mMapWidget.mRoomWidth + mMapWidget.mRX;
-                const float labelY = mapLabel.pos.y() * mMapWidget.mRoomHeight * -1 + mMapWidget.mRY;
-                const QRectF boundingRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
-                shouldHighlight = boundingRect.contains(context.widgetPosition);
-            }
-
-            if (mapLabel.highlight != shouldHighlight) {
-                mapLabel.highlight = shouldHighlight;
-                iterator.setValue(mapLabel);
-                highlightChanged = true;
-            }
-
-            if (shouldHighlight) {
-                labelFound = true;
-            }
-        }
-
-        mMapWidget.mLabelHighlighted = labelFound;
-        context.isLabelHighlighted = labelFound;
-
-        if (highlightChanged || !labelFound) {
+        const float labelX = mapLabel.pos.x() * mMapWidget.mRoomWidth + mMapWidget.mRX;
+        const float labelY = mapLabel.pos.y() * mMapWidget.mRoomHeight * -1 + mMapWidget.mRY;
+        const QPoint click = context.widgetPosition;
+        const QRectF boundingRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
+        if (boundingRect.contains(click)) {
+            mapLabel.highlight = !mapLabel.highlight;
+            mMapWidget.mLabelHighlighted = mapLabel.highlight;
+            iterator.setValue(mapLabel);
             mMapWidget.update();
+            return true;
         }
-
-        if (!labelFound) {
-            return false;
-        }
-
-        auto* popup = new QMenu(&mMapWidget);
-        popup->setToolTipsVisible(true);
-        popup->setAttribute(Qt::WA_DeleteOnClose);
-
-        //: 2D Mapper context menu (label) item
-        auto* moveLabel = new QAction(mMapWidget.tr("Move"), popup);
-        //: 2D Mapper context menu item (label) tooltip
-        moveLabel->setToolTip(mMapWidget.tr("Move label"));
-        QObject::connect(moveLabel, &QAction::triggered, &mMapWidget, &T2DMap::slot_moveLabel);
-
-        //: 2D Mapper context menu (label) item
-        auto* deleteLabel = new QAction(mMapWidget.tr("Delete"), popup);
-        //: 2D Mapper context menu (label) item tooltip
-        deleteLabel->setToolTip(mMapWidget.tr("Delete label"));
-        QObject::connect(deleteLabel, &QAction::triggered, &mMapWidget, &T2DMap::slot_deleteLabel);
-
-        popup->addAction(moveLabel);
-        popup->addAction(deleteLabel);
-
-        mMapWidget.mPopupMenu = true;
-        popup->popup(mMapWidget.mapToGlobal(context.widgetPosition));
-        mMapWidget.update();
-
-        return true;
     }
+
+    mMapWidget.mLabelHighlighted = false;
+    mMapWidget.update();
 
     return false;
 }
@@ -232,13 +147,45 @@ bool LabelInteractionHandler::handleMouseMove(T2DMap::MapInteractionContext& con
     return false;
 }
 
-bool LabelInteractionHandler::handleMouseRelease(T2DMap::MapInteractionContext& context) const
-{
-    if (context.button == Qt::LeftButton) {
-        if (mMapWidget.mMoveLabel) {
-            mMapWidget.mMoveLabel = false;
+bool LabelInteractionHandler::handleMouseRelease(T2DMap::MapInteractionContext &context) const {
+    switch (context.button) {
+        case Qt::LeftButton: {
+            if (mMapWidget.mMoveLabel) {
+                mMapWidget.mMoveLabel = false;
+            }
+            return false;
         }
-    }
+        case Qt::RightButton: {
+            if (!context.area || !context.isLabelHighlighted) {
+                return false;
+            }
 
-    return false;
+            auto *popup = new QMenu(&mMapWidget);
+            popup->setToolTipsVisible(true);
+            popup->setAttribute(Qt::WA_DeleteOnClose);
+
+            //: 2D Mapper context menu (label) item
+            auto *moveLabel = new QAction(mMapWidget.tr("Move"), popup);
+            //: 2D Mapper context menu item (label) tooltip
+            moveLabel->setToolTip(mMapWidget.tr("Move label"));
+            QObject::connect(moveLabel, &QAction::triggered, &mMapWidget, &T2DMap::slot_moveLabel);
+
+            //: 2D Mapper context menu (label) item
+            auto *deleteLabel = new QAction(mMapWidget.tr("Delete"), popup);
+            //: 2D Mapper context menu (label) item tooltip
+            deleteLabel->setToolTip(mMapWidget.tr("Delete label"));
+            QObject::connect(deleteLabel, &QAction::triggered, &mMapWidget, &T2DMap::slot_deleteLabel);
+
+            popup->addAction(moveLabel);
+            popup->addAction(deleteLabel);
+
+            mMapWidget.mPopupMenu = true;
+            popup->popup(mMapWidget.mapToGlobal(context.widgetPosition));
+            mMapWidget.update();
+
+            return true;
+        }
+        default:
+            return false;
+    }
 }

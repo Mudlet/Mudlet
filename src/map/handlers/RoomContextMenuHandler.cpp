@@ -78,36 +78,7 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
     }
 
     mMapWidget.prepareSingleClickSelection(context);
-
-    bool selectionChanged = false;
-
-    if (context.hasClickedRoom) {
-        const bool preserveSelection = context.modifiers.testFlag(Qt::ControlModifier)
-            && mMapWidget.mMultiSelectionSet.contains(context.clickedRoomId)
-            && mMapWidget.mMultiSelectionSet.size() > 1;
-
-        if (!preserveSelection) {
-            mMapWidget.clearSelection();
-            mMapWidget.mMultiSelectionSet.clear();
-            mMapWidget.mMultiSelectionSet.insert(context.clickedRoomId);
-            mMapWidget.mMultiSelectionHighlightRoomId = context.clickedRoomId;
-            selectionChanged = true;
-        }
-    } else if (!mMapWidget.mMultiSelectionSet.isEmpty()) {
-        mMapWidget.clearSelection();
-        mMapWidget.mMultiSelectionSet.clear();
-        mMapWidget.mMultiSelectionHighlightRoomId = 0;
-        selectionChanged = true;
-    }
-
-    context.multiSelectionSet = &mMapWidget.mMultiSelectionSet;
-    context.hasMultiSelection = !mMapWidget.mMultiSelectionSet.isEmpty();
-
-    if (selectionChanged) {
-        mMapWidget.updateSelectionWidget();
-    }
-
-    const int selectionSize = mMapWidget.mMultiSelectionSet.size();
+    const int selectionSize = context.multiSelectionSet ? context.multiSelectionSet->size() : 0;
 
     if (!context.isMapViewOnly) {
         populateEditModeActions(popup, selectionSize, context.area);
