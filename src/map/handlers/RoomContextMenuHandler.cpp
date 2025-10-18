@@ -108,7 +108,10 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
 
         if (isRoomAlreadySelected) {
             if (mMapWidget.mMultiSelectionHighlightRoomId != context.clickedRoomId) {
-                mMapWidget.mMultiSelectionHighlightRoomId = context.clickedRoomId;
+                const bool isHighlightMissing = !mMapWidget.mMultiSelectionSet.contains(mMapWidget.mMultiSelectionHighlightRoomId);
+                if (previousSelectionSize <= 1 || isHighlightMissing) {
+                    mMapWidget.mMultiSelectionHighlightRoomId = context.clickedRoomId;
+                }
             }
         } else {
             mMapWidget.clearSelection();
