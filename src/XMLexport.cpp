@@ -163,7 +163,6 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             }
             mpHost->xmlSaved(fileName);
         });
-        // Ensure watcher is deleted after completion
         connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
         saveFutures.append(future);
@@ -189,7 +188,6 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
         }
         mpHost->xmlSaved(qsl("profile"));
     });
-    // Ensure watcher is deleted after completion
     connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
     watcher->setFuture(future);
     saveFutures.append(future);
@@ -423,14 +421,14 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
-    
+
     // Handle proxy password based on application version for backward compatibility
     // For version 4.20.0+, use secure storage and clear XML; for older versions, maintain plaintext in XML
     const QString currentAppVersion = QString(APP_VERSION);
     const QVersionNumber appVersion = QVersionNumber::fromString(currentAppVersion);
     const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
     const bool useSecureStorage = appVersion >= secureStorageVersion;
-    
+
     if (useSecureStorage) {
         // Modern versions: store in secure storage, clear from XML
         if (!pHost->mProxyPassword.isEmpty()) {
@@ -642,7 +640,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
-    
+
     // Write experiments
     {
         QStringList allExperiments = pHost->getAllExperiments();
@@ -654,7 +652,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
-    
+
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);
@@ -806,7 +804,6 @@ bool XMLexport::exportProfile(const QString& exportFileName)
             }
             mpHost->xmlSaved(qsl("profile"));
         });
-        // Ensure watcher is deleted after completion
         QObject::connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
         saveFutures.append(future);

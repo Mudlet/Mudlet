@@ -31,9 +31,8 @@
 #include <QPointer>
 #include <QSaveFile>
 #include <pugixml.hpp>
-#include "post_guard.h"
-
 #include <memory>
+#include "post_guard.h"
 
 class QFile;
 class Host;
