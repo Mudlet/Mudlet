@@ -157,7 +157,7 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
         auto self = shared_from_this();
         auto future = QtConcurrent::run([self, fileName]() { return self->saveXml(fileName); });
         auto watcher = new QFutureWatcher<bool>;
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, self]() {
+        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this, fileName]() {
             if (!mpHost) {
                 return;
             }
@@ -182,7 +182,7 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run([self, filename_pugi_xml]() { return self->saveXml(filename_pugi_xml); });
 
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, self]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this]() {
         if (!mpHost) {
             return;
         }
@@ -798,7 +798,7 @@ bool XMLexport::exportProfile(const QString& exportFileName)
         auto self = shared_from_this();
         auto future = QtConcurrent::run([self, exportFileName]() { return self->saveXml(exportFileName); });
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, self]() {
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this]() {
             if (!mpHost) {
                 return;
             }
