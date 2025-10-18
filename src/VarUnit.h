@@ -44,6 +44,7 @@ class VarUnit
 
 public:
     VarUnit();
+    ~VarUnit();
     QStringList varName(TVar*);
     QStringList shortVarName(TVar*);
     bool varExists(TVar*);
