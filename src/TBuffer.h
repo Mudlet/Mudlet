@@ -53,6 +53,89 @@ class Host;
 class QTextCodec;
 class TConsole;
 
+// Enhanced OSC 8 hyperlink styling support with CSS link states
+// Defined in Mudlet namespace to avoid circular dependencies
+namespace Mudlet {
+
+struct HyperlinkStyling {
+    // Base styling properties
+    QColor foregroundColor;
+    QColor backgroundColor;
+    bool hasForegroundColor = false;
+    bool hasBackgroundColor = false;
+    bool isBold = false;
+    bool isItalic = false;
+    bool isUnderlined = false; // OSC 8 hyperlinks default to no underline (unlike other Mudlet hyperlinks)
+    bool isStrikeOut = false;
+    bool isOverlined = false;
+    bool hasCustomStyling = false; // Tracks if any custom styling was provided
+    bool hasBaseCustomStyling = false; // Tracks if base (non-pseudo-class) styling was provided
+    
+    // Extended text decoration support
+    enum UnderlineStyle {
+        UnderlineNone,
+        UnderlineSolid,     // Standard underline
+        UnderlineWavy,      // Squiggly/wavy underline
+        UnderlineDotted,    // Dotted underline  
+        UnderlineDashed     // Dashed underline
+    };
+    UnderlineStyle underlineStyle = UnderlineSolid;
+    QColor underlineColor;
+    QColor overlineColor;
+    QColor strikeoutColor;
+    bool hasUnderlineColor = false;
+    bool hasOverlineColor = false;
+    bool hasStrikeoutColor = false;
+    
+    // CSS Link State Support with Accessibility
+    enum LinkState {
+        StateDefault,       // Default/unvisited (:link)
+        StateVisited,       // Visited link (:visited)
+        StateHover,         // Mouse hover (:hover)
+        StateActive,        // Mouse down/active (:active)
+        StateFocus,         // Keyboard focus (:focus)
+        StateFocusVisible   // Visible keyboard focus (:focus-visible)
+    };
+    
+    // State-specific styling containers
+    struct StateStyle {
+        QColor foregroundColor;
+        QColor backgroundColor;
+        QColor underlineColor;
+        QColor overlineColor;
+        QColor strikeoutColor;
+        bool hasForegroundColor = false;
+        bool hasBackgroundColor = false;
+        bool hasUnderlineColor = false;
+        bool hasOverlineColor = false;
+        bool hasStrikeoutColor = false;
+        bool isBold = false;
+        bool isItalic = false;
+        bool isUnderlined = false;
+        bool isStrikeOut = false;
+        bool isOverlined = false;
+        UnderlineStyle underlineStyle = UnderlineSolid;
+        bool hasCustomStyling = false;
+    };
+    
+    // State-specific styles
+    StateStyle linkStyle;           // :link (unvisited)
+    StateStyle visitedStyle;        // :visited 
+    StateStyle hoverStyle;          // :hover
+    StateStyle activeStyle;         // :active
+    StateStyle focusStyle;          // :focus
+    StateStyle focusVisibleStyle;   // :focus-visible
+    StateStyle anyLinkStyle;        // :any-link (applies to both :link and :visited)
+    
+    // State tracking
+    LinkState currentState = StateDefault;
+    
+    // Methods to get effective styling for current state
+    StateStyle getEffectiveStyle() const;
+};
+
+} // namespace Mudlet
+
 class WrapInfo
 {
     friend class TBuffer;
@@ -82,6 +165,10 @@ public:
         Overline = 0x8,               // 0000 0000 0000 0000 0000 0000 0000 1000
         // Replaces TCHAR_STRIKEOUT 32
         StrikeOut = 0x10,             // 0000 0000 0000 0000 0000 0000 0001 0000
+        // Extended underline styles for enhanced OSC 8 hyperlink support
+        UnderlineWavy = 0x400000,     // 0000 0000 0100 0000 0000 0000 0000 0000
+        UnderlineDotted = 0x800000,   // 0000 0000 1000 0000 0000 0000 0000 0000
+        UnderlineDashed = 0x1000000,  // 0000 0001 0000 0000 0000 0000 0000 0000
         // NOT a replacement for TCHAR_INVERSE, that is now covered by the
         // separate isSelected bool but they must be EX-ORed at the point of
         // painting the Character
@@ -116,7 +203,7 @@ public:
         // Mask for "any alternate font" - only the most significant one should
         // be used if more than one is set:
         AltFontMask = 0x1ff00,        // 0000 0000 0000 0001 1111 1111 0000 0000
-        TestMask = 0x3ffff,           // 0000 0000 0000 0011 1111 1111 1111 1111
+        TestMask = 0x1f3ffff,         // 0000 0001 1111 0011 1111 1111 1111 1111 (includes extended underline styles)
         // The remainder are internal use ones that do not related to SGR codes
         // that have been parsed from the incoming text.
         // Has been found in a search operation (currently Main Console only)
@@ -172,6 +259,26 @@ public:
     bool isReversed() const { return mFlags & Reverse; }
     bool isConcealed() const { return mFlags & Concealed; }
     bool isFound() const { return mFlags & Found; }
+    // Extended underline style accessors for enhanced OSC 8 hyperlink support
+    bool isUnderlineWavy() const { return mFlags & UnderlineWavy; }
+    bool isUnderlineDotted() const { return mFlags & UnderlineDotted; }
+    bool isUnderlineDashed() const { return mFlags & UnderlineDashed; }
+    
+    // Decoration color accessors
+    const QColor& underlineColor() const { return mUnderlineColor; }
+    const QColor& overlineColor() const { return mOverlineColor; }
+    const QColor& strikeoutColor() const { return mStrikeoutColor; }
+    bool hasCustomUnderlineColor() const { return mHasCustomUnderlineColor; }
+    bool hasCustomOverlineColor() const { return mHasCustomOverlineColor; }
+    bool hasCustomStrikeoutColor() const { return mHasCustomStrikeoutColor; }
+    
+    // Decoration color setters
+    void setUnderlineColor(const QColor& color) { mUnderlineColor = color; mHasCustomUnderlineColor = true; }
+    void setOverlineColor(const QColor& color) { mOverlineColor = color; mHasCustomOverlineColor = true; }
+    void setStrikeoutColor(const QColor& color) { mStrikeoutColor = color; mHasCustomStrikeoutColor = true; }
+    void clearCustomUnderlineColor() { mHasCustomUnderlineColor = false; }
+    void clearCustomOverlineColor() { mHasCustomOverlineColor = false; }
+    void clearCustomStrikeoutColor() { mHasCustomStrikeoutColor = false; }
     // Special case - if fast blink is set then do NOT say that blink is set to
     // preserve priority of the former over the latter:
     bool isBlinking() const { return (mFlags & FastBlink) ? false : (mFlags & Blink); }
@@ -233,6 +340,12 @@ public:
             return qsl("AltFont9");
         case Concealed:
             return qsl("Concealed");
+        case UnderlineWavy:
+            return qsl("UnderlineWavy");
+        case UnderlineDotted:
+            return qsl("UnderlineDotted");
+        case UnderlineDashed:
+            return qsl("UnderlineDashed");
         default:
             return qsl("Unknown");
         }
@@ -245,6 +358,14 @@ private:
     // Kept as a separate flag because it must often be handled separately
     bool mIsSelected = false;
     int mLinkIndex = 0;
+    
+    // Enhanced decoration color support for OSC 8 hyperlinks
+    QColor mUnderlineColor;
+    QColor mOverlineColor;
+    QColor mStrikeoutColor;
+    bool mHasCustomUnderlineColor = false;
+    bool mHasCustomOverlineColor = false;
+    bool mHasCustomStrikeoutColor = false;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
@@ -307,6 +428,9 @@ public:
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
     void appendLog(const QString &text);
+    
+    // OSC 8 hyperlink documentation examples - triggered by secret phrase
+    void injectOSC8DocumentationExamples();
 
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
@@ -334,7 +458,6 @@ public:
     int mCursorY = 0;
     bool mEchoingText = false;
 
-
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
@@ -349,6 +472,24 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
+    
+    // Helper function for parsing URI query parameters in OSC 8 hyperlinks
+    QMap<QString, QString> parseUriQueryParameters(const QString& uri);
+    // Helper function for parsing JSON format hyperlink configuration
+    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters);
+    // Helper functions for JSON to CSS conversion
+    QString jsonStyleObjectToCss(const QJsonObject& styleObj);
+    QString jsonMenuArrayToString(const QJsonArray& menuArray);
+    // Helper function for appending query parameters to URIs (handles existing params)
+    QString appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters);
+    // Helper function for parsing CSS-like style strings
+    void parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling);
+    // Helper function for parsing color values (hex, named, rgb)
+    QColor parseColorValue(const QString& value);
+    // CSS Link State parsing and management
+    void parseHyperlinkStateStyle(const QString& pseudoClass, const QString& styleString, Mudlet::HyperlinkStyling& styling);
+    void parseStateStyleProperties(const QString& styleString, Mudlet::HyperlinkStyling::StateStyle& stateStyle);
+    void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
 
 
     QPointer<TConsole> mpConsole;
@@ -399,6 +540,9 @@ private:
     bool mReverse = false;
     bool mStrikeOut = false;
     bool mUnderline = false;
+    bool mUnderlineWavy = false;
+    bool mUnderlineDotted = false;
+    bool mUnderlineDashed = false;
     // If BOTH of these ever get set than only mFastBlink is to be considered
     // set - when setting one ensure the other is reset:
     bool mBlink = false;
@@ -425,11 +569,42 @@ private:
     QTextCodec* mMainIncomingCodec = nullptr;
 
     // OSC 8 hyperlink tracking
-    QString mCurrentHyperlinkUrl;
     QStringList mCurrentHyperlinkCommand;
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    
+    // Enhanced OSC 8 hyperlink styling and menu support
+    Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
+    QStringList mCurrentHyperlinkMenu; // Format: "Label|Command|Label|Command..."
+    
+    // Link state tracking for interactive pseudo-classes
+    QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
+    QMap<int, bool> mVisitedLinks; // Track which links have been visited (base state)
+    QMap<int, QColor> mLinkOriginalBackgrounds; // Track original background color per link
+    QMap<int, TChar> mLinkOriginalCharacters; // Track original ANSI formatting per link
+    int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
+    int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
+    int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
+    
+public:
+    // Methods for link state management (used by TTextEdit event handlers)
+    void setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState state);
+    Mudlet::HyperlinkStyling::LinkState getLinkState(int linkIndex) const;
+    Mudlet::HyperlinkStyling getEffectiveHyperlinkStyling(int linkIndex) const;
+    void setHoveredLink(int linkIndex);
+    void setActiveLink(int linkIndex);
+    void setFocusedLink(int linkIndex);
+    void markLinkAsVisited(int linkIndex); // Mark a link as visited (base state)
+    bool isLinkVisited(int linkIndex) const; // Check if link has been visited
+    int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
+    int getActiveLink() const { return mCurrentActiveLinkIndex; }
+    int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
+    int getLinkIndexAt(int line, int column) const; // Get link index at specific position
+    
+private:
+    // Update all TChar objects that belong to a specific link with effective styling
+    void updateLinkCharacters(int linkIndex);
 };
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -493,13 +668,22 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
         presentAttributes << QLatin1String("AltFont9 (0x10000)");
     }
     if (attributes & TChar::Concealed) {
-        presentAttributes << QLatin1String("AltFont9 (0x20000)");
+        presentAttributes << QLatin1String("Concealed (0x20000)");
     }
     if (attributes & TChar::Found) {
         presentAttributes << QLatin1String("Found (0x100000)");
     }
     if (attributes & TChar::Echo) {
         presentAttributes << QLatin1String("Echo (0x200000)");
+    }
+    if (attributes & TChar::UnderlineWavy) {
+        presentAttributes << QLatin1String("UnderlineWavy (0x400000)");
+    }
+    if (attributes & TChar::UnderlineDotted) {
+        presentAttributes << QLatin1String("UnderlineDotted (0x800000)");
+    }
+    if (attributes & TChar::UnderlineDashed) {
+        presentAttributes << QLatin1String("UnderlineDashed (0x1000000)");
     }
     if (presentAttributes.isEmpty()) {
         result.append(QLatin1String("None (0x0))"));
