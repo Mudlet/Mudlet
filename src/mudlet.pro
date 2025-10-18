@@ -664,8 +664,15 @@ SOURCES += \
     ShortcutsManager.cpp \
     SingleLineTextEdit.cpp \
     T2DMap.cpp \
+    map/handlers/CustomLineDrawContextMenuHandler.cpp \
+    map/handlers/CustomLineDrawHandler.cpp \
+    map/handlers/CustomLineEditContextMenuHandler.cpp \
+    map/handlers/CustomLineEditHandler.cpp \
     map/handlers/LabelInteractionHandler.cpp \
     map/handlers/PanInteractionHandler.cpp \
+    map/handlers/RoomContextMenuHandler.cpp \
+    map/handlers/RoomMoveActivationHandler.cpp \
+    map/handlers/RoomMoveDragHandler.cpp \
     map/handlers/SelectionRectangleHandler.cpp \
     TAccessibleTextEdit.cpp \
     TAction.cpp \
@@ -802,8 +809,15 @@ HEADERS += \
     ShortcutsManager.h \
     SingleLineTextEdit.h \
     T2DMap.h \
+    map/handlers/CustomLineDrawContextMenuHandler.h \
+    map/handlers/CustomLineDrawHandler.h \
+    map/handlers/CustomLineEditContextMenuHandler.h \
+    map/handlers/CustomLineEditHandler.h \
     map/handlers/LabelInteractionHandler.h \
     map/handlers/PanInteractionHandler.h \
+    map/handlers/RoomContextMenuHandler.h \
+    map/handlers/RoomMoveActivationHandler.h \
+    map/handlers/RoomMoveDragHandler.h \
     map/handlers/SelectionRectangleHandler.h \
     TAccessibleConsole.h \
     TAccessibleTextEdit.h \
