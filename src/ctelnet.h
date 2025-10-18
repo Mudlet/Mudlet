@@ -49,6 +49,7 @@
 #include <zlib.h>
 
 #include <iostream>
+#include <memory>
 #include <queue>
 #include <string>
 #include <QVector>
@@ -350,7 +351,7 @@ private:
     QTextCodec* mpOutOfBandDataIncomingCodec = nullptr;
     QTextCodec* outgoingDataCodec = nullptr;
 //    QTextDecoder* incomingDataDecoder;
-    QTextEncoder* outgoingDataEncoder = nullptr;
+    std::unique_ptr<QTextEncoder> outgoingDataEncoder;
     QString mHostName;
     int mHostPort = 0;
     bool mWaitingForResponse = false;
