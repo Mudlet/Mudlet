@@ -41,6 +41,7 @@
 #include <QProgressDialog>
 #include <QPainter>
 #include <QBuffer>
+#include <memory>
 #include "post_guard.h"
 
 
@@ -1721,7 +1722,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             ifs >> areaSize;
             // restore area table
             for (int i = 0; i < areaSize; i++) {
-                auto pA = new TArea(this, mpRoomDB);
+                auto pA = std::make_unique<TArea>(this, mpRoomDB);
                 int areaID = 0;
                 ifs >> areaID;
                 if (mVersion >= 18) {
@@ -1788,13 +1789,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
-                mpRoomDB->restoreSingleArea(areaID, pA);
+                mpRoomDB->restoreSingleArea(areaID, pA.release());
             }
         }
 
         if (!mpRoomDB->getAreaMap().keys().contains(-1)) {
-            auto pDefaultA = new TArea(this, mpRoomDB);
-            mpRoomDB->restoreSingleArea(-1, pDefaultA);
+            auto pDefaultA = std::make_unique<TArea>(this, mpRoomDB);
+            mpRoomDB->restoreSingleArea(-1, pDefaultA.release());
             const QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                  "area) not found, adding reserved -1 id.");
             appendErrorMsgWithNoLf(defaultAreaInsertionMsg, false);

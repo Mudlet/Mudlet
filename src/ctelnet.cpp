@@ -269,9 +269,9 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
         outgoingDataCodec = QTextCodec::codecForName(encoding);
         // Do NOT create BOM on out-going text data stream!
         if (outgoingDataCodec) {
-            outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+            outgoingDataEncoder.reset(outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader));
         } else {
-            outgoingDataEncoder = nullptr;
+            outgoingDataEncoder.reset();
         }
 
         if (!mEncoding.isEmpty() && mEncoding != "ASCII") {

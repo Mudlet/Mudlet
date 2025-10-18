@@ -30,6 +30,7 @@
 #include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QRegularExpression>
+#include <memory>
 #include "post_guard.h"
 
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
@@ -823,11 +824,11 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             mpMap->appendAreaErrorMsg(faultyAreaId, tr("[ INFO ]  - The area with this bad id was renumbered to: %1.").arg(replacementAreaId), true);
             mpMap->appendAreaErrorMsg(replacementAreaId, tr("[ INFO ]  - This area was renumbered from the bad id: %1.").arg(faultyAreaId), true);
 
-            TArea* pA = nullptr;
+            std::unique_ptr<TArea> pA;
             if (areas.contains(faultyAreaId)) {
-                pA = areas.take(faultyAreaId);
+                pA.reset(areas.take(faultyAreaId));
             } else {
-                pA = new TArea(mpMap, this);
+                pA = std::make_unique<TArea>(mpMap, this);
             }
             if (areaNamesMap.contains(faultyAreaId)) {
                 const QString areaName = areaNamesMap.value(faultyAreaId);
@@ -848,10 +849,9 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 areaNamesMap.insert(replacementAreaId, newAreaName);
             }
             pA->mUserData.insert(qsl("audit.remapped_id"), QString::number(faultyAreaId));
-            validUsedAreaIds.insert(replacementAreaId);
-            areas.insert(replacementAreaId, pA);
-
             pA->mIsDirty = true;
+            validUsedAreaIds.insert(replacementAreaId);
+            areas.insert(replacementAreaId, pA.release());
         }
         if (mudlet::self()->showMapAuditErrors()) {
             mpMap->postMessage(infoMsg);
