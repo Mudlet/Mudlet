@@ -564,7 +564,7 @@ void Host::writeModule(const QString &moduleName, const QString &filename)
     if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
         xml_filename = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
     }
-    auto writer = new XMLexport(this);
+    auto writer = std::make_shared<XMLexport>(this);
     writers.insert(xml_filename, writer);
     writer->writeModuleXML(moduleName, xml_filename);
     updateModuleZips(filename, moduleName);
@@ -874,7 +874,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         emit signal_saveCommandLinesHistory();
     }
 
-    auto writer = new XMLexport(this);
+    auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
     writer->exportHost(filename_xml);
     mWritingHostAndModules = true;
@@ -917,7 +917,7 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
         return {false, QString(), qsl("a save is already in progress")};
     }
 
-    auto writer = new XMLexport(this);
+    auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
     writer->exportProfile(file);
     return {true, file, QString()};
@@ -926,8 +926,8 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 void Host::xmlSaved(const QString& xmlName)
 {
     if (writers.contains(xmlName)) {
-        auto writer = writers.take(xmlName);
-        writer->deleteLater();
+        writers.remove(xmlName);
+        // shared_ptr automatically deletes XMLexport when last reference goes away
     }
 
     if (writers.empty()) {

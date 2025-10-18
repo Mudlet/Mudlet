@@ -33,6 +33,8 @@
 #include <pugixml.hpp>
 #include "post_guard.h"
 
+#include <memory>
+
 class QFile;
 class Host;
 class LuaInterface;
@@ -46,7 +48,7 @@ class TVar;
 class VarUnit;
 
 
-class XMLexport : public QObject
+class XMLexport : public QObject, public std::enable_shared_from_this<XMLexport>
 {
     Q_OBJECT
 
