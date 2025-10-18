@@ -90,6 +90,7 @@ public:
     friend class CustomLineDrawHandler;
     friend class CustomLineEditContextMenuHandler;
     friend class CustomLineEditHandler;
+    friend class LabelInteractionHandler;
     friend class RoomContextMenuHandler;
     friend class RoomMoveDragHandler;
     friend class SelectionRectangleHandler;

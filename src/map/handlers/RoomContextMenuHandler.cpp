@@ -101,19 +101,23 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
 
     bool selectionChanged = false;
 
-    if (context.hasClickedRoom) {
-        const bool preserveSelection = context.modifiers.testFlag(Qt::ControlModifier)
-            && mMapWidget.mMultiSelectionSet.contains(context.clickedRoomId)
-            && mMapWidget.mMultiSelectionSet.size() > 1;
+    const int previousSelectionSize = mMapWidget.mMultiSelectionSet.size();
 
-        if (!preserveSelection) {
+    if (context.hasClickedRoom) {
+        const bool isRoomAlreadySelected = mMapWidget.mMultiSelectionSet.contains(context.clickedRoomId);
+
+        if (isRoomAlreadySelected) {
+            if (mMapWidget.mMultiSelectionHighlightRoomId != context.clickedRoomId) {
+                mMapWidget.mMultiSelectionHighlightRoomId = context.clickedRoomId;
+            }
+        } else {
             mMapWidget.clearSelection();
             mMapWidget.mMultiSelectionSet.clear();
             mMapWidget.mMultiSelectionSet.insert(context.clickedRoomId);
             mMapWidget.mMultiSelectionHighlightRoomId = context.clickedRoomId;
             selectionChanged = true;
         }
-    } else if (!mMapWidget.mMultiSelectionSet.isEmpty()) {
+    } else if (previousSelectionSize <= 1 && previousSelectionSize > 0) {
         mMapWidget.clearSelection();
         mMapWidget.mMultiSelectionSet.clear();
         mMapWidget.mMultiSelectionHighlightRoomId = 0;

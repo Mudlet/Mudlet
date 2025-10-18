@@ -173,6 +173,22 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
             return false;
         }
 
+        bool clearedRoomSelection = false;
+        if (!mMapWidget.mMultiSelectionSet.isEmpty()) {
+            mMapWidget.clearSelection();
+            mMapWidget.mMultiSelectionSet.clear();
+            clearedRoomSelection = true;
+        }
+
+        if (mMapWidget.mMultiSelectionHighlightRoomId != 0) {
+            mMapWidget.mMultiSelectionHighlightRoomId = 0;
+            clearedRoomSelection = true;
+        }
+
+        if (clearedRoomSelection) {
+            mMapWidget.updateSelectionWidget();
+        }
+
         auto* popup = new QMenu(&mMapWidget);
         popup->setToolTipsVisible(true);
         popup->setAttribute(Qt::WA_DeleteOnClose);
