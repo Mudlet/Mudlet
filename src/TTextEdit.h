@@ -64,6 +64,7 @@ public:
     void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
     int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, const int, TChar&) const;
     void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
+    void drawCustomDecorations(QPainter&, const QColor&, const QRect&, TChar&) const;
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
