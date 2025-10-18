@@ -58,12 +58,12 @@ void TriggerHighlighter::setTheme(const QString& themeName)
     edbee::TextTheme* theme = themeManager->theme(themeName);
 
     // set defaults from chosen theme
-    edbee::TextThemeRule* defaultRule = new edbee::TextThemeRule("default", "selector", theme->foregroundColor(), theme->backgroundColor(), false, false, false);
-    applyFormatting(anchorFormat, defaultRule);
-    applyFormatting(charClassFormat, defaultRule);
-    applyFormatting(escapeCharFormat, defaultRule);
-    applyFormatting(groupFormat, defaultRule);
-    applyFormatting(quantifierFormat, defaultRule);
+    edbee::TextThemeRule defaultRule("default", "selector", theme->foregroundColor(), theme->backgroundColor(), false, false, false);
+    applyFormatting(anchorFormat, &defaultRule);
+    applyFormatting(charClassFormat, &defaultRule);
+    applyFormatting(escapeCharFormat, &defaultRule);
+    applyFormatting(groupFormat, &defaultRule);
+    applyFormatting(quantifierFormat, &defaultRule);
 
     QList<edbee::TextThemeRule*> rules = theme->rules();
 

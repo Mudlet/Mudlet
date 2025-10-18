@@ -535,7 +535,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         ui->pushButton_removeIcon->show();
     } else {
         ui->Icon->hide();
-        ui->pushButton_removeIcon->show();
+        ui->pushButton_removeIcon->hide();
     }
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
