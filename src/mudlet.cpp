@@ -678,7 +678,7 @@ void mudlet::init()
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
     connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assignShortcutsFromProfile);
 
-    mpShortcutsManager = new ShortcutsManager();
+    mpShortcutsManager = new ShortcutsManager(this);
     mpShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &mKeySequenceTriggers);
     mpShortcutsManager->registerShortcut(qsl("Show Map"), tr("Show Map"), &mKeySequenceShowMap);
     mpShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &mKeySequenceInputLine);
@@ -1491,7 +1491,7 @@ void mudlet::loadTranslators(const QString& languageCode)
     }
 
     translation const currentTranslation = mTranslationsMap.value(languageCode);
-    QPointer<QTranslator> const pQtTranslator = new QTranslator;
+    QPointer<QTranslator> const pQtTranslator = new QTranslator(this);
     const QString qtTranslatorFileName = currentTranslation.getQtTranslationFileName();
     if (!qtTranslatorFileName.isEmpty()) {
         // Need to use load(fileName (e.g. {qt_xx_YY.qm"}, pathName) form - Qt
@@ -1506,7 +1506,7 @@ void mudlet::loadTranslators(const QString& languageCode)
         }
     }
 
-    QPointer<QTranslator> const pMudletTranslator = new QTranslator;
+    QPointer<QTranslator> const pMudletTranslator = new QTranslator(this);
     const QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
     if (!mudletTranslatorFileName.isEmpty()) {
         const bool isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
@@ -1608,7 +1608,8 @@ void mudlet::slot_packageExporter()
 void mudlet::slot_closeCurrentProfile()
 {
     Host* pH = getActiveHost();
-    if (!pH) {
+
+    if (!pH || pH->mIsProfileLoadingSequence) {
         return;
     }
     slot_closeProfileRequested(mpTabBar->currentIndex());
@@ -4365,19 +4366,6 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     mPackagesToInstallList.clear();
 
-    // This marks the end of the profile loading process, so all the aliases
-    // triggers and other items are present in the Lua sub-system:
-    pHost->mIsProfileLoadingSequence = false;
-
-    TEvent event {};
-    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    // A non-zero value is how we send a "true" value - which indicates that
-    // this is for a freshly loaded profile (and NOT one after a resetProfile()):
-    event.mArgumentList.append(QString::number(1));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-    pHost->raiseEvent(event);
-
     // Now load the default (latest stored) map file:
     pHost->loadMap();
 
@@ -4403,6 +4391,16 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         raise();
         activateWindow();
     }
+
+    TEvent event {};
+    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // A non-zero value is how we send a "true" value - which indicates that
+    // this is for a freshly loaded profile (and NOT one after a resetProfile()):
+    event.mArgumentList.append(QString::number(1));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+    pHost->raiseEvent(event);
+    pHost->mIsProfileLoadingSequence = false;
 }
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)

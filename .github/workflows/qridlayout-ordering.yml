@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 0
           token: ${{secrets.GH_PAT_SORT_UIFILES}}
       - name: Use Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
       - name: Install yarn dependencies
         run: |
           yarn add sax --dev
