@@ -121,7 +121,7 @@ echo "Examining Mudlet application and Qt plugins to identify other needed libra
 # than the MINGW64 one - but making the value to match against a bash variable
 # in this pipeline has proven impossible! - Slysven
 mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive ./mudlet.exe \
-  ./{generic,iconengines,imageformats,multimedia,networkinformation,platforms,styles,texttospeech,tls}/*.dll \
+  ./*/*.dll ./*/*/*.dll \
   | /usr/bin/grep -v 'Qt6' \
   | /usr/bin/grep 'mingw64' \
   | /usr/bin/grep 'bin' \
