@@ -2158,7 +2158,19 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(mudletEvent);
 
-    mpHost->setFocusOnHostActiveCommandLine();
+    // Focus this console's command line, not the "active" one
+    // This ensures clicking on a console focuses its own command line
+    if (mpCommandLine && mpCommandLine->isVisible()) {
+        mpCommandLine->setFocus(Qt::MouseFocusReason);
+        mpHost->recordActiveCommandLine(mpCommandLine);
+    } else if (mType == MainConsole) {
+        // Main console always has its command line
+        mpHost->mpConsole->mpCommandLine->setFocus(Qt::MouseFocusReason);
+        mpHost->recordActiveCommandLine(mpHost->mpConsole->mpCommandLine);
+    } else {
+        // Fallback to the old behavior for other cases
+        mpHost->setFocusOnHostActiveCommandLine();
+    }
 }
 
 void TConsole::mousePressEvent(QMouseEvent* event)
@@ -2327,22 +2339,34 @@ void TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mo
 void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
 {
     if (mType == MainConsole) {
+        // Update all focus proxies to the main command line
+        setFocusProxy(pCommandLine);
         mUpperPane->setFocusProxy(pCommandLine);
+        mLowerPane->setFocusProxy(pCommandLine);
         QAccessibleEvent event(pCommandLine, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);
     } else if (mType == UserWindow) {
         if (pCommandLine && pCommandLine->isVisible()) {
+            // Update all focus proxies to the UserWindow's command line
+            setFocusProxy(pCommandLine);
             mUpperPane->setFocusProxy(pCommandLine);
+            mLowerPane->setFocusProxy(pCommandLine);
             QAccessibleEvent event(pCommandLine, QAccessible::Focus);
             QAccessible::updateAccessibility(&event);
         } else {
+            // Revert to main console's command line
+            setFocusProxy(mpHost->mpConsole->mpCommandLine);
             mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+            mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
             QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
             QAccessible::updateAccessibility(&event);
         }
     } else if (mType == SubConsole) {
         if (pCommandLine && pCommandLine->isVisible()) {
+            // Update all focus proxies to the SubConsole's command line
+            setFocusProxy(pCommandLine);
             mUpperPane->setFocusProxy(pCommandLine);
+            mLowerPane->setFocusProxy(pCommandLine);
             QAccessibleEvent event(pCommandLine, QAccessible::Focus);
             QAccessible::updateAccessibility(&event);
         } else {
@@ -2352,12 +2376,16 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
             if (!parentConsole.isNull() && parentConsole->mpCommandLine && parentConsole->mpCommandLine->isVisible()) {
                 // TBH We ought to also check for any added TCommandLine but
                 // that can wait for a future development...
+                setFocusProxy(parentConsole->mpCommandLine);
                 mUpperPane->setFocusProxy(parentConsole->mpCommandLine);
+                mLowerPane->setFocusProxy(parentConsole->mpCommandLine);
                 QAccessibleEvent event(parentConsole->mpCommandLine, QAccessible::Focus);
                 QAccessible::updateAccessibility(&event);
             } else {
                 // Somehow that has failed so fall back to the main console
+                setFocusProxy(mpHost->mpConsole->mpCommandLine);
                 mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+                mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
                 QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
                 QAccessible::updateAccessibility(&event);
             }
