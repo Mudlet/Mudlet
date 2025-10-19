@@ -160,7 +160,7 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
 # APP_BUILD is going away (it is not currently used in the source code now as
 # Mudlet instead reads it from the resource file) however until the CI/CB system
 # is cleaned up to not use it in any way in the
-# /CI/travis.validate_deployment.sh script we probably have to
+# /CI/validate_deployment.sh script we probably have to
 # leave it in place:
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
@@ -981,16 +981,16 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
                RenderCommandQueue.cpp \
                ResourceManager.cpp \
                ShaderManager.cpp
-    
+
     # Enable shader hot-reloading when USE_SHADER_HOT_RELOAD is defined
     contains( DEFINES, USE_SHADER_HOT_RELOAD ) {
         DEFINES += MUDLET_SHADER_HOT_RELOAD=1
     }
-    
+
     !build_pass{
         message("The 3D mapper code with both OpenGL implementations is included in this configuration for runtime selection")
     }
-    
+
     QT += opengl
 
     win32 {
@@ -1614,7 +1614,7 @@ macx {
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
         OBJECTIVE_SOURCES += sparkleupdater.mm
-        HEADERS += sparkleupdater.h        
+        HEADERS += sparkleupdater.h
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework
@@ -1699,17 +1699,17 @@ OTHER_FILES += \
     ../CI/register-windows-release.sh \
     ../CI/package-mudlet-for-windows.sh \
     ../CI/setup-windows-sdk.sh \
-    ../CI/travis.after_success.sh \
-    ../CI/travis.before_install.sh \
-    ../CI/travis.install.sh \
-    ../CI/travis.linux.after_success.sh \
-    ../CI/travis.linux.before_install.sh \
-    ../CI/travis.linux.install.sh \
-    ../CI/travis.osx.after_success.sh \
-    ../CI/travis.osx.before_install.sh \
-    ../CI/travis.osx.install.sh \
-    ../CI/travis.set-build-info.sh \
-    ../CI/travis.validate_deployment.sh \
+    ../CI/after_success.sh \
+    ../CI/before_install.sh \
+    ../CI/install.sh \
+    ../CI/linux.after_success.sh \
+    ../CI/linux.before_install.sh \
+    ../CI/linux.install.sh \
+    ../CI/osx.after_success.sh \
+    ../CI/osx.before_install.sh \
+    ../CI/osx.install.sh \
+    ../CI/set-build-info.sh \
+    ../CI/validate_deployment.sh \
     ../CI/update-autocompletion.lua \
     ../CI/validate-deployment-for-windows.sh \
     ../dangerfile.js \
