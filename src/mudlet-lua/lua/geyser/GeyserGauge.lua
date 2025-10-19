@@ -102,53 +102,55 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   
   -- Update gauge in the requested orientation
   -- Note: We use function-based constraints for dynamic sizing that accounts for margins
+  -- The front label can have its own borders and padding (margins are stripped in setStyleSheet)
+  -- Qt applies border/padding outside the widget's content area, so we don't need to compensate for them
   
   if self.orientation == "horizontal" then
     -- Position the front label inside the back's content area
     self.front:move(leftOffset .. "px", topOffset .. "px")
     -- For width: we want value% of the CONTENT width (back label's content area)
     -- Content width = back_label_width - leftOffset - rightOffset
-    local totalOffset = leftOffset + rightOffset
+    local totalBackOffset = leftOffset + rightOffset
     local gaugeValue = self.value
     self.front:resize(
-      function() return math.floor((self.back.get_width() - totalOffset) * (gaugeValue / 100) + 0.5) end,
+      function() return math.floor((self.back.get_width() - totalBackOffset) * (gaugeValue / 100) + 0.5) end,
       function() return math.floor(self.back.get_height() - topOffset - bottomOffset + 0.5) end
     )
   elseif self.orientation == "vertical" then
     -- For vertical (bottom-to-top), position needs to be calculated based on remaining space
     -- At 100%: y = topOffset (fills from top to bottom of content area)
     -- At 0%: y = topOffset + contentHeight (zero height at bottom)
-    local totalOffset = topOffset + bottomOffset
+    local totalBackOffset = topOffset + bottomOffset
     local gaugeValue = self.value
     self.front:move(
       leftOffset .. "px",
-      function() return topOffset + math.floor((self.back.get_height() - totalOffset) * (1 - gaugeValue / 100) + 0.5) end
+      function() return topOffset + math.floor((self.back.get_height() - totalBackOffset) * (1 - gaugeValue / 100) + 0.5) end
     )
     self.front:resize(
       function() return math.floor(self.back.get_width() - leftOffset - rightOffset + 0.5) end,
-      function() return math.floor((self.back.get_height() - totalOffset) * (gaugeValue / 100) + 0.5) end
+      function() return math.floor((self.back.get_height() - totalBackOffset) * (gaugeValue / 100) + 0.5) end
     )
   elseif self.orientation == "goofy" then
     -- For goofy (right-to-left), position needs to be calculated based on remaining space
     -- At 100%: x = leftOffset (fills from left to right edge)
     -- At 0%: x = leftOffset + contentWidth (zero width at right edge)
-    local totalOffset = leftOffset + rightOffset
+    local totalBackOffset = leftOffset + rightOffset
     local gaugeValue = self.value
     self.front:move(
-      function() return leftOffset + math.floor((self.back.get_width() - totalOffset) * (1 - gaugeValue / 100) + 0.5) end,
+      function() return leftOffset + math.floor((self.back.get_width() - totalBackOffset) * (1 - gaugeValue / 100) + 0.5) end,
       topOffset .. "px"
     )
     self.front:resize(
-      function() return math.floor((self.back.get_width() - totalOffset) * (gaugeValue / 100) + 0.5) end,
+      function() return math.floor((self.back.get_width() - totalBackOffset) * (gaugeValue / 100) + 0.5) end,
       function() return math.floor(self.back.get_height() - topOffset - bottomOffset + 0.5) end
     )
   else -- batty (top to bottom)
     self.front:move(leftOffset .. "px", topOffset .. "px")
-    local totalOffset = topOffset + bottomOffset
+    local totalBackOffset = topOffset + bottomOffset
     local gaugeValue = self.value
     self.front:resize(
       function() return math.floor(self.back.get_width() - leftOffset - rightOffset + 0.5) end,
-      function() return math.floor((self.back.get_height() - totalOffset) * (gaugeValue / 100) + 0.5) end
+      function() return math.floor((self.back.get_height() - totalBackOffset) * (gaugeValue / 100) + 0.5) end
     )
   end
 
@@ -264,13 +266,11 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
   -- Apply back stylesheet normally (this has margins/borders/padding)
   self.back:setStyleSheet(self.backCSS)
   
-  -- For the front label, strip margins/borders/padding
-  -- The front will be positioned inside the back's content area
+  -- For the front label, strip ONLY margins (borders and padding are safe and allow styling)
+  -- Margins on the front label cause positioning issues, but borders/padding are fine
   local frontCSSStripped = css
   if frontCSSStripped then
     frontCSSStripped = frontCSSStripped:gsub("%s*margin[^;]*;", "")
-    frontCSSStripped = frontCSSStripped:gsub("%s*border[^;]*;", "")  
-    frontCSSStripped = frontCSSStripped:gsub("%s*padding[^;]*;", "")
   end
   self.front:setStyleSheet(frontCSSStripped)
   
