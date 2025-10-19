@@ -791,8 +791,6 @@ HEADERS += \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \
-    pre_guard.h \
-    post_guard.h \
     ScriptUnit.h \
     SecureStringUtils.h \
     CredentialManager.h \
@@ -814,7 +812,6 @@ HEADERS += \
     TEncodingTable.h \
     TEntityHandler.h \
     TEntityResolver.h \
-    testdbg.h \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
@@ -981,16 +978,16 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
                RenderCommandQueue.cpp \
                ResourceManager.cpp \
                ShaderManager.cpp
-    
+
     # Enable shader hot-reloading when USE_SHADER_HOT_RELOAD is defined
     contains( DEFINES, USE_SHADER_HOT_RELOAD ) {
         DEFINES += MUDLET_SHADER_HOT_RELOAD=1
     }
-    
+
     !build_pass{
         message("The 3D mapper code with both OpenGL implementations is included in this configuration for runtime selection")
     }
-    
+
     QT += opengl
 
     win32 {
@@ -1614,7 +1611,7 @@ macx {
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
         OBJECTIVE_SOURCES += sparkleupdater.mm
-        HEADERS += sparkleupdater.h        
+        HEADERS += sparkleupdater.h
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework

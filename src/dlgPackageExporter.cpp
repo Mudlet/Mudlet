@@ -32,7 +32,6 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QDesktopServices>
 #include <QDirIterator>
@@ -41,7 +40,6 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QTimer>
-#include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0

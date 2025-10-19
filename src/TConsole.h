@@ -32,7 +32,6 @@
 
 #include "TTextCodec.h"
 
-#include "pre_guard.h"
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QFile>
@@ -45,7 +44,6 @@
 #include <QSplitter>
 #include <QVideoWidget>
 #include <QWidget>
-#include "post_guard.h"
 
 #include <hunspell/hunspell.h>
 

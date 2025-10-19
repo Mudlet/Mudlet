@@ -23,12 +23,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QMap>
 #include <QSet>
 #include <QStringList>
-#include "post_guard.h"
 
 #include "utils.h"
 

@@ -23,11 +23,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QList>
 #include <QString>
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)

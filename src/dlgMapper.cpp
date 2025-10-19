@@ -29,14 +29,12 @@
 #include "TRoomDB.h"
 #include "mapInfoContributorManager.h"
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
 #include <QProgressDialog>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -49,7 +47,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 #if defined(INCLUDE_3DMAPPER)
     QSurfaceFormat fmt;
-#ifndef NDEBUG    
+#ifndef NDEBUG
     fmt.setOption(QSurfaceFormat::DebugContext);
 #endif
     fmt.setSamples(10);
@@ -131,7 +129,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->restore16ColorSet();
     auto menu = new QMenu(this);
     pushButton_info->setMenu(menu);
-    
+
     connect(pushButton_exportArea, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_exportAreaToImage);
 
     if (mpHost) {
@@ -435,21 +433,21 @@ void dlgMapper::recreate3DWidget()
     if (!glWidget) {
         return;
     }
-    
+
     if (GLWidgetFactory::isCorrectWidgetType(glWidget, mpHost.data())) {
         return;
     }
-    
+
     bool was3DMode = glWidget->isVisible();
-    
+
     glWidget->setParent(nullptr);
     glWidget->deleteLater();
     glWidget = nullptr;
     mpMap->mpM = nullptr;
-    
+
     glWidget = GLWidgetFactory::createGLWidget(mpMap, mpHost.data(), this);
     glWidget->setObjectName("glWidget");
-    
+
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     sizePolicy.setHorizontalStretch(0);
     sizePolicy.setVerticalStretch(0);
@@ -457,7 +455,7 @@ void dlgMapper::recreate3DWidget()
     glWidget->setSizePolicy(sizePolicy);
     verticalLayout_mapper->insertWidget(0, glWidget);
     mpMap->mpM = glWidget;
-    
+
     connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
     connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
     connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
@@ -477,7 +475,7 @@ void dlgMapper::recreate3DWidget()
     connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
     connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
     connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
-    
+
     glWidget->setVisible(was3DMode);
 #endif
 }

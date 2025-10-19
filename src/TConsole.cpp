@@ -40,7 +40,6 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
 #include <QLineEdit>
@@ -51,7 +50,6 @@
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QPainter>
-#include "post_guard.h"
 
 const QString TConsole::cmLuaLineVariable("line");
 

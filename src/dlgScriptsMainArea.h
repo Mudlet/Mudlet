@@ -22,9 +22,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_scripts_main_area.h"
-#include "post_guard.h"
 
 
 class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area

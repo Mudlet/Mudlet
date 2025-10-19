@@ -21,7 +21,6 @@
 #include "SecureStringUtils.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -39,7 +38,6 @@
 #else
 #include <qt6keychain/keychain.h>
 #endif
-#include "post_guard.h"
 
 // Forward declaration to avoid including mudlet.h
 class mudlet;
@@ -53,15 +51,15 @@ CredentialManager::~CredentialManager()
 {
     // Set destruction flag to prevent any new operations or callbacks
     mShuttingDown = true;
-    
+
     // During destruction, we should NOT call callbacks as they may reference
     // objects that are being destroyed. Instead, just clean up without callbacks.
-    
+
     // Clear callbacks before cleanup to prevent them from being called
     mCurrentCallback = nullptr;
     mCurrentRetrievalCallback = nullptr;
     mCurrentAvailabilityCallback = nullptr;
-    
+
     // Clean up operations - this is safe even during application shutdown
     cleanupCurrentOperation();
 }
@@ -69,11 +67,11 @@ CredentialManager::~CredentialManager()
 void CredentialManager::setupTimeout()
 {
     cleanupTimeout(); // Clean up any existing timer
-    
+
     mTimeoutTimer = new QTimer(this);
     mTimeoutTimer->setSingleShot(true);
     mTimeoutTimer->setInterval(OPERATION_TIMEOUT_MS);
-    
+
     connect(mTimeoutTimer, &QTimer::timeout, this, &CredentialManager::handleTimeout);
     mTimeoutTimer->start();
 }
@@ -83,13 +81,13 @@ void CredentialManager::cleanupTimeout()
     if (mTimeoutTimer) {
         // Safely stop and disconnect the timer
         mTimeoutTimer->stop();
-        
+
         // If we're destroying or shutting down, avoid disconnect calls that might crash
         if (!mShuttingDown && !QCoreApplication::closingDown()) {
             // Safe to disconnect during normal operation
             mTimeoutTimer->disconnect();
         }
-        
+
         mTimeoutTimer->deleteLater();
         mTimeoutTimer = nullptr;
     }
@@ -98,7 +96,7 @@ void CredentialManager::cleanupTimeout()
 void CredentialManager::handleTimeout()
 {
     qWarning() << "CredentialManager: Operation timed out";
-    
+
     // Call appropriate callback with timeout error
     if (mCurrentCallback) {
         mCurrentCallback(false, qsl("Operation timed out"));
@@ -107,7 +105,7 @@ void CredentialManager::handleTimeout()
     } else if (mCurrentAvailabilityCallback) {
         mCurrentAvailabilityCallback(false, qsl("Operation timed out"));
     }
-    
+
     cleanupCurrentOperation();
 }
 
@@ -125,7 +123,7 @@ void CredentialManager::cleanupCurrentOperation()
         mCurrentJob->deleteLater();
         mCurrentJob = nullptr;
     }
-    
+
     // Clear callbacks
     mCurrentCallback = nullptr;
     mCurrentRetrievalCallback = nullptr;
@@ -140,20 +138,20 @@ bool CredentialManager::isOperationValid() const
         qDebug() << "CredentialManager: Operation invalid - object being destroyed";
         return false;
     }
-    
+
     // Check if application is shutting down
     if (QCoreApplication::closingDown()) {
         qDebug() << "CredentialManager: Operation invalid - application shutting down";
         return false;
     }
-    
+
     // Check if we have valid callbacks
     bool hasCallbacks = (mCurrentCallback || mCurrentRetrievalCallback || mCurrentAvailabilityCallback);
 
     if (!hasCallbacks) {
         qDebug() << "CredentialManager: Operation invalid - no callbacks set";
     }
-    
+
     return hasCallbacks;
 }
 
@@ -163,12 +161,12 @@ bool CredentialManager::isPortableModeActive() const
     // duplicating logic here. However, including mudlet.h creates circular dependencies.
     // Consider refactoring to get portable mode status from a shared utility or
     // through dependency injection.
-    
+
     // Detect portable mode by checking for portable.txt markers
     // This uses the same logic as mudlet::setupConfig()
-    
+
     QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-    
+
     // Find executable directory (same logic as findExecutableDir in mudlet.cpp)
     QString execDir;
     QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
@@ -179,10 +177,10 @@ bool CredentialManager::isPortableModeActive() const
     } else {
         execDir = QCoreApplication::applicationDirPath();
     }
-    
+
     QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-    
+
     // Check if either portable.txt marker exists
     return QFileInfo(markerExecDir).isFile() || QFileInfo(markerHomeDir).isFile();
 }
@@ -190,25 +188,25 @@ bool CredentialManager::isPortableModeActive() const
 bool CredentialManager::shouldUseKeychain(const QString& profileName) const
 {
     Q_UNUSED(profileName)
-    
+
     // If portable mode is active, prefer SecureStringUtils for portability
     if (isPortableModeActive()) {
         qDebug() << "CredentialManager: Using encrypted storage (portable mode)";
         return false;
     }
-    
+
     // If in test environment, use SecureStringUtils to avoid keychain access
     if (SecureStringUtils::isTestEnvironment()) {
         qDebug() << "CredentialManager: Using encrypted storage (test mode)";
         return false;
     }
-    
+
     // Otherwise, prefer keychain for better security
     qDebug() << "CredentialManager: Using keychain storage";
     return true;
 }
 
-void CredentialManager::storePassword(const QString& profileName, const QString& key, 
+void CredentialManager::storePassword(const QString& profileName, const QString& key,
                                      const QString& password, CredentialCallback callback)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
@@ -218,7 +216,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
 
         return;
     }
-    
+
     // Safety check: Don't start new operations during shutdown
     if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting storePassword operation during shutdown";
@@ -229,7 +227,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
 
         return;
     }
-    
+
     if (shouldUseKeychain(profileName)) {
         // Use keychain storage
         QString service = generateServiceName(profileName, key);
@@ -244,7 +242,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
     }
 }
 
-void CredentialManager::retrievePassword(const QString& profileName, const QString& key, 
+void CredentialManager::retrievePassword(const QString& profileName, const QString& key,
                                         CredentialRetrievalCallback callback)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
@@ -254,7 +252,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
 
         return;
     }
-    
+
     // Safety check: Don't start new operations during shutdown
     if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting retrievePassword operation during shutdown";
@@ -265,15 +263,15 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
 
         return;
     }
-    
+
     if (shouldUseKeychain(profileName)) {
         // Use keychain storage - but also try SecureStringUtils as fallback
         QString service = generateServiceName(profileName, key);
-        
+
         // First try keychain
         auto fallbackCallback = [this, profileName, key, callback](bool keychainSuccess, const QString& keychainPassword, const QString& keychainError) {
             qDebug() << "CredentialManager: Keychain result for profile" << profileName << "- success:" << keychainSuccess << "password empty:" << keychainPassword.isEmpty();
-            
+
             if (keychainSuccess && !keychainPassword.isEmpty()) {
                 // Keychain succeeded
                 if (callback) {
@@ -298,14 +296,14 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
                                     callback(true, legacyPassword, QString());
                                 }
                             });
-                            
+
                             // Only clean up legacy entry if this version is >= 4.20.0
                             // This prevents breaking compatibility with older Mudlet versions
 #ifdef APP_VERSION
                             const QString currentVersion = QString(APP_VERSION);
                             const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
                             const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
-                            
+
                             if (appVersion >= secureStorageVersion) {
                                 // Clean up legacy entry asynchronously (don't wait for result)
                                 deleteLegacyKeychainEntry(profileName);
@@ -354,7 +352,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
                 }
             }
         };
-        
+
         retrieveCredential(service, key, fallbackCallback);
     } else {
         // Use SecureStringUtils directly
@@ -367,7 +365,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
     }
 }
 
-void CredentialManager::removePassword(const QString& profileName, const QString& key, 
+void CredentialManager::removePassword(const QString& profileName, const QString& key,
                                       CredentialCallback callback)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
@@ -376,7 +374,7 @@ void CredentialManager::removePassword(const QString& profileName, const QString
         }
         return;
     }
-    
+
     // Safety check: Don't start new operations during shutdown
     if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting removePassword operation during shutdown";
@@ -387,15 +385,15 @@ void CredentialManager::removePassword(const QString& profileName, const QString
 
         return;
     }
-    
+
     if (shouldUseKeychain(profileName)) {
         // Remove from both keychain and SecureStringUtils to ensure complete cleanup
         QString service = generateServiceName(profileName, key);
-        
+
         auto combinedCallback = [this, profileName, key, callback](bool keychainSuccess, const QString& keychainError) {
             // Also remove from SecureStringUtils (ignore result as it might not exist there)
             bool fileSuccess = removeCredentialFromFile(profileName, key);
-            
+
             if (callback) {
                 if (keychainSuccess || fileSuccess) {
                     callback(true, QString());
@@ -404,7 +402,7 @@ void CredentialManager::removePassword(const QString& profileName, const QString
                 }
             }
         };
-        
+
         removeCredential(service, key, combinedCallback);
     } else {
         // Use SecureStringUtils
@@ -416,7 +414,7 @@ void CredentialManager::removePassword(const QString& profileName, const QString
     }
 }
 
-void CredentialManager::migratePassword(const QString& profileName, const QString& key, 
+void CredentialManager::migratePassword(const QString& profileName, const QString& key,
                                        const QString& plaintextPassword, CredentialCallback callback)
 {
     if (profileName.isEmpty() || key.isEmpty() || plaintextPassword.isEmpty()) {
@@ -426,7 +424,7 @@ void CredentialManager::migratePassword(const QString& profileName, const QStrin
 
         return;
     }
-    
+
     // Safety check: Don't start new operations during shutdown
     if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting migratePassword operation during shutdown";
@@ -436,14 +434,14 @@ void CredentialManager::migratePassword(const QString& profileName, const QStrin
         }
         return;
     }
-    
+
     qDebug() << "CredentialManager: Migrating plaintext password to encrypted storage for profile" << profileName << "key" << key;
-    
+
     // Store the password using our hybrid approach
     storePassword(profileName, key, plaintextPassword, callback);
 }
 
-void CredentialManager::storeCredential(const QString& service, const QString& account, 
+void CredentialManager::storeCredential(const QString& service, const QString& account,
                                        const QString& password, CredentialCallback callback)
 {
     if (service.isEmpty() || account.isEmpty()) {
@@ -470,17 +468,17 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
 
     auto* writeJob = new QKeychain::WritePasswordJob(service, this);
     writeJob->setKey(account);
-    
+
     // Store password directly in keychain (keychain handles encryption)
     writeJob->setTextData(password);
     writeJob->setAutoDelete(false);
-    
+
     mCurrentJob = writeJob;
     mCurrentCallback = callback;
-    
+
     // Set up timeout
     setupTimeout();
-    
+
     // Connect signals with queued connection for safety
     connect(writeJob, &QKeychain::WritePasswordJob::finished, this, [this, writeJob, service, account, password]() {
         // Early exit if operation is no longer valid
@@ -489,16 +487,16 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
             writeJob->deleteLater();
             return;
         }
-        
+
         cleanupTimeout();
-        
+
         bool success = (writeJob->error() == QKeychain::NoError);
         QString errorMessage = success ? QString() : writeJob->errorString();
-        
+
         // If keychain failed, try file storage fallback
         if (!success) {
             qDebug() << "CredentialManager: Keychain storage failed, using encrypted file storage:" << errorMessage;
-            
+
             // Use service as profile name and account as key for file storage
             bool fileSuccess = storeCredentialToFile(service, account, password);
 
@@ -512,23 +510,23 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
         } else {
             qDebug() << "CredentialManager: Password stored to keychain service:" << service;
         }
-        
+
         // Final validity check before calling callback
         if (mCurrentCallback && isOperationValid()) {
             auto callback = mCurrentCallback; // Copy callback to avoid use-after-free
             mCurrentCallback = nullptr;
             mCurrentJob = nullptr;
-            
+
             callback(success, errorMessage);
         }
-        
+
         writeJob->deleteLater();
     }, Qt::QueuedConnection); // Use queued connection for additional safety
-    
+
     writeJob->start();
 }
 
-void CredentialManager::retrieveCredential(const QString& service, const QString& account, 
+void CredentialManager::retrieveCredential(const QString& service, const QString& account,
                                           CredentialRetrievalCallback callback)
 {
     if (service.isEmpty() || account.isEmpty()) {
@@ -556,13 +554,13 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
     auto* readJob = new QKeychain::ReadPasswordJob(service, this);
     readJob->setKey(account);
     readJob->setAutoDelete(false);
-    
+
     mCurrentJob = readJob;
     mCurrentRetrievalCallback = callback;
-    
+
     // Set up timeout
     setupTimeout();
-    
+
     // Connect signals with queued connection for safety
     connect(readJob, &QKeychain::ReadPasswordJob::finished, this, [this, readJob, service, account]() {
         // Early exit if operation is no longer valid
@@ -571,13 +569,13 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
             readJob->deleteLater();
             return;
         }
-        
+
         cleanupTimeout();
-        
+
         bool success = (readJob->error() == QKeychain::NoError);
         QString password;
         QString errorMessage;
-        
+
         if (success) {
             // Get password directly from keychain (keychain handles decryption)
             password = readJob->textData();
@@ -607,54 +605,54 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     break;
             }
             qDebug() << "CredentialManager:" << errorContext << ", trying fallback storage";
-            
+
             // Try legacy keychain format if this is a character password and service follows new format
             if (account == "character" && service.startsWith("Mudlet-") && service.endsWith("-character")) {
                 // Extract profile name from service (format: "Mudlet-ProfileName-character")
                 QString profileName = service.mid(7); // Remove "Mudlet-" prefix
                 profileName.chop(10); // Remove "-character" suffix
-                
+
                 qDebug() << "CredentialManager: Checking for legacy keychain format for profile" << profileName;
-                
+
                 // Capture the error string now while readJob is still valid
                 QString keychainError = readJob->errorString();
-                
+
                 // Check legacy keychain format asynchronously
                 auto* legacyReadJob = new QKeychain::ReadPasswordJob("Mudlet profile", this);
                 legacyReadJob->setKey(profileName);
                 legacyReadJob->setAutoDelete(false);
-                
+
                 // Store the current callback and clear it to prevent double-calling
                 auto originalCallback = mCurrentRetrievalCallback;
                 mCurrentRetrievalCallback = nullptr;
-                
+
                 connect(legacyReadJob, &QKeychain::ReadPasswordJob::finished, this, [this, legacyReadJob, profileName, service, account, originalCallback, keychainError]() {
                     bool legacyFound = (legacyReadJob->error() == QKeychain::NoError);
                     QString legacyPassword = legacyFound ? legacyReadJob->textData() : QString();
-                    
+
                     if (legacyFound && !legacyPassword.isEmpty()) {
                         qDebug() << "CredentialManager: Found legacy password for profile" << profileName;
-                        
+
                         // Migrate to new format asynchronously
                         qDebug() << "CredentialManager: Migrating legacy password to new format for profile" << profileName;
-                        
+
                         // Extract original profile name and key from service name for migration
                         QString originalProfileName = service.mid(7); // Remove "Mudlet-" prefix
                         originalProfileName.chop(10); // Remove "-character" suffix
-                        
+
                         // Store in new format
                         auto* migrationManager = new CredentialManager();
-                        migrationManager->storePassword(originalProfileName, account, legacyPassword, 
+                        migrationManager->storePassword(originalProfileName, account, legacyPassword,
                             [migrationManager, profileName, originalCallback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
                                 if (migrationSuccess) {
                                     qDebug() << "CredentialManager: Legacy migration successful for profile" << profileName;
-                                    
+
                                     // Clean up legacy entry if migration succeeded
 #ifdef APP_VERSION
                                     const QString currentVersion = QString(APP_VERSION);
                                     const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
                                     const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
-                                    
+
                                     if (appVersion >= secureStorageVersion) {
                                         // Clean up legacy entry asynchronously
                                         auto* cleanupManager = new CredentialManager();
@@ -670,41 +668,41 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                                 } else {
                                     qWarning() << "CredentialManager: Legacy migration failed for profile" << profileName << ":" << migrationError;
                                 }
-                                
+
                                 // Return the legacy password regardless of migration result
                                 if (originalCallback) {
                                     originalCallback(true, legacyPassword, QString());
                                 }
-                                
+
                                 migrationManager->deleteLater();
                             });
                     } else {
                         qDebug() << "CredentialManager: No legacy password found for profile" << profileName;
-                        
+
                         // No legacy password, try file storage
                         QString filePassword = retrieveCredentialFromFile(service, account);
                         bool fileSuccess = !filePassword.isNull();
                         QString finalError = fileSuccess ? QString() : qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(keychainError);
-                        
+
                         if (fileSuccess) {
                             qDebug() << "CredentialManager: Retrieved password from encrypted file storage";
                         }
-                        
+
                         if (originalCallback) {
                             originalCallback(fileSuccess, filePassword, finalError);
                         }
                     }
-                    
+
                     legacyReadJob->deleteLater();
                 });
-                
+
                 legacyReadJob->start();
-                
+
                 // Early return to avoid the file storage check below
                 readJob->deleteLater();
                 return;
             }
-            
+
             // Not a character password or not new format, try file storage directly
             password = retrieveCredentialFromFile(service, account);
 
@@ -716,23 +714,23 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                 errorMessage = qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(readJob->errorString());
             }
         }
-        
+
         // Final validity check before calling callback
         if (mCurrentRetrievalCallback && isOperationValid()) {
             auto callback = mCurrentRetrievalCallback; // Copy callback to avoid use-after-free
             mCurrentRetrievalCallback = nullptr;
             mCurrentJob = nullptr;
-            
+
             callback(success, password, errorMessage);
         }
-        
+
         readJob->deleteLater();
     }, Qt::QueuedConnection); // Use queued connection for additional safety
-    
+
     readJob->start();
 }
 
-void CredentialManager::removeCredential(const QString& service, const QString& account, 
+void CredentialManager::removeCredential(const QString& service, const QString& account,
                                         CredentialCallback callback)
 {
     if (service.isEmpty() || account.isEmpty()) {
@@ -760,13 +758,13 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
     auto* deleteJob = new QKeychain::DeletePasswordJob(service, this);
     deleteJob->setKey(account);
     deleteJob->setAutoDelete(false);
-    
+
     mCurrentJob = deleteJob;
     mCurrentCallback = callback;
-    
+
     // Set up timeout
     setupTimeout();
-    
+
     // Connect signals with queued connection for safety
     connect(deleteJob, &QKeychain::DeletePasswordJob::finished, this, [this, deleteJob, service, account]() {
         // Early exit if operation is no longer valid
@@ -775,37 +773,37 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
             deleteJob->deleteLater();
             return;
         }
-        
+
         cleanupTimeout();
-        
-        bool keychainSuccess = (deleteJob->error() == QKeychain::NoError || 
+
+        bool keychainSuccess = (deleteJob->error() == QKeychain::NoError ||
                                deleteJob->error() == QKeychain::EntryNotFound);
-        
+
         // Always try to remove from file storage as well (for cleanup)
         bool fileSuccess = removeCredentialFromFile(service, account);
-        
+
         // Consider success if either method succeeded
         bool success = keychainSuccess || fileSuccess;
         QString errorMessage;
-        
+
         if (!success) {
             errorMessage = qsl("Failed to remove from both keychain and file storage. Keychain error: %1").arg(deleteJob->errorString());
         } else if (!keychainSuccess) {
             qDebug() << "Keychain removal failed but file removal succeeded:" << deleteJob->errorString();
         }
-        
+
         // Final validity check before calling callback
         if (mCurrentCallback && isOperationValid()) {
             auto callback = mCurrentCallback; // Copy callback to avoid use-after-free
             mCurrentCallback = nullptr;
             mCurrentJob = nullptr;
-            
+
             callback(success, errorMessage);
         }
-        
+
         deleteJob->deleteLater();
     }, Qt::QueuedConnection); // Use queued connection for additional safety
-    
+
     deleteJob->start();
 }
 
@@ -835,13 +833,13 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
     auto* testJob = new QKeychain::ReadPasswordJob("MudletKeychainTest", this);
     testJob->setKey("availability_test");
     testJob->setAutoDelete(false);
-    
+
     mCurrentJob = testJob;
     mCurrentAvailabilityCallback = callback;
-    
+
     // Set up timeout
     setupTimeout();
-    
+
     // Connect signals with queued connection for safety
     connect(testJob, &QKeychain::ReadPasswordJob::finished, this, [this, testJob]() {
         // Early exit if operation is no longer valid
@@ -850,37 +848,37 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
             testJob->deleteLater();
             return;
         }
-        
+
         cleanupTimeout();
-        
+
         bool available = true;
         QString message = "Keychain is available";
-        
+
         // Check for specific errors that indicate keychain is not available
         if (testJob->error() == QKeychain::AccessDenied ||
             testJob->error() == QKeychain::OtherError) {
             available = false;
             message = qsl("Keychain not available: %1").arg(testJob->errorString());
         }
-        
+
         // Final validity check before calling callback
         if (mCurrentAvailabilityCallback && isOperationValid()) {
             auto callback = mCurrentAvailabilityCallback; // Copy callback to avoid use-after-free
             mCurrentAvailabilityCallback = nullptr;
             mCurrentJob = nullptr;
-            
+
             callback(available, message);
         }
-        
+
         testJob->deleteLater();
     }, Qt::QueuedConnection); // Use queued connection for additional safety
-    
+
     testJob->start();
 }
 
 // ============================================================================
 // STATIC API (Synchronous file storage - for portable mode and backwards compatibility)
-// 
+//
 // NOTE: This API uses encrypted file storage and is suitable for:
 //   - Portable mode deployments where system keychain is not desired
 //   - Backwards compatibility with existing synchronous code
@@ -955,20 +953,20 @@ bool CredentialManager::removeCredential(const QString& profileName, const QStri
 bool CredentialManager::storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential)
 {
     QString filePath = generateFilePath(profileName, key);
-    
+
     // Check if path generation failed due to validation
     if (filePath.isEmpty()) {
         qWarning() << "CredentialManager: Failed to generate valid file path for storing encrypted credential";
         return false;
     }
-    
+
     // Validate credential input - empty is allowed (represents "no password")
     // Only reject null QString which indicates a programming error
     if (credential.isNull()) {
         qWarning() << "CredentialManager: Null credential provided for storage";
         return false;
     }
-    
+
     // Create directory structure if it doesn't exist
     QFileInfo fileInfo(filePath);
     QDir dir = fileInfo.absoluteDir();
@@ -977,7 +975,7 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
         qWarning() << "CredentialManager: Failed to create directory structure for" << filePath;
         return false;
     }
-    
+
     // Encrypt credential using profile-specific key (empty credentials are allowed)
     QString encrypted = SecureStringUtils::encryptStringForProfile(credential, profileName);
 
@@ -985,7 +983,7 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
         qWarning() << "CredentialManager: Failed to encrypt credential for profile" << profileName;
         return false;
     }
-    
+
     // Write to file
     QFile file(filePath);
 
@@ -993,29 +991,29 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
         qWarning() << "CredentialManager: Failed to open file for writing:" << filePath << "Error:" << file.errorString();
         return false;
     }
-    
+
     qint64 bytesWritten = file.write(encrypted.toUtf8());
     file.close();
-    
+
     // Verify write operation succeeded
     if (bytesWritten == -1) {
         qWarning() << "CredentialManager: Failed to write encrypted credential to file:" << filePath;
         return false;
     }
-    
+
     return true;
 }
 
 QString CredentialManager::retrieveCredentialFromFile(const QString& profileName, const QString& key)
 {
     QString filePath = generateFilePath(profileName, key);
-    
+
     // Check if path generation failed due to validation
     if (filePath.isEmpty()) {
         qWarning() << "CredentialManager: Failed to generate valid file path for retrieving encrypted credential";
         return QString();
     }
-    
+
     QFile file(filePath);
 
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -1026,47 +1024,47 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
 
         return QString();
     }
-    
+
     QString encrypted = QString::fromUtf8(file.readAll());
     file.close();
-    
+
     if (encrypted.isEmpty()) {
         qWarning() << "CredentialManager: Retrieved empty encrypted data from file:" << filePath;
         return QString();
     }
-    
+
     // Decrypt credential using profile-specific key
     QString decrypted = SecureStringUtils::decryptStringForProfile(encrypted, profileName);
-    
+
     if (decrypted.isEmpty()) {
         qWarning() << "CredentialManager: Failed to decrypt credential for profile" << profileName;
     }
-    
+
     return decrypted;
 }
 
 bool CredentialManager::removeCredentialFromFile(const QString& profileName, const QString& key)
 {
     QString filePath = generateFilePath(profileName, key);
-    
+
     // Check if path generation failed due to validation
     if (filePath.isEmpty()) {
         qWarning() << "CredentialManager: Failed to generate valid file path for removing encrypted credential";
         return false;
     }
-    
+
     // Check if file exists before attempting removal
     if (!QFile::exists(filePath)) {
         // Not an error - credential may not have been stored or already removed
         return true;
     }
-    
+
     bool removed = QFile::remove(filePath);
 
     if (!removed) {
         qWarning() << "CredentialManager: Failed to remove encrypted credential file:" << filePath;
     }
-    
+
     return removed;
 }
 
@@ -1084,10 +1082,10 @@ QString CredentialManager::generateServiceName(const QString& profileName, const
 
         return sanitized;
     };
-    
+
     QString sanitizedProfile = sanitizeForService(profileName);
     QString sanitizedKey = sanitizeForService(key);
-    
+
     return qsl("Mudlet-%1-%2").arg(sanitizedProfile, sanitizedKey);
 }
 
@@ -1098,7 +1096,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         qWarning() << "CredentialManager: Empty profile name or key provided for file path";
         return QString();
     }
-    
+
     // Check for invalid characters that could cause path traversal or filesystem issues
     QRegularExpression pathTraversalPattern(R"(\.\.|[<>:"|?*\x00-\x1f])");
 
@@ -1113,10 +1111,10 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         qWarning() << "CredentialManager: Invalid characters detected in path components:" << invalidChar;
         return QString();
     }
-    
+
     QString sanitizedProfile = utils::sanitizeForPath(profileName);
     QString sanitizedKey = utils::sanitizeForPath(key);
-    
+
     // QStandardPaths automatically handles portable mode configuration paths
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     return qsl("%1/profiles/%2/passwords/%3").arg(configPath, sanitizedProfile, sanitizedKey);
@@ -1128,13 +1126,13 @@ bool CredentialManager::isValidKeyName(const QString& key)
     if (key.isEmpty() || key.length() > 100) {
         return false;
     }
-    
+
     // Disallow dangerous characters and patterns
     QRegularExpression dangerousPattern(R"(\.\.|[<>:"|?*\x00-\x1f/\\])");
     return !key.contains(dangerousPattern);
 }
 
-void CredentialManager::checkLegacyKeychainFormat(const QString& profileName, 
+void CredentialManager::checkLegacyKeychainFormat(const QString& profileName,
                                                  std::function<void(bool, const QString&)> callback)
 {
     if (profileName.isEmpty() || !callback) {
@@ -1144,28 +1142,28 @@ void CredentialManager::checkLegacyKeychainFormat(const QString& profileName,
 
         return;
     }
-    
+
     // Legacy format used service="Mudlet profile" and key=profileName
     const QString legacyService = "Mudlet profile";
-    
+
     auto* readJob = new QKeychain::ReadPasswordJob(legacyService, this);
     readJob->setKey(profileName);
     readJob->setAutoDelete(false);
-    
+
     connect(readJob, &QKeychain::ReadPasswordJob::finished, this, [readJob, callback, profileName]() {
         bool success = (readJob->error() == QKeychain::NoError);
         QString password = success ? readJob->textData() : QString();
-        
+
         if (success) {
             qDebug() << "CredentialManager: Found legacy password for profile" << profileName;
         } else {
             qDebug() << "CredentialManager: No legacy password found for profile" << profileName;
         }
-        
+
         callback(success, password);
         readJob->deleteLater();
     });
-    
+
     readJob->start();
 }
 
@@ -1174,14 +1172,14 @@ void CredentialManager::deleteLegacyKeychainEntry(const QString& profileName)
     if (profileName.isEmpty()) {
         return;
     }
-    
+
     // Legacy format used service="Mudlet profile" and key=profileName
     const QString legacyService = "Mudlet profile";
-    
+
     auto* deleteJob = new QKeychain::DeletePasswordJob(legacyService, this);
     deleteJob->setKey(profileName);
     deleteJob->setAutoDelete(false);
-    
+
     connect(deleteJob, &QKeychain::DeletePasswordJob::finished, this, [deleteJob, profileName]() {
         if (deleteJob->error() == QKeychain::NoError) {
             qDebug() << "CredentialManager: Deleted legacy entry for profile" << profileName;
@@ -1191,6 +1189,6 @@ void CredentialManager::deleteLegacyKeychainEntry(const QString& profileName)
 
         deleteJob->deleteLater();
     });
-    
+
     deleteJob->start();
 }

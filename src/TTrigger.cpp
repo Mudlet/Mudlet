@@ -31,9 +31,7 @@
 #include "TMatchState.h"
 #include "TMedia.h"
 #include "mudlet.h"
-#include "pre_guard.h"
 #include <QRegularExpression>
-#include "post_guard.h"
 
 #include <cassert>
 #include <sstream>

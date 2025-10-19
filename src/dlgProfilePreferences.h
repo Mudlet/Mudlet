@@ -33,7 +33,6 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-#include "pre_guard.h"
 #include "ui_profile_preferences.h"
 #include <QtCore>
 #include <QDialog>
@@ -42,7 +41,6 @@
 #include <QFontDialog>
 #include <QMap>
 #include <QCloseEvent>
-#include "post_guard.h"
 
 class Host;
 

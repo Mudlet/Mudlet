@@ -27,9 +27,7 @@
 #include "TConsole.h"
 #include "TFlipButton.h"
 
-#include "pre_guard.h"
 #include <QGridLayout>
-#include "post_guard.h"
 
 
 TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)

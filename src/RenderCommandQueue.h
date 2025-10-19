@@ -20,14 +20,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <vector>
 #include <memory>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
-#include "post_guard.h"
 
 #include "RenderCommand.h"
 #include "GeometryManager.h"
@@ -40,10 +38,10 @@ public:
 
     void initialize();
     void cleanup();
-    
+
     // Add commands to the queue
     void addCommand(std::unique_ptr<RenderCommand> command);
-    
+
     // Execute all queued commands
     void executeAll(QOpenGLShaderProgram* shader,
                    GeometryManager* geometryManager,
@@ -53,10 +51,10 @@ public:
                    QOpenGLBuffer& colorBuffer,
                    QOpenGLBuffer& normalBuffer,
                    QOpenGLBuffer& indexBuffer);
-    
+
     // Clear the command queue
     void clear();
-    
+
     // Get queue statistics
     size_t getCommandCount() const;
     void printStatistics() const;
@@ -64,7 +62,7 @@ public:
 private:
     std::vector<std::unique_ptr<RenderCommand>> mCommands;
     bool mInitialized = false;
-    
+
     // Statistics
     mutable size_t mTotalCommandsExecuted = 0;
     mutable size_t mCubeCommandsExecuted = 0;
