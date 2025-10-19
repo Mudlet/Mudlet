@@ -47,7 +47,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     // remove excess hints, but allow for a custom tooltip
     while (hints.size() > hrefs.size() + 1) {
-        hints.removeFirst();
+        hints.removeLast();
     }
 
     // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
