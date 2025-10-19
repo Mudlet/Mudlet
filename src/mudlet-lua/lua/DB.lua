@@ -402,26 +402,48 @@ end
 
 
 -- NOT LUADOC
--- Normalizes a CREATE TABLE SQL statement for comparison by removing extra whitespace,
--- converting to lowercase, and standardizing formatting. This allows us to reliably
--- detect when table definitions have changed.
-function db:_normalize_create_table_sql(sql)
+-- Extracts UNIQUE constraints with ON CONFLICT clauses from a CREATE TABLE statement.
+-- This includes both column-level constraints (e.g., "col1" TEXT UNIQUE ON CONFLICT REPLACE)
+-- and table-level constraints (e.g., UNIQUE("col1", "col2") ON CONFLICT FAIL).
+-- This allows us to detect when constraint definitions have changed without being affected by
+-- column additions/removals.
+function db:_extract_table_constraints(sql)
   if not sql or sql == "" then
     return ""
   end
   
-  -- Convert to lowercase for case-insensitive comparison
-  sql = sql:lower()
+  -- Normalize whitespace and case for consistent comparison
+  local normalized = sql:lower()
+  normalized = normalized:gsub("\n", " ")
+  normalized = normalized:gsub("\r", " ")
+  normalized = normalized:gsub("%s+", " ")
+  normalized = normalized:gsub("^%s*(.-)%s*$", "%1")
   
-  -- Remove newlines and extra whitespace
-  sql = sql:gsub("\n", " ")
-  sql = sql:gsub("\r", " ")
-  sql = sql:gsub("%s+", " ")
+  -- Extract the part between the parentheses of CREATE TABLE
+  local content = normalized:match("create%s+table%s+[%w_\"]+%s*%((.+)%)")
+  if not content then
+    return ""
+  end
   
-  -- Trim leading/trailing whitespace
-  sql = sql:gsub("^%s*(.-)%s*$", "%1")
+  local constraints = {}
   
-  return sql
+  -- Find table-level UNIQUE constraints
+  -- They look like: UNIQUE("col1") ON CONFLICT REPLACE or UNIQUE("col1", "col2") ON CONFLICT FAIL
+  for constraint in content:gmatch('unique%s*%([^)]+%)%s+on%s+conflict%s+%w+') do
+    table.insert(constraints, constraint)
+  end
+  
+  -- Find column-level UNIQUE constraints
+  -- They look like: "col1" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT REPLACE
+  -- We need to extract just the "UNIQUE ON CONFLICT X" part for comparison
+  for constraint in content:gmatch('unique%s+on%s+conflict%s+%w+') do
+    table.insert(constraints, constraint)
+  end
+  
+  -- Sort for consistent comparison
+  table.sort(constraints)
+  
+  return table.concat(constraints, "|")
 end
 
 
@@ -490,13 +512,13 @@ function db:_migrate(db_name, s_name, force)
     -- At this point we know that the sheet already exists, but we are concerned if the current
     -- definition includes columns which may be added.
     
-    -- Check if the table definition has changed (e.g., _violations option changed)
-    -- by comparing the actual CREATE TABLE SQL with the expected SQL
+    -- Check if the table-level constraints have changed (e.g., _violations option changed)
+    -- by comparing only the UNIQUE constraint definitions, not the column list
     local expected_sql = db:_build_create_table_sql(schema, s_name)
     local get_actual_sql = "SELECT sql FROM sqlite_master " ..
                            "WHERE type = 'table' AND name = '" .. s_name .. "'"
     local sql_cur, sql_err = conn:execute(get_actual_sql)
-    local table_def_changed = false
+    local table_constraints_changed = false
     
     if sql_cur and type(sql_cur) ~= "number" then
       local sql_row = sql_cur:fetch({}, "a")
@@ -504,24 +526,26 @@ function db:_migrate(db_name, s_name, force)
       
       if sql_row and sql_row.sql then
         local actual_sql = sql_row.sql
-        local normalized_expected = db:_normalize_create_table_sql(expected_sql)
-        local normalized_actual = db:_normalize_create_table_sql(actual_sql)
+        local expected_constraints = db:_extract_table_constraints(expected_sql)
+        local actual_constraints = db:_extract_table_constraints(actual_sql)
         
-        if normalized_expected ~= normalized_actual then
-          table_def_changed = true
+        if expected_constraints ~= actual_constraints then
+          table_constraints_changed = true
         end
       end
     end
     
-    -- If the table definition has changed, we need to recreate the table
-    if table_def_changed then
+    -- If the table-level constraints have changed, we need to recreate the table
+    if table_constraints_changed then
       -- Commit any pending transaction before table recreation
       conn:commit()
       
-      -- Build the list of columns to preserve
+      -- Build the list of columns to preserve (only columns that exist in both current and new schema)
       local fields = { "_row_id" }
       for k, _ in pairs(schema.columns) do
-        fields[#fields + 1] = string.format('"%s"', k)
+        if current_columns[k] then
+          fields[#fields + 1] = string.format('"%s"', k)
+        end
       end
       local fields_sql = table.concat(fields, ", ")
       
@@ -565,6 +589,20 @@ function db:_migrate(db_name, s_name, force)
         
         -- Commit the migration transaction
         conn:commit()
+        
+        -- After recreating the table with new constraints, add any new columns that didn't exist before
+        for k, v in pairs(schema.columns) do
+          if not current_columns[k] then
+            local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
+            local t = db:_sql_type(v)
+            local def = db:_sql_convert(v)
+            local sql = sql_add:format(s_name, k, t, def)
+            conn:execute(sql)
+            db:echo_sql(sql)
+            -- Update current_columns to reflect the newly added column
+            current_columns[k] = ""
+          end
+        end
       end
     else
       -- No table definition change, proceed with normal column migration
@@ -669,7 +707,7 @@ function db:_migrate(db_name, s_name, force)
         end
       end
     end
-    end -- end of else block for table_def_changed check
+    end -- end of else block for table_constraints_changed check
   end
 
   -- On every invocation of db:create we run the code that creates indexes, as that code will
