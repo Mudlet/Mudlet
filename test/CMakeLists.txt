@@ -92,6 +92,9 @@ add_test(NAME TMxpFormattingTagsTest COMMAND TMxpFormattingTagsTest)
 add_executable(TMxpCustomElementTagHandlerTest TMxpCustomElementTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
 add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandlerTest)
 
+add_executable(TMxpModeSecurityTest TMxpModeSecurityTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpModeSecurityTest COMMAND TMxpModeSecurityTest)
+
 add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp ../src/TVar.cpp ../src/VarUnit.cpp)
 add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)
 

@@ -25,6 +25,7 @@
 #include "TLinkStore.h"
 #include "TMxpClient.h"
 #include "TMxpEvent.h"
+#include "TMxpProcessor.h"
 
 #include "pre_guard.h"
 #include <QList>
@@ -119,6 +120,8 @@ public:
         Q_UNUSED(value)
     }
 
+    bool startTagReceived(MxpStartTag* startTag) override;
+    
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override;
 
     void enqueueMxpEvent(MxpStartTag* tag);
@@ -135,6 +138,8 @@ public:
     QStack<TMxpEvent> mPendingSendEvents;
 
 private:
+    bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const;
+    
     Host* mpHost;
     bool mLinkMode;
 };
