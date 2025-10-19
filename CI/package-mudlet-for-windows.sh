@@ -115,26 +115,10 @@ fi
 # loaded for our Windows builds:
 "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "--multimedia" "./mudlet.exe"
 
-echo ""
-echo "Examining Mudlet application and Qt plugins to identify other needed libraries..."
-# Note the "mingw64" will need to be modified if used for a different environment
-# than the MINGW64 one - but making the value to match against a bash variable
-# in this pipeline has proven impossible! - Slysven
-mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive ./mudlet.exe \
-  ./*/*.dll ./*/*/*.dll \
-  | /usr/bin/grep -v 'Qt6' \
-  | /usr/bin/grep 'mingw64' \
-  | /usr/bin/grep 'bin' \
-  | /usr/bin/cut -d '>' -f2 \
-  | /usr/bin/cut -d '(' -f1 \
-  | /usr/bin/sort -u)
-
-echo ""
-echo "Copying identified libraries from Mudlet executable and plugins..."
-for LIB in ${NEEDED_LIBS[@]}; do
-  cp -p -v -t . "$(/usr/bin/cygpath -au "${LIB}")"
-done
-
+# Copy in all the other known to be needs .dlls BEFORE we analyse the WHOLE lot
+# for any dependencies - otherwise we'd have to any of the dependencies for
+# those others manually after dealing with the ones we can detect from the
+# Mudlet executable and the Qt plugins...
 echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness - but we
@@ -167,6 +151,26 @@ cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sq
 mkdir ./brimworks
 cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
 echo ""
+
+echo ""
+echo "Examining the Mudlet application and all the libraries and Qt plugins to identify other needed libraries..."
+# Note the "mingw64" will need to be modified if used for a different environment
+# than the MINGW64 one - but making the value to match against a bash variable
+# in this pipeline has proven impossible! - Slysven
+mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive ./mudlet.exe \
+  ./*/*.dll ./*/*/*.dll \
+  | /usr/bin/grep -v 'Qt6' \
+  | /usr/bin/grep 'mingw64' \
+  | /usr/bin/grep 'bin' \
+  | /usr/bin/cut -d '>' -f2 \
+  | /usr/bin/cut -d '(' -f1 \
+  | /usr/bin/sort -u)
+
+echo ""
+echo "Copying identified libraries from Mudlet executable and plugins..."
+for LIB in ${NEEDED_LIBS[@]}; do
+  cp -p -v -t . "$(/usr/bin/cygpath -au "${LIB}")"
+done
 
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # Using the '/./' notation provides the point at which rsync reproduces the
