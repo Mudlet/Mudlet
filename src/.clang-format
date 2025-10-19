@@ -14,11 +14,11 @@ BasedOnStyle: LLVM
 
 # language
 Language: Cpp
-Standard: c++17
+Standard: c++20
 DisableFormat: false
 
 # line length
-ColumnLimit: 200 # revisit when tuning.
+ColumnLimit: 180
 
 # indentation
 IndentWidth: 4
@@ -50,9 +50,9 @@ BraceWrapping:
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: true
-BreakConstructorInitializersBeforeComma: true
+BreakConstructorInitializers: BeforeComma
 # BreakStringLiterals: true
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
+PackConstructorInitializers: Never
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 2
 
@@ -67,6 +67,7 @@ SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
+SpaceBeforeCpp11BracedList: true
 
 # parameters/arguments
 AllowAllParametersOfDeclarationOnNextLine: true
@@ -96,7 +97,7 @@ AlignOperands: true
 AlignTrailingComments: true
 
 # penalties (revisit)
-PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakBeforeFirstCallParameter: 5
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
 PenaltyBreakString: 1000
