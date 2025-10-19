@@ -151,6 +151,7 @@ set(mudlet_SRCS
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpEntityTagHandler.cpp
+    TMxpExpireTagHandler.cpp
     TMxpFontTagHandler.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpLinkTagHandler.cpp
@@ -328,6 +329,7 @@ set(mudlet_HDRS
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
     TMxpEntityTagHandler.h
+    TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
     TMxpLinkTagHandler.h

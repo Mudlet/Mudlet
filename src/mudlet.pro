@@ -701,6 +701,7 @@ SOURCES += \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
+    TMxpExpireTagHandler.cpp \
     TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpColorTagHandler.cpp \
@@ -842,6 +843,7 @@ HEADERS += \
     TMxpElementDefinitionHandler.h \
     TMxpElementRegistry.h \
     TMxpEntityTagHandler.h \
+    TMxpExpireTagHandler.h \
     TMxpContext.h \
     TMxpFormattingTagsHandler.h \
     TMxpMudlet.h \
