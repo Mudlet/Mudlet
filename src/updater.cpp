@@ -45,8 +45,7 @@ static bool isFileAccessible(const QString& filePath)
         nullptr,
         OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL,
-        nullptr
-    );
+        nullptr);
 
     if (hFile == INVALID_HANDLE_VALUE) {
         DWORD error = GetLastError();
