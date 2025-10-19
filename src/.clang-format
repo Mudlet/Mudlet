@@ -90,8 +90,8 @@ AllowShortLoopsOnASingleLine: false
 
 # alignment
 AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: false
-AlignConsecutiveDeclarations: false
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
 AlignEscapedNewlinesLeft: false
 AlignOperands: true
 AlignTrailingComments: true
