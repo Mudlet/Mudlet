@@ -4662,6 +4662,22 @@ bool dlgProfilePreferences::updateDisplayFont()
     return true;
 }
 
+void dlgProfilePreferences::cancelShortcutCaptures()
+{
+    const auto sequenceEdits = findChildren<QKeySequenceEdit*>();
+    for (auto* sequenceEdit : sequenceEdits) {
+        if (!sequenceEdit) {
+            continue;
+        }
+
+        if (sequenceEdit->hasFocus()) {
+            sequenceEdit->clearFocus();
+        }
+
+        sequenceEdit->releaseKeyboard();
+    }
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
     if (!mpHost.isNull() && updateDisplayFont()) {
@@ -4690,6 +4706,8 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 
 void dlgProfilePreferences::closeEvent(QCloseEvent* event)
 {
+    cancelShortcutCaptures();
+
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());
     }
