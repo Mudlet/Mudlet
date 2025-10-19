@@ -540,6 +540,37 @@ function db:_migrate(db_name, s_name, force)
       -- Commit any pending transaction before table recreation
       conn:commit()
       
+      -- Check if we're deleting columns that contain data (unless force flag is set)
+      local redundant_columns = {}
+      for k, _ in pairs(current_columns) do
+        if not schema.columns[k] and k ~= "_row_id" then
+          redundant_columns[#redundant_columns + 1] = k
+        end
+      end
+      
+      if #redundant_columns > 0 and not force then
+        -- Check if any of the redundant columns contain non-null data
+        local not_blank = {}
+        for _, col in ipairs(redundant_columns) do
+          local check_sql = string.format('SELECT COUNT(*) AS cnt FROM %s WHERE "%s" IS NOT NULL', s_name, col)
+          local check_cur, check_err = conn:execute(check_sql)
+          assert(check_cur, check_err)
+          
+          if type(check_cur) ~= "number" then
+            local check_row = check_cur:fetch({}, "a")
+            check_cur:close()
+            
+            if check_row and check_row.cnt and tonumber(check_row.cnt) > 0 then
+              not_blank[#not_blank + 1] = col
+            end
+          end
+        end
+        
+        assert(not not_blank[1] or force,
+               "db:_migrate halted due to data present in undefined columns: " .. table.concat(not_blank, ", ") ..
+               "\nuse force option to drop anyway.")
+      end
+      
       -- Build the list of columns to preserve (only columns that exist in both current and new schema)
       local fields = { "_row_id" }
       for k, _ in pairs(schema.columns) do
