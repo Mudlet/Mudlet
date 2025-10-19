@@ -402,6 +402,31 @@ end
 
 
 -- NOT LUADOC
+-- Normalizes a CREATE TABLE SQL statement for comparison by removing extra whitespace,
+-- converting to lowercase, and standardizing formatting. This allows us to reliably
+-- detect when table definitions have changed.
+function db:_normalize_create_table_sql(sql)
+  if not sql or sql == "" then
+    return ""
+  end
+  
+  -- Convert to lowercase for case-insensitive comparison
+  sql = sql:lower()
+  
+  -- Remove newlines and extra whitespace
+  sql = sql:gsub("\n", " ")
+  sql = sql:gsub("\r", " ")
+  sql = sql:gsub("%s+", " ")
+  
+  -- Trim leading/trailing whitespace
+  sql = sql:gsub("^%s*(.-)%s*$", "%1")
+  
+  return sql
+end
+
+
+
+-- NOT LUADOC
 -- The migrate function is meant to upgrade an existing database live, to maintain a consistent
 -- and correct set of sheets and fields, along with their indexes. It should be safe to run
 -- at any time, and must not cause any data loss. It simply adds to what is there: in perticular
@@ -464,7 +489,86 @@ function db:_migrate(db_name, s_name, force)
   else
     -- At this point we know that the sheet already exists, but we are concerned if the current
     -- definition includes columns which may be added.
-    local missing = {}
+    
+    -- Check if the table definition has changed (e.g., _violations option changed)
+    -- by comparing the actual CREATE TABLE SQL with the expected SQL
+    local expected_sql = db:_build_create_table_sql(schema, s_name)
+    local get_actual_sql = "SELECT sql FROM sqlite_master " ..
+                           "WHERE type = 'table' AND name = '" .. s_name .. "'"
+    local sql_cur, sql_err = conn:execute(get_actual_sql)
+    local table_def_changed = false
+    
+    if sql_cur and type(sql_cur) ~= "number" then
+      local sql_row = sql_cur:fetch({}, "a")
+      sql_cur:close()
+      
+      if sql_row and sql_row.sql then
+        local actual_sql = sql_row.sql
+        local normalized_expected = db:_normalize_create_table_sql(expected_sql)
+        local normalized_actual = db:_normalize_create_table_sql(actual_sql)
+        
+        if normalized_expected ~= normalized_actual then
+          table_def_changed = true
+        end
+      end
+    end
+    
+    -- If the table definition has changed, we need to recreate the table
+    if table_def_changed then
+      -- Commit any pending transaction before table recreation
+      conn:commit()
+      
+      -- Build the list of columns to preserve
+      local fields = { "_row_id" }
+      for k, _ in pairs(schema.columns) do
+        fields[#fields + 1] = string.format('"%s"', k)
+      end
+      local fields_sql = table.concat(fields, ", ")
+      
+      -- Get the current CREATE TABLE statement to use for the backup
+      local get_create = "SELECT sql FROM sqlite_master " ..
+                        "WHERE type = 'table' AND name = '" .. s_name .. "'"
+      local create_cur, create_err = conn:execute(get_create)
+      assert(create_cur, create_err)
+      
+      if type(create_cur) ~= "number" then
+        local row = create_cur:fetch({}, "a")
+        create_cur:close()
+        
+        -- Ensure we got a result
+        if not row or not row.sql then
+          error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
+        end
+        
+        -- Create temporary backup table, recreate main table, copy data
+        local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
+        create_tmp = create_tmp:gsub("TABLE", "TEMPORARY TABLE")
+        
+        local sql_chunks = {}
+        sql_chunks[#sql_chunks + 1] = create_tmp .. ";"
+        sql_chunks[#sql_chunks + 1] = "INSERT INTO " .. s_name .. "_bak SELECT * FROM " .. s_name .. ";"
+        sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
+        
+        local new_create_sql = db:_build_create_table_sql(schema, s_name)
+        
+        sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
+        sql_chunks[#sql_chunks + 1] = string.format("INSERT INTO %s SELECT %s FROM %s_bak;", s_name, fields_sql, s_name)
+        sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
+        
+        for i, sql in ipairs(sql_chunks) do
+          local ret, str = conn:execute(sql)
+          
+          if not ret then
+            error("Migration failed at chunk " .. i .. ": " .. tostring(str))
+          end
+        end
+        
+        -- Commit the migration transaction
+        conn:commit()
+      end
+    else
+      -- No table definition change, proceed with normal column migration
+      local missing = {}
 
     for k, v in pairs(schema.columns) do
 
@@ -529,6 +633,12 @@ function db:_migrate(db_name, s_name, force)
       if type(cur) ~= "number" then
         local row = cur:fetch({}, "a");
         cur:close()
+        
+        -- Ensure we got a result
+        if not row or not row.sql then
+          error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
+        end
+        
         local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
         local sql_chunks = {}
         local fields = { "_row_id" }
@@ -559,6 +669,7 @@ function db:_migrate(db_name, s_name, force)
         end
       end
     end
+    end -- end of else block for table_def_changed check
   end
 
   -- On every invocation of db:create we run the code that creates indexes, as that code will
@@ -582,7 +693,7 @@ function db:_build_create_table_sql(schema, s_name)
   local sql_column = '"%s" %s NULL'
   local sql_column_default = sql_column .. ' DEFAULT %s'
 
-  local on_conflict = "ON CONFLICT "..schema.options._violations
+  local on_conflict = "ON CONFLICT "..(schema.options._violations or "FAIL")
 
   local sql_chunks = { '"_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
 
@@ -595,17 +706,19 @@ function db:_build_create_table_sql(schema, s_name)
   --
   -- Into unique_column_constraints when the a column is unique on its own
   -- and into unique_table_constraints when columns are grouped together.
-  if type(schema.options._unique) == "string" then
-    table.insert(unique_column_constraints, schema.options._unique)
-  elseif type(schema.options._unique) == "table" then
-    for _, unique_constraint in ipairs(schema.options._unique) do
-      if type(unique_constraint) == "string" then
-        table.insert(unique_column_constraints, unique_constraint)
-      elseif type(unique_constraint) == "table" then
-        table.insert(
-          unique_table_constraints,
-          'UNIQUE("'..table.concat(unique_constraint, '", "')..'") '..on_conflict
-        )
+  if schema.options and schema.options._unique then
+    if type(schema.options._unique) == "string" then
+      table.insert(unique_column_constraints, schema.options._unique)
+    elseif type(schema.options._unique) == "table" then
+      for i, unique_constraint in ipairs(schema.options._unique) do
+        if type(unique_constraint) == "string" then
+          table.insert(unique_column_constraints, unique_constraint)
+        elseif type(unique_constraint) == "table" then
+          table.insert(
+            unique_table_constraints,
+            'UNIQUE("'..table.concat(unique_constraint, '", "')..'") '..on_conflict
+          )
+        end
       end
     end
   end
@@ -626,7 +739,7 @@ function db:_build_create_table_sql(schema, s_name)
 
   -- Add in the unique constraints
   for _, unique_table_constraint in ipairs(unique_table_constraints) do
-    sql_chunks[#sql_chunks + 1] = "UNIQUE("..table.concat(unique_table_constraint, ", ")..")"
+    sql_chunks[#sql_chunks + 1] = unique_table_constraint
   end
 
   return "CREATE TABLE " .. s_name.. " ("..table.concat(sql_chunks, ", ")..")"
