@@ -2,7 +2,7 @@
 #define MUDLET_TMXPEXPIRETAGHANDLER_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Mike Conley - mconley@mudlet.org               *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
