@@ -477,7 +477,9 @@ void cTelnet::slot_send_login()
 
 void cTelnet::slot_send_pass()
 {
-    if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
+    // Auto-login: Send password if credentials are configured
+    if (mpHost->hasAutoLoginCredentials()) {
+        qDebug() << "Auto-login: Sending password (timer-based, independent of ECHO mode)";
         sendData(mpHost->getPass(), false);
     }
 }
@@ -2071,7 +2073,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
                     mpHost->setRemoteEchoingActive(true);
-                    qDebug() << "Enabling Server ECHOing of our output - perhaps he want us to type a password?";
+                    qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
                 } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
@@ -2193,7 +2195,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 if (option == OPT_ECHO) {
                     mpHost->setRemoteEchoingActive(false);
-                    qDebug() << "Server is stopping the ECHOing our output - so back to normal after, perhaps, sending a password...";
+                    qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
                 if (option == OPT_COMPRESS) {

@@ -818,6 +818,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
+    disable_password_masking_checkbox->setChecked(pHost->mDisablePasswordMasking);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
@@ -2905,6 +2906,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(show_sent_text_combobox->currentIndex());
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
+        pHost->mDisablePasswordMasking = disable_password_masking_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();

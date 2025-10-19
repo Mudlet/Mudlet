@@ -342,6 +342,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // that can be expressed solely with the Latin1 character encoding so that
     // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
+    host.append_attribute("disablePasswordMasking") = pHost->mDisablePasswordMasking ? "yes" : "no";
     host.append_attribute("HighlightHistory") = pHost->mHighlightHistory ? "yes" : "no";
     host.append_attribute("commandEchoMode") = QString::number(static_cast<int>(pHost->mCommandEchoMode)).toLatin1().data();
     // Keep legacy attribute for backward compatibility
