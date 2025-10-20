@@ -113,10 +113,22 @@ fi
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "--multimedia" "./mudlet.exe"
 
-# Copy in all the other known to be needs .dlls BEFORE we analyse the WHOLE lot
-# for any dependencies - otherwise we'd have to any of the dependencies for
+WINDEPLOY_ARGS=( \
+  "--translationdir" \
+  "./share/qt6/translations" \
+  "--compiler-runtime" \
+  "--no-system-dxc-compiler" \
+  "--force-openssl")
+
+echo "Running ${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt-qt6.exe..."
+echo "  With options: \"" "${WINDEPLOY_ARGS[@]}" "\""
+echo ""
+
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "${WINDEPLOY_ARGS[@]}" "./mudlet.exe"
+
+# Copy in all the other known to be needed .dlls BEFORE we analyse the WHOLE lot
+# for any dependencies - otherwise we'd have to add any of the dependencies for
 # those others manually after dealing with the ones we can detect from the
 # Mudlet executable and the Qt plugins...
 echo ""
@@ -154,13 +166,36 @@ echo ""
 
 echo ""
 echo "Examining the Mudlet application and all the libraries and Qt plugins to identify other needed libraries..."
-# Note the "mingw64" will need to be modified if used for a different environment
-# than the MINGW64 one - but making the value to match against a bash variable
-# in this pipeline has proven impossible! - Slysven
-mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive ./mudlet.exe \
-  ./*/*.dll ./*/*/*.dll \
+
+# The greps filter means we only get paths that:
+# * do not contain "Qt6"
+# * include the "root" directory of the particular bash terminal in use (to
+#   capture those with "mingw64", "ucrt64" or "clang64" in them)
+# * include "bin" for the path where the above keep their main library files
+# The cuts ensures we only get the file and path to the library after the =>
+# in the lines that match:
+case "${MSYSTEM}" in
+  *MINGW64*)
+    NEEDED_LIBS_ARG=mingw64
+    ;;
+  *CLANG64*)
+    NEEDED_LIBS_ARG=clang64
+    ;;
+  *UCRT64*)
+    NEEDED_LIBS_ARG=ucrt64
+    ;;
+  *)
+    echo "Uh, oh! Failed to work out what to use to identify the libraries we need to bundle!"
+    exit 2
+    ;;
+esac
+
+mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive \
+./mudlet.exe \
+  ./*.dll \
+  ./*/*.dll \
   | /usr/bin/grep -v 'Qt6' \
-  | /usr/bin/grep 'mingw64' \
+  | /usr/bin/grep "${NEEDED_LIBS_ARG}" \
   | /usr/bin/grep 'bin' \
   | /usr/bin/cut -d '>' -f2 \
   | /usr/bin/cut -d '(' -f1 \
@@ -169,6 +204,7 @@ mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive ./mu
 echo ""
 echo "Copying identified libraries from Mudlet executable and plugins..."
 for LIB in ${NEEDED_LIBS[@]}; do
+  # The ntldd above returns "Windows style pathFileNames"
   cp -p -v -t . "$(/usr/bin/cygpath -au "${LIB}")"
 done
 
