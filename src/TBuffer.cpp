@@ -751,17 +751,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // System entities are literal QString / UTF values which we just 'print'
                         // There is no further MXP or Codeset evaluation
 
-                        const TChar::AttributeFlags attributeFlags =
-                                ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
-                                | (mOverline ? TChar::Overline : TChar::None)
-                                | (mReverse ? TChar::Reverse : TChar::None)
-                                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
-                                | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
-                                | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
-                                | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None);
-
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
                         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
@@ -1094,7 +1085,7 @@ void TBuffer::processMxpWatchdogCallback()
 }
 
 TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const {
-    return ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+    return ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
             | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
             | (mOverline ? TChar::Overline : TChar::None)
             | (mReverse ? TChar::Reverse : TChar::None)
