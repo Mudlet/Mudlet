@@ -469,6 +469,48 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteMiniConsole
+int TLuaInterpreter::deleteMiniConsole(lua_State* L)
+{
+    const QString miniConsoleName = getVerifiedString(L, __func__, 1, "miniconsole name");
+    const Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->deleteMiniConsole(miniConsoleName); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteCommandLine
+int TLuaInterpreter::deleteCommandLine(lua_State* L)
+{
+    const QString commandLineName = getVerifiedString(L, __func__, 1, "command line name");
+    if (isMain(commandLineName)) {
+        return warnArgumentValue(L, __func__, "the main command line cannot be deleted");
+    }
+    const Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->deleteCommandLine(commandLineName); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteScrollBox
+int TLuaInterpreter::deleteScrollBox(lua_State* L)
+{
+    const QString scrollBoxName = getVerifiedString(L, __func__, 1, "scrollbox name");
+    const Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->deleteScrollBox(scrollBoxName); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteLine
 int TLuaInterpreter::deleteLine(lua_State* L)
 {
