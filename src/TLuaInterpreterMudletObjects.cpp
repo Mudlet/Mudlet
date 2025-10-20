@@ -233,7 +233,7 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
 {
     const int n = lua_gettop(L);
     QString name = "main";
-    if (n > 1) {
+    if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
     auto pN = COMMANDLINE(L, name);
