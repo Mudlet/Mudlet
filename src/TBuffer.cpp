@@ -582,7 +582,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
                         const TChar::AttributeFlags attributeFlags =
-                                ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
                                 | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
@@ -751,7 +751,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // There is no further MXP or Codeset evaluation
 
                         const TChar::AttributeFlags attributeFlags =
-                                ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
                                 | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
@@ -807,7 +807,7 @@ COMMIT_LINE:
                     continue;
                 } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
                     const TChar::AttributeFlags attributeFlags =
-                            ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                            ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
                             | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                             | (mOverline ? TChar::Overline : TChar::None)
                             | (mReverse ? TChar::Reverse : TChar::None)
@@ -961,7 +961,7 @@ COMMIT_LINE:
         }
 
         const TChar::AttributeFlags attributeFlags =
-                ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
                 | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                 | (mOverline ? TChar::Overline : TChar::None)
                 | (mReverse ? TChar::Reverse : TChar::None)
