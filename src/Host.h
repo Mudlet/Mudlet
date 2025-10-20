@@ -891,7 +891,7 @@ private:
     bool mWideAmbigousWidthGlyphs = false;
 
     // keeps track of all of the array writers we're currently operating with
-    QHash<QString, XMLexport*> writers;
+    QHash<QString, std::shared_ptr<XMLexport>> writers;
 
     QFuture<void> mModuleFuture;
 
