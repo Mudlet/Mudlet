@@ -4675,8 +4675,8 @@ double TLuaInterpreter::condenseMapLoad()
     }
 
     const int returnValues = lua_gettop(L);
-    if (returnValues > 0 && !lua_isnoneornil(L, 1)) {
-        loadTime = lua_tonumber(L, 1);
+    if (returnValues > 0 && !lua_isnoneornil(L, -1)) {
+        loadTime = lua_tonumber(L, -1);
     }
     lua_pop(L, returnValues);
     return loadTime;
