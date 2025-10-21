@@ -184,6 +184,7 @@ public:
     QPoint mPHighlight;
     bool mPick = false;
     int mTargetRoomId = 0;
+    bool mSnapCustomLinePointsToGridEnabled = false;
     bool mStartSpeedWalk = false;
 
 
@@ -319,6 +320,9 @@ public slots:
     void slot_customLineProperties();
     void slot_customLineAddPoint();
     void slot_customLineRemovePoint();
+    void slot_setSnapCustomLinePointsToGrid(bool enabled);
+    void slot_moveCustomLineLastPointToTargetRoom();
+    bool canMoveSelectedCustomLineLastPointToTargetRoom() const;
     void slot_cancelCustomLineDialog();
     void slot_loadMap();
     void slot_newMap();
@@ -358,6 +362,10 @@ private:
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
+    bool isSnapCustomLinePointsToGridEnabled() const { return mSnapCustomLinePointsToGridEnabled; }
+    void snapSelectedCustomLineToGrid();
+    QPointF snapPointToGrid(const QPointF& point) const;
+    std::optional<int> resolveCustomLineTargetRoomId(const TRoom& room, const QString& exitKey) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
     inline void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&, const bool showRoomCollision);

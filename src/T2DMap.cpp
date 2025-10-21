@@ -64,6 +64,8 @@
 #include <QtUiTools>
 #include "post_guard.h"
 
+#include <cmath>
+
 #include "mapInfoContributorManager.h"
 
 
@@ -3170,7 +3172,11 @@ void T2DMap::slot_customLineAddPoint()
         segment = QLineF(customLineStartPoint, room->customLines.value(mCustomLineSelectedExit).at(0));
     }
     segment.setLength(segment.length() / 2.0);
-    room->customLines[mCustomLineSelectedExit].insert(mCustomLineSelectedPoint, segment.p2());
+    QPointF newPoint = segment.p2();
+    if (mSnapCustomLinePointsToGridEnabled) {
+        newPoint = snapPointToGrid(newPoint);
+    }
+    room->customLines[mCustomLineSelectedExit].insert(mCustomLineSelectedPoint, newPoint);
     mCustomLineSelectedPoint++;
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
@@ -3178,6 +3184,20 @@ void T2DMap::slot_customLineAddPoint()
     repaint();
     mpMap->setUnsaved(__func__);
 }
+
+
+void T2DMap::slot_setSnapCustomLinePointsToGrid(bool enabled)
+{
+    const bool wasEnabled = mSnapCustomLinePointsToGridEnabled;
+    mSnapCustomLinePointsToGridEnabled = enabled;
+
+    if (enabled) {
+        snapSelectedCustomLineToGrid();
+    } else if (wasEnabled != enabled) {
+        repaint();
+    }
+}
+
 
 
 void T2DMap::slot_customLineRemovePoint()
@@ -3198,6 +3218,193 @@ void T2DMap::slot_customLineRemovePoint()
     }
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
+    room->calcRoomDimensions();
+    repaint();
+    mpMap->setUnsaved(__func__);
+}
+
+
+void T2DMap::snapSelectedCustomLineToGrid()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    if (mCustomLineSelectedRoom <= 0 || mCustomLineSelectedExit.isEmpty()) {
+        return;
+    }
+
+    TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
+    if (!room) {
+        return;
+    }
+
+    if (!room->customLines.contains(mCustomLineSelectedExit)) {
+        return;
+    }
+
+    QList<QPointF>& points = room->customLines[mCustomLineSelectedExit];
+    if (points.isEmpty()) {
+        return;
+    }
+
+    bool changed = false;
+    for (QPointF& point : points) {
+        const QPointF snapped = snapPointToGrid(point);
+        if (!qFuzzyIsNull(point.x() - snapped.x()) || !qFuzzyIsNull(point.y() - snapped.y())) {
+            point = snapped;
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        room->calcRoomDimensions();
+        repaint();
+        mpMap->setUnsaved(__func__);
+    }
+}
+
+
+QPointF T2DMap::snapPointToGrid(const QPointF& point) const
+{
+    constexpr qreal snapIncrement = 0.5;
+    const qreal snappedX = std::round(point.x() / snapIncrement) * snapIncrement;
+    const qreal snappedY = std::round(point.y() / snapIncrement) * snapIncrement;
+    return QPointF(snappedX, snappedY);
+}
+
+
+std::optional<int> T2DMap::resolveCustomLineTargetRoomId(const TRoom& room, const QString& exitKey) const
+{
+    if (exitKey == key_nw) {
+        return room.getNorthwest();
+    }
+    if (exitKey == key_n) {
+        return room.getNorth();
+    }
+    if (exitKey == key_ne) {
+        return room.getNortheast();
+    }
+    if (exitKey == key_up) {
+        return room.getUp();
+    }
+    if (exitKey == key_w) {
+        return room.getWest();
+    }
+    if (exitKey == key_e) {
+        return room.getEast();
+    }
+    if (exitKey == key_down) {
+        return room.getDown();
+    }
+    if (exitKey == key_sw) {
+        return room.getSouthwest();
+    }
+    if (exitKey == key_s) {
+        return room.getSouth();
+    }
+    if (exitKey == key_se) {
+        return room.getSoutheast();
+    }
+    if (exitKey == key_in) {
+        return room.getIn();
+    }
+    if (exitKey == key_out) {
+        return room.getOut();
+    }
+
+    const auto& specialExits = room.getSpecialExits();
+    const auto itSpecial = specialExits.constFind(exitKey);
+    if (itSpecial != specialExits.constEnd()) {
+        return itSpecial.value();
+    }
+
+    return std::nullopt;
+}
+
+
+bool T2DMap::canMoveSelectedCustomLineLastPointToTargetRoom() const
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return false;
+    }
+
+    if (mCustomLineSelectedRoom <= 0 || mCustomLineSelectedExit.isEmpty()) {
+        return false;
+    }
+
+    TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
+    if (!room) {
+        return false;
+    }
+
+    if (!room->customLines.contains(mCustomLineSelectedExit)) {
+        return false;
+    }
+
+    const auto& customLinePoints = room->customLines.value(mCustomLineSelectedExit);
+    if (customLinePoints.isEmpty()) {
+        return false;
+    }
+
+    const auto targetRoomId = resolveCustomLineTargetRoomId(*room, mCustomLineSelectedExit);
+    if (!targetRoomId || *targetRoomId <= 0) {
+        return false;
+    }
+
+    if (!mpMap->mpRoomDB->getRoom(*targetRoomId)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+void T2DMap::slot_moveCustomLineLastPointToTargetRoom()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    if (mCustomLineSelectedRoom <= 0 || mCustomLineSelectedExit.isEmpty()) {
+        return;
+    }
+
+    TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
+    if (!room) {
+        return;
+    }
+
+    if (!room->customLines.contains(mCustomLineSelectedExit)) {
+        return;
+    }
+
+    QList<QPointF>& points = room->customLines[mCustomLineSelectedExit];
+    if (points.isEmpty()) {
+        return;
+    }
+
+    const auto targetRoomId = resolveCustomLineTargetRoomId(*room, mCustomLineSelectedExit);
+    if (!targetRoomId || *targetRoomId <= 0) {
+        return;
+    }
+
+    TRoom* targetRoom = mpMap->mpRoomDB->getRoom(*targetRoomId);
+    if (!targetRoom) {
+        return;
+    }
+
+    QPointF newPoint(targetRoom->x(), targetRoom->y());
+    if (mSnapCustomLinePointsToGridEnabled) {
+        newPoint = snapPointToGrid(newPoint);
+    }
+
+    QPointF& lastPoint = points.last();
+    if (qFuzzyIsNull(lastPoint.x() - newPoint.x()) && qFuzzyIsNull(lastPoint.y() - newPoint.y())) {
+        return;
+    }
+
+    lastPoint = newPoint;
     room->calcRoomDimensions();
     repaint();
     mpMap->setUnsaved(__func__);
