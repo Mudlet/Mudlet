@@ -2206,48 +2206,6 @@ int TLuaInterpreter::moveWindow(lua_State* L)
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
     const int n = lua_gettop(L);
-
-    // Check if first argument is a table for named-key format
-    if (lua_istable(L, 1)) {
-        QString name, area;
-        bool loadLayout = true, autoDock = true;
-        bool hasName = false;
-
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
-                !key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
-                name = getVerifiedString(L, __func__, -1, key);
-                hasName = true;
-            } else if (!key.compare(QLatin1String("restoreLayout"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("loadLayout"), Qt::CaseInsensitive)) {
-                loadLayout = getVerifiedBool(L, __func__, -1, key);
-            } else if (!key.compare(QLatin1String("autoDock"), Qt::CaseInsensitive)) {
-                autoDock = getVerifiedBool(L, __func__, -1, key);
-            } else if (!key.compare(QLatin1String("area"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("dockingArea"), Qt::CaseInsensitive)) {
-                area = getVerifiedString(L, __func__, -1, key);
-            }
-
-            lua_pop(L, 1);
-        }
-
-        if (!hasName) {
-            lua_pushfstring(L, "openUserWindow: bad argument, missing 'name' or 'windowName' in table");
-            return lua_error(L);
-        }
-
-        Host& host = getHostFromLua(L);
-        if (auto [success, message] = host.openWindow(name, loadLayout, autoDock, area.toLower()); !success) {
-            return warnArgumentValue(L, __func__, message);
-        }
-        lua_pushboolean(L, true);
-        return 1;
-    }
-
-    // Original positional argument handling
     if (lua_type(L, 1) != LUA_TSTRING) {
         lua_pushfstring(L, "openUserWindow:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
@@ -2923,87 +2881,36 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
 int TLuaInterpreter::setBorderSizes(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
-    // Support both table and ordered arguments
-    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
-        // Table argument format: {top=N, right=N, bottom=N, left=N}
-        bool hasTop = false, hasRight = false, hasBottom = false, hasLeft = false;
-        int top = 0, right = 0, bottom = 0, left = 0;
-
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("top"), Qt::CaseInsensitive)) {
-                top = getVerifiedInt(L, __func__, -1, "top");
-                hasTop = true;
-            } else if (!key.compare(QLatin1String("right"), Qt::CaseInsensitive)) {
-                right = getVerifiedInt(L, __func__, -1, "right");
-                hasRight = true;
-            } else if (!key.compare(QLatin1String("bottom"), Qt::CaseInsensitive)) {
-                bottom = getVerifiedInt(L, __func__, -1, "bottom");
-                hasBottom = true;
-            } else if (!key.compare(QLatin1String("left"), Qt::CaseInsensitive)) {
-                left = getVerifiedInt(L, __func__, -1, "left");
-                hasLeft = true;
-            }
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
-        }
-
-        // Validate required parameters - all four sides must be specified
-        if (!hasTop) {
-            lua_pushfstring(L, "%s: missing required 'top' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasRight) {
-            lua_pushfstring(L, "%s: missing required 'right' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasBottom) {
-            lua_pushfstring(L, "%s: missing required 'bottom' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasLeft) {
-            lua_pushfstring(L, "%s: missing required 'left' in table", __func__);
-            return lua_error(L);
-        }
-
+    const int numberOfArguments = lua_gettop(L);
+    switch (numberOfArguments) {
+    case 0:
+        break;
+    case 1: {
+        auto value = getVerifiedInt(L, __func__, 1, "new size");
+        host.setBorders({value, value, value, value});
+        break;
+    }
+    case 2: {
+        auto height = getVerifiedInt(L, __func__, 1, "new height");
+        auto width = getVerifiedInt(L, __func__, 2, "new width");
+        host.setBorders({width, height, width, height});
+        break;
+    }
+    case 3: {
+        auto top = getVerifiedInt(L, __func__, 1, "new top size");
+        auto width = getVerifiedInt(L, __func__, 2, "new width");
+        auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+        host.setBorders({width, top, width, bottom});
+        break;
+    }
+    default: {
+        auto top = getVerifiedInt(L, __func__, 1, "new top size");
+        auto right = getVerifiedInt(L, __func__, 2, "new right size");
+        auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+        auto left = getVerifiedInt(L, __func__, 4, "new left size");
         host.setBorders({left, top, right, bottom});
-    } else {
-        // Ordered argument format with multiple forms
-        const int numberOfArguments = lua_gettop(L);
-        switch (numberOfArguments) {
-        case 0:
-            break;
-        case 1: {
-            auto value = getVerifiedInt(L, __func__, 1, "new size");
-            host.setBorders({value, value, value, value});
-            break;
-        }
-        case 2: {
-            auto height = getVerifiedInt(L, __func__, 1, "new height");
-            auto width = getVerifiedInt(L, __func__, 2, "new width");
-            host.setBorders({width, height, width, height});
-            break;
-        }
-        case 3: {
-            auto top = getVerifiedInt(L, __func__, 1, "new top size");
-            auto width = getVerifiedInt(L, __func__, 2, "new width");
-            auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-            host.setBorders({width, top, width, bottom});
-            break;
-            }
-        default: {
-            auto top = getVerifiedInt(L, __func__, 1, "new top size");
-            auto right = getVerifiedInt(L, __func__, 2, "new right size");
-            auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-            auto left = getVerifiedInt(L, __func__, 4, "new left size");
-            host.setBorders({left, top, right, bottom});
-            break;
-        }
-        }
+        break;
+    }
     }
     return 0;
 }
@@ -3022,61 +2929,15 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
 int TLuaInterpreter::setFgColor(lua_State* L)
 {
     QString windowName;
-    int luaRed, luaGreen, luaBlue;
-    auto validRange = [](int number) { return number >= 0 && number <= 255; };
-
-    // Support both table and ordered arguments
-    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
-        // Table argument format: {windowName="name", r=N, g=N, b=N} or {red=N, green=N, blue=N}
-        bool hasR = false, hasG = false, hasB = false;
-
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, "windowName");
-            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
-                luaRed = getVerifiedInt(L, __func__, -1, "red component");
-                hasR = true;
-            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
-                luaGreen = getVerifiedInt(L, __func__, -1, "green component");
-                hasG = true;
-            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
-                luaBlue = getVerifiedInt(L, __func__, -1, "blue component");
-                hasB = true;
-            }
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
-        }
-
-        // Validate required parameters
-        if (!hasR) {
-            lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasG) {
-            lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasB) {
-            lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
-            return lua_error(L);
-        }
-    } else {
-        // Ordered argument format: [windowName], r, g, b
-        int s = 0;
-        const int n = lua_gettop(L);
-        if (n > 3) {
-            windowName = WINDOW_NAME(L, ++s);
-        }
-        luaRed = getVerifiedInt(L, __func__, ++s, "red component value");
-        luaGreen = getVerifiedInt(L, __func__, ++s, "green component value");
-        luaBlue = getVerifiedInt(L, __func__, ++s, "blue component value");
+    int s = 0;
+    const int n = lua_gettop(L);
+    if (n > 3) {
+        windowName = WINDOW_NAME(L, ++s);
     }
-
-    // Validate RGB values
+    const int luaRed = getVerifiedInt(L, __func__, ++s, "red component value");
+    const int luaGreen = getVerifiedInt(L, __func__, ++s, "green component value");
+    const int luaBlue = getVerifiedInt(L, __func__, ++s, "blue component value");
+    auto validRange = [](int number) { return number >= 0 && number <= 255; };
     if (!validRange(luaRed)) {
         return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(luaRed));
     }

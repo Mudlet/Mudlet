@@ -2779,60 +2779,10 @@ int TLuaInterpreter::getRooms(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition
 int TLuaInterpreter::getRoomsByPosition(lua_State* L)
 {
-    int area, x, y, z;
-
-    // Support both table and ordered arguments
-    if (lua_istable(L, 1)) {
-        // Table argument format: {areaID=id, x=x, y=y, z=z}
-        bool hasAreaID = false, hasX = false, hasY = false, hasZ = false;
-
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("areaID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("areaId"), Qt::CaseInsensitive)) {
-                area = getVerifiedInt(L, __func__, -1, "areaID");
-                hasAreaID = true;
-            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, "x");
-                hasX = true;
-            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, "y");
-                hasY = true;
-            } else if (!key.compare(QLatin1String("z"), Qt::CaseInsensitive)) {
-                z = getVerifiedInt(L, __func__, -1, "z");
-                hasZ = true;
-            }
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
-        }
-
-        // Validate required parameters
-        if (!hasAreaID) {
-            lua_pushfstring(L, "%s: missing required 'areaID' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasX) {
-            lua_pushfstring(L, "%s: missing required 'x' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasY) {
-            lua_pushfstring(L, "%s: missing required 'y' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasZ) {
-            lua_pushfstring(L, "%s: missing required 'z' in table", __func__);
-            return lua_error(L);
-        }
-    } else {
-        // Ordered argument format: areaID, x, y, z
-        area = getVerifiedInt(L, __func__, 1, "areaID");
-        x = getVerifiedInt(L, __func__, 2, "x");
-        y = getVerifiedInt(L, __func__, 3, "y");
-        z = getVerifiedInt(L, __func__, 4, "z");
-    }
-
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    const int x = getVerifiedInt(L, __func__, 2, "x");
+    const int y = getVerifiedInt(L, __func__, 3, "y");
+    const int z = getVerifiedInt(L, __func__, 4, "z");
     const Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
@@ -3355,56 +3305,10 @@ int TLuaInterpreter::lockRoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockSpecialExit
 int TLuaInterpreter::lockSpecialExit(lua_State* L)
 {
-    int fromRoomID;
-    QString dir;
-    bool b;
-
-    // Support both table and ordered arguments
-    if (lua_istable(L, 1)) {
-        // Table argument format: {fromRoomID=id, command="dir", locked=true}
-        bool hasFromRoomID = false, hasCommand = false, hasLocked = false;
-
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("fromRoomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("roomID"), Qt::CaseInsensitive)) {
-                fromRoomID = getVerifiedInt(L, __func__, -1, "fromRoomID");
-                hasFromRoomID = true;
-            } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive) || !key.compare(QLatin1String("dir"), Qt::CaseInsensitive) || !key.compare(QLatin1String("direction"), Qt::CaseInsensitive)) {
-                dir = getVerifiedString(L, __func__, -1, "special exit command");
-                hasCommand = true;
-            } else if (!key.compare(QLatin1String("locked"), Qt::CaseInsensitive) || !key.compare(QLatin1String("lock"), Qt::CaseInsensitive)) {
-                b = getVerifiedBool(L, __func__, -1, "lock state");
-                hasLocked = true;
-            }
-            // Note: toRoomID is deprecated and ignored if provided
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
-        }
-
-        // Validate required parameters
-        if (!hasFromRoomID) {
-            lua_pushfstring(L, "%s: missing required 'fromRoomID' or 'roomID' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasCommand) {
-            lua_pushfstring(L, "%s: missing required 'command', 'dir', or 'direction' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasLocked) {
-            lua_pushfstring(L, "%s: missing required 'locked' or 'lock' in table", __func__);
-            return lua_error(L);
-        }
-    } else {
-        // Ordered argument format: fromRoomID, toRoomID (ignored), command, locked
-        fromRoomID = getVerifiedInt(L, __func__, 1, "exit roomID");
-        // The second argument (was the toRoomID) is now ignored as it is not required/considered in any way
-        dir = getVerifiedString(L, __func__, 3, "special exit name/command");
-        b = getVerifiedBool(L, __func__, 4, "special exit lock state");
-    }
-
+    const int fromRoomID = getVerifiedInt(L, __func__, 1, "exit roomID");
+    // The second argument (was the toRoomID) is now ignored as it is not required/considered in any way
+    const QString dir{getVerifiedString(L, __func__, 3, "special exit name/command")};
+    const bool b = getVerifiedBool(L, __func__, 4, "special exit lock state");
     if (dir.isEmpty()) {
         return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
@@ -4562,61 +4466,10 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCharColor
 int TLuaInterpreter::setRoomCharColor(lua_State* L)
 {
-    int id, r, g, b;
-
-    // Support both table and ordered arguments
-    if (lua_istable(L, 1)) {
-        // Table argument format: {roomID=id, r=r, g=g, b=b}
-        bool hasRoomID = false, hasR = false, hasG = false, hasB = false;
-
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("roomId"), Qt::CaseInsensitive)) {
-                id = getVerifiedInt(L, __func__, -1, "roomID");
-                hasRoomID = true;
-            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
-                r = getVerifiedInt(L, __func__, -1, "red component");
-                hasR = true;
-            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
-                g = getVerifiedInt(L, __func__, -1, "green component");
-                hasG = true;
-            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
-                b = getVerifiedInt(L, __func__, -1, "blue component");
-                hasB = true;
-            }
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
-        }
-
-        // Validate required parameters
-        if (!hasRoomID) {
-            lua_pushfstring(L, "%s: missing required 'roomID' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasR) {
-            lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasG) {
-            lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasB) {
-            lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
-            return lua_error(L);
-        }
-    } else {
-        // Ordered argument format: roomID, r, g, b
-        id = getVerifiedInt(L, __func__, 1, "roomID");
-        r = getVerifiedInt(L, __func__, 2, "red component");
-        g = getVerifiedInt(L, __func__, 3, "green component");
-        b = getVerifiedInt(L, __func__, 4, "blue component");
-    }
-
-    // Validate RGB values
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const int r = getVerifiedInt(L, __func__, 2, "red component");
+    const int g = getVerifiedInt(L, __func__, 3, "green component");
+    const int b = getVerifiedInt(L, __func__, 4, "blue component");
     if (r < 0 || r > 255) {
         lua_pushfstring(L, "%s: red component value %d out of range (0 to 255)", __func__, r);
         return lua_error(L);
@@ -4646,60 +4499,10 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCoordinates
 int TLuaInterpreter::setRoomCoordinates(lua_State* L)
 {
-    int id, x, y, z;
-
-    // Support both table and ordered arguments
-    if (lua_istable(L, 1)) {
-        // Table argument format: {roomID=id, x=x, y=y, z=z}
-        bool hasRoomID = false, hasX = false, hasY = false, hasZ = false;
-
-        lua_pushnil(L);
-        while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
-
-            if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("roomId"), Qt::CaseInsensitive)) {
-                id = getVerifiedInt(L, __func__, -1, "roomID");
-                hasRoomID = true;
-            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, "x");
-                hasX = true;
-            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, "y");
-                hasY = true;
-            } else if (!key.compare(QLatin1String("z"), Qt::CaseInsensitive)) {
-                z = getVerifiedInt(L, __func__, -1, "z");
-                hasZ = true;
-            }
-
-            lua_pop(L, 1); // Remove value, keep key for next iteration
-        }
-
-        // Validate required parameters
-        if (!hasRoomID) {
-            lua_pushfstring(L, "%s: missing required 'roomID' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasX) {
-            lua_pushfstring(L, "%s: missing required 'x' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasY) {
-            lua_pushfstring(L, "%s: missing required 'y' in table", __func__);
-            return lua_error(L);
-        }
-        if (!hasZ) {
-            lua_pushfstring(L, "%s: missing required 'z' in table", __func__);
-            return lua_error(L);
-        }
-    } else {
-        // Ordered argument format: roomID, x, y, z
-        id = getVerifiedInt(L, __func__, 1, "roomID");
-        x = getVerifiedInt(L, __func__, 2, "x");
-        y = getVerifiedInt(L, __func__, 3, "y");
-        z = getVerifiedInt(L, __func__, 4, "z");
-    }
-
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const int x = getVerifiedInt(L, __func__, 2, "x");
+    const int y = getVerifiedInt(L, __func__, 3, "y");
+    const int z = getVerifiedInt(L, __func__, 4, "z");
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->setRoomCoordinates(id, x, y, z));
     host.mpMap->update();
