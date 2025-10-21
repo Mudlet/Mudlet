@@ -10923,7 +10923,10 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
-    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
+    // Don't apply Lua syntax highlighting for the Variables view since it displays plain data values, not code
+    if (mCurrentView != EditorViewType::cmVarsView) {
+        mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
+    }
     pEditorWidget->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
     auto config = mpSourceEditorEdbee->config();
