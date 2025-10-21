@@ -21,13 +21,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include "ui_map_label.h"
 #include <QColorDialog>
 #include <QDialog>
 #include <QFileDialog>
 #include <QFontDialog>
-#include "post_guard.h"
 
 
 class dlgMapLabel : public QDialog, public Ui::map_label

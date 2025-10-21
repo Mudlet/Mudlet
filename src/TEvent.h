@@ -23,11 +23,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QStringBuilder>
 #include <QStringList>
-#include "post_guard.h"
 
 #define ARGUMENT_TYPE_NUMBER 0
 #define ARGUMENT_TYPE_STRING 1

@@ -24,11 +24,9 @@
 
 #include "MxpTag.h"
 
-#include "pre_guard.h"
 #include <QList>
 #include <QSharedPointer>
 #include <QString>
-#include "post_guard.h"
 
 class TMxpTagParser
 {
