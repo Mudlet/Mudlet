@@ -24,13 +24,11 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QAction>
 #include <QEvent>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QObject>
-#include "post_guard.h"
 
 RoomContextMenuHandler::RoomContextMenuHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)

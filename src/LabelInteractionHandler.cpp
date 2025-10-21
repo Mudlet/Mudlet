@@ -24,7 +24,6 @@
 #include "TMapLabel.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QAction>
 #include <QMenu>
@@ -32,7 +31,6 @@
 #include <QMutableMapIterator>
 #include <QRectF>
 #include <QtGlobal>
-#include "post_guard.h"
 
 LabelInteractionHandler::LabelInteractionHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)
