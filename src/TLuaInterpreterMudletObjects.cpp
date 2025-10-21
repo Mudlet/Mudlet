@@ -1300,6 +1300,70 @@ int TLuaInterpreter::permScript(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permTimer
 int TLuaInterpreter::permTimer(lua_State* L)
 {
+    // Table argument support
+    if (lua_istable(L, 1)) {
+        QString name, parent, luaCode;
+        double time = 0.0;
+        bool hasName = false, hasParent = false, hasTime = false, hasScript = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("timerName"), Qt::CaseInsensitive)) {
+                name = getVerifiedString(L, __func__, -1, key);
+                hasName = true;
+            } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("group"), Qt::CaseInsensitive)) {
+                parent = getVerifiedString(L, __func__, -1, key);
+                hasParent = true;
+            } else if (!key.compare(QLatin1String("time"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("seconds"), Qt::CaseInsensitive)) {
+                time = getVerifiedDouble(L, __func__, -1, key);
+                hasTime = true;
+            } else if (!key.compare(QLatin1String("script"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("code"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("luaCode"), Qt::CaseInsensitive)) {
+                Host& host = getHostFromLua(L);
+                TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+                if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(-1); !validationResult) {
+                    lua_pop(L, 2);
+                    lua_pushfstring(L, "permTimer: bad script value (%s)", validationMessage.toUtf8().constData());
+                    return lua_error(L);
+                }
+                luaCode = QString::fromUtf8(lua_tostring(L, -1));
+                hasScript = true;
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasName) {
+            return warnArgumentValue(L, __func__, "missing required 'name' in table");
+        }
+        if (!hasParent) {
+            return warnArgumentValue(L, __func__, "missing required 'parent' in table");
+        }
+        if (!hasTime) {
+            return warnArgumentValue(L, __func__, "missing required 'time' in table");
+        }
+        if (!hasScript) {
+            return warnArgumentValue(L, __func__, "missing required 'script' in table");
+        }
+
+        Host& host = getHostFromLua(L);
+        TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+        auto [id, message] = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
+        if (id == -1) {
+            lua_pushfstring(L, "permTimer: cannot create timer (%s)", message.toUtf8().constData());
+            return lua_error(L);
+        }
+        lua_pushnumber(L, id);
+        return 1;
+    }
+
+    // Original positional argument handling
     const QString name = getVerifiedString(L, __func__, 1, "timer name");
     const QString parent = getVerifiedString(L, __func__, 2, "timer parent name");
     const double time = getVerifiedDouble(L, __func__, 3, "time in seconds");
