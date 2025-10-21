@@ -73,6 +73,8 @@
 // qsls cannot be shared so define a common instance to use when
 // there are multiple places where they are used within this file:
 
+T2DMap::~T2DMap() = default;
+
 // replacement parameter supplied at point of use:
 const QString& key_plain = qsl("%1");
 

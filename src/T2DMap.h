@@ -76,6 +76,7 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
+    ~T2DMap();
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     void paintEvent(QPaintEvent*) override;
