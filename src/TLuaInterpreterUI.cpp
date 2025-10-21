@@ -1659,6 +1659,64 @@ int TLuaInterpreter::hideWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertLink
 int TLuaInterpreter::insertLink(lua_State* L)
 {
+    // Table argument support
+    if (lua_istable(L, 1)) {
+        QString windowName = qsl("main");
+        QString text, command, hint;
+        int luaReference = 0;
+        bool useCurrentFormat = false;
+        bool hasText = false, hasCommand = false, hasHint = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                windowName = getVerifiedString(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
+                text = getVerifiedString(L, __func__, -1, key);
+                hasText = true;
+            } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
+                parseCommandOrFunction(L, __func__, -1, command, luaReference);
+                hasCommand = true;
+            } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("tooltip"), Qt::CaseInsensitive)) {
+                hint = getVerifiedString(L, __func__, -1, key);
+                hasHint = true;
+            } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
+                if (lua_isboolean(L, -1)) {
+                    useCurrentFormat = lua_toboolean(L, -1);
+                }
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasText) {
+            return warnArgumentValue(L, __func__, "missing required 'text' in table");
+        }
+        if (!hasCommand) {
+            return warnArgumentValue(L, __func__, "missing required 'command' in table");
+        }
+        if (!hasHint) {
+            return warnArgumentValue(L, __func__, "missing required 'hint' in table");
+        }
+
+        QStringList commandList;
+        QStringList hintList;
+        QVector<int> luaReferences;
+        commandList << command;
+        luaReferences << luaReference;
+        hintList << hint;
+
+        auto console = CONSOLE(L, windowName);
+        console->insertLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Original positional argument handling
     QStringList commandList;
     QStringList hintList;
     QVector<int> luaReferences;

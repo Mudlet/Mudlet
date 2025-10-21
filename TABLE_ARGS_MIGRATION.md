@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **23**
-Remaining: **34**
+Completed: **24**
+Remaining: **33**
 
 ---
 
@@ -67,7 +67,7 @@ Remaining: **34**
 - [ ] `hechoPopup` - hechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
 - [ ] `hinsertLink` - hinsertLink([windowName], text, command, hint, true)
 - [ ] `hinsertPopup` - hinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
-- [ ] `insertLink` - insertLink([windowName], text, command, hint, [useCurrentLinkFormat])
+- [x] `insertLink` - insertLink([windowName], text, command, hint, [useCurrentLinkFormat])
 - [ ] `permKey` - permKey(name, parent, [modifier], key code, lua code)
 - [ ] `prefix` - prefix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
 - [ ] `registerNamedEventHandler` - success = registerNamedEventHandler(userName, handlerName, eventName, functionReference, [oneShot])
