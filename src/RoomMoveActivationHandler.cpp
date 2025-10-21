@@ -19,9 +19,13 @@
 
 #include "RoomMoveActivationHandler.h"
 
+#include "TRoom.h"
+#include "TRoomDB.h"
 #include "pre_guard.h"
 #include <QMouseEvent>
+#include <QPointF>
 #include <QRect>
+#include <QtGlobal>
 #include "post_guard.h"
 
 RoomMoveActivationHandler::RoomMoveActivationHandler(T2DMap& mapWidget)
@@ -45,10 +49,6 @@ bool RoomMoveActivationHandler::matches(const T2DMap::MapInteractionContext& con
             return false;
         }
 
-        if (!context.multiSelectionSet || context.multiSelectionSet->isEmpty()) {
-            return false;
-        }
-
         if (!context.area) {
             return false;
         }
@@ -59,7 +59,7 @@ bool RoomMoveActivationHandler::matches(const T2DMap::MapInteractionContext& con
         }
 
         const auto clickedRoomId = mMapWidget.roomIdAtWidgetPosition(context.widgetPosition, context.area);
-        return clickedRoomId.has_value() && context.multiSelectionSet->contains(clickedRoomId.value());
+        return clickedRoomId.has_value();
     }
     case QEvent::MouseButtonRelease:
         return context.button == Qt::LeftButton && context.isRoomBeingMoved;
@@ -85,18 +85,39 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
             return false;
         }
 
+        const int roomId = clickedRoomId.value();
+
+        if (!mMapWidget.mMultiSelectionSet.contains(roomId)) {
+            mMapWidget.mMultiSelectionSet.clear();
+            mMapWidget.mMultiSelectionSet.insert(roomId);
+            mMapWidget.mMultiSelectionHighlightRoomId = roomId;
+            mMapWidget.mMultiSelection = false;
+        } else {
+            mMapWidget.mMultiSelectionHighlightRoomId = roomId;
+        }
+
+        context.hasMultiSelection = !mMapWidget.mMultiSelectionSet.isEmpty();
+
         mMapWidget.mPopupMenu = false;
         mMapWidget.mPick = false;
         mMapWidget.mRoomBeingMoved = true;
         mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
         mMapWidget.mNewMoveAction = false;
+        if (mMapWidget.mpMap && mMapWidget.mpMap->mpRoomDB) {
+            if (TRoom* clickedRoom = mMapWidget.mpMap->mpRoomDB->getRoom(roomId)) {
+                mMapWidget.mRoomMoveLastMapPoint = QPointF(clickedRoom->x(), clickedRoom->y());
+            } else {
+                mMapWidget.mRoomMoveLastMapPoint = QPointF(qRound(context.mapX), qRound(context.mapY));
+            }
+        } else {
+            mMapWidget.mRoomMoveLastMapPoint = QPointF(qRound(context.mapX), qRound(context.mapY));
+        }
+        mMapWidget.mHasRoomMoveLastMapPoint = true;
         mMapWidget.setMouseTracking(true);
 
-        if (mMapWidget.mMultiSelectionSet.contains(clickedRoomId.value())) {
-            mMapWidget.mMultiSelectionHighlightRoomId = clickedRoomId.value();
-        }
-
         context.isRoomBeingMoved = true;
+        context.hasClickedRoom = true;
+        context.clickedRoomId = roomId;
 
         return true;
     }
@@ -105,6 +126,7 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
         mMapWidget.setMouseTracking(false);
         mMapWidget.mRoomBeingMoved = false;
         mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
+        mMapWidget.mHasRoomMoveLastMapPoint = false;
         context.isRoomBeingMoved = false;
 
         return true;
