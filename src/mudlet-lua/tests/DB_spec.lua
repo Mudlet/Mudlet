@@ -1121,4 +1121,188 @@ describe("Tests DB.lua functions", function()
       assert.are.same(first_result.niled._timestamp, second_result.niled._timestamp)
     end)
   end)
+
+  -- Tests for table argument support in mapper C++ functions with 5+ parameters
+  describe("Tests createMapper() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createMapper, 0, 0, 300, 300)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createMapper, {
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 300
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests addMapEvent() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(addMapEvent, "uniqueEvent" .. os.time(), "eventName", "parent", "displayName", "arg1,arg2")
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(addMapEvent, {
+        uniquename = "uniqueEvent2" .. os.time(),
+        event = "eventName",
+        parent = "parent",
+        displayname = "displayName",
+        arguments = "arg1,arg2"
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createMapLabel() table argument support", function()
+    it("should accept minimum positional arguments (11 required)", function()
+      local result = pcall(createMapLabel, 1, "Test Label", 0, 0, 0, 255, 255, 255, 0, 0, 0)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with required parameters", function()
+      local result = pcall(createMapLabel, {
+        area = 1,
+        text = "Table Label",
+        posX = 0,
+        posY = 0,
+        posZ = 0,
+        fgRed = 255,
+        fgGreen = 255,
+        fgBlue = 255,
+        bgRed = 0,
+        bgGreen = 0,
+        bgBlue = 0
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with optional parameters", function()
+      local result = pcall(createMapLabel, {
+        areaID = 1,
+        labelText = "Full Label",
+        x = 0,
+        y = 0,
+        z = 0,
+        fgR = 255,
+        fgG = 255,
+        fgB = 255,
+        bgR = 0,
+        bgG = 0,
+        bgB = 0,
+        zoom = 30.0,
+        fontSize = 50,
+        showOnTop = true,
+        noScaling = true,
+        foregroundTransparency = 255,
+        backgroundTransparency = 50
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests highlightRoom() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(highlightRoom, 1, 255, 0, 0, 128, 0, 0, 1.0, 255, 128)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(highlightRoom, {
+        roomID = 1,
+        color1Red = 255,
+        color1Green = 0,
+        color1Blue = 0,
+        color2Red = 128,
+        color2Green = 0,
+        color2Blue = 0,
+        highlightRadius = 1.0,
+        color1Alpha = 255,
+        color2Alpha = 128
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createMapImageLabel() table argument support", function()
+    it("should accept positional arguments", function()
+      -- Create a temp image file for testing
+      local tmpfile = "/tmp/mudlet_test_" .. os.time() .. ".png"
+      local f = io.open(tmpfile, "w")
+      if f then
+        f:write("dummy")
+        f:close()
+        local result = pcall(createMapImageLabel, 1, tmpfile, 0, 0, 0, 100, 100, 30.0, true)
+        os.remove(tmpfile)
+        assert.is_true(result)
+      else
+        pending("Could not create temp file")
+      end
+    end)
+
+    it("should accept table arguments", function()
+      local tmpfile = "/tmp/mudlet_test2_" .. os.time() .. ".png"
+      local f = io.open(tmpfile, "w")
+      if f then
+        f:write("dummy")
+        f:close()
+        local result = pcall(createMapImageLabel, {
+          areaID = 1,
+          imagePath = tmpfile,
+          posX = 0,
+          posY = 0,
+          posZ = 0,
+          width = 100,
+          height = 100,
+          zoom = 30.0,
+          showOnTop = true
+        })
+        os.remove(tmpfile)
+        assert.is_true(result)
+      else
+        pending("Could not create temp file")
+      end
+    end)
+  end)
+
+  describe("Tests addCustomLine() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(addCustomLine, 1, 2, "north", "solid line", {255, 0, 0}, true)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(addCustomLine, {
+        roomID = 1,
+        targetID = 2,
+        direction = "north",
+        style = "solid line",
+        color = {255, 0, 0},
+        arrow = true
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setCustomEnvColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setCustomEnvColor, 255, 255, 128, 64, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setCustomEnvColor, {
+        environmentID = 255,
+        r = 255,
+        g = 128,
+        b = 64,
+        alpha = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
 end)

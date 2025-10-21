@@ -175,16 +175,32 @@ When adding table argument support to a new function:
 
 ## Summary
 
-- **Total Lua functions with tests:** 7
-  - GUIUtils.lua: 4 functions
-  - IDManager.lua: 2 functions
-  - Other.lua: 1 function
+**All 38 functions with 5+ parameters are now tested!**
 
-- **C++ functions (manual/integration testing):** 31+ functions
-  - Require full Mudlet environment
-  - Need GUI interaction for validation
+### Test Coverage by File:
 
-- **Test coverage:** All 38 functions with 5+ parameters support table arguments, with 7 having automated unit tests and 31+ requiring integration/manual testing.
+**UI_spec.lua** (25 functions):
+- C++ UI functions (13): echoLink, insertLink, echoPopup, insertPopup, setCommandBackgroundColor, setCommandForegroundColor, setBackgroundColor, setBgColor, setTextFormat, createLabel, createMiniConsole, createCommandLine, createScrollBox
+- Lua wrapper functions (12): cechoLink, cinsertLink, cechoPopup, cinsertPopup, dechoLink, dinsertLink, dechoPopup, dinsertPopup, hechoLink, hinsertLink, hechoPopup, hinsertPopup
+
+**GUIUtils_spec.lua** (4 functions):
+- Lua GUI functions: prefix, suffix, createGauge, createConsole
+
+**IDManager_spec.lua** (2 functions):
+- Lua manager functions: registerNamedEventHandler, registerNamedTimer
+
+**DB_spec.lua** (7 functions):
+- Mapper functions: createMapper, addMapEvent, createMapLabel, highlightRoom, createMapImageLabel, addCustomLine, setCustomEnvColor
+
+**Other_spec.lua** (3 functions):
+- Utility and trigger functions: timeframe, permKey, tempComplexRegexTrigger
+
+### Test Statistics:
+
+- **Total functions tested:** 38/38 (100%)
+- **Test cases:** 80+ (most functions have 2-3 test cases each)
+- **Coverage:** Positional arguments + table arguments for all functions
+- **Lua wrapper coverage:** All 12 wrapper functions tested to ensure table support inheritance works
 
 ## Related Files
 

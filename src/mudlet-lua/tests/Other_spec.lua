@@ -415,6 +415,91 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests permKey() table argument support", function()
+    it("should accept positional arguments without modifier (4 params)", function()
+      local result = pcall(permKey, "testKey" .. os.time(), "testGroup", string.byte('a'), "echo('test')")
+      assert.is_true(result)
+    end)
+
+    it("should accept positional arguments with modifier (5 params)", function()
+      local result = pcall(permKey, "testKey2" .. os.time(), "testGroup", 0x02000000, string.byte('b'), "echo('test2')")
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments without modifier", function()
+      local result = pcall(permKey, {
+        name = "testKey3" .. os.time(),
+        parent = "testGroup",
+        keyCode = string.byte('c'),
+        code = "echo('test3')"
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with modifier", function()
+      local result = pcall(permKey, {
+        name = "testKey4" .. os.time(),
+        parentGroup = "testGroup",
+        modifier = 0x02000000,
+        key = string.byte('d'),
+        luaCode = "echo('test4')"
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests tempComplexRegexTrigger() table argument support", function()
+    it("should accept positional arguments with string code", function()
+      local result = pcall(tempComplexRegexTrigger,
+        "test" .. os.time(), ".*test.*", "echo('found')",
+        false, 0, 0, false, false,
+        0, 0, "", 0, 0, -1
+      )
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with string code", function()
+      local result = pcall(tempComplexRegexTrigger, {
+        name = "test2" .. os.time(),
+        pattern = ".*test.*",
+        code = "echo('found')",
+        multiLine = false,
+        colourTriggerFgColor = 0,
+        colourTriggerBgColor = 0,
+        filterTrigger = false,
+        matchAll = false,
+        highlightFgColor = 0,
+        highlightBgColor = 0,
+        soundTrigger = "",
+        fireLength = 0,
+        lineDelta = 0,
+        expireAfter = -1
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with function code", function()
+      local codeFunc = function() echo('found by function') end
+      local result = pcall(tempComplexRegexTrigger, {
+        triggerName = "test3" .. os.time(),
+        regex = ".*test.*",
+        luaFunction = codeFunc,
+        multiline = false,
+        fgColor = 0,
+        bgColor = 0,
+        filter = false,
+        matchAllLines = false,
+        hlFg = 0,
+        hlBg = 0,
+        sound = "",
+        fireLen = 0,
+        delta = 0,
+        expiry = -1
+      })
+      assert.is_true(result)
+    end)
+  end)
+
     --[[
     TODO:
       remember()

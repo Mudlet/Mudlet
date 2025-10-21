@@ -1182,4 +1182,386 @@ describe("Tests UI functions", function()
     assert.are.equal(selection, "Qux")
     deselect()
   end)
+
+  -- Tests for table argument support in C++ functions with 5+ parameters
+  describe("Tests echoLink() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(echoLink, "main", "test link", "echo('clicked')", "hint text", true)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(echoLink, {
+        windowName = "main",
+        text = "test link",
+        command = "echo('clicked')",
+        hint = "hint text",
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests insertLink() table argument support", function()
+    it("should accept positional arguments", function()
+      echo("test ")
+      local result = pcall(insertLink, "main", "insert link", "echo('inserted')", "tooltip", false)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      echo("test ")
+      local result = pcall(insertLink, {
+        windowName = "main",
+        text = "insert link",
+        command = "echo('inserted')",
+        hint = "tooltip"
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests echoPopup() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(echoPopup, "main", "popup text", {"cmd1", "cmd2"}, {"hint1", "hint2"}, true)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(echoPopup, {
+        windowName = "main",
+        text = "popup text",
+        commands = {"cmd1", "cmd2"},
+        hints = {"hint1", "hint2"},
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests insertPopup() table argument support", function()
+    it("should accept positional arguments", function()
+      echo("test ")
+      local result = pcall(insertPopup, "main", "popup", {"cmd1"}, {"hint1"}, false)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      echo("test ")
+      local result = pcall(insertPopup, {
+        windowName = "main",
+        text = "popup",
+        commands = {"cmd1"},
+        hints = {"hint1"}
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setCommandBackgroundColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setCommandBackgroundColor, "main", 255, 128, 64, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setCommandBackgroundColor, {
+        windowName = "main",
+        r = 255,
+        g = 128,
+        b = 64,
+        transparency = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setCommandForegroundColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setCommandForegroundColor, "main", 255, 128, 64, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setCommandForegroundColor, {
+        windowName = "main",
+        r = 255,
+        g = 128,
+        b = 64,
+        transparency = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setBackgroundColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setBackgroundColor, "main", 50, 50, 50, 255)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setBackgroundColor, {
+        windowName = "main",
+        r = 50,
+        g = 50,
+        b = 50,
+        transparency = 255
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setBgColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setBgColor, "main", 50, 50, 50, 255)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setBgColor, {
+        windowName = "main",
+        r = 50,
+        g = 50,
+        b = 50,
+        transparency = 255
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setTextFormat() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setTextFormat, "main", 255, 255, 255, 0, 0, 0, true, false, false, false, false, false)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setTextFormat, {
+        windowName = "main",
+        fgRed = 255,
+        fgGreen = 255,
+        fgBlue = 255,
+        bgRed = 0,
+        bgGreen = 0,
+        bgBlue = 0,
+        bold = true,
+        underline = false,
+        italics = false,
+        strikeout = false,
+        overline = false,
+        reverse = false
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createLabel() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createLabel, "main", "testLabel" .. os.time(), 0, 0, 100, 50, true, false)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createLabel, {
+        name = "testLabel2" .. os.time(),
+        x = 0,
+        y = 0,
+        width = 100,
+        height = 50,
+        fillBackground = true,
+        enableClickthrough = false
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createMiniConsole() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createMiniConsole, "main", "testMini" .. os.time(), 0, 0, 300, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createMiniConsole, {
+        name = "testMini2" .. os.time(),
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createCommandLine() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createCommandLine, "main", "testCmd" .. os.time(), 0, 0, 300, 30)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createCommandLine, {
+        name = "testCmd2" .. os.time(),
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 30
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createScrollBox() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createScrollBox, "main", "testScroll" .. os.time(), 0, 0, 300, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createScrollBox, {
+        name = "testScroll2" .. os.time(),
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  -- Tests for Lua wrapper functions (inherit table support from base C++ functions)
+  describe("Tests Lua wrapper functions table argument support", function()
+    it("cechoLink should accept table arguments", function()
+      local result = pcall(cechoLink, {
+        windowName = "main",
+        text = "<red>test link",
+        command = "echo('clicked')",
+        hint = "hint",
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+
+    it("cinsertLink should accept table arguments", function()
+      echo("test ")
+      local result = pcall(cinsertLink, {
+        windowName = "main",
+        text = "<blue>insert",
+        command = "echo('clicked')",
+        hint = "hint"
+      })
+      assert.is_true(result)
+    end)
+
+    it("cechoPopup should accept table arguments", function()
+      local result = pcall(cechoPopup, {
+        windowName = "main",
+        text = "<green>popup",
+        commands = {"cmd1"},
+        hints = {"hint1"},
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+
+    it("cinsertPopup should accept table arguments", function()
+      echo("test ")
+      local result = pcall(cinsertPopup, {
+        windowName = "main",
+        text = "<yellow>popup",
+        commands = {"cmd1"},
+        hints = {"hint1"}
+      })
+      assert.is_true(result)
+    end)
+
+    it("dechoLink should accept table arguments", function()
+      local result = pcall(dechoLink, {
+        windowName = "main",
+        text = "<255,0,0>test link",
+        command = "echo('clicked')",
+        hint = "hint",
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+
+    it("dinsertLink should accept table arguments", function()
+      echo("test ")
+      local result = pcall(dinsertLink, {
+        windowName = "main",
+        text = "<0,255,0>insert",
+        command = "echo('clicked')",
+        hint = "hint"
+      })
+      assert.is_true(result)
+    end)
+
+    it("dechoPopup should accept table arguments", function()
+      local result = pcall(dechoPopup, {
+        windowName = "main",
+        text = "<0,0,255>popup",
+        commands = {"cmd1"},
+        hints = {"hint1"},
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+
+    it("dinsertPopup should accept table arguments", function()
+      echo("test ")
+      local result = pcall(dinsertPopup, {
+        windowName = "main",
+        text = "<255,255,0>popup",
+        commands = {"cmd1"},
+        hints = {"hint1"}
+      })
+      assert.is_true(result)
+    end)
+
+    it("hechoLink should accept table arguments", function()
+      local result = pcall(hechoLink, {
+        windowName = "main",
+        text = "#FF0000test link",
+        command = "echo('clicked')",
+        hint = "hint",
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+
+    it("hinsertLink should accept table arguments", function()
+      echo("test ")
+      local result = pcall(hinsertLink, {
+        windowName = "main",
+        text = "#00FF00insert",
+        command = "echo('clicked')",
+        hint = "hint"
+      })
+      assert.is_true(result)
+    end)
+
+    it("hechoPopup should accept table arguments", function()
+      local result = pcall(hechoPopup, {
+        windowName = "main",
+        text = "#0000FFpopup",
+        commands = {"cmd1"},
+        hints = {"hint1"},
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+
+    it("hinsertPopup should accept table arguments", function()
+      echo("test ")
+      local result = pcall(hinsertPopup, {
+        windowName = "main",
+        text = "#FFFF00popup",
+        commands = {"cmd1"},
+        hints = {"hint1"}
+      })
+      assert.is_true(result)
+    end)
+  end)
 end)
