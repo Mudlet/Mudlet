@@ -499,6 +499,15 @@ end
 
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
 function speedwalk(dirString, backwards, delay, show)
+  -- Support table argument format
+  if type(dirString) == 'table' then
+    local args = dirString
+    dirString = args.dirString or args.dirs or args.directions or args.path
+    backwards = args.backwards or args.reverse
+    delay = args.delay
+    show = args.show
+  end
+
   dirString = dirString:lower()
   local walkdelay = delay
   if show ~= false then show = true end
