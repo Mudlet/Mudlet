@@ -4184,20 +4184,6 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="mForceNewEnvironNegotiationOff">
-            <property name="text">
-             <string>Force NEW_ENVIRON negotiation off</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="mFORCE_CHARSET_NEGOTIATION_OFF">
-            <property name="text">
-             <string>Force CHARSET negotiation off</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
            <widget class="QCheckBox" name="checkBox_mVersionInTTYPE">
             <property name="toolTip">
              <string>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</string>
@@ -4207,7 +4193,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_mForceMXPProcessorOn">
             <property name="toolTip">
              <string>&lt;p&gt;Some servers do not negotiate Mud eXtension Protocol (MXP). When checked, this preference forces the MXP processor to be enabled. Note: To disable MXP entirely, leave this unchecked and also uncheck MXP in Choose protocols section of the General tab in Settings.&lt;/p&gt;</string>
@@ -4217,7 +4203,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="2">
+          <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_specialoption">
             <property name="enabled">
              <bool>true</bool>
@@ -4720,11 +4706,9 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
-  <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>checkBox_mVersionInTTYPE</tabstop>
   <tabstop>checkBox_mForceMXPProcessorOn</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
-  <tabstop>mForceNewEnvironNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>

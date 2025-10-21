@@ -25,14 +25,12 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QClipboard>
 #include <QFuture>
 #include <QPointer>
 #include <QSaveFile>
 #include <pugixml.hpp>
 #include <memory>
-#include "post_guard.h"
 
 class QFile;
 class Host;

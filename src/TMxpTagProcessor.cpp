@@ -27,6 +27,7 @@
 #include "TMxpCustomElementTagHandler.h"
 #include "TMxpElementDefinitionHandler.h"
 #include "TMxpEntityTagHandler.h"
+#include "TMxpExpireTagHandler.h"
 #include "TMxpFontTagHandler.h"
 #include "TMxpFormattingTagsHandler.h"
 #include "TMxpLinkTagHandler.h"
@@ -39,9 +40,20 @@
 #include "TMxpVarTagHandler.h"
 #include "TMxpVersionTagHandler.h"
 
+#ifdef DEBUG_MXP_PROCESSING
+#include <QDebug>
+#endif
+
 TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
 {
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpTagProcessor::handleTag() processing tag:" << tag->getName();
+#endif
+    
     if (!client.tagReceived(tag)) {
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "  client.tagReceived() returned false, not handling";
+#endif
         return MXP_TAG_NOT_HANDLED;
     }
 
@@ -49,6 +61,9 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
         TMxpTagHandlerResult result = handler->handleTag(ctx, client, tag);
 
         if (result != MXP_TAG_NOT_HANDLED) {
+#ifdef DEBUG_MXP_PROCESSING
+            qDebug() << "  Handler handled tag, result:" << result;
+#endif
             result = client.tagHandled(tag, result);
             if (result != MXP_TAG_NOT_HANDLED) {
                 return result;
@@ -56,6 +71,9 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
         }
     }
 
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "  No handler handled tag:" << tag->getName();
+#endif
     return MXP_TAG_NOT_HANDLED;
 }
 
@@ -73,8 +91,9 @@ TMxpTagProcessor::TMxpTagProcessor()
 
     registerHandler(TMxpFeatureOptions({"var", {"publish"}}), new TMxpVarTagHandler());
     registerHandler(TMxpFeatureOptions({"br", {}}), new TMxpBRTagHandler());
-    registerHandler(TMxpFeatureOptions({"send", {"href", "hint", "prompt"}}), new TMxpSendTagHandler());
-    registerHandler(TMxpFeatureOptions({"a", {"href", "hint"}}), new TMxpLinkTagHandler());
+    registerHandler(TMxpFeatureOptions({"send", {"href", "hint", "prompt", "expire"}}), new TMxpSendTagHandler());
+    registerHandler(TMxpFeatureOptions({"a", {"href", "hint", "expire"}}), new TMxpLinkTagHandler());
+    registerHandler(new TMxpExpireTagHandler());
     registerHandler(TMxpFeatureOptions({"color", {"fore", "back"}}), new TMxpColorTagHandler());
     registerHandler(TMxpFeatureOptions({"font", {"color", "back"}}), new TMxpFontTagHandler());
     registerHandler(TMxpFeatureOptions({"sound", {"fname", "v", "l", "p", "t", "u"}}), new TMxpSoundTagHandler());

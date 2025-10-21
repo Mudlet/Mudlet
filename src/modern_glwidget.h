@@ -31,7 +31,6 @@
 #include <winsock2.h>
 #endif
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QMatrix4x4>
 #include <QVector3D>
@@ -44,7 +43,6 @@
 #include <QPointer>
 #include <QTimer>
 #include <QEasingCurve>
-#include "post_guard.h"
 
 #include "GeometryManager.h"
 #include "RenderCommandQueue.h"
@@ -122,16 +120,16 @@ private:
     QOpenGLBuffer mIndexBuffer;
     QOpenGLBuffer mInstanceBuffer;
     QOpenGLVertexArrayObject mVAO;
-    
+
     // Geometry management
     GeometryManager mGeometryManager;
-    
+
     // Render command queue
     RenderCommandQueue mRenderCommandQueue;
-    
+
     // Resource management
     ResourceManager mResourceManager;
-    
+
     // Camera management
     CameraController mCameraController;
 
@@ -164,10 +162,10 @@ private:
     int mShowTopLevels = 999999;
     int mShowBottomLevels = 999999;
     int mTargetRoomId = 0;
-    
+
     // Frame timing for benchmarking
     QElapsedTimer mFrameTimer;
-    
+
     // Smooth camera animation
     QTimer* mCameraAnimationTimer = nullptr;
     int mTargetAID = 0;
@@ -175,7 +173,7 @@ private:
     float mTargetMapCenterY = 0.0f;
     float mTargetMapCenterZ = 0.0f;
     float mStartMapCenterX = 0.0f;
-    float mStartMapCenterY = 0.0f; 
+    float mStartMapCenterY = 0.0f;
     float mStartMapCenterZ = 0.0f;
     float mCurrentAnimationX = 0.0f; // Floating point current position during animation
     float mCurrentAnimationY = 0.0f;

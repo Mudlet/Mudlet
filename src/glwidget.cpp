@@ -29,9 +29,7 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
-#include "pre_guard.h"
 #include <QtEvents>
-#include "post_guard.h"
 
 #include <QPainter>
 #ifdef Q_OS_MACOS
@@ -258,7 +256,7 @@ void GLWidget::paintGL()
 {
     // Start frame timing
     mFrameTimer.start();
-    
+
     if (!mpMap) {
         return;
     }
@@ -2038,7 +2036,7 @@ void GLWidget::paintGL()
         zPlane += 1.0;
     }
     glFlush();
-    
+
     // End frame timing and store result
     // Display instant frame time
     qint64 frameTime = mFrameTimer.elapsed();

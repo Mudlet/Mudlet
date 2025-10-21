@@ -25,7 +25,6 @@
 #include "HostManager.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
-#include "pre_guard.h"
 #include <chrono>
 #include <QCommandLineParser>
 #include <QDir>
@@ -40,7 +39,6 @@
 #include <QSplashScreen>
 #include <QStringList>
 #include <QTranslator>
-#include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
@@ -48,34 +46,9 @@
 
 using namespace std::chrono_literals;
 
-
-#if defined(_MSC_VER) && defined(_DEBUG)
-// Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
-// leak detection does not work when it is not defined.
-#include <Windows.h>
-#include <pcre.h>
-#endif // _MSC_VER && _DEBUG
-
 #if defined(Q_OS_WINDOWS)
 bool runUpdate();
 #endif
-
-#if defined(_DEBUG) && defined(_MSC_VER)
-// Enable leak detection for MSVC debug builds.
-
-#define PCRE_CLIENT_TYPE (_CLIENT_BLOCK | ((('P' << 8) | 'C') << 16))
-
-static void* pcre_malloc_dbg(size_t size)
-{
-    return ::_malloc_dbg(size, PCRE_CLIENT_TYPE, __FILE__, __LINE__);
-}
-
-static void pcre_free_dbg(void* ptr)
-{
-    return ::_free_dbg(ptr, PCRE_CLIENT_TYPE);
-}
-
-#endif // _DEBUG && _MSC_VER
 
 #if defined(INCLUDE_FONTS)
 void copyFont(const QString& externalPathName, const QString& resourcePathName, const QString& fileName)
@@ -185,37 +158,6 @@ int main(int argc, char* argv[])
         }
     }
 #endif
-#if defined(_MSC_VER) && defined(_DEBUG)
-    // Enable leak detection for MSVC debug builds.
-    {
-        // Check for a debugger and prompt if one is not attached.
-        while (!IsDebuggerPresent()
-               && IDYES == MessageBox(0,
-                                      "You are starting debug mudlet without a debugger attached. If you wish to attach one and verify that it worked, click yes. To continue without a debugger, "
-                                      "click no.",
-                                      "Mudlet Debug",
-                                      MB_ICONINFORMATION | MB_YESNO | MB_DEFBUTTON2)) {
-            ;
-        }
-
-        // _CRTDBG_ALLOC_MEM_DF: Enable heap debugging.
-        // _CRTDBG_LEAK_CHECK_DF: Check for leaks at program exit.
-        _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-
-        // Create a log file for writing leaks.
-        HANDLE hLogFile = CreateFile("stderr.txt", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-        _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-        _CrtSetReportFile(_CRT_WARN, hLogFile);
-
-        // Set this to break on the allocation number shown in the debug output above.
-        // _crtBreakAlloc = 0;
-
-        pcre_malloc = pcre_malloc_dbg;
-        pcre_free = pcre_free_dbg;
-        pcre_stack_malloc = pcre_malloc_dbg;
-        pcre_stack_free = pcre_free_dbg;
-    }
-#endif // _MSC_VER && _DEBUG
 
 #if defined(Q_OS_MACOS)
     // Workaround for horrible mac rendering issues once the mapper widget
@@ -344,7 +286,7 @@ int main(int argc, char* argv[])
                                                                   "                                    repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                                   "                                    predefined game, may be repeated."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       -f, --fullscreen             start Mudlet in fullscreen mode."));                                                                  
+        texts << appendLF.arg(QCoreApplication::translate("main", "       -f, --fullscreen             start Mudlet in fullscreen mode."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       --steammode                  adjusts Mudlet settings to match\n"
                                                                   "                                    Steam's requirements."));
         texts << appendLF.arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
