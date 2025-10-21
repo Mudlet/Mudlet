@@ -47,7 +47,6 @@
 #include "glwidget_integration.h"
 #endif
 
-#include "pre_guard.h"
 #include <QTextCodec>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -55,7 +54,6 @@
 #include <QNetworkProxy>
 #include <QProgressDialog>
 #include <QSslError>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -920,13 +918,13 @@ QString cTelnet::formatShortTelnetCommand(const std::string& telnetCommand, cons
     QByteArray cmdBytes(telnetCommand.data(), telnetCommand.size());
     QString hexStr = cmdBytes.toHex(' ');
     QString decoded = QString(" (IAC %1").arg(commandName);
-    
+
     if (telnetCommand.size() == 2 && !commandName.isEmpty()) {
         decoded += " <missing option>)";
     } else {
         decoded += ")";
     }
-    
+
     return QString("hex: %1%2").arg(hexStr, decoded);
 }
 
@@ -1710,7 +1708,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         qDebug() << "WARNING: telnetCommand too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
         return;
     }
-    
+
     char ch = telnetCommand[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
     QString commandType;
@@ -2917,7 +2915,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->raiseEvent(event);
         }
-        
+
     }
 }
 

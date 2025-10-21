@@ -57,23 +57,18 @@ include(../3rdparty/communi/communi.pri)
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
 # alternatives during compilations.
-!msvc {
-    QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
-    QMAKE_CFLAGS_RELEASE ~= s/-O[0123s]//g
+QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+QMAKE_CFLAGS_RELEASE ~= s/-O[0123s]//g
 # NOW we can put ours in:
-    QMAKE_CXXFLAGS_RELEASE += -O3
-    QMAKE_CFLAGS_RELEASE += -O3
+QMAKE_CXXFLAGS_RELEASE += -O3
+QMAKE_CFLAGS_RELEASE += -O3
 # There is NO need to put in the -g option as it is done already for debug bugs
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
-    QMAKE_CXXFLAGS_DEBUG += -O0
-    QMAKE_CFLAGS_DEBUG += -O0
-}
+QMAKE_CXXFLAGS_DEBUG += -O0
+QMAKE_CFLAGS_DEBUG += -O0
 
 # c++20 for Qt 6
 CONFIG += c++20
-
-# MSVC specific flags. Enable multiprocessor MSVC builds.
-msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.0
@@ -802,8 +797,6 @@ HEADERS += \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \
-    pre_guard.h \
-    post_guard.h \
     ScriptUnit.h \
     SecureStringUtils.h \
     CredentialManager.h \
@@ -835,7 +828,6 @@ HEADERS += \
     TEncodingTable.h \
     TEntityHandler.h \
     TEntityResolver.h \
-    testdbg.h \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
@@ -1003,16 +995,16 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
                RenderCommandQueue.cpp \
                ResourceManager.cpp \
                ShaderManager.cpp
-    
+
     # Enable shader hot-reloading when USE_SHADER_HOT_RELOAD is defined
     contains( DEFINES, USE_SHADER_HOT_RELOAD ) {
         DEFINES += MUDLET_SHADER_HOT_RELOAD=1
     }
-    
+
     !build_pass{
         message("The 3D mapper code with both OpenGL implementations is included in this configuration for runtime selection")
     }
-    
+
     QT += opengl
 
     win32 {
@@ -1636,7 +1628,7 @@ macx {
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
         OBJECTIVE_SOURCES += sparkleupdater.mm
-        HEADERS += sparkleupdater.h        
+        HEADERS += sparkleupdater.h
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework

@@ -25,14 +25,12 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QMouseEvent>
 #include <QRect>
 #include <QRectF>
 #include <QSet>
 #include <QtGlobal>
 #include <QTreeWidgetItem>
-#include "post_guard.h"
 
 SelectionRectangleHandler::SelectionRectangleHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)

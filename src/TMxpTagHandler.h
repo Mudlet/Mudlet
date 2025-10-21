@@ -25,9 +25,7 @@
 #include "TMxpTagHandlerResult.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QString>
-#include "post_guard.h"
 
 class TMxpClient;
 class TMxpContext;

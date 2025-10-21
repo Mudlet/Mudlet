@@ -34,11 +34,9 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QBuffer>
 #include <QtMath>
 #include <QVersionNumber>
-#include "post_guard.h"
 
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
@@ -733,7 +731,7 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
     setBoolAttributeWithDefault(qsl("disablePasswordMasking"), pHost->mDisablePasswordMasking, false);
-    
+
     // Handle command echo mode with backward compatibility
     if (attributes().hasAttribute(qsl("commandEchoMode"))) {
         // New tri-state attribute
@@ -792,17 +790,17 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
-    
+
     // Handle backward compatibility based on application version, not profile version
     QString storedProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
-    
+
     // For version 4.20.0+, use secure storage; for older versions, maintain plaintext in XML
     // Use current application version for consistency with XMLexport behavior
     const QString currentAppVersion = QString(APP_VERSION);
     const QVersionNumber appVersion = QVersionNumber::fromString(currentAppVersion);
     const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
     const bool useSecureStorage = appVersion >= secureStorageVersion;
-    
+
     if (!storedProxyPassword.isEmpty()) {
         if (useSecureStorage) {
             // Modern application: migrate plaintext password to secure storage and clear from XML

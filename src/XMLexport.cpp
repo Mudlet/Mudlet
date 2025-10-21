@@ -38,12 +38,10 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QVersionNumber>
 #include <QtConcurrent>
 #include <QFile>
 #include <sstream>
-#include "post_guard.h"
 
 XMLexport::XMLexport( Host * pH )
 : mpHost(pH)

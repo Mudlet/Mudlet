@@ -62,7 +62,6 @@
 #include <limits>
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -76,7 +75,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
@@ -1541,7 +1539,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 
     auto linesLimit = getVerifiedInt(L, __func__, s++, "linesLimit");
     auto sizeOfBatchDeletion = getVerifiedInt(L, __func__, s++, "sizeOfBatchDeletion");
-    
+
     // Optional fourth parameter: useMaximum (boolean)
     bool useMaximum = false;
     if (s <= n) {
@@ -1575,7 +1573,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
             host.setUseMaxConsoleBufferSize(false);
         }
     }
-    
+
     // Indicate success with a true return value:
     lua_pushboolean(L, true);
     return 1;

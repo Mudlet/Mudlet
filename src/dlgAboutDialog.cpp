@@ -28,11 +28,9 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QPainter>
 #include <QTextLayout>
 #include <QDebug>
-#include "post_guard.h"
 
 #if defined(Q_OS_WINDOWS)
 #include <wow64apiset.h>

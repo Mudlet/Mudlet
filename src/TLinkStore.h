@@ -21,11 +21,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QStringList>
 #include <QVector>
-#include "post_guard.h"
 
 class Host;
 
@@ -61,7 +59,7 @@ public:
     int getCurrentLinkID() const { return mLinkID; }
 
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
-    
+
 #if !defined(LinkStore_Test)
     // OSC 8 hyperlink styling storage and retrieval
     void setStyling(int id, const Mudlet::HyperlinkStyling& styling);

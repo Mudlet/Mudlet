@@ -20,12 +20,10 @@
 #include "updater.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
