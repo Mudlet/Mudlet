@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **6**
-Remaining: **51**
+Completed: **7**
+Remaining: **50**
 
 ---
 
@@ -72,7 +72,7 @@ Remaining: **51**
 - [ ] `prefix` - prefix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
 - [ ] `registerNamedEventHandler` - success = registerNamedEventHandler(userName, handlerName, eventName, functionReference, [oneShot])
 - [ ] `registerNamedTimer` - success = registerNamedTimer(userName, timerName, time, functionReference, [repeating])
-- [ ] `setBackgroundColor` - setBackgroundColor([windowName], r, g, b, [transparency])
+- [x] `setBackgroundColor` - setBackgroundColor([windowName], r, g, b, [transparency]) - [1f2a3b4]
 - [ ] `setBgColor` - setBgColor([windowName], r, g, b, [transparency])
 - [ ] `setCommandBackgroundColor` - setCommandBackgroundColor([windowName], r, g, b, [transparency])
 - [ ] `setCommandForegroundColor` - setCommandForegroundColor([windowName], r, g, b, [transparency])
