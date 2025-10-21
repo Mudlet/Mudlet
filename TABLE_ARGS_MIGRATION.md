@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **8**
-Remaining: **49**
+Completed: **9**
+Remaining: **48**
 
 ---
 
@@ -76,7 +76,7 @@ Remaining: **49**
 - [x] `setBgColor` - setBgColor([windowName], r, g, b, [transparency]) - [5c6d7e8]
 - [ ] `setCommandBackgroundColor` - setCommandBackgroundColor([windowName], r, g, b, [transparency])
 - [ ] `setCommandForegroundColor` - setCommandForegroundColor([windowName], r, g, b, [transparency])
-- [ ] `setCustomEnvColor` - setCustomEnvColor(environmentID, r,g,b,a)
+- [x] `setCustomEnvColor` - setCustomEnvColor(environmentID, r,g,b,a) - [7f8e9d0]
 - [ ] `suffix` - suffix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
 
 ### 4 Parameters (20 functions)
