@@ -375,8 +375,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
         if (!iconName.isEmpty()) {
             const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
             label_icon->setPixmap(QPixmap(iconDir));
-        }
-        else {
+        } else {
             QPixmap pixmap(":/icons/package-manager.png");               
             label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         }
@@ -498,8 +497,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString &searchText)
                 packageList->addItem(item);
             }
         }
-    }
-    else if (status == statusAvailable) {
+    } else if (status == statusAvailable) {
         for (const QJsonValue &value : repositoryPackages) {
             const QJsonObject pkg = value.toObject();
             const QString name = pkg[qsl("mpackage")].toString();
