@@ -38,7 +38,6 @@
 #include <QPointF>
 #include <QString>
 #include <QTreeWidget>
-#include <QVector>
 #include <QWidget>
 #include <QtConcurrent>
 #include "post_guard.h"
@@ -146,14 +145,8 @@ public:
     void registerInteractionHandler(IInteractionHandler* handler, int priority);
     void registerContextMenu(QMenu* menu);
     bool eventFilter(QObject* watched, QEvent* event) override;
-    enum class RoomPickMode
-    {
-        Cycle,
-        PreferSelection,
-    };
-
     void prepareSingleClickSelection(MapInteractionContext& context);
-    std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area, RoomPickMode mode = RoomPickMode::Cycle) const;
+    std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
@@ -205,9 +198,6 @@ public:
     QPointF mRoomMoveLastMapPoint;
     bool mHasRoomMoveLastMapPoint = false;
     bool mRoomMoveViaContextMenu = false;
-    mutable QVector<int> mRoomPickCycleCandidates;
-    mutable int mRoomPickCycleIndex = -1;
-    mutable int mRoomPickCycleLastReturned = 0;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is
     // multiplied by rsize which is 1.0 to exactly fill space between adjacent
