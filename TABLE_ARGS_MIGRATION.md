@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **16**
-Remaining: **41**
+Completed: **17**
+Remaining: **40**
 
 ---
 
@@ -52,7 +52,7 @@ Remaining: **41**
 - [x] `createScrollBox` - createScrollBox([name of parent window], name, x, y, width, height)
 
 ### 5 Parameters (25 functions)
-- [ ] `addMapEvent` - addMapEvent(uniquename, event name, parent, display name, arguments)
+- [x] `addMapEvent` - addMapEvent(uniquename, event name, parent, display name, arguments)
 - [ ] `cechoLink` - cechoLink([windowName], text, command, hint, true)
 - [ ] `cechoPopup` - cechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
 - [ ] `cinsertLink` - cinsertLink([windowName], text, command, hint, true)

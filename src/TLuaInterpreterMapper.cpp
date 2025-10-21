@@ -730,6 +730,79 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addMapEvent
 int TLuaInterpreter::addMapEvent(lua_State* L)
 {
+    // Table argument support
+    if (lua_istable(L, 1)) {
+        QString uniqueName;
+        QString eventName;
+        QString parent;
+        QString displayName;
+        QStringList arguments;
+        bool hasUniqueName = false, hasEventName = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("uniquename"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("uniqueName"), Qt::CaseInsensitive)) {
+                uniqueName = getVerifiedString(L, __func__, -1, key);
+                hasUniqueName = true;
+            } else if (!key.compare(QLatin1String("eventname"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("eventName"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("event"), Qt::CaseInsensitive)) {
+                eventName = getVerifiedString(L, __func__, -1, key);
+                hasEventName = true;
+            } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                if (lua_isstring(L, -1)) {
+                    parent = QString::fromUtf8(lua_tostring(L, -1));
+                }
+            } else if (!key.compare(QLatin1String("displayname"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("displayName"), Qt::CaseInsensitive)) {
+                if (lua_isstring(L, -1)) {
+                    displayName = QString::fromUtf8(lua_tostring(L, -1));
+                }
+            } else if (!key.compare(QLatin1String("arguments"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("args"), Qt::CaseInsensitive)) {
+                if (lua_istable(L, -1)) {
+                    lua_pushnil(L);
+                    while (lua_next(L, -2) != 0) {
+                        if (lua_isstring(L, -1)) {
+                            arguments << QString::fromUtf8(lua_tostring(L, -1));
+                        }
+                        lua_pop(L, 1);
+                    }
+                }
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasUniqueName) {
+            return warnArgumentValue(L, __func__, "missing required 'uniqueName' in table");
+        }
+        if (!hasEventName) {
+            return warnArgumentValue(L, __func__, "missing required 'eventName' in table");
+        }
+
+        // Build actionInfo list
+        QStringList actionInfo;
+        actionInfo << eventName;
+        actionInfo << parent;
+        actionInfo << (displayName.isEmpty() ? uniqueName : displayName);
+        actionInfo << arguments;
+
+        const Host& host = getHostFromLua(L);
+        if (host.mpMap) {
+            if (host.mpMap->mpMapper) {
+                if (host.mpMap->mpMapper->mp2dMap) {
+                    host.mpMap->mpMapper->mp2dMap->mUserActions.insert(uniqueName, actionInfo);
+                }
+            }
+        }
+        return 0;
+    }
+
+    // Original positional argument handling
     QStringList actionInfo;
     const QString uniqueName = getVerifiedString(L, __func__, 1, "uniquename");
     actionInfo << getVerifiedString(L, __func__, 2, "event name");
