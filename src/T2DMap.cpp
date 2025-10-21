@@ -3230,20 +3230,29 @@ void T2DMap::snapSelectedCustomLineToGrid()
         return;
     }
 
-    if (mCustomLineSelectedRoom <= 0 || mCustomLineSelectedExit.isEmpty()) {
+    int roomId = mCustomLineSelectedRoom;
+    QString exitKey = mCustomLineSelectedExit;
+
+    if (roomId <= 0 || exitKey.isEmpty()) {
+        roomId = mCustomLinesRoomFrom;
+        exitKey = mCustomLinesRoomExit;
+    }
+
+    if (roomId <= 0 || exitKey.isEmpty()) {
         return;
     }
 
-    TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
+    TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
     if (!room) {
         return;
     }
 
-    if (!room->customLines.contains(mCustomLineSelectedExit)) {
+    auto itLine = room->customLines.find(exitKey);
+    if (itLine == room->customLines.end()) {
         return;
     }
 
-    QList<QPointF>& points = room->customLines[mCustomLineSelectedExit];
+    QList<QPointF>& points = itLine.value();
     if (points.isEmpty()) {
         return;
     }
@@ -3338,25 +3347,32 @@ bool T2DMap::canMoveSelectedCustomLineLastPointToTargetRoom() const
         return false;
     }
 
-    if (!room->customLines.contains(mCustomLineSelectedExit)) {
+    return canMoveCustomLineLastPointToTargetRoom(*room, mCustomLineSelectedExit);
+}
+
+
+bool T2DMap::canMoveCustomLineLastPointToTargetRoom(const TRoom& room, const QString& exitKey) const
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
         return false;
     }
 
-    const auto& customLinePoints = room->customLines.value(mCustomLineSelectedExit);
-    if (customLinePoints.isEmpty()) {
+    const auto itLine = room.customLines.constFind(exitKey);
+    if (itLine == room.customLines.constEnd()) {
         return false;
     }
 
-    const auto targetRoomId = resolveCustomLineTargetRoomId(*room, mCustomLineSelectedExit);
+    const QList<QPointF>& points = itLine.value();
+    if (points.isEmpty()) {
+        return false;
+    }
+
+    const auto targetRoomId = resolveCustomLineTargetRoomId(room, exitKey);
     if (!targetRoomId || *targetRoomId <= 0) {
         return false;
     }
 
-    if (!mpMap->mpRoomDB->getRoom(*targetRoomId)) {
-        return false;
-    }
-
-    return true;
+    return mpMap->mpRoomDB->getRoom(*targetRoomId) != nullptr;
 }
 
 
@@ -3366,25 +3382,34 @@ void T2DMap::slot_moveCustomLineLastPointToTargetRoom()
         return;
     }
 
-    if (mCustomLineSelectedRoom <= 0 || mCustomLineSelectedExit.isEmpty()) {
+    int roomId = mCustomLineSelectedRoom;
+    QString exitKey = mCustomLineSelectedExit;
+
+    if (roomId <= 0 || exitKey.isEmpty()) {
+        roomId = mCustomLinesRoomFrom;
+        exitKey = mCustomLinesRoomExit;
+    }
+
+    if (roomId <= 0 || exitKey.isEmpty()) {
         return;
     }
 
-    TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
+    TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
     if (!room) {
         return;
     }
 
-    if (!room->customLines.contains(mCustomLineSelectedExit)) {
+    auto itLine = room->customLines.find(exitKey);
+    if (itLine == room->customLines.end()) {
         return;
     }
 
-    QList<QPointF>& points = room->customLines[mCustomLineSelectedExit];
+    QList<QPointF>& points = itLine.value();
     if (points.isEmpty()) {
         return;
     }
 
-    const auto targetRoomId = resolveCustomLineTargetRoomId(*room, mCustomLineSelectedExit);
+    const auto targetRoomId = resolveCustomLineTargetRoomId(*room, exitKey);
     if (!targetRoomId || *targetRoomId <= 0) {
         return;
     }

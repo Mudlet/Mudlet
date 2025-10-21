@@ -323,6 +323,7 @@ public slots:
     void slot_setSnapCustomLinePointsToGrid(bool enabled);
     void slot_moveCustomLineLastPointToTargetRoom();
     bool canMoveSelectedCustomLineLastPointToTargetRoom() const;
+    bool canMoveCustomLineLastPointToTargetRoom(const TRoom& room, const QString& exitKey) const;
     void slot_cancelCustomLineDialog();
     void slot_loadMap();
     void slot_newMap();
