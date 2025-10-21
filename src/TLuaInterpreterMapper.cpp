@@ -3731,20 +3731,71 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCharColor
 int TLuaInterpreter::setRoomCharColor(lua_State* L)
 {
-    const int id = getVerifiedInt(L, __func__, 1, "roomID");
-    const int r = getVerifiedInt(L, __func__, 2, "red component");
+    int id, r, g, b;
+
+    // Support both table and ordered arguments
+    if (lua_istable(L, 1)) {
+        // Table argument format: {roomID=id, r=r, g=g, b=b}
+        bool hasRoomID = false, hasR = false, hasG = false, hasB = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("roomId"), Qt::CaseInsensitive)) {
+                id = getVerifiedInt(L, __func__, -1, "roomID");
+                hasRoomID = true;
+            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                r = getVerifiedInt(L, __func__, -1, "red component");
+                hasR = true;
+            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                g = getVerifiedInt(L, __func__, -1, "green component");
+                hasG = true;
+            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                b = getVerifiedInt(L, __func__, -1, "blue component");
+                hasB = true;
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
+        }
+
+        // Validate required parameters
+        if (!hasRoomID) {
+            lua_pushfstring(L, "%s: missing required 'roomID' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasR) {
+            lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasG) {
+            lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasB) {
+            lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: roomID, r, g, b
+        id = getVerifiedInt(L, __func__, 1, "roomID");
+        r = getVerifiedInt(L, __func__, 2, "red component");
+        g = getVerifiedInt(L, __func__, 3, "green component");
+        b = getVerifiedInt(L, __func__, 4, "blue component");
+    }
+
+    // Validate RGB values
     if (r < 0 || r > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #2 type (red component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "%s: red component value %d out of range (0 to 255)", __func__, r);
         return lua_error(L);
     }
-    const int g = getVerifiedInt(L, __func__, 3, "green component");
     if (g < 0 || g > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #3 type (red component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "%s: green component value %d out of range (0 to 255)", __func__, g);
         return lua_error(L);
     }
-    const int b = getVerifiedInt(L, __func__, 4, "blue component");
     if (b < 0 || b > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #4 type (blue component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "%s: blue component value %d out of range (0 to 255)", __func__, b);
         return lua_error(L);
     }
 
