@@ -303,9 +303,7 @@ int main(int argc, char* argv[])
         mudlet::self()->publicTestVersion ||
         mudlet::self()->mEnableCrashReporting) {
         sentry_options_t* options = sentry_options_new();
-        sentry_options_set_dsn(
-            options,
-            "YOUR_SENTRY_DSN_HERE"); // TODO: Replace with actual DSN
+        sentry_options_set_dsn(options, ""); // The Sentry DSN is injected at build time
         sentry_options_set_database_path(
             options, (sentryDbPath + "/.sentry-native").toStdString().c_str());
         sentry_options_set_release(options,
