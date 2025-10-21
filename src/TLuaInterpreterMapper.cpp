@@ -2522,16 +2522,111 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#highlightRoom
 int TLuaInterpreter::highlightRoom(lua_State* L)
 {
-    const int id = getVerifiedInt(L, __func__, 1, "roomID");
-    const int fgr = getVerifiedInt(L, __func__, 2, "color1Red");
-    const int fgg = getVerifiedInt(L, __func__, 3, "color1Green");
-    const int fgb = getVerifiedInt(L, __func__, 4, "color1Blue");
-    const int bgr = getVerifiedInt(L, __func__, 5, "color2Red");
-    const int bgg = getVerifiedInt(L, __func__, 6, "color2Green");
-    const int bgb = getVerifiedInt(L, __func__, 7, "color2Blue");
-    const float radius = getVerifiedFloat(L, __func__, 8, "highlightRadius");
-    const int alpha1 = getVerifiedInt(L, __func__, 9, "color1Alpha");
-    const int alpha2 = getVerifiedInt(L, __func__, 10, "color2Alpha");
+    int id, fgr, fgg, fgb, bgr, bgg, bgb, alpha1, alpha2;
+    float radius;
+
+    // Support both table and ordered arguments
+    if (lua_istable(L, 1)) {
+        // Table argument format: {roomID=id, color1={r,g,b,a}, color2={r,g,b,a}, radius=r}
+        // Or flat format: {roomID=id, fgr=N, fgg=N, fgb=N, bgr=N, bgg=N, bgb=N, radius=r, alpha1=N, alpha2=N}
+        bool hasID = false, hasFgr = false, hasFgg = false, hasFgb = false;
+        bool hasBgr = false, hasBgg = false, hasBgb = false, hasRadius = false;
+        bool hasAlpha1 = false, hasAlpha2 = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("id"), Qt::CaseInsensitive)) {
+                id = getVerifiedInt(L, __func__, -1, "roomID");
+                hasID = true;
+            } else if (!key.compare(QLatin1String("fgr"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color1Red"), Qt::CaseInsensitive)) {
+                fgr = getVerifiedInt(L, __func__, -1, "color1Red");
+                hasFgr = true;
+            } else if (!key.compare(QLatin1String("fgg"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color1Green"), Qt::CaseInsensitive)) {
+                fgg = getVerifiedInt(L, __func__, -1, "color1Green");
+                hasFgg = true;
+            } else if (!key.compare(QLatin1String("fgb"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color1Blue"), Qt::CaseInsensitive)) {
+                fgb = getVerifiedInt(L, __func__, -1, "color1Blue");
+                hasFgb = true;
+            } else if (!key.compare(QLatin1String("bgr"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color2Red"), Qt::CaseInsensitive)) {
+                bgr = getVerifiedInt(L, __func__, -1, "color2Red");
+                hasBgr = true;
+            } else if (!key.compare(QLatin1String("bgg"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color2Green"), Qt::CaseInsensitive)) {
+                bgg = getVerifiedInt(L, __func__, -1, "color2Green");
+                hasBgg = true;
+            } else if (!key.compare(QLatin1String("bgb"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color2Blue"), Qt::CaseInsensitive)) {
+                bgb = getVerifiedInt(L, __func__, -1, "color2Blue");
+                hasBgb = true;
+            } else if (!key.compare(QLatin1String("radius"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightRadius"), Qt::CaseInsensitive)) {
+                radius = getVerifiedFloat(L, __func__, -1, "highlightRadius");
+                hasRadius = true;
+            } else if (!key.compare(QLatin1String("alpha1"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color1Alpha"), Qt::CaseInsensitive)) {
+                alpha1 = getVerifiedInt(L, __func__, -1, "color1Alpha");
+                hasAlpha1 = true;
+            } else if (!key.compare(QLatin1String("alpha2"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color2Alpha"), Qt::CaseInsensitive)) {
+                alpha2 = getVerifiedInt(L, __func__, -1, "color2Alpha");
+                hasAlpha2 = true;
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
+        }
+
+        // Validate required parameters
+        if (!hasID) {
+            lua_pushfstring(L, "%s: missing required 'roomID' or 'id' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasFgr) {
+            lua_pushfstring(L, "%s: missing required 'fgr' or 'color1Red' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasFgg) {
+            lua_pushfstring(L, "%s: missing required 'fgg' or 'color1Green' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasFgb) {
+            lua_pushfstring(L, "%s: missing required 'fgb' or 'color1Blue' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasBgr) {
+            lua_pushfstring(L, "%s: missing required 'bgr' or 'color2Red' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasBgg) {
+            lua_pushfstring(L, "%s: missing required 'bgg' or 'color2Green' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasBgb) {
+            lua_pushfstring(L, "%s: missing required 'bgb' or 'color2Blue' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasRadius) {
+            lua_pushfstring(L, "%s: missing required 'radius' or 'highlightRadius' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasAlpha1) {
+            lua_pushfstring(L, "%s: missing required 'alpha1' or 'color1Alpha' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasAlpha2) {
+            lua_pushfstring(L, "%s: missing required 'alpha2' or 'color2Alpha' in table", __func__);
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: roomID, color1Red, color1Green, color1Blue, color2Red, color2Green, color2Blue, radius, alpha1, alpha2
+        id = getVerifiedInt(L, __func__, 1, "roomID");
+        fgr = getVerifiedInt(L, __func__, 2, "color1Red");
+        fgg = getVerifiedInt(L, __func__, 3, "color1Green");
+        fgb = getVerifiedInt(L, __func__, 4, "color1Blue");
+        bgr = getVerifiedInt(L, __func__, 5, "color2Red");
+        bgg = getVerifiedInt(L, __func__, 6, "color2Green");
+        bgb = getVerifiedInt(L, __func__, 7, "color2Blue");
+        radius = getVerifiedFloat(L, __func__, 8, "highlightRadius");
+        alpha1 = getVerifiedInt(L, __func__, 9, "color1Alpha");
+        alpha2 = getVerifiedInt(L, __func__, 10, "color2Alpha");
+    }
 
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
