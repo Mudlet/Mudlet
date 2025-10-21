@@ -106,13 +106,15 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
   cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
-# The location that windeployqt6 puts the Qt translation files by default is "./translations"
-# unfortunately this is not what
-# "QLibraryInfo::path(QLibraryInfo::TranslationsPath)" in the calls to
-# "QString mudlet::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
+# The location that windeployqt6 puts the Qt translation files by default is
+# "./translations" unfortunately "QLibraryInfo::path(QLibraryInfo::TranslationsPath)"
+# in the calls to "QString mudlet::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
+# Also the --debug / --release flags don't work or are not needed for Qt6
+# (or even Qt5) as the debug information is shipped separatly rather than
+# being included in the Qt6 dll files.
 
 WINDEPLOY_ARGS=( \
   "--translationdir" \
@@ -132,23 +134,16 @@ echo ""
 # those others manually after dealing with the ones we can detect from the
 # Mudlet executable and the Qt plugins...
 echo ""
-echo "Copying OpenSSL libraries in..."
-# The openSSL libraries has a different name depending on the bitness - but we
-# only do 64-bits now:
-cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
-
-echo ""
 echo "Copying discord-rpc library in..."
 cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc64.dll"  .
-echo ""
+
 
 # Lua libraries:
 # If there is a demand for other rocks in the Windows installer because of
 # revisions to the mappers or geyser framework or popular demand otherwise then
 # the rock for those will also have to be installed and their C(.dll)/Lua (.lua)
 # files included here:
+echo ""
 echo "Copying lua C libraries in..."
 cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lfs.dll" \
@@ -163,6 +158,13 @@ cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sq
 mkdir ./brimworks
 cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
 echo ""
+
+echo "Copying OpenSSL libraries in..."
+# The openSSL libraries has a different name depending on the bitness - but we
+# only do 64-bits now:
+cp -v -p -t . \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
 
 echo ""
 echo "Examining the Mudlet application and all the libraries and Qt plugins to identify other needed libraries..."
@@ -191,7 +193,7 @@ case "${MSYSTEM}" in
 esac
 
 mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive \
-./mudlet.exe \
+  ./mudlet.exe \
   ./*.dll \
   ./*/*.dll \
   | /usr/bin/grep -v 'Qt6' \
@@ -201,13 +203,19 @@ mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive \
   | /usr/bin/cut -d '(' -f1 \
   | /usr/bin/sort -u)
 
+# echo ""
+# echo "  In summary, the needed libraries are:"
+# echo "${NEEDED_LIBS[@]}"
+
 echo ""
 echo "Copying identified libraries from Mudlet executable and plugins..."
 for LIB in ${NEEDED_LIBS[@]}; do
   # The ntldd above returns "Windows style pathFileNames"
   cp -p -v -t . "$(/usr/bin/cygpath -au "${LIB}")"
 done
+echo "    ... done copying identified libraries."
 
+echo ""
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # Using the '/./' notation provides the point at which rsync reproduces the
 # directory structure from the source into the target and avoids the need
