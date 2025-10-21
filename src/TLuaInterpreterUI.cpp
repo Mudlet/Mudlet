@@ -2206,6 +2206,48 @@ int TLuaInterpreter::moveWindow(lua_State* L)
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
     const int n = lua_gettop(L);
+
+    // Check if first argument is a table for named-key format
+    if (lua_istable(L, 1)) {
+        QString name, area;
+        bool loadLayout = true, autoDock = true;
+        bool hasName = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
+                name = getVerifiedString(L, __func__, -1, key);
+                hasName = true;
+            } else if (!key.compare(QLatin1String("restoreLayout"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("loadLayout"), Qt::CaseInsensitive)) {
+                loadLayout = getVerifiedBool(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("autoDock"), Qt::CaseInsensitive)) {
+                autoDock = getVerifiedBool(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("area"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("dockingArea"), Qt::CaseInsensitive)) {
+                area = getVerifiedString(L, __func__, -1, key);
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasName) {
+            lua_pushfstring(L, "openUserWindow: bad argument, missing 'name' or 'windowName' in table");
+            return lua_error(L);
+        }
+
+        Host& host = getHostFromLua(L);
+        if (auto [success, message] = host.openWindow(name, loadLayout, autoDock, area.toLower()); !success) {
+            return warnArgumentValue(L, __func__, message);
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Original positional argument handling
     if (lua_type(L, 1) != LUA_TSTRING) {
         lua_pushfstring(L, "openUserWindow:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
