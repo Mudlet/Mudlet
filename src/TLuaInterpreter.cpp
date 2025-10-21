@@ -7330,6 +7330,65 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
             return success();
         }
+        if (key == qsl("mapInfoColor")) {
+            if (!lua_istable(L, 2)) {
+                lua_pushfstring(L, "%s: bad argument #%d type (table expected for mapInfoColor, got %s!)",
+                    __func__, 2, luaL_typename(L, 2));
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor requires a table with {r, g, b, a} keys"));
+            }
+
+            // Get red component
+            lua_getfield(L, 2, "r");
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have 'r' key with numeric value"));
+            }
+            const int r = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (r < 0 || r > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+            }
+
+            // Get green component
+            lua_getfield(L, 2, "g");
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have 'g' key with numeric value"));
+            }
+            const int g = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (g < 0 || g > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+            }
+
+            // Get blue component
+            lua_getfield(L, 2, "b");
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have 'b' key with numeric value"));
+            }
+            const int b = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (b < 0 || b > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+            }
+
+            // Get alpha component (optional, defaults to 255)
+            int a = 255;
+            lua_getfield(L, 2, "a");
+            if (lua_isnumber(L, -1)) {
+                a = lua_tonumber(L, -1);
+                if (a < 0 || a > 255) {
+                    lua_pop(L, 1);
+                    return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
+                }
+            }
+            lua_pop(L, 1);
+
+            host.mMapInfoBg = QColor(r, g, b, a);
+            updateMap(L);
+            return success();
+        }
     }
 
     if (key == qsl("enableGMCP")) {
@@ -7638,6 +7697,21 @@ int TLuaInterpreter::getConfig(lua_State *L)
         }},
         { qsl("mapperPanelVisible"), [&](){ lua_pushboolean(L, host.mShowPanel); } },
         { qsl("mapShowRoomBorders"), [&](){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
+        { qsl("mapInfoColor"), [&](){
+            lua_newtable(L);
+            lua_pushstring(L, "r");
+            lua_pushnumber(L, host.mMapInfoBg.red());
+            lua_settable(L, -3);
+            lua_pushstring(L, "g");
+            lua_pushnumber(L, host.mMapInfoBg.green());
+            lua_settable(L, -3);
+            lua_pushstring(L, "b");
+            lua_pushnumber(L, host.mMapInfoBg.blue());
+            lua_settable(L, -3);
+            lua_pushstring(L, "a");
+            lua_pushnumber(L, host.mMapInfoBg.alpha());
+            lua_settable(L, -3);
+        } },
         { qsl("editorAutoComplete"), [&](){ lua_pushboolean(L, host.mEditorAutoComplete); } },
         { qsl("enableGMCP"), [&](){ lua_pushboolean(L, host.mEnableGMCP); } },
         { qsl("enableMSSP"), [&](){ lua_pushboolean(L, host.mEnableMSSP); } },
