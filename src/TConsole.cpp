@@ -1057,7 +1057,7 @@ void TConsole::scrollUp(int lines)
     mLowerPane->forceUpdate();
 
     if (lowerAppears) {
-        QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
+        QTimer::singleShot(0, this, [this, lines]() {  mUpperPane->scrollUp(mLowerPane->getRowCount() + lines); });
         if (mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
@@ -1067,8 +1067,9 @@ void TConsole::scrollUp(int lines)
             mpHost->postMessage(infoMsg);
             mudlet::self()->showedSplitscreenTutorial();
         }
+    } else {
+        mUpperPane->scrollUp(lines);
     }
-    mUpperPane->scrollUp(lines);
     slot_adjustAccessibleNames();
 }
 
