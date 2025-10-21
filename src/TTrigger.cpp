@@ -1085,7 +1085,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
         if (!mFilterTrigger) {
             if (conditionMet || (mPatterns.empty())) {
                 for (auto trigger : *mpMyChildrenList) {
-                    ret = trigger->match(haystackC, haystack, line);
+                    ret = trigger->match(haystackC, haystack, line, posOffset);
                     if (ret) {
                         conditionMet = true;
                     }
@@ -1099,7 +1099,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 execute();
             }
             for (auto trigger : *mpMyChildrenList) {
-                ret = trigger->match(haystackC, haystack, line);
+                ret = trigger->match(haystackC, haystack, line, posOffset);
                 if (ret) {
                     conditionMet = true;
                 }

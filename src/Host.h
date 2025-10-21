@@ -184,6 +184,7 @@ public:
     void            setLogin(const QString& login)       { mLogin = login; }
     QString &       getPass()                        { return mPass; }
     void            setPass(const QString& password) { mPass = password; }
+    bool            hasAutoLoginCredentials() const  { return !mLogin.isEmpty() && !mPass.isEmpty(); }
     int             getRetries()                     { return mRetries;}
     void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
@@ -472,11 +473,13 @@ public:
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
+    bool mDisablePasswordMasking;
     int commandLineMinimumHeight = 30;
     bool mAlertOnNewData = true;
     bool mAllowToSendCommand = true;
     bool mAutoClearCommandLineAfterSend = false;
     bool mHighlightHistory = true;
+
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared
     // after the main TConsole for a new profile has been created during the
@@ -492,6 +495,8 @@ public:
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
     bool mEnableMXP = true;
+    bool mEnableCHARSET = true;
+    bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
     bool mPromptedForVersionInTTYPE = false;
@@ -724,8 +729,6 @@ public:
     QColor mCommandLineBgColor{Qt::black};
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
-    bool mFORCE_CHARSET_NEGOTIATION_OFF = false;
-    bool mForceNewEnvironNegotiationOff = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;

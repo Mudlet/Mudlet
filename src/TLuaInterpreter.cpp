@@ -7426,11 +7426,23 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("specialForceCharsetNegotiationOff")) {
-        host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        // specialForceCharsetNegotiationOff should not be used anymore, but we support it for compatibility
+        // it will be the inverse of enableCHARSET
+        host.mEnableCHARSET = !getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableCHARSET")) {
+        host.mEnableCHARSET = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
-        host.mForceNewEnvironNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
+        // forceNewEnvironNegotiationOff should not be used anymore, but we support it for compatibility
+        // it will be the inverse of enableNEWENVIRON
+        host.mEnableNEWENVIRON = !getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableNEWENVIRON")) {
+        host.mEnableNEWENVIRON = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("compactInputLine")) {
@@ -7698,8 +7710,18 @@ int TLuaInterpreter::getConfig(lua_State *L)
             // it will be the inverse of enableMXP
             lua_pushboolean(L, !host.mEnableMXP);
         } },
-        { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
+        { qsl("specialForceCharsetNegotiationOff"), [&](){
+            // specialForceCharsetNegotiationOff should not be used anymore, but we support it for compatibility
+            // it will be the inverse of enableCHARSET
+            lua_pushboolean(L, !host.mEnableCHARSET);
+        } },
+        { qsl("enableCHARSET"), [&](){ lua_pushboolean(L, host.mEnableCHARSET); } },
+        { qsl("forceNewEnvironNegotiationOff"), [&](){
+            // forceNewEnvironNegotiationOff should not be used anymore, but we support it for compatibility
+            // it will be the inverse of enableNEWENVIRON
+            lua_pushboolean(L, !host.mEnableNEWENVIRON);
+        } },
+        { qsl("enableNEWENVIRON"), [&](){ lua_pushboolean(L, host.mEnableNEWENVIRON); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
         { qsl("blankLinesBehaviour"), [&](){

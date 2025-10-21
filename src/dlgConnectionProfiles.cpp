@@ -446,7 +446,7 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
 
-    credManager->storeCredential(profile, "character", pass,
+    credManager->storePassword(profile, "character", pass,
         [credManager, profile](bool success, const QString& errorMessage) {
             if (success) {
                 qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
@@ -464,7 +464,7 @@ void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
 
-    credManager->removeCredential(profile, "character",
+    credManager->removePassword(profile, "character",
         [credManager, profile](bool success, const QString& errorMessage) {
             if (success) {
                 qDebug() << "dlgConnectionProfiles: Successfully removed password for profile" << profile;

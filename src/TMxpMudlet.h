@@ -84,6 +84,10 @@ public:
 
     bool getLink(int id, QStringList** links, QStringList** hints) override;
 
+    // EXPIRE tag support
+    int setLink(const QStringList& links, const QStringList& hints, const QString& expireName) override;
+    void expireLinks(const QString& expireName) override;
+
     void playMedia(TMediaData& mediaData) override;
     void stopMedia(TMediaData& mediaData) override;
 

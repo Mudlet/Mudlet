@@ -46,13 +46,17 @@ public:
     : mMaxLinks(maxLinks)
     {}
 
-    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>());
+    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString());
 
     QStringList& getLinks(int id) { return mLinkStore[id]; }
     QStringList& getHints(int id) { return mHintStore[id]; }
     QStringList getLinksConst(int id) const { return mLinkStore.value(id); }
     QStringList getHintsConst(int id) const { return mHintStore.value(id); }
     QVector<int> getReference(int id) const { return mReferenceStore.value(id); }
+    
+    // EXPIRE tag support - manage link expiry by name
+    void expireLinks(const QString& expireName, Host* pH = nullptr);
+    QString getExpireName(int id) const { return mExpireStore.value(id); }
 
     int getCurrentLinkID() const { return mLinkID; }
 
@@ -77,6 +81,9 @@ private:
 #if !defined(LinkStore_Test)
     QMap<int, Mudlet::HyperlinkStyling> mStylingStore;
 #endif
+    // EXPIRE tag support - track which links belong to which expire group
+    QMap<int, QString> mExpireStore;  // Maps link ID to expire name
+    QMultiMap<QString, int> mExpireToLinks;  // Maps expire name to link IDs (for quick lookup)
 };
 
 #endif //MUDLET_TLINKSTORE_H

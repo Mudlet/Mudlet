@@ -56,7 +56,10 @@ public:
 
     TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);
-    inline QString getEntityValue() { return lastEntityValue;}
+    QString getEntityValue() { return lastEntityValue; }
+    void setLastEntityValue(const QString& value) { lastEntityValue = value; }
+    TMxpTagProcessor& getMxpTagProcessor() { return mMxpTagProcessor; }
+    TMxpNodeBuilder& getMxpTagBuilder() { return mMxpTagBuilder; }
 
 private:
     // State of MXP system:
