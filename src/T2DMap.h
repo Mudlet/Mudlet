@@ -204,6 +204,7 @@ public:
     bool mRoomBeingMoved = false;
     QPointF mRoomMoveLastMapPoint;
     bool mHasRoomMoveLastMapPoint = false;
+    bool mRoomMoveViaContextMenu = false;
     mutable QVector<int> mRoomPickCycleCandidates;
     mutable int mRoomPickCycleIndex = -1;
     mutable int mRoomPickCycleLastReturned = 0;
