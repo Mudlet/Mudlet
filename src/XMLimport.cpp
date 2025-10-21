@@ -730,6 +730,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("forceNewEnvironNegotiationOff"), pHost->mForceNewEnvironNegotiationOff, false);
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
+    setBoolAttributeWithDefault(qsl("disablePasswordMasking"), pHost->mDisablePasswordMasking, false);
     
     // Handle command echo mode with backward compatibility
     if (attributes().hasAttribute(qsl("commandEchoMode"))) {

@@ -295,6 +295,13 @@ private:
     QString getNewEnviron256Colors();
     QString getNewEnvironUTF8();
     QString getNewEnvironOSCColorPalette();
+    QString getNewEnvironOSCHyperlinks();
+    QString getNewEnvironOSCHyperlinksSend();
+    QString getNewEnvironOSCHyperlinksPrompt();
+    QString getNewEnvironOSCHyperlinksStyleBasic();
+    QString getNewEnvironOSCHyperlinksStyleStates();
+    QString getNewEnvironOSCHyperlinksTooltip();
+    QString getNewEnvironOSCHyperlinksMenu();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();

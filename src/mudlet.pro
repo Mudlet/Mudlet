@@ -1737,6 +1737,7 @@ OTHER_FILES += \
     ../test/TMxpStubClient.h \
     ../test/TMxpTagParserTest.cpp \
     ../test/TMxpVersionTagTest.cpp \
+    ../test/TMxpElementDefinitionHandlerTest.cpp \
     mac-deploy.sh \
     mudlet-lua/genDoc.sh \
     mudlet-lua/lua/ldoc.css

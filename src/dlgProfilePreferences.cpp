@@ -654,6 +654,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
+    checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
@@ -817,6 +818,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
+    disable_password_masking_checkbox->setChecked(pHost->mDisablePasswordMasking);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
@@ -1432,6 +1434,7 @@ void dlgProfilePreferences::clearHostDetails()
     mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
+    checkBox_drawUpperLowerLevels->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
@@ -2903,6 +2906,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(show_sent_text_combobox->currentIndex());
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
+        pHost->mDisablePasswordMasking = disable_password_masking_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
@@ -2924,6 +2928,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMNES = mEnableMNES->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
+        mudlet::self()->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
         if (pHost->mpMap) {
             // Need to save the original value in case we change it in the line
             // following this one:
@@ -4525,6 +4530,8 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     }
 }
 
+
+
 void dlgProfilePreferences::slot_changeWrapAt()
 {
     Host* pHost = mpHost;
@@ -4655,6 +4662,22 @@ bool dlgProfilePreferences::updateDisplayFont()
     return true;
 }
 
+void dlgProfilePreferences::cancelShortcutCaptures()
+{
+    const auto sequenceEdits = findChildren<QKeySequenceEdit*>();
+    for (auto* sequenceEdit : sequenceEdits) {
+        if (!sequenceEdit) {
+            continue;
+        }
+
+        if (sequenceEdit->hasFocus()) {
+            sequenceEdit->clearFocus();
+        }
+
+        sequenceEdit->releaseKeyboard();
+    }
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
     if (!mpHost.isNull() && updateDisplayFont()) {
@@ -4683,6 +4706,8 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 
 void dlgProfilePreferences::closeEvent(QCloseEvent* event)
 {
+    cancelShortcutCaptures();
+
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());
     }

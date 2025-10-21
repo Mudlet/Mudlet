@@ -4488,15 +4488,10 @@ void dlgTriggerEditor::addVar(bool isFolder)
         mpSourceEditorEdbee->setEnabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
-        mpVarsMainArea->lineEdit_var_name->setText(QString());
-        mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Table name..."));
-
         clearDocument(mpSourceEditorEdbee, QLatin1String("NewTable"));
     } else {
         // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(true);
-        mpVarsMainArea->lineEdit_var_name->setText(QString());
-        mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Variable name..."));
         mpVarsMainArea->comboBox_variable_value_type->setDisabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
     }
@@ -4504,7 +4499,8 @@ void dlgTriggerEditor::addVar(bool isFolder)
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
 
-    QStringList nameList = { QString(isFolder ? tr("New table name") : tr("New variable name")) };
+    QStringList nameList = { QString(isFolder ? tr("table_variable") : tr("variable_name")) };
+    mpVarsMainArea->lineEdit_var_name->setText(nameList[0]);
     QTreeWidgetItem* pParentItem = nullptr;
     QTreeWidgetItem* pNewItem;
     QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
@@ -4546,6 +4542,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     mpCurrentVarItem = pNewItem;
     treeWidget_variables->setCurrentItem(pNewItem);
     slot_variableSelected(treeWidget_variables->currentItem());
+    saveVar();
 }
 
 void dlgTriggerEditor::addKey(bool isFolder)
@@ -6859,7 +6856,6 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
 
     if (!var) {
         mpVarsMainArea->checkBox_variable_hidden->setChecked(false);
-        mpVarsMainArea->lineEdit_var_name->clear();
         clearDocument(mpSourceEditorEdbee); // Var Select
         //check for temp item
         var = vu->getTVar(pItem);
@@ -7105,9 +7101,16 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
 {
     auto * sender = qobject_cast<TTreeWidget*>(QObject::sender());
     if (sender) {
-        QList<QTreeWidgetItem*> items = sender->selectedItems();
-        if (!items.empty()) {
-            QTreeWidgetItem* item = items.first();
+        QTreeWidgetItem* item = sender->currentItem();
+        if (!item) {
+            QList<QTreeWidgetItem*> items = sender->selectedItems();
+            if (items.empty()) {
+                return;
+            }
+            item = items.first();
+        }
+
+        if (item) {
             if (sender == treeWidget_scripts) {
                 slot_scriptsSelected(item);
             } else if (sender == treeWidget_keys) {
@@ -8654,6 +8657,11 @@ void dlgTriggerEditor::showError(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+
+    // Reconnect close button to normal hide behavior (not banner dismiss)
+    disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
@@ -8666,6 +8674,11 @@ void dlgTriggerEditor::showWarning(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+
+    // Reconnect close button to normal hide behavior (not banner dismiss)
+    disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
