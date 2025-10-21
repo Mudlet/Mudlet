@@ -29,6 +29,12 @@
 
 class Host;
 
+// Forward declarations - HyperlinkStyling is defined in TBuffer.h
+// but we need to refer to it here, so we use a namespace-level forward declaration
+namespace Mudlet {
+struct HyperlinkStyling;
+}
+
 // Keep together lists of links and hints associated
 class TLinkStore {
     inline static const int scmMaxLinks = 20000;
@@ -51,7 +57,12 @@ public:
     int getCurrentLinkID() const { return mLinkID; }
 
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
-    void setCurrentLinks(const QStringList& links) { mLinkStore[mLinkID] = links; }
+    
+#if !defined(LinkStore_Test)
+    // OSC 8 hyperlink styling storage and retrieval
+    void setStyling(int id, const Mudlet::HyperlinkStyling& styling);
+    Mudlet::HyperlinkStyling getStyling(int id) const;
+#endif
 
 private:
     void freeReference(Host* pH, const QVector<int>& luaReference);
@@ -63,6 +74,9 @@ private:
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
     QMap<int, QVector<int>> mReferenceStore;
+#if !defined(LinkStore_Test)
+    QMap<int, Mudlet::HyperlinkStyling> mStylingStore;
+#endif
 };
 
 #endif //MUDLET_TLINKSTORE_H

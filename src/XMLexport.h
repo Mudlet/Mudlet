@@ -31,6 +31,7 @@
 #include <QPointer>
 #include <QSaveFile>
 #include <pugixml.hpp>
+#include <memory>
 #include "post_guard.h"
 
 class QFile;
@@ -46,7 +47,7 @@ class TVar;
 class VarUnit;
 
 
-class XMLexport : public QObject
+class XMLexport : public QObject, public std::enable_shared_from_this<XMLexport>
 {
     Q_OBJECT
 

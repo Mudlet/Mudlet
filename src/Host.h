@@ -184,6 +184,7 @@ public:
     void            setLogin(const QString& login)       { mLogin = login; }
     QString &       getPass()                        { return mPass; }
     void            setPass(const QString& password) { mPass = password; }
+    bool            hasAutoLoginCredentials() const  { return !mLogin.isEmpty() && !mPass.isEmpty(); }
     int             getRetries()                     { return mRetries;}
     void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
@@ -472,11 +473,13 @@ public:
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
+    bool mDisablePasswordMasking;
     int commandLineMinimumHeight = 30;
     bool mAlertOnNewData = true;
     bool mAllowToSendCommand = true;
     bool mAutoClearCommandLineAfterSend = false;
     bool mHighlightHistory = true;
+
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared
     // after the main TConsole for a new profile has been created during the
@@ -888,7 +891,7 @@ private:
     bool mWideAmbigousWidthGlyphs = false;
 
     // keeps track of all of the array writers we're currently operating with
-    QHash<QString, XMLexport*> writers;
+    QHash<QString, std::shared_ptr<XMLexport>> writers;
 
     QFuture<void> mModuleFuture;
 

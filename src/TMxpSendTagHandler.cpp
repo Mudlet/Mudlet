@@ -70,7 +70,10 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     mLinkId = client.setLink(hrefs, hints);
 
-    client.setLinkMode(true);
+    // Only set link mode if a link was actually created
+    if (mLinkId != 0) {
+        client.setLinkMode(true);
+    }
 
     return MXP_TAG_HANDLED;
 }
@@ -115,12 +118,16 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 {
     Q_UNUSED(ctx)
     Q_UNUSED(tag)
-    if (mIsHrefInContent) {
-        updateHrefInLinks(client);
-    }
+    
+    // Only process link-related logic if a link was actually created
+    if (mLinkId != 0) {
+        if (mIsHrefInContent) {
+            updateHrefInLinks(client);
+        }
 
-    mLastCaption = mCurrentTagContent.trimmed();
-    client.setCaptionForSendEvent(mLastCaption);
+        mLastCaption = mCurrentTagContent.trimmed();
+        client.setCaptionForSendEvent(mLastCaption);
+    }
 
     resetCurrentTagContent(client);
     return MXP_TAG_HANDLED;

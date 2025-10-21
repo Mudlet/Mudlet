@@ -133,6 +133,12 @@ void TCommandLine::processNormalKey(QEvent* event)
     } else {
         mUserKeptOnTyping = false;
     }
+    
+    // Track if user types during echo suppression for content preservation logic
+    if (mIsEchoSuppressed && mType == MainCommandLine) {
+        mUserTypedDuringEchoSuppression = true;
+    }
+    
     spellCheck();
 }
 
@@ -260,11 +266,6 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_Tab:
-            if (ke->modifiers() & Qt::AltModifier) {
-                // prevents ALT+TAB system switching auto refocusing to command line
-                return false;
-            }
-
             if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(ke->modifiers() & Qt::ControlModifier)) ||
                 (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (ke->modifiers() & Qt::ControlModifier))) {
                 mpHost->setCaretEnabled(true);
@@ -1631,6 +1632,11 @@ void TCommandLine::setEchoSuppression(bool suppress)
         return;
     }
 
+    // If password masking is disabled by user preference, don't activate it
+    if (suppress && mpHost->mDisablePasswordMasking) {
+        return;
+    }
+
     // Early exit if suppression state hasn't changed - avoids unnecessary processing
     if (mIsEchoSuppressed == suppress) {
         return;
@@ -1700,6 +1706,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
         
         // Store the command text for later restoration (empty if none to restore)
         mTextToRestoreAfterEchoSuppression = textToRestoreAfterPassword;
+        mUserTypedDuringEchoSuppression = false; // Reset typing tracking
         clear();  // Clear command line for password input
         
         // Show password toggle button and reset visibility state
@@ -1730,7 +1737,8 @@ void TCommandLine::setEchoSuppression(bool suppress)
         }
         
         // Restore any command text that was preserved when password mode started
-        if (!mTextToRestoreAfterEchoSuppression.isEmpty()) {
+        // Only restore if user didn't type anything during echo suppression
+        if (!mTextToRestoreAfterEchoSuppression.isEmpty() && !mUserTypedDuringEchoSuppression) {
             setPlainText(mTextToRestoreAfterEchoSuppression);
             
             // Restore the original selection state to maintain user workflow consistency
@@ -1747,11 +1755,12 @@ void TCommandLine::setEchoSuppression(bool suppress)
             }
 
             setTextCursor(cursor);
-            
-            // Clear saved state - restoration is complete
-            mTextToRestoreAfterEchoSuppression.clear();
-            mRestoredTextShouldBeSelected = false;
         }
+        
+        // Clear saved state - restoration is complete
+        mTextToRestoreAfterEchoSuppression.clear();
+        mRestoredTextShouldBeSelected = false;
+        mUserTypedDuringEchoSuppression = false;
     }
 
     viewport()->update(); // Force repaint to apply/remove password masking visual effect

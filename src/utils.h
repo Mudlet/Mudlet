@@ -47,7 +47,7 @@ public:
     // Qt 6.9 deprecated QDateTime::setOffsetFromUtc(int) and made it hard to
     // replicate the exact strings that we had before:
     static QString dateStamp() {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         auto localNow = QDateTime::currentDateTime();
         const int offset = localNow.offsetFromUtc();
         if (offset) {

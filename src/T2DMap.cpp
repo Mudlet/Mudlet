@@ -1209,8 +1209,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     QList<int> exitList;
     QList<int> oneWayExits;
-    const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+    int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
+
+    // try and set the player to a room if we don't have a known location
+    if (!pPlayerRoom && !mpMap->mpRoomDB->isEmpty()) {
+        int randomRoom = mpMap->mpRoomDB->getRoomIDList().first();
+        pPlayerRoom = mpMap->mpRoomDB->getRoom(randomRoom);
+        playerRoomId = pPlayerRoom->getId();
+    }
+    // no rooms at all, let's show an information message instead
     if (!pPlayerRoom) {
         painter.save();
         painter.fillRect(0, 0, width(), height(), Qt::transparent);
