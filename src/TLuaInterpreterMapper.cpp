@@ -2673,13 +2673,59 @@ int TLuaInterpreter::lockRoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockSpecialExit
 int TLuaInterpreter::lockSpecialExit(lua_State* L)
 {
-    const int fromRoomID = getVerifiedInt(L, __func__, 1, "exit roomID");
-    // The second argument (was the toRoomID) is now ignored as it is not required/considered in any way
-    const QString dir = getVerifiedString(L, __func__, 3, "special exit name/command");
+    int fromRoomID;
+    QString dir;
+    bool b;
+
+    // Support both table and ordered arguments
+    if (lua_istable(L, 1)) {
+        // Table argument format: {fromRoomID=id, command="dir", locked=true}
+        bool hasFromRoomID = false, hasCommand = false, hasLocked = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("fromRoomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("roomID"), Qt::CaseInsensitive)) {
+                fromRoomID = getVerifiedInt(L, __func__, -1, "fromRoomID");
+                hasFromRoomID = true;
+            } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive) || !key.compare(QLatin1String("dir"), Qt::CaseInsensitive) || !key.compare(QLatin1String("direction"), Qt::CaseInsensitive)) {
+                dir = getVerifiedString(L, __func__, -1, "special exit command");
+                hasCommand = true;
+            } else if (!key.compare(QLatin1String("locked"), Qt::CaseInsensitive) || !key.compare(QLatin1String("lock"), Qt::CaseInsensitive)) {
+                b = getVerifiedBool(L, __func__, -1, "lock state");
+                hasLocked = true;
+            }
+            // Note: toRoomID is deprecated and ignored if provided
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
+        }
+
+        // Validate required parameters
+        if (!hasFromRoomID) {
+            lua_pushfstring(L, "%s: missing required 'fromRoomID' or 'roomID' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasCommand) {
+            lua_pushfstring(L, "%s: missing required 'command', 'dir', or 'direction' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasLocked) {
+            lua_pushfstring(L, "%s: missing required 'locked' or 'lock' in table", __func__);
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: fromRoomID, toRoomID (ignored), command, locked
+        fromRoomID = getVerifiedInt(L, __func__, 1, "exit roomID");
+        // The second argument (was the toRoomID) is now ignored as it is not required/considered in any way
+        dir = getVerifiedString(L, __func__, 3, "special exit name/command");
+        b = getVerifiedBool(L, __func__, 4, "special exit lock state");
+    }
+
     if (dir.isEmpty()) {
         return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
-    const bool b = getVerifiedBool(L, __func__, 4, "special exit lock state");
 
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
