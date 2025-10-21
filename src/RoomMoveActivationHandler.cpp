@@ -101,6 +101,7 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
         mMapWidget.mPopupMenu = false;
         mMapWidget.mPick = false;
         mMapWidget.mRoomBeingMoved = true;
+        mMapWidget.mRoomMoveViaContextMenu = false;
         mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
         mMapWidget.mNewMoveAction = false;
         if (mMapWidget.mpMap && mMapWidget.mpMap->mpRoomDB) {
@@ -125,6 +126,7 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
         mMapWidget.mPopupMenu = false;
         mMapWidget.setMouseTracking(false);
         mMapWidget.mRoomBeingMoved = false;
+        mMapWidget.mRoomMoveViaContextMenu = false;
         mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
         mMapWidget.mHasRoomMoveLastMapPoint = false;
         context.isRoomBeingMoved = false;

@@ -50,7 +50,7 @@ bool RoomMoveDragHandler::matches(const T2DMap::MapInteractionContext& context) 
         return false;
     }
 
-    if (!context.buttons.testFlag(Qt::LeftButton)) {
+    if (!context.buttons.testFlag(Qt::LeftButton) && !mMapWidget.mRoomMoveViaContextMenu) {
         return false;
     }
 
@@ -67,7 +67,7 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
         return false;
     }
 
-    if (!context.buttons.testFlag(Qt::LeftButton)) {
+    if (!context.buttons.testFlag(Qt::LeftButton) && !mMapWidget.mRoomMoveViaContextMenu) {
         return false;
     }
 
