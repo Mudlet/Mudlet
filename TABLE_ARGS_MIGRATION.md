@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **17**
-Remaining: **40**
+Completed: **18**
+Remaining: **39**
 
 ---
 
@@ -57,7 +57,7 @@ Remaining: **40**
 - [ ] `cechoPopup` - cechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
 - [ ] `cinsertLink` - cinsertLink([windowName], text, command, hint, true)
 - [ ] `cinsertPopup` - cinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
-- [ ] `createMapper` - createMapper([name of userwindow], x, y, width, height)
+- [x] `createMapper` - createMapper([name of userwindow], x, y, width, height)
 - [ ] `dechoLink` - dechoLink([windowName], text, command, hint, true)
 - [ ] `dechoPopup` - dechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
 - [ ] `dinsertLink` - dinsertLink([windowName], text, command, hint, true)

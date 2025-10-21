@@ -1464,6 +1464,62 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapper
 int TLuaInterpreter::createMapper(lua_State* L)
 {
+    // Table argument support
+    if (lua_istable(L, 1)) {
+        QString windowName;
+        int x = 0, y = 0, width = 0, height = 0;
+        bool hasX = false, hasY = false, hasWidth = false, hasHeight = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                windowName = getVerifiedString(L, __func__, -1, key);
+                if (isMain(windowName)) {
+                    windowName.clear();
+                }
+            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+                x = getVerifiedInt(L, __func__, -1, key);
+                hasX = true;
+            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+                y = getVerifiedInt(L, __func__, -1, key);
+                hasY = true;
+            } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                width = getVerifiedInt(L, __func__, -1, key);
+                hasWidth = true;
+            } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                height = getVerifiedInt(L, __func__, -1, key);
+                hasHeight = true;
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasX) {
+            return warnArgumentValue(L, __func__, "missing required 'x' in table");
+        }
+        if (!hasY) {
+            return warnArgumentValue(L, __func__, "missing required 'y' in table");
+        }
+        if (!hasWidth) {
+            return warnArgumentValue(L, __func__, "missing required 'width' in table");
+        }
+        if (!hasHeight) {
+            return warnArgumentValue(L, __func__, "missing required 'height' in table");
+        }
+
+        const Host& host = getHostFromLua(L);
+        if (auto [success, message] = host.mpConsole->createMapper(windowName, x, y, width, height); !success) {
+            return warnArgumentValue(L, __func__, message);
+        }
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Original positional argument handling
     const int n = lua_gettop(L);
     QString windowName = "";
     int counter = 1;
