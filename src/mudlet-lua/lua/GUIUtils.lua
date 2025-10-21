@@ -624,15 +624,29 @@ end
 ---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
 ---   </pre>
 function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
-  if Ypos == nil then
-    Ypos = Xpos
-    Xpos = numberOfLines
-    numberOfLines = charsPerLine
-    charsPerLine = fontSize
-    fontSize = consoleName
-    consoleName = windowName
-    windowName = "main"
+  -- Support table argument format
+  if type(windowName) == 'table' then
+    local args = windowName
+    windowName = args.windowName or args.window
+    consoleName = args.consoleName or args.name
+    fontSize = args.fontSize
+    charsPerLine = args.charsPerLine
+    numberOfLines = args.numberOfLines
+    Xpos = args.Xpos or args.x
+    Ypos = args.Ypos or args.y
+  else
+    if Ypos == nil then
+      Ypos = Xpos
+      Xpos = numberOfLines
+      numberOfLines = charsPerLine
+      charsPerLine = fontSize
+      fontSize = consoleName
+      consoleName = windowName
+      windowName = "main"
+    end
   end
+
+  windowName = windowName or "main"
   assert(type(windowName) == 'string', 'createConsole: invalid type for windowName (expected string, got '..type(windowName)..'!)')
   assert(type(consoleName) == 'string', 'createConsole: invalid type for consoleName (expected string, got '..type(consoleName)..'!)')
   assert(type(fontSize) == 'number', 'createConsole: invalid type for fontSize (expected number, got '..type(fontSize)..'!)')
