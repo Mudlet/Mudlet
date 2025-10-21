@@ -248,8 +248,8 @@ int main(int argc, char* argv[])
         mudlet::self()->mEnableCrashReporting) {
         sentry_options_t* options = sentry_options_new();
         sentry_options_set_dsn(options, ""); // The Sentry DSN is injected at build time
-        sentry_options_set_database_path(
-            options, (sentryDbPath + "/.sentry-native").toStdString().c_str());
+                sentry_options_set_database_path(
+                    options, (sentryDbPath + "/.sentry-native").toStdString().c_str());
         sentry_options_set_release(options,
                                    app->applicationVersion().toStdString().c_str());
 #ifdef QT_DEBUG
