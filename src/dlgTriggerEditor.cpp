@@ -4732,7 +4732,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     }
     // Otherwise: insert a new root item
     if (!pNewAction) {
-        name = tr("New toolbar");
+        name = isFolder ? tr("New toolbar") : tr("New button");
         pNewAction = new TAction(name, mpHost);
         pNewAction->setCommandButtonUp(cmdButtonUp);
         QStringList nl;
