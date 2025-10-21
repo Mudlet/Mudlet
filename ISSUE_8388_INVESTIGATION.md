@@ -240,6 +240,34 @@ void TConsole::scrollUp(int lines)
    - Scrolling with Ctrl (speed up)
    - Scrolling with Shift (slow down)
 
+## Git History Investigation
+
+### QTimer::singleShot Pattern Origin
+
+Attempted to trace the history of the `if (lowerAppears)` code block using git blame:
+
+**Finding:** The code exists from the initial repository import (commit 7f58d98, Sept 23 2025). This repository is a fork, and the split-screen functionality predates this repository's creation.
+
+**Historical Context from GitHub Issues/Forums:**
+- Issue #1105: Discusses inconsistency in PgUp/PgDown scrolling behavior with split-screen
+- Issue #2397: Mousewheel scroll speed enhancements (PR #4445) - added Ctrl/Shift modifiers
+- Issue #3204: Multi-view persistence improvements (PR #3844)
+- Forum discussion: Users discovered Ctrl+Enter to close split-screen
+
+**Why QTimer::singleShot(0, ...) ?**
+
+While no explicit documentation was found, the deferred execution pattern with `QTimer::singleShot(0, ...)` is a common Qt technique that:
+
+1. **Allows layout updates to complete:** When `mLowerPane->show()` is called, Qt needs to process layout changes and resize events. The timer pushes the scroll operation to the next event loop iteration, ensuring the lower pane's geometry is fully calculated.
+
+2. **Prevents race conditions:** Executing `getRowCount()` immediately might return incorrect values before the layout system updates the pane's actual dimensions.
+
+3. **Ensures proper painting order:** Deferred execution lets Qt complete the show/hide state transitions and repaint operations before scrolling.
+
+However, this design creates the bug because:
+- The deferred scroll (for lower pane height) executes **in addition to** the immediate user scroll
+- This was likely unintentional - the timer was probably added to fix layout timing issues, not to add extra scrolling
+
 ## Additional Notes
 
 ### Related Code Locations
