@@ -95,10 +95,9 @@ T2DMap::T2DMap(QWidget* parent)
         //: Room name in the mapper widget
         tr("Name");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
-    mMultiSelectionListWidget.setToolTip(utils::richText(tr("Click on a line to select or deselect that room number (with the given name if the "
-                                                            "rooms are named) to add or remove the room from the selection.  Click on the "
-                                                            "relevant header to sort by that method.  Note that the name column will only "
-                                                            "show if at least one of the rooms has a name.")));
+    //: Tooltip for multi-room selection widget in mapper
+    mMultiSelectionListWidget.setToolTip(utils::richText(tr("Click to select/deselect rooms. Click headers to sort. "
+                                                            "Name column shows only if rooms are named.")));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
     mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection); // Was ExtendedSelection

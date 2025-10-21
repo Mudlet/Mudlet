@@ -450,7 +450,8 @@ void dlgRoomExits::slot_addSpecialExit()
 
     pI->setText(ExitsTreeWidget::colIndex_exitWeight, qsl("0")); //Exit Weight
     pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
-    pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, utils::richText(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
+    //: Tooltip for exit weight column
+    pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, utils::richText(tr("Positive value overrides room weight; zero uses default.")));
 
     pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked); //Doortype: none
     pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
@@ -990,8 +991,8 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     } else {
         // Something else that isn't a positive number:
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? mIcon_invalidExit : QIcon());
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, utils::richText(tr("The roomID of the room that this special exit leads to is expected here. "
-                                                                                          "If left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+        //: Tooltip for invalid room ID in special exits
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, utils::richText(tr("Invalid room ID: exit will be deleted on save.")));
     }
 
     if (pSpecialExit->text(ExitsTreeWidget::colIndex_command) == mSpecialExitCommandPlaceholder) {
@@ -1587,7 +1588,8 @@ void dlgRoomExits::init()
         pI->setData(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole, pR->hasExitWeight(dir) ? pR->getExitWeight(dir) : 0);
         pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignLeft);
         pSpecialExit->weight = pI->data(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole).toInt();
-        pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, utils::richText(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
+        //: Tooltip for exit weight column
+    pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, utils::richText(tr("Positive value overrides room weight; zero uses default.")));
 
         //ExitsTreeWidget::colIndex_doorNone-ExitsTreeWidget::colIndex_doorLocked
         //hold a buttongroup of 4, ideally QRadioButtons, to select a door type

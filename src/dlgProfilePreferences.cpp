@@ -190,32 +190,31 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     //: Tooltip for timer debug output minimum interval
     widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>Hide success messages in Central Debug Console for timers with intervals below this threshold. "
                                                           "Error messages always display. "
-                                                          "<a href='https://wiki.mudlet.org/w/Manual:Timers#Debugging'>Learn more</a></p>"));
+                                                          "<a href='https://wiki.mudlet.org/w/Manual:Timers'>Learn more</a></p>"));
 
     //: Tooltip for show glyph usage button
     pushButton_showGlyphUsage->setToolTip(utils::richText(tr("Show all map symbols, their Unicode code-points, font availability, and which rooms use them. "
-                                                             "<a href='https://wiki.mudlet.org/w/Manual:Mapper#Glyph_usage'>Learn more</a>")));
+                                                             "<a href='https://wiki.mudlet.org/w/Manual:Mapper'>Learn more</a>")));
     fontComboBox_mapSymbols->setToolTip(utils::richText(tr("Select the only or the primary font used (depending on <i>Only use symbols "
                                                                "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.")));
     //: Tooltip for map symbol font usage option
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Use only the selected font (may show � for missing symbols) or allow fallback fonts for better coverage. "
-                                                                        "<a href='https://wiki.mudlet.org/w/Manual:Mapper#Map_symbol_font'>Learn more</a>")));
+                                                                        "<a href='https://wiki.mudlet.org/w/Manual:Mapper'>Learn more</a>")));
     //: Tooltip for run all keybindings option
     checkBox_runAllKeyBindings->setToolTip(tr("<p>Run all matching keybindings instead of just the first one. "
                                               "Disable for compatibility with pre-3.9.0 scripts. "
-                                              "<a href='https://wiki.mudlet.org/w/Manual:Keybindings#Multiple_matches'>Learn more</a></p>"));
+                                              "<a href='https://wiki.mudlet.org/w/Manual:Introduction#Keybindings'>Learn more</a></p>"));
     //: Tooltip for East Asian ambiguous width character option
     checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Controls display width for ambiguous East Asian characters. "
                                                             "Auto-detects correct width for most encodings (default), or choose narrow/wide. "
-                                                            "<a href='https://wiki.mudlet.org/w/Manual:Unicode#Ambiguous_width_characters'>Learn more</a></p>"));
+                                                            "<a href='https://wiki.mudlet.org/w/Manual:Unicode'>Learn more</a></p>"));
     //: Tooltip for text analyzer option
     checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable context menu to analyze UTF-16/UTF-8 encoding of selected text. "
                                                "Useful for identifying multi-byte characters. "
-                                               "<a href='https://wiki.mudlet.org/w/Manual:Technical_Manual#Text_Analyzer'>Learn more</a></p>"));
+                                               "<a href='https://wiki.mudlet.org/w/Manual:Unicode'>Learn more</a></p>"));
     //: Tooltip for show icons on menus option
     checkBox_showIconsOnMenus->setToolTip(tr("<p>Control menu icon display: on, off, or auto (system default). "
-                                             "May require restart. "
-                                             "<a href='https://wiki.mudlet.org/w/Manual:Preferences#Appearance'>Learn more</a></p>"));
+                                             "May require restart.</p>"));
 
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
