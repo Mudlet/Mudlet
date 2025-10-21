@@ -132,7 +132,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile"));
-    widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
+    //: Accessibility description for copy profile action
+    widgetList.first()->setAccessibleDescription(tr("Copy entire profile to a new profile with a different name."));
 
     objectList = copyProfileSettings->associatedObjects();
     widgetList.clear();
@@ -145,7 +146,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile settings"));
-    widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));
+    //: Accessibility description for copy profile settings action
+    widgetList.first()->setAccessibleDescription(tr("Copy profile settings to a new profile with a different name."));
 
     if (mudlet::self()->mShowIconsOnDialogs) {
         // Since I've switched to allowing the possibility of theme replacement

@@ -454,13 +454,17 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, utils::richText(tr("Positive value overrides room weight; zero uses default.")));
 
     pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked); //Doortype: none
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
+    //: Tooltip for no door symbol option
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol on 2D map (only functional option currently).")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorOpen, Qt::Unchecked); //Doortype: open
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, utils::richText(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    //: Tooltip for open door symbol option
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, utils::richText(tr("Green (open) door symbol (not currently functional).")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorClosed, Qt::Unchecked); //Doortype: closed
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    //: Tooltip for closed door symbol option
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (closed) door symbol (not currently functional).")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked); //Doortype: locked
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    //: Tooltip for locked door symbol option
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (locked) door symbol (not currently functional).")));
 
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
@@ -1598,10 +1602,14 @@ void dlgRoomExits::init()
         pI->setCheckState(ExitsTreeWidget::colIndex_doorOpen, Qt::Unchecked);
         pI->setCheckState(ExitsTreeWidget::colIndex_doorClosed, Qt::Unchecked);
         pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked);
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, utils::richText(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        //: Tooltip for no door symbol option
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, utils::richText(tr("No door symbol on 2D map (only functional option currently).")));
+        //: Tooltip for open door symbol option
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, utils::richText(tr("Green (open) door symbol (not currently functional).")));
+        //: Tooltip for closed door symbol option
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (closed) door symbol (not currently functional).")));
+        //: Tooltip for locked door symbol option
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (locked) door symbol (not currently functional).")));
         {
             const int specialDoor = pR->getDoor(dir);
             switch (specialDoor) {

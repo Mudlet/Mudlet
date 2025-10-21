@@ -2278,7 +2278,8 @@ void TConsole::slot_adjustAccessibleNames()
         } else {
             setAccessibleName(tr("User window \"%1\".").arg(mConsoleName));
         }
-        setAccessibleDescription(tr("Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window."));
+        //: Accessibility description for user windows
+        setAccessibleDescription(tr("Content window that can be floated or docked."));
         if (mLowerPane->isVisible()) {
             if (multipleProfilesActive) {
                 //: accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.
