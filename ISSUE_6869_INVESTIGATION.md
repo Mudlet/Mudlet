@@ -229,6 +229,44 @@ Issue #6869 is valid and has already manifested as a real bug (missing extended 
 
 ---
 
+## Implementation
+
+**Status:** ✅ Bug Fixed (Immediate fix applied, full refactoring deferred)
+
+### Change Applied
+
+**File:** src/mudlet.cpp:4366
+
+**Fix:** Added missing `pHost->updateExtendedAnsiColorsInTable()` call in `slot_connectionDialogueFinished()`
+
+**Before:**
+```cpp
+pHost->getScriptUnit()->compileAll(true);
+pHost->updateAnsi16ColorsInTable();
+
+//Load rest of modules after scripts
+```
+
+**After:**
+```cpp
+pHost->getScriptUnit()->compileAll(true);
+pHost->updateAnsi16ColorsInTable();
+pHost->updateExtendedAnsiColorsInTable();
+
+//Load rest of modules after scripts
+```
+
+### Impact
+
+This one-line fix ensures that extended ANSI colors (256-color palette) are properly initialized in the Lua `color_table` when profiles are first loaded, matching the behavior that was already correct in `resetProfile_phase2()`.
+
+### Future Work
+
+The code duplication between `slot_connectionDialogueFinished()` and `resetProfile_phase2()` remains. Options 1-3 from the recommendations section above could be pursued in the future to reduce maintenance burden, but the immediate bug is now resolved.
+
+---
+
 **Investigation Date:** 2025-10-21
+**Implementation Date:** 2025-10-21
 **Mudlet Branch:** claude/investigate-issue-6869-011CULazXdTRAGfho9kV4TBJ
 **Base Commit:** 32332f6 Fix: MXP parser blocked on non-escaped '&' and '<' characters
