@@ -130,7 +130,8 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
         mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
         mMapWidget.mHasRoomMoveLastMapPoint = false;
         context.isRoomBeingMoved = false;
-
+        mMapWidget.mHelpMsg.clear();
+        mMapWidget.update();
         return true;
     default:
         return false;
