@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **30**
-Remaining: **27**
+Completed: **33**
+Remaining: **24**
 
 ---
 
@@ -82,14 +82,14 @@ Remaining: **27**
 ### 4 Parameters (20 functions)
 - [x] `getRoomsByPosition` - roomTable = getRoomsByPosition(areaID, x,y,z) - [5e6f7d9]
 - [x] `lockSpecialExit` - lockSpecialExit (from roomID, to roomID, special exit command, lockIfTrue) - [3c4d5e6]
-- [ ] `openUserWindow` - openUserWindow(windowName, [restoreLayout], [autoDock], [dockingArea])
+- [x] `openUserWindow` - openUserWindow(windowName, [restoreLayout], [autoDock], [dockingArea])
 - [x] `permAlias` - permAlias(name, parent, regex, lua code)
 - [x] `permBeginOfLineStringTrigger` - permBeginOfLineStringTrigger(name, parent, pattern table, lua code)
 - [x] `permRegexTrigger` - permRegexTrigger(name, parent, pattern table, lua code)
 - [x] `permSubstringTrigger` - permSubstringTrigger( name, parent, pattern table, lua code )
 - [x] `permTimer` - permTimer(name, parent, seconds, lua code)
-- [ ] `postHTTP` - postHTTP(dataToSend, url, headersTable, file)
-- [ ] `putHTTP` - putHTTP(dataToSend, url, [headersTable], [file])
+- [x] `postHTTP` - postHTTP(dataToSend, url, headersTable, file)
+- [x] `putHTTP` - putHTTP(dataToSend, url, [headersTable], [file])
 - [x] `setBorderSizes` - setBorderSizes(top, right, bottom, left) - [8b9c0d1]
 - [x] `setFgColor` - setFgColor([windowName], red, green, blue) - [9e8f1a2]
 - [ ] `setGauge` - setGauge(gaugeName, currentValue, maxValue, gaugeText)
@@ -97,7 +97,7 @@ Remaining: **27**
 - [x] `setRoomCharColor` - setRoomCharColor(roomId, r, g, b) - [e4e6d8c]
 - [x] `setRoomCoordinates` - setRoomCoordinates(roomID, x, y, z) - [bc6b462]
 - [ ] `speedwalk` - speedwalk(dirString, backwards, delay, show)
-- [ ] `tempColorTrigger` - tempColorTrigger(foregroundColor, backgroundColor, code, expireAfter)
+- [x] `tempColorTrigger` - tempColorTrigger(foregroundColor, backgroundColor, code, expireAfter)
 - [ ] `timeframe` - timeframe(vname, true_time, nil_time, ...)
 
 ---
