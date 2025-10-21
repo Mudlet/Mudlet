@@ -3519,6 +3519,155 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     const int n = lua_gettop(L);
 
+    // Check if first argument is a table for named-key format
+    if (lua_istable(L, 1)) {
+        QString windowName = qsl("main");
+        int bgR = 0, bgG = 0, bgB = 0, fgR = 0, fgG = 0, fgB = 0;
+        bool bold = false, underline = false, italics = false;
+        bool strikeout = false, overline = false, reverse = false;
+        bool hasBgR = false, hasBgG = false, hasBgB = false;
+        bool hasFgR = false, hasFgG = false, hasFgB = false;
+        bool hasBold = false, hasUnderline = false, hasItalics = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                windowName = getVerifiedString(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("bgR"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("bgRed"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("backgroundRed"), Qt::CaseInsensitive)) {
+                bgR = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                hasBgR = true;
+            } else if (!key.compare(QLatin1String("bgG"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("bgGreen"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("backgroundGreen"), Qt::CaseInsensitive)) {
+                bgG = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                hasBgG = true;
+            } else if (!key.compare(QLatin1String("bgB"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("bgBlue"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("backgroundBlue"), Qt::CaseInsensitive)) {
+                bgB = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                hasBgB = true;
+            } else if (!key.compare(QLatin1String("fgR"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("fgRed"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("foregroundRed"), Qt::CaseInsensitive)) {
+                fgR = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                hasFgR = true;
+            } else if (!key.compare(QLatin1String("fgG"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("fgGreen"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("foregroundGreen"), Qt::CaseInsensitive)) {
+                fgG = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                hasFgG = true;
+            } else if (!key.compare(QLatin1String("fgB"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("fgBlue"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("foregroundBlue"), Qt::CaseInsensitive)) {
+                fgB = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                hasFgB = true;
+            } else if (!key.compare(QLatin1String("bold"), Qt::CaseInsensitive)) {
+                if (lua_isboolean(L, -1)) {
+                    bold = lua_toboolean(L, -1);
+                } else if (lua_isnumber(L, -1)) {
+                    bold = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                }
+                hasBold = true;
+            } else if (!key.compare(QLatin1String("underline"), Qt::CaseInsensitive)) {
+                if (lua_isboolean(L, -1)) {
+                    underline = lua_toboolean(L, -1);
+                } else if (lua_isnumber(L, -1)) {
+                    underline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                }
+                hasUnderline = true;
+            } else if (!key.compare(QLatin1String("italics"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("italic"), Qt::CaseInsensitive)) {
+                if (lua_isboolean(L, -1)) {
+                    italics = lua_toboolean(L, -1);
+                } else if (lua_isnumber(L, -1)) {
+                    italics = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                }
+                hasItalics = true;
+            } else if (!key.compare(QLatin1String("strikeout"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("strikeOut"), Qt::CaseInsensitive)) {
+                if (lua_isboolean(L, -1)) {
+                    strikeout = lua_toboolean(L, -1);
+                } else if (lua_isnumber(L, -1)) {
+                    strikeout = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                }
+            } else if (!key.compare(QLatin1String("overline"), Qt::CaseInsensitive)) {
+                if (lua_isboolean(L, -1)) {
+                    overline = lua_toboolean(L, -1);
+                } else if (lua_isnumber(L, -1)) {
+                    overline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                }
+            } else if (!key.compare(QLatin1String("reverse"), Qt::CaseInsensitive)) {
+                if (lua_isboolean(L, -1)) {
+                    reverse = lua_toboolean(L, -1);
+                } else if (lua_isnumber(L, -1)) {
+                    reverse = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                }
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasBgR) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgR', 'bgRed', or 'backgroundRed' in table");
+            return lua_error(L);
+        }
+        if (!hasBgG) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgG', 'bgGreen', or 'backgroundGreen' in table");
+            return lua_error(L);
+        }
+        if (!hasBgB) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'bgB', 'bgBlue', or 'backgroundBlue' in table");
+            return lua_error(L);
+        }
+        if (!hasFgR) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgR', 'fgRed', or 'foregroundRed' in table");
+            return lua_error(L);
+        }
+        if (!hasFgG) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgG', 'fgGreen', or 'foregroundGreen' in table");
+            return lua_error(L);
+        }
+        if (!hasFgB) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'fgB', 'fgBlue', or 'foregroundBlue' in table");
+            return lua_error(L);
+        }
+        if (!hasBold) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'bold' in table");
+            return lua_error(L);
+        }
+        if (!hasUnderline) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'underline' in table");
+            return lua_error(L);
+        }
+        if (!hasItalics) {
+            lua_pushfstring(L, "setTextFormat: bad argument, missing 'italics' or 'italic' in table");
+            return lua_error(L);
+        }
+
+        TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None)
+                | (italics ? TChar::Italic : TChar::None)
+                | (overline ? TChar::Overline : TChar::None)
+                | (reverse ? TChar::Reverse : TChar::None)
+                | (strikeout ? TChar::StrikeOut : TChar::None)
+                | (underline ? TChar::Underline : TChar::None);
+
+        if (!host.mpConsole->setTextFormat(windowName,
+                                          QColor(fgR, fgG, fgB),
+                                          QColor(bgR, bgG, bgB),
+                                          flags)) {
+            return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName), true);
+        }
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Original positional argument handling
     const QString windowName {WINDOW_NAME(L, 1)};
 
     QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
