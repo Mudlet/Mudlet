@@ -1060,19 +1060,110 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
-    const int args = lua_gettop(L);
-    const int area = getVerifiedInt(L, __func__, 1, "areaID");
-    const QString imagePathFileName = getVerifiedString(L, __func__, 2, "imagePathFileName");
-    const float posx = getVerifiedFloat(L, __func__, 3, "posX");
-    const float posy = getVerifiedFloat(L, __func__, 4, "posY");
-    const float posz = getVerifiedFloat(L, __func__, 5, "posZ");
-    const float width = getVerifiedFloat(L, __func__, 6, "width");
-    const float height = getVerifiedFloat(L, __func__, 7, "height");
-    const float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
-    const bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
-    bool temporary = false;
-    if (args > 9) {
-        temporary = getVerifiedBool(L, __func__, 10, "showOnTop", true);
+    int area;
+    QString imagePathFileName;
+    float posx, posy, posz, width, height, zoom;
+    bool showOnTop, temporary;
+
+    // Support both table and ordered arguments
+    if (lua_istable(L, 1)) {
+        // Table argument format: {areaID=id, imagePath="path", x=x, y=y, z=z, width=w, height=h, zoom=z, showOnTop=bool, temporary=bool}
+        bool hasAreaID = false, hasImagePath = false, hasX = false, hasY = false, hasZ = false;
+        bool hasWidth = false, hasHeight = false, hasZoom = false, hasShowOnTop = false;
+        temporary = false; // default value
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("areaID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("area"), Qt::CaseInsensitive)) {
+                area = getVerifiedInt(L, __func__, -1, "areaID");
+                hasAreaID = true;
+            } else if (!key.compare(QLatin1String("imagePath"), Qt::CaseInsensitive) || !key.compare(QLatin1String("imagePathFileName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("filePath"), Qt::CaseInsensitive)) {
+                imagePathFileName = getVerifiedString(L, __func__, -1, "imagePath");
+                hasImagePath = true;
+            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive) || !key.compare(QLatin1String("posX"), Qt::CaseInsensitive)) {
+                posx = getVerifiedFloat(L, __func__, -1, "posX");
+                hasX = true;
+            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive) || !key.compare(QLatin1String("posY"), Qt::CaseInsensitive)) {
+                posy = getVerifiedFloat(L, __func__, -1, "posY");
+                hasY = true;
+            } else if (!key.compare(QLatin1String("z"), Qt::CaseInsensitive) || !key.compare(QLatin1String("posZ"), Qt::CaseInsensitive)) {
+                posz = getVerifiedFloat(L, __func__, -1, "posZ");
+                hasZ = true;
+            } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                width = getVerifiedFloat(L, __func__, -1, "width");
+                hasWidth = true;
+            } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                height = getVerifiedFloat(L, __func__, -1, "height");
+                hasHeight = true;
+            } else if (!key.compare(QLatin1String("zoom"), Qt::CaseInsensitive)) {
+                zoom = getVerifiedFloat(L, __func__, -1, "zoom");
+                hasZoom = true;
+            } else if (!key.compare(QLatin1String("showOnTop"), Qt::CaseInsensitive)) {
+                showOnTop = getVerifiedBool(L, __func__, -1, "showOnTop");
+                hasShowOnTop = true;
+            } else if (!key.compare(QLatin1String("temporary"), Qt::CaseInsensitive)) {
+                temporary = getVerifiedBool(L, __func__, -1, "temporary");
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
+        }
+
+        // Validate required parameters
+        if (!hasAreaID) {
+            lua_pushfstring(L, "%s: missing required 'areaID' or 'area' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasImagePath) {
+            lua_pushfstring(L, "%s: missing required 'imagePath', 'imagePathFileName', or 'filePath' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasX) {
+            lua_pushfstring(L, "%s: missing required 'x' or 'posX' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasY) {
+            lua_pushfstring(L, "%s: missing required 'y' or 'posY' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasZ) {
+            lua_pushfstring(L, "%s: missing required 'z' or 'posZ' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasWidth) {
+            lua_pushfstring(L, "%s: missing required 'width' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasHeight) {
+            lua_pushfstring(L, "%s: missing required 'height' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasZoom) {
+            lua_pushfstring(L, "%s: missing required 'zoom' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasShowOnTop) {
+            lua_pushfstring(L, "%s: missing required 'showOnTop' in table", __func__);
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: areaID, imagePath, posX, posY, posZ, width, height, zoom, showOnTop, [temporary]
+        const int args = lua_gettop(L);
+        area = getVerifiedInt(L, __func__, 1, "areaID");
+        imagePathFileName = getVerifiedString(L, __func__, 2, "imagePathFileName");
+        posx = getVerifiedFloat(L, __func__, 3, "posX");
+        posy = getVerifiedFloat(L, __func__, 4, "posY");
+        posz = getVerifiedFloat(L, __func__, 5, "posZ");
+        width = getVerifiedFloat(L, __func__, 6, "width");
+        height = getVerifiedFloat(L, __func__, 7, "height");
+        zoom = getVerifiedFloat(L, __func__, 8, "zoom");
+        showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
+        temporary = false;
+        if (args > 9) {
+            temporary = getVerifiedBool(L, __func__, 10, "showOnTop", true);
+        }
     }
 
     const Host& host = getHostFromLua(L);
