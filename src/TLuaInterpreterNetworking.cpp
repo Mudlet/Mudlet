@@ -139,8 +139,8 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     QNetworkRequest request = QNetworkRequest(url);
     mudlet::self()->setNetworkRequestDefaults(url, request);
 
-    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
-    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
+    host.updateProxySettings(host.getNetworkAccessManager());
+    QNetworkReply* reply = host.getNetworkAccessManager()->get(request);
     host.mLuaInterpreter.downloadMap.insert(reply, localFile);
     connect(reply, &QNetworkReply::downloadProgress, reply, [=](qint64 bytesDownloaded, qint64 totalBytes) {
         raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
@@ -625,8 +625,8 @@ int TLuaInterpreter::getHTTP(lua_State* L)
         }
     }
 
-    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
-    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
+    host.updateProxySettings(host.getNetworkAccessManager());
+    QNetworkReply* reply = host.getNetworkAccessManager()->get(request);
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::white, Qt::blue) << qsl("getHTTP: script is getting data from %1\n").arg(reply->url().toString()) >> &host;
@@ -685,8 +685,8 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
         }
     }
 
-    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
-    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->deleteResource(request);
+    host.updateProxySettings(host.getNetworkAccessManager());
+    QNetworkReply* reply = host.getNetworkAccessManager()->deleteResource(request);
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::white, Qt::blue) << qsl("deleteHTTP: script is sending delete request for %1\n").arg(reply->url().toString()) >> &host;

@@ -136,11 +136,10 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
 , hostName(hostName)
 , mHostID(id)
 , purgeTimer(this)
-, mpFileDownloader(new QNetworkAccessManager(this))
 , mpFileSystemWatcher(new QFileSystemWatcher(this))
 {
     connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slot_purge);
-    connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_httpRequestFinished);
+    connect(mpHost->getNetworkAccessManager(), &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_httpRequestFinished);
     connect(mpFileSystemWatcher, &QFileSystemWatcher::fileChanged, this, &TLuaInterpreter::slot_pathChanged);
     connect(mpFileSystemWatcher, &QFileSystemWatcher::directoryChanged, this, &TLuaInterpreter::slot_pathChanged);
 
@@ -4750,18 +4749,18 @@ int TLuaInterpreter::performHttpRequest(lua_State *L, const char* functionName, 
         file.close();
     }
 
-    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    host.updateProxySettings(host.getNetworkAccessManager());
 
     QNetworkReply* reply;
     switch (operation) {
         case QNetworkAccessManager::PostOperation:
-            reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+            reply = host.getNetworkAccessManager()->post(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
             break;
         case QNetworkAccessManager::PutOperation:
-            reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+            reply = host.getNetworkAccessManager()->put(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
             break;
         default:
-            reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, verb.toUtf8(), fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+            reply = host.getNetworkAccessManager()->sendCustomRequest(request, verb.toUtf8(), fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
     };
 
     if (mudlet::smDebugMode) {
@@ -7112,7 +7111,7 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
 
     // Parse cookies, add them as key-value pairs to the empty table
     const Host& host = getHostFromLua(L);
-    QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
+    QNetworkCookieJar* cookieJar = host.getNetworkAccessManager()->cookieJar();
     const QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
     for (const QNetworkCookie& cookie : cookies) {
         // Push cookie name onto stack

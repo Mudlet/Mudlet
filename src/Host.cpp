@@ -59,6 +59,7 @@
 #include <QtConcurrent>
 #include <QDialog>
 #include <QtUiTools>
+#include <QNetworkAccessManager>
 #include <QNetworkProxy>
 #include <QSettings>
 #include <zip.h>
@@ -226,6 +227,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpDockableMapWidget()
 , mTimerDebugOutputSuppressionInterval(QTime())
+, mpNetworkAccessManager(new QNetworkAccessManager(this))
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)

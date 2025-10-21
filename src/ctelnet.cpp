@@ -136,8 +136,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     mTimerPass->setSingleShot(true);
     connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
 
-    mpDownloader = new QNetworkAccessManager(this);
-    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
+    connect(mpHost->getNetworkAccessManager(), &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
 }
 
 void cTelnet::reset()
@@ -3032,11 +3031,11 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
     postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
 
     mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
-    mpHost->updateProxySettings(mpDownloader);
+    mpHost->updateProxySettings(mpHost->getNetworkAccessManager());
 
     auto request = QNetworkRequest(QUrl(url));
     mudlet::self()->setNetworkRequestDefaults(url, request);
-    mpPackageDownloadReply = mpDownloader->get(request);
+    mpPackageDownloadReply = mpHost->getNetworkAccessManager()->get(request);
 
     mpProgressDialog = new QProgressDialog(tr("Downloading game GUI from server..."), tr("Cancel"), 0, 4000000, mpHost && mpHost->mpConsole ? mpHost->mpConsole : nullptr);
     connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);

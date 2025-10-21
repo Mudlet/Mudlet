@@ -181,7 +181,6 @@ private:
     QList<std::shared_ptr<TMediaPlayer>> mAPIMusicList;
     QList<std::shared_ptr<TMediaPlayer>> mAPIVideoList;
 
-    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
 };
 #endif // MUDLET_TMEDIA_H

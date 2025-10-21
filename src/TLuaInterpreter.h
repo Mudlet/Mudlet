@@ -852,7 +852,6 @@ private:
     int mHostID = 0;
     QList<QObject*> objectsToDelete;
     QTimer purgeTimer;
-    QNetworkAccessManager* mpFileDownloader = nullptr;
     QFileSystemWatcher* mpFileSystemWatcher = nullptr;
 
     // Holds the list of places to look for the LuaGlobal.lua file:

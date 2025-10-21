@@ -42,8 +42,7 @@ TMedia::TMedia(Host* pHost, const QString& profileName)
     mpHost = pHost;
     mProfileName = profileName;
 
-    mpNetworkAccessManager = new QNetworkAccessManager(this);
-    connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMedia::slot_writeFile);
+    connect(mpHost->getNetworkAccessManager(), &QNetworkAccessManager::finished, this, &TMedia::slot_writeFile);
 }
 
 void TMedia::playMedia(TMediaData& mediaData)
@@ -924,8 +923,8 @@ void TMedia::downloadFile(TMediaData& mediaData)
             request.setSslConfiguration(config);
         }
 #endif
-        mpHost->updateProxySettings(mpNetworkAccessManager);
-        QNetworkReply* getReply = mpNetworkAccessManager->get(request);
+        mpHost->updateProxySettings(mpHost->getNetworkAccessManager());
+        QNetworkReply* getReply = mpHost->getNetworkAccessManager()->get(request);
         mMediaDownloads.insert(getReply, mediaData);
         connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
             qWarning() << "TMedia::downloadFile() WARNING - couldn't download sound from " << fileUrl.url();

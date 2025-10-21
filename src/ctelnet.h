@@ -242,7 +242,6 @@ public:
     bool mGA_Driver = false;
     bool mFORCE_GA_OFF = false;
     QPointer<dlgComposer> mpComposer;
-    QNetworkAccessManager* mpDownloader = nullptr;
     QProgressDialog* mpProgressDialog = nullptr;
     QString mServerPackage;
     QString mProfileName;

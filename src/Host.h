@@ -59,6 +59,7 @@ class QDialog;
 class QDockWidget;
 class QPushButton;
 class QListWidget;
+class QNetworkAccessManager;
 
 class TEvent;
 class TArea;
@@ -438,6 +439,7 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
+    QNetworkAccessManager* getNetworkAccessManager() { return mpNetworkAccessManager; }
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
     void setF3SearchEnabled(const bool enabled) {
         mF3SearchEnabled = enabled;
@@ -742,6 +744,7 @@ public:
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpConnectionProxy;
+    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions = dlgTriggerEditor::SearchOption::SearchOptionNone;
     TConsole::SearchOptions mBufferSearchOptions = TConsole::SearchOption::SearchOptionNone;

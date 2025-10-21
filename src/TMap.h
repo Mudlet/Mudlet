@@ -364,9 +364,6 @@ private:
     // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
     bool mIsFileViewingRecommended = false;
 
-    // Moved and revised from dlgMapper:
-    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
-
     QNetworkReply* mpNetworkReply = nullptr;
     QString mLocalMapFileName;
     int mExpectedFileSize = 0;

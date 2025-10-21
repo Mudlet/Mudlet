@@ -53,16 +53,9 @@ TMap::TMap(Host* pH, const QString& profileName)
 {
     restore16ColorSet();
 
-    // TODO: https://github.com/Mudlet/Mudlet/issues/6436
-    // According to Qt Docs we should really only have one of these
-    // (QNetworkAccessManager) for the whole application, but: each profile's
-    // TLuaInterpreter; each profile's ctelnet and now each profile's TMap
-    // (was dlgMapper) instance has one...!
-    mpNetworkAccessManager = new QNetworkAccessManager(this);
-
     mMapInfoContributorManager = new MapInfoContributorManager(this, pH);
 
-    connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
+    connect(mpHost->getNetworkAccessManager(), &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
 }
 
 TMap::~TMap()
@@ -2516,7 +2509,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    pHost->updateProxySettings(mpNetworkAccessManager);
+    pHost->updateProxySettings(pHost->getNetworkAccessManager());
     mudlet::self()->setNetworkRequestDefaults(url, request);
 
     mExpectedFileSize = 4000000;
@@ -2526,7 +2519,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     qApp->processEvents();
     // Attempts to ensure INFO message gets shown before download is initiated!
 
-    mpNetworkReply = mpNetworkAccessManager->get(request);
+    mpNetworkReply = pHost->getNetworkAccessManager()->get(request);
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
     //: %1 is the name of the current Mudlet profile
