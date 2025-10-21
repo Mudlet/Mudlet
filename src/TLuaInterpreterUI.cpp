@@ -3903,6 +3903,80 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
         return number >= 0 && number <= 255;
     };
 
+    // Check if first argument is a table for named-key format
+    if (lua_istable(L, 1)) {
+        windowName = qsl("main");
+        int g = 0, b = 0;
+        alpha = 255;
+        bool hasR = false, hasG = false, hasB = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                windowName = getVerifiedString(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                r = getVerifiedInt(L, __func__, -1, key);
+                hasR = true;
+                if (!validRange(r)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+                }
+            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                g = getVerifiedInt(L, __func__, -1, key);
+                hasG = true;
+                if (!validRange(g)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+                }
+            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                b = getVerifiedInt(L, __func__, -1, key);
+                hasB = true;
+                if (!validRange(b)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+                }
+            } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
+                alpha = getVerifiedInt(L, __func__, -1, key);
+                if (!validRange(alpha)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
+                }
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasR) {
+            lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'r' or 'red' in table");
+            return lua_error(L);
+        }
+        if (!hasG) {
+            lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'g' or 'green' in table");
+            return lua_error(L);
+        }
+        if (!hasB) {
+            lua_pushfstring(L, "setCommandForegroundColor: bad argument, missing 'b' or 'blue' in table");
+            return lua_error(L);
+        }
+
+        if (isMain(windowName)) {
+            host.mCommandFgColor.setRgb(r, g, b, alpha);
+            host.mpConsole->setCommandFgColor(r, g, b, alpha);
+        } else if (!host.setCommandForegroundColor(windowName, r, g, b, alpha)) {
+            return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Original positional argument handling
     if (lua_type(L, s) == LUA_TSTRING) {
         windowName = WINDOW_NAME(L, s++);
         r = getVerifiedInt(L, __func__, s, "red value 0-255");
