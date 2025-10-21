@@ -1430,7 +1430,8 @@ void TCommandLine::slot_adjustAccessibleNames()
             profile name. Because this is likely to be used often it should be
             kept as short as possible.
             */
-            setAccessibleDescription(tr("Input for profile \"%1\": send text to server or run aliases.").arg(hostName));
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.").arg(hostName));
         } else {
             /*:
             Accessibility-friendly name to describe the main command line for a
@@ -1443,7 +1444,8 @@ void TCommandLine::slot_adjustAccessibleNames()
             a Mudlet profile when only one profile is loaded. Because this is
             likely to be used often it should be kept as short as possible.
             */
-            setAccessibleDescription(tr("Input: send text to server or run aliases."));
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally."));
         }
         break;
     case SubCommandLine:
@@ -1461,7 +1463,8 @@ void TCommandLine::slot_adjustAccessibleNames()
             console/window when more than one profile is loaded, %1 is the profile
             name.
             */
-            setAccessibleDescription(tr("Input for profile \"%1\": send text to server or run aliases.").arg(hostName));
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.").arg(hostName));
         } else {
             /*:
             Accessibility-friendly name to describe an extra command line on
@@ -1475,7 +1478,8 @@ void TCommandLine::slot_adjustAccessibleNames()
             Accessibility-friendly description for an extra command line on
             top of a console/window when only one profile is loaded.
             */
-            setAccessibleDescription(tr("Input: send text to server or run aliases."));
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally."));
         }
         break;
     case ConsoleCommandLine:
@@ -1493,7 +1497,8 @@ void TCommandLine::slot_adjustAccessibleNames()
             console/window other than the main window's one when more than one profile is
             loaded, %1 is the profile name.
             */
-            setAccessibleDescription(tr("Input for profile \"%1\": send text to server or run aliases.").arg(hostName));
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.").arg(hostName));
         } else {
             /*:
             Accessibility-friendly name to describe the built-in command line
@@ -1507,7 +1512,8 @@ void TCommandLine::slot_adjustAccessibleNames()
             console/window other than the main window's one when only one profile is
             loaded.
             */
-            setAccessibleDescription(tr("Input: send text to server or run aliases."));
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally."));
         }
         break;
     case UnknownType:
