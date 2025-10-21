@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **5**
-Remaining: **52**
+Completed: **6**
+Remaining: **51**
 
 ---
 
@@ -81,7 +81,7 @@ Remaining: **52**
 
 ### 4 Parameters (20 functions)
 - [x] `getRoomsByPosition` - roomTable = getRoomsByPosition(areaID, x,y,z) - [5e6f7d9]
-- [ ] `lockSpecialExit` - lockSpecialExit (from roomID, to roomID, special exit command, lockIfTrue)
+- [x] `lockSpecialExit` - lockSpecialExit (from roomID, to roomID, special exit command, lockIfTrue) - [3c4d5e6]
 - [ ] `openUserWindow` - openUserWindow(windowName, [restoreLayout], [autoDock], [dockingArea])
 - [ ] `permAlias` - permAlias(name, parent, regex, lua code)
 - [ ] `permBeginOfLineStringTrigger` - permBeginOfLineStringTrigger(name, parent, pattern table, lua code)
