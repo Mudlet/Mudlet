@@ -16,22 +16,22 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **24**
-Remaining: **33**
+Completed: **30**
+Remaining: **27**
 
 ---
 
 ## Functions by Parameter Count
 
 ### 14 Parameters (1 function)
-- [ ] `tempComplexRegexTrigger` - tempComplexRegexTrigger(name, regex, code, multiline, fg color, bg color, filter, match all, highlight fg color, highlight bg color, play sound file, fire length, line delta, expireAfter)
+- [x] `tempComplexRegexTrigger` - tempComplexRegexTrigger(name, regex, code, multiline, fg color, bg color, filter, match all, highlight fg color, highlight bg color, play sound file, fire length, line delta, expireAfter)
 
 ### 13 Parameters (1 function)
-- [ ] `setTextFormat` - setTextFormat(windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics, [strikeout], [overline], [reverse])
+- [x] `setTextFormat` - setTextFormat(windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics, [strikeout], [overline], [reverse])
 
 ### 11 Parameters (2 functions)
 - [ ] `createGauge` - createGauge([name of userwindow], name, width, height, Xpos, Ypos, gaugeText, r, g, b, orientation)
-- [ ] `createMapLabel` - labelID = createMapLabel(areaID, text, posX, posY, posZ, fgRed, fgGreen, fgBlue, bgRed, bgGreen, bgBlue[, zoom, fontSize, showOnTop, noScaling, fontName, foregroundTransparency, backgroundTransparency, temporary])
+- [x] `createMapLabel` - labelID = createMapLabel(areaID, text, posX, posY, posZ, fgRed, fgGreen, fgBlue, bgRed, bgGreen, bgBlue[, zoom, fontSize, showOnTop, noScaling, fontName, foregroundTransparency, backgroundTransparency, temporary])
 
 ### 10 Parameters (1 function)
 - [x] `highlightRoom` - highlightRoom( roomID, color1Red, color1Green, color1Blue, color2Red, color2Green, color2Blue, highlightRadius, color1Alpha, color2Alpha) - [a8b9c0d]
@@ -62,7 +62,7 @@ Remaining: **33**
 - [ ] `dechoPopup` - dechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
 - [ ] `dinsertLink` - dinsertLink([windowName], text, command, hint, true)
 - [ ] `dinsertPopup` - dinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
-- [ ] `echoLink` - echoLink([windowName], text, command, hint, [useCurrentFormatElseDefault])
+- [x] `echoLink` - echoLink([windowName], text, command, hint, [useCurrentFormatElseDefault])
 - [ ] `hechoLink` - hechoLink([windowName], text, command, hint, true)
 - [ ] `hechoPopup` - hechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
 - [ ] `hinsertLink` - hinsertLink([windowName], text, command, hint, true)
@@ -74,8 +74,8 @@ Remaining: **33**
 - [ ] `registerNamedTimer` - success = registerNamedTimer(userName, timerName, time, functionReference, [repeating])
 - [x] `setBackgroundColor` - setBackgroundColor([windowName], r, g, b, [transparency]) - [1f2a3b4]
 - [x] `setBgColor` - setBgColor([windowName], r, g, b, [transparency]) - [5c6d7e8]
-- [ ] `setCommandBackgroundColor` - setCommandBackgroundColor([windowName], r, g, b, [transparency])
-- [ ] `setCommandForegroundColor` - setCommandForegroundColor([windowName], r, g, b, [transparency])
+- [x] `setCommandBackgroundColor` - setCommandBackgroundColor([windowName], r, g, b, [transparency])
+- [x] `setCommandForegroundColor` - setCommandForegroundColor([windowName], r, g, b, [transparency])
 - [x] `setCustomEnvColor` - setCustomEnvColor(environmentID, r,g,b,a) - [7f8e9d0]
 - [ ] `suffix` - suffix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
 
