@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **1**
-Remaining: **56**
+Completed: **2**
+Remaining: **55**
 
 ---
 
@@ -94,7 +94,7 @@ Remaining: **56**
 - [ ] `setFgColor` - setFgColor([windowName], red, green, blue)
 - [ ] `setGauge` - setGauge(gaugeName, currentValue, maxValue, gaugeText)
 - [ ] `setGaugeStyleSheet` - setGaugeStyleSheet(gaugeName, css, cssback, csstext)
-- [ ] `setRoomCharColor` - setRoomCharColor(roomId, r, g, b)
+- [x] `setRoomCharColor` - setRoomCharColor(roomId, r, g, b) - [e4e6d8c]
 - [x] `setRoomCoordinates` - setRoomCoordinates(roomID, x, y, z) - [bc6b462]
 - [ ] `speedwalk` - speedwalk(dirString, backwards, delay, show)
 - [ ] `tempColorTrigger` - tempColorTrigger(foregroundColor, backgroundColor, code, expireAfter)
