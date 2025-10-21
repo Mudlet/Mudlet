@@ -1772,6 +1772,72 @@ int TLuaInterpreter::insertLink(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertPopup
 int TLuaInterpreter::insertPopup(lua_State* L)
 {
+    // Table argument support - check if it has named keys (not just array indices)
+    if (lua_istable(L, 1)) {
+        // Check if this is a named-key table (has "text", "commands", or "hints" key)
+        lua_pushstring(L, "text");
+        lua_gettable(L, 1);
+        bool isNamedTable = !lua_isnil(L, -1);
+        lua_pop(L, 1);
+
+        if (isNamedTable) {
+            QString windowName = qsl("main");
+            QString text;
+            QStringList commandList;
+            QStringList hintList;
+            QVector<int> luaReferences;
+            bool useCurrentFormat = false;
+            bool hasText = false, hasCommands = false, hasHints = false;
+
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                QString key = getVerifiedString(L, __func__, -2, "table key");
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
+                    !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                    windowName = getVerifiedString(L, __func__, -1, key);
+                } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
+                    text = getVerifiedString(L, __func__, -1, key);
+                    hasText = true;
+                } else if (!key.compare(QLatin1String("commands"), Qt::CaseInsensitive)) {
+                    parseCommandsOrFunctionsTable(L, __func__, -1, commandList, luaReferences);
+                    hasCommands = true;
+                } else if (!key.compare(QLatin1String("hints"), Qt::CaseInsensitive)) {
+                    parseHintsTable(L, __func__, -1, hintList);
+                    hasHints = true;
+                } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
+                    if (lua_isboolean(L, -1)) {
+                        useCurrentFormat = lua_toboolean(L, -1);
+                    }
+                }
+
+                lua_pop(L, 1);
+            }
+
+            if (!hasText) {
+                return warnArgumentValue(L, __func__, "missing required 'text' in table");
+            }
+            if (!hasCommands) {
+                return warnArgumentValue(L, __func__, "missing required 'commands' in table");
+            }
+            if (!hasHints) {
+                return warnArgumentValue(L, __func__, "missing required 'hints' in table");
+            }
+
+            if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup", commandList.size(), hintList.size());
+                return 2;
+            }
+
+            auto console = CONSOLE(L, windowName);
+            console->insertLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+    }
+
+    // Original positional argument handling
     QStringList commandList;
     QStringList hintList;
     QVector<int> luaReferences;
