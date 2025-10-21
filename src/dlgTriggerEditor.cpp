@@ -6425,6 +6425,11 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 
     // save the current trigger before switching to the new one
     if (pItem != mpCurrentTriggerItem) {
+        // Save the editor state of the current trigger before switching
+        if (mpCurrentTriggerItem) {
+            const int currentID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+            saveEditorState(EditorViewType::cmTriggerView, currentID);
+        }
         saveTrigger();
     }
 
@@ -6583,6 +6588,9 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
+        // Restore the editor state (cursor and scroll position) if previously saved
+        restoreEditorState(EditorViewType::cmTriggerView, ID);
+
         if (!pT->state()) {
             showError(pT->getError());
         }
@@ -6604,6 +6612,11 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
 
     // save the current alias before switching to the new one
     if (pItem != mpCurrentAliasItem) {
+        // Save the editor state of the current alias before switching
+        if (mpCurrentAliasItem) {
+            const int currentID = mpCurrentAliasItem->data(0, Qt::UserRole).toInt();
+            saveEditorState(EditorViewType::cmAliasView, currentID);
+        }
         saveAlias();
     }
 
@@ -6632,6 +6645,9 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
+        // Restore the editor state (cursor and scroll position) if previously saved
+        restoreEditorState(EditorViewType::cmAliasView, ID);
+
         if (!pT->state()) {
             showError(pT->getError());
         }
@@ -6653,6 +6669,11 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
 
     // save the current key before switching to the new one
     if (pItem != mpCurrentKeyItem) {
+        // Save the editor state of the current key before switching
+        if (mpCurrentKeyItem) {
+            const int currentID = mpCurrentKeyItem->data(0, Qt::UserRole).toInt();
+            saveEditorState(EditorViewType::cmKeysView, currentID);
+        }
         saveKey();
     }
 
@@ -6679,6 +6700,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
         mpKeysMainArea->lineEdit_key_binding->setText(keyName);
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
+
+        // Restore the editor state (cursor and scroll position) if previously saved
+        restoreEditorState(EditorViewType::cmKeysView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
@@ -6988,6 +7012,11 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
 
     // save the current action before switching to the new one
     if (pItem != mpCurrentActionItem) {
+        // Save the editor state of the current action before switching
+        if (mpCurrentActionItem) {
+            const int currentID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+            saveEditorState(EditorViewType::cmActionView, currentID);
+        }
         saveAction();
     }
 
@@ -7029,6 +7058,9 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         mpActionsMainArea->lineEdit_action_button_command_up->setText(pT->getCommandButtonUp());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
+
+        // Restore the editor state (cursor and scroll position) if previously saved
+        restoreEditorState(EditorViewType::cmActionView, ID);
 
         // location = 1 = location = bottom is no longer supported
         int location = pT->mLocation;
@@ -7144,6 +7176,11 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
 
     // save the current script before switching to the new one
     if (pItem != mpCurrentScriptItem) {
+        // Save the editor state of the current script before switching
+        if (mpCurrentScriptItem) {
+            const int currentID = mpCurrentScriptItem->data(0, Qt::UserRole).toInt();
+            saveEditorState(EditorViewType::cmScriptView, currentID);
+        }
         saveScript();
     }
 
@@ -7167,6 +7204,9 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
         }
         const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
+
+        // Restore the editor state (cursor and scroll position) if previously saved
+        restoreEditorState(EditorViewType::cmScriptView, ID);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
         mpScriptsMainArea->label_idNumber->setText(QString::number(ID));
@@ -7194,6 +7234,11 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
 
     // save the current timer before switching to the new one
     if (pItem != mpCurrentTimerItem) {
+        // Save the editor state of the current timer before switching
+        if (mpCurrentTimerItem) {
+            const int currentID = mpCurrentTimerItem->data(0, Qt::UserRole).toInt();
+            saveEditorState(EditorViewType::cmTimerView, currentID);
+        }
         saveTimer();
     }
 
@@ -7226,6 +7271,9 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, time.msec()));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
+
+        // Restore the editor state (cursor and scroll position) if previously saved
+        restoreEditorState(EditorViewType::cmTimerView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
@@ -10951,6 +10999,147 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     mpSourceEditorEdbeeDocument->setText(initialText);
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
+}
+
+// saveEditorState( EditorViewType viewType, int itemId )
+//
+// Saves the current editor state (caret position and scroll position) for the given item.
+// This allows restoring the user's position when they return to a previously edited item.
+void dlgTriggerEditor::saveEditorState(EditorViewType viewType, int itemId)
+{
+    if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
+        return;
+    }
+
+    EditorState state;
+
+    // Get the current caret position
+    auto controller = mpSourceEditorEdbee->controller();
+    if (controller && controller->textSelection()) {
+        // Get the caret offset (position in the document)
+        int caretOffset = controller->textSelection()->range(0).anchor();
+
+        // Convert offset to line and column
+        state.caretLine = mpSourceEditorEdbeeDocument->lineFromOffset(caretOffset);
+        int lineStart = mpSourceEditorEdbeeDocument->offsetFromLine(state.caretLine);
+        state.caretColumn = caretOffset - lineStart;
+    }
+
+    // Get the current scroll positions
+    if (mpSourceEditorEdbee->verticalScrollBar()) {
+        state.verticalScrollPos = mpSourceEditorEdbee->verticalScrollBar()->value();
+    }
+    if (mpSourceEditorEdbee->horizontalScrollBar()) {
+        state.horizontalScrollPos = mpSourceEditorEdbee->horizontalScrollBar()->value();
+    }
+
+    // Store the state in the appropriate map based on view type
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+        mTriggerEditorStates[itemId] = state;
+        break;
+    case EditorViewType::cmAliasView:
+        mAliasEditorStates[itemId] = state;
+        break;
+    case EditorViewType::cmScriptView:
+        mScriptEditorStates[itemId] = state;
+        break;
+    case EditorViewType::cmTimerView:
+        mTimerEditorStates[itemId] = state;
+        break;
+    case EditorViewType::cmActionView:
+        mActionEditorStates[itemId] = state;
+        break;
+    case EditorViewType::cmKeysView:
+        mKeyEditorStates[itemId] = state;
+        break;
+    default:
+        break;
+    }
+}
+
+// restoreEditorState( EditorViewType viewType, int itemId )
+//
+// Restores the editor state (caret position and scroll position) for the given item,
+// if it was previously saved. This allows users to return to their previous editing
+// position when switching between items.
+void dlgTriggerEditor::restoreEditorState(EditorViewType viewType, int itemId)
+{
+    if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
+        return;
+    }
+
+    // Retrieve the state from the appropriate map based on view type
+    EditorState state;
+    bool hasState = false;
+
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+        if (mTriggerEditorStates.contains(itemId)) {
+            state = mTriggerEditorStates[itemId];
+            hasState = true;
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (mAliasEditorStates.contains(itemId)) {
+            state = mAliasEditorStates[itemId];
+            hasState = true;
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (mScriptEditorStates.contains(itemId)) {
+            state = mScriptEditorStates[itemId];
+            hasState = true;
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (mTimerEditorStates.contains(itemId)) {
+            state = mTimerEditorStates[itemId];
+            hasState = true;
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (mActionEditorStates.contains(itemId)) {
+            state = mActionEditorStates[itemId];
+            hasState = true;
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (mKeyEditorStates.contains(itemId)) {
+            state = mKeyEditorStates[itemId];
+            hasState = true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (!hasState) {
+        return; // No saved state for this item
+    }
+
+    // Restore the caret position
+    auto controller = mpSourceEditorEdbee->controller();
+    if (controller) {
+        // Clamp the line to valid range
+        int maxLine = qMax(0, mpSourceEditorEdbeeDocument->lineCount() - 1);
+        int line = qMin(state.caretLine, maxLine);
+
+        // Clamp the column to valid range for the line
+        int lineLength = mpSourceEditorEdbeeDocument->lineLength(line);
+        int column = qMin(state.caretColumn, lineLength);
+
+        // Move the caret to the saved position
+        controller->moveCaretTo(line, column, false);
+    }
+
+    // Restore the scroll positions
+    if (mpSourceEditorEdbee->verticalScrollBar()) {
+        mpSourceEditorEdbee->verticalScrollBar()->setValue(state.verticalScrollPos);
+    }
+    if (mpSourceEditorEdbee->horizontalScrollBar()) {
+        mpSourceEditorEdbee->horizontalScrollBar()->setValue(state.horizontalScrollPos);
+    }
 }
 
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)

@@ -611,6 +611,26 @@ private:
     QByteArray mVarEditorSplitterState;
     QByteArray mSearchSplitterState;
 
+    // Structure to store editor state (cursor position and scroll position)
+    struct EditorState {
+        int caretLine = 0;
+        int caretColumn = 0;
+        int verticalScrollPos = 0;
+        int horizontalScrollPos = 0;
+    };
+
+    // Maps to store editor states for each item type, keyed by item ID
+    QMap<int, EditorState> mTriggerEditorStates;
+    QMap<int, EditorState> mAliasEditorStates;
+    QMap<int, EditorState> mScriptEditorStates;
+    QMap<int, EditorState> mTimerEditorStates;
+    QMap<int, EditorState> mActionEditorStates;
+    QMap<int, EditorState> mKeyEditorStates;
+
+    // Helper methods to save and restore editor state
+    void saveEditorState(EditorViewType viewType, int itemId);
+    void restoreEditorState(EditorViewType viewType, int itemId);
+
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
     
