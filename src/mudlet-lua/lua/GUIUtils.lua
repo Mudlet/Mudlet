@@ -585,15 +585,6 @@ end
 ---   setGauge("healthBar", 200, 400, "some text")
 ---   </pre>
 function setGauge(gaugeName, currentValue, maxValue, gaugeText)
-  -- Support table argument format
-  if type(gaugeName) == 'table' then
-    local args = gaugeName
-    gaugeName = args.gaugeName or args.name
-    currentValue = args.currentValue or args.current or args.value
-    maxValue = args.maxValue or args.max
-    gaugeText = args.gaugeText or args.text
-  end
-
   assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
   assert(tonumber(currentValue) ~= nil, 'setGauge: bad argument #2 type (unable to convert '..type(currentValue)..' to a number!)')
   assert(tonumber(maxValue) ~= nil, 'setGauge: bad argument #3 type (unable to convert '..type(maxValue)..' to a number!)')
@@ -1037,15 +1028,6 @@ end
 
 --- <b><u>TODO</u></b> setGaugeStyleSheet(gaugeName, css, cssback)
 function setGaugeStyleSheet(gaugeName, css, cssback, csstext)
-  -- Support table argument format
-  if type(gaugeName) == 'table' then
-    local args = gaugeName
-    gaugeName = args.gaugeName or args.name
-    css = args.css or args.front or args.frontCSS
-    cssback = args.cssback or args.back or args.backCSS
-    csstext = args.csstext or args.text or args.textCSS
-  end
-
   if not setLabelStyleSheet then
     return
   end -- mudlet 1.0.5 and lower compatibility
