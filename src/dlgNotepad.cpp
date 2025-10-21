@@ -263,7 +263,6 @@ void dlgNotepad::restoreSettings()
         return;
     }
 
-    // Read from per-profile profile.ini
     const QString sendControlsVisibleStr = mpHost->readProfileIniData(qsl("Notepad/SendControlsVisible"));
     const bool sendControlsVisible = (sendControlsVisibleStr.compare(qsl("true"), Qt::CaseInsensitive) == 0);
 
