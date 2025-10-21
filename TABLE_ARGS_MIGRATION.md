@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **9**
-Remaining: **48**
+Completed: **10**
+Remaining: **47**
 
 ---
 
@@ -34,7 +34,7 @@ Remaining: **48**
 - [ ] `createMapLabel` - labelID = createMapLabel(areaID, text, posX, posY, posZ, fgRed, fgGreen, fgBlue, bgRed, bgGreen, bgBlue[, zoom, fontSize, showOnTop, noScaling, fontName, foregroundTransparency, backgroundTransparency, temporary])
 
 ### 10 Parameters (1 function)
-- [ ] `highlightRoom` - highlightRoom( roomID, color1Red, color1Green, color1Blue, color2Red, color2Green, color2Blue, highlightRadius, color1Alpha, color2Alpha)
+- [x] `highlightRoom` - highlightRoom( roomID, color1Red, color1Green, color1Blue, color2Red, color2Green, color2Blue, highlightRadius, color1Alpha, color2Alpha) - [a8b9c0d]
 
 ### 9 Parameters (1 function)
 - [ ] `createMapImageLabel` - labelID = createMapImageLabel(areaID, filePath, posx, posy, posz, width, height, zoom, showOnTop[, temporary])
