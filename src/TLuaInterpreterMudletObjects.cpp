@@ -1163,6 +1163,80 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permRegexTrigger
 int TLuaInterpreter::permRegexTrigger(lua_State* L)
 {
+    // Table argument support - check if first arg is table AND second arg doesn't exist (meaning all params in one table)
+    if (lua_istable(L, 1) && lua_gettop(L) == 1) {
+        QString name, parent, script;
+        QStringList patterns;
+        bool hasName = false, hasParent = false, hasPatterns = false, hasScript = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("triggerName"), Qt::CaseInsensitive)) {
+                name = getVerifiedString(L, __func__, -1, key);
+                hasName = true;
+            } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("group"), Qt::CaseInsensitive)) {
+                parent = getVerifiedString(L, __func__, -1, key);
+                hasParent = true;
+            } else if (!key.compare(QLatin1String("patterns"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("pattern"), Qt::CaseInsensitive)) {
+                if (!lua_istable(L, -1)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, "patterns must be a table");
+                }
+                lua_pushnil(L);
+                while (lua_next(L, -2) != 0) {
+                    if (lua_type(L, -1) == LUA_TSTRING) {
+                        patterns << QString::fromUtf8(lua_tostring(L, -1));
+                    }
+                    lua_pop(L, 1);
+                }
+                hasPatterns = true;
+            } else if (!key.compare(QLatin1String("script"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("code"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("luaCode"), Qt::CaseInsensitive)) {
+                Host& host = getHostFromLua(L);
+                TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+                if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(-1); !validationResult) {
+                    lua_pop(L, 2);
+                    lua_pushfstring(L, "permRegexTrigger: bad script value (%s)", validationMessage.toUtf8().constData());
+                    return lua_error(L);
+                }
+                script = QString::fromUtf8(lua_tostring(L, -1));
+                hasScript = true;
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasName) {
+            return warnArgumentValue(L, __func__, "missing required 'name' in table");
+        }
+        if (!hasParent) {
+            return warnArgumentValue(L, __func__, "missing required 'parent' in table");
+        }
+        if (!hasPatterns) {
+            return warnArgumentValue(L, __func__, "missing required 'patterns' in table");
+        }
+        if (!hasScript) {
+            return warnArgumentValue(L, __func__, "missing required 'script' in table");
+        }
+
+        Host& host = getHostFromLua(L);
+        TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+        auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, patterns, script);
+        if (triggerId == -1) {
+            lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+            return lua_error(L);
+        }
+        lua_pushnumber(L, triggerId);
+        return 1;
+    }
+
+    // Original positional argument handling
     const QString name = getVerifiedString(L, __func__, 1, "trigger name");
     const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
 
@@ -1315,6 +1389,80 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permSubstringTrigger
 int TLuaInterpreter::permSubstringTrigger(lua_State* L)
 {
+    // Table argument support - check if first arg is table AND second arg doesn't exist (meaning all params in one table)
+    if (lua_istable(L, 1) && lua_gettop(L) == 1) {
+        QString name, parent, script;
+        QStringList patterns;
+        bool hasName = false, hasParent = false, hasPatterns = false, hasScript = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("triggerName"), Qt::CaseInsensitive)) {
+                name = getVerifiedString(L, __func__, -1, key);
+                hasName = true;
+            } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("group"), Qt::CaseInsensitive)) {
+                parent = getVerifiedString(L, __func__, -1, key);
+                hasParent = true;
+            } else if (!key.compare(QLatin1String("patterns"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("pattern"), Qt::CaseInsensitive)) {
+                if (!lua_istable(L, -1)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, "patterns must be a table");
+                }
+                lua_pushnil(L);
+                while (lua_next(L, -2) != 0) {
+                    if (lua_type(L, -1) == LUA_TSTRING) {
+                        patterns << QString::fromUtf8(lua_tostring(L, -1));
+                    }
+                    lua_pop(L, 1);
+                }
+                hasPatterns = true;
+            } else if (!key.compare(QLatin1String("script"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("code"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("luaCode"), Qt::CaseInsensitive)) {
+                Host& host = getHostFromLua(L);
+                TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+                if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(-1); !validationResult) {
+                    lua_pop(L, 2);
+                    lua_pushfstring(L, "permSubstringTrigger: bad script value (%s)", validationMessage.toUtf8().constData());
+                    return lua_error(L);
+                }
+                script = QString::fromUtf8(lua_tostring(L, -1));
+                hasScript = true;
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasName) {
+            return warnArgumentValue(L, __func__, "missing required 'name' in table");
+        }
+        if (!hasParent) {
+            return warnArgumentValue(L, __func__, "missing required 'parent' in table");
+        }
+        if (!hasPatterns) {
+            return warnArgumentValue(L, __func__, "missing required 'patterns' in table");
+        }
+        if (!hasScript) {
+            return warnArgumentValue(L, __func__, "missing required 'script' in table");
+        }
+
+        Host& host = getHostFromLua(L);
+        TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+        auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, patterns, script);
+        if(triggerID == - 1) {
+            lua_pushfstring(L, "permSubstringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+            return lua_error(L);
+        }
+        lua_pushnumber(L, triggerID);
+        return 1;
+    }
+
+    // Original positional argument handling
     const QString name = getVerifiedString(L, __func__, 1, "trigger name");
     const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
     QStringList regList;

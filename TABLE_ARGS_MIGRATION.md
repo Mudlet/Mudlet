@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **21**
-Remaining: **36**
+Completed: **23**
+Remaining: **34**
 
 ---
 
@@ -85,8 +85,8 @@ Remaining: **36**
 - [ ] `openUserWindow` - openUserWindow(windowName, [restoreLayout], [autoDock], [dockingArea])
 - [x] `permAlias` - permAlias(name, parent, regex, lua code)
 - [x] `permBeginOfLineStringTrigger` - permBeginOfLineStringTrigger(name, parent, pattern table, lua code)
-- [ ] `permRegexTrigger` - permRegexTrigger(name, parent, pattern table, lua code)
-- [ ] `permSubstringTrigger` - permSubstringTrigger( name, parent, pattern table, lua code )
+- [x] `permRegexTrigger` - permRegexTrigger(name, parent, pattern table, lua code)
+- [x] `permSubstringTrigger` - permSubstringTrigger( name, parent, pattern table, lua code )
 - [x] `permTimer` - permTimer(name, parent, seconds, lua code)
 - [ ] `postHTTP` - postHTTP(dataToSend, url, headersTable, file)
 - [ ] `putHTTP` - putHTTP(dataToSend, url, [headersTable], [file])
