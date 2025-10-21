@@ -320,6 +320,13 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 {
+
+    if (auto* app = qApp) {
+        // This allows to forward clicks to widget even if popup menu is opened, therefore e.g. one click is enough to close popup and select room
+        // No more need to first close popup and then perform click on ob
+        app->installEventFilter(this);
+    }
+
     mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -382,6 +389,13 @@ T2DMap::T2DMap(QWidget* parent)
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
+}
+
+T2DMap::~T2DMap()
+{
+    if (auto* app = qApp) {
+        app->removeEventFilter(this);
+    }
 }
 
 void T2DMap::init()
