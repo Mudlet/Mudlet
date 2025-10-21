@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **20**
-Remaining: **37**
+Completed: **21**
+Remaining: **36**
 
 ---
 
@@ -84,7 +84,7 @@ Remaining: **37**
 - [x] `lockSpecialExit` - lockSpecialExit (from roomID, to roomID, special exit command, lockIfTrue) - [3c4d5e6]
 - [ ] `openUserWindow` - openUserWindow(windowName, [restoreLayout], [autoDock], [dockingArea])
 - [x] `permAlias` - permAlias(name, parent, regex, lua code)
-- [ ] `permBeginOfLineStringTrigger` - permBeginOfLineStringTrigger(name, parent, pattern table, lua code)
+- [x] `permBeginOfLineStringTrigger` - permBeginOfLineStringTrigger(name, parent, pattern table, lua code)
 - [ ] `permRegexTrigger` - permRegexTrigger(name, parent, pattern table, lua code)
 - [ ] `permSubstringTrigger` - permSubstringTrigger( name, parent, pattern table, lua code )
 - [x] `permTimer` - permTimer(name, parent, seconds, lua code)
