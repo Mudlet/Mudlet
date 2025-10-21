@@ -1973,7 +1973,10 @@ QString dlgPackageExporter::getActualPath() const
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
-    return mPackagePath.isEmpty() ? lastDir : mPackagePath;
+    // Clean the path to remove trailing slashes and normalize separators
+    // This prevents double slashes when exporting to root directories (e.g., C:/ becomes C://package.mpackage)
+    QString path = mPackagePath.isEmpty() ? lastDir : mPackagePath;
+    return QDir::cleanPath(path);
 }
 
 void dlgPackageExporter::slot_cancelExport()
