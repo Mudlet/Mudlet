@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **15**
-Remaining: **42**
+Completed: **16**
+Remaining: **41**
 
 ---
 
@@ -49,7 +49,7 @@ Remaining: **42**
 - [x] `addCustomLine` - addCustomLine(roomID, id_to, direction, style, color, arrow)
 - [x] `createCommandLine` - createCommandLine([name of userwindow], name, x, y, width, height)
 - [x] `createMiniConsole` - createMiniConsole([name of userwindow], name, x, y, width, height)
-- [ ] `createScrollBox` - createScrollBox([name of parent window], name, x, y, width, height)
+- [x] `createScrollBox` - createScrollBox([name of parent window], name, x, y, width, height)
 
 ### 5 Parameters (25 functions)
 - [ ] `addMapEvent` - addMapEvent(uniquename, event name, parent, display name, arguments)
