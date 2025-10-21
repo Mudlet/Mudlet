@@ -2420,6 +2420,143 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    // Check if first argument is a table for named-key format
+    if (lua_istable(L, 1)) {
+        int fgValue = 0, bgValue = 0;
+        int expiryCount = -1;
+        bool hasFgColor = false, hasBgColor = false, hasCode = false;
+        bool isCodeFunction = false;
+        QString codeString;
+        int codeStackIndex = -1;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("fgColor"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("foregroundColor"), Qt::CaseInsensitive)) {
+                fgValue = getVerifiedInt(L, __func__, -1, key);
+                hasFgColor = true;
+            } else if (!key.compare(QLatin1String("bgColor"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("backgroundColor"), Qt::CaseInsensitive)) {
+                bgValue = getVerifiedInt(L, __func__, -1, key);
+                hasBgColor = true;
+            } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+                if (lua_isfunction(L, -1)) {
+                    isCodeFunction = true;
+                    lua_pushvalue(L, -1);
+                    codeStackIndex = lua_gettop(L);
+                } else if (lua_isstring(L, -1)) {
+                    codeString = QString::fromUtf8(lua_tostring(L, -1));
+                }
+                hasCode = true;
+            } else if (!key.compare(QLatin1String("expireAfter"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("expiryCount"), Qt::CaseInsensitive)) {
+                if (lua_isnumber(L, -1)) {
+                    expiryCount = lua_tonumber(L, -1);
+                    if (expiryCount < 1) {
+                        if (codeStackIndex > 0) lua_pop(L, 1);
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, qsl(
+                            "trigger expiration count must be greater than zero, got %1").arg(expiryCount));
+                    }
+                }
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasFgColor) {
+            if (codeStackIndex > 0) lua_pop(L, 1);
+            lua_pushfstring(L, "tempColorTrigger: bad argument, missing 'fgColor' or 'foregroundColor' in table");
+            return lua_error(L);
+        }
+        if (!hasBgColor) {
+            if (codeStackIndex > 0) lua_pop(L, 1);
+            lua_pushfstring(L, "tempColorTrigger: bad argument, missing 'bgColor' or 'backgroundColor' in table");
+            return lua_error(L);
+        }
+        if (!hasCode) {
+            if (codeStackIndex > 0) lua_pop(L, 1);
+            lua_pushfstring(L, "tempColorTrigger: bad argument, missing 'code' or 'script' in table");
+            return lua_error(L);
+        }
+
+        // Apply color mapping for foreground
+        int foregroundColor = TTrigger::scmIgnored;
+        // clang-format off
+        switch (fgValue) {
+        case 0:     foregroundColor = TTrigger::scmDefault;  break;
+        case 1:     foregroundColor =      8;   break;
+        case 2:     foregroundColor =      0;   break;
+        case 3:     foregroundColor =      9;   break;
+        case 4:     foregroundColor =      1;   break;
+        case 5:     foregroundColor =     10;   break;
+        case 6:     foregroundColor =      2;   break;
+        case 7:     foregroundColor =     11;   break;
+        case 8:     foregroundColor =      3;   break;
+        case 9:     foregroundColor =     12;   break;
+        case 10:    foregroundColor =      4;   break;
+        case 11:    foregroundColor =     13;   break;
+        case 12:    foregroundColor =      5;   break;
+        case 13:    foregroundColor =     14;   break;
+        case 14:    foregroundColor =      6;   break;
+        case 15:    foregroundColor =     15;   break;
+        case 16:    foregroundColor =      7;   break;
+        default:    foregroundColor = fgValue;  break;
+        // clang-format on
+        }
+
+        // Apply color mapping for background
+        int backgroundColor = TTrigger::scmIgnored;
+        // clang-format off
+        switch (bgValue) {
+        case 0:     backgroundColor = TTrigger::scmDefault;  break;
+        case 1:     backgroundColor =      8;   break;
+        case 2:     backgroundColor =      0;   break;
+        case 3:     backgroundColor =      9;   break;
+        case 4:     backgroundColor =      1;   break;
+        case 5:     backgroundColor =     10;   break;
+        case 6:     backgroundColor =      2;   break;
+        case 7:     backgroundColor =     11;   break;
+        case 8:     backgroundColor =      3;   break;
+        case 9:     backgroundColor =     12;   break;
+        case 10:    backgroundColor =      4;   break;
+        case 11:    backgroundColor =     13;   break;
+        case 12:    backgroundColor =      5;   break;
+        case 13:    backgroundColor =     14;   break;
+        case 14:    backgroundColor =      6;   break;
+        case 15:    backgroundColor =     15;   break;
+        case 16:    backgroundColor =      7;   break;
+        default:    backgroundColor = bgValue;  break;
+        // clang-format on
+        }
+
+        if (foregroundColor == TTrigger::scmIgnored && backgroundColor == TTrigger::scmIgnored) {
+            if (codeStackIndex > 0) lua_pop(L, 1);
+            return warnArgumentValue(L, __func__, "only one of foreground and background colors can be -1 (ignored)");
+        }
+
+        int triggerID;
+        if (isCodeFunction) {
+            triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString(), expiryCount);
+            auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+            trigger->mRegisteredAnonymousLuaFunction = true;
+            lua_pushlightuserdata(L, trigger);
+            lua_pushvalue(L, codeStackIndex);
+            lua_settable(L, LUA_REGISTRYINDEX);
+            lua_pop(L, 1);
+        } else {
+            triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, codeString, expiryCount);
+        }
+
+        lua_pushnumber(L, triggerID);
+        return 1;
+    }
+
+    // Original positional argument handling
     int value = getVerifiedInt(L, __func__, 1, "foreground color");
 
     // match ANSI numbering and fixing that would break existing scripts so it has
