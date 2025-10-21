@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **33**
-Remaining: **24**
+Completed: **52**
+Remaining: **5**
 
 ---
 
@@ -30,7 +30,7 @@ Remaining: **24**
 - [x] `setTextFormat` - setTextFormat(windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics, [strikeout], [overline], [reverse])
 
 ### 11 Parameters (2 functions)
-- [ ] `createGauge` - createGauge([name of userwindow], name, width, height, Xpos, Ypos, gaugeText, r, g, b, orientation)
+- [x] `createGauge` - createGauge([name of userwindow], name, width, height, Xpos, Ypos, gaugeText, r, g, b, orientation)
 - [x] `createMapLabel` - labelID = createMapLabel(areaID, text, posX, posY, posZ, fgRed, fgGreen, fgBlue, bgRed, bgGreen, bgBlue[, zoom, fontSize, showOnTop, noScaling, fontName, foregroundTransparency, backgroundTransparency, temporary])
 
 ### 10 Parameters (1 function)
@@ -43,7 +43,7 @@ Remaining: **24**
 - [x] `createLabel` - createLabel([name of userwindow], name, Xpos, Ypos, width, height, fillBackground, [enableClickthrough]) - [c5d6e7f]
 
 ### 7 Parameters (1 function)
-- [ ] `createConsole` - createConsole([name of userwindow], consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+- [x] `createConsole` - createConsole([name of userwindow], consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
 
 ### 6 Parameters (4 functions)
 - [x] `addCustomLine` - addCustomLine(roomID, id_to, direction, style, color, arrow)
@@ -53,31 +53,31 @@ Remaining: **24**
 
 ### 5 Parameters (25 functions)
 - [x] `addMapEvent` - addMapEvent(uniquename, event name, parent, display name, arguments)
-- [ ] `cechoLink` - cechoLink([windowName], text, command, hint, true)
-- [ ] `cechoPopup` - cechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
-- [ ] `cinsertLink` - cinsertLink([windowName], text, command, hint, true)
-- [ ] `cinsertPopup` - cinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
+- [x] `cechoLink` - cechoLink([windowName], text, command, hint, true) *Lua wrapper - inherits from echoLink*
+- [x] `cechoPopup` - cechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault]) *Lua wrapper - inherits from echoPopup*
+- [x] `cinsertLink` - cinsertLink([windowName], text, command, hint, true) *Lua wrapper - inherits from insertLink*
+- [x] `cinsertPopup` - cinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault]) *Lua wrapper - inherits from insertPopup*
 - [x] `createMapper` - createMapper([name of userwindow], x, y, width, height)
-- [ ] `dechoLink` - dechoLink([windowName], text, command, hint, true)
-- [ ] `dechoPopup` - dechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
-- [ ] `dinsertLink` - dinsertLink([windowName], text, command, hint, true)
-- [ ] `dinsertPopup` - dinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
+- [x] `dechoLink` - dechoLink([windowName], text, command, hint, true) *Lua wrapper - inherits from echoLink*
+- [x] `dechoPopup` - dechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault]) *Lua wrapper - inherits from echoPopup*
+- [x] `dinsertLink` - dinsertLink([windowName], text, command, hint, true) *Lua wrapper - inherits from insertLink*
+- [x] `dinsertPopup` - dinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault]) *Lua wrapper - inherits from insertPopup*
 - [x] `echoLink` - echoLink([windowName], text, command, hint, [useCurrentFormatElseDefault])
-- [ ] `hechoLink` - hechoLink([windowName], text, command, hint, true)
-- [ ] `hechoPopup` - hechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
-- [ ] `hinsertLink` - hinsertLink([windowName], text, command, hint, true)
-- [ ] `hinsertPopup` - hinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])
+- [x] `hechoLink` - hechoLink([windowName], text, command, hint, true) *Lua wrapper - inherits from echoLink*
+- [x] `hechoPopup` - hechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault]) *Lua wrapper - inherits from echoPopup*
+- [x] `hinsertLink` - hinsertLink([windowName], text, command, hint, true) *Lua wrapper - inherits from insertLink*
+- [x] `hinsertPopup` - hinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault]) *Lua wrapper - inherits from insertPopup*
 - [x] `insertLink` - insertLink([windowName], text, command, hint, [useCurrentLinkFormat])
-- [ ] `permKey` - permKey(name, parent, [modifier], key code, lua code)
-- [ ] `prefix` - prefix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
-- [ ] `registerNamedEventHandler` - success = registerNamedEventHandler(userName, handlerName, eventName, functionReference, [oneShot])
-- [ ] `registerNamedTimer` - success = registerNamedTimer(userName, timerName, time, functionReference, [repeating])
+- [ ] `permKey` - permKey(name, parent, [modifier], key code, lua code) *4-param function with optional modifier*
+- [x] `prefix` - prefix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
+- [x] `registerNamedEventHandler` - success = registerNamedEventHandler(userName, handlerName, eventName, functionReference, [oneShot])
+- [x] `registerNamedTimer` - success = registerNamedTimer(userName, timerName, time, functionReference, [repeating])
 - [x] `setBackgroundColor` - setBackgroundColor([windowName], r, g, b, [transparency]) - [1f2a3b4]
 - [x] `setBgColor` - setBgColor([windowName], r, g, b, [transparency]) - [5c6d7e8]
 - [x] `setCommandBackgroundColor` - setCommandBackgroundColor([windowName], r, g, b, [transparency])
 - [x] `setCommandForegroundColor` - setCommandForegroundColor([windowName], r, g, b, [transparency])
 - [x] `setCustomEnvColor` - setCustomEnvColor(environmentID, r,g,b,a) - [7f8e9d0]
-- [ ] `suffix` - suffix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
+- [x] `suffix` - suffix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
 
 ### 4 Parameters (20 functions)
 - [x] `getRoomsByPosition` - roomTable = getRoomsByPosition(areaID, x,y,z) - [5e6f7d9]
