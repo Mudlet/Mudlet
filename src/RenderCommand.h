@@ -46,7 +46,8 @@ public:
                         QOpenGLBuffer& vertexBuffer,
                         QOpenGLBuffer& colorBuffer,
                         QOpenGLBuffer& normalBuffer,
-                        QOpenGLBuffer& indexBuffer) = 0;
+                        QOpenGLBuffer& indexBuffer,
+                        QOpenGLBuffer& texCoordBuffer) = 0;
 
     virtual const char* getCommandName() const = 0;
 };
@@ -66,7 +67,8 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderCube"; }
 
@@ -93,7 +95,8 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderLines"; }
 
@@ -120,13 +123,40 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderTriangles"; }
 
 private:
     QVector<float> mVertices;
     QVector<float> mColors;
+    QMatrix4x4 mProjectionMatrix;
+    QMatrix4x4 mViewMatrix;
+    QMatrix4x4 mModelMatrix;
+};
+
+class RenderTexturedTrianglesCommand : public RenderCommand
+{
+public:
+    RenderTexturedTrianglesCommand(const GeometryData& geometry,
+                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+    
+    void execute(QOpenGLFunctions* gl,
+                QOpenGLShaderProgram* shader,
+                GeometryManager* geometryManager,
+                ResourceManager* resourceManager,
+                QOpenGLVertexArrayObject& vao,
+                QOpenGLBuffer& vertexBuffer,
+                QOpenGLBuffer& colorBuffer,
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
+                
+    const char* getCommandName() const override { return "RenderTexturedTriangles"; }
+
+private:
+    GeometryData mGeometry;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
@@ -147,7 +177,8 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderInstancedCubes"; }
 
@@ -180,7 +211,8 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "GLState"; }
 
