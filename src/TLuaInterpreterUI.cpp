@@ -2433,22 +2433,68 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFgColor
 int TLuaInterpreter::setFgColor(lua_State* L)
 {
-    int s = 0;
-    const int n = lua_gettop(L);
-    auto validRange = [](int number) { return number >= 0 && number <= 255; };
     QString windowName;
-    if (n > 3) {
-        windowName = WINDOW_NAME(L, ++s);
+    int luaRed, luaGreen, luaBlue;
+    auto validRange = [](int number) { return number >= 0 && number <= 255; };
+
+    // Support both table and ordered arguments
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // Table argument format: {windowName="name", r=N, g=N, b=N} or {red=N, green=N, blue=N}
+        bool hasR = false, hasG = false, hasB = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
+                windowName = getVerifiedString(L, __func__, -1, "windowName");
+            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                luaRed = getVerifiedInt(L, __func__, -1, "red component");
+                hasR = true;
+            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                luaGreen = getVerifiedInt(L, __func__, -1, "green component");
+                hasG = true;
+            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                luaBlue = getVerifiedInt(L, __func__, -1, "blue component");
+                hasB = true;
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
+        }
+
+        // Validate required parameters
+        if (!hasR) {
+            lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasG) {
+            lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasB) {
+            lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: [windowName], r, g, b
+        int s = 0;
+        const int n = lua_gettop(L);
+        if (n > 3) {
+            windowName = WINDOW_NAME(L, ++s);
+        }
+        luaRed = getVerifiedInt(L, __func__, ++s, "red component value");
+        luaGreen = getVerifiedInt(L, __func__, ++s, "green component value");
+        luaBlue = getVerifiedInt(L, __func__, ++s, "blue component value");
     }
-    const int luaRed = getVerifiedInt(L, __func__, ++s, "red component value");
+
+    // Validate RGB values
     if (!validRange(luaRed)) {
         return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(luaRed));
     }
-    const int luaGreen = getVerifiedInt(L, __func__, ++s, "green component value");
     if (!validRange(luaGreen)) {
         return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(luaGreen));
     }
-    const int luaBlue = getVerifiedInt(L, __func__, ++s, "blue component value");
     if (!validRange(luaBlue)) {
         return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(luaBlue));
     }
