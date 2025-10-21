@@ -23,11 +23,9 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QEvent>
 #include <QMouseEvent>
 #include <QPointF>
-#include "post_guard.h"
 
 CustomLineDrawHandler::CustomLineDrawHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)

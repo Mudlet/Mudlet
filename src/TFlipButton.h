@@ -23,10 +23,8 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QPointer>
 #include <QPushButton>
-#include "post_guard.h"
 
 class Host;
 class TAction;

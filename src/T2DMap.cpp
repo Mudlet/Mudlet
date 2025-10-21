@@ -52,7 +52,6 @@
 #endif
 
 
-#include "pre_guard.h"
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
@@ -63,7 +62,6 @@
 #include <QtEvents>
 #include <QtUiTools>
 #include <QWidget>
-#include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
 

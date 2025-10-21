@@ -19,10 +19,8 @@
 
 #include "RoomMoveActivationHandler.h"
 
-#include "pre_guard.h"
 #include <QMouseEvent>
 #include <QRect>
-#include "post_guard.h"
 
 RoomMoveActivationHandler::RoomMoveActivationHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)

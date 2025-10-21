@@ -23,10 +23,8 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_composer.h"
 #include <QPointer>
-#include "post_guard.h"
 
 class Host;
 

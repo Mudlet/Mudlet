@@ -41,7 +41,6 @@
 #include "dlgTriggerEditor.h"
 #include "enums.h"
 
-#include "pre_guard.h"
 #include <QColor>
 #include <QFile>
 #include <QFont>
@@ -50,7 +49,6 @@
 #include <QPointer>
 #include <QStack>
 #include <QTextStream>
-#include "post_guard.h"
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
@@ -561,11 +559,11 @@ public:
     // Command echo mode getters and setters
     CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
     void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
-    
+
     // Backward compatibility methods - for existing code that expects boolean behavior
     bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
-    void setPrintCommand(bool print) { 
-        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; 
+    void setPrintCommand(bool print) {
+        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never;
     }
 
 public:
@@ -835,7 +833,7 @@ private:
 
     // Experiment system storage: key -> enabled state
     QMap<QString, bool> mExperiments;
-    
+
     // Static whitelist of valid experiments
     static const QSet<QString> mValidExperiments;
 

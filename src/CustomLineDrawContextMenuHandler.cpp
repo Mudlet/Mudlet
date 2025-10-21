@@ -24,12 +24,10 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QAction>
 #include <QEvent>
 #include <QMenu>
 #include <QMouseEvent>
-#include "post_guard.h"
 
 CustomLineDrawContextMenuHandler::CustomLineDrawContextMenuHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)

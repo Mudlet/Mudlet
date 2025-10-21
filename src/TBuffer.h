@@ -26,7 +26,6 @@
 
 #include "TTextCodec.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QChar>
 #include <QColor>
@@ -40,7 +39,6 @@
 #include <QStringList>
 #include <QTime>
 #include <QVector>
-#include "post_guard.h"
 #include "TEncodingTable.h"
 #include "TLinkStore.h"
 #include "TMxpMudlet.h"
@@ -70,13 +68,13 @@ struct HyperlinkStyling {
     bool isOverlined = false;
     bool hasCustomStyling = false; // Tracks if any custom styling was provided
     bool hasBaseCustomStyling = false; // Tracks if base (non-pseudo-class) styling was provided
-    
+
     // Extended text decoration support
     enum UnderlineStyle {
         UnderlineNone,
         UnderlineSolid,     // Standard underline
         UnderlineWavy,      // Squiggly/wavy underline
-        UnderlineDotted,    // Dotted underline  
+        UnderlineDotted,    // Dotted underline
         UnderlineDashed     // Dashed underline
     };
     UnderlineStyle underlineStyle = UnderlineSolid;
@@ -86,7 +84,7 @@ struct HyperlinkStyling {
     bool hasUnderlineColor = false;
     bool hasOverlineColor = false;
     bool hasStrikeoutColor = false;
-    
+
     // CSS Link State Support with Accessibility
     enum LinkState {
         StateDefault,       // Default/unvisited (:link)
@@ -96,7 +94,7 @@ struct HyperlinkStyling {
         StateFocus,         // Keyboard focus (:focus)
         StateFocusVisible   // Visible keyboard focus (:focus-visible)
     };
-    
+
     // State-specific styling containers
     struct StateStyle {
         QColor foregroundColor;
@@ -117,19 +115,19 @@ struct HyperlinkStyling {
         UnderlineStyle underlineStyle = UnderlineSolid;
         bool hasCustomStyling = false;
     };
-    
+
     // State-specific styles
     StateStyle linkStyle;           // :link (unvisited)
-    StateStyle visitedStyle;        // :visited 
+    StateStyle visitedStyle;        // :visited
     StateStyle hoverStyle;          // :hover
     StateStyle activeStyle;         // :active
     StateStyle focusStyle;          // :focus
     StateStyle focusVisibleStyle;   // :focus-visible
     StateStyle anyLinkStyle;        // :any-link (applies to both :link and :visited)
-    
+
     // State tracking
     LinkState currentState = StateDefault;
-    
+
     // Methods to get effective styling for current state
     StateStyle getEffectiveStyle() const;
 };
@@ -263,7 +261,7 @@ public:
     bool isUnderlineWavy() const { return mFlags & UnderlineWavy; }
     bool isUnderlineDotted() const { return mFlags & UnderlineDotted; }
     bool isUnderlineDashed() const { return mFlags & UnderlineDashed; }
-    
+
     // Decoration color accessors
     const QColor& underlineColor() const { return mUnderlineColor; }
     const QColor& overlineColor() const { return mOverlineColor; }
@@ -271,7 +269,7 @@ public:
     bool hasCustomUnderlineColor() const { return mHasCustomUnderlineColor; }
     bool hasCustomOverlineColor() const { return mHasCustomOverlineColor; }
     bool hasCustomStrikeoutColor() const { return mHasCustomStrikeoutColor; }
-    
+
     // Decoration color setters
     void setUnderlineColor(const QColor& color) { mUnderlineColor = color; mHasCustomUnderlineColor = true; }
     void setOverlineColor(const QColor& color) { mOverlineColor = color; mHasCustomOverlineColor = true; }
@@ -358,7 +356,7 @@ private:
     // Kept as a separate flag because it must often be handled separately
     bool mIsSelected = false;
     int mLinkIndex = 0;
-    
+
     // Enhanced decoration color support for OSC 8 hyperlinks
     QColor mUnderlineColor;
     QColor mOverlineColor;
@@ -429,7 +427,7 @@ public:
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
     void appendLog(const QString &text);
-    
+
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
 
@@ -591,7 +589,7 @@ private:
     // Enhanced OSC 8 hyperlink styling and menu support
     Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
     QStringList mCurrentHyperlinkMenu; // Format: "Label|Command|Label|Command..."
-    
+
     // Link state tracking for interactive pseudo-classes
     QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
     QMap<int, bool> mVisitedLinks; // Track which links have been visited (base state)
@@ -600,7 +598,7 @@ private:
     int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
     int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
     int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
-    
+
 public:
     // Methods for link state management (used by TTextEdit event handlers)
     void setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState state);
@@ -615,7 +613,7 @@ public:
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
     int getLinkIndexAt(int line, int column) const; // Get link index at specific position
-    
+
 private:
     // Update all TChar objects that belong to a specific link with effective styling
     void updateLinkCharacters(int linkIndex);

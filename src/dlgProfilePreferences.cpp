@@ -37,7 +37,6 @@
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/models/textdocumentscopes.h"
 
-#include "pre_guard.h"
 #include <chrono>
 #include <QtConcurrent>
 #include <QColorDialog>
@@ -52,7 +51,6 @@
 #include <QKeySequenceEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -800,13 +798,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
-    
+
     // Set maximum buffer size based on system capabilities and update tooltip
     if (pHost->mpConsole) {
         const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
         console_buffer_size_spinBox->setMaximum(maxBufferSize);
         checkBox_useMaxBufferSize->setToolTip(tr("<p>Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.</p>").arg(maxBufferSize));
-        
+
         // If using max buffer size, disable the spinbox and set it to max
         if (pHost->getUseMaxConsoleBufferSize()) {
             console_buffer_size_spinBox->setValue(maxBufferSize);
@@ -1295,7 +1293,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
     connect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeLargeAreaExitArrows);
     connect(checkBox_invertMapZoom, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeInvertMapZoom);
-    
+
     // Console buffer settings
     connect(checkBox_useMaxBufferSize, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleUseMaxBufferSize);
 
@@ -1429,7 +1427,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
-    
+
     // Console buffer settings
     disconnect(checkBox_useMaxBufferSize, &QCheckBox::toggled, nullptr, nullptr);
 }
@@ -2894,20 +2892,20 @@ void dlgProfilePreferences::slot_saveAndClose()
         // Save console buffer settings and apply them
         const bool useMaxBuffer = checkBox_useMaxBufferSize->isChecked();
         int newBufferSize;
-        
+
         if (useMaxBuffer && pHost->mpConsole) {
             newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
         } else {
             newBufferSize = console_buffer_size_spinBox->value();
         }
-        
+
         // Calculate batch delete size as 5% of buffer size (minimum 100)
         const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-        
+
         if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
             pHost->setConsoleBufferSize(newBufferSize);
             pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
-            
+
             // Apply the new buffer size to the main console
             if (pHost->mpConsole) {
                 pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
@@ -4559,7 +4557,7 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     if (!pHost) {
         return;
     }
-    
+
     if (checked) {
         // When max is enabled, set spinbox to max value and disable it
         if (pHost->mpConsole) {

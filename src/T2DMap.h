@@ -28,7 +28,6 @@
 #include "dlgMapLabel.h"
 #include "dlgRoomProperties.h"
 
-#include "pre_guard.h"
 #include <QCache>
 #include <QColor>
 #include <QFont>
@@ -39,7 +38,6 @@
 #include <QTreeWidget>
 #include <QWidget>
 #include <QtConcurrent>
-#include "post_guard.h"
 
 #include <QList>
 #include <memory>

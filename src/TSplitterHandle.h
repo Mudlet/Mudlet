@@ -22,9 +22,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QSplitterHandle>
-#include "post_guard.h"
 
 class TSplitter;
 

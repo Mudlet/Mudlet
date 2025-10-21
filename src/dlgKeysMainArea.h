@@ -23,9 +23,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_keybindings_main_area.h"
-#include "post_guard.h"
 
 
 class dlgKeysMainArea : public QWidget, public Ui::keybindings_main_area

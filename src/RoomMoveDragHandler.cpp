@@ -23,13 +23,11 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QMouseEvent>
 #include <QPointF>
 #include <QRect>
 #include <QSet>
 #include <QtGlobal>
-#include "post_guard.h"
 
 RoomMoveDragHandler::RoomMoveDragHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)

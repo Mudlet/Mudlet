@@ -34,7 +34,6 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QtUiTools>
 #include <QColorDialog>
@@ -43,7 +42,6 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QTime>
-#include "post_guard.h"
 #include <chrono>
 #include <sstream>
 
@@ -966,11 +964,11 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     // Prevent rapid duplicate clicks on the same profile
     static QString lastProfileClicked;
     static QTime lastClickTime;
-    
+
     if (profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
         return;
     }
-    
+
     lastProfileClicked = profile_name;
     lastClickTime = QTime::currentTime();
 
@@ -1547,7 +1545,7 @@ void dlgConnectionProfiles::slot_copyProfile()
             const QSignalBlocker blocker(character_password_entry);
             character_password_entry->setText(oldPassword);
         }
-        
+
         if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
             writeSecurePassword(profile_name, oldPassword);
         }
@@ -2295,7 +2293,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                             const QSignalBlocker blocker(character_password_entry);
                             character_password_entry->setText(retrievedPassword);
                         }
-                        
+
                         if (retrievedPassword.isEmpty()) {
                             qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
                         } else {
@@ -2357,7 +2355,7 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
     // Temporarily block textChanged signal to avoid triggering save on programmatic setText
     {
         const QSignalBlocker blocker(character_password_entry);
-        
+
         if (!password.isEmpty()) {
             character_password_entry->setText(password);
         } else if (!oldPassword.isEmpty()) {
