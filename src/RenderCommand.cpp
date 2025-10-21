@@ -19,9 +19,7 @@
 
 #include "RenderCommand.h"
 
-#include "pre_guard.h"
 #include <QDebug>
-#include "post_guard.h"
 
 // RenderCubeCommand implementation
 RenderCubeCommand::RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a,
@@ -40,9 +38,9 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLBuffer& colorBuffer,
                                QOpenGLBuffer& normalBuffer,
                                QOpenGLBuffer& indexBuffer)
-{    
+{
     GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA);
-    
+
     // Set uniforms
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
@@ -52,7 +50,7 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
     // Normal matrix (inverse transpose of model matrix)
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
-    
+
     geometryManager->renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
@@ -75,11 +73,11 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
                                 QOpenGLBuffer& indexBuffer)
 {
     GeometryData lineGeometry = geometryManager->generateLineGeometry(mVertices, mColors);
-    
+
     if (lineGeometry.isEmpty()) {
         return;
     }
-    
+
     // Set uniforms
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
@@ -88,7 +86,7 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
-    
+
     geometryManager->renderGeometry(lineGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_LINES);
 }
 
@@ -111,11 +109,11 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
                                     QOpenGLBuffer& indexBuffer)
 {
     GeometryData triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
-    
+
     if (triangleGeometry.isEmpty()) {
         return;
     }
-    
+
     // Set uniforms
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
@@ -124,7 +122,7 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
-    
+
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
@@ -148,7 +146,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     if (mInstances.isEmpty()) {
         return;
     }
-    
+
     // Set uniforms
     QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
     shader->setUniformValue("uMVP", mvp);
@@ -157,14 +155,14 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
-    
+
     // For now, we need to create a temporary instance buffer
     // This will be improved when we add the instance buffer to ModernGLWidget
     QOpenGLBuffer instanceBuffer(QOpenGLBuffer::VertexBuffer);
     instanceBuffer.create();
-    
+
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, instanceBuffer, resourceManager, GL_TRIANGLES);
-    
+
     instanceBuffer.destroy();
 }
 

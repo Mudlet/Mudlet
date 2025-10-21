@@ -26,11 +26,9 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QColorDialog>
 #include <QMenu>
 #include <QPainter>
-#include "post_guard.h"
 
 
 dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)

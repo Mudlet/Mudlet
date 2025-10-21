@@ -42,11 +42,9 @@
 #endif
 
 
-#include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
 #include <QStandardPaths>
-#include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
 

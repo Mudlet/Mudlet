@@ -283,8 +283,6 @@ set(mudlet_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
-    post_guard.h
-    pre_guard.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
@@ -305,7 +303,6 @@ set(mudlet_HDRS
     TEncodingTable.h
     TEntityHandler.h
     TEntityResolver.h
-    testdbg.h
     TEvent.h
     TFlipButton.h
     TForkedProcess.h

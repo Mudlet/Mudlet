@@ -24,10 +24,8 @@
 
 #include "TVar.h"
 
-#include "pre_guard.h"
 #include <QTreeWidgetItem>
 #include <QDebug>
-#include "post_guard.h"
 
 
 VarUnit::VarUnit()
