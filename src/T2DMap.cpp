@@ -62,6 +62,7 @@
 #include <QStandardPaths>
 #include <QtEvents>
 #include <QtUiTools>
+#include <QWidget>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
@@ -281,31 +282,44 @@ bool T2DMap::InteractionDispatcher::dispatch(MapInteractionContext& context) con
 bool T2DMap::eventFilter(QObject* watched, QEvent* event)
 {
     if (mActiveContextMenu && event && event->type() == QEvent::MouseButtonPress) {
+        if (auto* activeMenu = mActiveContextMenu.data()) {
+            if (watched == activeMenu) {
+                return QObject::eventFilter(watched, event);
+            }
+
+            if (auto* watchedWidget = qobject_cast<QWidget*>(watched); watchedWidget && activeMenu->isAncestorOf(watchedWidget)) {
+                return QObject::eventFilter(watched, event);
+            }
+        }
+
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
-        if (mouseEvent && mouseEvent->button() == Qt::RightButton) {
-            const QPoint globalPos = mouseEvent->globalPosition().toPoint();
-            const QPoint localPos = mapFromGlobal(globalPos);
+        if (mouseEvent) {
+            const auto button = mouseEvent->button();
+            if (button == Qt::LeftButton || button == Qt::RightButton) {
+                const QPoint globalPos = mouseEvent->globalPosition().toPoint();
+                const QPoint localPos = mapFromGlobal(globalPos);
 
-            if (rect().contains(localPos)) {
-                auto menu = mActiveContextMenu;
-                mActiveContextMenu.clear();
+                if (rect().contains(localPos)) {
+                    auto menu = mActiveContextMenu;
+                    mActiveContextMenu.clear();
 
-                if (menu) {
-                    menu->close();
+                    if (menu) {
+                        menu->close();
+                    }
+
+                    const QPointF localPosF(localPos);
+                    const QPointF globalPosF(globalPos);
+
+                    auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF,
+                        button, button, mouseEvent->modifiers());
+                    auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF,
+                        button, Qt::NoButton, mouseEvent->modifiers());
+
+                    QCoreApplication::postEvent(this, pressEvent);
+                    QCoreApplication::postEvent(this, releaseEvent);
+
+                    return true;
                 }
-
-                const QPointF localPosF(localPos);
-                const QPointF globalPosF(globalPos);
-
-                auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF,
-                    Qt::RightButton, Qt::RightButton, mouseEvent->modifiers());
-                auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF,
-                    Qt::RightButton, Qt::NoButton, mouseEvent->modifiers());
-
-                QCoreApplication::postEvent(this, pressEvent);
-                QCoreApplication::postEvent(this, releaseEvent);
-
-                return true;
             }
         }
     }
