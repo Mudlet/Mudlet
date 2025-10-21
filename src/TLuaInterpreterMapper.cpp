@@ -3764,10 +3764,60 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCoordinates
 int TLuaInterpreter::setRoomCoordinates(lua_State* L)
 {
-    const int id = getVerifiedInt(L, __func__, 1, "roomID");
-    const int x = getVerifiedInt(L, __func__, 2, "x");
-    const int y = getVerifiedInt(L, __func__, 3, "y");
-    const int z = getVerifiedInt(L, __func__, 4, "z");
+    int id, x, y, z;
+
+    // Support both table and ordered arguments
+    if (lua_istable(L, 1)) {
+        // Table argument format: {roomID=id, x=x, y=y, z=z}
+        bool hasRoomID = false, hasX = false, hasY = false, hasZ = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("roomId"), Qt::CaseInsensitive)) {
+                id = getVerifiedInt(L, __func__, -1, "roomID");
+                hasRoomID = true;
+            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+                x = getVerifiedInt(L, __func__, -1, "x");
+                hasX = true;
+            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+                y = getVerifiedInt(L, __func__, -1, "y");
+                hasY = true;
+            } else if (!key.compare(QLatin1String("z"), Qt::CaseInsensitive)) {
+                z = getVerifiedInt(L, __func__, -1, "z");
+                hasZ = true;
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
+        }
+
+        // Validate required parameters
+        if (!hasRoomID) {
+            lua_pushfstring(L, "%s: missing required 'roomID' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasX) {
+            lua_pushfstring(L, "%s: missing required 'x' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasY) {
+            lua_pushfstring(L, "%s: missing required 'y' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasZ) {
+            lua_pushfstring(L, "%s: missing required 'z' in table", __func__);
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: roomID, x, y, z
+        id = getVerifiedInt(L, __func__, 1, "roomID");
+        x = getVerifiedInt(L, __func__, 2, "x");
+        y = getVerifiedInt(L, __func__, 3, "y");
+        z = getVerifiedInt(L, __func__, 4, "z");
+    }
+
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->setRoomCoordinates(id, x, y, z));
     host.mpMap->update();
