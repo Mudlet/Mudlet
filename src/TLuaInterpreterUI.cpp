@@ -358,26 +358,104 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createLabel
 int TLuaInterpreter::createLabel(lua_State* L)
 {
-    QString labelName;
-    QString windowName = QLatin1String("main");
+    // Support both table and ordered arguments
+    if (lua_istable(L, 1)) {
+        // Table argument format: {windowName="name", name="labelName", x=x, y=y, width=w, height=h, fillBackground=bool, clickthrough=bool}
+        QString windowName = QLatin1String("main");
+        QString labelName;
+        int x = 0, y = 0, width = 0, height = 0;
+        bool fillBackground = false, clickthrough = false;
+        bool hasName = false, hasX = false, hasY = false, hasWidth = false, hasHeight = false, hasFillBackground = false;
 
-    if (lua_type(L, 1) != LUA_TSTRING) {
-        lua_pushfstring(L, "createLabel: bad argument #1 type (label or parent window name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TSTRING)) {
-        windowName = lua_tostring(L, 1);
-        labelName = lua_tostring(L, 2);
-        createLabelUserWindow(L, windowName, labelName);
-    } else if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TNUMBER)) {
-        labelName = lua_tostring(L, 1);
-        createLabelMainWindow(L, labelName);
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                windowName = getVerifiedString(L, __func__, -1, "windowName");
+            } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("labelName"), Qt::CaseInsensitive)) {
+                labelName = getVerifiedString(L, __func__, -1, "label name");
+                hasName = true;
+            } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive) || !key.compare(QLatin1String("Xpos"), Qt::CaseInsensitive)) {
+                x = getVerifiedInt(L, __func__, -1, "x");
+                hasX = true;
+            } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive) || !key.compare(QLatin1String("Ypos"), Qt::CaseInsensitive)) {
+                y = getVerifiedInt(L, __func__, -1, "y");
+                hasY = true;
+            } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                width = getVerifiedInt(L, __func__, -1, "width");
+                hasWidth = true;
+            } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                height = getVerifiedInt(L, __func__, -1, "height");
+                hasHeight = true;
+            } else if (!key.compare(QLatin1String("fillBackground"), Qt::CaseInsensitive)) {
+                fillBackground = getVerifiedBool(L, __func__, -1, "fillBackground");
+                hasFillBackground = true;
+            } else if (!key.compare(QLatin1String("clickthrough"), Qt::CaseInsensitive) || !key.compare(QLatin1String("enableClickthrough"), Qt::CaseInsensitive)) {
+                clickthrough = getVerifiedBool(L, __func__, -1, "clickthrough");
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
+        }
+
+        // Validate required parameters
+        if (!hasName) {
+            lua_pushfstring(L, "%s: missing required 'name' or 'labelName' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasX) {
+            lua_pushfstring(L, "%s: missing required 'x' or 'Xpos' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasY) {
+            lua_pushfstring(L, "%s: missing required 'y' or 'Ypos' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasWidth) {
+            lua_pushfstring(L, "%s: missing required 'width' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasHeight) {
+            lua_pushfstring(L, "%s: missing required 'height' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasFillBackground) {
+            lua_pushfstring(L, "%s: missing required 'fillBackground' in table", __func__);
+            return lua_error(L);
+        }
+
+        // Create the label
+        Host& host = getHostFromLua(L);
+        if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+            return warnArgumentValue(L, __func__, message, true);
+        }
+
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
+        // Ordered argument format - delegate to existing implementation
+        QString labelName;
+        QString windowName = QLatin1String("main");
 
-    return 1;
+        if (lua_type(L, 1) != LUA_TSTRING) {
+            lua_pushfstring(L, "createLabel: bad argument #1 type (label or parent window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TSTRING)) {
+            windowName = lua_tostring(L, 1);
+            labelName = lua_tostring(L, 2);
+            createLabelUserWindow(L, windowName, labelName);
+        } else if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TNUMBER)) {
+            labelName = lua_tostring(L, 1);
+            createLabelMainWindow(L, labelName);
+        } else {
+            lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+
+        return 1;
+    }
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
