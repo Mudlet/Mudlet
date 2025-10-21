@@ -23,7 +23,6 @@
 #include <QDebug>
 #include <QFile>
 #include <QImage>
-#include "post_guard.h"
 
 GeometryManager::GeometryManager()
 {
@@ -58,7 +57,7 @@ void GeometryManager::cleanup()
     if (mPlayerIconTemplate.has_value()) {
         mPlayerIconTemplate->clearTexture();
     }
-    
+
     mCubeTemplate.clear();
     mPlayerIconTemplate.reset();
     mInitialized = false;
@@ -213,11 +212,11 @@ GeometryData GeometryManager::generatePlayerIconGeometry(float scale, float rotX
     // Check if we need to regenerate the template
     static float lastScale = -1.0f;
     static float lastRotX = -999.0f;
-    static float lastRotY = -999.0f; 
+    static float lastRotY = -999.0f;
     static float lastRotZ = -999.0f;
-    
+
     bool parametersChanged = (scale != lastScale || rotX != lastRotX || rotY != lastRotY || rotZ != lastRotZ);
-    
+
     // Only regenerate if parameters changed or template doesn't exist
     if (parametersChanged || !mPlayerIconTemplate.has_value()) {
         loadPlayerIconTemplate(scale, rotX, rotY, rotZ);
@@ -226,7 +225,7 @@ GeometryData GeometryManager::generatePlayerIconGeometry(float scale, float rotX
         lastRotY = rotY;
         lastRotZ = rotZ;
     }
-    
+
     return mPlayerIconTemplate.value_or(GeometryData{});
 }
 
@@ -577,30 +576,30 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     if (geometry.isEmpty()) {
         return;
     }
-    
+
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
-    
+
     // Bind PBR textures if available
     if (geometry.hasPBRTextures()) {
-        
+
         // Bind base color texture to unit 0
         if (geometry.baseColorTextureId != 0) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, geometry.baseColorTextureId);
         }
-        
+
         // Bind metallic/roughness texture to unit 1
         if (geometry.metallicRoughnessTextureId != 0) {
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, geometry.metallicRoughnessTextureId);
         }
-        
+
         // Bind normal texture to unit 2
         if (geometry.normalTextureId != 0) {
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, geometry.normalTextureId);
         }
-        
+
         // Reset to texture unit 0
         glActiveTexture(GL_TEXTURE0);
     } else if (geometry.hasTexture()) {
@@ -611,7 +610,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     } else {
         // No textures available for rendering
     }
-    
+
     // Upload vertex data (cached)
     vertexBuffer.bind();
     if (!geometry.verticesUploaded) {
@@ -620,7 +619,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     }
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
-    
+
     // Upload color data (cached)
     colorBuffer.bind();
     if (!geometry.colorsUploaded) {
@@ -629,7 +628,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     }
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(1);
-    
+
     // Upload normal data (cached)
     normalBuffer.bind();
     if (!geometry.normalsUploaded) {
@@ -638,7 +637,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     }
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
-    
+
     // Upload texture coordinate data if available (cached)
     if (!geometry.textureCoords.isEmpty()) {
         texCoordBuffer.bind();
@@ -649,7 +648,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
         glVertexAttribPointer(6, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
         glEnableVertexAttribArray(6);
     }
-    
+
     // Draw the geometry - use indexed rendering if indices are available
     if (geometry.hasIndices()) {
         // Upload index data (cached)
@@ -658,7 +657,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
             indexBuffer.allocate(geometry.indices.data(), geometry.indices.size() * sizeof(unsigned int));
             geometry.indicesUploaded = true;
         }
-        
+
         // Draw using indices
         glDrawElements(drawMode, geometry.indexCount(), GL_UNSIGNED_INT, nullptr);
     } else {
@@ -680,10 +679,10 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     if (geometry.isEmpty()) {
         return;
     }
-    
+
     // Call the textured render method
     renderGeometry(geometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer, drawMode);
-    
+
     // Track draw call statistics
     if (resourceManager) {
         if (geometry.hasIndices()) {

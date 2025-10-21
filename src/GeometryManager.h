@@ -31,7 +31,6 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include "post_guard.h"
 
 struct GeometryData {
     QVector<float> vertices;
@@ -79,7 +78,7 @@ struct GeometryData {
         indicesUploaded = false;
         // Note: texture cleanup is handled by clearTexture()
     }
-    
+
     void clearTexture() {
         if (textureId != 0) {
             glDeleteTextures(1, &textureId);
@@ -114,11 +113,11 @@ struct GeometryData {
     bool hasIndices() const {
         return !indices.isEmpty();
     }
-    
+
     bool hasTexture() const {
         return (textureId != 0 || baseColorTextureId != 0) && !textureCoords.isEmpty();
     }
-    
+
     bool hasPBRTextures() const {
         return baseColorTextureId != 0 || metallicRoughnessTextureId != 0 || normalTextureId != 0;
     }
@@ -231,7 +230,7 @@ private:
 
     void generateCubeTemplate();
     GeometryData transformCubeTemplate(QMatrix4x4 transform, float r, float g, float b, float a);
-    
+
     void loadPlayerIconTemplate(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
 };
 

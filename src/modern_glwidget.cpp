@@ -35,7 +35,6 @@
 #include <QDebug>
 #include <QPainter>
 #include <QKeyEvent>
-#include "post_guard.h"
 
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
@@ -423,7 +422,7 @@ void ModernGLWidget::renderRooms()
                 if (!playerIcon.isEmpty()) {
                     // Create modified geometry positioned slightly above the current room
                     GeometryData positionedIcon = playerIcon;
-                    
+
                     // Determine player icon position based on whether smooth animation is active
                     float playerX, playerY, playerZ;
                     if (mCameraSmoothAnimating && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
@@ -437,7 +436,7 @@ void ModernGLWidget::renderRooms()
                         playerY = ry;
                         playerZ = rz;
                     }
-                    
+
                     // Position above the room using the adjustable height
                     for (int i = 2; i < positionedIcon.vertices.size(); i += 3) {
                         positionedIcon.vertices[i] += (playerZ + mPlayerIconHeight); // Use adjustable height
@@ -1110,7 +1109,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     if (!mpMap||!mpMap->mpRoomDB) {
         return;
     }
-        
+
     if (event->buttons() & Qt::LeftButton) {        // translation on xy-plane
         auto eventPos = event->position().toPoint();
         const int x = eventPos.x();
@@ -1233,11 +1232,11 @@ void ModernGLWidget::slot_resetPlayerIcon()
     mPlayerIconRotationY = -56.0f;
     mPlayerIconRotationZ = 20.0f;
     mPlayerIconScale = 0.0055f;
-    
+
 #ifdef DEBUG_PLAYER_ICON_CONTROLS
     qDebug() << "Player Icon RESET - Height:" << mPlayerIconHeight << "RotX:" << mPlayerIconRotationX << "RotY:" << mPlayerIconRotationY << "RotZ:" << mPlayerIconRotationZ << "Scale:" << mPlayerIconScale;
 #endif
-    
+
     // Reset the slider values to their defaults (need to emit signals to update UI)
     // Convert back to slider values
     emit resetPlayerIconSliders(static_cast<int>(mPlayerIconHeight * 100.0f), // height: 51
@@ -1245,7 +1244,7 @@ void ModernGLWidget::slot_resetPlayerIcon()
                                 static_cast<int>(mPlayerIconRotationY),        // rotY: -56
                                 static_cast<int>(mPlayerIconRotationZ),        // rotZ: 20
                                 static_cast<int>(mPlayerIconScale * 10000.0f)); // scale: 55
-    
+
     update();
 }
 
