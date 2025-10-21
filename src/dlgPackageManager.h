@@ -28,7 +28,7 @@
 #include "pre_guard.h"
 #include "ui_package_manager.h"
 #include <QDialog>
-#include <QTableWidget>
+#include <QListWidget>
 #include <QTextBrowser>
 #include "post_guard.h"
 
@@ -43,22 +43,37 @@ public:
     Q_DISABLE_COPY(dlgPackageManager)
     explicit dlgPackageManager(QWidget* parent, Host*);
     ~dlgPackageManager() override;
-    void resetPackageTable();
+    bool readPackageRepositoryFile();
+    void resetPackageList();
 
 signals:
     void packageManagerClosing(const QString& profileName);
 
 private slots:
-    void slot_installPackage();
+    void slot_installPackageFromFile();
+    void slot_installPackageFromRepository();
+    void slot_itemChanged(QListWidgetItem*);
+    void slot_openBugWebsite();
+    void slot_openPackageWebsite();
+    void slot_onIconDownloaded(QNetworkReply *reply);
     void slot_removePackages();
-    void slot_itemClicked(QTableWidgetItem*);
+    void slot_searchTextChanged(const QString &searchText);
+    void slot_setPackageList();
+    void slot_toggleInstallRepoButton();
     void slot_toggleRemoveButton();
 
 private:
+    void clearPackageDetails();
     void closeEvent(QCloseEvent* event) override;
-    void fillAdditionalDetails(const QMap<QString, QString>&);
+    void downloadIcon(const QString &packageName);
+    void downloadRepositoryIndex();    
+    void fillPackageDetails(const QString &name, const QString &title, const QString &author, const QString &version);
 
     Host* mpHost = nullptr;
+    QJsonArray repositoryPackages;
+    QListWidgetItem* statusAvailable;
+    QListWidgetItem* statusInstalled;
+    QListWidgetItem* statusUpdates;
 };
 
 #endif
