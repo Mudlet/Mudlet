@@ -43,6 +43,7 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QMessageBox>
 #include <QNetworkDiskCache>
 #include <QPainter>
 #include <QString>
@@ -1308,6 +1309,37 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 newSequence = new QKeySequence();
             } else {
                 newSequence = new QKeySequence(sequenceEdit->keySequence());
+
+                // Check for duplicate shortcuts
+                QStringList conflictingShortcuts;
+                QMapIterator<QString, QKeySequence*> it(currentShortcuts);
+                while (it.hasNext()) {
+                    it.next();
+                    // Skip the current shortcut being edited
+                    if (it.key() == key) {
+                        continue;
+                    }
+                    // Check if another shortcut uses the same key sequence
+                    if (!newSequence->isEmpty() && !it.value()->isEmpty()
+                            && newSequence->matches(*it.value()) == QKeySequence::ExactMatch) {
+                        conflictingShortcuts.append(mudlet::self()->mpShortcutsManager->getLabel(it.key()));
+                    }
+                }
+
+                // Show warning if duplicates found
+                if (!conflictingShortcuts.isEmpty()) {
+                    QString message;
+                    if (conflictingShortcuts.size() == 1) {
+                        //: Warning message for duplicate shortcut. %1 is the key sequence, %2 is the name of the existing shortcut
+                        message = tr("The shortcut %1 is already assigned to: %2\n\nAssigning it to this action will cause conflicts.")
+                                .arg(newSequence->toString(QKeySequence::NativeText), conflictingShortcuts.first());
+                    } else {
+                        //: Warning message for duplicate shortcut with multiple conflicts. %1 is the key sequence, %2 is a list of existing shortcuts
+                        message = tr("The shortcut %1 is already assigned to:\n%2\n\nAssigning it to this action will cause conflicts.")
+                                .arg(newSequence->toString(QKeySequence::NativeText), conflictingShortcuts.join(qsl("\n")));
+                    }
+                    QMessageBox::warning(this, tr("Duplicate Shortcut"), message);
+                }
             }
             sequenceEdit->setKeySequence(*newSequence);
             sequence->swap(*newSequence);
