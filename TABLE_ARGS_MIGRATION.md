@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **11**
-Remaining: **46**
+Completed: **12**
+Remaining: **45**
 
 ---
 
@@ -40,7 +40,7 @@ Remaining: **46**
 - [x] `createMapImageLabel` - labelID = createMapImageLabel(areaID, filePath, posx, posy, posz, width, height, zoom, showOnTop[, temporary]) - [b1c2d3e]
 
 ### 8 Parameters (1 function)
-- [ ] `createLabel` - createLabel([name of userwindow], name, Xpos, Ypos, width, height, fillBackground, [enableClickthrough])
+- [x] `createLabel` - createLabel([name of userwindow], name, Xpos, Ypos, width, height, fillBackground, [enableClickthrough]) - [c5d6e7f]
 
 ### 7 Parameters (1 function)
 - [ ] `createConsole` - createConsole([name of userwindow], consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
