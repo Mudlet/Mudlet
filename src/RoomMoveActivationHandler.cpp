@@ -35,27 +35,80 @@ bool RoomMoveActivationHandler::matches(const T2DMap::MapInteractionContext& con
         return false;
     }
 
-    if (!context.isRoomBeingMoved) {
+    switch (context.event->type()) {
+    case QEvent::MouseButtonPress: {
+        if (context.button != Qt::LeftButton) {
+            return false;
+        }
+
+        if (context.isMapViewOnly) {
+            return false;
+        }
+
+        if (!context.multiSelectionSet || context.multiSelectionSet->isEmpty()) {
+            return false;
+        }
+
+        if (!context.area) {
+            return false;
+        }
+
+        if (context.modifiers.testFlag(Qt::ShiftModifier) || context.modifiers.testFlag(Qt::ControlModifier)
+            || context.modifiers.testFlag(Qt::AltModifier)) {
+            return false;
+        }
+
+        const auto clickedRoomId = mMapWidget.roomIdAtWidgetPosition(context.widgetPosition, context.area);
+        return clickedRoomId.has_value() && context.multiSelectionSet->contains(clickedRoomId.value());
+    }
+    case QEvent::MouseButtonRelease:
+        return context.button == Qt::LeftButton && context.isRoomBeingMoved;
+    default:
         return false;
     }
-
-    return context.event->type() == QEvent::MouseButtonPress
-        && context.button == Qt::LeftButton;
 }
 
 bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
 {
-    if (!context.event || !context.isRoomBeingMoved) {
+    if (!context.event) {
         return false;
     }
 
-    mMapWidget.mPopupMenu = false;
-    mMapWidget.mPick = true;
-    mMapWidget.setMouseTracking(false);
-    mMapWidget.mRoomBeingMoved = false;
-    mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
+    switch (context.event->type()) {
+    case QEvent::MouseButtonPress: {
+        if (!context.area) {
+            return false;
+        }
 
-    context.isRoomBeingMoved = false;
+        const auto clickedRoomId = mMapWidget.roomIdAtWidgetPosition(context.widgetPosition, context.area);
+        if (!clickedRoomId.has_value()) {
+            return false;
+        }
 
-    return false;
+        mMapWidget.mPopupMenu = false;
+        mMapWidget.mPick = false;
+        mMapWidget.mRoomBeingMoved = true;
+        mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
+        mMapWidget.mNewMoveAction = false;
+        mMapWidget.setMouseTracking(true);
+
+        if (mMapWidget.mMultiSelectionSet.contains(clickedRoomId.value())) {
+            mMapWidget.mMultiSelectionHighlightRoomId = clickedRoomId.value();
+        }
+
+        context.isRoomBeingMoved = true;
+
+        return true;
+    }
+    case QEvent::MouseButtonRelease:
+        mMapWidget.mPopupMenu = false;
+        mMapWidget.setMouseTracking(false);
+        mMapWidget.mRoomBeingMoved = false;
+        mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
+        context.isRoomBeingMoved = false;
+
+        return true;
+    default:
+        return false;
+    }
 }
