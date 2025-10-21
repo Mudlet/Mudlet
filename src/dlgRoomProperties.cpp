@@ -321,11 +321,10 @@ void dlgRoomProperties::accept()
     const QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
     const QColor newSymbolColor = selectedSymbolColor;
-    bool changeSymbolColor = true;
+    bool changeSymbolColor = mSymbolColorWasChanged;
     if (newSymbol == multipleValuesPlaceholder) {
         // We don't want to change then
         changeSymbol = false;
-        changeSymbolColor = false;
     }
 
     // Find weight to return back
@@ -454,6 +453,7 @@ void dlgRoomProperties::slot_openSymbolColorSelector()
 void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 {
     selectedSymbolColor = color;
+    mSymbolColorWasChanged = true;
     slot_updatePreview();
 }
 
@@ -461,6 +461,7 @@ void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 void dlgRoomProperties::slot_resetSymbolColor()
 {
     selectedSymbolColor = QColor();
+    mSymbolColorWasChanged = true;
     slot_updatePreview();
 }
 
