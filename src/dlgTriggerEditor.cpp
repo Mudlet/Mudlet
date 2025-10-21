@@ -201,13 +201,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         //: Name of a selectable option for the Button intro
         {qsl("button1"), tr("How to add a new button now"),
         //: Help contents of a selectable option for the Button intro
-            tr("<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
-               "<li>Add new groups as <strong>menus</strong> to a button bar or sub-menus to menus.<li>"
-               "<li>Add new items as <strong>buttons</strong> to a button bar or menu or sub-menu.</li>"
-               "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
-               "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
-               "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
-               "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>")},
+            tr("<ol><li>Add a new group to create a <strong>button bar</strong>.</li>"
+               "<li>Add groups as <strong>menus</strong> or sub-menus.<li>"
+               "<li>Add items as <strong>buttons</strong> to a bar or menu.</li>"
+               "<li>Define a <strong>command</strong> or script to execute when pressed.</li>"
+               "<li><strong>Activate</strong> the item. </li></ol>"
+               "<p><strong>Note:</strong> Deactivated items are hidden.</p>"
+               "<p><strong>Click-down buttons:</strong> Can define separate commands for press/release. Use getButtonState() to check state.</p>")},
 //        {qsl("button2"), tr("How to add a new button from the input line"),
 //            tr("")},
         {qsl("button3"), tr("Where to find more information"),
