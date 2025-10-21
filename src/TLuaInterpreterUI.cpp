@@ -849,6 +849,60 @@ int TLuaInterpreter::echoLink(lua_State* L)
     QString command;
     QString text;
 
+    // Check if first argument is a table for named-key format
+    if (lua_istable(L, 1)) {
+        bool hasText = false;
+        bool hasCommand = false;
+        bool hasHint = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
+                windowName = getVerifiedString(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
+                text = getVerifiedString(L, __func__, -1, key);
+                hasText = true;
+            } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
+                parseCommandOrFunction(L, __func__, -1, command, luaReference);
+                hasCommand = true;
+            } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive)) {
+                hint = getVerifiedString(L, __func__, -1, key);
+                hasHint = true;
+            } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("useCurrentLinkFormat"), Qt::CaseInsensitive)) {
+                useCurrentFormat = getVerifiedBool(L, __func__, -1, key);
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasText) {
+            lua_pushfstring(L, "echoLink: bad argument, missing 'text' in table");
+            return lua_error(L);
+        }
+        if (!hasCommand) {
+            lua_pushfstring(L, "echoLink: bad argument, missing 'command' in table");
+            return lua_error(L);
+        }
+        if (!hasHint) {
+            lua_pushfstring(L, "echoLink: bad argument, missing 'hint' in table");
+            return lua_error(L);
+        }
+
+        commandList << command;
+        luaReferences << luaReference;
+        hintList << hint;
+
+        auto console = CONSOLE(L, windowName);
+        console->echoLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Original positional argument handling
     if (n < 4) {
         // (string) text, (string) command/function, (string) hint
         text = getVerifiedString(L, __func__, ++s, "text");
