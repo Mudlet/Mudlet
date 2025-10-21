@@ -235,6 +235,8 @@ private:
     QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableCHARSET;
+    QPointer<QAction> mEnableNEWENVIRON;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

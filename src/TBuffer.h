@@ -383,6 +383,7 @@ class TBuffer
 
 public:
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
+    ~TBuffer();
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -472,7 +473,10 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
-    
+    bool commitLine(char ch, size_t& localBufferPosition);
+    void processMxpWatchdogCallback();
+    TChar::AttributeFlags computeCurrentAttributeFlags() const;
+
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
     QMap<QString, QString> parseUriQueryParameters(const QString& uri);
     // Helper function for parsing JSON format hyperlink configuration
@@ -573,7 +577,17 @@ private:
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
-    
+
+    enum class WatchdogPhase {
+        Phase1_Snapshot,
+        Phase2_Unfreeze,
+        None
+    };
+    static constexpr int    MAX_TAG_TIMEOUT_MS = 1300;
+    WatchdogPhase           mWatchdogPhase = WatchdogPhase::None;
+    QTimer*                 mTagWatchdog;
+    std::string             mWatchdogTagSnapshot;
+
     // Enhanced OSC 8 hyperlink styling and menu support
     Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
     QStringList mCurrentHyperlinkMenu; // Format: "Label|Command|Label|Command..."

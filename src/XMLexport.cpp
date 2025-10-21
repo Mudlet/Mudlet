@@ -153,14 +153,17 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
         helpPackage.append_child("helpURL").text().set("");
     }
     if (async) {
-        auto future = QtConcurrent::run([this, fileName]() { return saveXml(fileName); });
+        // Capture shared_ptr to keep XMLexport alive during async operation
+        auto self = shared_from_this();
+        auto future = QtConcurrent::run([self, fileName]() { return self->saveXml(fileName); });
         auto watcher = new QFutureWatcher<bool>;
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
+        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this, fileName]() {
             if (!mpHost) {
                 return;
             }
             mpHost->xmlSaved(fileName);
         });
+        connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
         saveFutures.append(future);
     } else {
@@ -173,15 +176,19 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
 {
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
-    auto future = QtConcurrent::run([this, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
+
+    // Capture shared_ptr to keep XMLexport alive during async operation
+    auto self = shared_from_this();
+    auto future = QtConcurrent::run([self, filename_pugi_xml]() { return self->saveXml(filename_pugi_xml); });
 
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this]() {
         if (!mpHost) {
             return;
         }
         mpHost->xmlSaved(qsl("profile"));
     });
+    connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -374,6 +381,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableMTTS") = pHost->mEnableMTTS ? "yes" : "no";
     host.append_attribute("mEnableMNES") = pHost->mEnableMNES ? "yes" : "no";
     host.append_attribute("mEnableMXP") = pHost->mEnableMXP ? "yes" : "no";
+    host.append_attribute("mEnableCHARSET") = pHost->mEnableCHARSET ? "yes" : "no";
+    host.append_attribute("mEnableNEWENVIRON") = pHost->mEnableNEWENVIRON ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
     bool enableUserDictionary;
@@ -388,12 +397,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
-    host.append_attribute("mFORCE_CHARSET_NEGOTIATION_OFF") = pHost->mFORCE_CHARSET_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("mVersionInTTYPE") = pHost->mVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mPromptedForVersionInTTYPE") = pHost->mPromptedForVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mForceMXPProcessorOn") = pHost->getForceMXPProcessorOn() ? "yes" : "no";
     host.append_attribute("mPromptedForMXPProcessorOn") = pHost->mPromptedForMXPProcessorOn ? "yes" : "no";
-    host.append_attribute("forceNewEnvironNegotiationOff") = pHost->mForceNewEnvironNegotiationOff ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
@@ -415,14 +422,14 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
-    
+
     // Handle proxy password based on application version for backward compatibility
     // For version 4.20.0+, use secure storage and clear XML; for older versions, maintain plaintext in XML
     const QString currentAppVersion = QString(APP_VERSION);
     const QVersionNumber appVersion = QVersionNumber::fromString(currentAppVersion);
     const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
     const bool useSecureStorage = appVersion >= secureStorageVersion;
-    
+
     if (useSecureStorage) {
         // Modern versions: store in secure storage, clear from XML
         if (!pHost->mProxyPassword.isEmpty()) {
@@ -634,7 +641,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
-    
+
     // Write experiments
     {
         QStringList allExperiments = pHost->getAllExperiments();
@@ -646,7 +653,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
-    
+
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);
@@ -788,14 +795,17 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     auto mudletPackage = writeXmlHeader();
 
     if (writeGenericPackage(mpHost, mudletPackage)) {
-        auto future = QtConcurrent::run([this, exportFileName]() { return saveXml(exportFileName); });
+        // Capture shared_ptr to keep XMLexport alive during async operation
+        auto self = shared_from_this();
+        auto future = QtConcurrent::run([self, exportFileName]() { return self->saveXml(exportFileName); });
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this]() {
             if (!mpHost) {
                 return;
             }
             mpHost->xmlSaved(qsl("profile"));
         });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
         watcher->setFuture(future);
         saveFutures.append(future);
 

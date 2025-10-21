@@ -648,10 +648,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     const int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
-    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     checkBox_mVersionInTTYPE->setChecked(pHost->mVersionInTTYPE);
     checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
-    mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
@@ -909,40 +907,50 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     protocolMenu->clear();
 
+    mEnableCHARSET = new QAction(tr("CHARSET: Character Encoding Standard"), nullptr);
+    mEnableCHARSET->setCheckable(true);
+    mEnableCHARSET->setChecked(pHost->mEnableCHARSET);
+    protocolMenu->addAction(mEnableCHARSET);
+
     mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), nullptr);
     mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     protocolMenu->addAction(mEnableGMCP);
+
+    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
+    mEnableMNES->setCheckable(true);
+    mEnableMNES->setChecked(pHost->mEnableMNES);
+    protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
     mEnableMSDP->setCheckable(true);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
     protocolMenu->addAction(mEnableMSDP);
 
-    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
-    mEnableMSSP->setCheckable(true);
-    mEnableMSSP->setChecked(pHost->mEnableMSSP);
-    protocolMenu->addAction(mEnableMSSP);
-
     mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), nullptr);
     mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
     protocolMenu->addAction(mEnableMSP);
 
-    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
-    mEnableMXP->setCheckable(true);
-    mEnableMXP->setChecked(pHost->mEnableMXP);
-    protocolMenu->addAction(mEnableMXP);
+    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
+    mEnableMSSP->setCheckable(true);
+    mEnableMSSP->setChecked(pHost->mEnableMSSP);
+    protocolMenu->addAction(mEnableMSSP);
 
     mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), nullptr);
     mEnableMTTS->setCheckable(true);
     mEnableMTTS->setChecked(pHost->mEnableMTTS);
     protocolMenu->addAction(mEnableMTTS);
 
-    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
-    mEnableMNES->setCheckable(true);
-    mEnableMNES->setChecked(pHost->mEnableMNES);
-    protocolMenu->addAction(mEnableMNES);
+    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
+    mEnableMXP->setCheckable(true);
+    mEnableMXP->setChecked(pHost->mEnableMXP);
+    protocolMenu->addAction(mEnableMXP);
+
+    mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
+    mEnableNEWENVIRON->setCheckable(true);
+    mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
+    protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
 
@@ -1268,6 +1276,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableMXP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMTTS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMNES, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableCHARSET, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableNEWENVIRON, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1394,6 +1404,8 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(mEnableMXP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMTTS, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMNES, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableCHARSET, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableNEWENVIRON, &QAction::toggled, nullptr, nullptr);
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1428,10 +1440,8 @@ void dlgProfilePreferences::clearHostDetails()
     script_preview_combobox->clear();
     edbeePreviewWidget->textDocument()->setText(QString());
 
-    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     checkBox_mVersionInTTYPE->setChecked(false);
     checkBox_mForceMXPProcessorOn->setChecked(false);
-    mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
     checkBox_drawUpperLowerLevels->setChecked(false);
@@ -2926,6 +2936,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMXP = mEnableMXP->isChecked();
         pHost->mEnableMTTS = mEnableMTTS->isChecked();
         pHost->mEnableMNES = mEnableMNES->isChecked();
+        pHost->mEnableCHARSET = mEnableCHARSET->isChecked();
+        pHost->mEnableNEWENVIRON = mEnableNEWENVIRON->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         mudlet::self()->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
@@ -2956,10 +2968,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
-        pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
         pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
-        pHost->mForceNewEnvironNegotiationOff = mForceNewEnvironNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;

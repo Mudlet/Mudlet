@@ -495,6 +495,8 @@ public:
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
     bool mEnableMXP = true;
+    bool mEnableCHARSET = true;
+    bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
     bool mPromptedForVersionInTTYPE = false;
@@ -727,8 +729,6 @@ public:
     QColor mCommandLineBgColor{Qt::black};
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
-    bool mFORCE_CHARSET_NEGOTIATION_OFF = false;
-    bool mForceNewEnvironNegotiationOff = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
@@ -891,7 +891,7 @@ private:
     bool mWideAmbigousWidthGlyphs = false;
 
     // keeps track of all of the array writers we're currently operating with
-    QHash<QString, XMLexport*> writers;
+    QHash<QString, std::shared_ptr<XMLexport>> writers;
 
     QFuture<void> mModuleFuture;
 

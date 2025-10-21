@@ -152,7 +152,11 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 , mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
 , mpHost(pH)
+, mTagWatchdog(nullptr)
 {
+    mTagWatchdog = new QTimer();
+    mTagWatchdog->setSingleShot(true);
+    QObject::connect(mTagWatchdog, &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
     // All additions to the buffer must use append()/appendLine() to preserve formatting via TChar.
     // Direct modification of the `buffer` vector may bypass formatting and should be avoided.
     clear();
@@ -164,6 +168,11 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
         Q_ASSERT_X(table.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
 #endif
+}
+
+TBuffer::~TBuffer()
+{
+    delete mTagWatchdog;
 }
 
 // user-defined literal to represent megabytes
@@ -581,23 +590,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     bool isOk = false;
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
-                        const TChar::AttributeFlags attributeFlags =
-                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
-                                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
-                                | (mOverline ? TChar::Overline : TChar::None)
-                                | (mReverse ? TChar::Reverse : TChar::None)
-                                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
-                                | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
-                                | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
-                                | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
-                                | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
-                                | (TChar::alternateFontFlag(mAltFont))
-                                | (mConcealed ? TChar::Concealed : TChar::None);
-
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:
-                        const TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                        const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
                         for (int spaceCount = 0; spaceCount < spacesNeeded; ++spaceCount) {
                             mMudLine.append(QChar::Space);
                             mMudBuffer.push_back(c);
@@ -703,6 +698,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     // (countermeasure against infinite recursion)
                     TMxpProcessingResult const result =
                             mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+                    if (!mTagWatchdog->isActive()
+                    && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()
+                    && !mpHost->mMxpProcessor.getMxpTagBuilder().getRawTagContent().empty()) {
+                        mWatchdogPhase = WatchdogPhase::Phase1_Snapshot;
+                        mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
+                    }
 
                     switch (result) {
                     case HANDLER_NEXT_CHAR:
@@ -750,17 +751,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // System entities are literal QString / UTF values which we just 'print'
                         // There is no further MXP or Codeset evaluation
 
-                        const TChar::AttributeFlags attributeFlags =
-                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
-                                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
-                                | (mOverline ? TChar::Overline : TChar::None)
-                                | (mReverse ? TChar::Reverse : TChar::None)
-                                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
-                                | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
-                                | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
-                                | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None);
-
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
                         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
@@ -777,6 +769,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         //HANDLER_FALL_THROUGH -> do nothing
                         assert(localBuffer[localBufferPosition] == ch);
                     }
+                } else if (mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    localBufferPosition++;
+                    continue;
                 } else {
                     mpHost->mMxpProcessor.processRawInput(ch);
                 }
@@ -789,118 +784,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         }
 
 COMMIT_LINE:
-        if (CHAR_IS_COMMIT_CHAR(ch)) {
-            // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
-            // EN: MUD lines are always written at the beginning of the line
-
-            // FIXME: This is the point where we should renormalise the new text
-            // data - of course there is the theoretical chance that the new
-            // text would alter the prior contents but as that is on a separate
-            // line there should not be any changes to text before a line feed
-            // which sort of seems to be implied by the current value of ch:
-
-            // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
-            // https://bugreports.qt.io/browse/QTBUG-105035
-            if (Q_UNLIKELY(mMudLine.isEmpty())) {
-                if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
-                    localBufferPosition++;
-                    continue;
-                } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
-                    const TChar::AttributeFlags attributeFlags =
-                            ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
-                            | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
-                            | (mOverline ? TChar::Overline : TChar::None)
-                            | (mReverse ? TChar::Reverse : TChar::None)
-                            | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                            | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
-                            | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
-                            | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
-                            | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
-                            | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
-                            | (TChar::alternateFontFlag(mAltFont))
-                            | (mConcealed ? TChar::Concealed : TChar::None);
-
-                    // Note: we are using the background color for the
-                    // foreground color as well so that we are transparent:
-                    const TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
-                    mMudLine.append(QChar::Space);
-                    mMudBuffer.push_back(c);
-                }
-            }
-
-            if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
-                qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
-                              "data character and attribute data items!";
-            }
-
-            if (!lineBuffer.back().isEmpty()) {
-                if (!mMudLine.isEmpty()) {
-                    lineBuffer << mMudLine;
-                } else {
-                    if (ch == '\r') {
-                        ++localBufferPosition;
-                        continue; //empty timer posting
-                    }
-                    lineBuffer << QString();
-                }
-                buffer.push_back(mMudBuffer);
-                timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
-                if (ch == '\xff') {
-                    promptBuffer.append(true);
-                } else {
-                    promptBuffer.append(false);
-                }
-            } else {
-                if (!mMudLine.isEmpty()) {
-                    lineBuffer.back().append(mMudLine);
-                } else {
-                    if (ch == '\r') {
-                        ++localBufferPosition;
-                        continue; //empty timer posting
-                    }
-                    lineBuffer.back().append(QString());
-                }
-                buffer.back() = mMudBuffer;
-                timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
-                if (ch == '\xff') {
-                    promptBuffer.back() = true;
-                } else {
-                    promptBuffer.back() = false;
-                }
-            }
-
-            mMudLine.clear();
-            mMudBuffer.clear();
-            const int line = lineBuffer.size() - 1;
-            mpHost->mpConsole->runTriggers(line);
-            // Only use of TBuffer::wrap(), breaks up new text
-            // NOTE: it MAY have been clobbered by the trigger engine!
-            const int addedLines = wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
-
-            // Start a new, but empty line in the various buffers
-            log(lineBuffer.size() - 1, lineBuffer.size() - 1);
-            ++localBufferPosition;
-            // Suppress new empty line IFF echoes already created a new empty line
-            // i.e. add newline if no added lines or the lastline isn't empty
-            if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
-                std::deque<TChar> const newLine;
-                buffer.push_back(newLine);
-                lineBuffer.push_back(QString());
-                timeBuffer.push_back(QString());
-                promptBuffer << false;
-            }
-            if (static_cast<int>(buffer.size()) > mLinesLimit) {
-                // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
-                // in all other methods where the following is used (because
-                // both need to monitor the number of lines of text in the
-                // buffer) the event that the former may be required to
-                // generate is NOT used for the TMainConsole case whereas this
-                // (translateToPlainText(...)) method is ONLY for that one:
-                shrinkBuffer();
-            }
+        if (commitLine(ch, localBufferPosition)) {
             continue;
         }
-
         // PLACEMARKER: Incoming text decoding
         // Used to double up the TChars for Utf-8 byte sequences that produce
         // a surrogate pair (non-BMP):
@@ -960,21 +846,7 @@ COMMIT_LINE:
             }
         }
 
-        const TChar::AttributeFlags attributeFlags =
-                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
-                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
-                | (mOverline ? TChar::Overline : TChar::None)
-                | (mReverse ? TChar::Reverse : TChar::None)
-                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
-                | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
-                | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
-                | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
-                | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
-                | (TChar::alternateFontFlag(mAltFont))
-                | (mConcealed ? TChar::Concealed : TChar::None);
-
-        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
 
         if (mHyperlinkActive) {
             c.mLinkIndex = mCurrentHyperlinkLinkId;
@@ -1073,6 +945,158 @@ COMMIT_LINE:
 
         ++localBufferPosition;
     }
+}
+
+
+bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
+{
+    if (CHAR_IS_COMMIT_CHAR(ch)) {
+        // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
+        // EN: MUD lines are always written at the beginning of the line
+
+        // FIXME: This is the point where we should renormalise the new text
+        // data - of course there is the theoretical chance that the new
+        // text would alter the prior contents but as that is on a separate
+        // line there should not be any changes to text before a line feed
+        // which sort of seems to be implied by the current value of ch:
+
+        // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
+        // https://bugreports.qt.io/browse/QTBUG-105035
+        if (Q_UNLIKELY(mMudLine.isEmpty())) {
+            if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+                localBufferPosition++;
+                return true;
+            } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
+                // Note: we are using the background color for the
+                // foreground color as well so that we are transparent:
+                const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+                mMudLine.append(QChar::Space);
+                mMudBuffer.push_back(c);
+            }
+        }
+
+        if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
+            qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
+                        "data character and attribute data items!";
+        }
+        if (!lineBuffer.back().isEmpty()) {
+            if (!mMudLine.isEmpty()) {
+                lineBuffer << mMudLine;
+            } else {
+                if (ch == '\r') {
+                    ++localBufferPosition;
+                    return true; //empty timer posting
+                }
+                lineBuffer << QString();
+            }
+            buffer.push_back(mMudBuffer);
+            timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
+            if (ch == '\xff') {
+                promptBuffer.append(true);
+            } else {
+                promptBuffer.append(false);
+            }
+        } else {
+            if (!mMudLine.isEmpty()) {
+                lineBuffer.back().append(mMudLine);
+            } else {
+                if (ch == '\r') {
+                    ++localBufferPosition;
+                    return true; //empty timer posting
+                }
+                lineBuffer.back().append(QString());
+            }
+            buffer.back() = mMudBuffer;
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+            if (ch == '\xff') {
+                promptBuffer.back() = true;
+            } else {
+                promptBuffer.back() = false;
+            }
+        }
+        mMudLine.clear();
+        mMudBuffer.clear();
+        const int line = lineBuffer.size() - 1;
+        mpHost->mpConsole->runTriggers(line);
+
+        // Only use of TBuffer::wrap(), breaks up new text
+        // NOTE: it MAY have been clobbered by the trigger engine!
+        const int addedLines = wrapLine(line, mWrapAt, mWrapIndent, mWrapHangingIndent);
+
+        // Start a new, but empty line in the various buffers
+        log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+
+        ++localBufferPosition;
+        // Suppress new empty line IFF echoes already created a new empty line
+        // i.e. add newline if no added lines or the lastline isn't empty
+        if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
+            std::deque<TChar> const newLine;
+            buffer.push_back(newLine);
+            lineBuffer.push_back(QString());
+            timeBuffer.push_back(QString());
+            promptBuffer << false;
+        }
+
+        if (static_cast<int>(buffer.size()) > mLinesLimit) {
+            // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
+            // in all other methods where the following is used (because
+            // both need to monitor the number of lines of text in the
+            // buffer) the event that the former may be required to
+            // generate is NOT used for the TMainConsole case whereas this
+            // (translateToPlainText(...)) method is ONLY for that one:
+            shrinkBuffer();
+        }
+        return true;
+    }
+    return false;
+}
+
+void TBuffer::processMxpWatchdogCallback()
+{
+    TMxpNodeBuilder&    tagBuilder = mpHost->mMxpProcessor.getMxpTagBuilder();
+    std::string         currentTagContent = tagBuilder.getRawTagContent();
+    bool                isMxpParserFrozen = !currentTagContent.empty()
+                                            && currentTagContent.starts_with(mWatchdogTagSnapshot)
+                                            && tagBuilder.isInsideTag();
+
+    if (mWatchdogPhase == WatchdogPhase::Phase1_Snapshot) {
+        mWatchdogTagSnapshot = currentTagContent;
+        mWatchdogPhase = WatchdogPhase::Phase2_Unfreeze;
+        mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
+    } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
+        if (isMxpParserFrozen) {
+            mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
+            QTimer::singleShot(0, [this] () {
+                const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+                QString     lastEntityValue = mpHost->mMxpProcessor.getEntityValue();
+                size_t      unusedBufferPosition = 0;
+
+                mMudLine.append(lastEntityValue);
+                for (size_t i = 0; i < lastEntityValue.size(); ++i) {
+                    mMudBuffer.push_back(style);
+                }
+                commitLine('\r', unusedBufferPosition);
+                mpHost->mMxpProcessor.getMxpTagBuilder().reset();
+                mpHost->mpConsole->finalize();
+            });
+        }
+        mWatchdogPhase = WatchdogPhase::None;
+    }
+}
+
+TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const {
+    return ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+            | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
+            | (mOverline ? TChar::Overline : TChar::None)
+            | (mReverse ? TChar::Reverse : TChar::None)
+            | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+            | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
+            | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
+            | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
+            | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
+            | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
+            | (TChar::alternateFontFlag(mAltFont))
+            | (mConcealed ? TChar::Concealed : TChar::None);
 }
 
 void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
