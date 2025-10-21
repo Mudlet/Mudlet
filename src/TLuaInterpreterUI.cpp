@@ -2335,36 +2335,87 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
 int TLuaInterpreter::setBorderSizes(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const int numberOfArguments = lua_gettop(L);
-    switch (numberOfArguments) {
-    case 0:
-        break;
-    case 1: {
-        auto value = getVerifiedInt(L, __func__, 1, "new size");
-        host.setBorders({value, value, value, value});
-        break;
-    }
-    case 2: {
-        auto height = getVerifiedInt(L, __func__, 1, "new height");
-        auto width = getVerifiedInt(L, __func__, 2, "new width");
-        host.setBorders({width, height, width, height});
-        break;
-    }
-    case 3: {
-        auto top = getVerifiedInt(L, __func__, 1, "new top size");
-        auto width = getVerifiedInt(L, __func__, 2, "new width");
-        auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-        host.setBorders({width, top, width, bottom});
-        break;
+
+    // Support both table and ordered arguments
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // Table argument format: {top=N, right=N, bottom=N, left=N}
+        bool hasTop = false, hasRight = false, hasBottom = false, hasLeft = false;
+        int top = 0, right = 0, bottom = 0, left = 0;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("top"), Qt::CaseInsensitive)) {
+                top = getVerifiedInt(L, __func__, -1, "top");
+                hasTop = true;
+            } else if (!key.compare(QLatin1String("right"), Qt::CaseInsensitive)) {
+                right = getVerifiedInt(L, __func__, -1, "right");
+                hasRight = true;
+            } else if (!key.compare(QLatin1String("bottom"), Qt::CaseInsensitive)) {
+                bottom = getVerifiedInt(L, __func__, -1, "bottom");
+                hasBottom = true;
+            } else if (!key.compare(QLatin1String("left"), Qt::CaseInsensitive)) {
+                left = getVerifiedInt(L, __func__, -1, "left");
+                hasLeft = true;
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
         }
-    default: {
-        auto top = getVerifiedInt(L, __func__, 1, "new top size");
-        auto right = getVerifiedInt(L, __func__, 2, "new right size");
-        auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-        auto left = getVerifiedInt(L, __func__, 4, "new left size");
+
+        // Validate required parameters - all four sides must be specified
+        if (!hasTop) {
+            lua_pushfstring(L, "%s: missing required 'top' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasRight) {
+            lua_pushfstring(L, "%s: missing required 'right' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasBottom) {
+            lua_pushfstring(L, "%s: missing required 'bottom' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasLeft) {
+            lua_pushfstring(L, "%s: missing required 'left' in table", __func__);
+            return lua_error(L);
+        }
+
         host.setBorders({left, top, right, bottom});
-        break;
-    }
+    } else {
+        // Ordered argument format with multiple forms
+        const int numberOfArguments = lua_gettop(L);
+        switch (numberOfArguments) {
+        case 0:
+            break;
+        case 1: {
+            auto value = getVerifiedInt(L, __func__, 1, "new size");
+            host.setBorders({value, value, value, value});
+            break;
+        }
+        case 2: {
+            auto height = getVerifiedInt(L, __func__, 1, "new height");
+            auto width = getVerifiedInt(L, __func__, 2, "new width");
+            host.setBorders({width, height, width, height});
+            break;
+        }
+        case 3: {
+            auto top = getVerifiedInt(L, __func__, 1, "new top size");
+            auto width = getVerifiedInt(L, __func__, 2, "new width");
+            auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+            host.setBorders({width, top, width, bottom});
+            break;
+            }
+        default: {
+            auto top = getVerifiedInt(L, __func__, 1, "new top size");
+            auto right = getVerifiedInt(L, __func__, 2, "new right size");
+            auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+            auto left = getVerifiedInt(L, __func__, 4, "new left size");
+            host.setBorders({left, top, right, bottom});
+            break;
+        }
+        }
     }
     return 0;
 }

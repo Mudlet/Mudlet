@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **3**
-Remaining: **54**
+Completed: **4**
+Remaining: **53**
 
 ---
 
@@ -90,7 +90,7 @@ Remaining: **54**
 - [ ] `permTimer` - permTimer(name, parent, seconds, lua code)
 - [ ] `postHTTP` - postHTTP(dataToSend, url, headersTable, file)
 - [ ] `putHTTP` - putHTTP(dataToSend, url, [headersTable], [file])
-- [ ] `setBorderSizes` - setBorderSizes(top, right, bottom, left)
+- [x] `setBorderSizes` - setBorderSizes(top, right, bottom, left) - [8b9c0d1]
 - [ ] `setFgColor` - setFgColor([windowName], red, green, blue)
 - [ ] `setGauge` - setGauge(gaugeName, currentValue, maxValue, gaugeText)
 - [ ] `setGaugeStyleSheet` - setGaugeStyleSheet(gaugeName, css, cssback, csstext)
