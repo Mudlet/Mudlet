@@ -16,8 +16,10 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **52**
-Remaining: **5**
+Completed: **57**
+Remaining: **0**
+
+✅ **MIGRATION COMPLETE!** All 57 functions now support table argument syntax.
 
 ---
 
@@ -68,7 +70,7 @@ Remaining: **5**
 - [x] `hinsertLink` - hinsertLink([windowName], text, command, hint, true) *Lua wrapper - inherits from insertLink*
 - [x] `hinsertPopup` - hinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault]) *Lua wrapper - inherits from insertPopup*
 - [x] `insertLink` - insertLink([windowName], text, command, hint, [useCurrentLinkFormat])
-- [ ] `permKey` - permKey(name, parent, [modifier], key code, lua code) *4-param function with optional modifier*
+- [x] `permKey` - permKey(name, parent, [modifier], key code, lua code) *4-param function with optional modifier*
 - [x] `prefix` - prefix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
 - [x] `registerNamedEventHandler` - success = registerNamedEventHandler(userName, handlerName, eventName, functionReference, [oneShot])
 - [x] `registerNamedTimer` - success = registerNamedTimer(userName, timerName, time, functionReference, [repeating])
@@ -92,13 +94,13 @@ Remaining: **5**
 - [x] `putHTTP` - putHTTP(dataToSend, url, [headersTable], [file])
 - [x] `setBorderSizes` - setBorderSizes(top, right, bottom, left) - [8b9c0d1]
 - [x] `setFgColor` - setFgColor([windowName], red, green, blue) - [9e8f1a2]
-- [ ] `setGauge` - setGauge(gaugeName, currentValue, maxValue, gaugeText)
-- [ ] `setGaugeStyleSheet` - setGaugeStyleSheet(gaugeName, css, cssback, csstext)
+- [x] `setGauge` - setGauge(gaugeName, currentValue, maxValue, gaugeText)
+- [x] `setGaugeStyleSheet` - setGaugeStyleSheet(gaugeName, css, cssback, csstext)
 - [x] `setRoomCharColor` - setRoomCharColor(roomId, r, g, b) - [e4e6d8c]
 - [x] `setRoomCoordinates` - setRoomCoordinates(roomID, x, y, z) - [bc6b462]
-- [ ] `speedwalk` - speedwalk(dirString, backwards, delay, show)
+- [x] `speedwalk` - speedwalk(dirString, backwards, delay, show)
 - [x] `tempColorTrigger` - tempColorTrigger(foregroundColor, backgroundColor, code, expireAfter)
-- [ ] `timeframe` - timeframe(vname, true_time, nil_time, ...)
+- [x] `timeframe` - timeframe(vname, true_time, nil_time, ...)
 
 ---
 
