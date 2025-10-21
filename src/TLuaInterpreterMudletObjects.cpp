@@ -1608,16 +1608,79 @@ int TLuaInterpreter::permTimer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permKey
 int TLuaInterpreter::permKey(lua_State* L)
 {
-    QString keyName = getVerifiedString(L, __func__, 1, "key name");
-    QString parentGroup = getVerifiedString(L, __func__, 2, "key parent group");
+    QString keyName, parentGroup, luaFunction;
+    int keyModifier = Qt::NoModifier;
+    int keyCode = 0;
+
+    // Support table argument format
+    if (lua_istable(L, 1)) {
+        bool hasName = false, hasParent = false, hasKeyCode = false, hasCode = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyName"), Qt::CaseInsensitive)) {
+                keyName = getVerifiedString(L, __func__, -1, key);
+                hasName = true;
+            } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parentGroup"), Qt::CaseInsensitive)) {
+                parentGroup = getVerifiedString(L, __func__, -1, key);
+                hasParent = true;
+            } else if (!key.compare(QLatin1String("modifier"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyModifier"), Qt::CaseInsensitive)) {
+                keyModifier = getVerifiedInt(L, __func__, -1, key, true);
+            } else if (!key.compare(QLatin1String("keyCode"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)) {
+                keyCode = getVerifiedInt(L, __func__, -1, key);
+                hasKeyCode = true;
+            } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) || !key.compare(QLatin1String("luaCode"), Qt::CaseInsensitive) || !key.compare(QLatin1String("luaFunction"), Qt::CaseInsensitive)) {
+                luaFunction = getVerifiedString(L, __func__, -1, key);
+                hasCode = true;
+            }
+            lua_pop(L, 1);
+        }
+
+        if (!hasName) {
+            lua_pushstring(L, "permKey: missing required 'name' in table");
+            return lua_error(L);
+        }
+        if (!hasParent) {
+            lua_pushstring(L, "permKey: missing required 'parent' in table");
+            return lua_error(L);
+        }
+        if (!hasKeyCode) {
+            lua_pushstring(L, "permKey: missing required 'keyCode' in table");
+            return lua_error(L);
+        }
+        if (!hasCode) {
+            lua_pushstring(L, "permKey: missing required 'code' in table");
+            return lua_error(L);
+        }
+
+        Host& host = getHostFromLua(L);
+        TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+        if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(luaFunction); !validationResult) {
+            lua_pushfstring(L, "permKey: bad code argument (%s)", validationMessage.toUtf8().constData());
+            return lua_error(L);
+        }
+
+        auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
+        if(keyID == - 1) {
+            lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
+            return lua_error(L);
+        }
+        lua_pushnumber(L, keyID);
+        return 1;
+    }
+
+    // Original positional argument handling
+    keyName = getVerifiedString(L, __func__, 1, "key name");
+    parentGroup = getVerifiedString(L, __func__, 2, "key parent group");
 
     uint_fast8_t argIndex = 3;
-    int keyModifier = Qt::NoModifier;
     if (lua_gettop(L) > 4) {
         keyModifier = getVerifiedInt(L, __func__, 3, "key modifier", true);
         argIndex++;
     }
-    int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
+    keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -1626,7 +1689,7 @@ int TLuaInterpreter::permKey(lua_State* L)
         return lua_error(L);
     }
 
-    QString luaFunction{lua_tostring(L, argIndex)};
+    luaFunction = lua_tostring(L, argIndex);
     auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
     if(keyID == - 1) {
         lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
