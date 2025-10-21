@@ -62,6 +62,7 @@
 #include <QStandardPaths>
 #include <QtEvents>
 #include <QtUiTools>
+#include <algorithm>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
@@ -100,7 +101,7 @@ void T2DMap::registerInteractionHandler(IInteractionHandler* handler, int priori
     mInteractionDispatcher.registerHandler(handler, priority);
 }
 
-std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const
+std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area, RoomPickMode mode) const
 {
     if (!mpMap || !mpMap->mpRoomDB || !area) {
         return std::nullopt;
@@ -112,6 +113,8 @@ std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, 
     const int mx = widgetPosition.x();
     const int my = widgetPosition.y();
     const int mz = mMapCenterZ;
+
+    QVector<int> candidates;
 
     QSetIterator<int> roomIterator(area->getAreaRooms());
     while (roomIterator.hasNext()) {
@@ -128,11 +131,75 @@ std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, 
         if ((qAbs(mx - rx) < qRound(mRoomWidth * rSize / 2.0))
             && (qAbs(my - ry) < qRound(mRoomHeight * rSize / 2.0))
             && (mz == rz)) {
-            return roomId;
+            candidates.append(roomId);
         }
     }
 
-    return std::nullopt;
+    if (candidates.isEmpty()) {
+        mRoomPickCycleCandidates.clear();
+        mRoomPickCycleIndex = -1;
+        mRoomPickCycleLastReturned = 0;
+        return std::nullopt;
+    }
+
+    std::sort(candidates.begin(), candidates.end());
+
+    const bool candidatesChanged = candidates != mRoomPickCycleCandidates;
+    if (candidatesChanged) {
+        mRoomPickCycleCandidates = candidates;
+        mRoomPickCycleIndex = -1;
+        mRoomPickCycleLastReturned = 0;
+    }
+
+    const auto prioritizeRoom = [this, &candidates]() {
+        if (mMultiSelectionHighlightRoomId > 0 && candidates.contains(mMultiSelectionHighlightRoomId)) {
+            return mMultiSelectionHighlightRoomId;
+        }
+
+        if (!mMultiSelectionSet.isEmpty()) {
+            for (auto iterator = mMultiSelectionSet.cbegin(); iterator != mMultiSelectionSet.cend(); ++iterator) {
+                if (candidates.contains(*iterator)) {
+                    return *iterator;
+                }
+            }
+        }
+
+        return 0;
+    };
+
+    const int prioritizedRoomId = prioritizeRoom();
+    const int prioritizedIndex = prioritizedRoomId > 0 ? mRoomPickCycleCandidates.indexOf(prioritizedRoomId) : -1;
+
+    if (mode == RoomPickMode::PreferSelection) {
+        int chosenIndex = prioritizedIndex;
+
+        if (chosenIndex < 0 && mRoomPickCycleIndex >= 0 && mRoomPickCycleIndex < mRoomPickCycleCandidates.size()) {
+            chosenIndex = mRoomPickCycleIndex;
+        }
+
+        if (chosenIndex < 0) {
+            chosenIndex = 0;
+        }
+
+        mRoomPickCycleIndex = chosenIndex;
+        mRoomPickCycleLastReturned = mRoomPickCycleCandidates.at(chosenIndex);
+        return mRoomPickCycleLastReturned;
+    }
+
+    int nextIndex = -1;
+
+    if (prioritizedIndex >= 0 && prioritizedRoomId != mRoomPickCycleLastReturned) {
+        nextIndex = prioritizedIndex;
+    } else if (mRoomPickCycleIndex < 0) {
+        nextIndex = prioritizedIndex >= 0 ? prioritizedIndex : 0;
+    } else {
+        nextIndex = (mRoomPickCycleIndex + 1) % mRoomPickCycleCandidates.size();
+    }
+
+    mRoomPickCycleIndex = nextIndex;
+    mRoomPickCycleLastReturned = mRoomPickCycleCandidates.at(nextIndex);
+
+    return mRoomPickCycleLastReturned;
 }
 
 void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
@@ -151,7 +218,8 @@ void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
         return;
     }
 
-    const auto clickedRoomId = roomIdAtWidgetPosition(context.widgetPosition, area);
+    const auto pickMode = context.button == Qt::RightButton ? RoomPickMode::PreferSelection : RoomPickMode::Cycle;
+    const auto clickedRoomId = roomIdAtWidgetPosition(context.widgetPosition, area, pickMode);
     context.hasClickedRoom = clickedRoomId.has_value();
     context.clickedRoomId = clickedRoomId.value_or(0);
 
