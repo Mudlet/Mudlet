@@ -178,6 +178,30 @@ describe("Tests the functionality of IDMgr", function()
       assert.error_matches(exec, "registerNamedEventHandler: bad argument #4 type")
       assert.error_matches(exec2, "registerNamedEventHandler: bad argument #3 type")
     end)
+
+    it("Should accept table arguments (5+ parameters support)", function()
+      local result = registerNamedEventHandler({
+        user = user,
+        name = handlerName,
+        event = eventName,
+        handler = func,
+        oneShot = false
+      })
+      assert.is_true(result)
+      assert.spy(RESpy).was_called()
+      assert.spy(RESpy).was_called_with(eventName, func, false)
+    end)
+
+    it("Should accept table arguments with alternative key names", function()
+      local handler2 = "handler2"
+      local result = registerNamedEventHandler({
+        userName = user,
+        handlerName = handler2,
+        eventName = eventName,
+        functionReference = func
+      })
+      assert.is_true(result)
+    end)
   end)
 
   -- timer functionality tests awaiting me figuring out async tests in busted
@@ -245,6 +269,29 @@ describe("Tests the functionality of IDMgr", function()
 
       assert.error_matches(exec, "registerNamedTimer: bad argument #4 type")
       assert.error_matches(exec2, "registerNamedTimer: bad argument #3 type")
+    end)
+
+    it("Should accept table arguments (5+ parameters support)", function()
+      local timerFunc = function() end
+      local result = pcall(registerNamedTimer, {
+        user = user,
+        name = timerName,
+        time = 1.0,
+        handler = timerFunc,
+        repeating = true
+      })
+      assert.is_true(result)
+    end)
+
+    it("Should accept table arguments with alternative key names", function()
+      local timerFunc = function() end
+      local result = pcall(registerNamedTimer, {
+        userName = user,
+        timerName = timerName .. "2",
+        interval = 1.0,
+        functionReference = timerFunc
+      })
+      assert.is_true(result)
     end)
   end)
 end)

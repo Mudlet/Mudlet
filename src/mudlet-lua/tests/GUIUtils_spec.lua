@@ -954,6 +954,117 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
     end)
   end)
+
+  -- Tests for table argument support in functions with 5+ parameters
+  describe("Tests prefix() table argument support", function()
+    setup(function()
+      _G.moveCursor = function() end
+      _G.insertText = function() end
+      _G.selectString = function() end
+      _G.setFgColor = function() end
+      _G.setBgColor = function() end
+      _G.resetFormat = function() end
+    end)
+
+    it("should accept positional arguments", function()
+      local result = pcall(prefix, "test", "echo", "red", "blue", "main")
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(prefix, {
+        text = "test",
+        func = "echo",
+        fgColor = "red",
+        bgColor = "blue",
+        window = "main"
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests suffix() table argument support", function()
+    setup(function()
+      _G.moveCursor = function() end
+      _G.insertText = function() end
+      _G.selectString = function() end
+      _G.setFgColor = function() end
+      _G.setBgColor = function() end
+      _G.resetFormat = function() end
+    end)
+
+    it("should accept positional arguments", function()
+      local result = pcall(suffix, "test", "echo", "red", "blue", "main")
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(suffix, {
+        text = "test",
+        func = "echo",
+        fgColor = "red",
+        bgColor = "blue",
+        window = "main"
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createGauge() table argument support", function()
+    setup(function()
+      _G.gaugesTable = {}
+      _G.createLabel = function() return true end
+      _G.setBackgroundColor = function() end
+      _G.moveWindow = function() end
+      _G.setLabelClickCallback = function() end
+    end)
+
+    it("should accept positional arguments", function()
+      local result = pcall(createGauge, "main", "testGauge", 100, 20, 10, 10, "HP", 255, 0, 0, "horizontal")
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createGauge, {
+        name = "testGauge2",
+        width = 100,
+        height = 20,
+        Xpos = 10,
+        Ypos = 10,
+        gaugeText = "HP",
+        r = 255,
+        g = 0,
+        b = 0,
+        orientation = "horizontal"
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createConsole() table argument support", function()
+    setup(function()
+      _G.createMiniConsole = function() return true end
+      _G.setMiniConsoleFontSize = function() end
+      _G.setConsoleBufferSize = function() end
+    end)
+
+    it("should accept positional arguments (7 params)", function()
+      local result = pcall(createConsole, "main", "testConsole", 10, 80, 20, 100, 100)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createConsole, {
+        name = "testConsole2",
+        fontSize = 10,
+        charsPerLine = 80,
+        numberOfLines = 20,
+        Xpos = 100,
+        Ypos = 100
+      })
+      assert.is_true(result)
+    end)
+  end)
 end)
 
 --[[

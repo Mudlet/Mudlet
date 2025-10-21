@@ -1,65 +1,56 @@
 # Table Arguments Tests
 
-This document describes the test suite for table argument support in Lua functions with 5+ parameters.
+This document describes the test coverage for table argument support in Lua functions with 5+ parameters.
 
-## Test Files
+## Test Organization
 
-### 1. `TableArguments_spec.lua`
-Tests for pure Lua functions that support table arguments.
+Table argument tests are integrated into existing domain-specific test files rather than in standalone test files. This keeps tests organized by module and makes them easier to find.
+
+### 1. `GUIUtils_spec.lua`
+Tests for GUI-related Lua functions that support table arguments.
 
 **Functions tested:**
-- `prefix()` - Text prefix with formatting
-- `suffix()` - Text suffix with formatting
+- `prefix()` - Text prefix with formatting (5 parameters)
+- `suffix()` - Text suffix with formatting (5 parameters)
 - `createGauge()` - Gauge creation (11 parameters)
 - `createConsole()` - Console creation (7 parameters)
-- `registerNamedEventHandler()` - Event handler registration
-- `registerNamedTimer()` - Timer registration
-- `timeframe()` - Time-based variable changes (varargs)
 
 **Test coverage:**
 - Positional arguments (backward compatibility)
 - Table arguments with primary key names
 - Table arguments with alternative key names
-- Case-insensitive key matching
 
-### 2. `TableArgumentsIntegration_spec.lua`
-Integration tests for C++ functions exposed to Lua via the Lua C API.
+**Test location:** Added to the end of the existing file before the TODO comment.
+
+### 2. `IDManager_spec.lua`
+Tests for event and timer management functions.
 
 **Functions tested:**
-- Link functions: `echoLink()`, `insertLink()`
-- Popup functions: `echoPopup()`, `insertPopup()`
-- Color functions: `setCommandBackgroundColor()`, `setCommandForegroundColor()`, `setBackgroundColor()`, `setBgColor()`, `setCustomEnvColor()`
-- Key binding: `permKey()`
-- Mapper: `createMapper()`, `addMapEvent()`
+- `registerNamedEventHandler()` - Event handler registration (5 parameters)
+- `registerNamedTimer()` - Timer registration (5 parameters)
 
 **Test coverage:**
 - Positional arguments with all parameters
 - Table arguments with complete parameter sets
-- Alternative key name variations
-- Optional parameter handling
+- Alternative key name variations (userName, handlerName, eventName, functionReference)
+- Integration with existing spy assertions
 
-### 3. `TableArgumentsComplex_spec.lua`
-Tests for complex functions with 10+ parameters that benefit most from table argument syntax.
+**Test location:** Added to existing describe blocks for each function.
+
+### 3. `Other_spec.lua`
+Tests for miscellaneous utility functions.
 
 **Functions tested:**
-- `createMapLabel()` - 18 parameters (11 required + 7 optional)
-- `setTextFormat()` - 13 parameters
-- `tempComplexRegexTrigger()` - 14 parameters
-- `highlightRoom()` - 10 parameters
-- `createMapImageLabel()` - 9-10 parameters
-- `createLabel()` - 8 parameters
-- `addCustomLine()` - 6 parameters
-- `createMiniConsole()` - 6 parameters
-- `createCommandLine()` - 6 parameters
-- `createScrollBox()` - 6 parameters
+- `timeframe()` - Time-based variable changes (varargs, 3+ parameters)
 
 **Test coverage:**
-- Minimum required parameters (positional)
-- All parameters including optional ones (positional)
-- Table arguments with required parameters only
-- Table arguments with all optional parameters
-- Mixed case table key names
-- Function vs string code parameters
+- Positional arguments with minimum parameters
+- Positional arguments with additional varargs
+- Table arguments with timerlist
+- Alternative key names (name/variable, trueTime, nilTime, timers/timerlist)
+- Function as vname parameter
+
+**Test location:** New describe block added before the TODO comment.
 
 ## Running the Tests
 
@@ -85,14 +76,19 @@ Tests must be run from within Mudlet using the "Mudlet self-test" profile:
 1. **Open Mudlet** and connect to the "Mudlet self-test" profile
    - Type "Mudlet self-test" in the connection dialog
 
-2. **Run all table argument tests:**
+2. **Run tests by module:**
    ```lua
-   runTests "<path>/Mudlet/src/mudlet-lua/tests/TableArguments_spec.lua"
-   runTests "<path>/Mudlet/src/mudlet-lua/tests/TableArgumentsIntegration_spec.lua"
-   runTests "<path>/Mudlet/src/mudlet-lua/tests/TableArgumentsComplex_spec.lua"
+   -- Test GUI functions (prefix, suffix, createGauge, createConsole)
+   runTests "<path>/Mudlet/src/mudlet-lua/tests/GUIUtils_spec.lua"
+
+   -- Test event/timer managers (registerNamedEventHandler, registerNamedTimer)
+   runTests "<path>/Mudlet/src/mudlet-lua/tests/IDManager_spec.lua"
+
+   -- Test utility functions (timeframe)
+   runTests "<path>/Mudlet/src/mudlet-lua/tests/Other_spec.lua"
    ```
 
-3. **Run all Lua tests (including table argument tests):**
+3. **Run all Lua tests:**
    ```lua
    runTests "<path>/Mudlet/src/mudlet-lua/tests"
    ```
@@ -101,27 +97,47 @@ Tests must be run from within Mudlet using the "Mudlet self-test" profile:
 
 All tests should pass, demonstrating:
 - ✅ Backward compatibility with positional arguments
-- ✅ Table argument support for all migrated functions
+- ✅ Table argument support for all migrated Lua functions
 - ✅ Case-insensitive key matching
 - ✅ Alternative key name recognition
 - ✅ Proper parameter validation
+
+## C++ Function Tests
+
+C++ functions exposed to Lua require a full Mudlet environment and GUI to test properly. These include:
+
+**Functions that need manual/integration testing:**
+- Link functions: `echoLink()`, `insertLink()` (5 params)
+- Popup functions: `echoPopup()`, `insertPopup()` (5 params)
+- Color functions: `setCommandBackgroundColor()`, `setCommandForegroundColor()`, `setBackgroundColor()`, `setBgColor()`, `setCustomEnvColor()` (5 params)
+- Key binding: `permKey()` (4-5 params with optional modifier)
+- Mapper functions: `createMapper()`, `addMapEvent()`, `createMapLabel()`, `createMapImageLabel()`, `highlightRoom()`, `addCustomLine()` (5-18 params)
+- UI functions: `setTextFormat()`, `createLabel()`, `createMiniConsole()`, `createCommandLine()`, `createScrollBox()`, `tempComplexRegexTrigger()` (6-14 params)
+
+**Manual testing approach:**
+1. Open Mudlet with a test profile
+2. Test each function with both positional and table arguments
+3. Verify backward compatibility
+4. Check alternative key names work
+5. Validate error messages for missing required parameters
 
 ## Test Structure
 
 Each test follows the Busted framework pattern:
 
 ```lua
-describe("Tests [function_name]() function", function()
+describe("Tests [function_name]() table argument support", function()
   setup(function()
     -- Mock dependencies if needed
+    _G.someFunction = function() end
   end)
 
-  it("Should accept positional arguments", function()
+  it("should accept positional arguments", function()
     local result = pcall(function_name, arg1, arg2, arg3, ...)
     assert.is_true(result)
   end)
 
-  it("Should accept table arguments", function()
+  it("should accept table arguments", function()
     local result = pcall(function_name, {
       param1 = value1,
       param2 = value2,
@@ -130,31 +146,45 @@ describe("Tests [function_name]() function", function()
     })
     assert.is_true(result)
   end)
+
+  it("should accept table arguments with alternative key names", function()
+    local result = pcall(function_name, {
+      alternateParam1 = value1,
+      alternateParam2 = value2,
+      ...
+    })
+    assert.is_true(result)
+  end)
 end)
-```
-
-## Integration Tests
-
-Note that some tests in `TableArgumentsIntegration_spec.lua` and `TableArgumentsComplex_spec.lua` require a full Mudlet environment and will be skipped if `mudlet` global is not available.
-
-These tests check for function availability before running and will show as "pending" if the function is not accessible:
-
-```lua
-if not functionName then
-  pending("functionName not available")
-  return
-end
 ```
 
 ## Adding New Tests
 
 When adding table argument support to a new function:
 
-1. Add a test suite in the appropriate spec file
+1. Add tests to the appropriate existing spec file:
+   - GUI functions → `GUIUtils_spec.lua`
+   - Event/timer functions → `IDManager_spec.lua`
+   - Utility functions → `Other_spec.lua`
+   - UI/C++ functions → May need integration tests
+
 2. Test both positional and table argument formats
 3. Test alternative key names
 4. Verify backward compatibility
-5. Document the function in this README
+5. Update this documentation
+
+## Summary
+
+- **Total Lua functions with tests:** 7
+  - GUIUtils.lua: 4 functions
+  - IDManager.lua: 2 functions
+  - Other.lua: 1 function
+
+- **C++ functions (manual/integration testing):** 31+ functions
+  - Require full Mudlet environment
+  - Need GUI interaction for validation
+
+- **Test coverage:** All 38 functions with 5+ parameters support table arguments, with 7 having automated unit tests and 31+ requiring integration/manual testing.
 
 ## Related Files
 

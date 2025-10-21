@@ -372,7 +372,50 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
-    --[[ 
+  describe("Tests timeframe() table argument support", function()
+    setup(function()
+      _G.tempTimer = function() return 1 end
+      _G.killTimer = function() end
+    end)
+
+    it("should accept positional arguments", function()
+      local result = pcall(timeframe, "testVar", 1.0, 2.0)
+      assert.is_true(result)
+    end)
+
+    it("should accept positional arguments with additional timers", function()
+      local result = pcall(timeframe, "testVar2", 1.0, 2.0, {3.0, "value3"}, {4.0, "value4"})
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(timeframe, {
+        vname = "testVar3",
+        true_time = 1.0,
+        nil_time = 2.0,
+        timerlist = {{3.0, "value3"}, {4.0, "value4"}}
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with alternative key names", function()
+      local result = pcall(timeframe, {
+        name = "testVar4",
+        trueTime = 1.0,
+        nilTime = 2.0,
+        timers = {{3.0, "value3"}}
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept function as vname parameter", function()
+      local callback = function(val) end
+      local result = pcall(timeframe, callback, 1.0, 2.0)
+      assert.is_true(result)
+    end)
+  end)
+
+    --[[
     TODO:
       remember()
       loadVars()
