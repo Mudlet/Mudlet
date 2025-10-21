@@ -61,6 +61,10 @@ bool CustomLineEditHandler::matches(const T2DMap::MapInteractionContext& context
     }
 
     if (eventType == QEvent::MouseMove) {
+        if (!(context.buttons & Qt::LeftButton)) {
+            return false;
+        }
+
         return mMapWidget.mCustomLineSelectedRoom != 0 && mMapWidget.mCustomLineSelectedPoint >= 0;
     }
 
@@ -186,6 +190,10 @@ bool CustomLineEditHandler::handleMousePress(T2DMap::MapInteractionContext& cont
 
 bool CustomLineEditHandler::handleMouseMove(T2DMap::MapInteractionContext& context)
 {
+    if (!(context.buttons & Qt::LeftButton)) {
+        return false;
+    }
+
     if (!mMapWidget.mpMap || !mMapWidget.mpMap->mpRoomDB) {
         mMapWidget.mCustomLineSelectedPoint = -1;
         return false;
@@ -218,7 +226,6 @@ bool CustomLineEditHandler::handleMouseMove(T2DMap::MapInteractionContext& conte
 
 bool CustomLineEditHandler::handleMouseRelease()
 {
-    mMapWidget.mCustomLineSelectedPoint = -1;
     return false;
 }
 
