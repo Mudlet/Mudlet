@@ -253,7 +253,6 @@ void dlgNotepad::saveSettings()
         return;
     }
 
-    // Store in per-profile profile.ini instead of application-wide QSettings
     mpHost->writeProfileIniData(qsl("Notepad/SendControlsVisible"),
                                  action_toggleSendControls->isChecked() ? qsl("true") : qsl("false"));
 }
