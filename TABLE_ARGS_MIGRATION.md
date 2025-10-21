@@ -1,10 +1,10 @@
 # Lua Function Table Arguments Migration
 
-This file tracks the progress of migrating Lua functions with 4+ parameters to support table argument syntax.
+This file tracks the progress of migrating Lua functions with 5+ parameters to support table argument syntax.
 
 **Issue:** https://github.com/Mudlet/Mudlet/issues/6598
 
-**Goal:** Allow functions with 4+ parameters to accept arguments via table format alongside traditional positional arguments for improved API usability.
+**Goal:** Allow functions with 5+ parameters to accept arguments via table format alongside traditional positional arguments for improved API usability.
 
 **Requirements:**
 - Maintain backward compatibility with positional arguments
@@ -15,11 +15,13 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 
 ## Migration Status
 
-Total functions to migrate: **57**
-Completed: **57**
+Total functions with 5+ parameters: **38**
+Completed: **38**
 Remaining: **0**
 
-✅ **MIGRATION COMPLETE!** All 57 functions now support table argument syntax.
+✅ **MIGRATION COMPLETE!** All 38 functions with 5+ parameters now support table argument syntax.
+
+**Note:** Functions with exactly 4 parameters do NOT support table arguments, as they are not complex enough to require this feature.
 
 ---
 
@@ -81,26 +83,28 @@ Remaining: **0**
 - [x] `setCustomEnvColor` - setCustomEnvColor(environmentID, r,g,b,a) - [7f8e9d0]
 - [x] `suffix` - suffix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])
 
-### 4 Parameters (20 functions)
-- [x] `getRoomsByPosition` - roomTable = getRoomsByPosition(areaID, x,y,z) - [5e6f7d9]
-- [x] `lockSpecialExit` - lockSpecialExit (from roomID, to roomID, special exit command, lockIfTrue) - [3c4d5e6]
-- [x] `openUserWindow` - openUserWindow(windowName, [restoreLayout], [autoDock], [dockingArea])
-- [x] `permAlias` - permAlias(name, parent, regex, lua code)
-- [x] `permBeginOfLineStringTrigger` - permBeginOfLineStringTrigger(name, parent, pattern table, lua code)
-- [x] `permRegexTrigger` - permRegexTrigger(name, parent, pattern table, lua code)
-- [x] `permSubstringTrigger` - permSubstringTrigger( name, parent, pattern table, lua code )
-- [x] `permTimer` - permTimer(name, parent, seconds, lua code)
-- [x] `postHTTP` - postHTTP(dataToSend, url, headersTable, file)
-- [x] `putHTTP` - putHTTP(dataToSend, url, [headersTable], [file])
-- [x] `setBorderSizes` - setBorderSizes(top, right, bottom, left) - [8b9c0d1]
-- [x] `setFgColor` - setFgColor([windowName], red, green, blue) - [9e8f1a2]
-- [x] `setGauge` - setGauge(gaugeName, currentValue, maxValue, gaugeText)
-- [x] `setGaugeStyleSheet` - setGaugeStyleSheet(gaugeName, css, cssback, csstext)
-- [x] `setRoomCharColor` - setRoomCharColor(roomId, r, g, b) - [e4e6d8c]
-- [x] `setRoomCoordinates` - setRoomCoordinates(roomID, x, y, z) - [bc6b462]
-- [x] `speedwalk` - speedwalk(dirString, backwards, delay, show)
-- [x] `tempColorTrigger` - tempColorTrigger(foregroundColor, backgroundColor, code, expireAfter)
-- [x] `timeframe` - timeframe(vname, true_time, nil_time, ...)
+### 4 Parameters (19 functions - NOT MIGRATED)
+**Note:** Functions with exactly 4 parameters do not support table arguments.
+
+- [ ] `getRoomsByPosition` - roomTable = getRoomsByPosition(areaID, x,y,z) - [5e6f7d9]
+- [ ] `lockSpecialExit` - lockSpecialExit (from roomID, to roomID, special exit command, lockIfTrue) - [3c4d5e6]
+- [ ] `openUserWindow` - openUserWindow(windowName, [restoreLayout], [autoDock], [dockingArea])
+- [ ] `permAlias` - permAlias(name, parent, regex, lua code)
+- [ ] `permBeginOfLineStringTrigger` - permBeginOfLineStringTrigger(name, parent, pattern table, lua code)
+- [ ] `permRegexTrigger` - permRegexTrigger(name, parent, pattern table, lua code)
+- [ ] `permSubstringTrigger` - permSubstringTrigger( name, parent, pattern table, lua code )
+- [ ] `permTimer` - permTimer(name, parent, seconds, lua code)
+- [ ] `postHTTP` - postHTTP(dataToSend, url, headersTable, file)
+- [ ] `putHTTP` - putHTTP(dataToSend, url, [headersTable], [file])
+- [ ] `setBorderSizes` - setBorderSizes(top, right, bottom, left) - [8b9c0d1]
+- [ ] `setFgColor` - setFgColor([windowName], red, green, blue) - [9e8f1a2]
+- [ ] `setGauge` - setGauge(gaugeName, currentValue, maxValue, gaugeText)
+- [ ] `setGaugeStyleSheet` - setGaugeStyleSheet(gaugeName, css, cssback, csstext)
+- [ ] `setRoomCharColor` - setRoomCharColor(roomId, r, g, b) - [e4e6d8c]
+- [ ] `setRoomCoordinates` - setRoomCoordinates(roomID, x, y, z) - [bc6b462]
+- [ ] `speedwalk` - speedwalk(dirString, backwards, delay, show)
+- [ ] `tempColorTrigger` - tempColorTrigger(foregroundColor, backgroundColor, code, expireAfter)
+- [x] `timeframe` - timeframe(vname, true_time, nil_time, ...) *Has varargs - can accept 5+ params, so supports tables*
 
 ---
 
