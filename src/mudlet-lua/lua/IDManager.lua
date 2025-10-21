@@ -253,6 +253,16 @@ end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerNamedEventHandler
 function registerNamedEventHandler(user, name, eventName, handler, oneShot)
+  -- Support table argument format
+  if type(user) == 'table' then
+    local args = user
+    user = args.user or args.userName
+    name = args.name or args.handlerName
+    eventName = args.event or args.eventName
+    handler = args.handler or args.functionReference or args.function_name
+    oneShot = args.oneShot
+  end
+
   local funcName = "registerNamedEventHandler"
   local userType = type(user)
   if userType ~= "string" then
@@ -353,6 +363,20 @@ end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerNamedTimer
 function registerNamedTimer(user,name, time, handler, oneShot)
+  -- Support table argument format
+  if type(user) == 'table' then
+    local args = user
+    user = args.user or args.userName
+    name = args.name or args.timerName
+    time = args.time
+    handler = args.handler or args.functionReference or args.function_name
+    oneShot = args.oneShot or args.repeating
+    if oneShot ~= nil and args.repeating then
+      -- If 'repeating' was provided, invert it to get oneShot
+      oneShot = not args.repeating
+    end
+  end
+
   local funcName = "registerNamedTimer"
   local userType = type(user)
   if userType ~= "string" then
