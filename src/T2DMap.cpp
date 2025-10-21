@@ -30,16 +30,16 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
-#include "map/handlers/CustomLineDrawContextMenuHandler.h"
-#include "map/handlers/CustomLineDrawHandler.h"
-#include "map/handlers/CustomLineEditContextMenuHandler.h"
-#include "map/handlers/CustomLineEditHandler.h"
-#include "map/handlers/RoomContextMenuHandler.h"
-#include "map/handlers/RoomMoveActivationHandler.h"
-#include "map/handlers/RoomMoveDragHandler.h"
-#include "map/handlers/LabelInteractionHandler.h"
-#include "map/handlers/PanInteractionHandler.h"
-#include "map/handlers/SelectionRectangleHandler.h"
+#include "CustomLineDrawContextMenuHandler.h"
+#include "CustomLineDrawHandler.h"
+#include "CustomLineEditContextMenuHandler.h"
+#include "CustomLineEditHandler.h"
+#include "LabelInteractionHandler.h"
+#include "PanInteractionHandler.h"
+#include "RoomContextMenuHandler.h"
+#include "RoomMoveActivationHandler.h"
+#include "RoomMoveDragHandler.h"
+#include "SelectionRectangleHandler.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -320,10 +320,6 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 {
-    if (auto* app = qApp) {
-        app->installEventFilter(this);
-    }
-
     mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -386,13 +382,6 @@ T2DMap::T2DMap(QWidget* parent)
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
-}
-
-T2DMap::~T2DMap()
-{
-    if (auto* app = qApp) {
-        app->removeEventFilter(this);
-    }
 }
 
 void T2DMap::init()

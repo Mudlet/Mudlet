@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "map/handlers/CustomLineEditHandler.h"
+#include "CustomLineEditHandler.h"
 
 #include "TMap.h"
 #include "TArea.h"

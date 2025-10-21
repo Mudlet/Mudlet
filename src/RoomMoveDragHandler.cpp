@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "map/handlers/RoomMoveDragHandler.h"
+#include "RoomMoveDragHandler.h"
 
 #include "TArea.h"
 #include "TRoom.h"

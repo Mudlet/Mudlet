@@ -108,16 +108,16 @@ set(mudlet_SRCS
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
-    map/handlers/CustomLineDrawContextMenuHandler.cpp
-    map/handlers/CustomLineDrawHandler.cpp
-    map/handlers/CustomLineEditContextMenuHandler.cpp
-    map/handlers/CustomLineEditHandler.cpp
-    map/handlers/RoomContextMenuHandler.cpp
-    map/handlers/RoomMoveActivationHandler.cpp
-    map/handlers/RoomMoveDragHandler.cpp
-    map/handlers/LabelInteractionHandler.cpp
-    map/handlers/PanInteractionHandler.cpp
-    map/handlers/SelectionRectangleHandler.cpp
+    CustomLineDrawContextMenuHandler.cpp
+    CustomLineDrawHandler.cpp
+    CustomLineEditContextMenuHandler.cpp
+    CustomLineEditHandler.cpp
+    LabelInteractionHandler.cpp
+    PanInteractionHandler.cpp
+    RoomContextMenuHandler.cpp
+    RoomMoveActivationHandler.cpp
+    RoomMoveDragHandler.cpp
+    SelectionRectangleHandler.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
@@ -300,15 +300,15 @@ set(mudlet_HDRS
     ShortcutsManager.h
     SingleLineTextEdit.h
     T2DMap.h
-    map/handlers/CustomLineDrawContextMenuHandler.h
-    map/handlers/CustomLineDrawHandler.h
-    map/handlers/CustomLineEditContextMenuHandler.h
-    map/handlers/CustomLineEditHandler.h
-    map/handlers/RoomMoveActivationHandler.h
-    map/handlers/RoomMoveDragHandler.h
-    map/handlers/LabelInteractionHandler.h
-    map/handlers/PanInteractionHandler.h
-    map/handlers/SelectionRectangleHandler.h
+    CustomLineDrawContextMenuHandler.h
+    CustomLineDrawHandler.h
+    CustomLineEditContextMenuHandler.h
+    CustomLineEditHandler.h
+    LabelInteractionHandler.h
+    PanInteractionHandler.h
+    RoomMoveActivationHandler.h
+    RoomMoveDragHandler.h
+    SelectionRectangleHandler.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h

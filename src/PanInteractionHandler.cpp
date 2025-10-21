@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "map/handlers/PanInteractionHandler.h"
+#include "PanInteractionHandler.h"
 
 #include "TMap.h"
 

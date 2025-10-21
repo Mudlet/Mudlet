@@ -75,7 +75,6 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
-    ~T2DMap() override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     void paintEvent(QPaintEvent*) override;
@@ -133,6 +132,15 @@ public:
         virtual bool handle(MapInteractionContext& context) = 0;
     };
 
+    /**
+     * Register an interaction handler that can respond to map input.
+     *
+     * The handler pointer must remain valid for as long as it is registered.
+     * Handlers are evaluated in descending priority order: higher priority
+     * values run first, so they can intercept interactions before lower
+     * priority (fallback) handlers. Registering the same handler again updates
+     * its position in the priority list.
+     */
     void registerInteractionHandler(IInteractionHandler* handler, int priority);
     void registerContextMenu(QMenu* menu);
     bool eventFilter(QObject* watched, QEvent* event) override;
