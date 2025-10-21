@@ -659,6 +659,16 @@ SOURCES += \
     ShortcutsManager.cpp \
     SingleLineTextEdit.cpp \
     T2DMap.cpp \
+    CustomLineDrawContextMenuHandler.cpp \
+    CustomLineDrawHandler.cpp \
+    CustomLineEditContextMenuHandler.cpp \
+    CustomLineEditHandler.cpp \
+    LabelInteractionHandler.cpp \
+    PanInteractionHandler.cpp \
+    RoomContextMenuHandler.cpp \
+    RoomMoveActivationHandler.cpp \
+    RoomMoveDragHandler.cpp \
+    SelectionRectangleHandler.cpp \
     TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \
@@ -696,6 +706,7 @@ SOURCES += \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
+    TMxpExpireTagHandler.cpp \
     TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpColorTagHandler.cpp \
@@ -792,6 +803,16 @@ HEADERS += \
     ShortcutsManager.h \
     SingleLineTextEdit.h \
     T2DMap.h \
+    CustomLineDrawContextMenuHandler.h \
+    CustomLineDrawHandler.h \
+    CustomLineEditContextMenuHandler.h \
+    CustomLineEditHandler.h \
+    LabelInteractionHandler.h \
+    PanInteractionHandler.h \
+    RoomContextMenuHandler.h \
+    RoomMoveActivationHandler.h \
+    RoomMoveDragHandler.h \
+    SelectionRectangleHandler.h \
     TAccessibleConsole.h \
     TAccessibleTextEdit.h \
     TAction.h \
@@ -834,6 +855,7 @@ HEADERS += \
     TMxpElementDefinitionHandler.h \
     TMxpElementRegistry.h \
     TMxpEntityTagHandler.h \
+    TMxpExpireTagHandler.h \
     TMxpContext.h \
     TMxpFormattingTagsHandler.h \
     TMxpMudlet.h \
