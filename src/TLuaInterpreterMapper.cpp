@@ -314,7 +314,223 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     QList<qreal> x;
     QList<qreal> y;
     QList<int> z;
-    const int id_from = getVerifiedInt(L, __func__, 1, "roomID");
+    int id_from = 0;
+
+    // Table argument support
+    if (lua_istable(L, 1)) {
+        bool hasRoomID = false, hasToRoomIDOrCoords = false, hasDirection = false, hasStyle = false, hasColor = false, hasArrow = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("fromRoomID"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("id_from"), Qt::CaseInsensitive)) {
+                id_from = getVerifiedInt(L, __func__, -1, key);
+                hasRoomID = true;
+            } else if (!key.compare(QLatin1String("toRoomID"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("id_to"), Qt::CaseInsensitive)) {
+                id_to = getVerifiedInt(L, __func__, -1, key);
+                hasToRoomIDOrCoords = true;
+            } else if (!key.compare(QLatin1String("coordinates"), Qt::CaseInsensitive)) {
+                if (!lua_istable(L, -1)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, "coordinates must be a table");
+                }
+                // Process coordinates table
+                lua_pushnil(L);
+                int i = 0;
+                while (lua_next(L, -2) != 0) {
+                    ++i;
+                    if (lua_type(L, -1) != LUA_TTABLE) {
+                        lua_pop(L, 4);
+                        return warnArgumentValue(L, __func__, qsl("coordinates table item #%1 must be a table of {x,y,z}").arg(i));
+                    }
+                    lua_pushnil(L);
+                    int j = 0;
+                    qreal tx = 0, ty = 0;
+                    int tz = 0;
+                    while (lua_next(L, -2) != 0) {
+                        ++j;
+                        if (j <= 3) {
+                            if (lua_type(L, -1) != LUA_TNUMBER) {
+                                lua_pop(L, 6);
+                                return warnArgumentValue(L, __func__, qsl("coordinates table item #%1 inner item #%2 must be a number").arg(i).arg(j));
+                            }
+                            switch (j) {
+                            case 1: tx = lua_tonumber(L, -1); break;
+                            case 2: ty = lua_tonumber(L, -1); break;
+                            case 3: tz = static_cast<int>(lua_tonumber(L, -1)); break;
+                            }
+                        }
+                        lua_pop(L, 1);
+                    }
+                    x.append(tx);
+                    y.append(ty);
+                    z.append(tz);
+                    lua_pop(L, 1);
+                }
+                hasToRoomIDOrCoords = true;
+            } else if (!key.compare(QLatin1String("direction"), Qt::CaseInsensitive)) {
+                direction = dirToString(L, -1);
+                hasDirection = !direction.isEmpty();
+            } else if (!key.compare(QLatin1String("style"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("lineStyle"), Qt::CaseInsensitive)) {
+                QString styleStr = getVerifiedString(L, __func__, -1, key);
+                if (!styleStr.compare(QLatin1String("solid line"))) {
+                    line_style = Qt::SolidLine;
+                } else if (!styleStr.compare(QLatin1String("dot line"))) {
+                    line_style = Qt::DotLine;
+                } else if (!styleStr.compare(QLatin1String("dash line"))) {
+                    line_style = Qt::DashLine;
+                } else if (!styleStr.compare(QLatin1String("dash dot line"))) {
+                    line_style = Qt::DashDotLine;
+                } else if (!styleStr.compare(QLatin1String("dash dot dot line"))) {
+                    line_style = Qt::DashDotDotLine;
+                } else {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, qsl("invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'").arg(styleStr));
+                }
+                hasStyle = true;
+            } else if (!key.compare(QLatin1String("color"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("lineColor"), Qt::CaseInsensitive)) {
+                if (!lua_istable(L, -1)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, "color must be a table with {r, g, b} values");
+                }
+                lua_pushnil(L);
+                int colorIndex = 0;
+                while (lua_next(L, -2) != 0) {
+                    if (++colorIndex <= 3) {
+                        if (lua_type(L, -1) != LUA_TNUMBER) {
+                            lua_pop(L, 4);
+                            return warnArgumentValue(L, __func__, qsl("color table item #%1 must be a number").arg(colorIndex));
+                        }
+                        int component = static_cast<int>(lua_tointeger(L, -1));
+                        if (component < 0 || component > 255) {
+                            lua_pop(L, 4);
+                            return warnArgumentValue(L, __func__, qsl("color component #%1 is %2, must be 0-255").arg(colorIndex).arg(component));
+                        }
+                        switch (colorIndex) {
+                        case 1: r = component; break;
+                        case 2: g = component; break;
+                        case 3: b = component; break;
+                        }
+                    }
+                    lua_pop(L, 1);
+                }
+                hasColor = true;
+            } else if (!key.compare(QLatin1String("arrow"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("endWithArrow"), Qt::CaseInsensitive)) {
+                if (!lua_isboolean(L, -1)) {
+                    lua_pop(L, 2);
+                    return warnArgumentValue(L, __func__, "arrow must be a boolean");
+                }
+                hasArrow = true;
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasRoomID) {
+            return warnArgumentValue(L, __func__, "missing required 'roomID' in table");
+        }
+        if (!hasToRoomIDOrCoords) {
+            return warnArgumentValue(L, __func__, "missing required 'toRoomID' or 'coordinates' in table");
+        }
+        if (!hasDirection) {
+            return warnArgumentValue(L, __func__, "missing required 'direction' in table");
+        }
+        if (!hasStyle) {
+            return warnArgumentValue(L, __func__, "missing required 'style' in table");
+        }
+        if (!hasColor) {
+            return warnArgumentValue(L, __func__, "missing required 'color' in table");
+        }
+        if (!hasArrow) {
+            return warnArgumentValue(L, __func__, "missing required 'arrow' in table");
+        }
+
+        // If toRoomID was specified but coordinates weren't, populate coordinates from target room
+        if (id_to > 0 && x.isEmpty()) {
+            TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
+            if (!pR_to) {
+                return warnArgumentValue(L, __func__, qsl("toRoomID %1 is not a valid room").arg(id_to));
+            }
+            x.append(static_cast<qreal>(pR_to->x()));
+            y.append(static_cast<qreal>(pR_to->y()));
+            z.append(pR_to->z());
+        }
+
+        // Now continue with validation using the extracted values
+        TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
+        if (!pR) {
+            return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id_from));
+        }
+
+        if (id_to > 0) {
+            TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
+            const int area = pR->getArea();
+            const int area_to = pR_to->getArea();
+            if (area != area_to) {
+                return warnArgumentValue(L, __func__, qsl(
+                    "target room is in area '%1' (ID: %2) which is not the one '%3' (ID: %4) in which this custom line is to be drawn")
+                    .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
+                            (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
+            }
+        }
+
+        if (x.isEmpty()) {
+            return warnArgumentValue(L, __func__, "missing coordinates to create the line to");
+        }
+        if (x.count() != y.count() || x.count() != z.count()) {
+            return warnArgumentValue(L, __func__, "mismatch in numbers of coordinates");
+        }
+
+        if (direction.isEmpty()) {
+            return warnArgumentValue(L, __func__, "invalid direction");
+        }
+        if (!pR->hasExitOrSpecialExit(direction)) {
+            return warnArgumentValue(L, __func__, qsl("roomID %1 does not have an exit in direction '%2'").arg(id_from).arg(direction));
+        }
+
+        const int lz = z.at(0);
+        QList<QPointF> points;
+        points.append(QPointF(x.at(0), y.at(0)));
+        for (int i = 1, total = z.size(); i < total; ++i) {
+            if (lz != z.at(i)) {
+                return warnArgumentValue(L, __func__, qsl("the z values are not all on the same level (first wrong value is %1 at index %2)").arg(QString::number(z.at(i)), QString::number(i + 1)));
+            }
+            points.append(QPointF(x.at(i), y.at(i)));
+        }
+
+        // Extract arrow value from table
+        lua_pushstring(L, "arrow");
+        lua_gettable(L, 1);
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            lua_pushstring(L, "endWithArrow");
+            lua_gettable(L, 1);
+        }
+        const bool arrow = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+
+        pR->customLines[direction] = points;
+        pR->customLinesArrow[direction] = arrow;
+        pR->customLinesStyle[direction] = line_style;
+        pR->customLinesColor[direction] = QColor(r, g, b);
+
+        pR->calcRoomDimensions();
+        host.mpMap->setUnsaved(__func__);
+        host.mpMap->update();
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Original positional argument handling
+    id_from = getVerifiedInt(L, __func__, 1, "roomID");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id_from));
