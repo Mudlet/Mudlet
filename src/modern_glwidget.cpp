@@ -578,7 +578,8 @@ void ModernGLWidget::renderConnections()
         return;
     }
 
-    QVector<CubeInstanceData> roomConnectionInstances;
+    QVector<CubeInstanceData> greyConnectionInstances;
+    QVector<CubeInstanceData> redConnectionInstances;
     const QVector3D zVector = QVector3D(0, 0, 1);
 
     float pz = static_cast<float>(mMapCenterZ);
@@ -586,9 +587,11 @@ void ModernGLWidget::renderConnections()
     // Initialize instance queue
     QVector<CubeInstanceData> areaExitInstances;
 
-    // Collect all lines to draw
-    QVector<float> lineVertices;
-    QVector<float> lineColors;
+    // Collect all lines to draw - separate arrays for grey and red for proper rendering order
+    QVector<float> greyLineVertices;
+    QVector<float> greyLineColors;
+    QVector<float> redLineVertices;
+    QVector<float> redLineColors;
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -663,17 +666,24 @@ void ModernGLWidget::renderConnections()
                 auto ey = static_cast<float>(pExit->y());
                 auto ez = static_cast<float>(pExit->z());
 
-                // Add line from current room to exit room
-                lineVertices << rx << ry << rz; // Start point
-                lineVertices << ex << ey << ez; // End point
-                
                 // Determine translucency based on destination room level
                 bool exitAboveCurrentLevel = (ez > pz);
                 float connectionAlpha = exitAboveCurrentLevel ? 0.2f : 1.0f;
 
-                // Add colors for both vertices with appropriate alpha
-                lineColors << r << g << b << connectionAlpha; // Start color
-                lineColors << r << g << b << connectionAlpha; // End color
+                // Add line to appropriate array based on color (red for current room, grey for others)
+                if (isCurrentRoom) {
+                    // Red lines - rendered second (on top)
+                    redLineVertices << rx << ry << rz; // Start point
+                    redLineVertices << ex << ey << ez; // End point
+                    redLineColors << r << g << b << connectionAlpha; // Start color
+                    redLineColors << r << g << b << connectionAlpha; // End color
+                } else {
+                    // Grey lines - rendered first (underneath)
+                    greyLineVertices << rx << ry << rz; // Start point
+                    greyLineVertices << ex << ey << ez; // End point
+                    greyLineColors << r << g << b << connectionAlpha; // Start color
+                    greyLineColors << r << g << b << connectionAlpha; // End color
+                }
 
                 // for volume exits we calculate the cube transformation we need
                 const QVector3D exitVector = QVector3D(ex-rx, ey-ry, ez-rz);
@@ -684,13 +694,23 @@ void ModernGLWidget::renderConnections()
                     transform.translate(rx, ry, rz);
                     transform.rotate(alignmentQuat);
                     transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                    // Add to appropriate instance array based on color
+                    if (isCurrentRoom) {
+                        redConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                    } else {
+                        greyConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                    }
                 } else {
                     transform.translate(exitVector/4.0f);
                     transform.translate(rx, ry, rz);
                     transform.rotate(alignmentQuat);
                     transform.scale(0.02f, 0.02f, exitVector.length()/4.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                    // Add to appropriate instance array based on color
+                    if (isCurrentRoom) {
+                        redConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                    } else {
+                        greyConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
+                    }
                 }
             } else {
                 // Area exit - draw directional stub
@@ -729,19 +749,15 @@ void ModernGLWidget::renderConnections()
                     dy -= 0.5f;
                 }
 
-                // Add line from current room to direction offset
-                lineVertices << rx << ry << rz; // Start point
-                lineVertices << dx << dy << dz; // End point (offset)
-
                 // Determine translucency for area exits based on destination level
                 bool exitAboveCurrentLevel = (dz > pz);
                 float exitAlpha = exitAboveCurrentLevel ? 0.2f : 1.0f;
-                
+
                 // Darken area exit colors if above current level
                 float exitRed = 85.0f / 255.0f;
                 float exitGreen = 170.0f / 255.0f;
                 float exitBlue = 0.0f;
-                
+
                 if (exitAboveCurrentLevel) {
                     // Drastically darken area exits above current level
                     const float darkenFactor = 0.25f; // Keep only 25% of original brightness
@@ -749,10 +765,22 @@ void ModernGLWidget::renderConnections()
                     exitGreen *= darkenFactor;
                     exitBlue *= darkenFactor;
                 }
-                
-                // Use different color for area exits (greenish) with appropriate alpha and darkening
-                lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // Start color
-                lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
+
+                // Add line to appropriate array based on whether it's from current room
+                // Area exits use greenish color regardless, but respect rendering order
+                if (isCurrentRoom) {
+                    // Red room's area exits - rendered second (on top)
+                    redLineVertices << rx << ry << rz; // Start point
+                    redLineVertices << dx << dy << dz; // End point (offset)
+                    redLineColors << exitRed << exitGreen << exitBlue << exitAlpha; // Start color
+                    redLineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
+                } else {
+                    // Grey room's area exits - rendered first (underneath)
+                    greyLineVertices << rx << ry << rz; // Start point
+                    greyLineVertices << dx << dy << dz; // End point (offset)
+                    greyLineColors << exitRed << exitGreen << exitBlue << exitAlpha; // Start color
+                    greyLineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
+                }
 
                 // for volume exits we calculate the cube transformation we need
                 const QVector3D exitVector = QVector3D(dx-rx, dy-ry, dz-rz);
@@ -764,19 +792,32 @@ void ModernGLWidget::renderConnections()
                     transform.translate(rx, ry, rz);
                     transform.rotate(alignmentQuat);
                     transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    // Area exits from current room should render on top
+                    if (isCurrentRoom) {
+                        redConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    } else {
+                        greyConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    }
                     transform.setToIdentity();
                     transform.translate(5.0f*exitVector/8.0f);
                     transform.translate(rx, ry, rz);
                     transform.rotate(alignmentQuat);
                     transform.scale(0.02f, 0.02f, exitVector.length()/16.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    if (isCurrentRoom) {
+                        redConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    } else {
+                        greyConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    }
                 } else {
                     transform.translate(exitVector/2.0f);
                     transform.translate(rx, ry, rz);
                     transform.rotate(alignmentQuat);
                     transform.scale(0.02f, 0.02f, exitVector.length()/2.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    if (isCurrentRoom) {
+                        redConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    } else {
+                        greyConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
+                    }
                 }
 
                 // Render green area exit cube at the destination position with translucency and darkening
@@ -811,29 +852,55 @@ void ModernGLWidget::renderConnections()
         }
     }
 
-    // Always enable depth testing
+    // Enable depth testing for grey connections
     auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
     mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
 
-    // Always render room connection volumes
-    if (!roomConnectionInstances.isEmpty()) {
-        auto command = std::make_unique<RenderInstancedCubesCommand>(roomConnectionInstances, 
-                                                                    mCameraController.getProjectionMatrix(), 
-                                                                    mCameraController.getViewMatrix(), 
+    // Two-pass rendering with depth test control:
+    // Grey connections render with depth test (normal 3D rendering)
+    // Red connections render WITHOUT depth test (always on top)
+
+    // First pass: render grey room connection volumes with depth testing
+    if (!greyConnectionInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(greyConnectionInstances,
+                                                                    mCameraController.getProjectionMatrix(),
+                                                                    mCameraController.getViewMatrix(),
                                                                     mCameraController.getModelMatrix());
         mRenderCommandQueue.addCommand(std::move(command));
-
-    } else {
-        // Render all collected lines
-        if (!lineVertices.isEmpty()) {
-            renderLines(lineVertices, lineColors);
-        }
     }
 
+    // First pass: render grey lines with depth testing
+    if (!greyLineVertices.isEmpty()) {
+        renderLines(greyLineVertices, greyLineColors);
+    }
+
+    // Disable depth test for red connections so they always render on top
+    auto disableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST);
+    mRenderCommandQueue.addCommand(std::move(disableDepthCommand));
+
+    // Second pass: render red room connection volumes (always on top, no depth test)
+    if (!redConnectionInstances.isEmpty()) {
+        auto command = std::make_unique<RenderInstancedCubesCommand>(redConnectionInstances,
+                                                                    mCameraController.getProjectionMatrix(),
+                                                                    mCameraController.getViewMatrix(),
+                                                                    mCameraController.getModelMatrix());
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    // Second pass: render red lines (always on top, no depth test)
+    if (!redLineVertices.isEmpty()) {
+        renderLines(redLineVertices, redLineColors);
+    }
+
+    // Re-enable depth testing for area exit cubes
+    auto reEnableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
+    mRenderCommandQueue.addCommand(std::move(reEnableDepthCommand));
+
+    // Render area exit cubes with depth testing
     if (!areaExitInstances.isEmpty()) {
-        auto command = std::make_unique<RenderInstancedCubesCommand>(areaExitInstances, 
-                                                                    mCameraController.getProjectionMatrix(), 
-                                                                    mCameraController.getViewMatrix(), 
+        auto command = std::make_unique<RenderInstancedCubesCommand>(areaExitInstances,
+                                                                    mCameraController.getProjectionMatrix(),
+                                                                    mCameraController.getViewMatrix(),
                                                                     mCameraController.getModelMatrix());
         mRenderCommandQueue.addCommand(std::move(command));
     }
