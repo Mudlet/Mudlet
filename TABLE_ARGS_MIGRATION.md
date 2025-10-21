@@ -16,8 +16,8 @@ This file tracks the progress of migrating Lua functions with 4+ parameters to s
 ## Migration Status
 
 Total functions to migrate: **57**
-Completed: **4**
-Remaining: **53**
+Completed: **5**
+Remaining: **52**
 
 ---
 
@@ -91,7 +91,7 @@ Remaining: **53**
 - [ ] `postHTTP` - postHTTP(dataToSend, url, headersTable, file)
 - [ ] `putHTTP` - putHTTP(dataToSend, url, [headersTable], [file])
 - [x] `setBorderSizes` - setBorderSizes(top, right, bottom, left) - [8b9c0d1]
-- [ ] `setFgColor` - setFgColor([windowName], red, green, blue)
+- [x] `setFgColor` - setFgColor([windowName], red, green, blue) - [9e8f1a2]
 - [ ] `setGauge` - setGauge(gaugeName, currentValue, maxValue, gaugeText)
 - [ ] `setGaugeStyleSheet` - setGaugeStyleSheet(gaugeName, css, cssback, csstext)
 - [x] `setRoomCharColor` - setRoomCharColor(roomId, r, g, b) - [e4e6d8c]
