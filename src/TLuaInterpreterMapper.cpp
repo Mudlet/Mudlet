@@ -1297,6 +1297,157 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     int backgroundTransparency = 50;
 
     const int args = lua_gettop(L);
+
+    // Check if first argument is a table for named-key format
+    if (lua_istable(L, 1)) {
+        int area = 0, fgr = 0, fgg = 0, fgb = 0, bgr = 0, bgg = 0, bgb = 0;
+        int olr = 0, olg = 0, olb = 0;
+        float posx = 0, posy = 0, posz = 0;
+        QString text;
+        bool hasArea = false, hasText = false, hasPosX = false, hasPosY = false, hasPosZ = false;
+        bool hasFgR = false, hasFgG = false, hasFgB = false;
+        bool hasBgR = false, hasBgG = false, hasBgB = false;
+        bool hasOutlineColor = false;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("area"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("areaID"), Qt::CaseInsensitive)) {
+                area = getVerifiedInt(L, __func__, -1, key);
+                hasArea = true;
+            } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
+                text = getVerifiedString(L, __func__, -1, key);
+                hasText = true;
+            } else if (!key.compare(QLatin1String("posX"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+                posx = getVerifiedFloat(L, __func__, -1, key);
+                hasPosX = true;
+            } else if (!key.compare(QLatin1String("posY"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+                posy = getVerifiedFloat(L, __func__, -1, key);
+                hasPosY = true;
+            } else if (!key.compare(QLatin1String("posZ"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("z"), Qt::CaseInsensitive)) {
+                posz = getVerifiedFloat(L, __func__, -1, key);
+                hasPosZ = true;
+            } else if (!key.compare(QLatin1String("fgRed"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("fgR"), Qt::CaseInsensitive)) {
+                fgr = getVerifiedInt(L, __func__, -1, key);
+                hasFgR = true;
+            } else if (!key.compare(QLatin1String("fgGreen"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("fgG"), Qt::CaseInsensitive)) {
+                fgg = getVerifiedInt(L, __func__, -1, key);
+                hasFgG = true;
+            } else if (!key.compare(QLatin1String("fgBlue"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("fgB"), Qt::CaseInsensitive)) {
+                fgb = getVerifiedInt(L, __func__, -1, key);
+                hasFgB = true;
+            } else if (!key.compare(QLatin1String("bgRed"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("bgR"), Qt::CaseInsensitive)) {
+                bgr = getVerifiedInt(L, __func__, -1, key);
+                hasBgR = true;
+            } else if (!key.compare(QLatin1String("bgGreen"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("bgG"), Qt::CaseInsensitive)) {
+                bgg = getVerifiedInt(L, __func__, -1, key);
+                hasBgG = true;
+            } else if (!key.compare(QLatin1String("bgBlue"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("bgB"), Qt::CaseInsensitive)) {
+                bgb = getVerifiedInt(L, __func__, -1, key);
+                hasBgB = true;
+            } else if (!key.compare(QLatin1String("zoom"), Qt::CaseInsensitive)) {
+                zoom = getVerifiedFloat(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("fontSize"), Qt::CaseInsensitive)) {
+                fontSize = getVerifiedInt(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("showOnTop"), Qt::CaseInsensitive)) {
+                showOnTop = getVerifiedBool(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("noScaling"), Qt::CaseInsensitive)) {
+                noScaling = getVerifiedBool(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("fontName"), Qt::CaseInsensitive)) {
+                fontName = getVerifiedString(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("foregroundTransparency"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("fgAlpha"), Qt::CaseInsensitive)) {
+                foregroundTransparency = getVerifiedInt(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("backgroundTransparency"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("bgAlpha"), Qt::CaseInsensitive)) {
+                backgroundTransparency = getVerifiedInt(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("temporary"), Qt::CaseInsensitive)) {
+                temporary = getVerifiedBool(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("outlineRed"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("olR"), Qt::CaseInsensitive)) {
+                olr = getVerifiedInt(L, __func__, -1, key);
+                hasOutlineColor = true;
+            } else if (!key.compare(QLatin1String("outlineGreen"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("olG"), Qt::CaseInsensitive)) {
+                olg = getVerifiedInt(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("outlineBlue"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("olB"), Qt::CaseInsensitive)) {
+                olb = getVerifiedInt(L, __func__, -1, key);
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasArea) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'area' or 'areaID' in table");
+            return lua_error(L);
+        }
+        if (!hasText) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'text' in table");
+            return lua_error(L);
+        }
+        if (!hasPosX) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'posX' or 'x' in table");
+            return lua_error(L);
+        }
+        if (!hasPosY) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'posY' or 'y' in table");
+            return lua_error(L);
+        }
+        if (!hasPosZ) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'posZ' or 'z' in table");
+            return lua_error(L);
+        }
+        if (!hasFgR) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'fgRed' or 'fgR' in table");
+            return lua_error(L);
+        }
+        if (!hasFgG) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'fgGreen' or 'fgG' in table");
+            return lua_error(L);
+        }
+        if (!hasFgB) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'fgBlue' or 'fgB' in table");
+            return lua_error(L);
+        }
+        if (!hasBgR) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'bgRed' or 'bgR' in table");
+            return lua_error(L);
+        }
+        if (!hasBgG) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'bgGreen' or 'bgG' in table");
+            return lua_error(L);
+        }
+        if (!hasBgB) {
+            lua_pushfstring(L, "createMapLabel: bad argument, missing 'bgBlue' or 'bgB' in table");
+            return lua_error(L);
+        }
+
+        // If outline color not specified, default to foreground color
+        if (!hasOutlineColor) {
+            olr = fgr;
+            olg = fgg;
+            olb = fgb;
+        }
+
+        const Host& host = getHostFromLua(L);
+        lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName, QColor(olr, olg, olb, foregroundTransparency)));
+        host.mpMap->update();
+        return 1;
+    }
+
+    // Original positional argument handling
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
     const QString text = getVerifiedString(L, __func__, 2, "text");
     const float posx = getVerifiedFloat(L, __func__, 3, "posX");
