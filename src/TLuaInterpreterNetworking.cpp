@@ -640,12 +640,150 @@ int TLuaInterpreter::getHTTP(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
 int TLuaInterpreter::postHTTP(lua_State* L)
 {
+    // Check if first argument is a table for named-key format
+    if (lua_istable(L, 1)) {
+        QString data, url, file;
+        bool hasUrl = false;
+
+        // Store headers table if present
+        lua_newtable(L);  // Create empty headers table at stack position 2
+        int headersIndex = lua_gettop(L);
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("data"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("dataToSend"), Qt::CaseInsensitive)) {
+                data = getVerifiedString(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive)) {
+                url = getVerifiedString(L, __func__, -1, key);
+                hasUrl = true;
+            } else if (!key.compare(QLatin1String("headers"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("headersTable"), Qt::CaseInsensitive)) {
+                if (lua_istable(L, -1)) {
+                    // Copy headers table
+                    lua_pushnil(L);
+                    while (lua_next(L, -2) != 0) {
+                        lua_pushvalue(L, -2);  // Copy key
+                        lua_pushvalue(L, -2);  // Copy value
+                        lua_settable(L, headersIndex);
+                        lua_pop(L, 1);
+                    }
+                }
+            } else if (!key.compare(QLatin1String("file"), Qt::CaseInsensitive)) {
+                file = getVerifiedString(L, __func__, -1, key);
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasUrl) {
+            lua_pushfstring(L, "postHTTP: bad argument, missing 'url' in table");
+            return lua_error(L);
+        }
+
+        // Convert table format to positional arguments for performHttpRequest
+        // Stack: table, headers
+        lua_remove(L, 1);  // Remove original table
+        // Stack: headers
+
+        // Push arguments in order: data, url, headers, file
+        lua_pushstring(L, data.toUtf8().constData());
+        lua_insert(L, 1);  // Move to position 1
+        // Stack: data, headers
+
+        lua_pushstring(L, url.toUtf8().constData());
+        lua_insert(L, 2);  // Move to position 2
+        // Stack: data, url, headers
+
+        // headers already at position 3
+
+        if (!file.isEmpty()) {
+            lua_pushstring(L, file.toUtf8().constData());
+        } else {
+            lua_pushnil(L);
+        }
+        // Stack: data, url, headers, file
+
+        return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PostOperation, qsl("post"));
+    }
+
     return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PostOperation, qsl("post"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#putHTTP
 int TLuaInterpreter::putHTTP(lua_State* L)
 {
+    // Check if first argument is a table for named-key format
+    if (lua_istable(L, 1)) {
+        QString data, url, file;
+        bool hasUrl = false;
+
+        // Store headers table if present
+        lua_newtable(L);  // Create empty headers table at stack position 2
+        int headersIndex = lua_gettop(L);
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("data"), Qt::CaseInsensitive) ||
+                !key.compare(QLatin1String("dataToSend"), Qt::CaseInsensitive)) {
+                data = getVerifiedString(L, __func__, -1, key);
+            } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive)) {
+                url = getVerifiedString(L, __func__, -1, key);
+                hasUrl = true;
+            } else if (!key.compare(QLatin1String("headers"), Qt::CaseInsensitive) ||
+                       !key.compare(QLatin1String("headersTable"), Qt::CaseInsensitive)) {
+                if (lua_istable(L, -1)) {
+                    // Copy headers table
+                    lua_pushnil(L);
+                    while (lua_next(L, -2) != 0) {
+                        lua_pushvalue(L, -2);  // Copy key
+                        lua_pushvalue(L, -2);  // Copy value
+                        lua_settable(L, headersIndex);
+                        lua_pop(L, 1);
+                    }
+                }
+            } else if (!key.compare(QLatin1String("file"), Qt::CaseInsensitive)) {
+                file = getVerifiedString(L, __func__, -1, key);
+            }
+
+            lua_pop(L, 1);
+        }
+
+        if (!hasUrl) {
+            lua_pushfstring(L, "putHTTP: bad argument, missing 'url' in table");
+            return lua_error(L);
+        }
+
+        // Convert table format to positional arguments for performHttpRequest
+        // Stack: table, headers
+        lua_remove(L, 1);  // Remove original table
+        // Stack: headers
+
+        // Push arguments in order: data, url, headers, file
+        lua_pushstring(L, data.toUtf8().constData());
+        lua_insert(L, 1);  // Move to position 1
+        // Stack: data, headers
+
+        lua_pushstring(L, url.toUtf8().constData());
+        lua_insert(L, 2);  // Move to position 2
+        // Stack: data, url, headers
+
+        // headers already at position 3
+
+        if (!file.isEmpty()) {
+            lua_pushstring(L, file.toUtf8().constData());
+        } else {
+            lua_pushnil(L);
+        }
+        // Stack: data, url, headers, file
+
+        return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PutOperation, qsl("put"));
+    }
+
     return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PutOperation, qsl("put"));
 }
 
