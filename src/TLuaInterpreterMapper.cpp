@@ -3447,15 +3447,68 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCustomEnvColor
 int TLuaInterpreter::setCustomEnvColor(lua_State* L)
 {
-    const int id = getVerifiedInt(L, __func__, 1, "environmentID");
-    const int r = getVerifiedInt(L, __func__, 2, "red color component");
-    const int g = getVerifiedInt(L, __func__, 3, "green color component");
-    const int b = getVerifiedInt(L, __func__, 4, "blue color component");
-    int alpha = 255;
-    if (lua_gettop(L) > 4) {
-        alpha = getVerifiedInt(L, __func__, 5, "alpha color component", true);
+    int id, r, g, b, alpha;
+
+    // Support both table and ordered arguments
+    if (lua_istable(L, 1)) {
+        // Table argument format: {environmentID=id, r=N, g=N, b=N, a=N}
+        bool hasID = false, hasR = false, hasG = false, hasB = false;
+        alpha = 255; // default value
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("environmentID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("id"), Qt::CaseInsensitive)) {
+                id = getVerifiedInt(L, __func__, -1, "environmentID");
+                hasID = true;
+            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                r = getVerifiedInt(L, __func__, -1, "red component");
+                hasR = true;
+            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                g = getVerifiedInt(L, __func__, -1, "green component");
+                hasG = true;
+            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                b = getVerifiedInt(L, __func__, -1, "blue component");
+                hasB = true;
+            } else if (!key.compare(QLatin1String("a"), Qt::CaseInsensitive) || !key.compare(QLatin1String("alpha"), Qt::CaseInsensitive)) {
+                alpha = getVerifiedInt(L, __func__, -1, "alpha component");
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
+        }
+
+        // Validate required parameters
+        if (!hasID) {
+            lua_pushfstring(L, "%s: missing required 'environmentID' or 'id' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasR) {
+            lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasG) {
+            lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasB) {
+            lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: environmentID, r, g, b, [alpha]
+        id = getVerifiedInt(L, __func__, 1, "environmentID");
+        r = getVerifiedInt(L, __func__, 2, "red color component");
+        g = getVerifiedInt(L, __func__, 3, "green color component");
+        b = getVerifiedInt(L, __func__, 4, "blue color component");
+        alpha = 255;
+        if (lua_gettop(L) > 4) {
+            alpha = getVerifiedInt(L, __func__, 5, "alpha color component", true);
+        }
     }
 
+    // Validate color component ranges
     if ((r < 0) || (r > 255)) {
         lua_pushnil(L);
         lua_pushfstring(L, "red color component %d out of range {0 to 255}", r);
@@ -3476,6 +3529,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
         lua_pushfstring(L, "alpha color component %d out of range {0 to 255}", alpha);
         return 2;
     }
+
     const QColor& newColor = QColor(r, g, b, alpha);
     Host& host = getHostFromLua(L);
     host.mpMap->mCustomEnvColors[id] = newColor;
