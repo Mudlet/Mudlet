@@ -197,6 +197,52 @@ describe("Tests the functionality of IDMgr", function()
     pending("Should allow you to delete a named timer")
     pending("Should allow you to delete all named timers")
 
+    describe("Tests the functionality of remainingNamedTimer", function()
+      local tempTimerSpy
+      local remainingTimeSpy
+      before_each(function()
+        tempTimerSpy = spy.on(_G, "tempTimer")
+        remainingTimeSpy = spy.on(_G, "remainingTime")
+      end)
+      after_each(function()
+        tempTimer:revert()
+        remainingTime:revert()
+        deleteAllNamedTimers(user)
+      end)
+
+      it("Should return remaining time for an active named timer", function()
+        local handlerFunc = function() end
+        registerNamedTimer(user, timerName, time, handlerFunc)
+        -- Mock remainingTime to return a value
+        remainingTime:clear()
+        remainingTimeSpy = spy.on(_G, "remainingTime")
+        remainingTimeSpy.callback = function() return 50 end
+        local result = remainingNamedTimer(user, timerName)
+        assert.is_equal(50, result)
+        assert.spy(remainingTimeSpy).was_called(1)
+      end)
+
+      it("Should return nil and error message for non-existent timer", function()
+        local result, err = remainingNamedTimer(user, "nonexistent")
+        assert.is_nil(result)
+        assert.is_equal("timer not found", err)
+      end)
+
+      it("Should raise an error if user parameter is missing or wrong type", function()
+        local exec = function()
+          remainingNamedTimer()
+        end
+        assert.error_matches(exec, "bad argument #1 type")
+      end)
+
+      it("Should raise an error if name parameter is missing or wrong type", function()
+        local exec = function()
+          remainingNamedTimer(user)
+        end
+        assert.error_matches(exec, "bad argument #2 type")
+      end)
+    end)
+
     it("Should raise an error if the handlerName is missing or wrong type", function()
       local reg = function()
         registerNamedTimer(user)
