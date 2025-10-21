@@ -2128,46 +2128,95 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     QString windowName;
-    int r, alpha;
-    int s = 1;
+    int r, g, b, alpha;
 
     auto validRange = [](int number) {
         return number >= 0 && number <= 255;
     };
 
-    if (lua_type(L, s) == LUA_TSTRING) {
-        windowName = WINDOW_NAME(L, s++);
-        r = getVerifiedInt(L, __func__, s, "red value 0-255");
-        if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+    // Support both table and ordered arguments
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // Table argument format: {windowName="name", r=N, g=N, b=N, alpha=N}
+        bool hasR = false, hasG = false, hasB = false;
+        alpha = 255; // default value
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            QString key = getVerifiedString(L, __func__, -2, "table key");
+
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
+                windowName = getVerifiedString(L, __func__, -1, "windowName");
+            } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                r = getVerifiedInt(L, __func__, -1, "red component");
+                hasR = true;
+            } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                g = getVerifiedInt(L, __func__, -1, "green component");
+                hasG = true;
+            } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                b = getVerifiedInt(L, __func__, -1, "blue component");
+                hasB = true;
+            } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) || !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
+                alpha = getVerifiedInt(L, __func__, -1, "alpha component");
+            }
+
+            lua_pop(L, 1); // Remove value, keep key for next iteration
         }
-    } else if (lua_isnumber(L, s)) {
-        r = static_cast<int>(lua_tonumber(L, s));
-        if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+
+        // Validate required parameters
+        if (!hasR) {
+            lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasG) {
+            lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
+            return lua_error(L);
+        }
+        if (!hasB) {
+            lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
+            return lua_error(L);
         }
     } else {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
+        // Ordered argument format: [windowName], r, g, b, [alpha]
+        int s = 1;
+        if (lua_type(L, s) == LUA_TSTRING) {
+            windowName = WINDOW_NAME(L, s++);
+            r = getVerifiedInt(L, __func__, s, "red value 0-255");
+            if (!validRange(r)) {
+                return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+            }
+        } else if (lua_isnumber(L, s)) {
+            r = static_cast<int>(lua_tonumber(L, s));
+            if (!validRange(r)) {
+                return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+            }
+        } else {
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        }
+
+        g = getVerifiedInt(L, __func__, ++s, "green value 0-255");
+        b = getVerifiedInt(L, __func__, ++s, "blue value 0-255");
+
+        // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
+        alpha = 255;
+        if (lua_gettop(L) > s) {
+            alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
+        }
     }
 
-    const int g = getVerifiedInt(L, __func__, ++s, "green value 0-255");
+    // Validate RGB and alpha values
+    if (!validRange(r)) {
+        return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+    }
     if (!validRange(g)) {
         return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
     }
-
-    const int b = getVerifiedInt(L, __func__, ++s, "blue value 0-255");
     if (!validRange(b)) {
         return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
     }
-
-    // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
-    alpha = 255;
-    if (lua_gettop(L) > s) {
-        alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
-        if (!validRange(alpha)) {
-            return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
-        }
+    if (!validRange(alpha)) {
+        return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
     }
 
     if (isMain(windowName)) {
