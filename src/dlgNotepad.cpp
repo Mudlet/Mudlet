@@ -264,25 +264,9 @@ void dlgNotepad::restoreSettings()
         return;
     }
 
-    // Try to read from the new location (per-profile profile.ini)
-    QString sendControlsVisibleStr = mpHost->readProfileIniData(qsl("Notepad/SendControlsVisible"));
-    bool sendControlsVisible = false;
-    bool needsMigration = false;
-
-    if (sendControlsVisibleStr.isEmpty()) {
-        // Setting not found in profile.ini, try to migrate from old application-wide QSettings
-        QSettings* pQSettings = mudlet::getQSettings();
-        if (pQSettings) {
-            const QString oldSettingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
-            if (pQSettings->contains(oldSettingsKey)) {
-                sendControlsVisible = pQSettings->value(oldSettingsKey, false).toBool();
-                needsMigration = true;
-            }
-        }
-    } else {
-        // Parse the value from profile.ini
-        sendControlsVisible = (sendControlsVisibleStr.compare(qsl("true"), Qt::CaseInsensitive) == 0);
-    }
+    // Read from per-profile profile.ini
+    const QString sendControlsVisibleStr = mpHost->readProfileIniData(qsl("Notepad/SendControlsVisible"));
+    const bool sendControlsVisible = (sendControlsVisibleStr.compare(qsl("true"), Qt::CaseInsensitive) == 0);
 
     // Block signals to avoid triggering saveSettings during restoration
     const bool wasBlocked = action_toggleSendControls->signalsBlocked();
@@ -291,12 +275,6 @@ void dlgNotepad::restoreSettings()
     action_toggleSendControls->blockSignals(wasBlocked);
 
     slot_toggleSendControls(sendControlsVisible);
-
-    // If we migrated from the old location, save to the new location
-    if (needsMigration) {
-        mpHost->writeProfileIniData(qsl("Notepad/SendControlsVisible"),
-                                     sendControlsVisible ? qsl("true") : qsl("false"));
-    }
 }
 
 void dlgNotepad::closeEvent(QCloseEvent *event)
