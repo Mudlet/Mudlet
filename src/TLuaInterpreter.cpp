@@ -40,6 +40,7 @@
 #include "TForkedProcess.h"
 #include "TGameDetails.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"

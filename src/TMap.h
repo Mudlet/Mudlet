@@ -30,7 +30,7 @@
 #endif
 #include "utils.h"
 
-#include <QApplication>
+#include "pre_guard.h"
 #include <QColor>
 #include <QFont>
 #include <QJsonArray>

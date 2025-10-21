@@ -47,5 +47,4 @@ public:
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
     void handleContent(char ch) override;
 };
-#include "TMxpTagHandler.h"
 #endif //MUDLET_TMXPCUSTOMELEMENTTAGHANDLER_H
