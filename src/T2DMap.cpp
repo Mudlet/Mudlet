@@ -35,6 +35,7 @@
 #include "CustomLineEditContextMenuHandler.h"
 #include "CustomLineEditHandler.h"
 #include "LabelInteractionHandler.h"
+#include "MiddleMousePanHandler.h"
 #include "PanInteractionHandler.h"
 #include "RoomContextMenuHandler.h"
 #include "RoomMoveActivationHandler.h"
@@ -55,12 +56,16 @@
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QCursor>
 #include <QMap>
 #include <QMapIterator>
 #include <QMenu>
 #include <QStandardPaths>
 #include <QtEvents>
 #include <QtUiTools>
+
+#include <algorithm>
+#include <cmath>
 
 #include "mapInfoContributorManager.h"
 
@@ -92,6 +97,14 @@ const QString& key_icon_line_dashDotDot = qsl(":/icons/dash-dot-dot-line.png");
 
 const QString& key_dialog_ok_apply = qsl("dialog-ok-apply");
 const QString& key_dialog_cancel = qsl("dialog-cancel");
+
+namespace
+{
+constexpr int csmMiddlePanTimerIntervalMs = 16;
+constexpr int csmMiddlePanHoldThresholdMs = 300;
+constexpr qreal csmMiddlePanDeadZone = 6.0;
+constexpr qreal csmMiddlePanMaxDistance = 400.0;
+}
 
 void T2DMap::registerInteractionHandler(IInteractionHandler* handler, int priority)
 {
@@ -351,6 +364,10 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
 
+    mMiddlePanTimer.setTimerType(Qt::PreciseTimer);
+    mMiddlePanTimer.setInterval(csmMiddlePanTimerIntervalMs);
+    connect(&mMiddlePanTimer, &QTimer::timeout, this, &T2DMap::handleMiddlePanTick);
+
     mCustomLineDrawContextMenuHandler = std::make_unique<CustomLineDrawContextMenuHandler>(*this);
     registerInteractionHandler(mCustomLineDrawContextMenuHandler.get(), 450);
 
@@ -377,6 +394,9 @@ T2DMap::T2DMap(QWidget* parent)
 
     mLabelInteractionHandler = std::make_unique<LabelInteractionHandler>(*this);
     registerInteractionHandler(mLabelInteractionHandler.get(), 150);
+
+    mMiddleMousePanHandler = std::make_unique<MiddleMousePanHandler>(*this);
+    registerInteractionHandler(mMiddleMousePanHandler.get(), 110);
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
@@ -1896,6 +1916,55 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
+    if (mMiddlePanActive) {
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing, true);
+
+        const QPointF anchor = mMiddlePanAnchor;
+        const QPointF current = mMiddlePanCurrentPosition;
+        constexpr qreal anchorRadius = 10.0;
+
+        QPen ringPen(QColor(0, 0, 0, 190));
+        ringPen.setWidthF(2.0);
+        ringPen.setCosmetic(true);
+        painter.setPen(ringPen);
+        painter.setBrush(QColor(255, 255, 255, 170));
+        painter.drawEllipse(anchor, anchorRadius, anchorRadius);
+
+        QPen crossPen(QColor(0, 0, 0, 150));
+        crossPen.setWidthF(1.5);
+        crossPen.setCosmetic(true);
+        painter.setPen(crossPen);
+        painter.drawLine(anchor + QPointF(-anchorRadius * 0.7, 0.0), anchor + QPointF(anchorRadius * 0.7, 0.0));
+        painter.drawLine(anchor + QPointF(0.0, -anchorRadius * 0.7), anchor + QPointF(0.0, anchorRadius * 0.7));
+
+        const QPointF direction = current - anchor;
+        const qreal directionLength = std::hypot(direction.x(), direction.y());
+        if (directionLength > 1.0) {
+            const qreal displayLength = std::min(directionLength, 120.0);
+            const QPointF unitDirection = direction / directionLength;
+            const QPointF arrowEnd = anchor + unitDirection * displayLength;
+
+            QPen arrowPen(QColor(30, 136, 229, 220));
+            arrowPen.setWidthF(2.5);
+            arrowPen.setCosmetic(true);
+            arrowPen.setCapStyle(Qt::RoundCap);
+            painter.setPen(arrowPen);
+            painter.drawLine(anchor, arrowEnd);
+
+            painter.setBrush(QColor(30, 136, 229, 170));
+            const QPointF perpendicular(-unitDirection.y(), unitDirection.x());
+            const qreal headLength = 10.0;
+            const qreal headWidth = 6.0;
+            const QPointF headBase = arrowEnd - unitDirection * headLength;
+            QPolygonF headPolygon;
+            headPolygon << arrowEnd << headBase + perpendicular * headWidth << headBase - perpendicular * headWidth;
+            painter.drawPolygon(headPolygon);
+        }
+
+        painter.restore();
+    }
+
     QColor infoColor;
     if (mpHost->mBgColor_2.lightness() > 127) {
         infoColor = QColor(Qt::black);
@@ -2821,6 +2890,139 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     mInteractionDispatcher.dispatch(context);
 }
 
+void T2DMap::beginMiddlePan(const QPointF& widgetPosition, bool fromPress)
+{
+    if (!mpMap) {
+        return;
+    }
+
+    mMiddlePanActive = true;
+    mMiddlePanPressActive = fromPress;
+    mMiddlePanAnchor = widgetPosition;
+    mMiddlePanCurrentPosition = widgetPosition;
+
+    if (fromPress) {
+        mMiddlePanPressTimer.restart();
+    } else {
+        mMiddlePanPressTimer.invalidate();
+    }
+
+    if (!mMiddlePanTimer.isActive()) {
+        mMiddlePanTimer.start(csmMiddlePanTimerIntervalMs);
+    }
+
+    update();
+}
+
+void T2DMap::updateMiddlePanPointer(const QPointF& widgetPosition)
+{
+    if (!mMiddlePanActive) {
+        return;
+    }
+
+    mMiddlePanCurrentPosition = widgetPosition;
+    update();
+}
+
+void T2DMap::finishMiddlePanPress()
+{
+    if (!mMiddlePanActive || !mMiddlePanPressActive) {
+        return;
+    }
+
+    mMiddlePanPressActive = false;
+
+    const bool shouldStop = mMiddlePanPressTimer.isValid()
+        && mMiddlePanPressTimer.elapsed() >= csmMiddlePanHoldThresholdMs;
+    mMiddlePanPressTimer.invalidate();
+
+    if (shouldStop) {
+        cancelMiddlePan();
+        return;
+    }
+
+    update();
+}
+
+void T2DMap::cancelMiddlePan()
+{
+    if (!mMiddlePanActive && !mMiddlePanPressActive) {
+        return;
+    }
+
+    mMiddlePanActive = false;
+    mMiddlePanPressActive = false;
+
+    if (mMiddlePanTimer.isActive()) {
+        mMiddlePanTimer.stop();
+    }
+
+    mMiddlePanPressTimer.invalidate();
+    mMiddlePanAnchor = QPointF();
+    mMiddlePanCurrentPosition = QPointF();
+
+    update();
+}
+
+void T2DMap::handleMiddlePanTick()
+{
+    if (!mMiddlePanActive) {
+        if (mMiddlePanTimer.isActive()) {
+            mMiddlePanTimer.stop();
+        }
+        return;
+    }
+
+    if (!mpMap) {
+        cancelMiddlePan();
+        return;
+    }
+
+    if (!mMiddlePanPressActive) {
+        mMiddlePanCurrentPosition = QPointF(mapFromGlobal(QCursor::pos()));
+    }
+
+    const qreal roomWidth = static_cast<qreal>(mRoomWidth);
+    const qreal roomHeight = static_cast<qreal>(mRoomHeight);
+
+    QPointF delta = mMiddlePanAnchor - mMiddlePanCurrentPosition;
+
+    auto applyDeadZone = [](qreal value) {
+        if (std::abs(value) <= csmMiddlePanDeadZone) {
+            return 0.0;
+        }
+
+        if (value > 0) {
+            return value - csmMiddlePanDeadZone;
+        }
+
+        return value + csmMiddlePanDeadZone;
+    };
+
+    delta.setX(applyDeadZone(delta.x()));
+    delta.setY(applyDeadZone(delta.y()));
+
+    delta.setX(std::clamp(delta.x(), -csmMiddlePanMaxDistance, csmMiddlePanMaxDistance));
+    delta.setY(std::clamp(delta.y(), -csmMiddlePanMaxDistance, csmMiddlePanMaxDistance));
+
+    const bool hasHorizontalMovement = !qFuzzyIsNull(delta.x());
+    const bool hasVerticalMovement = !qFuzzyIsNull(delta.y());
+
+    const qreal intervalSeconds = static_cast<qreal>(csmMiddlePanTimerIntervalMs) / 1000.0;
+
+    if (hasHorizontalMovement && !qFuzzyIsNull(roomWidth)) {
+        mMapCenterX += (delta.x() / roomWidth) * intervalSeconds;
+        mShiftMode = true;
+    }
+
+    if (hasVerticalMovement && !qFuzzyIsNull(roomHeight)) {
+        mMapCenterY += (delta.y() / roomHeight) * intervalSeconds;
+        mShiftMode = true;
+    }
+
+    update();
+}
+
 bool T2DMap::event(QEvent* event)
 {
     // NOTE: key events aren't being forwarded to T2DMap because the widget
@@ -2856,6 +3058,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     if (!mpMap) {
         return;
     }
+
+    if (event->button() != Qt::MiddleButton && mMiddlePanActive) {
+        cancelMiddlePan();
+    }
+
     auto context = buildInteractionContext(event);
 
     mInteractionDispatcher.dispatch(context);

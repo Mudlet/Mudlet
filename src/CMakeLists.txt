@@ -113,6 +113,7 @@ set(mudlet_SRCS
     CustomLineEditContextMenuHandler.cpp
     CustomLineEditHandler.cpp
     LabelInteractionHandler.cpp
+    MiddleMousePanHandler.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp

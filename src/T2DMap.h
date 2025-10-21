@@ -32,10 +32,12 @@
 #include <QColor>
 #include <QFont>
 #include <QFutureWatcher>
+#include <QElapsedTimer>
 #include <QPixmap>
 #include <QPointer>
 #include <QPointF>
 #include <QString>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QWidget>
 #include <QtConcurrent>
@@ -53,13 +55,13 @@ class CustomLineDrawContextMenuHandler;
 class CustomLineDrawHandler;
 class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
+class MiddleMousePanHandler;
 class RoomMoveActivationHandler;
 class RoomMoveDragHandler;
 class RoomContextMenuHandler;
 
 class QCheckBox;
 class QComboBox;
-class QElapsedTimer;
 class QListWidgetItem;
 class QPushButton;
 class QTreeWidgetItem;
@@ -93,6 +95,8 @@ public:
     friend class RoomContextMenuHandler;
     friend class RoomMoveDragHandler;
     friend class SelectionRectangleHandler;
+    friend class PanInteractionHandler;
+    friend class MiddleMousePanHandler;
 
     struct MapInteractionContext {
         QMouseEvent* event = nullptr;
@@ -353,6 +357,7 @@ private:
     std::unique_ptr<IInteractionHandler> mRoomMoveDragHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
+    std::unique_ptr<IInteractionHandler> mMiddleMousePanHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
@@ -374,6 +379,21 @@ private:
         int x;
         int y;
     } mContextMenuClickPosition;
+
+    void beginMiddlePan(const QPointF& widgetPosition, bool fromPress);
+    void updateMiddlePanPointer(const QPointF& widgetPosition);
+    void finishMiddlePanPress();
+    void cancelMiddlePan();
+    void handleMiddlePanTick();
+    bool isMiddlePanActive() const { return mMiddlePanActive; }
+    bool isMiddlePanPressActive() const { return mMiddlePanPressActive; }
+
+    bool mMiddlePanActive = false;
+    bool mMiddlePanPressActive = false;
+    QPointF mMiddlePanAnchor;
+    QPointF mMiddlePanCurrentPosition;
+    QTimer mMiddlePanTimer;
+    QElapsedTimer mMiddlePanPressTimer;
 
     // This holds the ID of the room highlighted in yellow when multiple
     // rooms are selected. It is either the first selected room, or the
