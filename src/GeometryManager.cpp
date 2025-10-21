@@ -407,7 +407,12 @@ void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY
 
                             if (!image.isNull()) {
                                 // Convert to OpenGL format and upload
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
                                 QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).flipped(Qt::Vertical);
+#else
+                                // Deprecated in 6.9 and due for removal in 6.13:
+                                QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).mirrored(false, true);
+#endif
                                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
 
                                 // Set texture parameters based on texture type
