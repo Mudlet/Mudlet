@@ -1037,6 +1037,15 @@ end
 
 --- <b><u>TODO</u></b> setGaugeStyleSheet(gaugeName, css, cssback)
 function setGaugeStyleSheet(gaugeName, css, cssback, csstext)
+  -- Support table argument format
+  if type(gaugeName) == 'table' then
+    local args = gaugeName
+    gaugeName = args.gaugeName or args.name
+    css = args.css or args.front or args.frontCSS
+    cssback = args.cssback or args.back or args.backCSS
+    csstext = args.csstext or args.text or args.textCSS
+  end
+
   if not setLabelStyleSheet then
     return
   end -- mudlet 1.0.5 and lower compatibility
