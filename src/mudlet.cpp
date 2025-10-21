@@ -4363,6 +4363,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // are ready for use.
     pHost->getScriptUnit()->compileAll(true);
     pHost->updateAnsi16ColorsInTable();
+    pHost->updateExtendedAnsiColorsInTable();
 
     //Load rest of modules after scripts
     while (it2.hasNext()) {
