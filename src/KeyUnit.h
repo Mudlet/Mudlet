@@ -24,12 +24,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QObject>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
@@ -46,6 +44,7 @@ class KeyUnit : public QObject
 
 public:
     explicit KeyUnit(Host* pHost);
+    ~KeyUnit();
 
     std::list<TKey*> getKeyRootNodeList()
     {

@@ -21,9 +21,7 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
-#include "pre_guard.h"
 #include <QDebug>
-#include "post_guard.h"
 
 bool TMxpProcessor::setMode(const QString& code)
 {
@@ -152,10 +150,19 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
+    if (ch == '<'
+    && mMxpTagBuilder.isInsideTag()
+    && !mMxpTagBuilder.isQuotedSequence()
+    && !mMxpTagBuilder.isInsideComment()) {
+        lastEntityValue = QStringLiteral("<") + QString::fromStdString(mMxpTagBuilder.getRawTagContent());
+        mMxpTagBuilder.resetForNewTag();
+        return HANDLER_INSERT_ENTITY_LIT;
+    }
+
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         return HANDLER_NEXT_CHAR;
     }
-
+    
     if (mMxpTagBuilder.hasTag()) {
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 

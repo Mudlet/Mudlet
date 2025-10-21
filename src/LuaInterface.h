@@ -25,10 +25,8 @@
 
 #include "TVar.h"
 
-#include "pre_guard.h"
 #include <QScopedPointer>
 #include <QSet>
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)

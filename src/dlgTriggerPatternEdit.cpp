@@ -23,10 +23,8 @@
 #include "dlgTriggerPatternEdit.h"
 #include "TTrigger.h"
 
-#include "pre_guard.h"
 #include <QAction>
 #include <QDebug>
-#include "post_guard.h"
 
 dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pParentWidget)
 : QWidget(pParentWidget)

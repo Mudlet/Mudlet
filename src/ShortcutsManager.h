@@ -21,12 +21,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QObject>
 #include <QString>
 #include <QShortcut>
-#include "post_guard.h"
 
 class ShortcutsManager : public QObject
 {
@@ -34,7 +32,7 @@ class ShortcutsManager : public QObject
     Q_OBJECT
 
 public:
-    ShortcutsManager() = default;
+    explicit ShortcutsManager(QObject* parent = nullptr) : QObject(parent) {}
     ShortcutsManager(ShortcutsManager const&) = delete;
     ShortcutsManager& operator=(ShortcutsManager const&) = delete;
     ShortcutsManager(ShortcutsManager&&) = delete;

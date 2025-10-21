@@ -109,6 +109,16 @@ set(mudlet_SRCS
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
+    CustomLineDrawContextMenuHandler.cpp
+    CustomLineDrawHandler.cpp
+    CustomLineEditContextMenuHandler.cpp
+    CustomLineEditHandler.cpp
+    LabelInteractionHandler.cpp
+    PanInteractionHandler.cpp
+    RoomContextMenuHandler.cpp
+    RoomMoveActivationHandler.cpp
+    RoomMoveDragHandler.cpp
+    SelectionRectangleHandler.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
@@ -152,6 +162,7 @@ set(mudlet_SRCS
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpEntityTagHandler.cpp
+    TMxpExpireTagHandler.cpp
     TMxpFontTagHandler.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpLinkTagHandler.cpp
@@ -285,13 +296,20 @@ set(mudlet_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
-    post_guard.h
-    pre_guard.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
     SingleLineTextEdit.h
     T2DMap.h
+    CustomLineDrawContextMenuHandler.h
+    CustomLineDrawHandler.h
+    CustomLineEditContextMenuHandler.h
+    CustomLineEditHandler.h
+    LabelInteractionHandler.h
+    PanInteractionHandler.h
+    RoomMoveActivationHandler.h
+    RoomMoveDragHandler.h
+    SelectionRectangleHandler.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h
@@ -307,7 +325,6 @@ set(mudlet_HDRS
     TEncodingTable.h
     TEntityHandler.h
     TEntityResolver.h
-    testdbg.h
     TEvent.h
     TFlipButton.h
     TForkedProcess.h
@@ -330,6 +347,7 @@ set(mudlet_HDRS
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
     TMxpEntityTagHandler.h
+    TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
     TMxpLinkTagHandler.h

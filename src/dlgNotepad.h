@@ -24,7 +24,6 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_notes_editor.h"
 #include <QCheckBox>
 #include <QCloseEvent>
@@ -33,7 +32,6 @@
 #include <QPointer>
 #include <QSettings>
 #include <QTimer>
-#include "post_guard.h"
 
 class Host;
 
