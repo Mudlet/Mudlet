@@ -22,3 +22,6 @@
 [submodule "3rdparty/sentry-native"]
 	path = 3rdparty/sentry-native
 	url = https://github.com/getsentry/sentry-native.git
+[submodule "lua-yajl"]
+	path = lua-yajl
+	url = https://github.com/brimworks/lua-yajl.git
