@@ -53,38 +53,34 @@ if(WIN32)
 endif()
 
 set(mudlet_core_SRCS
-
+    TVar.cpp
 )
 
 set(mudlet_core_HDRS
     TEvent.h
+    TVar.h
 )
 
-# add_library(libMudlet STATIC
-#     ${mudlet_core_SRCS}
-#     ${mudlet_core_HDRS}
-# )
+add_library(MudletCore STATIC
+    ${mudlet_core_SRCS}
+    ${mudlet_core_HDRS}
+)
 
-add_library(libMudlet INTERFACE)
-target_include_directories(libMudlet INTERFACE
+target_link_libraries(MudletCore
+    Qt6::Core
+    Qt6::Network
+    # Qt6::Concurrent
+    Qt6::Core5Compat
+    # PUGIXML::PUGIXML
+    # ZLIB::ZLIB
+    # PCRE::PCRE
+    # LUA51::LUA51
+    # Boost::boost
+)
+
+target_include_directories(MudletCore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
-
-# target_link_libraries(libMudlet
-#     Qt6::Core
-#     Qt6::Network
-#     # Qt6::Concurrent
-#     Qt6::Core5Compat
-#     # PUGIXML::PUGIXML
-#     # ZLIB::ZLIB
-#     # PCRE::PCRE
-#     # LUA51::LUA51
-#     # Boost::boost
-# )
-
-# target_include_directories(libMudlet PUBLIC
-#     ${CMAKE_CURRENT_SOURCE_DIR}
-# )
 
 set(mudlet_SRCS
     ActionUnit.cpp
@@ -218,7 +214,7 @@ set(mudlet_SRCS
     TToolBar.cpp
     TTreeWidget.cpp
     TTrigger.cpp
-    TVar.cpp
+    # TVar.cpp
     VarUnit.cpp
     XMLexport.cpp
     XMLimport.cpp)
@@ -648,7 +644,7 @@ endif()
 target_compile_definitions(communi PUBLIC IRC_STATIC)
 
 target_link_libraries( mudlet
-        libMudlet
+        MudletCore
         communi
         edbee-lib
         QTagEdit
@@ -663,7 +659,7 @@ target_link_libraries( mudlet
 #       nanobench
         ${QT_LIBS})
 
-add_dependencies(mudlet libMudlet)        
+add_dependencies(mudlet MudletCore)        
 
 if (SYSINFO_LIBRARY)
   target_link_libraries(mudlet ${SYSINFO_LIBRARY} ${KVM_LIBRARY})
