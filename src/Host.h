@@ -465,6 +465,10 @@ private:
     std::optional<QFont> mTempDisplayFont;
 
 public:
+    // Shared QNetworkAccessManager for all network operations in this profile
+    // Must be initialized before components that use it (ctelnet, TMap, TLuaInterpreter, TMedia)
+    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
+
     // Make this the first public member instantiated so we can use ITS font
     // as the "reference" or "master" font for whole profile - and so we don't
     // have to maintain a separate one here in this class which does not, as
@@ -744,7 +748,6 @@ public:
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpConnectionProxy;
-    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions = dlgTriggerEditor::SearchOption::SearchOptionNone;
     TConsole::SearchOptions mBufferSearchOptions = TConsole::SearchOption::SearchOptionNone;

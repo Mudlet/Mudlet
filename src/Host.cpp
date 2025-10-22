@@ -218,7 +218,8 @@ QString stopWatch::getElapsedDayTimeString() const
 }
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
-: mTelnet(this, hostname)
+: mpNetworkAccessManager(new QNetworkAccessManager(this))
+, mTelnet(this, hostname)
 , mLuaInterpreter(this, hostname, id)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
@@ -227,7 +228,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpAuth(new GMCPAuthenticator(this))
 , mpDockableMapWidget()
 , mTimerDebugOutputSuppressionInterval(QTime())
-, mpNetworkAccessManager(new QNetworkAccessManager(this))
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
