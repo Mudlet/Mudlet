@@ -2627,6 +2627,74 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
     // clang-format on
 }
 
+// Converts a color name string to an ANSI color code.
+// Returns pair<success, code> where:
+//   - success=true, code=ANSI code (0-15 or special values)
+//   - success=false, code is undefined (error case)
+// Only supports exact matches for the basic 16 ANSI colors and special values.
+std::pair<bool, int> Host::colorNameToAnsiCode(const QString& colorName) const
+{
+    // Normalize to lowercase for case-insensitive matching
+    const QString name = colorName.toLower().trimmed();
+
+    // Special values
+    if (name == qsl("default")) {
+        return {true, TTrigger::scmDefault};
+    }
+    if (name == qsl("ignore")) {
+        return {true, TTrigger::scmIgnored};
+    }
+
+    // Basic 16 ANSI colors - exact name matching only
+    // ANSI color codes 0-15
+    static const QMap<QString, int> colorMap = {
+        // Dark colors (0-7)
+        {qsl("black"), 0},
+        {qsl("red"), 1},
+        {qsl("green"), 2},
+        {qsl("yellow"), 3},
+        {qsl("blue"), 4},
+        {qsl("magenta"), 5},
+        {qsl("cyan"), 6},
+        {qsl("white"), 7},
+        // Bright/Light colors (8-15)
+        {qsl("light_black"), 8},
+        {qsl("lightblack"), 8},
+        {qsl("light black"), 8},
+        {qsl("gray"), 8},        // common alias for light black
+        {qsl("grey"), 8},        // common alias for light black
+        {qsl("light_red"), 9},
+        {qsl("lightred"), 9},
+        {qsl("light red"), 9},
+        {qsl("light_green"), 10},
+        {qsl("lightgreen"), 10},
+        {qsl("light green"), 10},
+        {qsl("light_yellow"), 11},
+        {qsl("lightyellow"), 11},
+        {qsl("light yellow"), 11},
+        {qsl("light_blue"), 12},
+        {qsl("lightblue"), 12},
+        {qsl("light blue"), 12},
+        {qsl("light_magenta"), 13},
+        {qsl("lightmagenta"), 13},
+        {qsl("light magenta"), 13},
+        {qsl("light_cyan"), 14},
+        {qsl("lightcyan"), 14},
+        {qsl("light cyan"), 14},
+        {qsl("light_white"), 15},
+        {qsl("lightwhite"), 15},
+        {qsl("light white"), 15},
+    };
+
+    auto it = colorMap.find(name);
+    if (it != colorMap.end()) {
+        return {true, it.value()};
+    }
+
+    // No match found
+    return {false, 0};
+}
+
 // handles out of band (OOB) GMCP/MSDP data for Discord - called whenever GMCP
 // Telnet sub-option comes in and starts with "External.Discord.(Status|Info)"
 void Host::processDiscordGMCP(const QString& packageMessage, const QString& data)

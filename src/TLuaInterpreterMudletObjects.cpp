@@ -2203,20 +2203,89 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     const int fireLength = getVerifiedInt(L, __func__, 12, "fire length");
     const int lineDelta = getVerifiedInt(L, __func__, 13, "line delta");
 
-    bool colorTrigger;
-    QString fgColor;
+    // Process color trigger arguments (5 and 6)
+    // These can be either:
+    //   - numbers: ANSI color codes (0-255) or special values (scmIgnored, scmDefault)
+    //   - strings: named colors like "red", "blue", "light_green", etc.
+    bool colorTrigger = false;
+    int ansiFgColor = TTrigger::scmIgnored;
+    int ansiBgColor = TTrigger::scmIgnored;
+
+    // Argument 5: Foreground color
     if (lua_isnumber(L, 5)) {
-        colorTrigger = false;
-    } else {
-        colorTrigger = true;
-        fgColor = lua_tostring(L, 5);
+        ansiFgColor = lua_tointeger(L, 5);
+        // Validate the ANSI code
+        if (!(ansiFgColor == TTrigger::scmIgnored ||
+              ansiFgColor == TTrigger::scmDefault ||
+              (ansiFgColor >= 0 && ansiFgColor <= 255))) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #5 value (foreground color code %d invalid, must be %d (ignore), %d (default), or 0-255)",
+                           ansiFgColor, TTrigger::scmIgnored, TTrigger::scmDefault);
+            return 2;
+        }
+        if (ansiFgColor != TTrigger::scmIgnored) {
+            colorTrigger = true;
+        }
+    } else if (lua_isstring(L, 5)) {
+        const QString fgColorName = lua_tostring(L, 5);
+        const auto [success, code] = host.colorNameToAnsiCode(fgColorName);
+        if (!success) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #5 value (foreground color name '%s' not recognized, use basic ANSI color names like 'red', 'blue', 'light_green', etc., or numeric ANSI codes 0-255)",
+                           fgColorName.toUtf8().constData());
+            return 2;
+        }
+        ansiFgColor = code;
+        if (ansiFgColor != TTrigger::scmIgnored) {
+            colorTrigger = true;
+        }
+    } else if (!lua_isnoneornil(L, 5)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #5 type (foreground color as number or string expected, got %s)",
+                       luaL_typename(L, 5));
+        return 2;
     }
 
-    QString bgColor;
+    // Argument 6: Background color
     if (lua_isnumber(L, 6)) {
-        colorTrigger = false;
-    } else {
-        bgColor = lua_tostring(L, 6);
+        ansiBgColor = lua_tointeger(L, 6);
+        // Validate the ANSI code
+        if (!(ansiBgColor == TTrigger::scmIgnored ||
+              ansiBgColor == TTrigger::scmDefault ||
+              (ansiBgColor >= 0 && ansiBgColor <= 255))) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #6 value (background color code %d invalid, must be %d (ignore), %d (default), or 0-255)",
+                           ansiBgColor, TTrigger::scmIgnored, TTrigger::scmDefault);
+            return 2;
+        }
+        if (ansiBgColor != TTrigger::scmIgnored) {
+            colorTrigger = true;
+        }
+    } else if (lua_isstring(L, 6)) {
+        const QString bgColorName = lua_tostring(L, 6);
+        const auto [success, code] = host.colorNameToAnsiCode(bgColorName);
+        if (!success) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #6 value (background color name '%s' not recognized, use basic ANSI color names like 'red', 'blue', 'light_green', etc., or numeric ANSI codes 0-255)",
+                           bgColorName.toUtf8().constData());
+            return 2;
+        }
+        ansiBgColor = code;
+        if (ansiBgColor != TTrigger::scmIgnored) {
+            colorTrigger = true;
+        }
+    } else if (!lua_isnoneornil(L, 6)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #6 type (background color as number or string expected, got %s)",
+                       luaL_typename(L, 6));
+        return 2;
+    }
+
+    // Validate that we have at least one color set if this is a color trigger
+    if (colorTrigger && ansiFgColor == TTrigger::scmIgnored && ansiBgColor == TTrigger::scmIgnored) {
+        lua_pushnil(L);
+        lua_pushstring(L, "tempComplexRegexTrigger: cannot create color trigger with both foreground and background colors set to 'ignore'");
+        return 2;
     }
 
     bool highlight;
@@ -2284,6 +2353,18 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
+
+    // Set up color trigger pattern if this is a color trigger
+    if (colorTrigger) {
+        if (!pT->setupColorTrigger(ansiFgColor, ansiBgColor)) {
+            // Failed to set up color pattern - clean up and return error
+            delete pT;
+            lua_pushnil(L);
+            lua_pushstring(L, "tempComplexRegexTrigger: failed to set up color trigger pattern (both colors cannot be 'ignore')");
+            return 2;
+        }
+    }
+
     pT->registerTrigger();
     pT->setName(triggerName);
     pT->mPerlSlashGOption = matchAll; //match all

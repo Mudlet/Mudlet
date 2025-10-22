@@ -331,6 +331,7 @@ public:
     QString getPackageConfig(const QString&, bool isModule = false);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
+    std::pair<bool, int> colorNameToAnsiCode(const QString& colorName) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
     bool writeProfileIniData(const QString& item, const QString& what);
     QString readProfileData(const QString&);
