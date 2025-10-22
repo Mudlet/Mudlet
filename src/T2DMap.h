@@ -34,6 +34,7 @@
 #include <QFutureWatcher>
 #include <QPixmap>
 #include <QPointer>
+#include <QPointF>
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
@@ -88,6 +89,7 @@ public:
     friend class CustomLineEditContextMenuHandler;
     friend class CustomLineEditHandler;
     friend class LabelInteractionHandler;
+    friend class RoomMoveActivationHandler;
     friend class RoomContextMenuHandler;
     friend class RoomMoveDragHandler;
     friend class SelectionRectangleHandler;
@@ -192,6 +194,9 @@ public:
     QMap<QString, QStringList> mUserMenus;
 
     bool mRoomBeingMoved = false;
+    QPointF mRoomMoveLastMapPoint;
+    bool mHasRoomMoveLastMapPoint = false;
+    bool mRoomMoveViaContextMenu = false;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is
     // multiplied by rsize which is 1.0 to exactly fill space between adjacent

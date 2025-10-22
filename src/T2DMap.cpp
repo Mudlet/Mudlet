@@ -3527,6 +3527,10 @@ void T2DMap::slot_moveRoom()
     mRoomBeingMoved = true;
     setMouseTracking(true);
     mNewMoveAction = true;
+    mRoomMoveViaContextMenu = true;
+    mHasRoomMoveLastMapPoint = false;
+    mHelpMsg = tr("Click to finish moving the selected room(s).");
+    update();
 }
 
 void T2DMap::slot_showPropertiesDialog()

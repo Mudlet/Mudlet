@@ -19,7 +19,10 @@
 
 #include "RoomMoveActivationHandler.h"
 
+#include "TRoom.h"
+#include "TRoomDB.h"
 #include <QMouseEvent>
+#include <QPointF>
 #include <QRect>
 
 RoomMoveActivationHandler::RoomMoveActivationHandler(T2DMap& mapWidget)
@@ -33,27 +36,101 @@ bool RoomMoveActivationHandler::matches(const T2DMap::MapInteractionContext& con
         return false;
     }
 
-    if (!context.isRoomBeingMoved) {
+    switch (context.event->type()) {
+    case QEvent::MouseButtonPress: {
+        if (context.button != Qt::LeftButton) {
+            return false;
+        }
+
+        if (context.isMapViewOnly) {
+            return false;
+        }
+
+        if (!context.area) {
+            return false;
+        }
+
+        if (context.modifiers.testFlag(Qt::ShiftModifier) || context.modifiers.testFlag(Qt::ControlModifier)
+            || context.modifiers.testFlag(Qt::AltModifier)) {
+            return false;
+        }
+
+        const auto clickedRoomId = mMapWidget.roomIdAtWidgetPosition(context.widgetPosition, context.area);
+        return clickedRoomId.has_value();
+    }
+    case QEvent::MouseButtonRelease:
+        return context.button == Qt::LeftButton && context.isRoomBeingMoved;
+    default:
         return false;
     }
-
-    return context.event->type() == QEvent::MouseButtonPress
-        && context.button == Qt::LeftButton;
 }
 
 bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
 {
-    if (!context.event || !context.isRoomBeingMoved) {
+    if (!context.event) {
         return false;
     }
 
-    mMapWidget.mPopupMenu = false;
-    mMapWidget.mPick = true;
-    mMapWidget.setMouseTracking(false);
-    mMapWidget.mRoomBeingMoved = false;
-    mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
+    switch (context.event->type()) {
+    case QEvent::MouseButtonPress: {
+        if (!context.area) {
+            return false;
+        }
 
-    context.isRoomBeingMoved = false;
+        const auto clickedRoomId = mMapWidget.roomIdAtWidgetPosition(context.widgetPosition, context.area);
+        if (!clickedRoomId.has_value()) {
+            return false;
+        }
 
-    return false;
+        const int roomId = clickedRoomId.value();
+
+        if (!mMapWidget.mMultiSelectionSet.contains(roomId)) {
+            mMapWidget.mMultiSelectionSet.clear();
+            mMapWidget.mMultiSelectionSet.insert(roomId);
+            mMapWidget.mMultiSelectionHighlightRoomId = roomId;
+            mMapWidget.mMultiSelection = false;
+        } else {
+            mMapWidget.mMultiSelectionHighlightRoomId = roomId;
+        }
+
+        context.hasMultiSelection = !mMapWidget.mMultiSelectionSet.isEmpty();
+
+        mMapWidget.mPopupMenu = false;
+        mMapWidget.mPick = false;
+        mMapWidget.mRoomBeingMoved = true;
+        mMapWidget.mRoomMoveViaContextMenu = false;
+        mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
+        mMapWidget.mNewMoveAction = false;
+        if (mMapWidget.mpMap && mMapWidget.mpMap->mpRoomDB) {
+            if (TRoom* clickedRoom = mMapWidget.mpMap->mpRoomDB->getRoom(roomId)) {
+                mMapWidget.mRoomMoveLastMapPoint = QPointF(clickedRoom->x(), clickedRoom->y());
+            } else {
+                mMapWidget.mRoomMoveLastMapPoint = QPointF(qRound(context.mapX), qRound(context.mapY));
+            }
+        } else {
+            mMapWidget.mRoomMoveLastMapPoint = QPointF(qRound(context.mapX), qRound(context.mapY));
+        }
+        mMapWidget.mHasRoomMoveLastMapPoint = true;
+        mMapWidget.setMouseTracking(true);
+
+        context.isRoomBeingMoved = true;
+        context.hasClickedRoom = true;
+        context.clickedRoomId = roomId;
+
+        return true;
+    }
+    case QEvent::MouseButtonRelease:
+        mMapWidget.mPopupMenu = false;
+        mMapWidget.setMouseTracking(false);
+        mMapWidget.mRoomBeingMoved = false;
+        mMapWidget.mRoomMoveViaContextMenu = false;
+        mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
+        mMapWidget.mHasRoomMoveLastMapPoint = false;
+        context.isRoomBeingMoved = false;
+        mMapWidget.mHelpMsg.clear();
+        mMapWidget.update();
+        return true;
+    default:
+        return false;
+    }
 }

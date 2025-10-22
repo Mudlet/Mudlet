@@ -29,8 +29,14 @@
 
 
 VarUnit::VarUnit()
-: base()
+: base(nullptr)
 {
+}
+
+VarUnit::~VarUnit()
+{
+    // Delete the base TVar and all its children (recursively via TVar destructor)
+    delete base;
 }
 
 bool VarUnit::isHidden(TVar* var)
@@ -267,7 +273,9 @@ void VarUnit::setBase(TVar* pVariable)
 
 void VarUnit::clear()
 {
-    // delete base;
+    // Delete the base TVar and all its children (recursively via TVar destructor)
+    delete base;
+    base = nullptr;
     tVars.clear();
     wVars.clear();
     variableSet.clear();
