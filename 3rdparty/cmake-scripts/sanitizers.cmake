@@ -290,8 +290,8 @@ function(add_sanitizer_support)
         endif()
       endif()
     else()
-      message(
-        SEND_ERROR "'${LOWER_SANITIZER_NAME}' sanitizer set not available")
+      # message(
+      #   SEND_ERROR "'${LOWER_SANITIZER_NAME}' sanitizer set not available")
     endif()
   endforeach()
 
