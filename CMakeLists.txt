@@ -221,6 +221,10 @@ add_subdirectory(3rdparty/communi)
 add_subdirectory(3rdparty/qt-tags-widget)
 add_subdirectory(translations/translated)
 
+git_submodule_init(
+  CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
+  "3rdparty/sentry-native" READABLE_NAME "Sentry crash reporting")
+
 # Sentry integration
 set(SENTRY_INTEGRATION_QT ON CACHE BOOL "Enable Sentry Qt integration")
 if(WIN32 OR APPLE)
