@@ -1,0 +1,7 @@
+{
+  "name": "mudlet",
+  "version-string": "4.19.1",
+  "dependencies": [
+    "curl"
+  ]
+}

@@ -7,4 +7,5 @@ pugixml
 lua[core]
 sqlite3
 pcre
+curl
 
