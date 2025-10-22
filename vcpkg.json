@@ -2,6 +2,12 @@
   "name": "mudlet",
   "version-string": "4.19.1",
   "dependencies": [
+    "yajl",
+    "hunspell",
+    "pugixml",
+    "lua[core]",
+    "sqlite3",
+    "pcre",
     "curl"
   ]
 }
