@@ -52,6 +52,40 @@ if(WIN32)
   endif()
 endif()
 
+set(mudlet_core_SRCS
+
+)
+
+set(mudlet_core_HDRS
+    TEvent.h
+)
+
+# add_library(libMudlet STATIC
+#     ${mudlet_core_SRCS}
+#     ${mudlet_core_HDRS}
+# )
+
+add_library(libMudlet INTERFACE)
+target_include_directories(libMudlet INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# target_link_libraries(libMudlet
+#     Qt6::Core
+#     Qt6::Network
+#     # Qt6::Concurrent
+#     Qt6::Core5Compat
+#     # PUGIXML::PUGIXML
+#     # ZLIB::ZLIB
+#     # PCRE::PCRE
+#     # LUA51::LUA51
+#     # Boost::boost
+# )
+
+# target_include_directories(libMudlet PUBLIC
+#     ${CMAKE_CURRENT_SOURCE_DIR}
+# )
+
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
@@ -306,7 +340,7 @@ set(mudlet_HDRS
     TEntityHandler.h
     TEntityResolver.h
     testdbg.h
-    TEvent.h
+    # TEvent.h
     TFlipButton.h
     TForkedProcess.h
     TimerUnit.h
@@ -613,8 +647,8 @@ endif()
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
 target_compile_definitions(communi PUBLIC IRC_STATIC)
 
-target_link_libraries(
-        mudlet
+target_link_libraries( mudlet
+        libMudlet
         communi
         edbee-lib
         QTagEdit
@@ -628,6 +662,8 @@ target_link_libraries(
 # PLACEMARKER: sample benchmarking code
 #       nanobench
         ${QT_LIBS})
+
+add_dependencies(mudlet libMudlet)        
 
 if (SYSINFO_LIBRARY)
   target_link_libraries(mudlet ${SYSINFO_LIBRARY} ${KVM_LIBRARY})
