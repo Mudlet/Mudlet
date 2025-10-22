@@ -2214,24 +2214,21 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     // Argument 5: Foreground color
     if (lua_isnumber(L, 5)) {
         ansiFgColor = lua_tointeger(L, 5);
-        // Validate the ANSI code
-        if (!(ansiFgColor == TTrigger::scmIgnored ||
-              ansiFgColor == TTrigger::scmDefault ||
-              (ansiFgColor >= 0 && ansiFgColor <= 255))) {
+        // Validate the ANSI code (only 0-255 allowed for numbers)
+        // For special values "default" and "ignore", users must pass strings
+        if (ansiFgColor < 0 || ansiFgColor > 255) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #5 value (foreground color code %d invalid, must be %d (ignore), %d (default), or 0-255)",
-                           ansiFgColor, TTrigger::scmIgnored, TTrigger::scmDefault);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #5 value (foreground color code %d invalid, must be 0-255; for special values use strings: 'default' or 'ignore')",
+                           ansiFgColor);
             return 2;
         }
-        if (ansiFgColor != TTrigger::scmIgnored) {
-            colorTrigger = true;
-        }
+        colorTrigger = true;
     } else if (lua_isstring(L, 5)) {
         const QString fgColorName = lua_tostring(L, 5);
         const auto [success, code] = host.colorNameToAnsiCode(fgColorName);
         if (!success) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #5 value (foreground color name '%s' not recognized, use basic ANSI color names like 'red', 'blue', 'light_green', etc., or numeric ANSI codes 0-255)",
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #5 value (foreground color name '%s' not recognized, use basic ANSI color names like 'red', 'blue', 'light_green', special values 'default'/'ignore', or numeric ANSI codes 0-255)",
                            fgColorName.toUtf8().constData());
             return 2;
         }
@@ -2249,24 +2246,21 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     // Argument 6: Background color
     if (lua_isnumber(L, 6)) {
         ansiBgColor = lua_tointeger(L, 6);
-        // Validate the ANSI code
-        if (!(ansiBgColor == TTrigger::scmIgnored ||
-              ansiBgColor == TTrigger::scmDefault ||
-              (ansiBgColor >= 0 && ansiBgColor <= 255))) {
+        // Validate the ANSI code (only 0-255 allowed for numbers)
+        // For special values "default" and "ignore", users must pass strings
+        if (ansiBgColor < 0 || ansiBgColor > 255) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #6 value (background color code %d invalid, must be %d (ignore), %d (default), or 0-255)",
-                           ansiBgColor, TTrigger::scmIgnored, TTrigger::scmDefault);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #6 value (background color code %d invalid, must be 0-255; for special values use strings: 'default' or 'ignore')",
+                           ansiBgColor);
             return 2;
         }
-        if (ansiBgColor != TTrigger::scmIgnored) {
-            colorTrigger = true;
-        }
+        colorTrigger = true;
     } else if (lua_isstring(L, 6)) {
         const QString bgColorName = lua_tostring(L, 6);
         const auto [success, code] = host.colorNameToAnsiCode(bgColorName);
         if (!success) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #6 value (background color name '%s' not recognized, use basic ANSI color names like 'red', 'blue', 'light_green', etc., or numeric ANSI codes 0-255)",
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #6 value (background color name '%s' not recognized, use basic ANSI color names like 'red', 'blue', 'light_green', special values 'default'/'ignore', or numeric ANSI codes 0-255)",
                            bgColorName.toUtf8().constData());
             return 2;
         }

@@ -197,7 +197,7 @@ describe("Tests tempComplexRegexTrigger color support (GitHub issue #2574)", fun
     end)
   end)
 
-  describe("Tests numeric ANSI code support (backward compatibility)", function()
+  describe("Tests numeric ANSI code support", function()
     local mockTriggerId = 12345
 
     setup(function()
@@ -205,18 +205,20 @@ describe("Tests tempComplexRegexTrigger color support (GitHub issue #2574)", fun
 
       _G.tempComplexRegexTrigger = function(name, pattern, code, multiline, fgColor, bgColor, filter, matchAll, hlFg, hlBg, sound, fireLength, lineDelta, expiryCount)
         if type(fgColor) == "number" then
-          if not (fgColor == -2 or fgColor == -1 or (fgColor >= 0 and fgColor <= 255)) then
+          -- Only accept 0-255 for numbers; special values must be strings
+          if fgColor < 0 or fgColor > 255 then
             return nil, string.format(
-              "tempComplexRegexTrigger: bad argument #5 value (foreground color code %d invalid, must be -2 (ignore), -1 (default), or 0-255)",
+              "tempComplexRegexTrigger: bad argument #5 value (foreground color code %d invalid, must be 0-255; for special values use strings: 'default' or 'ignore')",
               fgColor
             )
           end
         end
 
         if type(bgColor) == "number" then
-          if not (bgColor == -2 or bgColor == -1 or (bgColor >= 0 and bgColor <= 255)) then
+          -- Only accept 0-255 for numbers; special values must be strings
+          if bgColor < 0 or bgColor > 255 then
             return nil, string.format(
-              "tempComplexRegexTrigger: bad argument #6 value (background color code %d invalid, must be -2 (ignore), -1 (default), or 0-255)",
+              "tempComplexRegexTrigger: bad argument #6 value (background color code %d invalid, must be 0-255; for special values use strings: 'default' or 'ignore')",
               bgColor
             )
           end
@@ -247,16 +249,6 @@ describe("Tests tempComplexRegexTrigger color support (GitHub issue #2574)", fun
       end
     end)
 
-    it("should accept special value -1 (scmDefault)", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, -1, 0, 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-    end)
-
-    it("should accept special value -2 (scmIgnored)", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, -2, 1, 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-    end)
-
     it("should reject invalid ANSI codes > 255", function()
       local id, err = tempComplexRegexTrigger("test", ".*", function() end, 0, 256, 0, 0, 0, "", "", "", 0, 0)
       assert.is_nil(id)
@@ -264,11 +256,16 @@ describe("Tests tempComplexRegexTrigger color support (GitHub issue #2574)", fun
       assert.is_truthy(err:match("invalid"))
     end)
 
-    it("should reject invalid negative ANSI codes < -2", function()
-      local id, err = tempComplexRegexTrigger("test", ".*", function() end, 0, -3, 0, 0, 0, "", "", "", 0, 0)
+    it("should reject negative ANSI codes (must use string 'default' or 'ignore')", function()
+      local id, err = tempComplexRegexTrigger("test", ".*", function() end, 0, -1, 0, 0, 0, "", "", "", 0, 0)
       assert.is_nil(id)
       assert.is_not_nil(err)
-      assert.is_truthy(err:match("invalid"))
+      assert.is_truthy(err:match("invalid") or err:match("0%-255"))
+
+      id, err = tempComplexRegexTrigger("test", ".*", function() end, 0, -2, 1, 0, 0, "", "", "", 0, 0)
+      assert.is_nil(id)
+      assert.is_not_nil(err)
+      assert.is_truthy(err:match("invalid") or err:match("0%-255"))
     end)
   end)
 

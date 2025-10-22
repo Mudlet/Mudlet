@@ -116,14 +116,31 @@ This call to `setupColorTrigger()` creates the `TColorTable` objects and stores 
 
 ## API Changes
 
+### Color Arguments (5 and 6)
+
+Arguments 5 and 6 can now be:
+- **Numbers (0-255):** ANSI color codes
+- **Strings:** Color names or special values
+
+**Important:** For special values "default" and "ignore", you **must use strings**, not numeric codes:
+```lua
+-- ✅ CORRECT: Use strings for special values
+tempComplexRegexTrigger("test", ".*", func, 0, "default", "ignore", 0, 0, "", "", "", 0, 0)
+
+-- ❌ WRONG: Numeric -1 and -2 are NOT accepted
+tempComplexRegexTrigger("test", ".*", func, 0, -1, -2, 0, 0, "", "", "", 0, 0)  -- Will error!
+```
+
 ### Backward Compatibility
 
-**100% backward compatible** - existing code using numeric ANSI codes continues to work:
+**100% backward compatible** for valid ANSI codes - existing code using numeric ANSI codes 0-255 continues to work:
 
 ```lua
--- Old code still works (numeric ANSI codes)
+-- Old code still works (numeric ANSI codes 0-255)
 tempComplexRegexTrigger("test", ".*", func, 0, 1, 2, 0, 0, "", "", "", 0, 0)
 ```
+
+**Note:** This feature has been broken since 2019, so there's no existing code using arguments 5 and 6. We're establishing the API from scratch.
 
 ### New Functionality
 
@@ -134,10 +151,10 @@ tempComplexRegexTrigger("test", ".*", func, 0, 1, 2, 0, 0, "", "", "", 0, 0)
 tempComplexRegexTrigger("test", ".*", func, 0, "red", "blue", 0, 0, "", "", "", 0, 0)
 tempComplexRegexTrigger("test", ".*", func, 0, "light_green", "yellow", 0, 0, "", "", "", 0, 0)
 
--- Special values
+-- Special values (MUST be strings, not numbers)
 tempComplexRegexTrigger("test", ".*", func, 0, "default", "ignore", 0, 0, "", "", "", 0, 0)
 
--- Mix numbers and strings
+-- Mix numbers (0-255) and strings
 tempComplexRegexTrigger("test", ".*", func, 0, 9, "blue", 0, 0, "", "", "", 0, 0)
 ```
 
@@ -157,6 +174,15 @@ end
 ```
 
 ## Design Decisions
+
+### Why Strings for "default" and "ignore"?
+
+**Special values must be passed as strings, not numbers (-1/-2):**
+
+1. **Clarity:** `"default"` and `"ignore"` are self-documenting, unlike `-1` and `-2`
+2. **Consistency:** Aligns with the new string color API (`"red"`, `"blue"`, etc.)
+3. **Type safety:** Prevents confusion between ANSI color codes and special values
+4. **No backward compatibility issues:** Feature has been broken since 2019, so no existing code to break
 
 ### Why Exact Matching Only?
 
