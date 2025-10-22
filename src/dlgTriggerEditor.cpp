@@ -11063,6 +11063,9 @@ void dlgTriggerEditor::saveEditorState(EditorViewType viewType, int itemId)
 // Restores the editor state (caret position and scroll position) for the given item,
 // if it was previously saved. This allows users to return to their previous editing
 // position when switching between items.
+//
+// Note: The restoration is deferred using QTimer::singleShot to ensure the document
+// and scroll bars are fully initialized after clearDocument() creates a new document.
 void dlgTriggerEditor::restoreEditorState(EditorViewType viewType, int itemId)
 {
     if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
@@ -11118,28 +11121,37 @@ void dlgTriggerEditor::restoreEditorState(EditorViewType viewType, int itemId)
         return; // No saved state for this item
     }
 
-    // Restore the caret position
-    auto controller = mpSourceEditorEdbee->controller();
-    if (controller) {
-        // Clamp the line to valid range
-        int maxLine = qMax(0, mpSourceEditorEdbeeDocument->lineCount() - 1);
-        int line = qMin(state.caretLine, maxLine);
+    // Defer the actual restoration to ensure the document and scrollbars are ready
+    // This is especially important when using keyboard navigation which can trigger
+    // rapid selection changes
+    QTimer::singleShot(0, this, [this, state]() {
+        if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
+            return;
+        }
 
-        // Clamp the column to valid range for the line
-        int lineLength = mpSourceEditorEdbeeDocument->lineLength(line);
-        int column = qMin(state.caretColumn, lineLength);
+        // Restore the caret position
+        auto controller = mpSourceEditorEdbee->controller();
+        if (controller) {
+            // Clamp the line to valid range
+            int maxLine = qMax(0, mpSourceEditorEdbeeDocument->lineCount() - 1);
+            int line = qMin(state.caretLine, maxLine);
 
-        // Move the caret to the saved position
-        controller->moveCaretTo(line, column, false);
-    }
+            // Clamp the column to valid range for the line
+            int lineLength = mpSourceEditorEdbeeDocument->lineLength(line);
+            int column = qMin(state.caretColumn, lineLength);
 
-    // Restore the scroll positions
-    if (mpSourceEditorEdbee->verticalScrollBar()) {
-        mpSourceEditorEdbee->verticalScrollBar()->setValue(state.verticalScrollPos);
-    }
-    if (mpSourceEditorEdbee->horizontalScrollBar()) {
-        mpSourceEditorEdbee->horizontalScrollBar()->setValue(state.horizontalScrollPos);
-    }
+            // Move the caret to the saved position
+            controller->moveCaretTo(line, column, false);
+        }
+
+        // Restore the scroll positions
+        if (mpSourceEditorEdbee->verticalScrollBar()) {
+            mpSourceEditorEdbee->verticalScrollBar()->setValue(state.verticalScrollPos);
+        }
+        if (mpSourceEditorEdbee->horizontalScrollBar()) {
+            mpSourceEditorEdbee->horizontalScrollBar()->setValue(state.horizontalScrollPos);
+        }
+    });
 }
 
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
