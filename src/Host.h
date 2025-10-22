@@ -439,7 +439,7 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
-    QNetworkAccessManager* getNetworkAccessManager() { return mpNetworkAccessManager; }
+    QNetworkAccessManager* getNetworkAccessManager() const { return mpNetworkAccessManager; }
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
     void setF3SearchEnabled(const bool enabled) {
         mF3SearchEnabled = enabled;
