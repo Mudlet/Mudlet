@@ -2903,21 +2903,28 @@ void dlgTriggerEditor::delete_alias()
         return;
     }
 
-    // Check if any selected items are module master folders
+    // Check if any selected items are package/module master folders
     for (TAlias* pT : aliasesToDelete) {
-        if (pT->mModuleMasterFolder) {
+        if (!pT->mPackageName.isEmpty()) {
+            // Determine if this is a package or module
+            const bool isModule = pT->mModuleMasterFolder;
+            const QString itemType = isModule ? tr("module") : tr("package");
+            const enums::PackageModuleType packageType = isModule
+                ? enums::PackageModuleType::ModuleFromUI
+                : enums::PackageModuleType::Package;
+
             QMessageBox msgBox;
-            msgBox.setWindowTitle(tr("Cannot Delete Module Folder"));
-            //: Explanation shown when user tries to delete a module master folder
-            msgBox.setText(tr("This is a module master folder. Deleting it here won't permanently remove the module."));
-            //: Additional information about how to properly uninstall a module
-            msgBox.setInformativeText(tr("Would you like to uninstall the module \"%1\" instead?\n\nThis will properly remove the module and all its items.").arg(pT->mPackageName));
+            msgBox.setWindowTitle(tr("Cannot Delete %1 Folder").arg(isModule ? tr("Module") : tr("Package")));
+            //: Explanation shown when user tries to delete a package/module master folder
+            msgBox.setText(tr("This is a %1 master folder. Deleting it here won't permanently remove the %1.").arg(itemType));
+            //: Additional information about how to properly uninstall a package/module
+            msgBox.setInformativeText(tr("Would you like to uninstall the %1 \"%2\" instead?\n\nThis will properly remove the %1 and all its items.").arg(itemType, pT->mPackageName));
             msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
             msgBox.setDefaultButton(QMessageBox::No);
             msgBox.setIcon(QMessageBox::Question);
 
             if (msgBox.exec() == QMessageBox::Yes) {
-                mpHost->uninstallPackage(pT->mPackageName, enums::PackageModuleType::ModuleFromUI);
+                mpHost->uninstallPackage(pT->mPackageName, packageType);
             }
             return;
         }
@@ -2996,21 +3003,28 @@ void dlgTriggerEditor::delete_action()
         return;
     }
 
-    // Check if any selected items are module master folders
+    // Check if any selected items are package/module master folders
     for (TAction* pT : actionsToDelete) {
-        if (pT->mModuleMasterFolder) {
+        if (!pT->mPackageName.isEmpty()) {
+            // Determine if this is a package or module
+            const bool isModule = pT->mModuleMasterFolder;
+            const QString itemType = isModule ? tr("module") : tr("package");
+            const enums::PackageModuleType packageType = isModule
+                ? enums::PackageModuleType::ModuleFromUI
+                : enums::PackageModuleType::Package;
+
             QMessageBox msgBox;
-            msgBox.setWindowTitle(tr("Cannot Delete Module Folder"));
-            //: Explanation shown when user tries to delete a module master folder
-            msgBox.setText(tr("This is a module master folder. Deleting it here won't permanently remove the module."));
-            //: Additional information about how to properly uninstall a module
-            msgBox.setInformativeText(tr("Would you like to uninstall the module \"%1\" instead?\n\nThis will properly remove the module and all its items.").arg(pT->mPackageName));
+            msgBox.setWindowTitle(tr("Cannot Delete %1 Folder").arg(isModule ? tr("Module") : tr("Package")));
+            //: Explanation shown when user tries to delete a package/module master folder
+            msgBox.setText(tr("This is a %1 master folder. Deleting it here won't permanently remove the %1.").arg(itemType));
+            //: Additional information about how to properly uninstall a package/module
+            msgBox.setInformativeText(tr("Would you like to uninstall the %1 \"%2\" instead?\n\nThis will properly remove the %1 and all its items.").arg(itemType, pT->mPackageName));
             msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
             msgBox.setDefaultButton(QMessageBox::No);
             msgBox.setIcon(QMessageBox::Question);
 
             if (msgBox.exec() == QMessageBox::Yes) {
-                mpHost->uninstallPackage(pT->mPackageName, enums::PackageModuleType::ModuleFromUI);
+                mpHost->uninstallPackage(pT->mPackageName, packageType);
             }
             return;
         }
@@ -3180,21 +3194,28 @@ void dlgTriggerEditor::delete_script()
         return;
     }
 
-    // Check if any selected items are module master folders
+    // Check if any selected items are package/module master folders
     for (TScript* pT : scriptsToDelete) {
-        if (pT->mModuleMasterFolder) {
+        if (!pT->mPackageName.isEmpty()) {
+            // Determine if this is a package or module
+            const bool isModule = pT->mModuleMasterFolder;
+            const QString itemType = isModule ? tr("module") : tr("package");
+            const enums::PackageModuleType packageType = isModule
+                ? enums::PackageModuleType::ModuleFromUI
+                : enums::PackageModuleType::Package;
+
             QMessageBox msgBox;
-            msgBox.setWindowTitle(tr("Cannot Delete Module Folder"));
-            //: Explanation shown when user tries to delete a module master folder
-            msgBox.setText(tr("This is a module master folder. Deleting it here won't permanently remove the module."));
-            //: Additional information about how to properly uninstall a module
-            msgBox.setInformativeText(tr("Would you like to uninstall the module \"%1\" instead?\n\nThis will properly remove the module and all its items.").arg(pT->mPackageName));
+            msgBox.setWindowTitle(tr("Cannot Delete %1 Folder").arg(isModule ? tr("Module") : tr("Package")));
+            //: Explanation shown when user tries to delete a package/module master folder
+            msgBox.setText(tr("This is a %1 master folder. Deleting it here won't permanently remove the %1.").arg(itemType));
+            //: Additional information about how to properly uninstall a package/module
+            msgBox.setInformativeText(tr("Would you like to uninstall the %1 \"%2\" instead?\n\nThis will properly remove the %1 and all its items.").arg(itemType, pT->mPackageName));
             msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
             msgBox.setDefaultButton(QMessageBox::No);
             msgBox.setIcon(QMessageBox::Question);
 
             if (msgBox.exec() == QMessageBox::Yes) {
-                mpHost->uninstallPackage(pT->mPackageName, enums::PackageModuleType::ModuleFromUI);
+                mpHost->uninstallPackage(pT->mPackageName, packageType);
             }
             return;
         }
@@ -3273,21 +3294,28 @@ void dlgTriggerEditor::delete_key()
         return;
     }
 
-    // Check if any selected items are module master folders
+    // Check if any selected items are package/module master folders
     for (TKey* pT : keysToDelete) {
-        if (pT->mModuleMasterFolder) {
+        if (!pT->mPackageName.isEmpty()) {
+            // Determine if this is a package or module
+            const bool isModule = pT->mModuleMasterFolder;
+            const QString itemType = isModule ? tr("module") : tr("package");
+            const enums::PackageModuleType packageType = isModule
+                ? enums::PackageModuleType::ModuleFromUI
+                : enums::PackageModuleType::Package;
+
             QMessageBox msgBox;
-            msgBox.setWindowTitle(tr("Cannot Delete Module Folder"));
-            //: Explanation shown when user tries to delete a module master folder
-            msgBox.setText(tr("This is a module master folder. Deleting it here won't permanently remove the module."));
-            //: Additional information about how to properly uninstall a module
-            msgBox.setInformativeText(tr("Would you like to uninstall the module \"%1\" instead?\n\nThis will properly remove the module and all its items.").arg(pT->mPackageName));
+            msgBox.setWindowTitle(tr("Cannot Delete %1 Folder").arg(isModule ? tr("Module") : tr("Package")));
+            //: Explanation shown when user tries to delete a package/module master folder
+            msgBox.setText(tr("This is a %1 master folder. Deleting it here won't permanently remove the %1.").arg(itemType));
+            //: Additional information about how to properly uninstall a package/module
+            msgBox.setInformativeText(tr("Would you like to uninstall the %1 \"%2\" instead?\n\nThis will properly remove the %1 and all its items.").arg(itemType, pT->mPackageName));
             msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
             msgBox.setDefaultButton(QMessageBox::No);
             msgBox.setIcon(QMessageBox::Question);
 
             if (msgBox.exec() == QMessageBox::Yes) {
-                mpHost->uninstallPackage(pT->mPackageName, enums::PackageModuleType::ModuleFromUI);
+                mpHost->uninstallPackage(pT->mPackageName, packageType);
             }
             return;
         }
@@ -3366,21 +3394,28 @@ void dlgTriggerEditor::delete_trigger()
         return;
     }
 
-    // Check if any selected items are module master folders
+    // Check if any selected items are package/module master folders
     for (TTrigger* pT : triggersToDelete) {
-        if (pT->mModuleMasterFolder) {
+        if (!pT->mPackageName.isEmpty()) {
+            // Determine if this is a package or module
+            const bool isModule = pT->mModuleMasterFolder;
+            const QString itemType = isModule ? tr("module") : tr("package");
+            const enums::PackageModuleType packageType = isModule
+                ? enums::PackageModuleType::ModuleFromUI
+                : enums::PackageModuleType::Package;
+
             QMessageBox msgBox;
-            msgBox.setWindowTitle(tr("Cannot Delete Module Folder"));
-            //: Explanation shown when user tries to delete a module master folder
-            msgBox.setText(tr("This is a module master folder. Deleting it here won't permanently remove the module."));
-            //: Additional information about how to properly uninstall a module
-            msgBox.setInformativeText(tr("Would you like to uninstall the module \"%1\" instead?\n\nThis will properly remove the module and all its items.").arg(pT->mPackageName));
+            msgBox.setWindowTitle(tr("Cannot Delete %1 Folder").arg(isModule ? tr("Module") : tr("Package")));
+            //: Explanation shown when user tries to delete a package/module master folder
+            msgBox.setText(tr("This is a %1 master folder. Deleting it here won't permanently remove the %1.").arg(itemType));
+            //: Additional information about how to properly uninstall a package/module
+            msgBox.setInformativeText(tr("Would you like to uninstall the %1 \"%2\" instead?\n\nThis will properly remove the %1 and all its items.").arg(itemType, pT->mPackageName));
             msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
             msgBox.setDefaultButton(QMessageBox::No);
             msgBox.setIcon(QMessageBox::Question);
 
             if (msgBox.exec() == QMessageBox::Yes) {
-                mpHost->uninstallPackage(pT->mPackageName, enums::PackageModuleType::ModuleFromUI);
+                mpHost->uninstallPackage(pT->mPackageName, packageType);
             }
             return;
         }
@@ -3459,21 +3494,28 @@ void dlgTriggerEditor::delete_timer()
         return;
     }
 
-    // Check if any selected items are module master folders
+    // Check if any selected items are package/module master folders
     for (TTimer* pT : timersToDelete) {
-        if (pT->mModuleMasterFolder) {
+        if (!pT->mPackageName.isEmpty()) {
+            // Determine if this is a package or module
+            const bool isModule = pT->mModuleMasterFolder;
+            const QString itemType = isModule ? tr("module") : tr("package");
+            const enums::PackageModuleType packageType = isModule
+                ? enums::PackageModuleType::ModuleFromUI
+                : enums::PackageModuleType::Package;
+
             QMessageBox msgBox;
-            msgBox.setWindowTitle(tr("Cannot Delete Module Folder"));
-            //: Explanation shown when user tries to delete a module master folder
-            msgBox.setText(tr("This is a module master folder. Deleting it here won't permanently remove the module."));
-            //: Additional information about how to properly uninstall a module
-            msgBox.setInformativeText(tr("Would you like to uninstall the module \"%1\" instead?\n\nThis will properly remove the module and all its items.").arg(pT->mPackageName));
+            msgBox.setWindowTitle(tr("Cannot Delete %1 Folder").arg(isModule ? tr("Module") : tr("Package")));
+            //: Explanation shown when user tries to delete a package/module master folder
+            msgBox.setText(tr("This is a %1 master folder. Deleting it here won't permanently remove the %1.").arg(itemType));
+            //: Additional information about how to properly uninstall a package/module
+            msgBox.setInformativeText(tr("Would you like to uninstall the %1 \"%2\" instead?\n\nThis will properly remove the %1 and all its items.").arg(itemType, pT->mPackageName));
             msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
             msgBox.setDefaultButton(QMessageBox::No);
             msgBox.setIcon(QMessageBox::Question);
 
             if (msgBox.exec() == QMessageBox::Yes) {
-                mpHost->uninstallPackage(pT->mPackageName, enums::PackageModuleType::ModuleFromUI);
+                mpHost->uninstallPackage(pT->mPackageName, packageType);
             }
             return;
         }
@@ -7488,8 +7530,8 @@ void dlgTriggerEditor::populateKeys()
             pItem->setIcon(0, iconError);
             showError(key->getError());
         }
-        // Disable drag-and-drop for module master folders
-        if (key->mModuleMasterFolder) {
+        // Disable drag-and-drop for package/module master folders
+        if (!key->mPackageName.isEmpty()) {
             pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -7575,8 +7617,8 @@ void dlgTriggerEditor::populateActions()
             pItem->setIcon(0, iconError);
             showError(action->getError());
         }
-        // Disable drag-and-drop for module master folders
-        if (action->mModuleMasterFolder) {
+        // Disable drag-and-drop for package/module master folders
+        if (!action->mPackageName.isEmpty()) {
             pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -7658,8 +7700,8 @@ void dlgTriggerEditor::populateAliases()
             pItem->setIcon(0, iconError);
             showError(alias->getError());
         }
-        // Disable drag-and-drop for module master folders
-        if (alias->mModuleMasterFolder) {
+        // Disable drag-and-drop for package/module master folders
+        if (!alias->mPackageName.isEmpty()) {
             pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -7717,8 +7759,8 @@ void dlgTriggerEditor::populateScripts()
             pItem->setIcon(0, iconError);
             showError(script->getError());
         }
-        // Disable drag-and-drop for module master folders
-        if (script->mModuleMasterFolder) {
+        // Disable drag-and-drop for package/module master folders
+        if (!script->mPackageName.isEmpty()) {
             pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -7811,8 +7853,8 @@ void dlgTriggerEditor::populateTimers()
             pItem->setIcon(0, iconError);
             showError(timer->getError());
         }
-        // Disable drag-and-drop for module master folders
-        if (timer->mModuleMasterFolder) {
+        // Disable drag-and-drop for package/module master folders
+        if (!timer->mPackageName.isEmpty()) {
             pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -7905,8 +7947,8 @@ void dlgTriggerEditor::populateTriggers()
             pItem->setIcon(0, iconError);
             showError(trigger->getError());
         }
-        // Disable drag-and-drop for module master folders
-        if (trigger->mModuleMasterFolder) {
+        // Disable drag-and-drop for package/module master folders
+        if (!trigger->mPackageName.isEmpty()) {
             pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
