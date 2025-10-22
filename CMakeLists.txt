@@ -242,3 +242,18 @@ endif()
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)
+
+# Install crashpad handler
+if(APPLE)
+  install(
+    TARGETS crashpad_handler
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/Mudlet.app/Contents/MacOS"
+  )
+endif()
+
+if(WIN32)
+  install(
+    TARGETS crashpad_handler
+    DESTINATION "${CMAKE_INSTALL_PREFIX}"
+  )
+endif()
