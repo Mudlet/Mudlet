@@ -172,6 +172,11 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
 
 void XMLexport::exportHost(const QString& filename_pugi_xml)
 {
+    if (!mpHost) {
+        qWarning() << "XMLexport::exportHost() ERROR - Host is null, cannot export";
+        return;
+    }
+
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
 
@@ -385,7 +390,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
     bool enableUserDictionary;
     bool useSharedDictionary;
-    mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     if (pHost->mMapInfoContributors.isEmpty()) {
