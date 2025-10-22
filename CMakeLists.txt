@@ -225,6 +225,14 @@ git_submodule_init(
   CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/sentry-native" READABLE_NAME "Sentry crash reporting")
 
+# Recursively update sentry-native's submodules (i.e. crashpad)
+execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive 3rdparty/sentry-native
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    RESULT_VARIABLE GIT_SUBMODULE_RESULT)
+if(NOT GIT_SUBMODULE_RESULT EQUAL "0")
+    message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMODULE_RESULT} for sentry-native")
+endif()
+
 # Sentry integration
 set(SENTRY_INTEGRATION_QT ON CACHE BOOL "Enable Sentry Qt integration")
 if(WIN32 OR APPLE)
