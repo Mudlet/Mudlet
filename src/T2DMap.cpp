@@ -104,6 +104,7 @@ constexpr int csmMiddlePanTimerIntervalMs = 16;
 constexpr int csmMiddlePanHoldThresholdMs = 300;
 constexpr qreal csmMiddlePanDeadZone = 6.0;
 constexpr qreal csmMiddlePanMaxDistance = 400.0;
+constexpr qreal csmMiddlePanSpeedMultiplier = 4.0;
 }
 
 void T2DMap::registerInteractionHandler(IInteractionHandler* handler, int priority)
@@ -3009,14 +3010,15 @@ void T2DMap::handleMiddlePanTick()
     const bool hasVerticalMovement = !qFuzzyIsNull(delta.y());
 
     const qreal intervalSeconds = static_cast<qreal>(csmMiddlePanTimerIntervalMs) / 1000.0;
+    const qreal movementFactor = csmMiddlePanSpeedMultiplier * intervalSeconds;
 
     if (hasHorizontalMovement && !qFuzzyIsNull(roomWidth)) {
-        mMapCenterX += (delta.x() / roomWidth) * intervalSeconds;
+        mMapCenterX -= (delta.x() / roomWidth) * movementFactor;
         mShiftMode = true;
     }
 
     if (hasVerticalMovement && !qFuzzyIsNull(roomHeight)) {
-        mMapCenterY += (delta.y() / roomHeight) * intervalSeconds;
+        mMapCenterY -= (delta.y() / roomHeight) * movementFactor;
         mShiftMode = true;
     }
 
