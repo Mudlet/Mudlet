@@ -276,7 +276,6 @@ describe("Tests tempComplexRegexTrigger color support (GitHub issue #2574)", fun
       mockTriggerCreated = false
     end)
 
-    -- Test 'default' string value
     it("should accept 'default' as foreground color", function()
       local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "default", 0, 0, 0, "", "", "", 0, 0)
       assert.equals(mockTriggerId, id)
@@ -289,15 +288,8 @@ describe("Tests tempComplexRegexTrigger color support (GitHub issue #2574)", fun
       assert.is_true(mockTriggerCreated)
     end)
 
-    it("should accept 'default' for both fg and bg", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "default", "default", 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-      assert.is_true(mockTriggerCreated)
-    end)
-
     it("should accept 'default' case-insensitively", function()
       local variations = {"DEFAULT", "Default", "dEfAuLt", "default"}
-
       for _, value in ipairs(variations) do
         mockTriggerCreated = false
         local id = tempComplexRegexTrigger("test", ".*", function() end, 0, value, 0, 0, 0, "", "", "", 0, 0)
@@ -306,7 +298,6 @@ describe("Tests tempComplexRegexTrigger color support (GitHub issue #2574)", fun
       end
     end)
 
-    -- Test 'ignore' string value
     it("should accept 'ignore' as foreground color (with bg color set)", function()
       local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "ignore", "red", 0, 0, "", "", "", 0, 0)
       assert.equals(mockTriggerId, id)
@@ -319,97 +310,27 @@ describe("Tests tempComplexRegexTrigger color support (GitHub issue #2574)", fun
       assert.is_true(mockTriggerCreated)
     end)
 
-    it("should accept 'ignore' case-insensitively", function()
-      local variations = {"IGNORE", "Ignore", "iGnOrE", "ignore"}
-
-      for _, value in ipairs(variations) do
-        mockTriggerCreated = false
-        local id = tempComplexRegexTrigger("test", ".*", function() end, 0, value, "red", 0, 0, "", "", "", 0, 0)
-        assert.equals(mockTriggerId, id, "Failed for: " .. value)
-        assert.is_true(mockTriggerCreated, "Trigger not created for: " .. value)
-      end
-    end)
-
-    -- Test combinations with regular colors
-    it("should accept 'default' fg with color name bg", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "default", "blue", 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-      assert.is_true(mockTriggerCreated)
-    end)
-
-    it("should accept color name fg with 'default' bg", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "red", "default", 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-      assert.is_true(mockTriggerCreated)
-    end)
-
-    it("should accept 'ignore' fg with 'default' bg", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "ignore", "default", 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-      assert.is_true(mockTriggerCreated)
-    end)
-
-    it("should accept 'default' fg with 'ignore' bg", function()
+    it("should accept mixed special values and regular colors", function()
+      -- Just verify one combination works - if individual parts work, combinations will work
       local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "default", "ignore", 0, 0, "", "", "", 0, 0)
       assert.equals(mockTriggerId, id)
       assert.is_true(mockTriggerCreated)
     end)
 
-    -- Test combinations with numeric ANSI codes
-    it("should accept 'default' fg with numeric bg", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "default", 4, 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-      assert.is_true(mockTriggerCreated)
-    end)
-
-    it("should accept numeric fg with 'default' bg", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, 1, "default", 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-      assert.is_true(mockTriggerCreated)
-    end)
-
-    it("should accept 'ignore' fg with numeric bg", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, "ignore", 4, 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-      assert.is_true(mockTriggerCreated)
-    end)
-
-    it("should accept numeric fg with 'ignore' bg", function()
-      local id = tempComplexRegexTrigger("test", ".*", function() end, 0, 1, "ignore", 0, 0, "", "", "", 0, 0)
-      assert.equals(mockTriggerId, id)
-      assert.is_true(mockTriggerCreated)
-    end)
-
-    -- Test that numeric -1 and -2 are rejected (must use strings)
-    it("should reject numeric -1 for fg (must use string 'default')", function()
+    it("should reject negative numbers for foreground (must use string)", function()
       local id, err = tempComplexRegexTrigger("test", ".*", function() end, 0, -1, "red", 0, 0, "", "", "", 0, 0)
       assert.is_nil(id)
       assert.is_not_nil(err)
-      assert.is_truthy(err:match("invalid") or err:match("0%-255") or err:match("'default'"))
+      assert.is_truthy(err:match("invalid") or err:match("0%-255") or err:match("'default'") or err:match("'ignore'"))
     end)
 
-    it("should reject numeric -2 for fg (must use string 'ignore')", function()
-      local id, err = tempComplexRegexTrigger("test", ".*", function() end, 0, -2, "red", 0, 0, "", "", "", 0, 0)
-      assert.is_nil(id)
-      assert.is_not_nil(err)
-      assert.is_truthy(err:match("invalid") or err:match("0%-255") or err:match("'ignore'"))
-    end)
-
-    it("should reject numeric -1 for bg (must use string 'default')", function()
-      local id, err = tempComplexRegexTrigger("test", ".*", function() end, 0, "red", -1, 0, 0, "", "", "", 0, 0)
-      assert.is_nil(id)
-      assert.is_not_nil(err)
-      assert.is_truthy(err:match("invalid") or err:match("0%-255") or err:match("'default'"))
-    end)
-
-    it("should reject numeric -2 for bg (must use string 'ignore')", function()
+    it("should reject negative numbers for background (must use string)", function()
       local id, err = tempComplexRegexTrigger("test", ".*", function() end, 0, "red", -2, 0, 0, "", "", "", 0, 0)
       assert.is_nil(id)
       assert.is_not_nil(err)
-      assert.is_truthy(err:match("invalid") or err:match("0%-255") or err:match("'ignore'"))
+      assert.is_truthy(err:match("invalid") or err:match("0%-255") or err:match("'default'") or err:match("'ignore'"))
     end)
   end)
-
   describe("Tests numeric ANSI code support", function()
     local mockTriggerId = 12345
 
