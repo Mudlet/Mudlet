@@ -21,7 +21,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "utils.h"
+// #include "utils.h"
+
+#define qsl(s) QStringLiteral(s)
 
 #include "pre_guard.h"
 #include <QMap>

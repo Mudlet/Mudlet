@@ -54,11 +54,13 @@ endif()
 
 set(mudlet_core_SRCS
     TVar.cpp
+    MxpTag.cpp
 )
 
 set(mudlet_core_HDRS
     TEvent.h
     TVar.h
+    MxpTag.h
 )
 
 add_library(MudletCore STATIC
@@ -131,7 +133,7 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
-    MxpTag.cpp
+    # MxpTag.cpp
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
