@@ -47,7 +47,6 @@
 #include "glwidget_integration.h"
 #endif
 
-#include "pre_guard.h"
 #include <QTextCodec>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -55,7 +54,6 @@
 #include <QNetworkProxy>
 #include <QProgressDialog>
 #include <QSslError>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -920,13 +918,13 @@ QString cTelnet::formatShortTelnetCommand(const std::string& telnetCommand, cons
     QByteArray cmdBytes(telnetCommand.data(), telnetCommand.size());
     QString hexStr = cmdBytes.toHex(' ');
     QString decoded = QString(" (IAC %1").arg(commandName);
-    
+
     if (telnetCommand.size() == 2 && !commandName.isEmpty()) {
         decoded += " <missing option>)";
     } else {
         decoded += ")";
     }
-    
+
     return QString("hex: %1%2").arg(hexStr, decoded);
 }
 
@@ -1157,7 +1155,7 @@ QString cTelnet::getNewEnvironMTTS()
         terminalStandards |= MTTS_STD_SCREEN_READER;
     }
 
-    if (mpHost->mEnableMNES && !mpHost->mForceNewEnvironNegotiationOff) {
+    if (mpHost->mEnableMNES && mpHost->mEnableNEWENVIRON) {
         terminalStandards |= MTTS_STD_MNES;
     }
 
@@ -1305,7 +1303,7 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
 // SEND INFO per https://www.rfc-editor.org/rfc/rfc1572
 void cTelnet::sendInfoNewEnvironValue(const QString &var)
 {
-    if (!enableNewEnviron || mpHost->mForceNewEnvironNegotiationOff) {
+    if (!enableNewEnviron || !mpHost->mEnableNEWENVIRON) {
         return;
     }
 
@@ -1710,7 +1708,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         qDebug() << "WARNING: telnetCommand too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
         return;
     }
-    
+
     char ch = telnetCommand[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
     QString commandType;
@@ -1814,19 +1812,19 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_NEW_ENVIRON) {
             // NEW_ENVIRON support per https://www.rfc-editor.org/rfc/rfc1572.txt
-            if (mpHost->mForceNewEnvironNegotiationOff) { // We DONT welcome the WILL
+            if (!mpHost->mEnableNEWENVIRON) { // We DONT welcome the WILL
                 sendTelnetOption(TN_DONT, option);
 
                 if (enableNewEnviron) {
                     raiseProtocolEvent("sysProtocolDisabled", "NEW_ENVIRON");
                 }
 
-                qDebug() << "Rejecting NEW_ENVIRON, because Force NEW_ENVIRON negotiation off is checked.";
+                enableNewEnviron = false;
             } else {
                 sendTelnetOption(TN_DO, OPT_NEW_ENVIRON);
                 enableNewEnviron = true; // We negotiated, the game server is welcome to SEND now
-                raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
                 qDebug() << "NEW_ENVIRON enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
             }
 
             break;
@@ -1834,7 +1832,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_CHARSET) {
             // CHARSET support per https://tools.ietf.org/html/rfc2066
-            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We DONT welcome the WILL
+            if (!mpHost->mEnableCHARSET) { // We DONT welcome the WILL
                 sendTelnetOption(TN_DONT, option);
 
                 if (enableCHARSET) {
@@ -1842,7 +1840,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 enableCHARSET = false;
-                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
             } else {
                 sendTelnetOption(TN_DO, OPT_CHARSET);
                 enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
@@ -2228,19 +2225,19 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_NEW_ENVIRON) {
             // NEW_ENVIRON support per https://www.rfc-editor.org/rfc/rfc1572.txt
-            if (mpHost->mForceNewEnvironNegotiationOff) { // We WONT welcome the DO
+            if (!mpHost->mEnableNEWENVIRON) { // We WONT welcome the DO
                 sendTelnetOption(TN_WONT, option);
 
                 if (enableNewEnviron) {
                     raiseProtocolEvent("sysProtocolDisabled", "NEW_ENVIRON");
                 }
 
-                qDebug() << "Rejecting NEW_ENVIRON, because Force NEW_ENVIRON negotiation off is checked.";
+                enableNewEnviron = false;
             } else { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_NEW_ENVIRON);
                 enableNewEnviron = true; // We negotiated, the game server is welcome to SEND now
-                raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
                 qDebug() << "NEW_ENVIRON enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
             }
 
             break;
@@ -2248,7 +2245,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_CHARSET) {
             // CHARSET support per https://tools.ietf.org/html/rfc2066
-            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We WONT welcome the DO
+            if (!mpHost->mEnableCHARSET) { // We WONT welcome the DO
                 sendTelnetOption(TN_WONT, option);
 
                 if (enableCHARSET) {
@@ -2256,7 +2253,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 enableCHARSET = false;
-                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
             } else  { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_CHARSET);
                 enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
@@ -2919,7 +2915,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->raiseEvent(event);
         }
-        
+
     }
 }
 

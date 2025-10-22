@@ -23,9 +23,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_trigger_pattern_edit.h"
-#include "post_guard.h"
 
 class QAction;
 

@@ -26,11 +26,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_trigger_editor.h"
 #include <QPointer>
 #include <unordered_map>
-#include "post_guard.h"
 
 #include "TAction.h"
 #include "TAlias.h"
@@ -48,14 +46,12 @@
 #include "dlgVarsMainArea.h"
 #include "SingleLineTextEdit.h"
 
-#include "pre_guard.h"
 #include <QDialog>
 #include <QFlag>
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
 #include <QDesktopServices>
-#include "post_guard.h"
 
 // Edbee editor includes
 #include "edbee/edbee.h"
@@ -613,11 +609,11 @@ private:
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
-    
+
     struct introOption {
         QString name;
         QString headline;
-        QString contents;  
+        QString contents;
     };
 
     struct introTextParts {

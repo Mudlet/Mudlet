@@ -29,13 +29,11 @@
 #include "TRoomDB.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QString>
 #include <QStringBuilder>
-#include "post_guard.h"
 
 
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)

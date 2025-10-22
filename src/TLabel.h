@@ -29,13 +29,11 @@
 
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QLabel>
 #include <QMovie>
 #include <QPointer>
 #include <QString>
 #include <QVideoWidget>
-#include "post_guard.h"
 
 class Host;
 class QMouseEvent;

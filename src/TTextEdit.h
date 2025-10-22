@@ -30,13 +30,11 @@
 
 #include "TBuffer.h"
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
 #include <QWidget>
 #include <chrono>
-#include "post_guard.h"
 
 #include <string>
 
