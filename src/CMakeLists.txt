@@ -55,6 +55,7 @@ endif()
 set(mudlet_core_SRCS
     TVar.cpp
     MxpTag.cpp
+    DebugBridge.cpp
 )
 
 set(mudlet_core_HDRS
@@ -62,7 +63,8 @@ set(mudlet_core_HDRS
     TVar.h
     MxpTag.h
     I_Host.h
-    I_Mudlet.h
+    I_TDebug.h
+    DebugBridge.h
 )
 
 add_library(MudletCore STATIC
@@ -221,7 +223,8 @@ set(mudlet_SRCS
     # TVar.cpp
     VarUnit.cpp
     XMLexport.cpp
-    XMLimport.cpp)
+    XMLimport.cpp
+    )
 
 if(APPLE)
   # Sparkle updater for macOS
@@ -402,7 +405,8 @@ set(mudlet_HDRS
     widechar_width.h
     XMLexport.h
     XMLimport.h
-    enums.h)
+    enums.h
+    TDebugAdapter.h)
 
 
 if(USE_UPDATER)

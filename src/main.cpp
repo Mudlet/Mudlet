@@ -55,10 +55,12 @@ using namespace std::chrono_literals;
 #include <Windows.h>
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
+#include "DebugBridge.h"
 
 #if defined(Q_OS_WINDOWS)
 bool runUpdate();
 #endif
+#include "TDebugAdapter.h"
 
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
@@ -267,6 +269,13 @@ int main(int argc, char* argv[])
     } else {
         app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
+
+    //register DebugBridge factory
+    DebugBridge::registerFactory(
+        [](const QString& fg, const QString& bg) -> std::unique_ptr<I_TDebug> {
+            return std::make_unique<TDebugAdapter>(fg, bg);
+        }
+    );
 
     mudlet::start();
     // Detect config path before any files are read

@@ -25,7 +25,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "ActionUnit.h"
 #include "AliasUnit.h"
 #include "KeyUnit.h"
@@ -195,9 +194,7 @@ public:
         return &mModuleInfo;
     };
 
-    bool _getMudletSmDebugMode() override {
-        return mudlet::smDebugMode;
-    };
+    bool _getMudletSmDebugMode() override;
 
 
     QString         getName()                        { return mHostName; }

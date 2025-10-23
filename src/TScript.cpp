@@ -28,6 +28,8 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
+#include "DebugBridge.h"
+
 TScript::TScript( TScript * parent, I_Host * pHost )
 : Tree<TScript>( parent )
 , mpHost(pHost)
@@ -101,8 +103,9 @@ void TScript::compile(bool saveLoadingError)
     if (mNeedsToBeCompiled) {
         if (!compileScript(saveLoadingError)) {
             if (mpHost->_getMudletSmDebugMode()) {      //TODO
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
-                
+                //TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
+                auto dbg = DebugBridge::create("white", "red");
+                (*dbg) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }

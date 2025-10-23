@@ -2961,6 +2961,11 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     }
 }
 
+bool Host::_getMudletSmDebugMode()
+{
+    return mudlet::smDebugMode;
+}
+
 // This does not take care of any QMaps or other containers that the mudlet
 // and HostManager classes have that use the name of this profile as a key,
 // however it should ensure that other classes get updated:
