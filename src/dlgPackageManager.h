@@ -25,12 +25,10 @@
 
 #include "Host.h"
 
-#include "pre_guard.h"
 #include "ui_package_manager.h"
 #include <QDialog>
 #include <QListWidget>
 #include <QTextBrowser>
-#include "post_guard.h"
 
 class Host;
 

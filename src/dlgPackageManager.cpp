@@ -25,12 +25,10 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QCloseEvent>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
-#include "post_guard.h"
 
 
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)

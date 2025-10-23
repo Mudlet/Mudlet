@@ -27,10 +27,8 @@
 #include "TTimer.h"
 #include "VarUnit.h"
 
-#include "pre_guard.h"
 #include <QtEvents>
 #include <QHeaderView>
-#include "post_guard.h"
 
 TTreeWidget::TTreeWidget(QWidget* pW)
 : QTreeWidget(pW)
@@ -188,7 +186,7 @@ void TTreeWidget::mousePressEvent(QMouseEvent* event)
             return;
         }
     }
-    
+
     QTreeWidget::mousePressEvent(event);
 }
 

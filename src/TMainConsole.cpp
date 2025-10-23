@@ -37,7 +37,6 @@
 #include "mudlet.h"
 #include "GifTracker.h"
 
-#include "pre_guard.h"
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
@@ -47,7 +46,6 @@
 #include <QTextCodec>
 #include <QTextStream>
 #include <QPainter>
-#include "post_guard.h"
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)

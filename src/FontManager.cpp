@@ -23,12 +23,10 @@
 #include "FontManager.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QDesktopServices>
 #include <QFontDatabase>
-#include "post_guard.h"
 
 void FontManager::addFonts()
 {
