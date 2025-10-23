@@ -21,6 +21,10 @@
 #include "TMxpContext.h"
 #include "TMxpTagParser.h"
 
+#ifdef DEBUG_MXP_PROCESSING
+#include <QDebug>
+#endif
+
 // <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>
 TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
@@ -31,6 +35,10 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
 
     TMxpElement element;
     element.name = tag->getAttrName(0); // element-name
+
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpElementDefinitionHandler: Defining custom element:" << element.name;
+#endif
 
     if (tag->hasAttribute("DELETE")) {
         ctx.getElementRegistry().unregisterElement(element.name);
@@ -76,9 +84,16 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
 
     if (!element.definition.isEmpty()) {
         element.parsedDefinition = TMxpTagParser::parseToMxpNodeList(element.definition);
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "  Definition:" << element.definition;
+#endif
     }
 
     ctx.getElementRegistry().registerElement(element);
+
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "  Custom element registered:" << element.name;
+#endif
 
     return MXP_TAG_HANDLED;
 }

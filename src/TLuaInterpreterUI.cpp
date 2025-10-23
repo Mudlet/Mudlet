@@ -60,7 +60,6 @@
 #include <limits>
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -74,7 +73,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";

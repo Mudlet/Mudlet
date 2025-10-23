@@ -27,12 +27,10 @@
 
 #include "TConsole.h"
 #include "TScrollBox.h"
-#include "pre_guard.h"
 #include <QFile>
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
-#include "post_guard.h"
 
 #include <hunspell/hunspell.h>
 

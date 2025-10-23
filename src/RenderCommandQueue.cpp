@@ -19,10 +19,8 @@
 
 #include "RenderCommandQueue.h"
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <cstring>
-#include "post_guard.h"
 
 RenderCommandQueue::RenderCommandQueue()
 {
@@ -38,7 +36,7 @@ void RenderCommandQueue::initialize()
     if (mInitialized) {
         return;
     }
-    
+
     initializeOpenGLFunctions();
     mInitialized = true;
 }
@@ -63,7 +61,8 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
                                    QOpenGLBuffer& vertexBuffer,
                                    QOpenGLBuffer& colorBuffer,
                                    QOpenGLBuffer& normalBuffer,
-                                   QOpenGLBuffer& indexBuffer)
+                                   QOpenGLBuffer& indexBuffer,
+                                   QOpenGLBuffer& texCoordBuffer)
 {
     if (!mInitialized) {
         qWarning() << "RenderCommandQueue: Not initialized";
@@ -81,11 +80,11 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
         qWarning() << "RenderCommandQueue: No resource manager provided";
         return;
     }
-    
+
     for (const auto& command : mCommands) {
         if (command) {
-            command->execute(this, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer);
-            
+            command->execute(this, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer);
+
             // Update statistics
             mTotalCommandsExecuted++;
             const char* commandName = command->getCommandName();
@@ -100,7 +99,7 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
             }
         }
     }
-    
+
     // Clear the queue after execution
     clear();
 }

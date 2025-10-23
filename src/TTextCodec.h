@@ -26,10 +26,8 @@
  *   or for any "special cases".                                           *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QTextCodec>
 #include <QVector>
-#include "post_guard.h"
 
 
 class TTextCodec_437 : private QTextCodec

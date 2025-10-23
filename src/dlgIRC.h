@@ -24,7 +24,6 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_irc.h"
 #include <Irc>
 #include <IrcBuffer>
@@ -39,7 +38,6 @@
 #include <IrcUserModel>
 
 #include <QPointer>
-#include "post_guard.h"
 
 #include "utils.h"
 
