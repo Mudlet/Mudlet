@@ -4,8 +4,6 @@
 #include "ScriptUnit.h"
 #include "TLuaInterpreter.h"
 
-
-
 class I_Host
 {
 public:

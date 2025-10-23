@@ -56,6 +56,7 @@ set(mudlet_core_SRCS
     TVar.cpp
     MxpTag.cpp
     DebugBridge.cpp
+    TScript.cpp
 )
 
 set(mudlet_core_HDRS
@@ -65,6 +66,7 @@ set(mudlet_core_HDRS
     I_Host.h
     I_TDebug.h
     DebugBridge.h
+    TScript.h
 )
 
 add_library(MudletCore STATIC
@@ -207,7 +209,7 @@ set(mudlet_SRCS
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
-    TScript.cpp
+    # TScript.cpp
     TScrollBox.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
@@ -399,7 +401,7 @@ set(mudlet_HDRS
     TToolBar.h
     TTreeWidget.h
     TTrigger.h
-    TVar.h
+    # TVar.h
     utils.h
     VarUnit.h
     widechar_width.h

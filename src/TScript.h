@@ -26,7 +26,7 @@
 
 #include "pre_guard.h"
 #include <QDebug>
-#include <QPointer>
+// #include <QPointer>
 #include <QStringList>
 #include <optional>
 #include "post_guard.h"
@@ -37,8 +37,8 @@ class TEvent;
 
 class TScript : public Tree<TScript>
 {
-    friend class XMLexport;
-    friend class XMLimport;
+    // friend class XMLexport;
+    // friend class XMLimport;
 
 public:
     virtual ~TScript();

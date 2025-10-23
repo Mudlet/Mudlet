@@ -3,6 +3,7 @@
 #include <QColor>
 #include "I_TDebug.h"
 #include "TDebug.h"
+#include "Host.h"
 
 class TDebugAdapter : public I_TDebug {
 public:
