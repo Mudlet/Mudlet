@@ -30,7 +30,6 @@
 #endif
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QColor>
 #include <QFont>
@@ -45,7 +44,6 @@
 #include <QVector3D>
 #include <stdlib.h>
 #include <optional>
-#include "post_guard.h"
 
 #define DIR_NORTH 1
 #define DIR_NORTHEAST 2

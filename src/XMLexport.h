@@ -25,13 +25,12 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QClipboard>
 #include <QFuture>
 #include <QPointer>
 #include <QSaveFile>
 #include <pugixml.hpp>
-#include "post_guard.h"
+#include <memory>
 
 class QFile;
 class Host;
@@ -46,7 +45,7 @@ class TVar;
 class VarUnit;
 
 
-class XMLexport : public QObject
+class XMLexport : public QObject, public std::enable_shared_from_this<XMLexport>
 {
     Q_OBJECT
 

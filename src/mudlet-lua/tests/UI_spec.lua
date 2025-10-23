@@ -1169,5 +1169,17 @@ describe("Tests UI functions", function()
     
     deselect("main")
     print("=== END VALIDATION ===\n")
+    end)
+
+  -- https://github.com/Mudlet/Mudlet/issues/7886
+  -- In Mudlet self-test profile there is predefined trigger group that will react on Foo Bar Baz Qux
+  -- as a result Qux is expected to be the one selected
+  it("correct capture group should be selected for nested triggers", function()
+
+    feedTriggers("Foo Bar Baz Qux\n")
+    local selection, startOffset, endOffset = getSelection()
+    print(selection)
+    assert.are.equal(selection, "Qux")
+    deselect()
   end)
 end)

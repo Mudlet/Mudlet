@@ -23,11 +23,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QMultiMap>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
@@ -44,6 +42,7 @@ public:
     explicit AliasUnit(Host* pHost)
     : mpHost(pHost)
     {}
+    ~AliasUnit();
 
     std::list<TAlias*> getAliasRootNodeList() { return mAliasRootNodeList; }
     TAlias* getAlias(int id);

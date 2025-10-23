@@ -32,9 +32,7 @@
 #include "utils.h"
 
 
-#include "pre_guard.h"
 #include <QAction>
-#include "post_guard.h"
 
 // A template for tooltip HTML formatting so that we do not have
 // 30 copies of the same QString in the read-only segment of the code:

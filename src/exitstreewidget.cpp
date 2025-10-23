@@ -22,9 +22,7 @@
 
 #include "exitstreewidget.h"
 
-#include "pre_guard.h"
 #include <QtEvents>
-#include "post_guard.h"
 
 
 ExitsTreeWidget::ExitsTreeWidget(QWidget* pParent)

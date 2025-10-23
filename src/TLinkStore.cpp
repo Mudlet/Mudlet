@@ -20,10 +20,11 @@
 
 #include "TLinkStore.h"
 #if !defined(LinkStore_Test)
+#include "TBuffer.h"  // For Mudlet::HyperlinkStyling definition
 #include "Host.h"
 #endif
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference)
+int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference, const QString& expireName)
 {
     if (++mLinkID > mMaxLinks) {
         mLinkID = 1;
@@ -32,9 +33,21 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
     // Used to unref lua objects in the registry to avoid memory leaks
     freeReference(pH, mReferenceStore.value(mLinkID, QVector<int>()));
 
+    // Remove old expire mapping if it exists (when wrapping around)
+    QString oldExpireName = mExpireStore.value(mLinkID);
+    if (!oldExpireName.isEmpty()) {
+        mExpireToLinks.remove(oldExpireName, mLinkID);
+    }
+
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
     mReferenceStore[mLinkID] = luaReference;
+
+    // Store expire name if provided
+    if (!expireName.isEmpty()) {
+        mExpireStore[mLinkID] = expireName;
+        mExpireToLinks.insert(expireName, mLinkID);
+    }
 
     return mLinkID;
 }
@@ -53,3 +66,42 @@ void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
         }
     }
 }
+
+void TLinkStore::expireLinks(const QString& expireName, Host* pH)
+{
+    if (expireName.isEmpty()) {
+        return;
+    }
+
+    // Get all link IDs with this expire name
+    QList<int> linkIds = mExpireToLinks.values(expireName);
+
+    for (int linkId : linkIds) {
+        // Free Lua references
+        freeReference(pH, mReferenceStore.value(linkId));
+
+        // Remove from all stores
+        mLinkStore.remove(linkId);
+        mHintStore.remove(linkId);
+        mReferenceStore.remove(linkId);
+        mExpireStore.remove(linkId);
+#if !defined(LinkStore_Test)
+        mStylingStore.remove(linkId);
+#endif
+    }
+
+    // Remove all mappings for this expire name
+    mExpireToLinks.remove(expireName);
+}
+
+#if !defined(LinkStore_Test)
+void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
+{
+    mStylingStore[id] = styling;
+}
+
+Mudlet::HyperlinkStyling TLinkStore::getStyling(int id) const
+{
+    return mStylingStore.value(id, Mudlet::HyperlinkStyling());
+}
+#endif

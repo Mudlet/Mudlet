@@ -71,6 +71,16 @@ int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
     return getLinkStore().addLinks(links, hints, mpHost);
 }
 
+int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints, const QString& expireName)
+{
+    return getLinkStore().addLinks(links, hints, mpHost, QVector<int>(), expireName);
+}
+
+void TMxpMudlet::expireLinks(const QString& expireName)
+{
+    getLinkStore().expireLinks(expireName, mpHost);
+}
+
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
 {
     *links = &getLinkStore().getLinks(id);
