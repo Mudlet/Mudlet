@@ -30,6 +30,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
+#include <QProgressDialog>
 #include "post_guard.h"
 
 
@@ -61,7 +62,6 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     packageStatusList->setSortingEnabled(false);
     //: Package manager - status item showing installed packages
     statusInstalled = new QListWidgetItem(tr("Installed") + QString(" (%1)").arg(mpHost->mInstalledPackages.size()), packageStatusList);
-    statusUpdates = new QListWidgetItem(tr("Updates"), packageStatusList);
     //: Package manager - status item showing available packages
     statusAvailable = new QListWidgetItem(tr("Available") + QString(" (%1)").arg(repositoryPackages.size()), packageStatusList);
     packageStatusList->setCurrentItem(statusInstalled);
@@ -74,15 +74,9 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     }
 
     pushButton_installRepo->setEnabled(false);
-    if (packageList->count() >= 0) {
-        packageList->setCurrentRow(0);
-    }
+    packageList->setCurrentRow(0);
 
     setAttribute(Qt::WA_DeleteOnClose);
-}
-
-dlgPackageManager::~dlgPackageManager()
-{
 }
 
 void dlgPackageManager::clearPackageDetails()
@@ -101,34 +95,33 @@ void dlgPackageManager::downloadIcon(const QString &packageName)
 {
     QString iconPath;
 
-    for (const QJsonValue &value : repositoryPackages) {
-        const QJsonObject packageObj = value.toObject();
-
-        if (packageObj[qsl("mpackage")].toString() == packageName) {
-            if (packageObj.contains(qsl("icon"))) {
-                iconPath = packageObj[qsl("icon")].toString();
-            } else {
-                iconPath = qsl(":/icons/package-manager.png");
-                QPixmap pixmap(iconPath);               
-                label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-                return;
-            }
-            break;
+    if (packageLookup.contains(packageName)) {
+        QJsonObject packageObj = packageLookup.value(packageName);
+        if (packageObj.contains(qsl("icon"))) {
+            iconPath = packageObj[qsl("icon")].toString();
+        } else {
+            iconPath = qsl(":/icons/package-manager.png");
+            QPixmap pixmap(iconPath);               
+            label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            return;
         }
     }
 
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-    QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/") + iconPath)));
+    QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/") + iconPath));
+    request.setTransferTimeout(10000);
+    QNetworkReply *reply = manager->get(request);
     reply->setProperty("packageName", packageName);
     connect(reply, &QNetworkReply::finished, this, [this, reply](){ slot_onIconDownloaded(reply); });
 }
 
 void dlgPackageManager::downloadRepositoryIndex() 
 {
-    const QUrl url = QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json"));
     const QString outputPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-    QNetworkReply *reply = manager->get(QNetworkRequest(url));
+    QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
+    request.setTransferTimeout(20000);
+    QNetworkReply *reply = manager->get(request);
     QFile *file = new QFile(outputPath);
 
     if (!file->open(QIODevice::WriteOnly)) {
@@ -165,23 +158,35 @@ void dlgPackageManager::fillPackageDetails(const QString &name, const QString &t
 
 bool dlgPackageManager::readPackageRepositoryFile() 
 {
-    //: Package manager - status item showing number of available packages
-    statusAvailable->setText(tr("Available") + QString(" (%1)").arg(repositoryPackages.size()));
-
     QFile file(mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json")));
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
     
     const QByteArray data = file.readAll();
-    const QJsonDocument doc(QJsonDocument::fromJson(data));
+    if (data.isEmpty()) {
+        qWarning() << "Repository file is empty";
+        return false;
+    }
 
-    if (!doc.isObject()) {
+    const QJsonDocument doc(QJsonDocument::fromJson(data));
+    if (doc.isNull() || !doc.isObject()) {
+        qWarning() << "Invalid JSON in repository file";
         return false;
     }
 
     QJsonObject obj = doc.object();
-    repositoryPackages = obj[qsl("packages")].toArray();  
+    if (!obj.contains("packages") || !obj["packages"].isArray()) {
+        qWarning() << "Repository file corrupt: missing 'packages' array";
+        return false;
+    }
+
+    repositoryPackages = obj[qsl("packages")].toArray(); 
+    packageLookup.clear();
+    for (const QJsonValue &val : repositoryPackages) {
+        QJsonObject pkg = val.toObject();
+        packageLookup.insert(pkg["mpackage"].toString(), pkg);
+    }     
     //: Package manager - status item showing number of available packages
     statusAvailable->setText(tr("Available") + QString(" (%1)").arg(repositoryPackages.size()));
     return true;
@@ -216,7 +221,8 @@ void dlgPackageManager::resetPackageList()
     }
 
     //: Package manager - status item showing number of installed packages
-    statusInstalled->setText(tr("Installed") + QString(" (%1)").arg(mpHost->mInstalledPackages.size()));    
+    statusInstalled->setText(tr("Installed") + QString(" (%1)").arg(mpHost->mInstalledPackages.size()));
+    packageList->setCurrentRow(0);    
 }
 
 void dlgPackageManager::slot_installPackageFromFile()
@@ -231,7 +237,7 @@ void dlgPackageManager::slot_installPackageFromFile()
     }
 
     lastDir = QFileInfo(fileName).absolutePath();
-    settings.setValue("lastFileDialogLocation", lastDir);
+    settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
@@ -250,45 +256,51 @@ void dlgPackageManager::slot_installPackageFromRepository()
         return;
     }
 
-    this->setEnabled(false);
+    auto progress = new QProgressDialog(tr("Downloading packages..."), nullptr, 0, 0, this);
+    progress->setWindowModality(Qt::WindowModal);
+    progress->setAutoClose(true);
+    progress->setMinimumDuration(0);
+    progress->show();     
 
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-    QHash<QString, QString> *pendingDownloads = new QHash<QString, QString>();
-    int *remainingDownloads = new int(selected.size());
+    auto pendingDownloads = std::make_shared<QHash<QString, QString>>();
+    auto remainingDownloads = std::make_shared<int>(selected.size());
     bool repoError = false;
 
     for (QListWidgetItem* item : selected) {
         const QString packageName = item->text();
 
         QJsonObject foundObj;
-        for (const QJsonValue &val : repositoryPackages) {
-            QJsonObject obj = val.toObject();
-            if (obj.value("mpackage").toString() == packageName) {
-                foundObj = obj;
-                break;
-            }
+        if (packageLookup.contains(packageName)) {
+            foundObj = packageLookup.value(packageName);
         }
 
         if (foundObj.isEmpty()) {
+            //: Package manager: package couldn't be downloaded
+            QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' not found in repository").arg(packageName));            
             repoError = true;
             continue;
         }
 
-        const QString remoteFileName = foundObj.value("filename").toString();
+        QString remoteFileName = foundObj.value("filename").toString();
+        remoteFileName = QFileInfo(remoteFileName).fileName();
         if (remoteFileName.isEmpty()) {
+            //: Package manager: package couldn't be downloaded
+            QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' not found in repository").arg(packageName));            
             repoError = true;
             continue;
         }
 
         const QByteArray encoded = QUrl::toPercentEncoding(remoteFileName);
-        const QUrl downloadUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/%1").arg(QString::fromUtf8(encoded)));
         const QString outDir = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
         const QString outPath = outDir + QDir::separator() + remoteFileName;
-
-        QNetworkReply *reply = manager->get(QNetworkRequest(downloadUrl));
+        QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/%1").arg(QString::fromUtf8(encoded))));
+        request.setTransferTimeout(30000);
+        QNetworkReply *reply = manager->get(request);
 
         QFile *file = new QFile(outPath);
         if (!file->open(QIODevice::WriteOnly)) {
+            (*remainingDownloads.get())--;
             file->deleteLater();
             reply->deleteLater();
             continue;
@@ -300,18 +312,20 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
         pendingDownloads->insert(packageName, outPath);
 
-        QObject::connect(reply, &QNetworkReply::finished, [reply, file, this, outPath, packageName, pendingDownloads, remainingDownloads, manager]() {
+        QObject::connect(reply, &QNetworkReply::finished, [reply, file, this, outPath, packageName, pendingDownloads, remainingDownloads, manager, progress]() {
             file->write(reply->readAll());
             file->close();
             reply->deleteLater();
             file->deleteLater();
 
             if (reply->error() != QNetworkReply::NoError) {
+                //: Package manager: network error, package couldn't be downloaded
+                QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' could not be downloaded due to a network error").arg(packageName));
                 pendingDownloads->remove(packageName);
-                (*remainingDownloads)--;
+                (*remainingDownloads.get())--;
             }
 
-            if (--(*remainingDownloads) == 0) {
+            if (--(*remainingDownloads.get()) == 0) {
                 for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
                     const QString &pkgName = it.key();
                     const QString &filePath = it.value();
@@ -322,9 +336,9 @@ void dlgPackageManager::slot_installPackageFromRepository()
                     QFile::remove(filePath);
                 }
 
-                this->setEnabled(true);
-                delete pendingDownloads;
-                delete remainingDownloads;
+                progress->reset();
+                progress->close();
+                progress->deleteLater();
                 manager->deleteLater();
             }
         });
@@ -354,15 +368,10 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
             return;
         }
 
-        // if the package is installed and in the repository, show the website link and report buttons
-        for (const QJsonValue& packageVal : repositoryPackages) {
-            const QJsonObject packageObj = packageVal.toObject();
-            if (packageObj.value(qsl("mpackage")).toString() == packageName) {
-                pushButton_website->show();
-                pushButton_report->show();
-                break;
-            }
-        }        
+        if (packageLookup.contains(packageName)) {
+            pushButton_website->show();
+            pushButton_report->show();
+        }          
 
         QString description = packageInfo.value(qsl("description"));
         if (!description.isEmpty()) {
@@ -567,6 +576,8 @@ void dlgPackageManager::slot_setPackageList()
             packageList->addItem(item);
         }
     }
+    
+    packageList->setCurrentRow(0);
 }
 
 void dlgPackageManager::slot_toggleInstallRepoButton()

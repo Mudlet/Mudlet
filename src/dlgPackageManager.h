@@ -42,7 +42,6 @@ class dlgPackageManager : public QDialog, public Ui::package_manager
 public:
     Q_DISABLE_COPY(dlgPackageManager)
     explicit dlgPackageManager(QWidget* parent, Host*);
-    ~dlgPackageManager() override;
     bool readPackageRepositoryFile();
     void resetPackageList();
 
@@ -70,10 +69,10 @@ private:
     void fillPackageDetails(const QString &name, const QString &title, const QString &author, const QString &version);
 
     Host* mpHost = nullptr;
+    QHash<QString, QJsonObject> packageLookup;    
     QJsonArray repositoryPackages;
     QListWidgetItem* statusAvailable;
     QListWidgetItem* statusInstalled;
-    QListWidgetItem* statusUpdates;
 };
 
 #endif
