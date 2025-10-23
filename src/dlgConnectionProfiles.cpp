@@ -351,7 +351,7 @@ void dlgConnectionProfiles::ensurePasswordLoadedThenConnect(bool alsoConnect)
         // Queue the profile loading until keychain completes
         mPendingConnect = alsoConnect;
         mPendingProfileLoad = profile_name;
-        //TODO !!!delete!!! //return; // Will be handled by keychain callback
+        return; // Will be handled by keychain callback
     }
 
     // No pending keychain operations, proceed immediately
