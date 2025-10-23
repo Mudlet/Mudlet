@@ -24,12 +24,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QHash>
 #include <QMap>
 #include <QString>
-#include "post_guard.h"
 
 #include "utils.h"
 

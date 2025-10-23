@@ -30,10 +30,8 @@
 #include "TConsole.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QBuffer>
 #include <QElapsedTimer>
-#include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without

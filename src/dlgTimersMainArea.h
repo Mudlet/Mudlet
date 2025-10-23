@@ -23,9 +23,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_timers_main_area.h"
-#include "post_guard.h"
 
 
 class dlgTimersMainArea : public QWidget, public Ui::timers_main_area

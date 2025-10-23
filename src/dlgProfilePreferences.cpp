@@ -37,7 +37,6 @@
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/models/textdocumentscopes.h"
 
-#include "pre_guard.h"
 #include <chrono>
 #include <QtConcurrent>
 #include <QColorDialog>
@@ -52,7 +51,6 @@
 #include <QKeySequenceEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -648,12 +646,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     const int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
-    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     checkBox_mVersionInTTYPE->setChecked(pHost->mVersionInTTYPE);
     checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
-    mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
+    checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
@@ -801,13 +798,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
-    
+
     // Set maximum buffer size based on system capabilities and update tooltip
     if (pHost->mpConsole) {
         const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
         console_buffer_size_spinBox->setMaximum(maxBufferSize);
         checkBox_useMaxBufferSize->setToolTip(tr("<p>Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.</p>").arg(maxBufferSize));
-        
+
         // If using max buffer size, disable the spinbox and set it to max
         if (pHost->getUseMaxConsoleBufferSize()) {
             console_buffer_size_spinBox->setValue(maxBufferSize);
@@ -817,6 +814,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
+    disable_password_masking_checkbox->setChecked(pHost->mDisablePasswordMasking);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
@@ -907,40 +905,50 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     protocolMenu->clear();
 
+    mEnableCHARSET = new QAction(tr("CHARSET: Character Encoding Standard"), nullptr);
+    mEnableCHARSET->setCheckable(true);
+    mEnableCHARSET->setChecked(pHost->mEnableCHARSET);
+    protocolMenu->addAction(mEnableCHARSET);
+
     mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), nullptr);
     mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     protocolMenu->addAction(mEnableGMCP);
+
+    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
+    mEnableMNES->setCheckable(true);
+    mEnableMNES->setChecked(pHost->mEnableMNES);
+    protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
     mEnableMSDP->setCheckable(true);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
     protocolMenu->addAction(mEnableMSDP);
 
-    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
-    mEnableMSSP->setCheckable(true);
-    mEnableMSSP->setChecked(pHost->mEnableMSSP);
-    protocolMenu->addAction(mEnableMSSP);
-
     mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), nullptr);
     mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
     protocolMenu->addAction(mEnableMSP);
 
-    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
-    mEnableMXP->setCheckable(true);
-    mEnableMXP->setChecked(pHost->mEnableMXP);
-    protocolMenu->addAction(mEnableMXP);
+    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
+    mEnableMSSP->setCheckable(true);
+    mEnableMSSP->setChecked(pHost->mEnableMSSP);
+    protocolMenu->addAction(mEnableMSSP);
 
     mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), nullptr);
     mEnableMTTS->setCheckable(true);
     mEnableMTTS->setChecked(pHost->mEnableMTTS);
     protocolMenu->addAction(mEnableMTTS);
 
-    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
-    mEnableMNES->setCheckable(true);
-    mEnableMNES->setChecked(pHost->mEnableMNES);
-    protocolMenu->addAction(mEnableMNES);
+    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
+    mEnableMXP->setCheckable(true);
+    mEnableMXP->setChecked(pHost->mEnableMXP);
+    protocolMenu->addAction(mEnableMXP);
+
+    mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
+    mEnableNEWENVIRON->setCheckable(true);
+    mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
+    protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
 
@@ -1266,6 +1274,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableMXP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMTTS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMNES, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableCHARSET, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableNEWENVIRON, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1283,7 +1293,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
     connect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeLargeAreaExitArrows);
     connect(checkBox_invertMapZoom, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeInvertMapZoom);
-    
+
     // Console buffer settings
     connect(checkBox_useMaxBufferSize, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleUseMaxBufferSize);
 
@@ -1392,6 +1402,8 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(mEnableMXP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMTTS, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMNES, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableCHARSET, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableNEWENVIRON, &QAction::toggled, nullptr, nullptr);
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1415,7 +1427,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
-    
+
     // Console buffer settings
     disconnect(checkBox_useMaxBufferSize, &QCheckBox::toggled, nullptr, nullptr);
 }
@@ -1426,12 +1438,11 @@ void dlgProfilePreferences::clearHostDetails()
     script_preview_combobox->clear();
     edbeePreviewWidget->textDocument()->setText(QString());
 
-    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     checkBox_mVersionInTTYPE->setChecked(false);
     checkBox_mForceMXPProcessorOn->setChecked(false);
-    mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
+    checkBox_drawUpperLowerLevels->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
@@ -2881,20 +2892,20 @@ void dlgProfilePreferences::slot_saveAndClose()
         // Save console buffer settings and apply them
         const bool useMaxBuffer = checkBox_useMaxBufferSize->isChecked();
         int newBufferSize;
-        
+
         if (useMaxBuffer && pHost->mpConsole) {
             newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
         } else {
             newBufferSize = console_buffer_size_spinBox->value();
         }
-        
+
         // Calculate batch delete size as 5% of buffer size (minimum 100)
         const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-        
+
         if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
             pHost->setConsoleBufferSize(newBufferSize);
             pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
-            
+
             // Apply the new buffer size to the main console
             if (pHost->mpConsole) {
                 pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
@@ -2903,6 +2914,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(show_sent_text_combobox->currentIndex());
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
+        pHost->mDisablePasswordMasking = disable_password_masking_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
@@ -2922,8 +2934,11 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMXP = mEnableMXP->isChecked();
         pHost->mEnableMTTS = mEnableMTTS->isChecked();
         pHost->mEnableMNES = mEnableMNES->isChecked();
+        pHost->mEnableCHARSET = mEnableCHARSET->isChecked();
+        pHost->mEnableNEWENVIRON = mEnableNEWENVIRON->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
+        mudlet::self()->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
         if (pHost->mpMap) {
             // Need to save the original value in case we change it in the line
             // following this one:
@@ -2951,10 +2966,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
-        pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
         pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
-        pHost->mForceNewEnvironNegotiationOff = mForceNewEnvironNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
@@ -4525,6 +4538,8 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     }
 }
 
+
+
 void dlgProfilePreferences::slot_changeWrapAt()
 {
     Host* pHost = mpHost;
@@ -4542,7 +4557,7 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     if (!pHost) {
         return;
     }
-    
+
     if (checked) {
         // When max is enabled, set spinbox to max value and disable it
         if (pHost->mpConsole) {
@@ -4655,6 +4670,22 @@ bool dlgProfilePreferences::updateDisplayFont()
     return true;
 }
 
+void dlgProfilePreferences::cancelShortcutCaptures()
+{
+    const auto sequenceEdits = findChildren<QKeySequenceEdit*>();
+    for (auto* sequenceEdit : sequenceEdits) {
+        if (!sequenceEdit) {
+            continue;
+        }
+
+        if (sequenceEdit->hasFocus()) {
+            sequenceEdit->clearFocus();
+        }
+
+        sequenceEdit->releaseKeyboard();
+    }
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
     if (!mpHost.isNull() && updateDisplayFont()) {
@@ -4683,6 +4714,8 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 
 void dlgProfilePreferences::closeEvent(QCloseEvent* event)
 {
+    cancelShortcutCaptures();
+
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());
     }

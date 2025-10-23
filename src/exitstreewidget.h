@@ -23,9 +23,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QTreeWidget>
-#include "post_guard.h"
 
 
 class ExitsTreeWidget : public QTreeWidget
