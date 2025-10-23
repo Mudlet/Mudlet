@@ -182,6 +182,11 @@ public:
         return &mLuaInterpreter;
     };
 
+    void _dlgTriggerEditor_cleanReset() override {
+        if(mpEditorDialog)
+            mpEditorDialog->doCleanReset();
+    };
+
     bool _getResetProfile() override {
         return mResetProfile;
     }; 
@@ -192,6 +197,10 @@ public:
 
     QMap<QString, QMap<QString, QString>>* _getModuleInfo() override {
         return &mModuleInfo;
+    };
+
+    QMap<QString, QList<TScript*>>* _getEventHandlerMap() override {
+        return &mEventHandlerMap;
     };
 
     bool _getMudletSmDebugMode() override;

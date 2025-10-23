@@ -23,7 +23,7 @@
 #include "ScriptUnit.h"
 
 
-#include "Host.h"
+#include "I_Host.h"
 #include "TScript.h"
 
 void ScriptUnit::resetStats()
@@ -190,10 +190,12 @@ void ScriptUnit::removeScript(TScript* pT)
     if (!pT) {
         return;
     }
-    QMapIterator<QString, QList<TScript*>> it(mpHost->mEventHandlerMap);
+
+    QMap<QString, QList<TScript*>>* ehm = mpHost->_getEventHandlerMap();
+    QMapIterator<QString, QList<TScript*>> it(*ehm);
     while (it.hasNext()) {
         it.next();
-        mpHost->mEventHandlerMap[it.key()].removeAll(pT);
+        ehm->value(it.key()).removeAll(pT);
     }
     mScriptMap.remove(pT->getID());
 }
@@ -211,9 +213,8 @@ void ScriptUnit::compileAll(bool saveLoadingError)
             script->compileAll(saveLoadingError);
         }
     }
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->doCleanReset();
-    }
+    
+    mpHost->_dlgTriggerEditor_cleanReset();
 }
 
 std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)

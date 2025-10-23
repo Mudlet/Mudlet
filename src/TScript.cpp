@@ -94,7 +94,7 @@ void TScript::callEventHandler(const TEvent& pEvent)
 {
     // Only call this event handler if this script and all its ancestors are active:
     if (isActive() && ancestorsActive()) {
-        mpHost->_getLuaInterpreter()->callEventHandler(mName, pEvent);
+        mpHost->_getLuaInterpreter()->_callEventHandler(mName, pEvent);
     }
 }
 
@@ -102,7 +102,7 @@ void TScript::compile(bool saveLoadingError)
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript(saveLoadingError)) {
-            if (mpHost->_getMudletSmDebugMode()) {      //TODO
+            if (mpHost->_getMudletSmDebugMode()) {      
                 //TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
                 auto dbg = DebugBridge::create("white", "red");
                 (*dbg) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
@@ -125,7 +125,7 @@ bool TScript::setScript(const QString& script)
 bool TScript::compileScript(bool saveLoadingError)
 {
     QString error;
-    if (mpHost->_getLuaInterpreter()->compile(mScript, error, QString("Script: ") + getName())) {
+    if (mpHost->_getLuaInterpreter()->_compile(mScript, error, QString("Script: ") + getName())) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         if (mpHost->_getResetProfile()) {
@@ -149,7 +149,7 @@ void TScript::execute()
             return;
         }
     }
-    mpHost->_getLuaInterpreter()->call(mFuncName, mName);
+    mpHost->_getLuaInterpreter()->_call(mFuncName, mName);
 }
 
 // Gets the Lua error message for this script if one occurred during profile load

@@ -31,7 +31,7 @@
 
 #include <list>
 
-class Host;
+class I_Host;
 class TScript;
 
 
@@ -41,7 +41,7 @@ class ScriptUnit
     friend class XMLimport;
 
 public:
-    explicit ScriptUnit(Host* pHost)
+    explicit ScriptUnit(I_Host* pHost)
     : mpHost(pHost)
     {}
 
@@ -81,7 +81,8 @@ private:
     void removeScript(TScript*);
     void assembleReport(TScript*);
 
-    QPointer<Host> mpHost;
+    // QPointer<Host> mpHost;
+    I_Host* mpHost;
     QMap<int, TScript*> mScriptMap;
     std::list<TScript*> mScriptRootNodeList;
     int mMaxID = 0;

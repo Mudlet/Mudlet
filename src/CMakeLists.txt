@@ -57,6 +57,7 @@ set(mudlet_core_SRCS
     MxpTag.cpp
     DebugBridge.cpp
     TScript.cpp
+    ScriptUnit.cpp
 )
 
 set(mudlet_core_HDRS
@@ -67,6 +68,7 @@ set(mudlet_core_HDRS
     I_TDebug.h
     DebugBridge.h
     TScript.h
+    ScriptUnit.h
     I_TLuaInterpreter.h       #should be removed after moving TLuaInterpreter into core 
 )
 
@@ -142,7 +144,7 @@ set(mudlet_SRCS
     MudletInstanceCoordinator.cpp
     # MxpTag.cpp
     CredentialManager.cpp
-    ScriptUnit.cpp
+    # ScriptUnit.cpp
     SecureStringUtils.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp

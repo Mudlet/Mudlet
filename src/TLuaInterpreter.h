@@ -91,13 +91,13 @@ class TLuaInterpreter : public QThread, public I_TLuaInterpreter
 
 public:
 
-    bool compile(const QString &script, QString &error, const QString &context) override {
+    bool _compile(const QString &script, QString &error, const QString &context) override {
         return compile(script, error, context);
     };
-    bool call(const QString &funcName, const QString &scriptName, const bool muteDebugOutput = false) override {
+    bool _call(const QString &funcName, const QString &scriptName, const bool muteDebugOutput = false) override {
         return call(funcName, scriptName, muteDebugOutput);
     };
-    bool callEventHandler(const QString &scriptName, const TEvent &event) override {
+    bool _callEventHandler(const QString &scriptName, const TEvent &event) override {
         return callEventHandler(scriptName, event);
     };
 
