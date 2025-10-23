@@ -115,7 +115,7 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_HINT)) {
         return tag->getAttributeValue(ATTR_HINT);
-    } else if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed(ATTR_PROMPT) && !tag->getAttribute(1).isNamed(ATTR_EXPIRE)) {
+    } else if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed(ATTR_PROMPT) && !tag->getAttribute(1).isNamed(ATTR_EXPIRE) && !tag->getAttribute(1).isNamed(ATTR_HREF)) {
         return tag->getAttrName(1);
     }
 
