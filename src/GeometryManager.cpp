@@ -20,9 +20,9 @@
 #include "GeometryManager.h"
 #include "ResourceManager.h"
 
-#include "pre_guard.h"
 #include <QDebug>
-#include "post_guard.h"
+#include <QFile>
+#include <QImage>
 
 GeometryManager::GeometryManager()
 {
@@ -38,23 +38,28 @@ void GeometryManager::initialize()
     if (mInitialized) {
         return;
     }
-    
+
     initializeOpenGLFunctions();
-    
+
     // Get function pointers for instancing (OpenGL 3.3+)
     QOpenGLContext* context = QOpenGLContext::currentContext();
     if (context) {
         glVertexAttribDivisor = reinterpret_cast<PFNGLVERTEXATTRIBDIVISORPROC>(context->getProcAddress("glVertexAttribDivisor"));
         glDrawElementsInstanced = reinterpret_cast<PFNGLDRAWELEMENTSINSTANCEDPROC>(context->getProcAddress("glDrawElementsInstanced"));
     }
-    
+
     generateCubeTemplate();
     mInitialized = true;
 }
 
 void GeometryManager::cleanup()
 {
+    if (mPlayerIconTemplate.has_value()) {
+        mPlayerIconTemplate->clearTexture();
+    }
+
     mCubeTemplate.clear();
+    mPlayerIconTemplate.reset();
     mInitialized = false;
 }
 
@@ -62,7 +67,7 @@ void GeometryManager::generateCubeTemplate()
 {
     // Generate unit cube centered at origin using indexed geometry
     mCubeTemplate.clear();
-    
+
     // Define 24 unique vertices + normals for a unit cube
     // Vertex order: front face (counter-clockwise from bottom-left), then back face
     // Front bottom-left
@@ -81,7 +86,7 @@ void GeometryManager::generateCubeTemplate()
     mCubeTemplate.vertices << -1.0f <<  1.0f <<  1.0f << 0.0 << 0.0 << 1.0;   // 9: Front top-left (normal:front)
     mCubeTemplate.vertices << -1.0f <<  1.0f <<  1.0f << 0.0 << 1.0 << 0.0;   // 10: Front top-left (normal:top)
     mCubeTemplate.vertices << -1.0f <<  1.0f <<  1.0f << -1.0 << 0.0 << 0.0;  // 11: Front top-left (normal:left)
-    // Back bottom-left 
+    // Back bottom-left
     mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << 0.0 << 0.0 << -1.0;  // 12: Back bottom-left (normal:back)
     mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << 0.0 << -1.0 << 0.0;  // 13: Back bottom-left (normal:bottom)
     mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << -1.0 << 0.0 << 0.0;  // 14: Back bottom-left (normal:left)
@@ -103,7 +108,7 @@ void GeometryManager::generateCubeTemplate()
     QVector<unsigned int> indices = {
         // Front face
         0, 3, 6,  0, 6, 9,
-        // Back face  
+        // Back face
         12, 15, 18,  12, 18, 21,
         // Left face
         2, 11, 23,  2, 23, 14,
@@ -114,16 +119,16 @@ void GeometryManager::generateCubeTemplate()
         // Top face
         7, 10, 22,  7, 22, 19,
     };
-    
+
     mCubeTemplate.indices = indices;
-    
+
     // Colors will be set per instance, so we don't populate them in the template
 }
 
 GeometryData GeometryManager::transformCubeTemplate(QMatrix4x4 transform, float r, float g, float b, float a)
 {
     GeometryData result;
-    
+
     // Transform vertices and copy normals
     for (int i = 0; i < mCubeTemplate.vertices.size(); i += 6) {
         // Scale and translate vertex
@@ -132,7 +137,7 @@ GeometryData GeometryManager::transformCubeTemplate(QMatrix4x4 transform, float 
         result.vertices << vertex.x();
         result.vertices << vertex.y();
         result.vertices << vertex.z();
-        
+
         // Copy normal (no transformation needed since it's a uniform scale)
         vertex = QVector3D(mCubeTemplate.vertices[i+3], mCubeTemplate.vertices[i+4], mCubeTemplate.vertices[i+5]);
         vertex = transform.map(vertex) - transform.map(QVector3D());
@@ -140,14 +145,14 @@ GeometryData GeometryManager::transformCubeTemplate(QMatrix4x4 transform, float 
         result.vertices << vertex.x();
         result.vertices << vertex.y();
         result.vertices << vertex.z();
-        
+
         // Set color for this vertex
         result.colors << r << g << b << a;
     }
-    
+
     // Copy indices (they don't need transformation)
     result.indices = mCubeTemplate.indices;
-    
+
     return result;
 }
 
@@ -157,7 +162,7 @@ GeometryData GeometryManager::generateCubeGeometry(float x, float y, float z, fl
         qWarning() << "GeometryManager: generateCubeGeometry called before initialize()";
         return GeometryData();
     }
-    
+
     QMatrix4x4 transform = QMatrix4x4();
     transform.translate(x, y, z);
     transform.scale(size);
@@ -169,11 +174,11 @@ GeometryData GeometryManager::generateLineGeometry(const QVector<float>& vertice
     if (vertices.isEmpty() || colors.isEmpty()) {
         return GeometryData();
     }
-    
+
     GeometryData result;
     result.vertices = vertices;
     result.colors = colors;
-    
+
     return result;
 }
 
@@ -183,13 +188,13 @@ GeometryData GeometryManager::generateTriangleGeometry(const QVector<float>& ver
         qDebug() << "GeometryManager: Invalid vertex or color array size";
         return GeometryData();
     }
-    
+
     // Check that we have the right ratio: 3 floats per vertex, 4 floats per color
     if (vertices.size() / 3 != colors.size() / 4) {
         qDebug() << "GeometryManager: Vertex count doesn't match color count";
         return GeometryData();
     }
-    
+
     GeometryData result;
     //result.vertices = vertices;
     result.colors = colors;
@@ -198,8 +203,286 @@ GeometryData GeometryManager::generateTriangleGeometry(const QVector<float>& ver
     for (int i=0; i < vertices.size(); i+=3) {
         result.vertices << vertices[i] << vertices[i+1] << vertices[i+2] << 0.0f << 0.0f << 1.0f;
     }
-    
+
     return result;
+}
+
+GeometryData GeometryManager::generatePlayerIconGeometry(float scale, float rotX, float rotY, float rotZ)
+{
+    // Check if we need to regenerate the template
+    static float lastScale = -1.0f;
+    static float lastRotX = -999.0f;
+    static float lastRotY = -999.0f;
+    static float lastRotZ = -999.0f;
+
+    bool parametersChanged = (scale != lastScale || rotX != lastRotX || rotY != lastRotY || rotZ != lastRotZ);
+
+    // Only regenerate if parameters changed or template doesn't exist
+    if (parametersChanged || !mPlayerIconTemplate.has_value()) {
+        loadPlayerIconTemplate(scale, rotX, rotY, rotZ);
+        lastScale = scale;
+        lastRotX = rotX;
+        lastRotY = rotY;
+        lastRotZ = rotZ;
+    }
+
+    return mPlayerIconTemplate.value_or(GeometryData{});
+}
+
+void GeometryManager::clearPlayerIconTemplate()
+{
+    mPlayerIconTemplate.reset();
+}
+
+void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY, float rotZ)
+{
+    GeometryData result;
+    QFile file(":/3d-models/sword/sword.glb");
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "GeometryManager: Failed to open sword GLB model file";
+        mPlayerIconTemplate = result;
+        return;
+    }
+
+    QByteArray modelData = file.readAll();
+    file.close();
+
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFileFromMemory(modelData.constData(), modelData.size(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs);
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+        qWarning() << "GeometryManager: Failed to load sword model:" << importer.GetErrorString();
+        mPlayerIconTemplate = result;
+        return;
+    }
+
+    // Process the first mesh in model
+    if (scene->mNumMeshes > 0) {
+        const aiMesh* mesh = scene->mMeshes[0];
+
+        // Create transformation matrices for the additional rotations
+        QMatrix4x4 rotationX;
+        rotationX.rotate(rotX, 1.0f, 0.0f, 0.0f);
+
+        QMatrix4x4 rotationY;
+        rotationY.rotate(rotY, 0.0f, 1.0f, 0.0f);
+
+        QMatrix4x4 rotationZ;
+        rotationZ.rotate(rotZ, 0.0f, 0.0f, 1.0f);
+
+        // Base rotation to make sword point upward (90 degrees around Z)
+        QMatrix4x4 baseRotation;
+        baseRotation.rotate(90.0f, 0.0f, 0.0f, 1.0f);
+
+        // Combined transformation: scale * user rotations * base rotation
+        QMatrix4x4 combinedTransform = rotationZ * rotationY * rotationX;
+
+        // Extract vertices, normals, and texture coordinates
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+            // Original vertex
+            QVector3D vertex(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+
+            // Apply base rotation first (90-degree rotation around Z-axis to make sword point upward)
+            QVector3D rotatedVertex(-vertex.y(), vertex.x(), vertex.z());
+
+            // Apply user rotations
+            rotatedVertex = combinedTransform.map(rotatedVertex);
+
+            // Apply scaling
+            rotatedVertex *= scale;
+
+            result.vertices << rotatedVertex.x() << rotatedVertex.y() << rotatedVertex.z();
+
+            // Apply same transformations to normals (normals shouldn't be scaled)
+            if (mesh->HasNormals()) {
+                QVector3D normal(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
+                // Apply base rotation
+                QVector3D rotatedNormal(-normal.y(), normal.x(), normal.z());
+                // Apply user rotations
+                rotatedNormal = combinedTransform.map(rotatedNormal);
+
+                result.normals << rotatedNormal.x() << rotatedNormal.y() << rotatedNormal.z();
+            } else {
+                result.normals << 0.0f << 0.0f << 1.0f;
+            }
+
+            // Extract texture coordinates if available
+            if (mesh->mTextureCoords[0]) {
+                float u = mesh->mTextureCoords[0][i].x;
+                float v = 1.0f - mesh->mTextureCoords[0][i].y; // Flip V coordinate for OpenGL
+                result.textureCoords << u << v;
+
+                // UV coordinates processed
+            } else {
+                result.textureCoords << 0.0f << 0.0f;
+            }
+
+            // Set color to white for textured rendering (texture will provide color)
+            result.colors << 1.0f << 1.0f << 1.0f << 1.0f;
+        }
+
+        // Extract indices - ensure we have triangulated faces
+        for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+            const aiFace& face = mesh->mFaces[i];
+            if (face.mNumIndices == 3) { // Only process triangles
+                result.indices.append(face.mIndices[0]);
+                result.indices.append(face.mIndices[1]);
+                result.indices.append(face.mIndices[2]);
+            } else {
+                qWarning() << "GeometryManager: Non-triangular face found with" << face.mNumIndices << "indices";
+            }
+        }
+
+        // Process material textures
+        if (mesh->mMaterialIndex < scene->mNumMaterials) {
+            const aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+            // Check for diffuse/base color texture
+            aiTextureType textureType = aiTextureType_DIFFUSE;
+            if (material->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
+                textureType = aiTextureType_BASE_COLOR;
+            }
+
+            if (material->GetTextureCount(textureType) > 0) {
+                aiString texturePath;
+                material->GetTexture(textureType, 0, &texturePath);
+                // Processing texture reference
+
+                // Check if it's an embedded texture reference (format: *0, *1, etc.)
+                QString texturePathStr = QString::fromStdString(texturePath.C_Str());
+                if (texturePathStr.startsWith("*")) {
+                    bool ok;
+                    int textureIndex = texturePathStr.mid(1).toInt(&ok);
+                    if (ok && textureIndex >= 0 && textureIndex < static_cast<int>(scene->mNumTextures)) {
+                        // Using embedded texture
+                        // We'll use this index below instead of hardcoded 0
+                    }
+                }
+            }
+        }
+
+        // Load PBR textures if available
+        if (mesh->mMaterialIndex < scene->mNumMaterials) {
+            const aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+            // Helper function to load a texture by type
+            auto loadTextureByType = [&](aiTextureType textureType, unsigned int& textureId, const QString& typeName) {
+                if (material->GetTextureCount(textureType) > 0) {
+                    aiString texturePath;
+                    aiTextureMapping mapping;
+                    unsigned int uvIndex = 0;
+                    ai_real blend;
+                    aiTextureOp op;
+                    aiTextureMapMode mapMode;
+
+                    material->GetTexture(textureType, 0, &texturePath, &mapping, &uvIndex, &blend, &op, &mapMode);
+                    // Texture uses UV channel
+
+                    QString texturePathStr = QString::fromStdString(texturePath.C_Str());
+
+                    if (texturePathStr.startsWith("*")) {
+                        bool ok;
+                        int materialTextureIndex = texturePathStr.mid(1).toInt(&ok);
+                        if (ok && materialTextureIndex >= 0 && materialTextureIndex < static_cast<int>(scene->mNumTextures)) {
+                            // Loading texture from index
+
+                            const aiTexture* texture = scene->mTextures[materialTextureIndex];
+
+                            // Create OpenGL texture
+                            GLuint newTextureId;
+                            glGenTextures(1, &newTextureId);
+                            glBindTexture(GL_TEXTURE_2D, newTextureId);
+
+                            // Create QImage from embedded texture data
+                            QImage image;
+                            if (texture->mHeight == 0) {
+                                // Compressed texture data
+                                QByteArray textureData(reinterpret_cast<const char*>(texture->pcData), texture->mWidth);
+                                image = QImage::fromData(textureData);
+                            } else {
+                                // Uncompressed texture data (RGBA)
+                                const unsigned char* data = reinterpret_cast<const unsigned char*>(texture->pcData);
+                                image = QImage(data, texture->mWidth, texture->mHeight, QImage::Format_RGBA8888);
+                            }
+
+                            if (!image.isNull()) {
+                                // Convert to OpenGL format and upload
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+                                QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).flipped(Qt::Vertical);
+#else
+                                // Deprecated in 6.9 and due for removal in 6.13:
+                                QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).mirrored(false, true);
+#endif
+                                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
+
+                                // Set texture parameters based on texture type
+                                if (typeName == "base color") {
+                                    // Base color textures benefit from mipmapping for distance
+                                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                                    glGenerateMipmap(GL_TEXTURE_2D);
+                                } else if (typeName == "normal") {
+                                    // Normal maps should use linear filtering, no mipmaps to preserve detail
+                                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                                } else {
+                                    // Metallic/roughness and other maps
+                                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                                }
+                                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                                // Set texture filtering
+
+                                textureId = newTextureId;
+                                // Texture loaded successfully
+                            } else {
+                                qWarning() << "GeometryManager: Failed to load" << typeName << "texture data";
+                                glDeleteTextures(1, &newTextureId);
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Load all PBR texture types
+            loadTextureByType(aiTextureType_BASE_COLOR, result.baseColorTextureId, "base color");
+            if (result.baseColorTextureId == 0) {
+                loadTextureByType(aiTextureType_DIFFUSE, result.baseColorTextureId, "diffuse");
+            }
+            loadTextureByType(aiTextureType_METALNESS, result.metallicRoughnessTextureId, "metallic roughness");
+            loadTextureByType(aiTextureType_NORMALS, result.normalTextureId, "normal");
+
+            // Extract PBR material factors
+            aiColor4D baseColor;
+            if (material->Get(AI_MATKEY_BASE_COLOR, baseColor) == AI_SUCCESS) {
+                result.baseColorFactor[0] = baseColor.r;
+                result.baseColorFactor[1] = baseColor.g;
+                result.baseColorFactor[2] = baseColor.b;
+                result.baseColorFactor[3] = baseColor.a;
+            }
+
+            material->Get(AI_MATKEY_METALLIC_FACTOR, result.metallicFactor);
+
+            material->Get(AI_MATKEY_ROUGHNESS_FACTOR, result.roughnessFactor);
+
+            // Check for emissive factor (material self-illumination)
+            aiColor3D emissive;
+            material->Get(AI_MATKEY_COLOR_EMISSIVE, emissive);
+
+            // Check for opacity/transparency
+            float opacity = 1.0f;
+            material->Get(AI_MATKEY_OPACITY, opacity);
+
+            // Set legacy textureId for backward compatibility with non-PBR rendering
+            result.textureId = result.baseColorTextureId;
+        }
+    }
+
+    qDebug() << "Loaded model" << file.fileName();
+
+    mPlayerIconTemplate = std::move(result);
 }
 
 void GeometryManager::renderGeometry(const GeometryData& geometry,
@@ -213,30 +496,45 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     if (geometry.isEmpty()) {
         return;
     }
-    
+
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
-    
-    // Upload vertex data
+
+    // Upload vertex data (cached)
     vertexBuffer.bind();
-    vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
+    if (!geometry.verticesUploaded) {
+        vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
+        geometry.verticesUploaded = true;
+    }
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
-    
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    // Upload color data
+
+    // Upload color data (cached)
     colorBuffer.bind();
-    colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
+    if (!geometry.colorsUploaded) {
+        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
+        geometry.colorsUploaded = true;
+    }
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
+
+    // Upload normal data (cached)
+    normalBuffer.bind();
+    if (!geometry.normalsUploaded) {
+        normalBuffer.allocate(geometry.normals.data(), geometry.normals.size() * sizeof(float));
+        geometry.normalsUploaded = true;
+    }
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
-    
+
     // Draw the geometry - use indexed rendering if indices are available
     if (geometry.hasIndices()) {
-        // Upload index data
+        // Upload index data (cached)
         indexBuffer.bind();
-        indexBuffer.allocate(geometry.indices.data(), geometry.indices.size() * sizeof(unsigned int));
-        
+        if (!geometry.indicesUploaded) {
+            indexBuffer.allocate(geometry.indices.data(), geometry.indices.size() * sizeof(unsigned int));
+            geometry.indicesUploaded = true;
+        }
+
         // Draw using indices
         glDrawElements(drawMode, geometry.indexCount(), GL_UNSIGNED_INT, nullptr);
     } else {
@@ -257,10 +555,139 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     if (geometry.isEmpty()) {
         return;
     }
-    
+
     // Call the original render method
     renderGeometry(geometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
-    
+
+    // Track draw call statistics
+    if (resourceManager) {
+        if (geometry.hasIndices()) {
+            resourceManager->onDrawCall(geometry.indexCount() / 3); // Count triangles for indexed geometry
+        } else {
+            resourceManager->onDrawCall(geometry.vertexCount());
+        }
+    }
+}
+
+void GeometryManager::renderGeometry(const GeometryData& geometry,
+                                   QOpenGLVertexArrayObject& vao,
+                                   QOpenGLBuffer& vertexBuffer,
+                                   QOpenGLBuffer& colorBuffer,
+                                   QOpenGLBuffer& normalBuffer,
+                                   QOpenGLBuffer& indexBuffer,
+                                   QOpenGLBuffer& texCoordBuffer,
+                                   GLenum drawMode)
+{
+    if (geometry.isEmpty()) {
+        return;
+    }
+
+    QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
+
+    // Bind PBR textures if available
+    if (geometry.hasPBRTextures()) {
+
+        // Bind base color texture to unit 0
+        if (geometry.baseColorTextureId != 0) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, geometry.baseColorTextureId);
+        }
+
+        // Bind metallic/roughness texture to unit 1
+        if (geometry.metallicRoughnessTextureId != 0) {
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, geometry.metallicRoughnessTextureId);
+        }
+
+        // Bind normal texture to unit 2
+        if (geometry.normalTextureId != 0) {
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, geometry.normalTextureId);
+        }
+
+        // Reset to texture unit 0
+        glActiveTexture(GL_TEXTURE0);
+    } else if (geometry.hasTexture()) {
+        // Fallback to legacy single texture
+        // Binding legacy texture
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, geometry.textureId);
+    } else {
+        // No textures available for rendering
+    }
+
+    // Upload vertex data (cached)
+    vertexBuffer.bind();
+    if (!geometry.verticesUploaded) {
+        vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
+        geometry.verticesUploaded = true;
+    }
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(0);
+
+    // Upload color data (cached)
+    colorBuffer.bind();
+    if (!geometry.colorsUploaded) {
+        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
+        geometry.colorsUploaded = true;
+    }
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
+
+    // Upload normal data (cached)
+    normalBuffer.bind();
+    if (!geometry.normalsUploaded) {
+        normalBuffer.allocate(geometry.normals.data(), geometry.normals.size() * sizeof(float));
+        geometry.normalsUploaded = true;
+    }
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(2);
+
+    // Upload texture coordinate data if available (cached)
+    if (!geometry.textureCoords.isEmpty()) {
+        texCoordBuffer.bind();
+        if (!geometry.texCoordsUploaded) {
+            texCoordBuffer.allocate(geometry.textureCoords.data(), geometry.textureCoords.size() * sizeof(float));
+            geometry.texCoordsUploaded = true;
+        }
+        glVertexAttribPointer(6, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(6);
+    }
+
+    // Draw the geometry - use indexed rendering if indices are available
+    if (geometry.hasIndices()) {
+        // Upload index data (cached)
+        indexBuffer.bind();
+        if (!geometry.indicesUploaded) {
+            indexBuffer.allocate(geometry.indices.data(), geometry.indices.size() * sizeof(unsigned int));
+            geometry.indicesUploaded = true;
+        }
+
+        // Draw using indices
+        glDrawElements(drawMode, geometry.indexCount(), GL_UNSIGNED_INT, nullptr);
+    } else {
+        // Draw using vertex arrays (for lines and triangles)
+        glDrawArrays(drawMode, 0, geometry.vertexCount());
+    }
+}
+
+void GeometryManager::renderGeometry(const GeometryData& geometry,
+                                   QOpenGLVertexArrayObject& vao,
+                                   QOpenGLBuffer& vertexBuffer,
+                                   QOpenGLBuffer& colorBuffer,
+                                   QOpenGLBuffer& normalBuffer,
+                                   QOpenGLBuffer& indexBuffer,
+                                   QOpenGLBuffer& texCoordBuffer,
+                                   ResourceManager* resourceManager,
+                                   GLenum drawMode)
+{
+    if (geometry.isEmpty()) {
+        return;
+    }
+
+    // Call the textured render method
+    renderGeometry(geometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer, drawMode);
+
     // Track draw call statistics
     if (resourceManager) {
         if (geometry.hasIndices()) {
@@ -283,7 +710,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     if (!mInitialized || instances.isEmpty()) {
         return;
     }
-    
+
     // Check if instancing functions are available
     if (!glVertexAttribDivisor || !glDrawElementsInstanced) {
         qWarning() << "GeometryManager: Instancing functions not available, falling back to individual cubes";
@@ -296,26 +723,26 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     }
 
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
-    
+
     // Upload cube template vertex and normal data
     vertexBuffer.bind();
     vertexBuffer.allocate(mCubeTemplate.vertices.data(), mCubeTemplate.vertices.size() * sizeof(float));
     // Pointer to vertices
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
     glEnableVertexAttribArray(0);
-    
+
     // Pointer to normals
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
-    
+
     // Upload cube template index data
     indexBuffer.bind();
     indexBuffer.allocate(mCubeTemplate.indices.data(), mCubeTemplate.indices.size() * sizeof(unsigned int));
-    
+
     // Upload instance data to GPU
     instanceBuffer.bind();
     instanceBuffer.allocate(instances.data(), instances.size() * sizeof(CubeInstanceData));
-    
+
     // Set up instance attributes
     // Color: location 3
     glEnableVertexAttribArray(3);
@@ -335,10 +762,10 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     glEnableVertexAttribArray(7);
     glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(16 * sizeof(float)));
     glVertexAttribDivisor(7, 1);
-    
+
     // Draw all instances with a single call
     glDrawElementsInstanced(drawMode, mCubeTemplate.indexCount(), GL_UNSIGNED_INT, nullptr, instances.size());
-    
+
     // Clean up instance attributes
     glVertexAttribDivisor(3, 0);
     glVertexAttribDivisor(4, 0);
@@ -365,10 +792,10 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     if (instances.isEmpty()) {
         return;
     }
-    
+
     // Call the original instanced render method
     renderInstancedCubes(instances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, instanceBuffer, drawMode);
-    
+
     // Track draw call statistics - one draw call for all instances
     if (resourceManager) {
         resourceManager->onDrawCall(instances.size() * (mCubeTemplate.indexCount() / 3)); // Count triangles for all instances

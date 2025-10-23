@@ -131,6 +131,10 @@ else
     export WITH_UPDATER="YES"
 fi
 
+# Since we have this already installed as a package there is no need to build
+# it from a submodule:
+export WITH_OWN_QTKEYCHAIN=NO
+
 echo "Running qmake to make MAKEFILE ..."
 echo ""
 

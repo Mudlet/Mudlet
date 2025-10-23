@@ -60,7 +60,6 @@
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
 
-#include "pre_guard.h"
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
@@ -117,7 +116,6 @@ namespace coreMacOS {
 
 // PLACEMARKER: sample benchmarking code
 // #include <nanobench.h>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
