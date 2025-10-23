@@ -55,6 +55,8 @@
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
 
+#include "I_Host.h"
+
 class QDialog;
 class QDockWidget;
 class QPushButton;
@@ -140,7 +142,7 @@ inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
 }
 #endif // QT_NO_DEBUG_STREAM
 
-class Host : public QObject
+class Host : public QObject, public I_Host
 {
     Q_OBJECT
 
@@ -167,7 +169,35 @@ public:
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
+    //override I_Host methods
+    void _registerEventHandler(const QString &handler, TScript *script) override {
+        registerEventHandler(handler, script);
+    };
+    void _unregisterEventHandler(const QString &handler, TScript *script) override {
+        unregisterEventHandler(handler, script);
+    };
+    ScriptUnit* _getScriptUnit() override {
+        return &mScriptUnit;
+    };
+    TLuaInterpreter* _getLuaInterpreter() override {
+        return &mLuaInterpreter;
+    };
 
+    bool _getResetProfile() override {
+        return mResetProfile;
+    }; 
+    
+    bool _getBlockScript() override {
+        return mBlockScriptCompile;
+    };
+
+    QMap<QString, QMap<QString, QString>>* _getModuleInfo() override {
+        return &mModuleInfo;
+    };
+
+    bool _getMudletSmDebugMode() override {
+        return mudlet::smDebugMode;
+    };
 
 
     QString         getName()                        { return mHostName; }

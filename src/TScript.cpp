@@ -24,17 +24,17 @@
 #include "TScript.h"
 
 
-#include "Host.h"
+#include "I_Host.h"
 #include "TDebug.h"
 #include "mudlet.h"
 
-TScript::TScript( TScript * parent, Host * pHost )
+TScript::TScript( TScript * parent, I_Host * pHost )
 : Tree<TScript>( parent )
 , mpHost(pHost)
 {
 }
 
-TScript::TScript(const QString& name, Host * pHost )
+TScript::TScript(const QString& name, I_Host * pHost )
 : Tree<TScript>(nullptr)
 , mName(name)
 , mpHost(pHost)
@@ -47,9 +47,9 @@ TScript::~TScript()
         return;
     }
     for (const auto& handler : mEventHandlerList) {
-        mpHost->unregisterEventHandler(handler, this);
+        mpHost->_unregisterEventHandler(handler, this);
     }
-    mpHost->getScriptUnit()->unregisterScript(this);
+    mpHost->_getScriptUnit()->unregisterScript(this);
 }
 
 
@@ -58,13 +58,13 @@ bool TScript::registerScript()
     if (!mpHost) {
         return false;
     }
-    return mpHost->getScriptUnit()->registerScript(this);
+    return mpHost->_getScriptUnit()->registerScript(this);
 }
 
 void TScript::setEventHandlerList(QStringList handlerList)
 {
     for (const QString& handler : mEventHandlerList) {
-        mpHost->unregisterEventHandler(handler, this);
+        mpHost->_unregisterEventHandler(handler, this);
     }
     mEventHandlerList.clear();
     for (const QString& handler : handlerList) {
@@ -72,14 +72,14 @@ void TScript::setEventHandlerList(QStringList handlerList)
             continue;
         }
         mEventHandlerList.append(handler);
-        mpHost->registerEventHandler(handler, this);
+        mpHost->_registerEventHandler(handler, this);
     }
 }
 
 
 void TScript::compileAll(bool saveLoadingError)
 {
-    if (mpHost->mResetProfile) {
+    if (mpHost->_getResetProfile()) {
         mNeedsToBeCompiled = true;
     }
     compile(saveLoadingError);
@@ -92,7 +92,7 @@ void TScript::callEventHandler(const TEvent& pEvent)
 {
     // Only call this event handler if this script and all its ancestors are active:
     if (isActive() && ancestorsActive()) {
-        mpHost->mLuaInterpreter.callEventHandler(mName, pEvent);
+        mpHost->_getLuaInterpreter()->callEventHandler(mName, pEvent);
     }
 }
 
@@ -100,8 +100,9 @@ void TScript::compile(bool saveLoadingError)
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript(saveLoadingError)) {
-            if (mudlet::smDebugMode) {
+            if (mpHost->_getMudletSmDebugMode()) {      //TODO
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
+                
             }
             mOK_code = false;
         }
@@ -112,7 +113,7 @@ bool TScript::setScript(const QString& script)
 {
     mScript = script;
     mNeedsToBeCompiled = true;
-    if (!mpHost->blockScripts()) {
+    if (!mpHost->_getBlockScript()) {
         mOK_code = compileScript();
     }
     return mOK_code;
@@ -121,10 +122,10 @@ bool TScript::setScript(const QString& script)
 bool TScript::compileScript(bool saveLoadingError)
 {
     QString error;
-    if (mpHost->mLuaInterpreter.compile(mScript, error, QString("Script: ") + getName())) {
+    if (mpHost->_getLuaInterpreter()->compile(mScript, error, QString("Script: ") + getName())) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
-        if (mpHost->mResetProfile) {
+        if (mpHost->_getResetProfile()) {
             setEventHandlerList(getEventHandlerList());
         }
         return true;
@@ -145,7 +146,7 @@ void TScript::execute()
             return;
         }
     }
-    mpHost->mLuaInterpreter.call(mFuncName, mName);
+    mpHost->_getLuaInterpreter()->call(mFuncName, mName);
 }
 
 // Gets the Lua error message for this script if one occurred during profile load
@@ -184,7 +185,7 @@ QString TScript::packageName(TScript* pScript)
     }
 
     if (!pScript->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+        return !mpHost->_getModuleInfo()->contains(pScript->mPackageName) ? pScript->mPackageName : QString();
     }
 
     if (pScript->getParent()) {
@@ -201,7 +202,7 @@ QString TScript::moduleName(TScript* pScript)
     }
 
     if (!pScript->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+        return mpHost->_getModuleInfo()->contains(pScript->mPackageName) ? pScript->mPackageName : QString();
     }
 
     if (pScript->getParent()) {

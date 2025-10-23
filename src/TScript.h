@@ -31,7 +31,7 @@
 #include <optional>
 #include "post_guard.h"
 
-class Host;
+class I_Host;
 class TEvent;
 
 
@@ -42,8 +42,8 @@ class TScript : public Tree<TScript>
 
 public:
     virtual ~TScript();
-    TScript(TScript* parent, Host* pHost);
-    TScript(const QString& name, Host* pHost);
+    TScript(TScript* parent, I_Host* pHost);
+    TScript(const QString& name, I_Host* pHost);
 
     QString getName() const { return mName; }
     void setName(const QString& name) { mName = name; }
@@ -74,7 +74,8 @@ private:
     QString mName;
     QString mScript;
     QString mFuncName;
-    QPointer<Host> mpHost;
+    // QPointer<Host> mpHost;
+    I_Host* mpHost;
     bool mNeedsToBeCompiled = true;
     QStringList mEventHandlerList;
     bool mModuleMember = false;

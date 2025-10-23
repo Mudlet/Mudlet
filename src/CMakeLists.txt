@@ -61,6 +61,8 @@ set(mudlet_core_HDRS
     TEvent.h
     TVar.h
     MxpTag.h
+    I_Host.h
+    I_Mudlet.h
 )
 
 add_library(MudletCore STATIC
