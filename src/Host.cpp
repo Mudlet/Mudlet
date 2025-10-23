@@ -54,7 +54,6 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include "pre_guard.h"
 #include <chrono>
 #include <QtConcurrent>
 #include <QDialog>
@@ -63,7 +62,6 @@
 #include <QSettings>
 #include <zip.h>
 #include <memory>
-#include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -4541,6 +4539,7 @@ const QSet<QString> Host::mValidExperiments = {
     qsl("experiment.rendering.more-transparent"),
     qsl("experiment.3dmap.modernmapper"),
     qsl("experiment.render-in-out-exits"),
+    qsl("experiment.3d-player-icon")
 };
 
 bool Host::experimentEnabled(const QString& experimentKey) const

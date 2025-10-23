@@ -25,12 +25,10 @@
 
 #define qsl(s) QStringLiteral(s)
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QPair>
 #include <QString>
 #include <QStringList>
-#include "post_guard.h"
 
 #include <functional>
 

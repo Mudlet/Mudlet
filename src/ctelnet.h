@@ -32,7 +32,6 @@
 #include <winsock2.h>
 #endif
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
@@ -44,7 +43,6 @@
 #include <QSslSocket>
 #endif
 #include <QTime>
-#include "post_guard.h"
 
 #include <zlib.h>
 

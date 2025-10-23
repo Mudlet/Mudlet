@@ -40,7 +40,6 @@
 #include "dlgTriggerEditor.h"
 #include "enums.h"
 
-#include "pre_guard.h"
 #include <QColor>
 #include <QFile>
 #include <QFont>
@@ -49,7 +48,6 @@
 #include <QPointer>
 #include <QStack>
 #include <QTextStream>
-#include "post_guard.h"
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
@@ -531,6 +529,8 @@ public:
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
     bool mEnableMXP = true;
+    bool mEnableCHARSET = true;
+    bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
     bool mPromptedForVersionInTTYPE = false;
@@ -595,11 +595,11 @@ public:
     // Command echo mode getters and setters
     CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
     void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
-    
+
     // Backward compatibility methods - for existing code that expects boolean behavior
     bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
-    void setPrintCommand(bool print) { 
-        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; 
+    void setPrintCommand(bool print) {
+        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never;
     }
 
 public:
@@ -763,8 +763,6 @@ public:
     QColor mCommandLineBgColor{Qt::black};
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
-    bool mFORCE_CHARSET_NEGOTIATION_OFF = false;
-    bool mForceNewEnvironNegotiationOff = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
@@ -871,7 +869,7 @@ private:
 
     // Experiment system storage: key -> enabled state
     QMap<QString, bool> mExperiments;
-    
+
     // Static whitelist of valid experiments
     static const QSet<QString> mValidExperiments;
 

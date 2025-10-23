@@ -23,12 +23,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QMap>
 #include <QSet>
 #include <QStringList>
-#include "post_guard.h"
 
 #include "utils.h"
 
@@ -44,6 +42,7 @@ class VarUnit
 
 public:
     VarUnit();
+    ~VarUnit();
     QStringList varName(TVar*);
     QStringList shortVarName(TVar*);
     bool varExists(TVar*);

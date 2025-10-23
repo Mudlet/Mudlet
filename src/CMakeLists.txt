@@ -149,6 +149,16 @@ set(mudlet_SRCS
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
+    CustomLineDrawContextMenuHandler.cpp
+    CustomLineDrawHandler.cpp
+    CustomLineEditContextMenuHandler.cpp
+    CustomLineEditHandler.cpp
+    LabelInteractionHandler.cpp
+    PanInteractionHandler.cpp
+    RoomContextMenuHandler.cpp
+    RoomMoveActivationHandler.cpp
+    RoomMoveDragHandler.cpp
+    SelectionRectangleHandler.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
@@ -192,6 +202,7 @@ set(mudlet_SRCS
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpEntityTagHandler.cpp
+    TMxpExpireTagHandler.cpp
     TMxpFontTagHandler.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpLinkTagHandler.cpp
@@ -325,13 +336,20 @@ set(mudlet_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
-    post_guard.h
-    pre_guard.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
     SingleLineTextEdit.h
     T2DMap.h
+    CustomLineDrawContextMenuHandler.h
+    CustomLineDrawHandler.h
+    CustomLineEditContextMenuHandler.h
+    CustomLineEditHandler.h
+    LabelInteractionHandler.h
+    PanInteractionHandler.h
+    RoomMoveActivationHandler.h
+    RoomMoveDragHandler.h
+    SelectionRectangleHandler.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h
@@ -347,8 +365,7 @@ set(mudlet_HDRS
     TEncodingTable.h
     TEntityHandler.h
     TEntityResolver.h
-    testdbg.h
-    # TEvent.h
+    TEvent.h
     TFlipButton.h
     TForkedProcess.h
     TimerUnit.h
@@ -370,6 +387,7 @@ set(mudlet_HDRS
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
     TMxpEntityTagHandler.h
+    TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
     TMxpLinkTagHandler.h
@@ -542,6 +560,7 @@ if(USE_3DMAPPER)
     cmake_policy(SET CMP0072 NEW)
   endif()
   find_package(OpenGL REQUIRED)
+  find_package(assimp REQUIRED)
 endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -611,6 +630,10 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 # * Produce qDebug() messages about window handling operations like dock widget
 #   transfers, profile switching, and detached window management:
 # target_compile_definitions(mudlet PRIVATE DEBUG_WINDOW_HANDLING)
+#
+# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+#   alignment purposes - these are normally hidden in production builds:
+# target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
@@ -689,6 +712,7 @@ endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)
+  target_link_libraries(mudlet assimp::assimp)
   target_compile_definitions(mudlet PRIVATE INCLUDE_3DMAPPER)
 endif()
 
