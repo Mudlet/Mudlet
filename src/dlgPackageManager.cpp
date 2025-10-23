@@ -30,7 +30,6 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
-#include <QProgressDialog>
 #include "post_guard.h"
 
 
