@@ -29,6 +29,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
+#include <QProgressDialog>
 
 
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
