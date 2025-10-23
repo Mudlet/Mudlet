@@ -178,7 +178,7 @@ public:
     ScriptUnit* _getScriptUnit() override {
         return &mScriptUnit;
     };
-    TLuaInterpreter* _getLuaInterpreter() override {
+    I_TLuaInterpreter* _getLuaInterpreter() override {
         return &mLuaInterpreter;
     };
 

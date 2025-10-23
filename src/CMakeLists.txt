@@ -67,6 +67,7 @@ set(mudlet_core_HDRS
     I_TDebug.h
     DebugBridge.h
     TScript.h
+    I_TLuaInterpreter.h       #should be removed after moving TLuaInterpreter into core 
 )
 
 add_library(MudletCore STATIC

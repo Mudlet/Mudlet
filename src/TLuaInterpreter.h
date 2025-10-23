@@ -24,6 +24,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#include "I_TLuaInterpreter.h"
 
 #include "TMap.h"
 #include "TMediaData.h"
@@ -81,7 +82,7 @@ class TTrigger;
 using NamedMatchesRanges = QMap<QString, QPair<int, int>>;
 
 
-class TLuaInterpreter : public QThread
+class TLuaInterpreter : public QThread, public I_TLuaInterpreter
 {
     Q_OBJECT
 
@@ -89,6 +90,18 @@ class TLuaInterpreter : public QThread
     friend class LuaInterface;
 
 public:
+
+    bool compile(const QString &script, QString &error, const QString &context) override {
+        return compile(script, error, context);
+    };
+    bool call(const QString &funcName, const QString &scriptName, const bool muteDebugOutput = false) override {
+        return call(funcName, scriptName, muteDebugOutput);
+    };
+    bool callEventHandler(const QString &scriptName, const TEvent &event) override {
+        return callEventHandler(scriptName, event);
+    };
+
+
     Q_DISABLE_COPY(TLuaInterpreter)
     TLuaInterpreter(Host* pH, const QString& hostName, const int id);
     ~TLuaInterpreter();
