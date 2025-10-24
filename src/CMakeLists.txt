@@ -153,6 +153,7 @@ set(mudlet_SRCS
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
     CustomLineEditHandler.cpp
+    CustomLineSession.cpp
     LabelInteractionHandler.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -239,8 +240,7 @@ set(mudlet_SRCS
     # TVar.cpp
     VarUnit.cpp
     XMLexport.cpp
-    XMLimport.cpp
-    )
+    XMLimport.cpp)
 
 if(APPLE)
   # Sparkle updater for macOS
@@ -336,7 +336,6 @@ set(mudlet_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MxpTag.h
-    
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
@@ -346,6 +345,7 @@ set(mudlet_HDRS
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
     CustomLineEditHandler.h
+    CustomLineSession.h
     LabelInteractionHandler.h
     PanInteractionHandler.h
     RoomMoveActivationHandler.h
