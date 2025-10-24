@@ -23,10 +23,8 @@
 #include "TConsole.h"
 #include "TLinkStore.h"
 
-#include "pre_guard.h"
 #include <QSet>
 #include <QStack>
-#include "post_guard.h"
 
 static const QString PLACEHOLDER_TEXT = QLatin1String("&text;");
 
