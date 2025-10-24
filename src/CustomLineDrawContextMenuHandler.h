@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2025 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,21 +17,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// MSVC's leak detection allowed for the definition of macros for the
-// functions/keywords below. This is fine for Mudlet's code, since it does
-// not use placement new, etc. The macros add file/line information to the
-// debug information shown by MSVC.
-// These pragmas save the value of the macros and then undefine the macros
-// so that when external headers, like Qt's or Boost's are included, they
-// are not broken by the unexpected macro definitions.
+#pragma once
 
-#if defined(_DEBUG) && defined(_MSC_VER)
-#pragma push_macro("new")
-#undef new
-#pragma push_macro("malloc")
-#undef malloc
-#pragma push_macro("realloc")
-#undef realloc
-#pragma push_macro("free")
-#undef free
-#endif // _DEBUG && _MSC_VER
+#include "T2DMap.h"
+
+class CustomLineDrawContextMenuHandler : public T2DMap::IInteractionHandler
+{
+public:
+    explicit CustomLineDrawContextMenuHandler(T2DMap& mapWidget);
+
+    bool matches(const T2DMap::MapInteractionContext& context) const override;
+    bool handle(T2DMap::MapInteractionContext& context) override;
+
+private:
+    T2DMap& mMapWidget;
+};

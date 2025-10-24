@@ -54,6 +54,13 @@ TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, cons
 {
 }
 
+TVar::~TVar()
+{
+    // Delete all children recursively
+    qDeleteAll(children);
+    children.clear();
+}
+
 void TVar::setReference(const bool s)
 {
     reference = s;

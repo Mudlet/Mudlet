@@ -23,13 +23,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include "ui_connection_profiles.h"
 #include <optional>
 #include <QTimer>
 #include <QKeyEvent>
 #include <pugixml.hpp>
-#include "post_guard.h"
 
 class QDir;
 
@@ -116,8 +114,8 @@ private:
     void deleteSecurePassword(const QString& profile) const;
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
-    void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, 
-                           const QString& newProfileHost, const QString& newProfilePort, 
+    void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName,
+                           const QString& newProfileHost, const QString& newProfilePort,
                            const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
@@ -152,7 +150,7 @@ private:
     QTimer mSearchTextTimer;
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
-    
+
     // Async connection handling
     QString mPendingProfileLoad;  // Profile name waiting for password load
     bool mPendingConnect = false; // Whether to connect (true) or just load (false)
