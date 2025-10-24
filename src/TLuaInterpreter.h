@@ -703,6 +703,7 @@ public:
     static int aiPrompt(lua_State*);
     static int aiPromptStream(lua_State*);
     static int setActiveProfile(lua_State*);
+    static int getKeyCode(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
