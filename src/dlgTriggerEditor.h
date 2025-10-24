@@ -566,7 +566,6 @@ private:
 
     QAction* mpAction_searchCaseSensitive = nullptr;
     QAction* mpAction_searchIncludeVariables = nullptr;
-    // TODO: Add other searchOptions
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
 
