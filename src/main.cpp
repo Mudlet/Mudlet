@@ -44,6 +44,11 @@
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+#include <windows.h>
+#include <QThread>
+#endif
+
 using namespace std::chrono_literals;
 
 #if defined(Q_OS_WINDOWS)
@@ -693,6 +698,61 @@ int main(int argc, char* argv[])
 }
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+// Helper function to check if a file is accessible (not locked by another process)
+// Returns true if file can be accessed, false if locked
+static bool isFileAccessible(const QString& filePath)
+{
+    // Try opening file with exclusive write access
+    HANDLE hFile = CreateFileW(
+        reinterpret_cast<const wchar_t*>(filePath.utf16()),
+        GENERIC_WRITE,
+        0, // No sharing - exclusive access
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr);
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        DWORD error = GetLastError();
+        if (error == ERROR_SHARING_VIOLATION || error == ERROR_LOCK_VIOLATION) {
+            qWarning() << "File is locked:" << filePath << "- error code:" << error;
+            return false; // File is locked
+        }
+        // File doesn't exist or other error - consider it accessible
+        return true;
+    }
+
+    CloseHandle(hFile);
+    return true;
+}
+
+// Helper function to try a file operation with retry logic
+// Returns true if operation succeeded, false if all retries failed
+static bool tryFileOperationWithRetry(const std::function<bool()>& operation, const QString& operationName, int maxAttempts = 3)
+{
+    const std::chrono::milliseconds retryDelays[] = {5000ms, 15000ms, 30000ms};
+
+    for (int attempt = 0; attempt < maxAttempts; ++attempt) {
+        if (attempt > 0) {
+            qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts
+                      << "after" << retryDelays[attempt - 1].count() << "ms delay";
+            QThread::msleep(retryDelays[attempt - 1].count());
+        }
+
+        if (operation()) {
+            if (attempt > 0) {
+                qWarning() << operationName << "- Succeeded on attempt" << (attempt + 1);
+            }
+            return true;
+        }
+
+        qWarning() << operationName << "- Failed on attempt" << (attempt + 1);
+    }
+
+    qWarning() << operationName << "- All" << maxAttempts << "attempts failed";
+    return false;
+}
+
 // Small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done.
@@ -703,20 +763,59 @@ bool runUpdate()
     QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
     QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
     QDir updateDir;
+
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
-        if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
-            qWarning() << "Couldn't delete previous installer: " << seenUpdatedInstaller;
+        // Verify the new installer is accessible before trying to move it
+        if (!isFileAccessible(updatedInstaller.absoluteFilePath())) {
+            qWarning() << "New installer exists but is locked, cannot proceed with update:" << updatedInstaller.absoluteFilePath();
+            qWarning() << "Update will be attempted on next Mudlet restart";
+            return false;
         }
 
-        if (!updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath())) {
-            qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath() << "to" << seenUpdatedInstaller.absoluteFilePath();
+        // Try to remove old installer if it exists
+        if (seenUpdatedInstaller.exists()) {
+            bool removed = tryFileOperationWithRetry([&]() {
+                return isFileAccessible(seenUpdatedInstaller.absoluteFilePath()) &&
+                       updateDir.remove(seenUpdatedInstaller.absoluteFilePath());
+            }, qsl("Delete previous installer"));
+
+            if (!removed) {
+                qWarning() << "Couldn't delete previous installer after retries:" << seenUpdatedInstaller;
+                qWarning() << "Update aborted to prevent potential issues";
+                return false;
+            }
         }
 
+        // Try to move the installer with retry logic
+        bool moved = tryFileOperationWithRetry([&]() {
+            return isFileAccessible(updatedInstaller.absoluteFilePath()) &&
+                   updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath());
+        }, qsl("Move installer to application directory"));
+
+        if (!moved) {
+            qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath()
+                      << "to" << seenUpdatedInstaller.absoluteFilePath() << "after all retries";
+            qWarning() << "Update will be attempted on next Mudlet restart";
+            return false;
+        }
+
+        // Verify the installer is still accessible before launching
+        if (!isFileAccessible(seenUpdatedInstaller.absoluteFilePath())) {
+            qWarning() << "Installer was moved but is now locked, cannot launch:" << seenUpdatedInstaller.absoluteFilePath();
+            qWarning() << "Update will be attempted on next Mudlet restart";
+            return false;
+        }
+
+        qWarning() << "Launching installer:" << seenUpdatedInstaller.absoluteFilePath();
         QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath(), QStringList());
         return true;
-    } else if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+    } else if (seenUpdatedInstaller.exists()) {
         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
-        qWarning() << "Couldn't delete old uninstaller: " << seenUpdatedInstaller;
+        if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+            qWarning() << "Couldn't delete old installer:" << seenUpdatedInstaller;
+        } else {
+            qDebug() << "Successfully cleaned up old installer after update";
+        }
     }
     return false;
 }

@@ -342,6 +342,10 @@ DEFINES+=DEBUG_TELNET=1
 # * Produce qDebug() messages about window handling operations like dock widget
 # transfers, profile switching, and detached window management:
 # DEFINES+=DEBUG_WINDOW_HANDLING
+#
+# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# alignment purposes - these are normally hidden in production builds:
+# DEFINES+=DEBUG_PLAYER_ICON_CONTROLS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -430,6 +434,9 @@ unix:!macx {
         -lpugixml \
         -lws2_32 \
         -loleaut32
+    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+        LIBS += -lassimp
+    }
 
     INCLUDEPATH += \
         $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
@@ -663,6 +670,7 @@ SOURCES += \
     CustomLineDrawHandler.cpp \
     CustomLineEditContextMenuHandler.cpp \
     CustomLineEditHandler.cpp \
+    CustomLineSession.cpp \
     LabelInteractionHandler.cpp \
     PanInteractionHandler.cpp \
     RoomContextMenuHandler.cpp \
@@ -807,6 +815,7 @@ HEADERS += \
     CustomLineDrawHandler.h \
     CustomLineEditContextMenuHandler.h \
     CustomLineEditHandler.h \
+    CustomLineSession.h \
     LabelInteractionHandler.h \
     PanInteractionHandler.h \
     RoomContextMenuHandler.h \
@@ -1009,7 +1018,8 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
 
     win32 {
         LIBS += -lopengl32 \
-                -lglu32
+                -lglu32 \
+                -lassimp
     }
 } else {
     !build_pass{

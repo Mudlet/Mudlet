@@ -34,6 +34,7 @@
 #include <QtEvents>
 #include <QDebug>
 #include <QPainter>
+#include <QKeyEvent>
 
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
@@ -166,6 +167,13 @@ void ModernGLWidget::setupBuffers()
     mIndexBuffer.bind();
     mIndexBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     mResourceManager.checkGLError(qsl("Index buffer creation"));
+
+    // Create texture coordinate buffer
+    mTexCoordBuffer.create();
+    mResourceManager.onBufferCreated();
+    mTexCoordBuffer.bind();
+    mTexCoordBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    mResourceManager.checkGLError(qsl("Texture coordinate buffer creation"));
 
     // Create instance buffer for instanced rendering
     mInstanceBuffer.create();
@@ -319,7 +327,7 @@ void ModernGLWidget::paintGL()
     renderRooms();
 
     // Execute all queued commands
-    mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer);
+    mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer, mTexCoordBuffer);
 
     shaderProgram->release();
 
@@ -340,10 +348,6 @@ void ModernGLWidget::paintGL()
                            mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight);
 
     painter.end();
-
-    // Display instant frame time
-    qint64 frameTime = mFrameTimer.elapsed();
-    qDebug() << "[Modern GLWidget] Frame time:" << frameTime << "ms";
 }
 
 void ModernGLWidget::renderRooms()
@@ -411,6 +415,43 @@ void ModernGLWidget::renderRooms()
             transform.translate(rx, ry, rz);
             transform.scale(1.0f/scale, 1.0f/scale, 1.0f/scale/zFlattening);
             currentRoomInstances.append(CubeInstanceData(transform, 1.0f, 0.0f, 0.0f, 1.0f));
+
+            if (mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")) {
+                GeometryData playerIcon = mGeometryManager.generatePlayerIconGeometry(
+                    mPlayerIconScale, mPlayerIconRotationX, mPlayerIconRotationY, mPlayerIconRotationZ);
+                if (!playerIcon.isEmpty()) {
+                    // Create modified geometry positioned slightly above the current room
+                    GeometryData positionedIcon = playerIcon;
+
+                    // Determine player icon position based on whether smooth animation is active
+                    float playerX, playerY, playerZ;
+                    if (mCameraSmoothAnimating && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
+                        // Use animated coordinates during smooth transition
+                        playerX = mCurrentAnimationX;
+                        playerY = mCurrentAnimationY;
+                        playerZ = mCurrentAnimationZ;
+                    } else {
+                        // Use actual room coordinates when not animating
+                        playerX = rx;
+                        playerY = ry;
+                        playerZ = rz;
+                    }
+
+                    // Position above the room using the adjustable height
+                    for (int i = 2; i < positionedIcon.vertices.size(); i += 3) {
+                        positionedIcon.vertices[i] += (playerZ + mPlayerIconHeight); // Use adjustable height
+                    }
+                    for (int i = 0; i < positionedIcon.vertices.size(); i += 3) {
+                        positionedIcon.vertices[i] += playerX;     // Add player X position
+                        positionedIcon.vertices[i + 1] += playerY; // Add player Y position
+                    }
+
+                    // Use textured rendering for the player icon
+                    auto command = std::make_unique<RenderTexturedTrianglesCommand>(
+                            positionedIcon, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
+                    mRenderCommandQueue.addCommand(std::move(command));
+                }
+            }
         } else if (isTargetRoom) {
             // Target room: green
             QMatrix4x4 transform = QMatrix4x4();
@@ -1068,6 +1109,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     if (!mpMap||!mpMap->mpRoomDB) {
         return;
     }
+
     if (event->buttons() & Qt::LeftButton) {        // translation on xy-plane
         auto eventPos = event->position().toPoint();
         const int x = eventPos.x();
@@ -1130,6 +1172,79 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
     mMapCenterY = newCenter.y();
     mMapCenterZ = newCenter.z();
     QOpenGLWidget::mouseReleaseEvent(event);
+    update();
+}
+
+void ModernGLWidget::keyPressEvent(QKeyEvent* event)
+{
+    QOpenGLWidget::keyPressEvent(event);
+}
+
+void ModernGLWidget::slot_setPlayerIconHeight(int value)
+{
+    mPlayerIconHeight = static_cast<float>(value) / 100.0f; // Convert slider value to units (-2.0 to +5.0)
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+    qDebug() << "Player Icon - Height:" << mPlayerIconHeight << "RotX:" << mPlayerIconRotationX << "RotY:" << mPlayerIconRotationY << "RotZ:" << mPlayerIconRotationZ << "Scale:" << mPlayerIconScale;
+#endif
+    update();
+}
+
+void ModernGLWidget::slot_setPlayerIconRotationX(int angle)
+{
+    mPlayerIconRotationX = static_cast<float>(angle);
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+    qDebug() << "Player Icon - Height:" << mPlayerIconHeight << "RotX:" << mPlayerIconRotationX << "RotY:" << mPlayerIconRotationY << "RotZ:" << mPlayerIconRotationZ << "Scale:" << mPlayerIconScale;
+#endif
+    update();
+}
+
+void ModernGLWidget::slot_setPlayerIconRotationY(int angle)
+{
+    mPlayerIconRotationY = static_cast<float>(angle);
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+    qDebug() << "Player Icon - Height:" << mPlayerIconHeight << "RotX:" << mPlayerIconRotationX << "RotY:" << mPlayerIconRotationY << "RotZ:" << mPlayerIconRotationZ << "Scale:" << mPlayerIconScale;
+#endif
+    update();
+}
+
+void ModernGLWidget::slot_setPlayerIconRotationZ(int angle)
+{
+    mPlayerIconRotationZ = static_cast<float>(angle);
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+    qDebug() << "Player Icon - Height:" << mPlayerIconHeight << "RotX:" << mPlayerIconRotationX << "RotY:" << mPlayerIconRotationY << "RotZ:" << mPlayerIconRotationZ << "Scale:" << mPlayerIconScale;
+#endif
+    update();
+}
+
+void ModernGLWidget::slot_setPlayerIconScale(int value)
+{
+    mPlayerIconScale = static_cast<float>(value) / 10000.0f; // Convert slider value to scale (0.001 to 0.02)
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+    qDebug() << "Player Icon - Height:" << mPlayerIconHeight << "RotX:" << mPlayerIconRotationX << "RotY:" << mPlayerIconRotationY << "RotZ:" << mPlayerIconRotationZ << "Scale:" << mPlayerIconScale;
+#endif
+    update();
+}
+
+void ModernGLWidget::slot_resetPlayerIcon()
+{
+    mPlayerIconHeight = 0.51f;
+    mPlayerIconRotationX = 1.0f;
+    mPlayerIconRotationY = -56.0f;
+    mPlayerIconRotationZ = 20.0f;
+    mPlayerIconScale = 0.0055f;
+
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+    qDebug() << "Player Icon RESET - Height:" << mPlayerIconHeight << "RotX:" << mPlayerIconRotationX << "RotY:" << mPlayerIconRotationY << "RotZ:" << mPlayerIconRotationZ << "Scale:" << mPlayerIconScale;
+#endif
+
+    // Reset the slider values to their defaults (need to emit signals to update UI)
+    // Convert back to slider values
+    emit resetPlayerIconSliders(static_cast<int>(mPlayerIconHeight * 100.0f), // height: 51
+                                static_cast<int>(mPlayerIconRotationX),        // rotX: 1
+                                static_cast<int>(mPlayerIconRotationY),        // rotY: -56
+                                static_cast<int>(mPlayerIconRotationZ),        // rotZ: 20
+                                static_cast<int>(mPlayerIconScale * 10000.0f)); // scale: 55
+
     update();
 }
 
@@ -1514,4 +1629,3 @@ void ModernGLWidget::onCameraAnimationTick()
     // Trigger a repaint
     update();
 }
-

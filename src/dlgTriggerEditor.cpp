@@ -4859,6 +4859,7 @@ void dlgTriggerEditor::selectTriggerByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_triggerSelected((*it));
+            treeWidget_triggers->clearSelection();
             treeWidget_triggers->setCurrentItem((*it), 0);
             treeWidget_triggers->scrollToItem((*it));
             mpCurrentTriggerItem = (*it);
@@ -4875,6 +4876,7 @@ void dlgTriggerEditor::selectTimerByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_timerSelected((*it));
+            treeWidget_timers->clearSelection();
             treeWidget_timers->setCurrentItem((*it), 0);
             treeWidget_timers->scrollToItem((*it));
             mpCurrentTimerItem = (*it);
@@ -4891,6 +4893,7 @@ void dlgTriggerEditor::selectAliasByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_aliasSelected((*it));
+            treeWidget_aliases->clearSelection();
             treeWidget_aliases->setCurrentItem((*it), 0);
             treeWidget_aliases->scrollToItem((*it));
             mpCurrentAliasItem = (*it);
@@ -4907,6 +4910,7 @@ void dlgTriggerEditor::selectScriptByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_scriptsSelected((*it));
+            treeWidget_scripts->clearSelection();
             treeWidget_scripts->setCurrentItem((*it), 0);
             treeWidget_scripts->scrollToItem((*it));
             mpCurrentScriptItem = (*it);
@@ -4923,6 +4927,7 @@ void dlgTriggerEditor::selectActionByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_actionSelected((*it));
+            treeWidget_actions->clearSelection();
             treeWidget_actions->setCurrentItem((*it), 0);
             treeWidget_actions->scrollToItem((*it));
             mpCurrentActionItem = (*it);
@@ -4939,6 +4944,7 @@ void dlgTriggerEditor::selectKeyByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_keySelected((*it));
+            treeWidget_keys->clearSelection();
             treeWidget_keys->setCurrentItem((*it), 0);
             treeWidget_keys->scrollToItem((*it));
             mpCurrentKeyItem = (*it);

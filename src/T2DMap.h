@@ -34,6 +34,7 @@
 #include <QFutureWatcher>
 #include <QPixmap>
 #include <QPointer>
+#include <QPointF>
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
@@ -52,6 +53,7 @@ class CustomLineDrawContextMenuHandler;
 class CustomLineDrawHandler;
 class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
+class CustomLineSession;
 class RoomMoveActivationHandler;
 class RoomMoveDragHandler;
 class RoomContextMenuHandler;
@@ -88,7 +90,9 @@ public:
     friend class CustomLineDrawHandler;
     friend class CustomLineEditContextMenuHandler;
     friend class CustomLineEditHandler;
+    friend class CustomLineSession;
     friend class LabelInteractionHandler;
+    friend class RoomMoveActivationHandler;
     friend class RoomContextMenuHandler;
     friend class RoomMoveDragHandler;
     friend class SelectionRectangleHandler;
@@ -193,6 +197,9 @@ public:
     QMap<QString, QStringList> mUserMenus;
 
     bool mRoomBeingMoved = false;
+    QPointF mRoomMoveLastMapPoint;
+    bool mHasRoomMoveLastMapPoint = false;
+    bool mRoomMoveViaContextMenu = false;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is
     // multiplied by rsize which is 1.0 to exactly fill space between adjacent
@@ -318,6 +325,10 @@ public slots:
     void slot_customLineProperties();
     void slot_customLineAddPoint();
     void slot_customLineRemovePoint();
+    void slot_setSnapCustomLinePointsToGrid(bool enabled);
+    void slot_moveCustomLineLastPointToTargetRoom();
+    bool canMoveSelectedCustomLineLastPointToTargetRoom() const;
+    bool canMoveCustomLineLastPointToTargetRoom(const TRoom& room, const QString& exitKey) const;
     void slot_cancelCustomLineDialog();
     void slot_loadMap();
     void slot_newMap();
@@ -339,6 +350,7 @@ private:
         QList<HandlerEntry> mHandlers;
     };
 
+    std::unique_ptr<CustomLineSession> mCustomLineSession;
     InteractionDispatcher mInteractionDispatcher;
     std::unique_ptr<IInteractionHandler> mCustomLineDrawContextMenuHandler;
     std::unique_ptr<IInteractionHandler> mCustomLineDrawInteractionHandler;
@@ -357,6 +369,8 @@ private:
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
+    bool isSnapCustomLinePointsToGridEnabled() const;
+    QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
     inline void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&, const bool showRoomCollision);

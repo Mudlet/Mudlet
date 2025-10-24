@@ -112,6 +112,7 @@ set(mudlet_SRCS
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
     CustomLineEditHandler.cpp
+    CustomLineSession.cpp
     LabelInteractionHandler.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -303,6 +304,7 @@ set(mudlet_HDRS
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
     CustomLineEditHandler.h
+    CustomLineSession.h
     LabelInteractionHandler.h
     PanInteractionHandler.h
     RoomMoveActivationHandler.h
@@ -517,6 +519,7 @@ if(USE_3DMAPPER)
     cmake_policy(SET CMP0072 NEW)
   endif()
   find_package(OpenGL REQUIRED)
+  find_package(assimp REQUIRED)
 endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -586,6 +589,10 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 # * Produce qDebug() messages about window handling operations like dock widget
 #   transfers, profile switching, and detached window management:
 # target_compile_definitions(mudlet PRIVATE DEBUG_WINDOW_HANDLING)
+#
+# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+#   alignment purposes - these are normally hidden in production builds:
+# target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
@@ -662,6 +669,7 @@ endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)
+  target_link_libraries(mudlet assimp::assimp)
   target_compile_definitions(mudlet PRIVATE INCLUDE_3DMAPPER)
 endif()
 

@@ -41,6 +41,7 @@ public:
     TVar();
     explicit TVar(TVar*);
     TVar(TVar*, const QString&, int, const QString&, int);
+    ~TVar();
     void addChild(TVar*);
     void setParent(TVar*);
     void removeChild(TVar*);
