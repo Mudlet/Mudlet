@@ -34,6 +34,7 @@
 #include "CustomLineDrawHandler.h"
 #include "CustomLineEditContextMenuHandler.h"
 #include "CustomLineEditHandler.h"
+#include "CustomLineSession.h"
 #include "LabelInteractionHandler.h"
 #include "PanInteractionHandler.h"
 #include "RoomContextMenuHandler.h"
@@ -62,11 +63,15 @@
 #include <QtEvents>
 #include <QtUiTools>
 
+#include <cmath>
+
 #include "mapInfoContributorManager.h"
 
 
 // qsls cannot be shared so define a common instance to use when
 // there are multiple places where they are used within this file:
+
+T2DMap::~T2DMap() = default;
 
 // replacement parameter supplied at point of use:
 const QString& key_plain = qsl("%1");
@@ -350,6 +355,8 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
+
+    mCustomLineSession = std::make_unique<CustomLineSession>(*this);
 
     mCustomLineDrawContextMenuHandler = std::make_unique<CustomLineDrawContextMenuHandler>(*this);
     registerInteractionHandler(mCustomLineDrawContextMenuHandler.get(), 450);
@@ -3168,7 +3175,11 @@ void T2DMap::slot_customLineAddPoint()
         segment = QLineF(customLineStartPoint, room->customLines.value(mCustomLineSelectedExit).at(0));
     }
     segment.setLength(segment.length() / 2.0);
-    room->customLines[mCustomLineSelectedExit].insert(mCustomLineSelectedPoint, segment.p2());
+    QPointF newPoint = segment.p2();
+    if (isSnapCustomLinePointsToGridEnabled()) {
+        newPoint = snapPointToGrid(newPoint);
+    }
+    room->customLines[mCustomLineSelectedExit].insert(mCustomLineSelectedPoint, newPoint);
     mCustomLineSelectedPoint++;
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
@@ -3176,6 +3187,15 @@ void T2DMap::slot_customLineAddPoint()
     repaint();
     mpMap->setUnsaved(__func__);
 }
+
+
+void T2DMap::slot_setSnapCustomLinePointsToGrid(bool enabled)
+{
+    if (mCustomLineSession) {
+        mCustomLineSession->setSnapToGridEnabled(enabled);
+    }
+}
+
 
 
 void T2DMap::slot_customLineRemovePoint()
@@ -3202,6 +3222,47 @@ void T2DMap::slot_customLineRemovePoint()
 }
 
 
+bool T2DMap::isSnapCustomLinePointsToGridEnabled() const
+{
+    return mCustomLineSession && mCustomLineSession->isSnapToGridEnabled();
+}
+
+
+
+QPointF T2DMap::snapPointToGrid(const QPointF& point) const
+{
+    if (mCustomLineSession) {
+        return mCustomLineSession->snapPointToGrid(point);
+    }
+
+    return point;
+}
+
+
+
+bool T2DMap::canMoveSelectedCustomLineLastPointToTargetRoom() const
+{
+    return mCustomLineSession && mCustomLineSession->canMoveSelectedCustomLineLastPointToTargetRoom();
+}
+
+
+
+bool T2DMap::canMoveCustomLineLastPointToTargetRoom(const TRoom& room, const QString& exitKey) const
+{
+    return mCustomLineSession && mCustomLineSession->canMoveCustomLineLastPointToTargetRoom(room, exitKey);
+}
+
+
+
+void T2DMap::slot_moveCustomLineLastPointToTargetRoom()
+{
+    if (mCustomLineSession) {
+        mCustomLineSession->moveCustomLineLastPointToTargetRoom();
+    }
+}
+
+
+
 void T2DMap::slot_undoCustomLineLastPoint()
 {
     if (mCustomLinesRoomFrom > 0) {
@@ -3219,6 +3280,10 @@ void T2DMap::slot_undoCustomLineLastPoint()
 
 void T2DMap::slot_doneCustomLine()
 {
+    if (mCustomLineSession) {
+        mCustomLineSession->clearOriginalPoints();
+    }
+
     if (mpCustomLinesDialog) {
         mpCustomLinesDialog->accept();
         mpCustomLinesDialog = nullptr;
@@ -3242,6 +3307,10 @@ void T2DMap::slot_deleteCustomExitLine()
     if (mCustomLineSelectedRoom > 0) {
         TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
         if (room) {
+            if (mCustomLineSession) {
+                mCustomLineSession->clearOriginalPoints();
+            }
+
             room->customLinesArrow.remove(mCustomLineSelectedExit);
             room->customLinesColor.remove(mCustomLineSelectedExit);
             room->customLinesStyle.remove(mCustomLineSelectedExit);
@@ -4510,6 +4579,10 @@ void T2DMap::slot_customLineColor()
 // title bar and by ESC keypress...
 void T2DMap::slot_cancelCustomLineDialog()
 {
+    if (mCustomLineSession) {
+        mCustomLineSession->clearOriginalPoints();
+    }
+
     mpCustomLinesDialog->deleteLater();
     mpCustomLinesDialog = nullptr;
     mCustomLinesRoomFrom = 0;
