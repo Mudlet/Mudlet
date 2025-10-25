@@ -214,7 +214,12 @@ bool CustomLineEditHandler::handleMouseMove(T2DMap::MapInteractionContext& conte
         return false;
     }
 
-    points[mMapWidget.mCustomLineSelectedPoint] = context.mapPoint;
+    QPointF newPoint = context.mapPoint;
+    if (mMapWidget.isSnapCustomLinePointsToGridEnabled()) {
+        newPoint = mMapWidget.snapPointToGrid(newPoint);
+    }
+
+    points[mMapWidget.mCustomLineSelectedPoint] = newPoint;
     room->calcRoomDimensions();
     mMapWidget.repaint();
     mMapWidget.mpMap->setUnsaved("CustomLineEditHandler::handleMouseMove");

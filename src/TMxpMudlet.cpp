@@ -22,6 +22,8 @@
 #include "TMedia.h"
 #include "TConsole.h"
 #include "TLinkStore.h"
+
+#include <QSet>
 #include <QStack>
 
 static const QString PLACEHOLDER_TEXT = QLatin1String("&text;");
@@ -209,4 +211,56 @@ void TMxpMudlet::resetTextProperties()
     while (!bgColors.isEmpty()) {
         bgColors.pop_back();
     }
+}
+
+bool TMxpMudlet::startTagReceived(MxpStartTag* startTag)
+{
+    // Get the current MXP mode from the processor
+    TMXPMode currentMode = mpHost->mMxpProcessor.mode();
+    
+    // In LOCKED mode, no tags are allowed
+    if (currentMode == MXP_MODE_LOCKED) {
+        return false;
+    }
+    
+    // Check if this tag is allowed in the current mode
+    const QString tagName = startTag->getName().toUpper();
+
+    if (!isTagAllowedInMode(tagName, currentMode)) {
+        return false;
+    }
+    
+    return true;
+}
+
+bool TMxpMudlet::isTagAllowedInMode(const QString& tagName, TMXPMode mode) const
+{
+    // In SECURE or TEMP_SECURE mode, all tags are allowed
+    if (mode == MXP_MODE_SECURE || mode == MXP_MODE_TEMP_SECURE) {
+        return true;
+    }
+    
+    // In LOCKED mode, no tags are allowed (handled in startTagReceived)
+    if (mode == MXP_MODE_LOCKED) {
+        return false;
+    }
+    
+    // In OPEN mode, only specific formatting tags are allowed
+    // According to MXP spec: https://www.zuggsoft.com/zmud/mxp.htm
+    // OPEN tags are: B, I, U, S, C (color), H (high), FONT, NOBR, P, BR, SBR
+    // Plus their variations: BOLD, ITALIC, UNDERLINE, STRIKEOUT, EM, STRONG, HIGH
+    static const QSet<QString> openModeTags = {
+        qsl("B"), qsl("BOLD"), qsl("STRONG"),
+        qsl("I"), qsl("ITALIC"), qsl("EM"),
+        qsl("U"), qsl("UNDERLINE"),
+        qsl("S"), qsl("STRIKEOUT"),
+        qsl("C"), qsl("COLOR"),
+        qsl("H"), qsl("HIGH"),
+        qsl("FONT"),
+        qsl("NOBR"),
+        qsl("P"),
+        qsl("BR"), qsl("SBR")
+    };
+    
+    return openModeTags.contains(tagName);
 }
