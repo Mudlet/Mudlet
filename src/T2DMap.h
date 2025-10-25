@@ -306,6 +306,7 @@ public slots:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, std::optional<bool> newLockStatus,
+        bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
         QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();

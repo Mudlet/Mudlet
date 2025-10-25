@@ -3633,6 +3633,7 @@ void T2DMap::slot_showPropertiesDialog()
     QHash<QString, int> usedSymbols;
     QHash<int, int> usedWeights; // key is weight, value is count of uses
     QHash<bool, int> usedLockStatus;
+    QHash<bool, int> usedHiddenStatus;
 
     while (itRoom.hasNext()) {
         TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -3687,6 +3688,14 @@ void T2DMap::slot_showPropertiesDialog()
         } else {
             usedLockStatus[thisLockStatus] = 1;
         }
+
+        // Scan and count all the different hidden status used
+        const bool thisHiddenStatus = room->isHidden();
+        if (usedHiddenStatus.contains(thisHiddenStatus)) {
+            (usedHiddenStatus[thisHiddenStatus])++;
+        } else {
+            usedHiddenStatus[thisHiddenStatus] = 1;
+        }
     }
 
     // No need to show dialog if no rooms were found
@@ -3695,7 +3704,7 @@ void T2DMap::slot_showPropertiesDialog()
     }
 
     mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, roomPtrsSet);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, usedHiddenStatus, roomPtrsSet);
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
@@ -3712,6 +3721,7 @@ void T2DMap::slot_setRoomProperties(
     bool changeSymbolColor, QColor newSymbolColor,
     bool changeWeight, int newWeight,
     bool changeLockStatus, std::optional<bool> newLockStatus,
+    bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
     QSet<TRoom*> rooms)
 {
     if (newName.isEmpty()) {
@@ -3757,6 +3767,9 @@ void T2DMap::slot_setRoomProperties(
         }
         if (changeLockStatus && newLockStatus.has_value()) {
             room->isLocked = newLockStatus.value();
+        }
+        if (changeHiddenStatus && newHiddenStatus.has_value()) {
+            room->setHidden(newHiddenStatus.value());
         }
     }
     if (changeWeight || changeLockStatus) {

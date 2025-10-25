@@ -41,6 +41,7 @@ public:
         QHash<QString, int>& pSymbols,
         QHash<int, int>& pWeights,
         QHash<bool, int> lockStatus,
+        QHash<bool, int> hiddenStatus,
         QSet<TRoom*>& pRooms);
     void accept() override;
 
@@ -52,6 +53,7 @@ signals:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, std::optional<bool> newLockStatus,
+        bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
         QSet<TRoom*> mpRooms);
 
 private:
@@ -66,6 +68,7 @@ private:
     void initWeightInstructions();
     QStringList getComboBoxWeightItems();
     void initLockInstructions();
+    void initHiddenInstructions();
 
     Host* mpHost = nullptr;
     QSet<TRoom*> mpRooms;

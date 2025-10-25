@@ -55,6 +55,7 @@ void dlgRoomProperties::init(
     QHash<QString, int>& pSymbols,
     QHash<int, int>& pWeights,
     QHash<bool, int> lockStatus,
+    QHash<bool, int> hiddenStatus,
     QSet<TRoom*>& pRooms)
 {
     // Configure name display
@@ -147,6 +148,20 @@ void dlgRoomProperties::init(
     }
     initLockInstructions();
 
+    // Configure hidden display
+    // Are all hidden statuses the same or mixed? Then show dialog in tristate.
+    if (hiddenStatus.contains(true) && hiddenStatus.contains(false)) {
+        checkBox_hidden->setTristate(true);
+        checkBox_hidden->setCheckState(Qt::PartiallyChecked);
+    } else if (hiddenStatus.contains(true)) {
+        checkBox_hidden->setTristate(false);
+        checkBox_hidden->setCheckState(Qt::Checked);
+    } else { // hiddenStatus.contains(false)
+        checkBox_hidden->setTristate(false);
+        checkBox_hidden->setCheckState(Qt::Unchecked);
+    }
+    initHiddenInstructions();
+
     // Configure dialog display
     adjustSize();
 }
@@ -159,6 +174,15 @@ void dlgRoomProperties::initLockInstructions()
                            "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
                            mpRooms.size());
     checkBox_locked->setText(instructions);
+}
+
+void dlgRoomProperties::initHiddenInstructions()
+{
+    const QString instructions = tr("Hide room(s) from the map display",
+                           // Intentional comment to separate arguments!
+                           "This text will be shown at a checkbox, where you can set/unset a number of room's hidden status.",
+                           mpRooms.size());
+    checkBox_hidden->setText(instructions);
 }
 
 
@@ -352,6 +376,21 @@ void dlgRoomProperties::accept()
         }
     }
 
+    // Find hidden status to return back
+    Qt::CheckState const newHiddenCheckState = checkBox_hidden->checkState();
+    bool changeHiddenStatus = true;
+    std::optional<bool> newHiddenStatus;
+    if (newHiddenCheckState == Qt::PartiallyChecked) {
+        // We don't want to change then
+        changeHiddenStatus = false;
+    } else {
+        if (newHiddenCheckState == Qt::Checked) {
+            newHiddenStatus = true;
+        } else { // Qt::Unchecked
+            newHiddenStatus = false;
+        }
+    }
+
     emit signal_save_symbol(
         changeName, newName,
         mChangeRoomColor, mRoomColorNumber,
@@ -359,6 +398,7 @@ void dlgRoomProperties::accept()
         changeSymbolColor, newSymbolColor,
         changeWeight, newWeight,
         changeLockStatus, newLockStatus,
+        changeHiddenStatus, newHiddenStatus,
         mpRooms);
 }
 
