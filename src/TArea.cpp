@@ -990,3 +990,30 @@ void TArea::clean()
         mIsDirty = false;
     }
 }
+
+// Returns true if the given z-level has rooms that could potentially be visible
+// within the given viewport bounds (in map coordinates, not screen coordinates).
+// This uses the per-z-level coordinate extremes to avoid iterating through rooms
+// on z-levels that are definitely not visible.
+bool TArea::isZLevelVisible(int z, int viewMinX, int viewMaxX, int viewMinY, int viewMaxY) const
+{
+    // If we don't have extremes for this z-level, it has no rooms
+    if (!xminForZ.contains(z) || !xmaxForZ.contains(z) ||
+        !yminForZ.contains(z) || !ymaxForZ.contains(z)) {
+        return false;
+    }
+
+    // Get the coordinate bounds for this z-level
+    const int zMinX = xminForZ.value(z);
+    const int zMaxX = xmaxForZ.value(z);
+    // Note: yminForZ and ymaxForZ are stored as (-1 * y), so we need to flip the comparison
+    const int zMinY = yminForZ.value(z);
+    const int zMaxY = ymaxForZ.value(z);
+
+    // Check if the z-level bounds intersect with the viewport bounds
+    // Rectangles intersect if they overlap in both x and y dimensions
+    const bool xOverlap = (zMaxX >= viewMinX) && (zMinX <= viewMaxX);
+    const bool yOverlap = (zMaxY >= viewMinY) && (zMinY <= viewMaxY);
+
+    return xOverlap && yOverlap;
+}

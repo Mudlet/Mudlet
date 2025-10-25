@@ -1646,9 +1646,20 @@ void T2DMap::paintEvent(QPaintEvent* e)
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
 
+    // Calculate viewport bounds in map coordinates for z-level visibility optimization
+    // This uses the per-z-level coordinate extremes to skip entire z-levels that are not visible
+    const int viewMinX = static_cast<int>(std::floor(-static_cast<float>(mRX) / mRoomWidth)) - 1;
+    const int viewMaxX = static_cast<int>(std::ceil((static_cast<float>(widgetWidth) - static_cast<float>(mRX)) / mRoomWidth)) + 1;
+    // Note: yminForZ/ymaxForZ store (-1 * y), so we calculate in that coordinate system
+    const int viewMinY = static_cast<int>(std::floor(-static_cast<float>(mRY) / mRoomHeight)) - 1;
+    const int viewMaxY = static_cast<int>(std::ceil((static_cast<float>(widgetHeight) - static_cast<float>(mRY)) / mRoomHeight)) + 1;
+
     if (mudlet::self()->mDrawUpperLowerLevels) {
         // draw room on lower z-levels
-        while (itRoom.hasNext()) {
+        // Optimization: Check if this z-level could have any visible rooms before iterating
+        const bool lowerLevelVisible = pDrawnArea->isZLevelVisible(zLevel - 1, viewMinX, viewMaxX, viewMinY, viewMaxY);
+        if (lowerLevelVisible) {
+            while (itRoom.hasNext()) {
             const int currentAreaRoom = itRoom.next();
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -1674,11 +1685,15 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.restore();
                 }
             }
+            }
         }
         itRoom.toFront();
 
         // draw rooms on upper z-levels
-        while (itRoom.hasNext()) {
+        // Optimization: Check if this z-level could have any visible rooms before iterating
+        const bool upperLevelVisible = pDrawnArea->isZLevelVisible(zLevel + 1, viewMinX, viewMaxX, viewMinY, viewMaxY);
+        if (upperLevelVisible) {
+            while (itRoom.hasNext()) {
             const int currentAreaRoom = itRoom.next();
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -1703,6 +1718,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     }
                     painter.restore();
                 }
+            }
             }
         }
         itRoom.toFront();
@@ -1760,7 +1776,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 
     // now draw rooms on selected z-level
-    while (itRoom.hasNext()) {
+    // Optimization: Check if this z-level could have any visible rooms before iterating
+    const bool currentLevelVisible = pDrawnArea->isZLevelVisible(zLevel, viewMinX, viewMaxX, viewMinY, viewMaxY);
+    if (currentLevelVisible) {
+        while (itRoom.hasNext()) {
         const int currentAreaRoom = itRoom.next();
         TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
         if (!room) {
@@ -1787,6 +1806,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             const bool roomCollision = usedRoomPositions.contains(roomPos);
             usedRoomPositions.insert(roomPos);
             drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap, roomCollision);
+        }
         }
     }
 
