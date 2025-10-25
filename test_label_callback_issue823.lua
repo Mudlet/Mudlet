@@ -17,8 +17,8 @@ if not success1 then
     print("  Error:", err1)
 end
 
--- Test 2: Try to clear callback with nil (this should fail with current code)
-print("\nTest 2: Setting callback with nil (expected to fail with bug)")
+-- Test 2: Try to clear callback with nil (this should work after fix)
+print("\nTest 2: Setting callback with nil (should work after fix)")
 local success2, err2 = pcall(function()
     setLabelClickCallback("testLabel", nil)
 end)
@@ -27,24 +27,14 @@ if not success2 then
     print("  Error:", err2)
 end
 
--- Test 3: Try to set callback with boolean true (this should fail with current code)
-print("\nTest 3: Setting callback with boolean true (expected to fail with bug)")
+-- Test 3: Try to set callback with boolean (should fail - not supported)
+print("\nTest 3: Setting callback with boolean (should fail - not supported)")
 local success3, err3 = pcall(function()
     setLabelClickCallback("testLabel", true)
 end)
-print("  Result:", success3 and "SUCCESS" or "FAILED")
+print("  Result:", success3 and "SUCCESS (unexpected)" or "FAILED (expected)")
 if not success3 then
     print("  Error:", err3)
-end
-
--- Test 4: Try to set callback with boolean false (this should fail with current code)
-print("\nTest 4: Setting callback with boolean false (expected to fail with bug)")
-local success4, err4 = pcall(function()
-    setLabelClickCallback("testLabel", false)
-end)
-print("  Result:", success4 and "SUCCESS" or "FAILED")
-if not success4 then
-    print("  Error:", err4)
 end
 
 -- Test the other three affected functions
@@ -81,9 +71,13 @@ end
 hideWindow("testLabel")
 
 print("\n\nConclusion:")
-if not (success2 or success3 or success4 or success5 or success6 or success7) then
-    print("CONFIRMED: Issue #823 still exists!")
-    print("None of the label callback functions accept nil or boolean values.")
+if success2 and success5 and success6 and success7 then
+    print("SUCCESS: Issue #823 has been fixed!")
+    print("All label callback functions now accept nil to clear callbacks.")
 else
-    print("Issue #823 appears to be fixed - some functions accepted nil/boolean.")
+    print("PARTIAL FIX: Some functions still don't accept nil properly.")
+    print("  setLabelClickCallback nil:", success2 and "✓" or "✗")
+    print("  setLabelOnEnter nil:", success5 and "✓" or "✗")
+    print("  setLabelOnLeave nil:", success6 and "✓" or "✗")
+    print("  setLabelReleaseCallback nil:", success7 and "✓" or "✗")
 end

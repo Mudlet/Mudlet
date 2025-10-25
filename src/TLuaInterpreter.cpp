@@ -1549,11 +1549,24 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
     lua_remove(L, 1);
 
-    if (!lua_isfunction(L, 1)) {
-        lua_pushfstring(L, "%s: bad argument #2 type (function expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
+    int func = 0; // Default to no callback (for nil)
+
+    const int argType = lua_type(L, 1);
+    switch (argType) {
+    case LUA_TFUNCTION:
+        // luaL_ref pops the function from the stack and stores it in the registry
+        func = luaL_ref(L, LUA_REGISTRYINDEX);
+        break;
+    case LUA_TNIL:
+        // nil clears the callback
+        func = 0;
+        lua_pop(L, 1); // Remove nil from stack
+        break;
+    default:
+        lua_pushfstring(L, "%s: bad argument #2 type (function or nil expected, got %s!)",
+                      funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
     }
-    const int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
     if (funcName == qsl("setLabelClickCallback")) {
