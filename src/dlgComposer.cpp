@@ -211,13 +211,25 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     QAction* action_removeWord = nullptr;
     QAction* action_dictionarySeparatorLine = nullptr;
     if (handle_profile) {
+        //: Context menu action to add a word to the user's personal dictionary
         action_addWord = new QAction(tr("Add to user dictionary"));
         action_addWord->setEnabled(false);
+        //: Context menu action to remove a word from the user's personal dictionary
         action_removeWord = new QAction(tr("Remove from user dictionary"));
         action_removeWord->setEnabled(false);
         if (mudlet::self()->mUsingMudletDictionaries) {
+            /*:
+            This separator line in the spell-check context menu divides suggestions
+            from the user's personal dictionary (above) and Mudlet's built-in dictionary (below).
+            The symbols are decorative and help indicate the direction. This appears in the composer window.
+            */
             action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
         } else {
+            /*:
+            This separator line in the spell-check context menu divides suggestions
+            from the user's personal dictionary (above) and the system dictionary (below).
+            The symbols are decorative and help indicate the direction. This appears in the composer window.
+            */
             action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
         }
         action_dictionarySeparatorLine->setEnabled(false);
@@ -284,6 +296,7 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         }
 
     } else {
+        //: Shown when the spell-checker has no suggestions from the system dictionary for the misspelled word in the composer
         auto pA = new QAction(tr("no suggestions (system)"));
         pA->setEnabled(false);
         spellings_system << pA;
@@ -309,8 +322,10 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             QAction* pA = nullptr;
             auto mainConsole = mpHost->mpConsole;
             if (mainConsole->isUsingSharedDictionary()) {
+                //: Shown when the spell-checker has no suggestions from the shared user dictionary for the misspelled word in the composer
                 pA = new QAction(tr("no suggestions (shared)"));
             } else {
+                //: Shown when the spell-checker has no suggestions from the profile-specific user dictionary for the misspelled word in the composer
                 pA = new QAction(tr("no suggestions (profile)"));
             }
             pA->setEnabled(false);
