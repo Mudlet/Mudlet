@@ -131,21 +131,40 @@ void dlgModuleManager::slot_installModule()
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), lastDir);
-    if (fileName.isEmpty()) {
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Load Mudlet Module"), lastDir);
+    if (fileNames.isEmpty()) {
         return;
     }
 
-    lastDir = QFileInfo(fileName).absolutePath();
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Load Mudlet Module:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
-        return;
+    QStringList unreadableFiles;
+    QStringList failedModules;
+
+    for (const QString& fileName : fileNames) {
+        QFile file(fileName);
+        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            unreadableFiles << QFileInfo(fileName).fileName();
+            continue;
+        }
+        file.close();
+
+        auto result = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
+        if (!result.first) {
+            failedModules << QFileInfo(fileName).fileName();
+        }
     }
 
-    mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
+    if (!unreadableFiles.isEmpty()) {
+        QMessageBox::warning(this, tr("Load Mudlet Module:"), tr("Cannot read the following files:\n%1").arg(unreadableFiles.join(qsl("\n"))));
+    }
+
+    if (!failedModules.isEmpty()) {
+        QMessageBox::warning(this, tr("Load Mudlet Module"),
+            tr("The following modules failed to install:\n%1").arg(failedModules.join(qsl("\n"))));
+    }
+
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
     }

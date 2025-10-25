@@ -10413,14 +10413,25 @@ void dlgTriggerEditor::slot_import()
 
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), lastDir);
-    if (fileName.isEmpty()) {
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Import Mudlet Package"), lastDir);
+    if (fileNames.isEmpty()) {
         return;
     }
-    lastDir = QFileInfo(fileName).absolutePath();
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    mpHost->installPackage(fileName, enums::PackageModuleType::Package);
+    QStringList failedPackages;
+    for (const QString& fileName : fileNames) {
+        auto result = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
+        if (!result.first) {
+            failedPackages << QFileInfo(fileName).fileName();
+        }
+    }
+
+    if (!failedPackages.isEmpty()) {
+        QMessageBox::warning(this, tr("Import Mudlet Package"),
+            tr("The following packages failed to install:\n%1").arg(failedPackages.join(qsl("\n"))));
+    }
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
