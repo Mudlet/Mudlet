@@ -89,18 +89,18 @@ TMainConsole::~TMainConsole()
     }
 }
 
-void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& stylesheet)
+std::pair<bool, QString> TMainConsole::setLabelStyleSheet(const QString& name, const QString& stylesheet)
 {
-    const QString key{buf.c_str()};
-    const QString sheet{stylesheet.c_str()};
-    if (mLabelMap.find(key) != mLabelMap.end()) {
-        QLabel* pC = mLabelMap[key];
-        if (!pC) {
-            return;
-        }
-        pC->setStyleSheet(sheet);
-        return;
+    if (name.isEmpty()) {
+        return {false, qsl("a label cannot have an empty string as its name")};
     }
+
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        pL->setStyleSheet(stylesheet);
+        return {true, QString()};
+    }
+    return {false, qsl("label name '%1' not found").arg(name)};
 }
 
 std::optional<QString> TMainConsole::getLabelStyleSheet(const QString& name) const
