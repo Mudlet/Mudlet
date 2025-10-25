@@ -42,6 +42,7 @@ jobs:
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
       env:
+        # Used to flag a "release" build - when a Git "tagged" commit is pushed
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
@@ -62,9 +63,27 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        # This should export the following to the GitHub "environment" for later
+        # steps:
+        # ABORT_WORKFLOW - Only created by PublicTest builds when it is not
+        #   required; needed because there still isn't a way to abort a workflow
+        #   without it showing up as an error. See:
+        #   https://github.com/orgs/community/discussions/82744
+        # BUILD_ACTION - what this build is doing, one of:
+        #   "Release" - a tagged release branch representing that release version of Mudlet
+        #   "PublicTest" - the nightly build (if needed) of the development branch
+        #   "PullRequest" - a commit to a PR
+        #   "Testing" - when a PR is merged into the "development" branch
+        #   "Archive" - all other cases, just produces a zip file of everything needed to run the build
+        # BUILD_COMMIT - the identifier of where in the Git history this build is
+        # BUILD_CONFIG - whether to produce an optimised or a debuggable build
+        #   "release" - default, currently only value that can be used, will be set to this if not previously defined
+        #   "debug" - not yet supported, but intended to include extra debug information and be built for debugging
+        # VERSION - the x.y.z (only) part of the Mudlet version number, without any suffix
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     - name: (Windows) Run Lua tests
+      if: ! env.ABORT_WORKFLOW
       timeout-minutes: 5
       shell: msys2 {0}
       env:
@@ -76,11 +95,11 @@ jobs:
         export LUA_PATH
         LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
         export LUA_CPATH
-
         $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
 
-    - name: Passed Lua tests
+    - name: Check that Lua tests were passed
       shell: msys2 {0}
+      if: ! env.ABORT_WORKFLOW
       run: |
         if [ -e $TEMP/busted-tests-failed ]
         then
@@ -89,46 +108,65 @@ jobs:
         fi
 
     - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      if: (! env.ABORT_WORKFLOW) && steps.restore-ccache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
     - name: (Windows) Package
+      if: ! env.ABORT_WORKFLOW
       shell: msys2 {0}
+      env:
+        BUILD_ACTION: ${{ env.BUILD_ACTION }}
+        BUILD_COMMIT: ${{ env.BUILD_COMMIT }}
+        MUDLET_VERSION_BUILD: ${{ env.MUDLET_VERSION_BUILD }}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
 
     - name: (Windows) Login to Azure
       uses: azure/login@v2
-      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
+      if: (! env.ABORT_WORKFLOW) && github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Get Azure access token for code signing
       shell: pwsh
-      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
+      if: (! env.ABORT_WORKFLOW) && github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
       run: |
         $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
         "::add-mask::$token"
         "AZURE_ACCESS_TOKEN=$token" | Add-Content -Path $env:GITHUB_ENV
 
     - name: (Windows) Deploy
+      if: ! env.ABORT_WORKFLOW
       shell: msys2 {0}
       env:
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
-        X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
-        DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
-        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
         AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
+        BUILD_ACTION: ${{ env.BUILD_ACTION }}
+        BUILD_COMMIT: ${{ env.BUILD_COMMIT }}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
+        DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
+        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
-        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        MUDLET_VERSION_BUILD: ${{ env.MUDLET_VERSION_BUILD }}
+        X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
+
+    - name: Create portable artifact for uploading
+      uses: actions/upload-artifact@v4
+      if: env.PORTABLE_ARTIFACT_NAME
+      with:
+        name: ${{env.PORTABLE_ARTIFACT_NAME}}
+        path: ${{env.PORTABLE_ARTIFACT_WINPATHORFILE}}
+        # As this is a single self-extracting archive file another round of
+        # compression is pointless!
+        compression-level: 0
+        if-no-files-found: ignore
 
     - name: Create intermediate artifact for debugging
       uses: actions/upload-artifact@v5
@@ -136,29 +174,47 @@ jobs:
       with:
         name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
         path: ${{env.INTERMEDIATE_ARTIFACT_WINPATHORFILE}}
-        compression-level: ${{env.INTERMEDIATE_ARTIFACT_COMPRESSION}}
+        # Maximumal compression to minimise space needed:
+        compression-level: 9
         if-no-files-found: ignore
 
-    - name: Create artifact for later uploading
-      # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
-      # the given name - the Environmental variables are created by the
+    - name: Create main artifact for uploading
+      # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact"
+      # with the above name - the Environmental variables are created by the
       # deploy-mudlet-for-windows.sh script:
       uses: actions/upload-artifact@v5
       if: env.ARTIFACT_NAME
       with:
+        # The name presented in the "artifacts" listing for the (zip) file created
         name: ${{env.ARTIFACT_NAME}}
+        # One (or more if the "path: |" is used) to a path to a directory - or a
+        # (possibly wildcarded) file name to identify what to include in the
+        # archive - if a directory all files in and below that directory are
+        # included (except for hidden files unless:
+        # include-hidden-files: true
+        # is specified:
         path: ${{env.ARTIFACT_WINPATHORFILE}}
         compression-level: ${{env.ARTIFACT_COMPRESSION}}
 
-    - name: Upload artifact to make.mudlet.org
-      shell: msys2 {0}
+    - name: Upload main artifact to make.mudlet.org
       if: env.ARTIFACT_NAME
+      shell: msys2 {0}
+      # Depending on the type (see BUILD_ACTION) of workflow this may or may not
+      # need unzipping once it gets to our own website:
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+
+    - name: Upload portable artifact to make.mudlet.org
+      if: env.PORTABLE_ARTIFACT_NAME
+      shell: msys2 {0}
+      # The artifact creation process zipped (well "stored", as there is no
+      # compression) the self-extracting archive which does need "unzipping" but
+      # only to get the archive file back once we've uploaded it:
+      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.PORTABLE_ARTIFACT_NAME}}&unzip=1"
 
     - name: Register PTB Release
       shell: msys2 {0}
-      if: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
+      if: ${{ (! env.ABORT_WORKFLOW) &&  github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
       env:
-        VERSION_STRING: ${{env.VERSION_STRING}}
-        BUILD_COMMIT: ${{env.BUILD_COMMIT}}
+        BUILD_COMMIT: ${{ env.BUILD_COMMIT }}
+        VERSION_STRING: ${{ env.VERSION_STRING }}
       run: $GITHUB_WORKSPACE/CI/register-windows-release.sh

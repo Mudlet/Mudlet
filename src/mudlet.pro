@@ -409,8 +409,9 @@ unix:!macx {
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
-    MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
-    isEmpty( MINGW_BASE_DIR_TEST ) {
+    # Typically this will be "/mingw64" and this is usable by Qt Creator/qmake
+    MINGW_PREFIX_TEST = $$(MINGW_PREFIX)
+    isEmpty( MINGW_PREFIX_TEST ) {
         # 32-BIT Build systems have been obsolete since 2020/05/15
         # https://www.msys2.org/news/#2020-05-17-32-bit-msys2-no-longer-actively-supported
         #
@@ -420,14 +421,14 @@ unix:!macx {
         # https://www.msys2.org/news/#2023-12-13-starting-to-drop-some-32-bit-packages
         # although it might be possible for dedicated parties to build them
         # locally for a while:
-        error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
-        "the MINGW64/CLANG64/UCRT64 part typically this:\\n"\
-        "'C:\msys64\mingw64' {64 Bit (MINGW64) Mudlet built on a 64 Bit Host}\\n"))
+        error($$escape_expand("Build aborted as environmental variable MINGW_PREFIX not found.\\n"
+        "It is set to the root of the MINGW64/CLANG64/UCRT64 part typically this:\\n"\
+        "'/mingw64' {64 Bit (MINGW64) Mudlet built on a 64 Bit Host}\\n"))
     }
     # For users/developers building with MSYS2 on Windows:
     # AND for CI building with MSYS2 for Windows in a GH Workflow:
     LIBS +=  \
-        -L$${MINGW_BASE_DIR_TEST}/bin \
+        -L$${MINGW_PREFIX_TEST}/bin \
         -llua5.1 \
         -llibhunspell-1.7 \
         -lpcre \
@@ -441,8 +442,8 @@ unix:!macx {
     }
 
     INCLUDEPATH += \
-        $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
-        $${MINGW_BASE_DIR_TEST}/include/pugixml
+        $${MINGW_PREFIX_TEST}/include/lua5.1 \
+        $${MINGW_PREFIX_TEST}/include/pugixml
 
     # Leave this unset - we do not need it on Windows:
     # LUA_DEFAULT_DIR =

@@ -117,7 +117,7 @@ jobs:
         cmakeAppendedArgs: >-
           -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
           -G Ninja
-          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MSYSTEM }}
           -DVCPKG_APPLOCAL_DEPS=OFF
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         buildWithCMakeArgs: >-

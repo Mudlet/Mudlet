@@ -55,25 +55,19 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
-else
+elif [ "${MSYSTEM}" != "MINGW64" ]; then
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
-# We use this internally - but it is actually the same as ${MINGW_PREFIX}
-export MINGW_BASE_DIR=${MSYSTEM_PREFIX}
-# A more compact - but not necessarily understood by other than MSYS/MINGW
-# executables - path:
-export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+# Set up some environmental variables if they haven't been already:
+
 #
 # FIXME: don't add duplicates but rearrange instead to put them in the "right" order:
 #
-export PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+export PATH="${MINGW_PREFIX}/usr/local/bin:${MINGW_PREFIX}/bin:/usr/bin:${PATH}"
 echo "MSYSTEM is: ${MSYSTEM}"
 echo "PATH is now: ${PATH}"
 echo ""
@@ -92,59 +86,67 @@ echo "=== Installing needed packages ==="
 pacman_attempts=0
 while true; do
   if /usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-translations" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-    "mingw-w64-${BUILDCOMPONENT}-angleproject" \
-    "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-base" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-multimedia" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-wmf" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-svg" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-speech" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-imageformats" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-translations" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-tools" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-5compat" \
+    "${MINGW_PACKAGE_PREFIX}-angleproject" \
+    "${MINGW_PACKAGE_PREFIX}-qtkeychain-qt6" \
     git \
     man \
     rsync \
-    "mingw-w64-${BUILDCOMPONENT}-ccache" \
-    "mingw-w64-${BUILDCOMPONENT}-toolchain" \
-    "mingw-w64-${BUILDCOMPONENT}-pcre" \
-    "mingw-w64-${BUILDCOMPONENT}-libzip" \
-    "mingw-w64-${BUILDCOMPONENT}-ntldd" \
-    "mingw-w64-${BUILDCOMPONENT}-pugixml" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51-lpeg" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3" \
-    "mingw-w64-${BUILDCOMPONENT}-hunspell" \
-    "mingw-w64-${BUILDCOMPONENT}-zlib" \
-    "mingw-w64-${BUILDCOMPONENT}-boost" \
-    "mingw-w64-${BUILDCOMPONENT}-yajl" \
-    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
-    "mingw-w64-${BUILDCOMPONENT}-meson" \
-    "mingw-w64-${BUILDCOMPONENT}-ninja" \
-    "mingw-w64-${BUILDCOMPONENT}-assimp" \
-    "mingw-w64-${BUILDCOMPONENT}-jq"; then
+    "${MINGW_PACKAGE_PREFIX}-ccache" \
+    "${MINGW_PACKAGE_PREFIX}-toolchain" \
+    "${MINGW_PACKAGE_PREFIX}-pcre" \
+    "${MINGW_PACKAGE_PREFIX}-libzip" \
+    "${MINGW_PACKAGE_PREFIX}-ntldd" \
+    "${MINGW_PACKAGE_PREFIX}-pugixml" \
+    "${MINGW_PACKAGE_PREFIX}-lua51" \
+    "${MINGW_PACKAGE_PREFIX}-lua51-lpeg" \
+    "${MINGW_PACKAGE_PREFIX}-lua51-lsqlite3" \
+    "${MINGW_PACKAGE_PREFIX}-hunspell" \
+    "${MINGW_PACKAGE_PREFIX}-zlib" \
+    "${MINGW_PACKAGE_PREFIX}-boost" \
+    "${MINGW_PACKAGE_PREFIX}-yajl" \
+    "${MINGW_PACKAGE_PREFIX}-lua-luarocks" \
+    "${MINGW_PACKAGE_PREFIX}-meson" \
+    "${MINGW_PACKAGE_PREFIX}-ninja" \
+    "${MINGW_PACKAGE_PREFIX}-7zip" \
+    "${MINGW_PACKAGE_PREFIX}-assimp" \
+    "${MINGW_PACKAGE_PREFIX}-jq"; then
       break
   fi
 
   pacman_attempts=$((pacman_attempts +1))
 
-  if [ ${pacman_attempts} -lt 10 ]; then
-    echo "=== Some packages failed to install, waiting and trying again ==="
-    sleep 10
-  else
+  if [[ ${pacman_attempts} -ge 10 ]]; then
     echo "=== Some packages failed to install after ${pacman_attempts} attempts, giving up ==="
     exit 7
   fi
+
+  echo "=== Some packages failed to install, waiting and trying again ==="
+  sleep 10
 done
 
+# Needed until https://github.com/msys2/MINGW-packages/pull/25876 or equivalent
+# gets merged:
+if [ -f "${MINGW_PREFIX}/lib/7zip/7zCon.sfx" ] && [ ! -f "${MINGW_PREFIX}/bin/7zCon.sfx" ]; then
+  echo "Fixing 7z so it can make self-extracting archives"
+  cp -pv "${MINGW_PREFIX}/lib/7zip/7zCon.sfx" "${MINGW_PREFIX}/bin"
+fi
+
 echo "Removing harfbuzz installed by qt"
-pacman -Rdd --noconfirm mingw-w64-${BUILDCOMPONENT}-harfbuzz
+pacman -Rdd --noconfirm ${MINGW_PACKAGE_PREFIX}-harfbuzz
 
 echo "Building harfbuzz without graphite2"
 git clone https://github.com/harfbuzz/harfbuzz.git
 cd harfbuzz || exit 1
-meson setup build --prefix=/mingw${BUILD_BITNESS} --buildtype=release -Dgraphite=disabled -Dtests=disabled
+meson setup build --prefix=${MINGW_PREFIX} --buildtype=release -Dgraphite=disabled -Dtests=disabled
 meson compile -C build
 meson install -C build
 
@@ -153,29 +155,28 @@ echo "    Completed"
 echo ""
 
 
-if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
+if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_PREFIX}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
   # The luarocks config file has not been tweaked to put the compiled rocks in
   # a location that is different for each different MSYS2 environment
-  echo "  Tweaking location for constructed Luarocks so 32 and 64 bits ones do"
-  echo "  not end up in the same place when --tree \"user\" is used..."
+  echo "  Tweaking location for constructed Luarocks so the modules for different Mingw-w64 "
+  echo "  environments do not end up in the same place when --tree \"user\" is used..."
   echo ""
 
-  cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig"
-  cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig"
-  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua"
-  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua"
+  cp "${MINGW_PREFIX}/etc/luarocks/config-5.1.lua" "${MINGW_PREFIX}/etc/luarocks/config-5.1.lua.orig"
+  cp "${MINGW_PREFIX}/etc/luarocks/config-5.4.lua" "${MINGW_PREFIX}/etc/luarocks/config-5.4.lua.orig"
+  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_PREFIX}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_PREFIX}/etc/luarocks/config-5.1.lua"
+  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_PREFIX}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_PREFIX}/etc/luarocks/config-5.4.lua"
   echo "    Completed"
 else
-  echo "  Things have already been setup for Luarocks so 32 and 64 bits ones"
-  echo "  do not end up in the same place"
+  echo "  Things have already been setup for Luarocks so the modules for different"
+  echo "  Mingw-w64 environments do not end up in the same place"
 fi
 echo "For per-user Lua modules from LuaRocks:"
 echo "- Use '--tree \"user\"' (literally) instead of '--local'"
 echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
-
-ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
+ROCKCOMMAND="${MINGW_PREFIX}/bin/luarocks --lua-version 5.1"
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
@@ -224,8 +225,6 @@ echo ""
 echo "Copy the following lines into the build environment for a project in Qt Creator:"
 echo "See https://doc.qt.io/qtcreator/creator-how-set-project-environment.html#change-the-environment-for-a-project"
 echo ""
-MSYS_ROOT=$(cygpath -aw /)
-echo "MINGW_BASE_DIR=${MSYS_ROOT}$(echo "${MSYSTEM_PREFIX}" | sed 's/\//\\/g')"
 echo "LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)"
 echo "LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)"
 

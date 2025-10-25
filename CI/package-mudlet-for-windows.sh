@@ -41,30 +41,57 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2/MINGW shell type
 # 3 - Unsupported build type
 # 4 - Directory to be used to assemble the package is NOT empty
-# 6 - No Mudlet.exe file found to work with
+# 8 - No Mudlet.exe file found to work with
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
-else
+elif [ "${MSYSTEM}" != "MINGW64" ]; then
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
-BUILD_CONFIG="release"
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
-GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
+# These should be set by the build-mudlet-for-windows script:
+if [ "${BUILD_ACTION}" != "Release" ]; then
+  if [ -z "${BUILD_COMMIT}" ]; then
+    # Error out if not set:
+    echo "BUILD_COMMIT not set in environment and this isn't a \"Release\" build, check preceding steps!"
+    exit 10
+  fi
+  if [ -z "${MUDLET_VERSION_BUILD}" ]; then
+    echo "MUDLET_VERSION_BUILD not set in environment and this isn't a \"Release\" build, check preceding steps!"
+    exit 10
+  fi
+fi
+
+if [ -z "${BUILD_CONFIG}" ]; then
+  # Error out if not set:
+  echo "BUILD_CONFIG not set in environment, check preceding steps!"
+  exit 10
+fi
+
+if [ -z "${VERSION}" ]; then
+  # Error out if not set:
+  echo "VERSION not set in environment, check preceding steps!"
+  exit 10
+fi
+
+GITHUB_WORKSPACE_UNIX_PATH="$(cygpath -au "${GITHUB_WORKSPACE}")"
+
+if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" ]; then
+  echo "ERROR: no Mudlet executable found - did the previous build"
+  echo "complete sucessfully?"
+  exit 6
+fi
+
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
+export PACKAGE_DIR
 
 echo "MSYSTEM is: ${MSYSTEM}"
 echo ""
@@ -92,18 +119,16 @@ fi
 cd "${PACKAGE_DIR}" || exit 1
 echo ""
 
-echo "Copying wanted compiled files from ${GITHUB_WORKSPACE}/build-${MSYSTEM} to ${GITHUB_WORKSPACE}/package-${MSYSTEM} ..."
+echo "Copying wanted compiled files from ${GITHUB_WORKSPACE}/build-${MSYSTEM} to ${PACKAGE_DIR} ..."
 echo ""
 
-if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" ]; then
-  echo "ERROR: no Mudlet executable found - did the previous build"
-  echo "complete sucessfully?"
-  exit 6
-fi
-
 cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
-if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+if [ "${BUILD_CONFIG}" == "debug" ]; then
+  if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
+     cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+  else
+     echo "Warning: separate Mudlet debug information file not found!"
+  fi
 fi
 
 # The location that windeployqt6 puts the Qt translation files by default is "./translations"
@@ -113,57 +138,37 @@ fi
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
+"${MINGW_PREFIX}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
 
-# To determine which system libraries have to be copied in it requires
-# continually trying to run the executable on the target type system
-# and adding in the libraries to the same directory and repeating that
-# until the executable actually starts to run. Alternatively running
-# ntldd ./mudlet.exe | grep "/mingw64" inside an Mingw63 shell as appropriate 
-# will produce the libraries that are likely to be needed below. Unfortunately
-# this process is a little recursive in that you may have to repeat the
-# process for individual librarys. For ones used by lua modules this
-# can manifest as being unable to "require" the library within lua
-# and doing the above "ntldd" check revealed that, for instance,
-# "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
-#
 echo ""
-echo "Examining Mudlet application to identify other needed libraries..."
-NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
+echo "Examining Mudlet application and Qt plugins to identify other needed libraries..."
+# ${MSYSTEM} is UPPERCASE but the paths ww need to consider are lowercase so
+# make that grep case-insensitive:
+mapfile -t NEEDED_LIBS < <("${MINGW_PREFIX}/bin/ntldd" --recursive ./mudlet.exe \
+  ./{generic,iconengines,imageformats,multimedia,networkinformation,platforms,styles,texttospeech,tls}/*.dll \
   | /usr/bin/grep -v "Qt6" \
-  | /usr/bin/grep -i "mingw" \
+  | /usr/bin/grep -i "${MSYSTEM}" \
   | /usr/bin/cut -d ">" -f2 \
   | /usr/bin/cut -d "(" -f1 \
-  | /usr/bin/sort \
-  | /usr/bin/uniq)
+  | /usr/bin/sort -u )
 
 echo ""
-echo "Copying these identified libraries..."
-for LIB in ${NEEDED_LIBS} ; do
-  cp -v -p "${LIB}" . ;
+echo "Copying identified libraries from Mudlet executable and plugins..."
+for LIB in "${NEEDED_LIBS[@]}"; do
+  # The paths that ntldd return are "Windows" form ones:
+  # "C:\msys64\mingw64\bin\file.dll" so run them through cygpath to convert them
+  # to POSIX style ones: "/mingw64/bin/file.dll":
+  cp -p -v "$(cygpath -au "${LIB}")" .
 done
-
-echo ""
-echo "Copying other, known to be needed, libraries in..."
-# libjasper to libwebpdemux-2 are additional image format handlers that Qt can
-# use if they are present.
-# libsqlite3 and libyajl are needed by lua modules (luasql-sqlite3) and at Mudlet run time.
-cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libjasper.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libjpeg-8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libtiff-6.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libwebp-7.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libwebpdemux-2.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
+echo "    ... done copying identified libraries."
 
 echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness - but we
 # only do 64-bits now:
 cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
+    "${MINGW_PREFIX}/bin/libcrypto-3-x64.dll" \
+    "${MINGW_PREFIX}/bin/libssl-3-x64.dll"
 
 
 echo ""
@@ -178,17 +183,17 @@ echo ""
 # files included here:
 echo "Copying lua C libraries in..."
 cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lfs.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lua-utf8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll"
+    "${MINGW_PREFIX}/lib/lua/5.1/lfs.dll" \
+    "${MINGW_PREFIX}/lib/lua/5.1/lpeg.dll" \
+    "${MINGW_PREFIX}/lib/lua/5.1/lsqlite3.dll" \
+    "${MINGW_PREFIX}/lib/lua/5.1/lua-utf8.dll" \
+    "${MINGW_PREFIX}/lib/lua/5.1/rex_pcre.dll" \
+    "${MINGW_PREFIX}/lib/lua/5.1/yajl.dll"
 
 mkdir ./luasql
-cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sqlite3.dll
+cp -v -p "${MINGW_PREFIX}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sqlite3.dll
 mkdir ./brimworks
-cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
+cp -v -p "${MINGW_PREFIX}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
 echo ""
 
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
@@ -218,58 +223,16 @@ echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
-
 echo ""
 
-# Create portable version
-echo "Creating portable ZIP package..."
-PORTABLE_ZIP_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/portable-${MSYSTEM}-${BUILD_CONFIG}"
-if [ -d "${PORTABLE_ZIP_DIR}" ]; then
-  rm -rf "${PORTABLE_ZIP_DIR}"
-fi
-mkdir -p "${PORTABLE_ZIP_DIR}"
-
-# Copy all packaged files to portable directory
-cp -r "${PACKAGE_DIR}"/* "${PORTABLE_ZIP_DIR}/"
-
-# Create portable.txt file to enable portable mode (empty file)
-touch "${PORTABLE_ZIP_DIR}/portable.txt"
-echo "Created portable.txt file in: ${PORTABLE_ZIP_DIR}/portable.txt"
-
-# Verify portable.txt was created
-if [ -f "${PORTABLE_ZIP_DIR}/portable.txt" ]; then
-  echo "portable.txt file exists and is ready for packaging"
-  ls -la "${PORTABLE_ZIP_DIR}/portable.txt"
-else
-  echo "ERROR: portable.txt file was not created!"
-  exit 1
-fi
-
-# Create the portable ZIP archive
 cd "${GITHUB_WORKSPACE_UNIX_PATH}" || exit 1
-PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
-
-echo "Creating ZIP from directory: $(basename "${PORTABLE_ZIP_DIR}")"
-echo "Contents of portable directory before ZIP creation:"
-ls -la "${PORTABLE_ZIP_DIR}/" | head -20
-
-zip -r "${PORTABLE_ZIP_NAME}" "$(basename "${PORTABLE_ZIP_DIR}")"
-
-# Verify portable.txt is in the ZIP
-echo "Verifying portable.txt is in the ZIP:"
-unzip -l "${PORTABLE_ZIP_NAME}" | grep portable.txt || echo "WARNING: portable.txt not found in ZIP!"
-
-echo ""
-echo "Created portable ZIP: ${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
-echo ""
 
 # For debugging purposes:
-# echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows "~/src/mudlet/package"):"
-# /usr/bin/ls -aRl
+# echo "The recursive contents of the Project build sub-directory $(cygpath --windows "~/src/mudlet/package"):"
+# /usr/bin/ls -laR
 # echo ""
 
-FINAL_DIR=$(/usr/bin/cygpath --windows "${PACKAGE_DIR}")
-echo "${FINAL_DIR} should contain everything needed to run Mudlet!"
+echo "$(cygpath --windows "${PACKAGE_DIR}") should contain everything needed to run Mudlet!"
 echo ""
 echo "   ... package-mudlet-for-windows.sh shell script finished."
 echo ""
