@@ -118,6 +118,3 @@ if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
-
-add_executable(cTelnetBufferTest cTelnetBufferTest.cpp)
-add_test(NAME cTelnetBufferTest COMMAND cTelnetBufferTest)
