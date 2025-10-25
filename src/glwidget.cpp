@@ -441,7 +441,6 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
-            // Skip exits from hidden rooms
             if (pR->isHidden()) {
                 continue;
             }
@@ -504,7 +503,6 @@ void GLWidget::paintGL()
                     if (!pExit) {
                         continue;
                     }
-                    // Skip exits to hidden rooms
                     if (pExit->isHidden()) {
                         continue;
                     }
@@ -917,7 +915,6 @@ void GLWidget::paintGL()
                     if (!pExit) {
                         continue;
                     }
-                    // Skip exits to hidden rooms
                     if (pExit->isHidden()) {
                         continue;
                     }
@@ -1347,7 +1344,6 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
-            // Skip hidden rooms
             if (pR->isHidden()) {
                 continue;
             }

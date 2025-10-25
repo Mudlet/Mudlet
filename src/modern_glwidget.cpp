@@ -385,7 +385,6 @@ void ModernGLWidget::renderRooms()
             continue;
         }
 
-        // Skip hidden rooms
         if (pR->isHidden()) {
             continue;
         }
@@ -641,7 +640,6 @@ void ModernGLWidget::renderConnections()
             continue;
         }
 
-        // Skip exits from hidden rooms
         if (pR->isHidden()) {
             continue;
         }
@@ -703,7 +701,6 @@ void ModernGLWidget::renderConnections()
                 continue;
             }
 
-            // Skip exits to hidden rooms
             if (pExit->isHidden()) {
                 continue;
             }

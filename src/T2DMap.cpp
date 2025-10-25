@@ -871,7 +871,6 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
                              const bool showRoomCollision)
 {
     const int currentRoomId = pRoom->getId();
-    // Skip rendering hidden rooms
     if (pRoom->isHidden()) {
         return;
     }
@@ -2098,7 +2097,6 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         if (!room) {
             continue;
         }
-        // Skip exits from hidden rooms
         if (room->isHidden()) {
             continue;
         }
@@ -2146,7 +2144,6 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             // This room has custom exit lines:
             if (!room->customLines.contains(key_n)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorth());
-                // Skip exits to hidden rooms
                 if (pER && !pER->isHidden()) {
                     exitList.push_back(room->getNorth());
                     if (pER->getSouth() != _id) {
