@@ -169,6 +169,7 @@ void dlgRoomProperties::init(
 
 void dlgRoomProperties::initLockInstructions()
 {
+    //: room properties dialog, setting lock status
     const QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
                            // Intentional comment to separate arguments!
                            "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
@@ -178,6 +179,7 @@ void dlgRoomProperties::initLockInstructions()
 
 void dlgRoomProperties::initHiddenInstructions()
 {
+    //: room properties dialog, setting hidden status
     const QString instructions = tr("Hide room(s) from the map display",
                            // Intentional comment to separate arguments!
                            "This text will be shown at a checkbox, where you can set/unset a number of room's hidden status.",
