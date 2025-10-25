@@ -1321,6 +1321,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->getWeight();
         ofs << pR->name;
         ofs << pR->isLocked;
+        if (mSaveVersion >= 22) {
+            ofs << pR->hidden;
+        }
         if (mSaveVersion >= 21) {
             ofs << pR->getSpecialExits();
         } else {

@@ -356,6 +356,8 @@ public:
     static int pasteWindow(lua_State*);
     static int setRoomWeight(lua_State*);
     static int getRoomWeight(lua_State*);
+    static int setRoomHidden(lua_State*);
+    static int getRoomHidden(lua_State*);
     static int gotoRoom(lua_State*);
     static int permKey(lua_State*);
     static int tempKey(lua_State*);

@@ -3873,6 +3873,45 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomHidden
+int TLuaInterpreter::setRoomHidden(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const bool hidden = getVerifiedBool(L, __func__, 2, "hidden");
+
+    const Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->setHidden(hidden);
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->update();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomHidden
+int TLuaInterpreter::getRoomHidden(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    int roomId;
+    if (lua_gettop(L) > 0) {
+        roomId = getVerifiedInt(L, __func__, 1, "roomID");
+    } else {
+        roomId = host.mpMap->mRoomIdHash.value(host.getName());
+    }
+
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (pR) {
+        lua_pushboolean(L, pR->isHidden());
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unHighlightRoom
 int TLuaInterpreter::unHighlightRoom(lua_State* L)
 {
