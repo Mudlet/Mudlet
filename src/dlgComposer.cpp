@@ -24,6 +24,13 @@
 
 
 #include "Host.h"
+#include "TBuffer.h"
+#include "TMainConsole.h"
+#include "mudlet.h"
+
+#include <QMenu>
+#include <QMouseEvent>
+#include <QTextCursor>
 
 
 dlgComposer::dlgComposer(Host* pH)
@@ -34,6 +41,12 @@ dlgComposer::dlgComposer(Host* pH)
     edit->setFont(font);
     connect(saveButton, &QAbstractButton::clicked, this, &dlgComposer::slot_save);
     connect(cancelButton, &QAbstractButton::clicked, this, &dlgComposer::slot_cancel);
+
+    // Set up spellcheck
+    connect(edit, &QPlainTextEdit::textChanged, this, &dlgComposer::slot_spellCheck);
+    edit->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(edit, &QWidget::customContextMenu, this, &dlgComposer::slot_contextMenu);
+
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -53,4 +66,340 @@ void dlgComposer::init(const QString &newTitle, const QString &newText)
 {
     title->setText(newTitle);
     edit->setPlainText(newText);
+    // Recheck spelling after setting text
+    if (mpHost && mpHost->mEnableSpellCheck) {
+        recheckWholeLine();
+    }
+}
+
+void dlgComposer::slot_spellCheck()
+{
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
+        return;
+    }
+
+    QTextCursor oldCursor = edit->textCursor();
+    QTextCursor c = edit->textCursor();
+    spellCheckWord(c);
+    QTextCharFormat f;
+    f.setFontUnderline(false);
+    oldCursor.setCharFormat(f);
+    edit->setTextCursor(oldCursor);
+}
+
+void dlgComposer::spellCheckWord(QTextCursor& c)
+{
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
+        return;
+    }
+
+    Hunhandle* systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    if (!systemDictionaryHandle) {
+        return;
+    }
+
+    QTextCharFormat f;
+    mSpellChecking = true;
+    c.select(QTextCursor::WordUnderCursor);
+    const QString spellCheckedWord = c.selectedText();
+    const bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
+    if (!wantSpellCheck) {
+        // We don't check when the word is too short, but may need to
+        // undo any prior underline, and we need to also reset the flag:
+        f.setFontUnderline(false);
+        c.setCharFormat(f);
+        edit->setTextCursor(c);
+        mSpellChecking = false;
+        return;
+    }
+
+    // The dictionary used from "the system" may not be UTF-8 encoded so we
+    // will need to transform the UTF-16BE "QString" to the appropriate encoding
+    // using the correct "codec":
+    const QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
+    if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
+        // Word is not in selected system dictionary
+        Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
+        if (userDictionaryhandle) {
+            // The per-profile/shared dictionary is always UTF-8 encoded - so
+            // we can use QString::toUtf8() directly to get the bytes needed:
+            if (Hunspell_spell(userDictionaryhandle, spellCheckedWord.toUtf8().constData())) {
+                // We are using a user dictionary and it does contain this word - so
+                // use a different underline, on many systems the spell-check underline is
+                // a wavy line but on macOs it is a dotted line - so use dash underline
+                f.setUnderlineStyle(QTextCharFormat::DashUnderline);
+                f.setUnderlineColor(Qt::cyan);
+            } else {
+                // The word is not in it either:
+                f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+                f.setUnderlineColor(Qt::red);
+            }
+        } else {
+            // The word is not in the main dictionary and that is all we are using:
+            f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+            f.setUnderlineColor(Qt::red);
+        }
+
+    } else {
+        // Word is spelt correctly
+        f.setFontUnderline(false);
+    }
+    c.setCharFormat(f);
+    edit->setTextCursor(c);
+    mSpellChecking = false;
+}
+
+void dlgComposer::recheckWholeLine()
+{
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
+        return;
+    }
+
+    // Save the current position
+    const QTextCursor oldCursor = edit->textCursor();
+
+    QTextCursor c = edit->textCursor();
+    // Move Cursor AND selection anchor to start:
+    c.movePosition(QTextCursor::Start);
+    // In case the first character is something other than the beginning of a
+    // word
+    c.movePosition(QTextCursor::NextWord);
+    c.movePosition(QTextCursor::PreviousWord);
+    // Now select the word
+    c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+    while (c.hasSelection()) {
+        spellCheckWord(c);
+        c.movePosition(QTextCursor::NextWord);
+        c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+    }
+    // Jump back to where we started
+    edit->setTextCursor(oldCursor);
+}
+
+void dlgComposer::slot_contextMenu(const QPoint& pos)
+{
+    auto* popup = edit->createStandardContextMenu();
+    if (mpHost && mpHost->mEnableSpellCheck) {
+        // Convert from widget coordinates to viewport coordinates
+        QPoint viewportPos = edit->viewport()->mapFromParent(pos);
+        QMouseEvent mouseEvent(QEvent::MouseButtonPress, viewportPos, edit->mapToGlobal(pos),
+                               Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+        fillSpellCheckList(&mouseEvent, popup);
+    }
+
+    mPopupPosition = pos;
+    popup->popup(edit->mapToGlobal(pos));
+}
+
+void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
+{
+    QTextCursor c = edit->cursorForPosition(event->pos());
+    c.select(QTextCursor::WordUnderCursor);
+    mSpellCheckedWord = c.selectedText();
+
+    const bool wantSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
+    if (!wantSpellCheck) {
+        return;
+    }
+
+    auto codec = mpHost->mpConsole->getHunspellCodec_system();
+    auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
+    auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
+    bool haveAddOption = false;
+    bool haveRemoveOption = false;
+    QAction* action_addWord = nullptr;
+    QAction* action_removeWord = nullptr;
+    QAction* action_dictionarySeparatorLine = nullptr;
+    if (handle_profile) {
+        action_addWord = new QAction(tr("Add to user dictionary"));
+        action_addWord->setEnabled(false);
+        action_removeWord = new QAction(tr("Remove from user dictionary"));
+        action_removeWord->setEnabled(false);
+        if (mudlet::self()->mUsingMudletDictionaries) {
+            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
+        } else {
+            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
+        }
+        action_dictionarySeparatorLine->setEnabled(false);
+    }
+
+    QList<QAction*> spellings_system;
+    QList<QAction*> spellings_profile;
+    // We always use UTF-8 for the per profile/shared dictionary so we do not
+    // need to have a codec prepared for it and can use QString::toUtf8()
+    // directly:
+    const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
+    if (!(handle_system && codec)) {
+        mSystemDictionarySuggestionsCount = 0;
+    } else {
+        // The dictionary used from "the system" may not be UTF-8 encoded so we
+        // will need to transform the UTF-16BE "QString" to the appropriate encoding
+        // using "codec" declared previously in this method:
+        const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+        if (!Hunspell_spell(handle_system, encodedText.constData())) {
+            // The word is NOT in the main system dictionary:
+            if (handle_profile) {
+                // Have a user dictionary so check it:
+                if (!Hunspell_spell(handle_profile, utf8Text.constData())) {
+                    // The word is NOT in the profile one either - so enable add option
+                    haveAddOption = true;
+                } else {
+                    // However the word is in the profile one - so enable remove option
+                    haveRemoveOption = true;
+                }
+
+                if (haveAddOption) {
+                    action_addWord->setEnabled(true);
+                    connect(action_addWord, &QAction::triggered, this, &dlgComposer::slot_addWord);
+                }
+                if (haveRemoveOption) {
+                    action_removeWord->setEnabled(true);
+                    connect(action_removeWord, &QAction::triggered, this, &dlgComposer::slot_removeWord);
+                }
+            }
+        }
+
+        mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
+    }
+
+    if (handle_profile) {
+        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, utf8Text.constData());
+    } else {
+        mUserDictionarySuggestionsCount = 0;
+    }
+
+    if (mSystemDictionarySuggestionsCount) {
+        for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
+            auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
+#if defined(Q_OS_FREEBSD)
+            // Adding the text afterwards as user data as well as in the
+            // constructor is to fix a bug(?) in FreeBSD that
+            // automagically adds a '&' somewhere in the text to be a
+            // shortcut - but doesn't show it and forgets to remove
+            // it when asked for the text later:
+            pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
+#endif
+            connect(pA, &QAction::triggered, this, &dlgComposer::slot_popupMenu);
+            spellings_system << pA;
+        }
+
+    } else {
+        auto pA = new QAction(tr("no suggestions (system)"));
+        pA->setEnabled(false);
+        spellings_system << pA;
+    }
+
+    if (handle_profile) {
+        if (mUserDictionarySuggestionsCount) {
+            for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
+                auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
+#if defined(Q_OS_FREEBSD)
+                // Adding the text afterwards as user data as well as in the
+                // constructor is to fix a bug(?) in FreeBSD that
+                // automagically adds a '&' somewhere in the text to be a
+                // shortcut - but doesn't show it and forgets to remove
+                // it when asked for the text later:
+                pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
+#endif
+                connect(pA, &QAction::triggered, this, &dlgComposer::slot_popupMenu);
+                spellings_profile << pA;
+            }
+
+        } else {
+            QAction* pA = nullptr;
+            auto mainConsole = mpHost->mpConsole;
+            if (mainConsole->isUsingSharedDictionary()) {
+                pA = new QAction(tr("no suggestions (shared)"));
+            } else {
+                pA = new QAction(tr("no suggestions (profile)"));
+            }
+            pA->setEnabled(false);
+            spellings_profile << pA;
+        }
+    }
+
+    /*
+    * Build up the extra context menu items from the BOTTOM up, so that
+    * the top of the context menu looks like:
+    *
+    * profile dictionary suggestions
+    * --------- separator_aboveDictionarySeparatorLine
+    * \/ System dictionary suggestions /\ Profile  <== Text
+    * --------- separator_aboveSystemDictionarySuggestions
+    * system dictionary suggestions
+    * --------- separator_aboveAddAndRemove
+    * Add word action
+    * Remove word action
+    * --------- separator_aboveStandardMenu
+    *
+    * The insertAction[s](...)/(Separator(...)) insert their things
+    * second argument (or generated by themself) before the first (or
+    * only) argument given.
+    */
+
+    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
+    if (handle_profile) {
+        popup->insertAction(separator_aboveStandardMenu, action_removeWord);
+        popup->insertAction(action_removeWord, action_addWord);
+        auto separator_aboveAddAndRemove = popup->insertSeparator(action_addWord);
+        popup->insertActions(separator_aboveAddAndRemove, spellings_system);
+        auto separator_aboveSystemDictionarySuggestions = popup->insertSeparator(spellings_system.first());
+        popup->insertAction(separator_aboveSystemDictionarySuggestions, action_dictionarySeparatorLine);
+        auto separator_aboveDictionarySeparatorLine = popup->insertSeparator(action_dictionarySeparatorLine);
+        popup->insertActions(separator_aboveDictionarySeparatorLine, spellings_profile);
+    } else {
+        popup->insertActions(separator_aboveStandardMenu, spellings_system);
+    }
+}
+
+void dlgComposer::slot_addWord()
+{
+    if (mSpellCheckedWord.isEmpty()) {
+        return;
+    }
+
+    mpHost->mpConsole->addWordToSet(mSpellCheckedWord);
+    // Redo spell check to update underlining
+    recheckWholeLine();
+}
+
+void dlgComposer::slot_removeWord()
+{
+    if (mSpellCheckedWord.isEmpty()) {
+        return;
+    }
+
+    mpHost->mpConsole->removeWordFromSet(mSpellCheckedWord);
+    // Redo spell check to update underlining
+    recheckWholeLine();
+}
+
+void dlgComposer::slot_popupMenu()
+{
+    auto* pA = qobject_cast<QAction*>(sender());
+    if (!mpHost || !pA) {
+        return;
+    }
+#if defined(Q_OS_FREEBSD)
+    QString t = pA->data().toString();
+#else
+    const QString t = pA->text();
+#endif
+    QTextCursor c = edit->cursorForPosition(mPopupPosition);
+    c.select(QTextCursor::WordUnderCursor);
+
+    c.removeSelectedText();
+    c.insertText(t);
+    c.clearSelection();
+    auto systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    if (systemDictionaryHandle) {
+        Hunspell_free_list(mpHost->mpConsole->getHunspellHandle_system(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
+    }
+    auto userDictionaryHandle = mpHost->mpConsole->getHunspellHandle_user();
+    if (userDictionaryHandle) {
+        Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
+    }
+
+    // Call the function again so that the replaced word gets rechecked:
+    slot_spellCheck();
 }
