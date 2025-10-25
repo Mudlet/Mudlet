@@ -577,8 +577,9 @@ private:
     QAction* mpAction_restoreEditorActionsToolbar = nullptr;
     QAction* mpAction_restoreEditorItemsToolbar = nullptr;
 
-    // We need to keep a record of this button as we have to disable it
+    // We need to keep a record of these buttons as we have to disable them
     // for the "Variables" view:
+    QAction* mpToggleActiveAction = nullptr;
     QAction* mpExportAction = nullptr;
     QAction* mpCreateModuleAction = nullptr;
 
