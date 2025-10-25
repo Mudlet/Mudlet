@@ -385,6 +385,11 @@ void ModernGLWidget::renderRooms()
             continue;
         }
 
+        // Skip hidden rooms
+        if (pR->isHidden()) {
+            continue;
+        }
+
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
         auto rz = static_cast<float>(pR->z());
@@ -636,6 +641,11 @@ void ModernGLWidget::renderConnections()
             continue;
         }
 
+        // Skip exits from hidden rooms
+        if (pR->isHidden()) {
+            continue;
+        }
+
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
         auto rz = static_cast<float>(pR->z());
@@ -690,6 +700,11 @@ void ModernGLWidget::renderConnections()
 
             TRoom* pExit = mpMap->mpRoomDB->getRoom(k);
             if (!pExit) {
+                continue;
+            }
+
+            // Skip exits to hidden rooms
+            if (pExit->isHidden()) {
                 continue;
             }
 

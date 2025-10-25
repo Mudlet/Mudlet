@@ -441,6 +441,10 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
+            // Skip exits from hidden rooms
+            if (pR->isHidden()) {
+                continue;
+            }
             auto rx = static_cast<float>(pR->x());
             auto ry = static_cast<float>(pR->y());
             auto rz = static_cast<float>(pR->z());
@@ -498,6 +502,10 @@ void GLWidget::paintGL()
                     }
                     TRoom* pExit = mpMap->mpRoomDB->getRoom(k);
                     if (!pExit) {
+                        continue;
+                    }
+                    // Skip exits to hidden rooms
+                    if (pExit->isHidden()) {
                         continue;
                     }
                     if (pExit->getArea() != mAID) {
@@ -907,6 +915,10 @@ void GLWidget::paintGL()
                     }
                     TRoom* pExit = mpMap->mpRoomDB->getRoom(k);
                     if (!pExit) {
+                        continue;
+                    }
+                    // Skip exits to hidden rooms
+                    if (pExit->isHidden()) {
                         continue;
                     }
                     if (pExit->getArea() != mAID) {
@@ -1333,6 +1345,10 @@ void GLWidget::paintGL()
             const int currentRoomId = itRoom.next();
             TRoom* pR = mpMap->mpRoomDB->getRoom(currentRoomId);
             if (!pR) {
+                continue;
+            }
+            // Skip hidden rooms
+            if (pR->isHidden()) {
                 continue;
             }
             auto rx = static_cast<float>(pR->x());
