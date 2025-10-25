@@ -189,9 +189,10 @@ be in these areas...</numerusform>
         <source>Enter one or more characters to set a new symbol for %n room(s).  Clear to unset.</source>
         <comment>%n is the total number of rooms involved.</comment>
         <extracomment>room properties dialog, setting symbols</extracomment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translatorcomment>Copied from the en_GB equivalent I just entered on-line in CrowdIn for that locale.</translatorcomment>
+        <translation>
+            <numerusform>Enter one or more characters to set a new symbol for %n room.  Clear to unset.</numerusform>
+            <numerusform>Enter one or more characters to set a new symbol for all %n rooms.  Clear to unset.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -202,9 +203,16 @@ be in these areas...</numerusform>
  • clear to unset.</source>
         <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
         <extracomment>room properties dialog, setting symbols</extracomment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translatorcomment>From viewing the source code it is clear that the %n == 1 case is NEVER used, i.e. the singular translation is not required for English locales.</translatorcomment>
+        <translation>
+            <numerusform>To set the symbol for %n room, please choose:
+ • an existing symbol from the list,
+ • enter one or more characters to set a new symbol,
+ • clear to unset.</numerusform>
+            <numerusform>To set the symbol for all %n rooms, please choose:
+ • an existing symbol from the list,
+ • enter one or more characters to set a new symbol,
+ • clear to unset.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
