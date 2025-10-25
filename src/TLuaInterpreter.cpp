@@ -56,7 +56,6 @@
 
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -67,7 +66,6 @@
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -4918,50 +4916,11 @@ int TLuaInterpreter::check_for_custom_speedwalk()
     return r;
 }
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-// Enable leak detection for MSVC debug builds.
-
-#define LUA_CLIENT_TYPE (_CLIENT_BLOCK | ((('L' << 8) | 'U') << 16))
-
-// No documentation available in wiki - internal function
-static void* l_alloc(void* ud, void* ptr, size_t osize, size_t nsize)
-{
-    (void)ud;
-    (void)osize;
-    if (nsize == 0) {
-        ::_free_dbg(ptr, LUA_CLIENT_TYPE);
-        return NULL;
-    } else {
-        return ::_realloc_dbg(ptr, nsize, LUA_CLIENT_TYPE, __FILE__, __LINE__);
-    }
-}
-
-// No documentation available in wiki - internal function
-static int panic(lua_State* L)
-{
-    fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n", lua_tostring(L, -1));
-    return 0;
-}
-
-// No documentation available in wiki - internal function
-static lua_State* newstate()
-{
-    lua_State* L = lua_newstate(l_alloc, NULL);
-    if (L) {
-        lua_atpanic(L, &panic);
-    }
-    return L;
-}
-
-#else
-
 // No documentation available in wiki - internal function
 static lua_State* newstate()
 {
     return luaL_newstate();
 }
-
-#endif // _MSC_VER && _DEBUG
 
 // No documentation available in wiki - internal function
 static void storeHostInLua(lua_State* L, Host* h);
@@ -7426,11 +7385,23 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("specialForceCharsetNegotiationOff")) {
-        host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        // specialForceCharsetNegotiationOff should not be used anymore, but we support it for compatibility
+        // it will be the inverse of enableCHARSET
+        host.mEnableCHARSET = !getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableCHARSET")) {
+        host.mEnableCHARSET = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
-        host.mForceNewEnvironNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
+        // forceNewEnvironNegotiationOff should not be used anymore, but we support it for compatibility
+        // it will be the inverse of enableNEWENVIRON
+        host.mEnableNEWENVIRON = !getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableNEWENVIRON")) {
+        host.mEnableNEWENVIRON = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("compactInputLine")) {
@@ -7698,8 +7669,18 @@ int TLuaInterpreter::getConfig(lua_State *L)
             // it will be the inverse of enableMXP
             lua_pushboolean(L, !host.mEnableMXP);
         } },
-        { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
+        { qsl("specialForceCharsetNegotiationOff"), [&](){
+            // specialForceCharsetNegotiationOff should not be used anymore, but we support it for compatibility
+            // it will be the inverse of enableCHARSET
+            lua_pushboolean(L, !host.mEnableCHARSET);
+        } },
+        { qsl("enableCHARSET"), [&](){ lua_pushboolean(L, host.mEnableCHARSET); } },
+        { qsl("forceNewEnvironNegotiationOff"), [&](){
+            // forceNewEnvironNegotiationOff should not be used anymore, but we support it for compatibility
+            // it will be the inverse of enableNEWENVIRON
+            lua_pushboolean(L, !host.mEnableNEWENVIRON);
+        } },
+        { qsl("enableNEWENVIRON"), [&](){ lua_pushboolean(L, host.mEnableNEWENVIRON); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
         { qsl("blankLinesBehaviour"), [&](){

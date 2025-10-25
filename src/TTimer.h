@@ -26,11 +26,9 @@
 #include "Tree.h"
 
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QPointer>
 #include <QTime>
-#include "post_guard.h"
 
 class Host;
 

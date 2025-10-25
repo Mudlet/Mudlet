@@ -23,9 +23,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QProcess>
-#include "post_guard.h"
 
 #include "TLuaInterpreter.h"
 

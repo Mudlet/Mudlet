@@ -20,10 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QList>
 #include <QUrl>
-#include "post_guard.h"
 
 class TMediaPlaylist
 {

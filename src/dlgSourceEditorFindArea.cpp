@@ -21,9 +21,7 @@
 #include "dlgSourceEditorFindArea.h"
 #include "ui_dlgPackageExporter.h"
 
-#include "pre_guard.h"
 #include <QDebug>
-#include "post_guard.h"
 
 dlgSourceEditorFindArea::dlgSourceEditorFindArea(QWidget* pParentWidget)
 : QWidget(pParentWidget)

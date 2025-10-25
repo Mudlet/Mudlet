@@ -26,11 +26,9 @@
 
 #include "Host.h"
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QString>
 #include <QSharedPointer>
-#include "post_guard.h"
 
 
 class TEvent;
