@@ -856,8 +856,7 @@ bool TSpatialAudio::parseJSONByRoom(QJsonObject& json, QVector3D& dimensions, fl
                 dimensions = QVector3D(
                     static_cast<float>(dimArray[0].toDouble(10.0)),
                     static_cast<float>(dimArray[1].toDouble(10.0)),
-                    static_cast<float>(dimArray[2].toDouble(3.0))
-                );
+                    static_cast<float>(dimArray[2].toDouble(3.0)));
             }
         }
     }

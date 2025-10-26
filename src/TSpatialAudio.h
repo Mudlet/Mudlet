@@ -101,7 +101,7 @@ private:
 class TSpatialAudioRoom
 {
 public:
-    TSpatialAudioRoom(QAudioEngine* engine);
+    explicit TSpatialAudioRoom(QAudioEngine* engine);
     ~TSpatialAudioRoom();
     
     // Room dimensions
