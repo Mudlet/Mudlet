@@ -153,6 +153,9 @@ void dlgModuleManager::slot_installModule()
         auto result = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
         if (!result.first) {
             failedModules << QFileInfo(fileName).fileName();
+        } else {
+            // Wait for this module's save to complete before installing the next one
+            mpHost->waitForProfileSave();
         }
     }
 

@@ -10425,6 +10425,9 @@ void dlgTriggerEditor::slot_import()
         auto result = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
         if (!result.first) {
             failedPackages << QFileInfo(fileName).fileName();
+        } else {
+            // Wait for this package's save to complete before installing the next one
+            mpHost->waitForProfileSave();
         }
     }
 
