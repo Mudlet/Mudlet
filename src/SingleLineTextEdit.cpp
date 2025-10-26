@@ -18,9 +18,7 @@
 #include "Host.h"
 #include "SingleLineTextEdit.h"
 
-#include "pre_guard.h"
 #include <QKeyEvent>
-#include "post_guard.h"
 
 SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
     : QPlainTextEdit(parent)

@@ -20,18 +20,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QString>
 #include <QByteArray>
-#include "post_guard.h"
 
 /**
  * @brief Utility class for secure string operations
- * 
+ *
  * This class provides cryptographically secure encryption for sensitive data like passwords
  * stored in configuration files. All encryption is profile-aware, using unique encryption
  * keys stored in profile directories.
- * 
+ *
  * Features:
  * - Per-profile encryption keys stored in profile directories
  * - Qt-based encryption with PBKDF2-SHA256 key derivation and HMAC authentication
@@ -39,7 +37,7 @@
  * - Secure memory clearing
  * - Automatic migration from plaintext passwords
  * - Graceful degradation when SSL/TLS is unavailable
- * 
+ *
  * Encrypted format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
  * All encoded as Base64 for safe text storage in encrypted files.
  */
@@ -53,7 +51,7 @@ public:
      * @return Base64-encoded encrypted string, or empty string if input is empty
      */
     static QString encryptStringForProfile(const QString& plaintext, const QString& profileName);
-    
+
     /**
      * @brief Decrypt a string using a profile-specific encryption key
      * @param ciphertext Base64-encoded encrypted string
@@ -61,26 +59,26 @@ public:
      * @return Decrypted plaintext, or empty string if input is empty/invalid
      */
     static QString decryptStringForProfile(const QString& ciphertext, const QString& profileName);
-    
+
     /**
      * @brief Check if a string appears to be in encrypted format
      * @param text String to check
      * @return true if the string appears to be encrypted
      */
     static bool isEncryptedFormat(const QString& text);
-    
+
     /**
      * @brief Securely clear a QString from memory
      * @param str String to clear
      */
     static void secureStringClear(QString& str);
-    
+
     /**
      * @brief Securely clear a QByteArray from memory
      * @param array Array to clear
      */
     static void secureByteArrayClear(QByteArray& array);
-    
+
     /**
      * @brief Check SSL backend configuration and report potential issues
      * @return QString with diagnostic information about SSL backend status
@@ -94,7 +92,7 @@ public:
     static bool isTestEnvironment();
 
     // Convenience methods for password storage and retrieval
-    
+
     /**
      * @brief Store an encrypted password for a profile and key
      * @param profileName Name of the profile
@@ -103,7 +101,7 @@ public:
      * @return true if stored successfully, false otherwise
      */
     static bool storePassword(const QString& profileName, const QString& key, const QString& password);
-    
+
     /**
      * @brief Retrieve and decrypt a password for a profile and key
      * @param profileName Name of the profile
@@ -111,7 +109,7 @@ public:
      * @return Decrypted password, or empty string if not found or decryption failed
      */
     static QString retrievePassword(const QString& profileName, const QString& key);
-    
+
     /**
      * @brief Remove a stored password for a profile and key
      * @param profileName Name of the profile
@@ -119,7 +117,7 @@ public:
      * @return true if removed successfully, false otherwise
      */
     static bool removePassword(const QString& profileName, const QString& key);
-    
+
     /**
      * @brief Check if a password is stored for a profile and key
      * @param profileName Name of the profile
@@ -130,7 +128,7 @@ public:
 
 private:
     // Password file storage helpers
-    
+
     /**
      * @brief Generate the file path for storing a password
      * @param profileName Name of the profile
@@ -138,7 +136,7 @@ private:
      * @return Full path to password file
      */
     static QString getPasswordFilePath(const QString& profileName, const QString& key);
-    
+
     /**
      * @brief Validate that a key name is safe for file storage
      * @param key Password identifier to validate
@@ -154,21 +152,21 @@ private:
      * @return 32-byte key
      */
     static QByteArray generateKey(const QByteArray& password, const QByteArray& salt, int iterations = 10000);
-    
+
     /**
      * @brief Get or create a profile-specific encryption key
      * @param profileName Name of the profile
      * @return 32-byte encryption key for the profile
      */
     static QByteArray getProfileEncryptionKey(const QString& profileName);
-    
+
     /**
      * @brief Load encryption key from profile directory file
      * @param profileName Name of the profile
      * @return 32-byte encryption key, or empty if not found/invalid
      */
     static QByteArray loadEncryptionKeyFromFile(const QString& profileName);
-    
+
     /**
      * @brief Store encryption key to profile directory file
      * @param profileName Name of the profile
@@ -176,19 +174,19 @@ private:
      * @return true if storage was successful
      */
     static bool storeEncryptionKeyToFile(const QString& profileName, const QByteArray& key);
-    
+
     /**
      * @brief Generate a random salt
      * @return 16-byte random salt
      */
     static QByteArray generateSalt();
-    
+
     /**
      * @brief Generate a random nonce for encryption
      * @return 16-byte random nonce
      */
     static QByteArray generateNonce();
-    
+
     /**
      * @brief Encrypt data using XOR cipher + HMAC-SHA256
      * @param plaintext Data to encrypt
@@ -201,7 +199,7 @@ private:
     static QByteArray encryptData(const QByteArray& plaintext, const QByteArray& key,
                                  const QByteArray& salt, const QByteArray& nonce,
                                  QByteArray& hmac);
-    
+
     /**
      * @brief Decrypt data using XOR cipher + HMAC-SHA256
      * @param ciphertext Encrypted data
@@ -214,7 +212,7 @@ private:
     static QByteArray decryptData(const QByteArray& ciphertext, const QByteArray& key,
                                  const QByteArray& salt, const QByteArray& nonce,
                                  const QByteArray& hmac);
-    
+
     // Constants for the encrypted format
     static constexpr quint8 ENCRYPTION_VERSION_CURRENT = 2; // Current version
     static constexpr int SALT_SIZE = 16;

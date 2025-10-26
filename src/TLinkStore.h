@@ -21,11 +21,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QStringList>
 #include <QVector>
-#include "post_guard.h"
 
 class Host;
 
@@ -46,18 +44,22 @@ public:
     : mMaxLinks(maxLinks)
     {}
 
-    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>());
+    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString());
 
     QStringList& getLinks(int id) { return mLinkStore[id]; }
     QStringList& getHints(int id) { return mHintStore[id]; }
     QStringList getLinksConst(int id) const { return mLinkStore.value(id); }
     QStringList getHintsConst(int id) const { return mHintStore.value(id); }
     QVector<int> getReference(int id) const { return mReferenceStore.value(id); }
+    
+    // EXPIRE tag support - manage link expiry by name
+    void expireLinks(const QString& expireName, Host* pH = nullptr);
+    QString getExpireName(int id) const { return mExpireStore.value(id); }
 
     int getCurrentLinkID() const { return mLinkID; }
 
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
-    
+
 #if !defined(LinkStore_Test)
     // OSC 8 hyperlink styling storage and retrieval
     void setStyling(int id, const Mudlet::HyperlinkStyling& styling);
@@ -77,6 +79,9 @@ private:
 #if !defined(LinkStore_Test)
     QMap<int, Mudlet::HyperlinkStyling> mStylingStore;
 #endif
+    // EXPIRE tag support - track which links belong to which expire group
+    QMap<int, QString> mExpireStore;  // Maps link ID to expire name
+    QMultiMap<QString, int> mExpireToLinks;  // Maps expire name to link IDs (for quick lookup)
 };
 
 #endif //MUDLET_TLINKSTORE_H
