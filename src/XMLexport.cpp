@@ -90,7 +90,6 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeTrigger(it, triggerPackage, true);
         }
     }
@@ -101,7 +100,6 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeTimer(it, timerPackage, true);
         }
     }
@@ -112,7 +110,6 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeAlias(it, aliasPackage, true);
         }
     }
@@ -123,7 +120,6 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (it->mModuleMember) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeAction(it, actionPackage, true);
         }
     }
@@ -134,7 +130,6 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (it->mModuleMember) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeScript(it, scriptPackage, true);
         }
     }
@@ -145,7 +140,6 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeKey(it, keyPackage, true);
         }
     }
@@ -703,7 +697,6 @@ void XMLexport::writeKeyPackage(const Host* pHost, pugi::xml_node& mudletPackage
         if (!it || it->isTemporary() || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        // Pass true for root-level items to skip unnecessary folder wrappers
         writeKey(it, keyPackage, true);
     }
 }
@@ -715,7 +708,6 @@ void XMLexport::writeScriptPackage(const Host* pHost, pugi::xml_node& mudletPack
         if (!it || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        // Pass true for root-level items to skip unnecessary folder wrappers
         writeScript(it, scriptPackage, true);
     }
 }
@@ -727,7 +719,6 @@ void XMLexport::writeActionPackage(const Host* pHost, pugi::xml_node& mudletPack
         if (!it || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        // Pass true for root-level items to skip unnecessary folder wrappers
         writeAction(it, actionPackage, true);
     }
 }
@@ -740,7 +731,6 @@ void XMLexport::writeAliasPackage(const Host* pHost, pugi::xml_node& mudletPacka
             continue;
         }
         if (!it->isTemporary()) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeAlias(it, aliasPackage, true);
         }
     }
@@ -754,7 +744,6 @@ void XMLexport::writeTimerPackage(const Host* pHost, pugi::xml_node& mudletPacka
             continue;
         }
         if (!it->isTemporary()) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeTimer(it, timerPackage, true);
         }
     }
@@ -768,7 +757,6 @@ void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPac
             continue;
         }
         if (!it->isTemporary()) {
-            // Pass true for root-level items to skip unnecessary folder wrappers
             writeTrigger(it, triggerPackage, true);
         }
     }
@@ -891,10 +879,10 @@ void XMLexport::exportToClipboard(TTrigger* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
+void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent, bool packageRootLevel)
 {
-    // Skip wrapper for root-level folders in package exports, but still export their children
-    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+    // Skip wrapper for root-level folders in package exports
+    bool shouldSkipWrapper = packageRootLevel && pT->isFolder();
 
     if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto trigger = xmlParent.append_child(pT->isFolder() ? "TriggerGroup" : "Trigger");
@@ -977,10 +965,10 @@ void XMLexport::exportToClipboard(TAlias* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
+void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent, bool packageRootLevel)
 {
-    // Skip wrapper for root-level folders in package exports, but still export their children
-    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+    // Skip wrapper for root-level folders in package exports
+    bool shouldSkipWrapper = packageRootLevel && pT->isFolder();
 
     if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto aliasContents = xmlParent.append_child(pT->isFolder() ? "AliasGroup" : "Alias");
@@ -1034,10 +1022,10 @@ void XMLexport::exportToClipboard(TAction* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
+void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent, bool packageRootLevel)
 {
-    // Skip wrapper for root-level folders in package exports, but still export their children
-    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+    // Skip wrapper for root-level folders in package exports
+    bool shouldSkipWrapper = packageRootLevel && pT->isFolder();
 
     if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto actionContents = xmlParent.append_child(pT->isFolder() ? "ActionGroup" : "Action");
@@ -1107,10 +1095,10 @@ void XMLexport::exportToClipboard(TTimer* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
+void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent, bool packageRootLevel)
 {
-    // Skip wrapper for root-level folders in package exports, but still export their children
-    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+    // Skip wrapper for root-level folders in package exports
+    bool shouldSkipWrapper = packageRootLevel && pT->isFolder();
 
     if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto timerContents = xmlParent.append_child(pT->isFolder() ? "TimerGroup" : "Timer");
@@ -1167,10 +1155,10 @@ void XMLexport::exportToClipboard(TScript* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
+void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent, bool packageRootLevel)
 {
-    // Skip wrapper for root-level folders in package exports, but still export their children
-    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+    // Skip wrapper for root-level folders in package exports
+    bool shouldSkipWrapper = packageRootLevel && pT->isFolder();
 
     if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto scriptContents = xmlParent.append_child(pT->isFolder() ? "ScriptGroup" : "Script");
@@ -1226,10 +1214,10 @@ void XMLexport::exportToClipboard(TKey* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
+void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent, bool packageRootLevel)
 {
-    // Skip wrapper for root-level folders in package exports, but still export their children
-    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+    // Skip wrapper for root-level folders in package exports
+    bool shouldSkipWrapper = packageRootLevel && pT->isFolder();
 
     if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto keyContents = xmlParent.append_child(pT->isFolder() ? "KeyGroup" : "Key");

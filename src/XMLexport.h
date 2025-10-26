@@ -59,12 +59,12 @@ public:
     explicit XMLexport(TKey*);
 
     void writeHost(Host*, pugi::xml_node hostPackage);
-    void writeTrigger(TTrigger*, pugi::xml_node xmlParent, bool isPackageRootLevel = false);
-    void writeTimer(TTimer*, pugi::xml_node xmlParent, bool isPackageRootLevel = false);
-    void writeAlias(TAlias*, pugi::xml_node xmlParent, bool isPackageRootLevel = false);
-    void writeAction(TAction*, pugi::xml_node xmlParent, bool isPackageRootLevel = false);
-    void writeScript(TScript*, pugi::xml_node xmlParent, bool isPackageRootLevel = false);
-    void writeKey(TKey*, pugi::xml_node xmlParent, bool isPackageRootLevel = false);
+    void writeTrigger(TTrigger*, pugi::xml_node xmlParent, bool packageRootLevel = false);
+    void writeTimer(TTimer*, pugi::xml_node xmlParent, bool packageRootLevel = false);
+    void writeAlias(TAlias*, pugi::xml_node xmlParent, bool packageRootLevel = false);
+    void writeAction(TAction*, pugi::xml_node xmlParent, bool packageRootLevel = false);
+    void writeScript(TScript*, pugi::xml_node xmlParent, bool packageRootLevel = false);
+    void writeKey(TKey*, pugi::xml_node xmlParent, bool packageRootLevel = false);
     void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
     void writeModuleXML(const QString& moduleName, const QString& fileName, bool async = false);
 
