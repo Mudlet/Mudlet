@@ -1763,6 +1763,38 @@ void ModernGLWidget::renderSingleLabel(const TMapLabel& label)
     float width = label.size.width();
     float height = label.size.height();
 
+    // If label is highlighted, render an orange outline quad FIRST (so it appears behind)
+    if (label.highlight) {
+        // Render a slightly larger quad with orange color behind the label
+        float outlineWidth = width * 1.1f;  // 10% larger
+        float outlineHeight = height * 1.1f;
+        float outlineZ = z - 0.01f; // Slightly behind to ensure it appears as background
+
+        GeometryData highlightQuad = mGeometryManager.generateBillboardQuadGeometry(
+            x, y, outlineZ, outlineWidth, outlineHeight);
+
+        // Create orange color for all vertices
+        highlightQuad.colors.clear();
+        for (int i = 0; i < 4; i++) {
+            highlightQuad.colors << 1.0f << 0.5f << 0.0f << 1.0f; // Orange (RGB: 255, 128, 0)
+        }
+
+        // No texture for highlight quad - just solid color
+        highlightQuad.textureId = 0;
+
+        // Render the highlight outline before the label
+        auto highlightCommand = std::make_unique<RenderTrianglesCommand>(
+            highlightQuad.vertices,
+            highlightQuad.colors,
+            mCameraController.getProjectionMatrix(),
+            mCameraController.getViewMatrix(),
+            mCameraController.getModelMatrix()
+        );
+
+        mRenderCommandQueue.addCommand(std::move(highlightCommand));
+    }
+
+    // Now render the actual label on top of the highlight
     GeometryData labelQuad = mGeometryManager.generateBillboardQuadGeometry(x, y, z, width, height);
 
     // Assign the texture to the geometry
@@ -1777,10 +1809,4 @@ void ModernGLWidget::renderSingleLabel(const TMapLabel& label)
     );
 
     mRenderCommandQueue.addCommand(std::move(command));
-
-    // If label is highlighted, render an orange outline quad
-    if (label.highlight) {
-        // TODO: Implement highlight outline rendering
-        // This would involve rendering a slightly larger quad with orange color behind the label
-    }
 }
