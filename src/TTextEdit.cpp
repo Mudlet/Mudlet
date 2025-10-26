@@ -587,15 +587,8 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
     if (Q_UNLIKELY(charStyle.isFound())) {
         if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            // When colors would be swapped and the search highlight colors match,
-            // only reverse one color to make the text readable
-            if (mSearchHighlightFgColor == mSearchHighlightBgColor) {
-                fgColors.append(mSearchHighlightFgColor);
-                bgColor = (mSearchHighlightBgColor.lightness() < 128) ? Qt::white : Qt::black;
-            } else {
-                fgColors.append(mSearchHighlightBgColor);
-                bgColor = mSearchHighlightFgColor;
-            }
+            fgColors.append(mSearchHighlightBgColor);
+            bgColor = mSearchHighlightFgColor;
         } else {
             fgColors.append(mSearchHighlightFgColor);
             bgColor = mSearchHighlightBgColor;
