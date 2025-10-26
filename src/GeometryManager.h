@@ -151,6 +151,7 @@ public:
     GeometryData generateTriangleGeometry(const QVector<float>& vertices, const QVector<float>& colors);
     GeometryData generatePlayerIconGeometry(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
     void clearPlayerIconTemplate(); // Clear cached template to free memory
+    GeometryData generateBillboardQuadGeometry(float x, float y, float z, float width, float height);
 
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry,

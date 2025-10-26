@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "TArea.h"
+#include "TMapLabel.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -322,9 +323,15 @@ void ModernGLWidget::paintGL()
     // Enable room flattening
     zFlattening = 8.0f;
 
-    // Build up render commands - render connections first so rooms appear above them
+    // Build up render commands in order:
+    // 1. Connections (lowest layer)
     renderConnections();
+    // 2. Background labels (behind rooms)
+    renderLabels();
+    // 3. Rooms (middle layer)
     renderRooms();
+    // 4. Foreground labels (on top of rooms)
+    renderForegroundLabels();
 
     // Execute all queued commands
     mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer, mTexCoordBuffer);
@@ -1628,4 +1635,152 @@ void ModernGLWidget::onCameraAnimationTick()
 
     // Trigger a repaint
     update();
+}
+
+unsigned int ModernGLWidget::createTextureFromPixmap(const QPixmap& pixmap)
+{
+    if (pixmap.isNull()) {
+        return 0;
+    }
+
+    // Convert QPixmap to QImage
+    QImage image = pixmap.toImage();
+    if (image.isNull()) {
+        return 0;
+    }
+
+    // Convert to OpenGL format
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).flipped(Qt::Vertical);
+#else
+    // Deprecated in 6.9 and due for removal in 6.13:
+    QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).mirrored(false, true);
+#endif
+
+    // Create OpenGL texture
+    GLuint textureId;
+    glGenTextures(1, &textureId);
+    glBindTexture(GL_TEXTURE_2D, textureId);
+
+    // Upload texture data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(),
+                 0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
+
+    // Set texture parameters for UI-like rendering (no mipmaps, nearest filtering for crisp text)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    return textureId;
+}
+
+void ModernGLWidget::renderLabels()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
+    if (!pArea) {
+        return;
+    }
+
+    // Get current Z level for filtering
+    float currentZ = static_cast<float>(mMapCenterZ);
+
+    // Separate labels by showOnTop flag to control render order
+    QVector<int> backgroundLabelIds;
+    QVector<int> foregroundLabelIds;
+
+    // Collect label IDs and separate by showOnTop flag
+    QMapIterator<int, TMapLabel> itLabel(pArea->mMapLabels);
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        const TMapLabel& label = itLabel.value();
+
+        // Filter by Z-level (same logic as 2D mapper)
+        float labelZ = label.pos.z();
+        if (labelZ != currentZ) {
+            continue;
+        }
+
+        if (label.showOnTop) {
+            foregroundLabelIds.append(itLabel.key());
+        } else {
+            backgroundLabelIds.append(itLabel.key());
+        }
+    }
+
+    // Render background labels first (they appear behind rooms)
+    for (int labelId : backgroundLabelIds) {
+        renderSingleLabel(pArea->mMapLabels[labelId]);
+    }
+
+    // Foreground labels will be rendered after rooms in the main paintGL loop
+    // For now, store them for later rendering
+    mForegroundLabelIds = foregroundLabelIds;
+}
+
+void ModernGLWidget::renderForegroundLabels()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
+    if (!pArea) {
+        return;
+    }
+
+    // Render foreground labels (on top of rooms)
+    for (int labelId : mForegroundLabelIds) {
+        if (pArea->mMapLabels.contains(labelId)) {
+            renderSingleLabel(pArea->mMapLabels[labelId]);
+        }
+    }
+
+    // Clear the list after rendering
+    mForegroundLabelIds.clear();
+}
+
+void ModernGLWidget::renderSingleLabel(const TMapLabel& label)
+{
+    // Create or get cached texture
+    if (label.textureId == 0) {
+        label.textureId = createTextureFromPixmap(label.pix);
+        if (label.textureId == 0) {
+            return; // Failed to create texture
+        }
+    }
+
+    // Generate billboard quad geometry
+    float x = label.pos.x();
+    float y = label.pos.y();
+    float z = label.pos.z();
+
+    // Use label size from the label data
+    float width = label.size.width();
+    float height = label.size.height();
+
+    GeometryData labelQuad = mGeometryManager.generateBillboardQuadGeometry(x, y, z, width, height);
+
+    // Assign the texture to the geometry
+    labelQuad.textureId = label.textureId;
+
+    // Create render command for this label
+    auto command = std::make_unique<RenderTexturedTrianglesCommand>(
+        labelQuad,
+        mCameraController.getProjectionMatrix(),
+        mCameraController.getViewMatrix(),
+        mCameraController.getModelMatrix()
+    );
+
+    mRenderCommandQueue.addCommand(std::move(command));
+
+    // If label is highlighted, render an orange outline quad
+    if (label.highlight) {
+        // TODO: Implement highlight outline rendering
+        // This would involve rendering a slightly larger quad with orange color behind the label
+    }
 }

@@ -48,6 +48,9 @@ public:
     bool showOnTop = false;
     bool noScaling = false;
     bool temporary = false;
+
+    // OpenGL texture cache for 3D mapper (mutable so it can be updated in const methods)
+    mutable unsigned int textureId = 0;
 };
 
 #endif // MUDLET_TMAPLABEL_H

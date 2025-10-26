@@ -207,6 +207,9 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
+    void renderLabels();
+    void renderForegroundLabels();
+    void renderSingleLabel(const class TMapLabel& label);
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
     void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
@@ -218,6 +221,10 @@ private:
     QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
     QColor getEnvironmentColor(TRoom* pRoom);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
+    unsigned int createTextureFromPixmap(const QPixmap& pixmap);
+
+    // Label rendering state
+    QVector<int> mForegroundLabelIds;
 };
 
 #endif // MUDLET_MODERN_GLWIDGET_H

@@ -234,6 +234,53 @@ void GeometryManager::clearPlayerIconTemplate()
     mPlayerIconTemplate.reset();
 }
 
+GeometryData GeometryManager::generateBillboardQuadGeometry(float x, float y, float z, float width, float height)
+{
+    GeometryData result;
+
+    // Create a quad centered at (x, y, z) with given width and height
+    // The quad is in the XY plane initially, will be billboard-transformed in the shader
+    float halfWidth = width / 2.0f;
+    float halfHeight = height / 2.0f;
+
+    // Vertices: position (x,y,z) + normal (nx,ny,nz)
+    // Four corners of the quad
+    result.vertices = {
+        // Bottom-left
+        x - halfWidth, y - halfHeight, z,  0.0f, 0.0f, 1.0f,
+        // Bottom-right
+        x + halfWidth, y - halfHeight, z,  0.0f, 0.0f, 1.0f,
+        // Top-right
+        x + halfWidth, y + halfHeight, z,  0.0f, 0.0f, 1.0f,
+        // Top-left
+        x - halfWidth, y + halfHeight, z,  0.0f, 0.0f, 1.0f
+    };
+
+    // Texture coordinates (standard 2D quad mapping)
+    result.textureCoords = {
+        0.0f, 1.0f,  // Bottom-left
+        1.0f, 1.0f,  // Bottom-right
+        1.0f, 0.0f,  // Top-right
+        0.0f, 0.0f   // Top-left
+    };
+
+    // Colors (white, will be modulated by texture)
+    result.colors = {
+        1.0f, 1.0f, 1.0f, 1.0f,  // Bottom-left
+        1.0f, 1.0f, 1.0f, 1.0f,  // Bottom-right
+        1.0f, 1.0f, 1.0f, 1.0f,  // Top-right
+        1.0f, 1.0f, 1.0f, 1.0f   // Top-left
+    };
+
+    // Indices for two triangles making up the quad
+    result.indices = {
+        0, 1, 2,  // First triangle
+        0, 2, 3   // Second triangle
+    };
+
+    return result;
+}
+
 void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY, float rotZ)
 {
     GeometryData result;
