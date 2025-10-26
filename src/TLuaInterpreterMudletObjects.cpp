@@ -2772,35 +2772,3 @@ int TLuaInterpreter::closeProfile(lua_State* L)
     }
     return 0;
 }
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getKeyCode
-int TLuaInterpreter::getKeyCode(lua_State* L)
-{
-    auto [isId, nameOrId] = getVerifiedStringOrInteger(L, __func__, 1, "itemID or item name");
-    bool isOk = false;
-    const int id = nameOrId.toInt(&isOk);
-    if (isId && (!isOk || id < 0)) {
-        // Must be zero or more but doesn't seem to be, must return the
-        // original supplied argument as a string (rather than the nameOrId
-        // "number" as the latter will have been rounded to an integer) to
-        // show what was entered:
-        return warnArgumentValue(L, __func__, csmInvalidItemID.arg(lua_tostring(L, 1)));
-    }
-
-    Host& host = getHostFromLua(L);
-    TKey* pT = nullptr;
-    if (isId) {
-        pT = host.getKeyUnit()->getKey(id);
-    } else {
-        pT = host.getKeyUnit()->mLookupTable.value(nameOrId);
-    }
-
-    if (!pT) {
-        return warnArgumentValue(L, __func__, qsl("keybind %1%2 does not exist").arg((isId ? qsl("ID ") : QString()), nameOrId));
-    }
-
-    lua_pushinteger(L, static_cast<lua_Integer>(pT->getKeyCode()));
-    lua_pushinteger(L, static_cast<lua_Integer>(pT->getKeyModifiers()));
-
-    return 2;
-}
