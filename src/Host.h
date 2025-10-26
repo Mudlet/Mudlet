@@ -62,6 +62,7 @@ class TEvent;
 class TArea;
 class LuaInterface;
 class TMedia;
+class TSpatialAudio;
 class GMCPAuthenticator;
 class TRoom;
 class TConsole;
@@ -533,6 +534,7 @@ public:
     dlgTriggerEditor* mpEditorDialog{nullptr};
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
+    TSpatialAudio* mpSpatialAudio{nullptr};
     QScopedPointer<GMCPAuthenticator> mpAuth;
     dlgNotepad* mpNotePad{nullptr};
 

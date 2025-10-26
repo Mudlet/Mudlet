@@ -5172,6 +5172,18 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
     lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
+    
+    // Spatial audio functions - table-based API
+    lua_register(pGlobalLua, "playSpatialSound", TLuaInterpreter::playSpatialSound);
+    lua_register(pGlobalLua, "stopSpatialSound", TLuaInterpreter::stopSpatialSound);
+    lua_register(pGlobalLua, "pauseSpatialSound", TLuaInterpreter::pauseSpatialSound);
+    lua_register(pGlobalLua, "updateSpatialSound", TLuaInterpreter::updateSpatialSound);
+    lua_register(pGlobalLua, "getSpatialSounds", TLuaInterpreter::getSpatialSounds);
+    lua_register(pGlobalLua, "removeSpatialSound", TLuaInterpreter::removeSpatialSound);
+    lua_register(pGlobalLua, "setSpatialListener", TLuaInterpreter::setSpatialListener);
+    lua_register(pGlobalLua, "setSpatialMasterVolume", TLuaInterpreter::setSpatialMasterVolume);
+    lua_register(pGlobalLua, "playSpatialTestTone", TLuaInterpreter::playSpatialTestTone);
+    
     lua_register(pGlobalLua, "setBorderSizes", TLuaInterpreter::setBorderSizes);
     lua_register(pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop);
     lua_register(pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight);

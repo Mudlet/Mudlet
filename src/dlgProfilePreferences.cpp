@@ -30,6 +30,7 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TSpatialAudio.h"
 #include "TTextEdit.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
@@ -955,6 +956,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     groupBox_purgeMediaCache->setVisible(true);
     connect(buttonPurgeMediaCache, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_purgeMediaCache);
 
+    groupBox_spatialAudioTest->setVisible(true);
+    connect(buttonRunSpatialAudioTest, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_runSpatialAudioTest);
+
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
     const QStringList profileList = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
@@ -1741,6 +1745,524 @@ void dlgProfilePreferences::slot_purgeMediaCache()
     }
 
     pHost->mpMedia->purgeMediaCache();
+}
+
+void dlgProfilePreferences::slot_runSpatialAudioTest()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    auto* spatialAudio = pHost->mpSpatialAudio;
+    if (!spatialAudio) {
+        return;
+    }
+
+    const int testIndex = comboBox_spatialAudioTest->currentIndex();
+    
+    // Close the preferences dialog
+    close();
+    
+    // Execute the test after a short delay to allow dialog to close
+    QTimer::singleShot(100, pHost, [pHost, spatialAudio, testIndex, this]() {
+        switch (testIndex) {
+        case 0: // White Noise - circling test
+            {
+                //: Title for White Noise spatial audio test
+                pHost->postMessage(tr("\n=== WHITE NOISE TEST ==="));
+                //: Description of White Noise spatial audio test
+                pHost->postMessage(tr("White noise circling around listener at ear level\n"));
+                
+                // Generate and create the test tone source
+                spatialAudio->createTestToneSource(qsl("white_test"), TSpatialAudio::WhiteNoise, 0, 2.0f);
+                auto* source = spatialAudio->getSource(qsl("white_test"));
+                if (!source) {
+                    break;
+                }
+                
+                source->setPosition(0, 0, 5);
+                source->setVolume(0.6f);
+                source->setLoops(-1);
+                source->play();
+                
+                //: Initial position message in White Noise test
+                pHost->postMessage(tr("White noise at: FRONT (0°)"));
+                
+                // Define position sequence
+                struct Position { int delay; float azimuth; QString name; };
+                static const QVector<Position> positions = {
+                    //: Spatial audio test - sound position at 45 degrees to the right
+                    {2000, 45, tr("Front Right (45°)")},
+                    //: Spatial audio test - sound position directly to the right
+                    {4000, 90, tr("RIGHT (90°)")},
+                    //: Spatial audio test - sound position at 135 degrees (right rear)
+                    {6000, 135, tr("Back Right (135°)")},
+                    //: Spatial audio test - sound position directly behind
+                    {8000, 180, tr("REAR (180°)")},
+                    //: Spatial audio test - sound position at -135 degrees (left rear)
+                    {10000, -135, tr("Back Left (-135°)")},
+                    //: Spatial audio test - sound position directly to the left
+                    {12000, -90, tr("LEFT (-90°)")},
+                    //: Spatial audio test - sound position at -45 degrees (left front)
+                    {14000, -45, tr("Front Left (-45°)")},
+                    //: Spatial audio test - sound returns to front position
+                    {16000, 0, tr("Back to FRONT (0°)")}
+                };
+                
+                for (const auto& pos : positions) {
+                    QTimer::singleShot(pos.delay, pHost, [pHost, spatialAudio, pos]() {
+                        if (auto* src = spatialAudio->getSource(qsl("white_test"))) {
+                            src->setPosition(pos.azimuth, 0, 5);
+                            pHost->postMessage(qsl("  → %1").arg(pos.name));
+                        }
+                    });
+                }
+                
+                QTimer::singleShot(18000, pHost, [pHost, spatialAudio, this]() {
+                    spatialAudio->removeSource(qsl("white_test"));
+                    //: Completion message for White Noise spatial audio test
+                    pHost->postMessage(tr("\n✓ White noise test complete!"));
+                });
+            }
+            break;
+            
+        case 1: // Pink Noise - calibration test
+            {
+                //: Title for Pink Noise spatial audio test
+                pHost->postMessage(tr("\n=== PINK NOISE TEST ==="));
+                //: Description of Pink Noise spatial audio test
+                pHost->postMessage(tr("Industry-standard pink noise for speaker calibration\n"));
+                
+                struct Speaker { float azimuth; QString name; };
+                static const QVector<Speaker> speakers = {
+                    //: Spatial audio test - speaker position directly in front
+                    {0, tr("FRONT")}, 
+                    //: Spatial audio test - speaker position front right
+                    {45, tr("Front Right")}, 
+                    //: Spatial audio test - speaker position directly to the right
+                    {90, tr("RIGHT")}, 
+                    //: Spatial audio test - speaker position back right
+                    {135, tr("Back Right")},
+                    //: Spatial audio test - speaker position directly behind
+                    {180, tr("REAR")}, 
+                    //: Spatial audio test - speaker position back left
+                    {-135, tr("Back Left")}, 
+                    //: Spatial audio test - speaker position directly to the left
+                    {-90, tr("LEFT")}, 
+                    //: Spatial audio test - speaker position front left
+                    {-45, tr("Front Left")}
+                };
+                
+                for (int i = 0; i < speakers.size(); ++i) {
+                    const int delay = i * 3500;
+                    QTimer::singleShot(delay, pHost, [pHost, spatialAudio, i, speaker = speakers[i], this]() {
+                        //: %1 is speaker number (1-8), %2 is speaker name, %3 is azimuth angle in degrees
+                        pHost->postMessage(tr("Speaker %1/8: %2 (%3°)").arg(i + 1).arg(speaker.name).arg(static_cast<int>(speaker.azimuth)));
+                        
+                        const QString sourceName = qsl("pink_test_%1").arg(i);
+                        spatialAudio->createTestToneSource(sourceName, TSpatialAudio::PinkNoise, 0, 3.0f);
+                        if (auto* src = spatialAudio->getSource(sourceName)) {
+                            src->setPosition(speaker.azimuth, 0, 5);
+                            src->setVolume(0.6f);
+                            src->setLoops(1);
+                            src->play();
+                        }
+                        
+                        // Clean up after playback finishes (3s duration + 400ms buffer)
+                        QTimer::singleShot(3400, pHost, [spatialAudio, sourceName]() {
+                            spatialAudio->removeSource(sourceName);
+                        });
+                    });
+                }
+                
+                QTimer::singleShot(speakers.size() * 3500, pHost, [pHost, this]() {
+                    //: Completion message for Pink Noise spatial audio test
+                    pHost->postMessage(tr("\n✓ Pink noise calibration test complete!"));
+                });
+            }
+            break;
+            
+        case 2: // Sine Waves - frequency test
+            {
+                //: Title for Sine Wave spatial audio test
+                pHost->postMessage(tr("\n=== SINE WAVE FREQUENCY TEST ==="));
+                //: Description of Sine Wave spatial audio test
+                pHost->postMessage(tr("Testing spatial positioning with pure tones\n"));
+                
+                struct Tone { float freq; float azimuth; QString name; };
+                static const QVector<Tone> tones = {
+                    //: Spatial audio test - musical note frequency (A3)
+                    {220, -90, tr("220 Hz (A3)")},
+                    //: Spatial audio test - musical note frequency (A4)
+                    {440, -30, tr("440 Hz (A4)")},
+                    //: Spatial audio test - musical note frequency (A5)
+                    {880, 30, tr("880 Hz (A5)")},
+                    //: Spatial audio test - musical note frequency (A6)
+                    {1760, 90, tr("1760 Hz (A6)")}
+                };
+                
+                for (int i = 0; i < tones.size(); ++i) {
+                    const int delay = i * 2500;
+                    QTimer::singleShot(delay, pHost, [pHost, spatialAudio, i, tone = tones[i], this]() {
+                        //: %1 is tone number (1-4), %2 is tone name, %3 is azimuth angle
+                        pHost->postMessage(tr("Tone %1/4: %2 at %3°").arg(i + 1).arg(tone.name).arg(static_cast<int>(tone.azimuth)));
+                        
+                        const QString sourceKey = qsl("sine_test_%1").arg(i);
+                        spatialAudio->createTestToneSource(sourceKey, TSpatialAudio::SineWave, tone.freq, 2.0f);
+                        if (auto* src = spatialAudio->getSource(sourceKey)) {
+                            src->setPosition(tone.azimuth, 0, 5);
+                            src->setVolume(0.5f);
+                            src->setLoops(1);
+                            src->play();
+                        }
+                    });
+                }
+                
+                QTimer::singleShot(tones.size() * 2500, pHost, [pHost, spatialAudio, this]() {
+                    //: Completion message for Sine Wave spatial audio test
+                    pHost->postMessage(tr("\n✓ Sine wave frequency test complete!"));
+                    
+                    // Clean up all sine test sources
+                    for (int i = 0; i < 4; ++i) {
+                        if (auto* src = spatialAudio->getSource(qsl("sine_test_%1").arg(i))) {
+                            src->stop();
+                        }
+                        spatialAudio->removeSource(qsl("sine_test_%1").arg(i));
+                    }
+                });
+            }
+            break;
+            
+        case 3: // Professional 7.1 Surround
+            {
+                //: Title for 7.1 Surround Sound spatial audio test
+                pHost->postMessage(tr("\n=== PROFESSIONAL 7.1 SURROUND CALIBRATION ==="));
+                //: Description of 7.1 Surround Sound spatial audio test
+                pHost->postMessage(tr("Using pink noise - the industry standard for speaker testing\n"));
+                
+                struct Channel { QString name; float azimuth; float elevation; bool isSubwoofer; };
+                static const QVector<Channel> channels = {
+                    //: 7.1 Surround Sound channel name
+                    {tr("Front Left"), -30, 0, false},
+                    //: 7.1 Surround Sound channel name
+                    {tr("Front Right"), 30, 0, false},
+                    //: 7.1 Surround Sound channel name
+                    {tr("Center"), 0, 0, false},
+                    //: 7.1 Surround Sound channel name
+                    {tr("Rear Left"), -150, 0, false},
+                    //: 7.1 Surround Sound channel name
+                    {tr("Rear Right"), 150, 0, false},
+                    //: 7.1 Surround Sound channel name
+                    {tr("Side Left"), -90, 0, false},
+                    //: 7.1 Surround Sound channel name
+                    {tr("Side Right"), 90, 0, false},
+                    //: 7.1 Surround Sound channel name
+                    {tr("Subwoofer (Low Freq)"), 0, -45, true}
+                };
+                
+                for (int i = 0; i < channels.size(); ++i) {
+                    const int delay = i * 5500;
+                    QTimer::singleShot(delay, pHost, [pHost, spatialAudio, i, ch = channels[i], this]() {
+                        //: %1 is channel number, %2 is total channels, %3 is channel name, %4 is azimuth, %5 is elevation
+                        pHost->postMessage(tr("[%1/%2] %3 (azimuth=%4°, elevation=%5°)")
+                            .arg(i + 1).arg(8).arg(ch.name)
+                            .arg(static_cast<int>(ch.azimuth)).arg(static_cast<int>(ch.elevation)));
+                        
+                        // Use unique key for each channel to avoid race conditions
+                        const QString key = qsl("surround_cal_%1").arg(i);
+                        auto toneType = ch.isSubwoofer ? TSpatialAudio::SineWave : TSpatialAudio::PinkNoise;
+                        spatialAudio->createTestToneSource(key, toneType, 80, 5.0f);
+                        if (auto* src = spatialAudio->getSource(key)) {
+                            src->setPosition(ch.azimuth, ch.elevation, 5);
+                            src->setVolume(0.6f);
+                            src->setLoops(1);
+                            src->play();
+                        }
+                    });
+                }
+                
+                QTimer::singleShot(channels.size() * 5500, pHost, [pHost, spatialAudio, this]() {
+                    // Clean up all channel sources
+                    for (int i = 0; i < 8; ++i) {
+                        spatialAudio->removeSource(qsl("surround_cal_%1").arg(i));
+                    }
+                    //: Completion message for 7.1 Surround Sound spatial audio test
+                    pHost->postMessage(tr("\n✓ Professional surround calibration complete!"));
+                });
+            }
+            break;
+            
+        case 4: // Vertical Positioning
+            {
+                //: Title for Vertical Positioning spatial audio test
+                pHost->postMessage(tr("\n=== VERTICAL POSITIONING TEST ==="));
+                //: Description of Vertical Positioning spatial audio test
+                pHost->postMessage(tr("Broadband noise with emphasized elevation cues - focus on the 'height' of the sound\n"));
+                
+                // Use pink noise instead of sine wave - better for elevation perception
+                // Shorter duration with more distinct pauses between positions
+                spatialAudio->createTestToneSource(qsl("vertical_test"), TSpatialAudio::PinkNoise, 0, 2.5f);
+                if (auto* src = spatialAudio->getSource(qsl("vertical_test"))) {
+                    src->setPosition(0, -75, 3);  // Closer distance (3m) for stronger effect
+                    src->setVolume(0.8f);  // Louder for clearer perception
+                    src->setLoops(0);  // Play once per position (bursts)
+                    src->play();
+                }
+                
+                //: Initial position in Vertical Positioning spatial audio test
+                pHost->postMessage(tr("Position: BELOW (-75°) - sound from underneath"));
+                
+                // More dramatic elevation changes with longer pauses and bursts instead of continuous
+                struct Position { int delay; float elevation; float distance; QString name; QString description; };
+                static const QVector<Position> positions = {
+                    //: Vertical position in spatial audio test
+                    {4000, -30, 3.5f, tr("Below-Front (-30°)"), tr("sound angled down from front")},
+                    //: Vertical position in spatial audio test
+                    {8000, 0, 4.0f, tr("EAR LEVEL (0°)"), tr("sound directly ahead")},
+                    //: Vertical position in spatial audio test
+                    {12000, 60, 3.0f, tr("Above-Front (60°)"), tr("sound angled up from front")},
+                    //: Vertical position in spatial audio test
+                    {16000, 90, 2.5f, tr("OVERHEAD (90°)"), tr("sound directly above")},
+                    //: Vertical position in spatial audio test - dramatic contrast
+                    {20000, -90, 2.5f, tr("FLOOR (-90°)"), tr("sound directly below for contrast")},
+                    //: Vertical position in spatial audio test - returning to center
+                    {24000, 0, 4.0f, tr("Back to EAR LEVEL"), tr("sound directly ahead again")}
+                };
+                
+                for (const auto& pos : positions) {
+                    QTimer::singleShot(pos.delay, pHost, [pHost, spatialAudio, pos, this]() {
+                        // Create a fresh burst for each position
+                        spatialAudio->createTestToneSource(qsl("vertical_test"), TSpatialAudio::PinkNoise, 0, 2.5f);
+                        if (auto* src = spatialAudio->getSource(qsl("vertical_test"))) {
+                            src->setPosition(0, pos.elevation, pos.distance);
+                            src->setVolume(0.8f);
+                            src->setLoops(0);
+                            src->play();
+                        }
+                        //: Position announcement in vertical positioning test - %1 is position name, %2 is description
+                        pHost->postMessage(tr("  → %1 - %2").arg(pos.name, pos.description));
+                    });
+                }
+                
+                QTimer::singleShot(28000, pHost, [pHost, spatialAudio, this]() {
+                    spatialAudio->removeSource(qsl("vertical_test"));
+                    //: Completion message for Vertical Positioning spatial audio test
+                    pHost->postMessage(tr("\n✓ Vertical positioning test complete!"));
+                    //: Tip for vertical positioning perception
+                    pHost->postMessage(tr("Tip: Elevation is easier to hear with good headphones or speakers positioned above/below ear level"));
+                });
+            }
+            break;
+            
+        case 5: // Distance Perception
+            {
+                //: Title for Distance Perception spatial audio test
+                pHost->postMessage(tr("\n=== DISTANCE PERCEPTION TEST ==="));
+                //: Description of Distance Perception spatial audio test
+                pHost->postMessage(tr("Broadband sound demonstrating spatial distance cues - notice volume AND clarity changes\n"));
+                
+                // Use pink noise bursts - better frequency content for distance perception
+                spatialAudio->createTestToneSource(qsl("distance_test"), TSpatialAudio::PinkNoise, 0, 3.0f);
+                if (auto* src = spatialAudio->getSource(qsl("distance_test"))) {
+                    src->setPosition(45, 0, 0.5);  // Start very close, slightly to the right for better spatial reference
+                    src->setVolume(1.0f);  // Full volume to emphasize distance attenuation
+                    src->setLoops(0);  // Bursts instead of continuous
+                    src->play();
+                }
+                
+                //: Initial distance in Distance Perception spatial audio test
+                pHost->postMessage(tr("Distance: 0.5 meters (TOUCHING) - maximum volume and clarity"));
+                
+                // More dramatic distance changes with enhanced perceptual cues
+                struct Distance { int delay; float distance; float volume; QString name; QString description; };
+                static const QVector<Distance> distances = {
+                    //: Distance level in spatial audio test
+                    {4000, 1.5f, 0.9f, tr("1.5 meters (arm's reach)"), tr("still very close and clear")},
+                    //: Distance level in spatial audio test
+                    {8000, 4.0f, 0.7f, tr("4 meters (across room)"), tr("noticeable volume drop, some reverb")},
+                    //: Distance level in spatial audio test
+                    {12000, 10.0f, 0.45f, tr("10 meters (far end)"), tr("much quieter, more ambient")},
+                    //: Distance level in spatial audio test
+                    {16000, 25.0f, 0.25f, tr("25 meters (DISTANT)"), tr("very quiet, significant reverb")},
+                    //: Distance level in spatial audio test
+                    {20000, 50.0f, 0.15f, tr("50 meters (VERY FAR)"), tr("barely audible, heavily attenuated")},
+                    //: Distance level in spatial audio test - dramatic contrast
+                    {24000, 0.3f, 1.0f, tr("0.3 meters (WHISPER CLOSE)"), tr("sudden return - maximum presence")},
+                    //: Distance level in spatial audio test - returning to reference
+                    {28000, 5.0f, 0.6f, tr("5 meters (reference)"), tr("medium distance for comparison")}
+                };
+                
+                for (const auto& dist : distances) {
+                    QTimer::singleShot(dist.delay, pHost, [pHost, spatialAudio, dist, this]() {
+                        // Create fresh burst for each distance to emphasize the change
+                        spatialAudio->createTestToneSource(qsl("distance_test"), TSpatialAudio::PinkNoise, 0, 3.0f);
+                        if (auto* src = spatialAudio->getSource(qsl("distance_test"))) {
+                            src->setPosition(45, 0, dist.distance);  // Keep consistent azimuth
+                            src->setVolume(dist.volume);  // Manual volume adjustment to enhance distance effect
+                            src->setLoops(0);
+                            src->play();
+                        }
+                        //: Distance announcement in distance perception test - %1 is distance name, %2 is description
+                        pHost->postMessage(tr("  → %1 - %2").arg(dist.name, dist.description));
+                    });
+                }
+                
+                QTimer::singleShot(32000, pHost, [pHost, spatialAudio, this]() {
+                    spatialAudio->removeSource(qsl("distance_test"));
+                    //: Completion message for Distance Perception spatial audio test
+                    pHost->postMessage(tr("\n✓ Distance perception test complete!"));
+                    //: Tip for distance perception
+                    pHost->postMessage(tr("Tip: Distance perception relies on volume attenuation, reverb, and high-frequency rolloff"));
+                });
+            }
+            break;
+            
+        case 6: // Room Materials & Occlusion
+            {
+                //: Title for Room Materials & Occlusion spatial audio test
+                pHost->postMessage(tr("\n=== ROOM MATERIALS & OCCLUSION TEST ==="));
+                //: Description of Room Materials & Occlusion spatial audio test
+                pHost->postMessage(tr("Simple burst test - listen for subtle changes in tone quality and volume\n"));
+                
+                // Get or create room with moderate settings
+                TSpatialAudioRoom* room = spatialAudio->getRoom();
+                if (!room) {
+                    room = spatialAudio->createRoom();
+                }
+                
+                if (!room) {
+                    break;
+                }
+                
+                // Moderate room settings - start simple
+                room->setDimensions(8.0f, 6.0f, 3.0f);  // Normal room size
+                room->setReverbGain(0.6f);  // Moderate reverb
+                room->setReflectionGain(0.6f);  // Moderate reflections
+                
+                // Helper to set all walls to same material
+                auto setAllWalls = [room](TSpatialAudioRoom::WallMaterial mat) {
+                    room->setWallMaterial(QAudioRoom::Wall::LeftWall, mat);
+                    room->setWallMaterial(QAudioRoom::Wall::RightWall, mat);
+                    room->setWallMaterial(QAudioRoom::Wall::FrontWall, mat);
+                    room->setWallMaterial(QAudioRoom::Wall::BackWall, mat);
+                    room->setWallMaterial(QAudioRoom::Wall::Floor, mat);
+                    room->setWallMaterial(QAudioRoom::Wall::Ceiling, mat);
+                };
+                
+                // Use simple pink noise bursts instead of trying to simulate claps
+                auto playBurst = [spatialAudio, pHost](int burstId) {
+                    const QString sourceKey = qsl("room_burst_%1").arg(burstId);
+                    spatialAudio->createTestToneSource(sourceKey, TSpatialAudio::PinkNoise, 0, 2.0f);  // 2 second burst
+                    if (auto* src = spatialAudio->getSource(sourceKey)) {
+                        src->setPosition(0, 0, 4);  // Directly in front
+                        src->setVolume(0.7f);
+                        src->setLoops(0);
+                        src->play();
+                    }
+                };
+                
+                // Just 3 very different materials to make differences more obvious
+                struct RoomMaterial { int delay; TSpatialAudioRoom::WallMaterial material; QString name; QString description; };
+                const QVector<RoomMaterial> materials = {
+                    //: Room material in spatial audio test - reflective
+                    {0, TSpatialAudioRoom::WallMaterial::Metal, tr("Hard Reflective"), tr("bright, echoing")},
+                    //: Room material in spatial audio test - absorbing
+                    {8000, TSpatialAudioRoom::WallMaterial::CurtainHeavy, tr("Soft Absorbing"), tr("muffled, deadened")},
+                    //: Room material in spatial audio test - normal
+                    {16000, TSpatialAudioRoom::WallMaterial::Marble, tr("Normal Room"), tr("balanced acoustics")},
+                };
+                
+                // Start with first material
+                setAllWalls(materials[0].material);
+                //: Initial room material in Room Materials test - %1 is material name, %2 is description
+                pHost->postMessage(tr("Room Type: %1 - %2").arg(materials[0].name, materials[0].description));
+                playBurst(0);
+                
+                int burstId = 1;
+                // Change materials and play burst
+                for (int i = 1; i < materials.size(); ++i) {
+                    const auto& mat = materials[i];
+                    QTimer::singleShot(mat.delay, pHost, [pHost, spatialAudio, setAllWalls, mat, playBurst, burstId, this]() {
+                        setAllWalls(mat.material);
+                        //: Room material change in spatial audio test - %1 is material name, %2 is description
+                        pHost->postMessage(tr("Room Type: %1 - %2").arg(mat.name, mat.description));
+                        playBurst(burstId);
+                    });
+                    burstId++;
+                }
+                
+                // === OCCLUSION TEST PHASE (starts at 24 seconds) ===
+                QTimer::singleShot(24000, pHost, [pHost, spatialAudio, burstId, this]() {
+                    // Clean up all room material burst sounds first to prevent interference
+                    for (int i = 0; i < burstId; ++i) {
+                        auto* src = spatialAudio->getSource(qsl("room_burst_%1").arg(i));
+                        if (src) {
+                            src->stop();
+                        }
+                        spatialAudio->removeSource(qsl("room_burst_%1").arg(i));
+                    }
+                    
+                    //: Occlusion test message in spatial audio test
+                    pHost->postMessage(tr("\n--- Sound Blocking Test ---"));
+                    //: Description of enhanced occlusion test
+                    pHost->postMessage(tr("Listen for dramatic volume and tone changes as barriers are added"));
+                    //: Occlusion level in spatial audio test - no obstruction
+                    pHost->postMessage(tr("Obstruction: None (full volume and clarity)"));
+                    
+                    // Louder, more prominent sound for occlusion test
+                    spatialAudio->createTestToneSource(qsl("room_occlusion"), TSpatialAudio::PinkNoise, 0, 30.0f);  // 30 seconds
+                    auto* src = spatialAudio->getSource(qsl("room_occlusion"));
+                    if (src) {
+                        src->setPosition(60, 0, 3);  // More to the right for clearer spatial reference
+                        src->setVolume(0.9f);  // Much louder to make occlusion more noticeable
+                        src->setLoops(-1);  // Continuous
+                        src->play();
+                    }
+                });
+                
+                // Much more dramatic occlusion changes with longer timing
+                struct Occlusion { int delay; float level; float volume; QString name; QString description; };
+                const QVector<Occlusion> occlusions = {
+                    //: Occlusion level in spatial audio test - light blocking
+                    {28000, 0.3f, 0.7f, tr("Thin Wall"), tr("noticeable muffling")},
+                    //: Occlusion level in spatial audio test - moderate blocking
+                    {33000, 0.6f, 0.4f, tr("Thick Door"), tr("significantly dampened")},
+                    //: Occlusion level in spatial audio test - heavy blocking  
+                    {38000, 0.9f, 0.15f, tr("Concrete Barrier"), tr("heavily muffled, almost gone")},
+                    //: Occlusion level in spatial audio test - dramatic contrast back to clear
+                    {43000, 0.0f, 0.9f, tr("Clear Path"), tr("full volume and clarity restored")},
+                };
+                
+                for (const auto& occ : occlusions) {
+                    QTimer::singleShot(occ.delay, pHost, [pHost, spatialAudio, occ, this]() {
+                        auto* src = spatialAudio->getSource(qsl("room_occlusion"));
+                        if (src) {
+                            src->setOcclusion(occ.level);
+                            // Also manually adjust volume to enhance the occlusion effect
+                            src->setVolume(occ.volume);
+                        }
+                        //: Occlusion level change in spatial audio test - %1 is obstruction name, %2 is description
+                        pHost->postMessage(tr("  → %1 - %2").arg(occ.name, occ.description));
+                    });
+                }
+                
+                // Cleanup (total test time: 48 seconds)
+                QTimer::singleShot(48000, pHost, [pHost, spatialAudio, this]() {
+                    // Room burst sources should already be cleaned up at start of occlusion test
+                    spatialAudio->removeSource(qsl("room_occlusion"));
+                    //: Completion message for Room Materials & Occlusion spatial audio test
+                    pHost->postMessage(tr("\n✓ Room materials and occlusion test complete!"));
+                    //: Tip for room acoustics perception
+                    pHost->postMessage(tr("Note: Room acoustic effects may be subtle - they work best with good headphones"));
+                });
+            }
+            break;
+            
+        default:
+            break;
+        }
+    });
 }
 
 void dlgProfilePreferences::slot_resetColors()

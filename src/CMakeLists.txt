@@ -144,6 +144,7 @@ set(mudlet_SRCS
     TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
     TLuaInterpreterMedia.cpp
+    TLuaInterpreterSpatialAudio.cpp
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
@@ -153,6 +154,7 @@ set(mudlet_SRCS
     TMapLabel.cpp
     TMedia.cpp
     TMediaPlaylist.cpp
+    TSpatialAudio.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
@@ -462,7 +464,8 @@ find_package(Qt6 6.4.0 REQUIRED
                UiTools
                Widgets
                Concurrent
-               Core5Compat)
+               Core5Compat
+               SpatialAudio)
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
@@ -478,6 +481,7 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::UiTools
               Qt6::Widgets
               Qt6::Core5Compat
+              Qt6::SpatialAudio
               qt6keychain)
 
 if(Qt6TextToSpeech_FOUND)
@@ -593,6 +597,10 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 # * Enable player icon adjustment controls in the 3D mapper for debugging and 
 #   alignment purposes - these are normally hidden in production builds:
 # target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
+#
+# * Produce qDebug() messages about spatial audio operations including source
+#   creation, playback, updates, mute state changes, and position updates:
+# target_compile_definitions(mudlet PRIVATE DEBUG_SPATIAL_AUDIO)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

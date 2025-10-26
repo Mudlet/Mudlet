@@ -47,6 +47,7 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
+#include "TSpatialAudio.h"
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
@@ -4490,9 +4491,19 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
         if (state) {
             if (isAPINotGame) {
                 pHost->mpMedia->muteMedia(TMediaData::MediaProtocolAPI);
+                // Stop (not remove) all API-triggered spatial audio sources when muting
+                // so they can be restarted when unmuted
+                if (pHost->mpSpatialAudio) {
+                    pHost->mpSpatialAudio->stopAllSources(TSpatialAudio::ProtocolAPI);
+                }
             } else {
                 pHost->mpMedia->muteMedia(TMediaData::MediaProtocolGMCP);
                 pHost->mpMedia->muteMedia(TMediaData::MediaProtocolMSP);
+                // Stop (not remove) all GMCP-triggered spatial audio sources when muting
+                // so they can be restarted when unmuted
+                if (pHost->mpSpatialAudio) {
+                    pHost->mpSpatialAudio->stopAllSources(TSpatialAudio::ProtocolGMCP);
+                }
             }
         } else {
             if (isAPINotGame) {

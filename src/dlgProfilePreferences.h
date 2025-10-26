@@ -117,6 +117,7 @@ public slots:
     // Media
     void slot_purgeMediaCache();
     void slot_toggleEnableClosedCaption(const bool);
+    void slot_runSpatialAudioTest();
 
     // Log.
     void slot_setLogDir();

@@ -478,6 +478,18 @@ public:
     static int pauseMusic(lua_State*);
     static int pauseVideos(lua_State*);
     static int purgeMediaCache(lua_State*);
+    
+    // Spatial audio functions - table-based API
+    static int playSpatialSound(lua_State*);
+    static int stopSpatialSound(lua_State*);
+    static int pauseSpatialSound(lua_State*);
+    static int updateSpatialSound(lua_State*);
+    static int getSpatialSounds(lua_State*);
+    static int removeSpatialSound(lua_State*);
+    static int setSpatialListener(lua_State*);
+    static int setSpatialMasterVolume(lua_State*);
+    static int playSpatialTestTone(lua_State*);
+
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
     static int setBorderBottom(lua_State*);

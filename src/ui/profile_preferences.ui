@@ -4231,6 +4231,80 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_spatialAudioTest">
+         <property name="title">
+          <string>Spatial Audio Tests</string>
+         </property>
+         <layout class="QHBoxLayout" name="hBoxLayout_groupBox_spatialAudioTest">
+          <item>
+           <widget class="QLabel" name="label_spatialAudioTest">
+            <property name="toolTip">
+             <string>&lt;p&gt;Select a professional spatial audio test to verify your speaker setup and 3D audio positioning. Tests include surround sound calibration, white/pink noise positioning, and frequency response testing.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Run spatial audio test:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_spatialAudioTest</cstring>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBox_spatialAudioTest">
+            <property name="toolTip">
+             <string>&lt;p&gt;Select a spatial audio test to run. Tests will close this dialog and provide visual feedback in the main console.&lt;/p&gt;</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>White Noise - Circular Movement</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Pink Noise - Speaker Calibration</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Sine Waves - Frequency Test</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>7.1 Surround - Professional Calibration</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Vertical Positioning Test</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Distance Perception Test</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Room Materials &amp; Occlusion Test</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="buttonRunSpatialAudioTest">
+            <property name="toolTip">
+             <string>&lt;p&gt;Run the selected spatial audio test. This will close the preferences dialog and execute the test with visual feedback in the main console.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Run Test</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_purgeMediaCache">
          <property name="title">
           <string>Clear stored media</string>
@@ -4709,6 +4783,8 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_mVersionInTTYPE</tabstop>
   <tabstop>checkBox_mForceMXPProcessorOn</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
+  <tabstop>comboBox_spatialAudioTest</tabstop>
+  <tabstop>buttonRunSpatialAudioTest</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>

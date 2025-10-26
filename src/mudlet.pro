@@ -86,6 +86,10 @@ qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
 }
+qtHaveModule(spatialaudio) {
+    QT += spatialaudio
+    !build_pass : message("Using SpatialAudio module")
+}
 
 greaterThan(QT_MAJOR_VERSION, 5) {
     QT += core5compat
@@ -346,6 +350,10 @@ DEFINES+=DEBUG_TELNET=1
 # * Enable player icon adjustment controls in the 3D mapper for debugging and 
 # alignment purposes - these are normally hidden in production builds:
 # DEFINES+=DEBUG_PLAYER_ICON_CONTROLS
+#
+# * Produce qDebug() messages about spatial audio operations including source
+# creation, playback, updates, mute state changes, and position updates:
+# DEFINES+=DEBUG_SPATIAL_AUDIO
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -710,6 +718,8 @@ SOURCES += \
     TMapLabel.cpp \
     TMedia.cpp \
     TMediaPlaylist.cpp \
+    TSpatialAudio.cpp \
+    TLuaInterpreterSpatialAudio.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
@@ -853,6 +863,7 @@ HEADERS += \
     TMedia.h \
     TMediaData.h \
     TMediaPlaylist.h \
+    TSpatialAudio.h \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
