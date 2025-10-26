@@ -109,35 +109,7 @@ public:
     void setDimensions(const QVector3D& dimensions);
     QVector3D dimensions() const;
     
-    // Wall materials (affects reflection)
-    enum WallMaterial {
-        Transparent = 0,
-        AcousticCeilingTiles,
-        BrickBare,
-        BrickPainted,
-        ConcreteBlockCoarse,
-        ConcreteBlockPainted,
-        CurtainHeavy,
-        FiberGlassInsulation,
-        GlassThin,
-        GlassThick,
-        Grass,
-        LinoleumOnConcrete,
-        Marble,
-        Metal,
-        ParquetOnConcrete,
-        PlasterRough,
-        PlasterSmooth,
-        PlywoodPanel,
-        PolishedConcreteOrTile,
-        Sheetrock,
-        WaterOrIceSurface,
-        WoodCeiling,
-        WoodPanel,
-        UniformMaterial
-    };
-    
-    void setWallMaterial(QAudioRoom::Wall wall, WallMaterial material);
+    void setWallMaterial(QAudioRoom::Wall wall, QAudioRoom::Material material);
     
     // Reverb and reflection gains
     void setReflectionGain(float gain);  // 0.0 to 5.0

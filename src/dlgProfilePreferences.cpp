@@ -2141,7 +2141,7 @@ void dlgProfilePreferences::slot_runSpatialAudioTest()
                 room->setReflectionGain(0.6f);  // Moderate reflections
                 
                 // Helper to set all walls to same material
-                auto setAllWalls = [room](TSpatialAudioRoom::WallMaterial mat) {
+                auto setAllWalls = [room](QAudioRoom::Material mat) {
                     room->setWallMaterial(QAudioRoom::Wall::LeftWall, mat);
                     room->setWallMaterial(QAudioRoom::Wall::RightWall, mat);
                     room->setWallMaterial(QAudioRoom::Wall::FrontWall, mat);
@@ -2163,14 +2163,14 @@ void dlgProfilePreferences::slot_runSpatialAudioTest()
                 };
                 
                 // Just 3 very different materials to make differences more obvious
-                struct RoomMaterial { int delay; TSpatialAudioRoom::WallMaterial material; QString name; QString description; };
+                struct RoomMaterial { int delay; QAudioRoom::Material material; QString name; QString description; };
                 const QVector<RoomMaterial> materials = {
                     //: Room material in spatial audio test - reflective
-                    {0, TSpatialAudioRoom::WallMaterial::Metal, tr("Hard Reflective"), tr("bright, echoing")},
+                    {0, QAudioRoom::Material::Metal, tr("Hard Reflective"), tr("bright, echoing")},
                     //: Room material in spatial audio test - absorbing
-                    {8000, TSpatialAudioRoom::WallMaterial::CurtainHeavy, tr("Soft Absorbing"), tr("muffled, deadened")},
+                    {8000, QAudioRoom::Material::CurtainHeavy, tr("Soft Absorbing"), tr("muffled, deadened")},
                     //: Room material in spatial audio test - normal
-                    {16000, TSpatialAudioRoom::WallMaterial::Marble, tr("Normal Room"), tr("balanced acoustics")},
+                    {16000, QAudioRoom::Material::Marble, tr("Normal Room"), tr("balanced acoustics")},
                 };
                 
                 // Start with first material

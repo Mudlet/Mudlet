@@ -245,10 +245,10 @@ QVector3D TSpatialAudioRoom::dimensions() const
     return mAudioRoom ? mAudioRoom->dimensions() : QVector3D();
 }
 
-void TSpatialAudioRoom::setWallMaterial(QAudioRoom::Wall wall, WallMaterial material)
+void TSpatialAudioRoom::setWallMaterial(QAudioRoom::Wall wall, QAudioRoom::Material material)
 {
     if (mAudioRoom) {
-        mAudioRoom->setWallMaterial(wall, static_cast<QAudioRoom::Material>(material));
+        mAudioRoom->setWallMaterial(wall, material);
     }
 }
 
