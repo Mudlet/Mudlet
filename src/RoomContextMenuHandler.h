@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2025 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,10 +17,25 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#pragma once
 
-#if defined(_DEBUG) && defined(_MSC_VER)
-#pragma pop_macro("new")
-#pragma pop_macro("malloc")
-#pragma pop_macro("realloc")
-#pragma pop_macro("free")
-#endif // _DEBUG && _MSC_VER
+#include "T2DMap.h"
+
+class QMenu;
+class TArea;
+
+class RoomContextMenuHandler : public T2DMap::IInteractionHandler
+{
+public:
+    explicit RoomContextMenuHandler(T2DMap& mapWidget);
+
+    bool matches(const T2DMap::MapInteractionContext& context) const override;
+    bool handle(T2DMap::MapInteractionContext& context) override;
+
+private:
+    void populateEditModeActions(QMenu* menu, int selectionSize, TArea* area) const;
+    void populateViewModeActions(QMenu* menu, int selectionSize) const;
+    bool hasCustomLineSelection(const T2DMap::MapInteractionContext& context) const;
+
+    T2DMap& mMapWidget;
+};

@@ -22,9 +22,7 @@
 
 #include "TMapLabel.h"
 
-#include "pre_guard.h"
 #include <QBuffer>
-#include "post_guard.h"
 
 QByteArray TMapLabel::base64EncodePixmap() const
 {

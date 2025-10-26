@@ -20,14 +20,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMatrix4x4>
 #include <QMatrix3x3>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
-#include "post_guard.h"
 
 #include "GeometryManager.h"
 
@@ -40,16 +38,17 @@ class RenderCommand
 {
 public:
     virtual ~RenderCommand() = default;
-    virtual void execute(QOpenGLFunctions* gl, 
+    virtual void execute(QOpenGLFunctions* gl,
                         QOpenGLShaderProgram* shader,
                         GeometryManager* geometryManager,
                         ResourceManager* resourceManager,
                         QOpenGLVertexArrayObject& vao,
                         QOpenGLBuffer& vertexBuffer,
-                        QOpenGLBuffer& colorBuffer, 
+                        QOpenGLBuffer& colorBuffer,
                         QOpenGLBuffer& normalBuffer,
-                        QOpenGLBuffer& indexBuffer) = 0;
-                        
+                        QOpenGLBuffer& indexBuffer,
+                        QOpenGLBuffer& texCoordBuffer) = 0;
+
     virtual const char* getCommandName() const = 0;
 };
 
@@ -59,7 +58,7 @@ class RenderCubeCommand : public RenderCommand
 public:
     RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a,
                      const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
-    
+
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
                 GeometryManager* geometryManager,
@@ -68,8 +67,9 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
-                
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
+
     const char* getCommandName() const override { return "RenderCube"; }
 
 private:
@@ -86,7 +86,7 @@ class RenderLinesCommand : public RenderCommand
 public:
     RenderLinesCommand(const QVector<float>& vertices, const QVector<float>& colors,
                       const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
-    
+
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
                 GeometryManager* geometryManager,
@@ -95,8 +95,9 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
-                
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
+
     const char* getCommandName() const override { return "RenderLines"; }
 
 private:
@@ -113,6 +114,33 @@ class RenderTrianglesCommand : public RenderCommand
 public:
     RenderTrianglesCommand(const QVector<float>& vertices, const QVector<float>& colors,
                           const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+
+    void execute(QOpenGLFunctions* gl,
+                QOpenGLShaderProgram* shader,
+                GeometryManager* geometryManager,
+                ResourceManager* resourceManager,
+                QOpenGLVertexArrayObject& vao,
+                QOpenGLBuffer& vertexBuffer,
+                QOpenGLBuffer& colorBuffer,
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
+
+    const char* getCommandName() const override { return "RenderTriangles"; }
+
+private:
+    QVector<float> mVertices;
+    QVector<float> mColors;
+    QMatrix4x4 mProjectionMatrix;
+    QMatrix4x4 mViewMatrix;
+    QMatrix4x4 mModelMatrix;
+};
+
+class RenderTexturedTrianglesCommand : public RenderCommand
+{
+public:
+    RenderTexturedTrianglesCommand(const GeometryData& geometry,
+                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
     
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -122,13 +150,13 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
                 
-    const char* getCommandName() const override { return "RenderTriangles"; }
+    const char* getCommandName() const override { return "RenderTexturedTriangles"; }
 
 private:
-    QVector<float> mVertices;
-    QVector<float> mColors;
+    GeometryData mGeometry;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
@@ -140,7 +168,7 @@ class RenderInstancedCubesCommand : public RenderCommand
 public:
     RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
                                const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
-    
+
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
                 GeometryManager* geometryManager,
@@ -149,8 +177,9 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
-                
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
+
     const char* getCommandName() const override { return "RenderInstancedCubes"; }
 
 private:
@@ -171,9 +200,9 @@ public:
         DISABLE_BLEND,
         CLEAR_BUFFERS
     };
-    
+
     explicit GLStateCommand(StateType stateType);
-    
+
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
                 GeometryManager* geometryManager,
@@ -182,8 +211,9 @@ public:
                 QOpenGLBuffer& vertexBuffer,
                 QOpenGLBuffer& colorBuffer,
                 QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer) override;
-                
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
+
     const char* getCommandName() const override { return "GLState"; }
 
 private:

@@ -25,14 +25,12 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QClipboard>
 #include <QFuture>
 #include <QPointer>
 #include <QSaveFile>
 #include <pugixml.hpp>
 #include <memory>
-#include "post_guard.h"
 
 class QFile;
 class Host;
@@ -71,9 +69,9 @@ public:
     void writeModuleXML(const QString& moduleName, const QString& fileName, bool async = false);
 
     void exportHost(const QString& filename_pugi_xml);
-    bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage, bool ignoreModuleMember = true);
+    bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage, bool ignoreModuleMember = true, bool ignoreVariables = false);
     bool exportProfile(const QString& exportFileName);
-    bool exportPackage(const QString &exportFileName, bool ignoreModuleMember = true);
+    bool exportPackage(const QString &exportFileName, bool ignoreModuleMember = true, bool ignoreVariables = false);
     bool exportTrigger(const QString& fileName);
     bool exportTimer(const QString& fileName);
     bool exportAlias(const QString& fileName);
