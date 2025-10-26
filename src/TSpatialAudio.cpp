@@ -317,7 +317,10 @@ TSpatialAudio::TSpatialAudio(Host* host)
 
 TSpatialAudio::~TSpatialAudio()
 {
-    shutdown();
+    // Following TMedia's pattern: let Qt's parent-child cleanup handle destruction order
+    // But explicitly clear sources first to avoid dangling pointers
+    mAPISpatialSources.clear();
+    mGMCPSpatialSources.clear();
 }
 
 bool TSpatialAudio::initialize()
@@ -345,17 +348,24 @@ void TSpatialAudio::shutdown()
         return;
     }
     
-    // Stop and remove all sources
-    removeAllSources();
+    // Stop all sources first
+    stopAllSources(ProtocolAPI);
+    stopAllSources(ProtocolGMCP);
+    
+    // Clear source containers
+    mAPISpatialSources.clear();
+    mGMCPSpatialSources.clear();
     
     // Remove room
     removeRoom();
     
-    // Stop and delete engine
-    mAudioEngine->stop();
-    delete mAudioEngine;
-    mAudioEngine = nullptr;
-    mAudioListener = nullptr;  // Deleted by engine
+    // Stop engine and let Qt parent-child cleanup handle deletion
+    if (mAudioEngine) {
+        mAudioEngine->stop();
+        mAudioEngine->deleteLater();  // Use Qt's delayed deletion
+        mAudioEngine = nullptr;
+        mAudioListener = nullptr;  // Will be deleted with engine
+    }
     
     qDebug() << "TSpatialAudio: Shut down spatial audio engine";
 }

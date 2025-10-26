@@ -45,6 +45,7 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "TSpatialAudio.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TTextEdit.h"
@@ -221,6 +222,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMxpProcessor(&mMxpClient)
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
+, mpSpatialAudio(new TSpatialAudio(this))
 , mpAuth(new GMCPAuthenticator(this))
 , mpDockableMapWidget()
 , mTimerDebugOutputSuppressionInterval(QTime())

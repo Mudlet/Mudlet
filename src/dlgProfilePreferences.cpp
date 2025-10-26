@@ -1754,7 +1754,7 @@ void dlgProfilePreferences::slot_runSpatialAudioTest()
         return;
     }
 
-    auto* spatialAudio = pHost->mpSpatialAudio;
+    auto* spatialAudio = pHost->mpSpatialAudio.get();
     if (!spatialAudio) {
         return;
     }

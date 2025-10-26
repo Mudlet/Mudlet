@@ -26,15 +26,14 @@
 #include "mudlet.h"
 #include <QDir>
 
-// Helper to get or create spatial audio system
+// Helper to get spatial audio system (now automatically created in Host constructor)
 static TSpatialAudio* getSpatialAudio(Host& host)
 {
-    if (!host.mpSpatialAudio) {
-        host.mpSpatialAudio = new TSpatialAudio(&host);
+    if (!host.mpSpatialAudio->isInitialized()) {
         host.mpSpatialAudio->initialize();
     }
 
-    return host.mpSpatialAudio;
+    return host.mpSpatialAudio.get();
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playSpatialSound

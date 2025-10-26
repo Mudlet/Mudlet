@@ -535,7 +535,7 @@ public:
     dlgTriggerEditor* mpEditorDialog{nullptr};
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
-    TSpatialAudio* mpSpatialAudio{nullptr};
+    QScopedPointer<TSpatialAudio> mpSpatialAudio;
     QScopedPointer<GMCPAuthenticator> mpAuth;
     dlgNotepad* mpNotePad{nullptr};
 
