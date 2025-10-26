@@ -94,6 +94,11 @@ function Geyser.CommandLine:new (cons, container)
   return me
 end
 
+--- Deletes the command line using the C++ deleteCommandLine function
+function Geyser.CommandLine:type_delete()
+  deleteCommandLine(self.name)
+end
+
 --- Overridden constructor to use add2
 function Geyser.CommandLine:new2 (cons, container)
   cons = cons or {}
