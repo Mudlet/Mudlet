@@ -1788,8 +1788,7 @@ void ModernGLWidget::renderSingleLabel(const TMapLabel& label)
             highlightQuad.colors,
             mCameraController.getProjectionMatrix(),
             mCameraController.getViewMatrix(),
-            mCameraController.getModelMatrix()
-        );
+            mCameraController.getModelMatrix());
 
         mRenderCommandQueue.addCommand(std::move(highlightCommand));
     }
@@ -1805,8 +1804,7 @@ void ModernGLWidget::renderSingleLabel(const TMapLabel& label)
         labelQuad,
         mCameraController.getProjectionMatrix(),
         mCameraController.getViewMatrix(),
-        mCameraController.getModelMatrix()
-    );
+        mCameraController.getModelMatrix());
 
     mRenderCommandQueue.addCommand(std::move(command));
 }
