@@ -90,7 +90,8 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
-            writeTrigger(it, triggerPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeTrigger(it, triggerPackage, true);
         }
     }
 
@@ -100,7 +101,8 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
-            writeTimer(it, timerPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeTimer(it, timerPackage, true);
         }
     }
 
@@ -110,7 +112,8 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
-            writeAlias(it, aliasPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeAlias(it, aliasPackage, true);
         }
     }
 
@@ -120,7 +123,8 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (it->mModuleMember) {
-            writeAction(it, actionPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeAction(it, actionPackage, true);
         }
     }
 
@@ -130,7 +134,8 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (it->mModuleMember) {
-            writeScript(it, scriptPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeScript(it, scriptPackage, true);
         }
     }
 
@@ -140,7 +145,8 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
             continue;
         }
         if (!it->isTemporary() && it->mModuleMember) {
-            writeKey(it, keyPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeKey(it, keyPackage, true);
         }
     }
 
@@ -697,7 +703,8 @@ void XMLexport::writeKeyPackage(const Host* pHost, pugi::xml_node& mudletPackage
         if (!it || it->isTemporary() || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        writeKey(it, keyPackage);
+        // Pass true for root-level items to skip unnecessary folder wrappers
+        writeKey(it, keyPackage, true);
     }
 }
 
@@ -708,7 +715,8 @@ void XMLexport::writeScriptPackage(const Host* pHost, pugi::xml_node& mudletPack
         if (!it || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        writeScript(it, scriptPackage);
+        // Pass true for root-level items to skip unnecessary folder wrappers
+        writeScript(it, scriptPackage, true);
     }
 }
 
@@ -719,7 +727,8 @@ void XMLexport::writeActionPackage(const Host* pHost, pugi::xml_node& mudletPack
         if (!it || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        writeAction(it, actionPackage);
+        // Pass true for root-level items to skip unnecessary folder wrappers
+        writeAction(it, actionPackage, true);
     }
 }
 
@@ -731,7 +740,8 @@ void XMLexport::writeAliasPackage(const Host* pHost, pugi::xml_node& mudletPacka
             continue;
         }
         if (!it->isTemporary()) {
-            writeAlias(it, aliasPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeAlias(it, aliasPackage, true);
         }
     }
 }
@@ -744,7 +754,8 @@ void XMLexport::writeTimerPackage(const Host* pHost, pugi::xml_node& mudletPacka
             continue;
         }
         if (!it->isTemporary()) {
-            writeTimer(it, timerPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeTimer(it, timerPackage, true);
         }
     }
 }
@@ -757,7 +768,8 @@ void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPac
             continue;
         }
         if (!it->isTemporary()) {
-            writeTrigger(it, triggerPackage);
+            // Pass true for root-level items to skip unnecessary folder wrappers
+            writeTrigger(it, triggerPackage, true);
         }
     }
 }
@@ -879,9 +891,12 @@ void XMLexport::exportToClipboard(TTrigger* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
+void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
 {
-    if (!pT->mModuleMasterFolder && pT->exportItem) {
+    // Skip wrapper for root-level folders in package exports, but still export their children
+    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+
+    if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto trigger = xmlParent.append_child(pT->isFolder() ? "TriggerGroup" : "Trigger");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
@@ -929,8 +944,9 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         }
     }
 
+    // Children are never root-level, even if parent was skipped
     for (auto& it : *pT->mpMyChildrenList) {
-        writeTrigger(it, xmlParent);
+        writeTrigger(it, xmlParent, false);
     }
 }
 
@@ -961,9 +977,12 @@ void XMLexport::exportToClipboard(TAlias* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
+void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
 {
-    if (!pT->mModuleMasterFolder && pT->exportItem) {
+    // Skip wrapper for root-level folders in package exports, but still export their children
+    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+
+    if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto aliasContents = xmlParent.append_child(pT->isFolder() ? "AliasGroup" : "Alias");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
@@ -982,8 +1001,9 @@ void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
         }
     }
 
+    // Children are never root-level, even if parent was skipped
     for (auto& it : *pT->mpMyChildrenList) {
-        writeAlias(it, xmlParent);
+        writeAlias(it, xmlParent, false);
     }
 }
 
@@ -1014,9 +1034,12 @@ void XMLexport::exportToClipboard(TAction* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
+void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
 {
-    if (!pT->mModuleMasterFolder && pT->exportItem) {
+    // Skip wrapper for root-level folders in package exports, but still export their children
+    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+
+    if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto actionContents = xmlParent.append_child(pT->isFolder() ? "ActionGroup" : "Action");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
@@ -1051,8 +1074,9 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
         }
     }
 
+    // Children are never root-level, even if parent was skipped
     for (auto& it : *pT->mpMyChildrenList) {
-        writeAction(it, xmlParent);
+        writeAction(it, xmlParent, false);
     }
 }
 
@@ -1083,9 +1107,12 @@ void XMLexport::exportToClipboard(TTimer* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
+void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
 {
-    if (!pT->mModuleMasterFolder && pT->exportItem) {
+    // Skip wrapper for root-level folders in package exports, but still export their children
+    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+
+    if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto timerContents = xmlParent.append_child(pT->isFolder() ? "TimerGroup" : "Timer");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
@@ -1107,8 +1134,9 @@ void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
         }
     }
 
+    // Children are never root-level, even if parent was skipped
     for (auto& it : *pT->mpMyChildrenList) {
-        writeTimer(it, xmlParent);
+        writeTimer(it, xmlParent, false);
     }
 }
 
@@ -1139,9 +1167,12 @@ void XMLexport::exportToClipboard(TScript* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
+void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
 {
-    if (!pT->mModuleMasterFolder && pT->exportItem) {
+    // Skip wrapper for root-level folders in package exports, but still export their children
+    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+
+    if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto scriptContents = xmlParent.append_child(pT->isFolder() ? "ScriptGroup" : "Script");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
@@ -1162,8 +1193,9 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
         }
     }
 
+    // Children are never root-level, even if parent was skipped
     for (auto& it : *pT->mpMyChildrenList) {
-        writeScript(it, xmlParent);
+        writeScript(it, xmlParent, false);
     }
 }
 
@@ -1194,9 +1226,12 @@ void XMLexport::exportToClipboard(TKey* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
+void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent, bool isPackageRootLevel)
 {
-    if (!pT->mModuleMasterFolder && pT->exportItem) {
+    // Skip wrapper for root-level folders in package exports, but still export their children
+    bool shouldSkipWrapper = isPackageRootLevel && pT->isFolder();
+
+    if (!shouldSkipWrapper && !pT->mModuleMasterFolder && pT->exportItem) {
         auto keyContents = xmlParent.append_child(pT->isFolder() ? "KeyGroup" : "Key");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
@@ -1216,8 +1251,9 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
         }
     }
 
+    // Children are never root-level, even if parent was skipped
     for (auto& it : *pT->mpMyChildrenList) {
-        writeKey(it, xmlParent);
+        writeKey(it, xmlParent, false);
     }
 }
 
