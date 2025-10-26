@@ -45,7 +45,7 @@ dlgComposer::dlgComposer(Host* pH)
     // Set up spellcheck
     connect(edit, &QPlainTextEdit::textChanged, this, &dlgComposer::slot_spellCheck);
     edit->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(edit, &QWidget::customContextMenu, this, &dlgComposer::slot_contextMenu);
+    connect(edit, &QWidget::customContextMenuRequested, this, &dlgComposer::slot_contextMenu);
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
