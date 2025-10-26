@@ -69,6 +69,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 {
     mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
+    Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
     mFontHeight = fontMetrics().height();
     mFontWidth = fontMetrics().averageCharWidth();
