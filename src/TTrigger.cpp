@@ -411,7 +411,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             for (int position = 1; iti != posList.end(); ++iti, ++its, position++) {
                 const int begin = *iti;
                 const std::string& s = *its;
-                const int length = QString::fromStdString(s).size();
+                const int length = QString::fromUtf8(s.c_str(), s.size()).length();
                 if (total > 1) {
                     // skip complete match in Perl /g option type of triggers
                     // to enable people to highlight capture groups if there are any
