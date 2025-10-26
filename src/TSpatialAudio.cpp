@@ -20,6 +20,7 @@
 #include "TSpatialAudio.h"
 #include "Host.h"
 #include "mudlet.h"
+#include "ctelnet.h"
 #include <QtMath>
 #include <QDebug>
 #include <QUrl>
@@ -33,6 +34,8 @@
 #include <QJsonArray>
 #include <QRandomGenerator>
 #include <QDataStream>
+#include <QMediaFormat>
+#include <QAudioDecoder>
 
 // ============================================================================
 // TSpatialAudioSource implementation
@@ -357,16 +360,16 @@ void TSpatialAudio::shutdown()
     qDebug() << "TSpatialAudio: Shut down spatial audio engine";
 }
 
-void TSpatialAudio::setOutputMode(OutputMode mode)
+void TSpatialAudio::setOutputMode(QAudioEngine::OutputMode mode)
 {
     if (mAudioEngine) {
-        mAudioEngine->setOutputMode(static_cast<QAudioEngine::OutputMode>(mode));
+        mAudioEngine->setOutputMode(mode);
     }
 }
 
-TSpatialAudio::OutputMode TSpatialAudio::outputMode() const
+QAudioEngine::OutputMode TSpatialAudio::outputMode() const
 {
-    return mAudioEngine ? static_cast<OutputMode>(mAudioEngine->outputMode()) : Stereo;
+    return mAudioEngine ? mAudioEngine->outputMode() : QAudioEngine::Stereo;
 }
 
 void TSpatialAudio::setListenerPosition(float x, float y, float z)
@@ -530,7 +533,14 @@ QString TSpatialAudio::resolveFilePath(const QString& key, const QString& fileNa
         QString normalizedPath = fileName;
         normalizedPath.replace('\\', '/');
         
+        // Check if the file format is supported
         QFileInfo fileInfo(normalizedPath);
+        const QString fileExtension = fileInfo.suffix();
+        if (!isFormatSupported(fileExtension)) {
+            qWarning() << "TSpatialAudio::resolveFilePath - Unsupported audio format:" << fileExtension 
+                       << "for file:" << fileName << "Supported formats:" << getSupportedAudioFormats();
+            return QString();
+        }
         if (fileInfo.isAbsolute()) {
             // Copy absolute path file to profile media folder
             const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
@@ -723,6 +733,12 @@ void TSpatialAudio::parseGMCP(QString& packageMessage, QString& gmcp)
         parseJSONForSpatialUpdate(json, ProtocolGMCP);
     } else if (package == "client.media.spatial.listener") {
         parseJSONForSpatialListener(json);
+    } else if (package == "client.media.spatial.capabilities") {
+        sendCapabilitiesResponse();
+    } else if (package == "client.media.spatial.settings") {
+        sendSettingsResponse();
+    } else if (package == "client.media.spatial.status") {
+        sendStatusResponse();
     }
 }
 
@@ -935,7 +951,15 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
             room->setDimensions(dimensions);
             room->setReverbGain(reverb);
             room->setReflectionGain(reflection);
-            // Material setting would require mapping string to enum
+            
+            // Convert material string to enum and apply to all walls
+            const QAudioRoom::Material materialEnum = stringToMaterial(material);
+            room->setWallMaterial(QAudioRoom::Wall::LeftWall, materialEnum);
+            room->setWallMaterial(QAudioRoom::Wall::RightWall, materialEnum);
+            room->setWallMaterial(QAudioRoom::Wall::FrontWall, materialEnum);
+            room->setWallMaterial(QAudioRoom::Wall::BackWall, materialEnum);
+            room->setWallMaterial(QAudioRoom::Wall::Floor, materialEnum);
+            room->setWallMaterial(QAudioRoom::Wall::Ceiling, materialEnum);
         }
     }
 
@@ -1252,5 +1276,444 @@ bool TSpatialAudio::createTestToneSource(const QString& name, ToneType type, flo
 #endif
     
     return true;
+}
+
+// GMCP Response Methods
+// ====================================================================================
+
+QStringList TSpatialAudio::getSupportedAudioFormats()
+{
+    QStringList supportedFormats;
+    
+    // Runtime detection of supported audio formats from Qt6 Multimedia
+    // This replaces hardcoded format lists and adapts to the actual capabilities
+    // of the multimedia backend (FFmpeg, GStreamer, AVFoundation, etc.)
+    QMediaFormat format;
+    const QList<QMediaFormat::FileFormat> fileFormats = format.supportedFileFormats(QMediaFormat::Decode);
+    
+    // Map Qt's enum values to string extensions
+    for (const auto& format : fileFormats) {
+        switch (format) {
+            case QMediaFormat::Wave:
+                if (!supportedFormats.contains(qsl("wav"))) {
+                    supportedFormats << qsl("wav");
+                }
+                break;
+            case QMediaFormat::MP3:
+                if (!supportedFormats.contains(qsl("mp3"))) {
+                    supportedFormats << qsl("mp3");
+                }
+                break;
+            case QMediaFormat::Ogg:
+                if (!supportedFormats.contains(qsl("ogg"))) {
+                    supportedFormats << qsl("ogg");
+                }
+                break;
+            case QMediaFormat::FLAC:
+                if (!supportedFormats.contains(qsl("flac"))) {
+                    supportedFormats << qsl("flac");
+                }
+                break;
+            case QMediaFormat::AAC:
+                if (!supportedFormats.contains(qsl("aac"))) {
+                    supportedFormats << qsl("aac");
+                }
+                break;
+            case QMediaFormat::Mpeg4Audio:
+                if (!supportedFormats.contains(qsl("m4a"))) {
+                    supportedFormats << qsl("m4a");
+                }
+                break;
+            default:
+                // Skip other formats (video formats, etc.)
+                break;
+        }
+    }
+    
+    // Ensure we always support WAV as a fallback (since we can generate test tones)
+    if (!supportedFormats.contains(qsl("wav"))) {
+        supportedFormats.prepend(qsl("wav"));
+    }
+    
+    // Sort for consistent ordering
+    supportedFormats.sort();
+    
+#ifdef DEBUG_SPATIAL_AUDIO
+    qDebug() << "TSpatialAudio::getSupportedAudioFormats - Detected formats:" << supportedFormats;
+#endif
+    
+    return supportedFormats;
+}
+
+bool TSpatialAudio::isFormatSupported(const QString& fileExtension)
+{
+    // Check if format is in our supported list
+    const QStringList supportedFormats = getSupportedAudioFormats();
+    
+    // Normalize extension (remove leading dot if present, convert to lowercase)
+    QString normalizedExt = fileExtension.toLower();
+    if (normalizedExt.startsWith('.')) {
+        normalizedExt = normalizedExt.mid(1);
+    }
+    
+    // Check against supported formats
+    bool isSupported = supportedFormats.contains(normalizedExt);
+    
+#ifdef DEBUG_SPATIAL_AUDIO
+    qDebug() << "TSpatialAudio::isFormatSupported - Extension:" << normalizedExt 
+             << "Supported:" << isSupported << "Available formats:" << supportedFormats;
+#endif
+    
+    return isSupported;
+}
+
+QStringList TSpatialAudio::getSupportedRoomMaterials()
+{
+    // Return all Qt6 QAudioRoom::Material enum values as strings
+    // This ensures bidirectional compatibility between string names and Qt enums
+    QStringList materials;
+    
+    materials << qsl("brick");          // QAudioRoom::Material::BrickBare
+    materials << qsl("brickpainted");   // QAudioRoom::Material::BrickPainted  
+    materials << qsl("concrete");       // QAudioRoom::Material::ConcreteBlockCoarse
+    materials << qsl("concretepainted"); // QAudioRoom::Material::ConcreteBlockPainted
+    materials << qsl("curtainheavy");   // QAudioRoom::Material::CurtainHeavy
+    materials << qsl("fiberglassinsulation"); // QAudioRoom::Material::FiberGlassInsulation
+    materials << qsl("glassthin");      // QAudioRoom::Material::GlassThin
+    materials << qsl("glassthick");     // QAudioRoom::Material::GlassThick
+    materials << qsl("grass");          // QAudioRoom::Material::Grass
+
+    materials << qsl("marble");         // QAudioRoom::Material::Marble
+    materials << qsl("metal");          // QAudioRoom::Material::Metal
+
+    materials << qsl("plasterrough");   // QAudioRoom::Material::PlasterRough
+    materials << qsl("plastersmooth");  // QAudioRoom::Material::PlasterSmooth
+    materials << qsl("plywoodpanel");   // QAudioRoom::Material::PlywoodPanel
+    materials << qsl("polishedconcreteortile"); // QAudioRoom::Material::PolishedConcreteOrTile
+    materials << qsl("sheetrock");      // QAudioRoom::Material::Sheetrock
+
+    materials << qsl("woodceiling");    // QAudioRoom::Material::WoodCeiling
+    materials << qsl("woodpanel");      // QAudioRoom::Material::WoodPanel
+    materials << qsl("transparent");    // QAudioRoom::Material::Transparent
+    materials << qsl("acousticceilingtiles"); // QAudioRoom::Material::AcousticCeilingTiles
+    materials << qsl("linoleumonconcrete"); // QAudioRoom::Material::LinoleumOnConcrete
+    materials << qsl("parquetonconcrete"); // QAudioRoom::Material::ParquetOnConcrete
+    materials << qsl("wateroricesurface"); // QAudioRoom::Material::WaterOrIceSurface
+    materials << qsl("uniform");        // QAudioRoom::Material::UniformMaterial
+    
+    return materials;
+}
+
+QAudioRoom::Material TSpatialAudio::stringToMaterial(const QString& materialName)
+{
+    const QString name = materialName.toLower().replace("_", "").replace("-", "");
+    
+    // Map string names to Qt enum values with comprehensive coverage
+    if (name == "brick" || name == "brickbare") {
+        return QAudioRoom::Material::BrickBare;
+    } else if (name == "brickpainted") {
+        return QAudioRoom::Material::BrickPainted;
+    } else if (name == "concrete" || name == "concreteblockcoarse") {
+        return QAudioRoom::Material::ConcreteBlockCoarse;
+    } else if (name == "concretepainted" || name == "concreteblockpainted") {
+        return QAudioRoom::Material::ConcreteBlockPainted;
+    } else if (name == "curtain" || name == "curtainheavy" || name == "fabric") {
+        return QAudioRoom::Material::CurtainHeavy;
+    } else if (name == "fiberglass" || name == "fiberglassinsulation" || name == "carpet") {
+        return QAudioRoom::Material::FiberGlassInsulation;
+    } else if (name == "glass" || name == "glassthin") {
+        return QAudioRoom::Material::GlassThin;
+    } else if (name == "glassthick") {
+        return QAudioRoom::Material::GlassThick;
+    } else if (name == "grass") {
+        return QAudioRoom::Material::Grass;
+    } else if (name == "linoleum" || name == "linoleumontile") {
+        return QAudioRoom::Material::PolishedConcreteOrTile; // Use as hard floor surface
+    } else if (name == "marble") {
+        return QAudioRoom::Material::Marble;
+    } else if (name == "metal") {
+        return QAudioRoom::Material::Metal;
+    } else if (name == "parquet" || name == "parquetonfiberboard" || name == "parquetonconcrete") {
+        return QAudioRoom::Material::ParquetOnConcrete;
+    } else if (name == "plaster" || name == "plasterrough") {
+        return QAudioRoom::Material::PlasterRough;
+    } else if (name == "plastersmooth") {
+        return QAudioRoom::Material::PlasterSmooth;
+    } else if (name == "plywood" || name == "plywoodpanel") {
+        return QAudioRoom::Material::PlywoodPanel;
+    } else if (name == "tile" || name == "polishedconcrete" || name == "polishedconcreteortile") {
+        return QAudioRoom::Material::PolishedConcreteOrTile;
+    } else if (name == "sheetrock" || name == "drywall") {
+        return QAudioRoom::Material::Sheetrock;
+    } else if (name == "water" || name == "ice" || name == "wateroriceereflector" || name == "wateroricesurface") {
+        return QAudioRoom::Material::WaterOrIceSurface;
+    } else if (name == "woodceiling") {
+        return QAudioRoom::Material::WoodCeiling;
+    } else if (name == "wood" || name == "woodpanel") {
+        return QAudioRoom::Material::WoodPanel;
+    } else if (name == "transparent" || name == "air") {
+        return QAudioRoom::Material::Transparent;
+    } else if (name == "acousticceilingtiles" || name == "acoustictiles") {
+        return QAudioRoom::Material::AcousticCeilingTiles;
+    } else if (name == "linoleumonconcrete" || name == "linoleum") {
+        return QAudioRoom::Material::LinoleumOnConcrete;
+    } else if (name == "uniform" || name == "uniformmaterial") {
+        return QAudioRoom::Material::UniformMaterial;
+    }
+    
+    // Default fallback
+    return QAudioRoom::Material::BrickBare;
+}
+
+QString TSpatialAudio::materialToString(QAudioRoom::Material material)
+{
+    // Convert Qt enum back to string names for GMCP responses
+    switch (material) {
+        case QAudioRoom::Material::BrickBare:
+            return qsl("brick");
+        case QAudioRoom::Material::BrickPainted:
+            return qsl("brickpainted");
+        case QAudioRoom::Material::ConcreteBlockCoarse:
+            return qsl("concrete");
+        case QAudioRoom::Material::ConcreteBlockPainted:
+            return qsl("concretepainted");
+        case QAudioRoom::Material::CurtainHeavy:
+            return qsl("curtainheavy");
+        case QAudioRoom::Material::FiberGlassInsulation:
+            return qsl("fiberglassinsulation");
+        case QAudioRoom::Material::GlassThin:
+            return qsl("glassthin");
+        case QAudioRoom::Material::GlassThick:
+            return qsl("glassthick");
+        case QAudioRoom::Material::Grass:
+            return qsl("grass");
+
+        case QAudioRoom::Material::Marble:
+            return qsl("marble");
+        case QAudioRoom::Material::Metal:
+            return qsl("metal");
+
+        case QAudioRoom::Material::PlasterRough:
+            return qsl("plasterrough");
+        case QAudioRoom::Material::PlasterSmooth:
+            return qsl("plastersmooth");
+        case QAudioRoom::Material::PlywoodPanel:
+            return qsl("plywoodpanel");
+        case QAudioRoom::Material::PolishedConcreteOrTile:
+            return qsl("polishedconcreteortile");
+        case QAudioRoom::Material::Sheetrock:
+            return qsl("sheetrock");
+
+        case QAudioRoom::Material::WoodCeiling:
+            return qsl("woodceiling");
+        case QAudioRoom::Material::WoodPanel:
+            return qsl("woodpanel");
+        case QAudioRoom::Material::Transparent:
+            return qsl("transparent");
+        case QAudioRoom::Material::AcousticCeilingTiles:
+            return qsl("acousticceilingtiles");
+        case QAudioRoom::Material::LinoleumOnConcrete:
+            return qsl("linoleumonconcrete");
+        case QAudioRoom::Material::ParquetOnConcrete:
+            return qsl("parquetonconcrete");
+        case QAudioRoom::Material::WaterOrIceSurface:
+            return qsl("wateroricesurface");
+        case QAudioRoom::Material::UniformMaterial:
+            return qsl("uniform");
+    }
+    
+    return qsl("brick");  // Default fallback
+}
+
+void TSpatialAudio::sendGMCPResponse(const QString& messageType, const QString& data)
+{
+    // Check connection status first
+    if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        qWarning() << "TSpatialAudio::sendGMCPResponse - Not connected to game server";
+        return;
+    }
+
+    if (!mpHost->mTelnet.isGMCPEnabled()) {
+        qWarning() << "TSpatialAudio::sendGMCPResponse - GMCP is not currently enabled";
+        return;
+    }
+
+    // Format the GMCP message using the same pattern as TLuaInterpreter::sendGMCP
+    const std::string msg = mpHost->mTelnet.encodeAndCookBytes(messageType.toStdString());
+    const std::string payload = mpHost->mTelnet.encodeAndCookBytes(data.toStdString());
+
+    std::string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_GMCP;
+    output += msg;
+    if (!payload.empty()) {
+        output += " ";
+        output += payload;
+    }
+    output += TN_IAC;
+    output += TN_SE;
+
+    // Send the raw GMCP message
+    if (!mpHost->mTelnet.socketOutRaw(output)) {
+        qWarning() << "TSpatialAudio::sendGMCPResponse - Failed to send GMCP message:" << messageType;
+    }
+
+#ifdef DEBUG_SPATIAL_AUDIO
+    qDebug() << "TSpatialAudio::sendGMCPResponse - Sent:" << messageType << "data:" << data;
+#endif
+}
+
+void TSpatialAudio::sendCapabilitiesResponse()
+{
+    QJsonObject capabilities;
+    capabilities[qsl("version")] = qsl("1.0");
+    
+    // Supported audio formats - query at runtime
+    QJsonArray formats;
+    const QStringList supportedFormats = getSupportedAudioFormats();
+
+    for (const QString& format : supportedFormats) {
+        formats << format;
+    }
+
+    capabilities[qsl("formats")] = formats;
+    
+    // Supported output modes
+    QJsonArray outputModes;
+    outputModes << qsl("stereo") << qsl("surround") << qsl("headphone");
+    capabilities[qsl("output_modes")] = outputModes;
+    
+    // Supported room materials - get complete list from Qt enum
+    QJsonArray materials;
+    const QStringList supportedMaterials = getSupportedRoomMaterials();
+
+    for (const QString& material : supportedMaterials) {
+        materials << material;
+    }
+
+    capabilities[qsl("room_materials")] = materials;
+    
+    // Technical capabilities
+    capabilities[qsl("max_sources")] = 32;
+    capabilities[qsl("distance_model")] = qsl("inverse");
+    capabilities[qsl("coordinate_system")] = qsl("spherical");
+    
+    // Feature support
+    QJsonObject features;
+    features[qsl("positioning")] = true;
+    features[qsl("room_acoustics")] = true;
+    features[qsl("occlusion")] = true;
+    features[qsl("listener_control")] = true;
+    features[qsl("test_tones")] = true;
+    features[qsl("volume_control")] = true;
+    features[qsl("loops")] = true;
+    capabilities[qsl("features")] = features;
+    
+    // Send response
+    QJsonDocument doc(capabilities);
+    QString response = doc.toJson(QJsonDocument::Compact);
+    sendGMCPResponse(qsl("Client.Media.Spatial.Capabilities"), response);
+    
+#ifdef DEBUG_SPATIAL_AUDIO
+    qDebug() << "TSpatialAudio::sendCapabilitiesResponse - Sent capabilities:" << response;
+#endif
+}
+
+void TSpatialAudio::sendSettingsResponse()
+{
+    QJsonObject settings;
+    
+    // Master volume (convert from 0.0-1.0 to 0-100)
+    settings[qsl("master_volume")] = static_cast<int>(masterVolume() * 100);
+    
+    // Listener position and rotation
+    QJsonObject listener;
+    QVector3D pos = listenerPosition();
+    QJsonArray position;
+    position << pos.x() << pos.y() << pos.z();
+    listener[qsl("position")] = position;
+    
+    QQuaternion rot = listenerRotation();
+    QVector3D euler = rot.toEulerAngles();
+    QJsonArray rotation;
+    rotation << euler.x() << euler.y() << euler.z();
+    listener[qsl("rotation")] = rotation;
+    settings[qsl("listener")] = listener;
+    
+    // Room settings if available
+    if (TSpatialAudioRoom* room = getRoom()) {
+        QJsonObject roomObj;
+        QVector3D dims = room->dimensions();
+        QJsonArray dimensions;
+        dimensions << dims.x() << dims.y() << dims.z();
+        roomObj[qsl("dimensions")] = dimensions;
+        
+        roomObj[qsl("reverb_gain")] = room->reverbGain();
+        roomObj[qsl("reflection_gain")] = room->reflectionGain();
+        roomObj[qsl("reverb_time")] = room->reverbTime();
+        roomObj[qsl("reverb_brightness")] = room->reverbBrightness();
+        
+        settings[qsl("room")] = roomObj;
+    }
+    
+    // Send response
+    QJsonDocument doc(settings);
+    QString response = doc.toJson(QJsonDocument::Compact);
+    sendGMCPResponse(qsl("Client.Media.Spatial.Settings"), response);
+    
+#ifdef DEBUG_SPATIAL_AUDIO
+    qDebug() << "TSpatialAudio::sendSettingsResponse - Sent settings:" << response;
+#endif
+}
+
+void TSpatialAudio::sendStatusResponse()
+{
+    QJsonObject status;
+    
+    // Collect active GMCP sources only (server should not know about client API sources)
+    QJsonArray activeSources;
+    QStringList gmcpSources = listSources(ProtocolGMCP);
+    
+    int activeCount = 0;
+
+    for (const QString& sourceKey : gmcpSources) {
+        TSpatialAudioSource* source = getSource(sourceKey, ProtocolGMCP);
+        
+        if (source && source->isPlaying()) {
+            QJsonObject sourceObj;
+            sourceObj[qsl("key")] = sourceKey;
+            sourceObj[qsl("status")] = source->isPaused() ? qsl("paused") : qsl("playing");
+            
+            // Position in spherical coordinates
+            QJsonArray position;
+            position << source->azimuth() << source->elevation() << source->distance();
+            sourceObj[qsl("position")] = position;
+            
+            sourceObj[qsl("volume")] = static_cast<int>(source->volume() * 100);
+            sourceObj[qsl("occlusion")] = source->occlusion();
+            sourceObj[qsl("size")] = source->size();
+            sourceObj[qsl("loops")] = source->loops();
+            
+            activeSources << sourceObj;
+            activeCount++;
+        }
+    }
+    
+    status[qsl("active_sources")] = activeSources;
+    status[qsl("source_count")] = activeCount;
+    status[qsl("max_sources")] = 32;
+    
+    // Engine status
+    status[qsl("engine_initialized")] = isInitialized();
+    
+    // Send response
+    QJsonDocument doc(status);
+    QString response = doc.toJson(QJsonDocument::Compact);
+    sendGMCPResponse(qsl("Client.Media.Spatial.Status"), response);
+    
+#ifdef DEBUG_SPATIAL_AUDIO
+    qDebug() << "TSpatialAudio::sendStatusResponse - Sent status:" << response;
+#endif
 }
 

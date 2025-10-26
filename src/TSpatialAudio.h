@@ -25,6 +25,7 @@
 #include <QAudioRoom>
 #include <QSpatialSound>
 #include <QString>
+#include <QStringList>
 #include <QVector3D>
 #include <QQuaternion>
 #include <QMap>
@@ -149,13 +150,8 @@ public:
     bool isInitialized() const { return mAudioEngine != nullptr; }
     
     // Output mode
-    enum OutputMode {
-        Stereo = QAudioEngine::Stereo,
-        Surround = QAudioEngine::Surround,
-        Headphone = QAudioEngine::Headphone
-    };
-    void setOutputMode(OutputMode mode);
-    OutputMode outputMode() const;
+    void setOutputMode(QAudioEngine::OutputMode mode);
+    QAudioEngine::OutputMode outputMode() const;
     
     // Listener (player) position and orientation
     void setListenerPosition(float x, float y, float z);
@@ -181,6 +177,17 @@ public:
     // GMCP message parsing (like TMedia::parseGMCP)
     void parseGMCP(QString& packageMessage, QString& gmcp);
     
+    // GMCP response methods for server queries
+    void sendCapabilitiesResponse();
+    void sendSettingsResponse();  
+    void sendStatusResponse();
+    
+private:
+    // Helper to send GMCP responses
+    void sendGMCPResponse(const QString& messageType, const QString& data);
+    
+public:
+    
     // Room management
     TSpatialAudioRoom* createRoom();
     TSpatialAudioRoom* getRoom();
@@ -203,6 +210,15 @@ public:
     };
     QString generateTestTone(ToneType type, float frequency, float durationSeconds, int sampleRate = 48000);
     bool createTestToneSource(const QString& name, ToneType type, float frequency, float durationSeconds);
+    
+    // Runtime format detection
+    QStringList getSupportedAudioFormats();
+    bool isFormatSupported(const QString& fileExtension);
+    
+    // Room material utilities
+    QStringList getSupportedRoomMaterials();
+    QAudioRoom::Material stringToMaterial(const QString& materialName);
+    QString materialToString(QAudioRoom::Material material);
 
 private slots:
     void downloadFinished(QNetworkReply* reply);
