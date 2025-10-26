@@ -1409,6 +1409,7 @@ QAudioRoom::Material TSpatialAudio::stringToMaterial(const QString& materialName
     const QString name = materialName.toLower().replace("_", "").replace("-", "");
     
     // Map string names to Qt enum values with comprehensive coverage
+    // Note: Use "transparent" or "air" for open areas with no walls/reflections
     if (name == "brick" || name == "brickbare") {
         return QAudioRoom::Material::BrickBare;
     } else if (name == "brickpainted") {
