@@ -60,7 +60,6 @@
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
 
-#include "pre_guard.h"
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
@@ -117,7 +116,6 @@ namespace coreMacOS {
 
 // PLACEMARKER: sample benchmarking code
 // #include <nanobench.h>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -225,7 +223,7 @@ void mudlet::init()
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
-    
+
     // Add context menu to toolbar for show/hide functionality
     mpMainToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpMainToolBar, &QWidget::customContextMenuRequested,
@@ -249,7 +247,7 @@ void mudlet::init()
     // Connect the tab bar's reattach signal (for drag and drop reattachment)
     connect(mpTabBar, &TTabBar::tabReattachRequested,
             this, &mudlet::slot_tabReattachRequested);
-    
+
     // Add context menu to tab bar for toolbar visibility options
     mpTabBar->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpTabBar, &QWidget::customContextMenuRequested,
@@ -1529,14 +1527,14 @@ void mudlet::slot_moduleManager()
     if (!moduleManager){
         moduleManager = new dlgModuleManager(this, pH);
         pH->mpModuleManager = moduleManager;
-        
+
         // Set up focus restoration for when this module manager is closed
         setupModuleManagerFocusRestoration(moduleManager);
     }
-    
+
     moduleManager->raise();
     moduleManager->show();
-    
+
     // Force reposition after showing, since module manager is a singleton per profile
     // that may restore its position after being shown
     Host* activeHost = getActiveHost();
@@ -1568,15 +1566,15 @@ void mudlet::slot_packageManager()
     if (!packageManager) {
         packageManager = new dlgPackageManager(this, pH);
         pH->mpPackageManager = packageManager;
-        
+
         // Set up focus restoration for when this package manager is closed
         setupPackageManagerFocusRestoration(packageManager);
     }
-    
+
     packageManager->raise();
     packageManager->showNormal();
     packageManager->activateWindow();
-    
+
     // Force reposition after showing, since package manager is a singleton per profile
     // that may restore its position after being shown
     Host* activeHost = getActiveHost();
@@ -1592,12 +1590,12 @@ void mudlet::slot_packageExporter()
         return;
     }
     auto d = new dlgPackageExporter(this, pH);
-    
+
     // Set up focus restoration for when this package exporter is closed
     setupPackageExporterFocusRestoration(d);
-    
+
     d->show();
-    
+
     // Force reposition after showing to ensure correct screen placement
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
@@ -1674,7 +1672,7 @@ void mudlet::slot_reattachAllDetachedWindows()
         qWarning() << "slot_reattachAllDetachedWindows: Found orphaned profiles:" << orphanedProfiles;
         reattachOrphanedProfiles();
     }
-    
+
     // Get a copy of the detached windows map since reattaching will modify it
     auto detachedWindowsCopy = mDetachedWindows;
 
@@ -1684,7 +1682,7 @@ void mudlet::slot_reattachAllDetachedWindows()
 #endif
         return;
     }
-    
+
 #if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "slot_reattachAllDetachedWindows: Reattaching" << detachedWindowsCopy.size() << "detached windows";
 #endif
@@ -1701,7 +1699,7 @@ void mudlet::slot_reattachAllDetachedWindows()
             reattachTab(profileName, -1); // Use default insert index
         }
     }
-    
+
     // Final validation to ensure no profiles are left orphaned
     QStringList remainingOrphans = getOrphanedProfiles();
 
@@ -1801,7 +1799,7 @@ void mudlet::updateWindowMenu()
                 uniqueDetachedWindows.insert(detachedWindow);
             }
         }
-        
+
         // Process each unique detached window
         for (TDetachedWindow* detachedWindow : uniqueDetachedWindows) {
             // Get all profiles in this detached window
@@ -1868,7 +1866,7 @@ void mudlet::slot_activateMainWindowProfile()
     }
 
     QString profileName = action->data().toString();
-    
+
     // Find the tab index for this profile in the main window
     int tabIndex = -1;
 
@@ -1884,13 +1882,13 @@ void mudlet::slot_activateMainWindowProfile()
         raise();
         activateWindow();
         show(); // Ensure it's not minimized
-        
+
         // Switch to the specific tab
         mpTabBar->setCurrentIndex(tabIndex);
-        
+
         // Trigger the tab change logic to ensure the profile is properly activated
         slot_tabChanged(tabIndex);
-        
+
         updateWindowMenu(); // Refresh checkmarks
     }
 }
@@ -1904,7 +1902,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     }
 
     QString profileName = action->data().toString();
-    
+
     // Find which detached window contains this profile
     for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
         TDetachedWindow* detachedWindow = it.value();
@@ -1914,10 +1912,10 @@ void mudlet::slot_activateDetachedWindowProfile()
             detachedWindow->raise();
             detachedWindow->activateWindow();
             detachedWindow->show(); // Ensure it's not minimized
-            
+
             // Switch to the specific profile tab in the detached window
             detachedWindow->switchToProfile(profileName);
-            
+
             updateWindowMenu(); // Refresh checkmarks
             break;
         }
@@ -1947,17 +1945,17 @@ void mudlet::closeHost(const QString& name)
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "mudlet::closeHost: Cleaning up main window dock widget for profile" << name;
 #endif
-            
+
             // If this is the currently active map dock, clear the global reference
             if (mpCurrentMapDockWidget == mapDockWidget) {
                 mpCurrentMapDockWidget = nullptr;
             }
-            
+
             // Remove the dock widget
             removeDockWidget(mapDockWidget);
             mapDockWidget->deleteLater();
         }
-        
+
         // Remove from our tracking map
         mMainWindowDockWidgetMap.remove(mapKey);
         mMainWindowDockWidgetUserPreference.remove(mapKey);
@@ -1994,7 +1992,7 @@ void mudlet::updateMultiViewControls()
     if (dactionMultiView->isEnabled() != isEnabled) {
         dactionMultiView->setEnabled(isEnabled);
     }
-    
+
     // Update reattach detached windows menu visibility
     const bool hasDetachedWindows = !mDetachedWindows.isEmpty();
 
@@ -2026,10 +2024,10 @@ void mudlet::slot_tabChanged(int tabID)
     activateProfile(mHostManager.getHost(hostName));
     updateDetachedWindowToolbars();
     updateMainWindowTabIndicators();
-    
+
     // Update main window toolbar state for the new active profile
     updateMainWindowToolbarState();
-    
+
     // Update main window dock widget visibility for the new active profile
     updateMainWindowDockWidgetVisibilityForProfile(hostName);
 }
@@ -2055,7 +2053,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
-    
+
     // Apply Host's console buffer size settings to the newly created console
     int bufferSize = pH->getConsoleBufferSize();
     if (pH->getUseMaxConsoleBufferSize()) {
@@ -2149,7 +2147,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // profiles get shown across a split screen - even though mMultiView is NOT
     // set)!
     qApp->processEvents();
-    
+
     // Set up a timer to refresh tab indicators after a few seconds
     // This catches connection status changes that typically happen shortly after profile creation
     QTimer::singleShot(3000, this, &mudlet::slot_refreshTabIndicatorsDelayed);
@@ -2263,61 +2261,61 @@ void mudlet::updateMainWindowToolbarState()
 {
     // Update toolbar buttons based on whether the main window has any active profiles
     // This is called when tabs are detached/reattached to ensure proper button states
-    
+
     Host* activeHost = getActiveHost();
     bool hasActiveProfileInMainWindow = false;
-    
+
     // Check if we have tabs in the main window and if the active host is actually in the main window
     if (activeHost != nullptr && mpTabBar->count() > 0) {
         QString activeHostName = activeHost->getName();
         // Check if the active host is NOT in a detached window
         hasActiveProfileInMainWindow = !mDetachedWindows.contains(activeHostName);
     }
-    
+
     // Profile-specific actions should only be enabled if there's an active profile in the main window
     mpActionCloseProfile->setEnabled(hasActiveProfileInMainWindow);
     dactionCloseProfile->setEnabled(hasActiveProfileInMainWindow);
-    
+
     // Connection actions should also follow the same logic
     mpActionReconnect->setEnabled(hasActiveProfileInMainWindow);
     dactionReconnect->setEnabled(hasActiveProfileInMainWindow);
-    
+
     mpActionDisconnect->setEnabled(hasActiveProfileInMainWindow);
     dactionDisconnect->setEnabled(hasActiveProfileInMainWindow);
-    
+
     // Profile editor actions - only enable if there's an active profile in main window
     mpActionTriggers->setEnabled(hasActiveProfileInMainWindow);
     dactionScriptEditor->setEnabled(hasActiveProfileInMainWindow);
     dactionShowErrors->setEnabled(hasActiveProfileInMainWindow);
-    
+
     mpActionAliases->setEnabled(hasActiveProfileInMainWindow);
     mpActionTimers->setEnabled(hasActiveProfileInMainWindow);
     mpActionButtons->setEnabled(hasActiveProfileInMainWindow);
     mpActionScripts->setEnabled(hasActiveProfileInMainWindow);
     mpActionKeys->setEnabled(hasActiveProfileInMainWindow);
     mpActionVariables->setEnabled(hasActiveProfileInMainWindow);
-    
+
     mpActionMapper->setEnabled(hasActiveProfileInMainWindow);
     dactionShowMap->setEnabled(hasActiveProfileInMainWindow);
-    
+
     mpActionNotes->setEnabled(hasActiveProfileInMainWindow);
     dactionNotepad->setEnabled(hasActiveProfileInMainWindow);
-    
+
     mpButtonPackageManagers->setEnabled(hasActiveProfileInMainWindow);
     dactionPackageManager->setEnabled(hasActiveProfileInMainWindow);
     dactionModuleManager->setEnabled(hasActiveProfileInMainWindow);
     dactionPackageExporter->setEnabled(hasActiveProfileInMainWindow);
-    
+
     dactionToggleTimeStamp->setEnabled(hasActiveProfileInMainWindow);
     dactionToggleReplay->setEnabled(hasActiveProfileInMainWindow);
     dactionToggleLogging->setEnabled(hasActiveProfileInMainWindow);
     dactionToggleEmergencyStop->setEnabled(hasActiveProfileInMainWindow);
-    
+
     mpActionIRC->setEnabled(true);
     dactionIRC->setEnabled(true);
-    
+
     dactionInputLine->setEnabled(hasActiveProfileInMainWindow);
-    
+
     // Replay action has special logic
     if (!mpToolBarReplay && hasActiveProfileInMainWindow) {
         mpActionReplay->setEnabled(true);
@@ -2331,16 +2329,16 @@ void mudlet::updateMainWindowToolbarState()
                                       "<p><i>Disabled until a profile is loaded.</i></p>"));
         dactionReplay->setToolTip(mpActionReplay->toolTip());
     }
-    
+
     mpActionMudletDiscord->setEnabled(true);
     dactionDiscord->setEnabled(true);
-    
+
     // Hide Discord button in main window when no profiles are active (revert to default state)
     mpButtonDiscord->setVisible(hasActiveProfileInMainWindow);
-    
+
     // Update Discord icon visibility based on active host state
     updateDiscordNamedIcon();
-    
+
     updateDetachedWindowToolbars();
     updateMainWindowTabIndicators();
 }
@@ -2348,18 +2346,18 @@ void mudlet::updateMainWindowToolbarState()
 void mudlet::updateMainWindowTitle()
 {
     QString mainWindowActiveProfileName;
-    
+
     // Find the currently active profile that's displayed in the main window
     if (mpTabBar->count() > 0) {
         if (mpCurrentActiveHost) {
             QString currentActiveProfileName = mpCurrentActiveHost->getName();
             bool currentProfileInMainWindow = !mDetachedWindows.contains(currentActiveProfileName);
-            
+
             if (currentProfileInMainWindow) {
                 // The globally active profile is in the main window
                 mainWindowActiveProfileName = currentActiveProfileName;
             } else {
-                // The globally active profile is detached, find which profile is 
+                // The globally active profile is detached, find which profile is
                 // currently selected in the main window tab bar
                 int currentTabIndex = mpTabBar->currentIndex();
 
@@ -2373,7 +2371,7 @@ void mudlet::updateMainWindowTitle()
             }
         }
     }
-    
+
     // Set window title based on whether we have an active profile in the main window
     if (!mainWindowActiveProfileName.isEmpty()) {
         setWindowTitle(qsl("%1 - %2").arg(mainWindowActiveProfileName, scmVersion));
@@ -2534,21 +2532,21 @@ void mudlet::showEvent(QShowEvent* event)
 {
     mWindowMinimized = false;
     QMainWindow::showEvent(event);
-    
-    // Validate profiles on startup - check for orphaned profiles that might 
+
+    // Validate profiles on startup - check for orphaned profiles that might
     // have been left invisible due to improper detached window closure
     static bool startupValidationDone = false;
 
     if (!startupValidationDone) {
         startupValidationDone = true;
-        
+
         // Use a timer to defer this check until after full initialization
         QTimer::singleShot(1000, this, [this]() {
             QStringList orphanedProfiles = getOrphanedProfiles();
 
             if (!orphanedProfiles.isEmpty()) {
                 qWarning() << "Startup validation: Found orphaned profiles from previous session:" << orphanedProfiles;
-                
+
                 // Automatically reattach orphaned profiles without user prompt
 #if defined(DEBUG_WINDOW_HANDLING)
                 qDebug() << "Automatically reattaching" << orphanedProfiles.size() << "orphaned profiles:" << orphanedProfiles.join(", ");
@@ -2864,12 +2862,12 @@ void mudlet::setToolBarVisibility(const enums::controlsVisibility state)
     mToolbarVisibility = state;
 
     adjustToolBarVisibility();
-    
+
     // Update the toggle action to match the current state
     if (mpActionToggleMainToolBar) {
         mpActionToggleMainToolBar->setChecked(state != enums::visibleNever);
     }
-    
+
     emit signal_toolBarVisibilityChanged(state);
 }
 
@@ -2942,6 +2940,18 @@ void mudlet::writeSettings()
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
     mpSettings->setValue("AI/modelPath", mAIModelPath);
     mpSettings->setValue("AI/autoStart", mAIAutoStart);
+
+    settings.sync();
+    switch (settings.status()) {
+    case QSettings::NoError:
+        break;
+    case QSettings::FormatError:
+        qWarning() << "mudlet::writeSettings() ERROR - failed to save settings, reason: \"Format error\".";
+        break;
+    case QSettings::AccessError:
+        qWarning() << "mudlet::writeSettings() ERROR - failed to save settings, reason: \"Access error\" (file permissions or disk full).";
+        break;
+    }
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2962,7 +2972,7 @@ void mudlet::slot_showConnectionDialog()
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
-    
+
     // Use a timer to ensure the main window is ready before showing the dialog
     // This is especially important at startup when the main window might not be fully initialized
     QTimer::singleShot(0, this, [this]() {
@@ -2970,11 +2980,11 @@ void mudlet::slot_showConnectionDialog()
         if (!isVisible()) {
             show();
         }
-        
+
         // Bring the main window to the front first
         raise();
         activateWindow();
-        
+
         // Then show and bring the dialog to the front
         mpConnectionDialog->show();
         mpConnectionDialog->raise();
@@ -2992,7 +3002,7 @@ void mudlet::slot_showEditorDialog()
     if (!pEditor) {
         return;
     }
-    
+
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
         QTimer::singleShot(50, this, [this]() {
@@ -3000,7 +3010,7 @@ void mudlet::slot_showEditorDialog()
             this->show();
             this->raise();
             this->activateWindow();
-            
+
             // Ensure the current profile tab is properly focused
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
@@ -3011,12 +3021,12 @@ void mudlet::slot_showEditorDialog()
             }
         });
     });
-    
+
     pEditor->showCurrentTriggerItem();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
-    
+
     // Force reposition after showing, since script editor is a singleton
     // that may restore its position after being shown
     Host* activeHost = getActiveHost();
@@ -3035,7 +3045,7 @@ void mudlet::slot_showTriggerDialog()
     if (!pEditor) {
         return;
     }
-    
+
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
         QTimer::singleShot(50, this, [this]() {
@@ -3043,7 +3053,7 @@ void mudlet::slot_showTriggerDialog()
             this->show();
             this->raise();
             this->activateWindow();
-            
+
             // Ensure the current profile tab is properly focused
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
@@ -3054,10 +3064,10 @@ void mudlet::slot_showTriggerDialog()
             }
         });
     });
-    
+
     // Position dialog on the same screen as the main window for better multi-monitor UX
     utils::positionDialogOnParentScreen(pEditor, this);
-    
+
     pEditor->slot_showTriggers();
     pEditor->raise();
     pEditor->showNormal();
@@ -3074,7 +3084,7 @@ void mudlet::slot_showAliasDialog()
     if (!pEditor) {
         return;
     }
-    
+
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
         QTimer::singleShot(50, this, [this]() {
@@ -3082,7 +3092,7 @@ void mudlet::slot_showAliasDialog()
             this->show();
             this->raise();
             this->activateWindow();
-            
+
             // Ensure the current profile tab is properly focused
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
@@ -3093,7 +3103,7 @@ void mudlet::slot_showAliasDialog()
             }
         });
     });
-    
+
     pEditor->slot_showAliases();
     pEditor->raise();
     pEditor->showNormal();
@@ -3110,7 +3120,7 @@ void mudlet::slot_showTimerDialog()
     if (!pEditor) {
         return;
     }
-    
+
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
         QTimer::singleShot(50, this, [this]() {
@@ -3118,7 +3128,7 @@ void mudlet::slot_showTimerDialog()
             this->show();
             this->raise();
             this->activateWindow();
-            
+
             // Ensure the current profile tab is properly focused
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
@@ -3129,7 +3139,7 @@ void mudlet::slot_showTimerDialog()
             }
         });
     });
-    
+
     pEditor->slot_showTimers();
     pEditor->raise();
     pEditor->showNormal();
@@ -3146,18 +3156,18 @@ void mudlet::restoreProfileFocus(const QString& profileName)
         if (!mudletInstance) {
             return;
         }
-        
+
         // Check if there are any detached windows for this profile
         auto detachedWindows = mudletInstance->mDetachedWindows;
         TDetachedWindow* detachedWindow = nullptr;
-        
+
         for (auto window : detachedWindows) {
             if (window && window->getProfileNames().contains(profileName)) {
                 detachedWindow = window;
                 break;
             }
         }
-        
+
         if (detachedWindow) {
             detachedWindow->show();
             detachedWindow->raise();
@@ -3167,7 +3177,7 @@ void mudlet::restoreProfileFocus(const QString& profileName)
             mudletInstance->show();
             mudletInstance->raise();
             mudletInstance->activateWindow();
-            
+
             // Focus the specific profile in main window by finding its tab
             for (int i = 0; i < mudletInstance->mpTabBar->count(); ++i) {
                 if (mudletInstance->mpTabBar->tabData(i).toString() == profileName) {
@@ -3186,10 +3196,10 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
     if (!pEditor) {
         return;
     }
-    
+
     // Disconnect any existing focus restoration connections for this editor
     disconnect(pEditor, &dlgTriggerEditor::editorClosing, nullptr, nullptr);
-    
+
     // Connect to our custom editorClosing signal which is emitted from closeEvent
     connect(pEditor, &dlgTriggerEditor::editorClosing, [profileName, targetWindow]() {
         // If a specific target window is provided (detached window), focus that
@@ -3199,7 +3209,7 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
                 targetWindow->show();
                 targetWindow->raise();
                 targetWindow->activateWindow();
-                
+
                 // For detached windows, we need to find and activate the specific profile tab
                 auto detachedWindow = qobject_cast<TDetachedWindow*>(targetWindow);
                 if (detachedWindow && !profileName.isEmpty()) {
@@ -3218,10 +3228,10 @@ void mudlet::setupNotepadFocusRestoration(dlgNotepad* pNotepad)
     if (!pNotepad) {
         return;
     }
-    
+
     // Disconnect any existing focus restoration connections for this notepad
     disconnect(pNotepad, &dlgNotepad::notepadClosing, nullptr, nullptr);
-    
+
     // Connect to our custom notepadClosing signal which is emitted from closeEvent
     connect(pNotepad, &dlgNotepad::notepadClosing, [](const QString& profileName) {
         // Use the common focus restoration logic
@@ -3234,10 +3244,10 @@ void mudlet::setupPackageManagerFocusRestoration(dlgPackageManager* pPackageMana
     if (!pPackageManager) {
         return;
     }
-    
+
     // Disconnect any existing focus restoration connections for this package manager
     disconnect(pPackageManager, &dlgPackageManager::packageManagerClosing, nullptr, nullptr);
-    
+
     // Connect to our custom packageManagerClosing signal which is emitted from closeEvent
     connect(pPackageManager, &dlgPackageManager::packageManagerClosing, [](const QString& profileName) {
         // Use the common focus restoration logic
@@ -3250,10 +3260,10 @@ void mudlet::setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager
     if (!pModuleManager) {
         return;
     }
-    
+
     // Disconnect any existing focus restoration connections for this module manager
     disconnect(pModuleManager, &dlgModuleManager::moduleManagerClosing, nullptr, nullptr);
-    
+
     // Connect to our custom moduleManagerClosing signal which is emitted from closeEvent
     connect(pModuleManager, &dlgModuleManager::moduleManagerClosing, [](const QString& profileName) {
         // Use the common focus restoration logic
@@ -3266,10 +3276,10 @@ void mudlet::setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageEx
     if (!pPackageExporter) {
         return;
     }
-    
+
     // Disconnect any existing focus restoration connections for this package exporter
     disconnect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, nullptr, nullptr);
-    
+
     // Connect to our custom packageExporterClosing signal which is emitted from closeEvent
     connect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, [](const QString& profileName) {
         // Use the common focus restoration logic
@@ -3282,10 +3292,10 @@ void mudlet::setupPreferencesFocusRestoration(dlgProfilePreferences* pPreference
     if (!pPreferences) {
         return;
     }
-    
+
     // Disconnect any existing focus restoration connections for this preferences dialog
     disconnect(pPreferences, &dlgProfilePreferences::preferencesClosing, nullptr, nullptr);
-    
+
     // Connect to our custom preferencesClosing signal which is emitted from closeEvent
     connect(pPreferences, &dlgProfilePreferences::preferencesClosing, [](const QString& profileName) {
         // Use the common focus restoration logic
@@ -3303,10 +3313,10 @@ void mudlet::slot_showScriptDialog()
     if (!pEditor) {
         return;
     }
-    
+
     // Use centralized focus restoration (no target window = main window)
     setupEditorFocusRestoration(pEditor, pHost->getName(), nullptr);
-    
+
     pEditor->slot_showScripts();
     pEditor->raise();
     pEditor->showNormal();
@@ -3323,7 +3333,7 @@ void mudlet::slot_showKeyDialog()
     if (!pEditor) {
         return;
     }
-    
+
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
         QTimer::singleShot(50, this, [this]() {
@@ -3331,7 +3341,7 @@ void mudlet::slot_showKeyDialog()
             this->show();
             this->raise();
             this->activateWindow();
-            
+
             // Ensure the current profile tab is properly focused
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
@@ -3342,7 +3352,7 @@ void mudlet::slot_showKeyDialog()
             }
         });
     });
-    
+
     pEditor->slot_showKeys();
     pEditor->raise();
     pEditor->showNormal();
@@ -3359,7 +3369,7 @@ void mudlet::slot_showVariableDialog()
     if (!pEditor) {
         return;
     }
-    
+
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
         QTimer::singleShot(50, this, [this]() {
@@ -3367,7 +3377,7 @@ void mudlet::slot_showVariableDialog()
             this->show();
             this->raise();
             this->activateWindow();
-            
+
             // Ensure the current profile tab is properly focused
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
@@ -3378,7 +3388,7 @@ void mudlet::slot_showVariableDialog()
             }
         });
     });
-    
+
     pEditor->slot_showVariables();
     pEditor->raise();
     pEditor->showNormal();
@@ -3395,7 +3405,7 @@ void mudlet::slot_showActionDialog()
     if (!pEditor) {
         return;
     }
-    
+
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
         QTimer::singleShot(50, this, [this]() {
@@ -3403,7 +3413,7 @@ void mudlet::slot_showActionDialog()
             this->show();
             this->raise();
             this->activateWindow();
-            
+
             // Ensure the current profile tab is properly focused
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
@@ -3414,7 +3424,7 @@ void mudlet::slot_showActionDialog()
             }
         });
     });
-    
+
     pEditor->slot_showActions();
     pEditor->raise();
     pEditor->showNormal();
@@ -3453,10 +3463,10 @@ void mudlet::showOptionsDialog(const QString& tab)
         pPrefs->setStyleSheet(pHost->mProfileStyleSheet);
     }
     pPrefs->setTab(tab);
-    
+
     pPrefs->raise();
     pPrefs->show();
-    
+
     // Force reposition after showing, since preferences dialog may be a singleton
     // that restores its position after being shown
     Host* activeHost = getActiveHost();
@@ -3722,7 +3732,7 @@ void mudlet::slot_showMapperDialog()
 
     const QString profileName = pHost->getName();
     const QString mapKey = qsl("map_%1").arg(profileName);
-    
+
     // Close any existing map for this profile in detached windows first
     const auto& detachedWindows = getDetachedWindows();
 
@@ -3743,19 +3753,19 @@ void mudlet::slot_showMapperDialog()
             }
         }
     }
-    
+
     // Check if we already have a main window dock widget for this profile
     QPointer<QDockWidget> existingMapDock = mMainWindowDockWidgetMap.value(mapKey);
-    
+
     if (existingMapDock) {
         // Toggle visibility of existing mapper and update global reference
         bool newVisibility = !existingMapDock->isVisible();
         existingMapDock->setVisible(newVisibility);
-        
+
         // Update mpCurrentMapDockWidget to point to the current profile's map if it's being shown
         if (newVisibility) {
             mpCurrentMapDockWidget = existingMapDock;
-            
+
             // Ensure the map's active mapper points to our main window instance
             auto mapWidget = existingMapDock->widget();
 
@@ -3765,7 +3775,7 @@ void mudlet::slot_showMapperDialog()
         } else if (mpCurrentMapDockWidget == existingMapDock) {
             // If we're hiding the current map, clear the global reference and restore host's default mapper
             mpCurrentMapDockWidget = nullptr;
-            
+
             // Restore the host's default mapper if it exists
             if (pHost->mpDockableMapWidget) {
                 auto hostMapWidget = pHost->mpDockableMapWidget->widget();
@@ -3787,10 +3797,10 @@ void mudlet::slot_showMapperDialog()
     // Create a new docked mapper widget for this profile in the main window
     auto newMapDockWidget = new QDockWidget(tr("Map - %1").arg(profileName), this);
     newMapDockWidget->setObjectName(qsl("dockMap_%1_main").arg(profileName));
-    
+
     // Store the host's default mapper temporarily so we can restore it later
     QPointer<dlgMapper> hostMapper = pMap->mpMapper;
-    
+
     // Create a new mapper instance for the main window's per-profile dock widget
     // We need to copy player room style details first
     pHost->getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
@@ -3818,13 +3828,13 @@ void mudlet::slot_showMapperDialog()
 
     // Add the dock widget to the main window
     addDockWidget(Qt::RightDockWidgetArea, newMapDockWidget);
-    
+
     // Store reference in our map for cleanup and profile-specific access
     mMainWindowDockWidgetMap[mapKey] = newMapDockWidget;
-    
+
     // Set user preference to true since we're initially showing this dock widget
     mMainWindowDockWidgetUserPreference[mapKey] = true;
-    
+
     // Set global reference to the currently active map
     mpCurrentMapDockWidget = newMapDockWidget;
 
@@ -3835,21 +3845,21 @@ void mudlet::slot_showMapperDialog()
         if (!mapDockWidget) {
             return;
         }
-        
+
         // Track user-initiated visibility changes - always update user preference
         // to ensure dock widget state is properly tracked regardless of which profile is active
         mMainWindowDockWidgetUserPreference[mapKey] = visible;
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet: User changed dock widget visibility for" << mapKey << "to" << visible;
 #endif
-        
+
         // Extract profile name from mapKey to safely look up objects
         QString profileName = mapKey;
 
         if (profileName.startsWith("map_")) {
             profileName = profileName.mid(4); // Remove "map_" prefix
         }
-        
+
         // Safely get the host and map - they might be null during shutdown
         Host* pHost = getActiveHost();
 
@@ -3861,19 +3871,19 @@ void mudlet::slot_showMapperDialog()
                 return;
             }
         }
-        
+
         auto pMap = pHost->mpMap.data();
 
         if (!pMap) {
             return;
         }
-        
+
         if (!visible) {
             // If this is the currently active map dock, clear the global reference
             if (mpCurrentMapDockWidget == mapDockWidget) {
                 mpCurrentMapDockWidget = nullptr;
             }
-            
+
             // Restore the host's default mapper when hiding
             if (pHost->mpDockableMapWidget) {
                 auto hostMapWidget = pHost->mpDockableMapWidget->widget();
@@ -3885,7 +3895,7 @@ void mudlet::slot_showMapperDialog()
         } else {
             // When showing, set this as the active mapper
             mpCurrentMapDockWidget = mapDockWidget;
-            
+
             // Ensure the map's active mapper points to our main window instance
             auto mapWidget = mapDockWidget->widget();
 
@@ -3893,7 +3903,7 @@ void mudlet::slot_showMapperDialog()
                 pMap->mpMapper = mainMapper;
             }
         }
-        
+
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet: Main window map dock visibility changed for" << mapKey << "visible:" << visible;
 #endif
@@ -3964,14 +3974,14 @@ void mudlet::slot_notes()
         pNotes->setWindowIcon(QIcon(qsl(":/icons/mudlet_notepad.png")));
         pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
         pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
-        
+
         // Set up focus restoration for the notepad
         setupNotepadFocusRestoration(pNotes);
     }
 
     pNotes->raise();
     pNotes->show();
-    
+
     // Force reposition after showing, since notepad is a singleton per profile
     // that may restore its position after being shown
     Host* activeHost = getActiveHost();
@@ -4014,11 +4024,11 @@ void mudlet::slot_mudletDiscord()
 void mudlet::updateDiscordNamedIcon()
 {
     Host* pHost = getActiveHost();
-    
+
     if (!pHost) {
         // No active host - reset Discord icon to default state (hidden)
         mpActionDiscord->setIconText(qsl("Discord"));
-        
+
         // Hide Mudlet Discord action as there's no game with custom invite
         if (mpActionMudletDiscord->isVisible()) {
             mpActionMudletDiscord->setVisible(false);
@@ -4052,7 +4062,7 @@ void mudlet::slot_reconnect()
     pHost->mTelnet.reconnect();
     updateDetachedWindowToolbars();
     updateMainWindowTabIndicators();
-    
+
     // Set up a timer to refresh tab indicators after a few seconds
     // This catches connection status changes that typically happen shortly after reconnection
     QTimer::singleShot(3000, this, &mudlet::slot_refreshTabIndicatorsDelayed);
@@ -4105,7 +4115,7 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
         qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
         return QString();
     }
-    
+
     QDataStream ifs(&file);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
         ifs.setVersion(scmQDataStreamFormat_5_12);
@@ -4351,6 +4361,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // are ready for use.
     pHost->getScriptUnit()->compileAll(true);
     pHost->updateAnsi16ColorsInTable();
+    pHost->updateExtendedAnsiColorsInTable();
 
     //Load rest of modules after scripts
     while (it2.hasNext()) {
@@ -4377,7 +4388,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
         updateDetachedWindowToolbars();
         updateMainWindowTabIndicators();
-        
+
         // Bring main window to focus when new profile connects
         show();
         raise();
@@ -4385,7 +4396,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     } else {
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
-        
+
         // Bring main window to focus when new profile loads offline
         show();
         raise();
@@ -4669,7 +4680,7 @@ void mudlet::slot_toggleMainToolBar()
     // Toggle the toolbar visibility
     enums::controlsVisibility currentState = toolBarVisibility();
     bool newVisibility = (currentState == enums::visibleNever);
-    
+
     // Synchronize toolbar visibility across all windows
     synchronizeToolBarVisibility(newVisibility);
 }
@@ -4677,15 +4688,15 @@ void mudlet::slot_toggleMainToolBar()
 void mudlet::slot_showMainToolBarContextMenu(const QPoint& position)
 {
     QMenu contextMenu(this);
-    
+
     // Create a copy of the toggle action for the context menu
     QAction* toggleAction = new QAction(tr("Profile Toolbar"), &contextMenu);
     toggleAction->setCheckable(true);
     toggleAction->setChecked(mpMainToolBar->isVisible());
     connect(toggleAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
-    
+
     contextMenu.addAction(toggleAction);
-    
+
     // Show the context menu at the global position
     contextMenu.exec(mpMainToolBar->mapToGlobal(position));
 }
@@ -4704,7 +4715,7 @@ void mudlet::synchronizeToolBarVisibility(bool visible)
             mpActionToggleMainToolBar->setChecked(visible);
         }
     }
-    
+
     // Update all detached windows
     for (auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
@@ -4716,7 +4727,7 @@ void mudlet::synchronizeToolBarVisibility(bool visible)
 void mudlet::slot_showTabContextMenu(const QPoint& position)
 {
     QMenu contextMenu(this);
-    
+
     // Find which tab was right-clicked
     int tabIndex = -1;
 
@@ -4726,30 +4737,30 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
             break;
         }
     }
-    
+
     // If we right-clicked on a specific tab, add tab-specific actions
     if (tabIndex >= 0) {
         const QString profileName = mpTabBar->tabData(tabIndex).toString();
-        
+
         // Add "Detach Tab" option
         QAction* detachTabAction = new QAction(tr("Detach Tab \"%1\"").arg(profileName), &contextMenu);
         detachTabAction->setIcon(QIcon(":/icons/window-new.png"));
         connect(detachTabAction, &QAction::triggered, this, [this, tabIndex]() {
             detachTab(tabIndex, QPoint()); // Position doesn't matter for manual detach
         });
-        
+
         contextMenu.addAction(detachTabAction);
         contextMenu.addSeparator();
     }
-    
+
     // Add toolbar visibility toggle
     QAction* toggleToolbarAction = new QAction(tr("Profile Toolbar"), &contextMenu);
     toggleToolbarAction->setCheckable(true);
     toggleToolbarAction->setChecked(mpMainToolBar->isVisible());
     connect(toggleToolbarAction, &QAction::triggered, this, &mudlet::slot_toggleMainToolBar);
-    
+
     contextMenu.addAction(toggleToolbarAction);
-    
+
     // Add connection indicator toggle
     QAction* connectionIndicatorToggleAction = new QAction(tr("Show Connection Indicators on Tabs"), &contextMenu);
     connectionIndicatorToggleAction->setCheckable(true);
@@ -4758,9 +4769,9 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
         setShowTabConnectionIndicators(checked);
     });
     contextMenu.addAction(connectionIndicatorToggleAction);
-    
+
     contextMenu.addSeparator();
-    
+
     // Show the context menu at the global position
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
@@ -5556,24 +5567,24 @@ std::string mudlet::replaceString(std::string subject, const std::string& search
 bool mudlet::isVersionAtLeast(const QString& minVersion)
 {
     const QString currentVersion = QString(APP_VERSION);
-    
+
     // Parse version strings (format: major.minor.patch)
     const QStringList currentParts = currentVersion.split('.');
     const QStringList minParts = minVersion.split('.');
-    
+
     // Ensure we have at least 3 parts for comparison
     auto getCurrentPart = [&currentParts](int index) -> int {
         return (index < currentParts.size()) ? currentParts[index].toInt() : 0;
     };
-    
+
     auto getMinPart = [&minParts](int index) -> int {
         return (index < minParts.size()) ? minParts[index].toInt() : 0;
     };
-    
+
     for (int i = 0; i < 3; ++i) {
         const int currentPart = getCurrentPart(i);
         const int minPart = getMinPart(i);
-        
+
         if (currentPart > minPart) {
             return true;
         } else if (currentPart < minPart) {
@@ -5581,7 +5592,7 @@ bool mudlet::isVersionAtLeast(const QString& minVersion)
         }
         // If equal, continue to next part
     }
-    
+
     return true; // Versions are equal
 }
 
@@ -5649,11 +5660,11 @@ bool mudlet::migratePasswordsToProfileStorage()
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
         QString password = CredentialManager::retrieveCredential(profile, "character");
-        
+
         if (!password.isEmpty()) {
             // Store in profile data
             writeProfileData(profile, qsl("password"), password);
-            
+
             // Only remove from secure storage if this version is >= 4.20.0
             // This prevents breaking compatibility with older Mudlet versions
             if (isVersionAtLeast(qsl("4.20.0"))) {
@@ -5664,7 +5675,7 @@ bool mudlet::migratePasswordsToProfileStorage()
             }
             anyMigrationNeeded = true;
         }
-        
+
         // Also check for old-format keychain entries (service: "Mudlet profile", key: profile name)
         // and migrate them to profile storage
         auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
@@ -5737,10 +5748,10 @@ void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
         const auto password = readJob->textData();
-        
+
         // Store the password using CredentialManager
         CredentialManager::storeCredential(profileName, characterName, password);
-        
+
         // Only delete from QtKeychain if this version is >= 4.20.0
         // This prevents breaking compatibility with older Mudlet versions
         if (isVersionAtLeast(qsl("4.20.0"))) {
@@ -5755,7 +5766,7 @@ void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
             qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage() INFO - migrated character password for \"" << characterName << "\" in profile \"" << profileName << "\" (legacy keychain storage preserved for compatibility).";
         }
     }
-    
+
     mCharacterPasswordsToMigrate.removeAll(qMakePair(profileName, characterName));
     job->deleteLater();
 
@@ -5787,10 +5798,10 @@ void mudlet::setShowTabConnectionIndicators(const bool state)
     }
 
     mShowTabConnectionIndicators = state;
-    
+
     // Update all tab indicators immediately
     updateTabIndicators();
-    
+
     // Update detached window tab indicators
     updateDetachedWindowTabIndicators();
 
@@ -6611,7 +6622,7 @@ void mudlet::refreshTabBar()
             mpTabBar->applyPrefixToDisplayedText(hostName);
         }
     }
-    
+
     // Also refresh all detached windows to ensure they show CDC identifiers
     for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
         TDetachedWindow* detachedWindow = it.value();
@@ -6683,14 +6694,14 @@ void mudlet::announce(const QString& text, const QString& processing, bool isPla
     }
 
     QAccessibleAnnouncementEvent event(this, textToAnnounce);
-    
+
     // Set politeness based on processing parameter
     if (processing == QLatin1String("importantall") || processing == QLatin1String("importantmostrecent")) {
         event.setPoliteness(QAccessible::AnnouncementPoliteness::Assertive);
     } else {
         event.setPoliteness(QAccessible::AnnouncementPoliteness::Polite);
     }
-    
+
     QAccessible::updateAccessibility(&event);
 }
 
@@ -7044,7 +7055,7 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
 
         // Update tab bar auto-hide behavior since detached windows changed
         updateMainWindowTabBarAutoHide();
-        
+
         // Update multi-view controls including "Reattach detached windows" menu visibility
         updateMultiViewControls();
 
@@ -7171,7 +7182,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
         if (currentTabIndex >= 0) {
             const QString currentProfileName = mpTabBar->tabData(currentTabIndex).toString();
             Host* currentHost = mHostManager.getHost(currentProfileName);
-            
+
             if (currentHost) {
                 // Hide all other consoles in the main window (not detached)
                 for (const auto& host : mHostManager) {
@@ -7486,21 +7497,21 @@ QIcon mudlet::createConnectionStatusIcon(bool isConnected, bool isConnecting, bo
     // Create a 16x16 pixmap for the icon
     QPixmap pixmap(16, 16);
     pixmap.fill(Qt::transparent);
-    
+
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    
+
     // Set up the dot properties
     const int centerX = 8;
     const int centerY = 8;
     const int radius = 4;
-    
+
     if (hasError) {
         // Red filled triangle for error
         painter.setBrush(QColor(220, 50, 50));
         painter.setPen(QPen(QColor(180, 40, 40), 1));
         QPolygon triangle;
-        triangle << QPoint(centerX, centerY - 4) 
+        triangle << QPoint(centerX, centerY - 4)
                  << QPoint(centerX - 4, centerY + 3)
                  << QPoint(centerX + 4, centerY + 3);
         painter.drawPolygon(triangle);
@@ -7520,7 +7531,7 @@ QIcon mudlet::createConnectionStatusIcon(bool isConnected, bool isConnecting, bo
         painter.setPen(QPen(QColor(120, 120, 120), 2));
         painter.drawEllipse(centerX - radius, centerY - radius, radius * 2, radius * 2);
     }
-    
+
     return QIcon(pixmap);
 }
 
@@ -7772,7 +7783,7 @@ void mudlet::moveProfileBetweenDetachedWindows(const QString& profileName, TDeta
 
         // Update tab bar auto-hide behavior since detached windows changed
         updateMainWindowTabBarAutoHide();
-        
+
         // Update multi-view controls including "Reattach detached windows" menu visibility
         updateMultiViewControls();
     }
@@ -8038,12 +8049,12 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
 {
     // Clear the current map dock widget reference first
     mpCurrentMapDockWidget = nullptr;
-    
+
 #if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile: Starting for profile" << profileName
              << "- mMainWindowDockWidgetMap.size():" << mMainWindowDockWidgetMap.size();
 #endif
-    
+
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
 
@@ -8069,16 +8080,16 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
     for (const auto& dockPair : dockWidgetsToProcess) {
         const QString& dockKey = dockPair.first;
         QPointer<QDockWidget> dockWidget = dockPair.second;
-        
+
         // Check if the dock widget still exists and is in our map
         if (!dockWidget || !mMainWindowDockWidgetMap.contains(dockKey)) {
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Skipping main window dock widget" << dockKey << "- widget exists:" << (dockWidget != nullptr) 
+            qDebug() << "mudlet: Skipping main window dock widget" << dockKey << "- widget exists:" << (dockWidget != nullptr)
                      << "in map:" << mMainWindowDockWidgetMap.contains(dockKey);
 #endif
             continue;
         }
-        
+
         // Check if this docked widget belongs to the current profile
         if (dockKey.startsWith("map_")) {
             QString dockProfileName = dockKey.mid(4); // Remove "map_" prefix
@@ -8091,8 +8102,8 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                 // Check the user's preference for dock widget visibility
                 bool shouldBeVisible = mMainWindowDockWidgetUserPreference.value(dockKey, false);
 #if defined(DEBUG_WINDOW_HANDLING)
-                qDebug() << "mudlet: Found main window dock widget for current profile" << profileName 
-                         << "currently visible:" << dockWidget->isVisible() 
+                qDebug() << "mudlet: Found main window dock widget for current profile" << profileName
+                         << "currently visible:" << dockWidget->isVisible()
                          << "should be visible:" << shouldBeVisible;
 #endif
 
@@ -8116,7 +8127,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                     qDebug() << "mudlet: Main window dock widget should be hidden - respecting user preference";
 #endif
                 }
-                
+
                 // Ensure the map's active mapper points to our main window instance (if visible)
                 if (auto pHost = mHostManager.getHost(profileName)) {
                     if (auto pMap = pHost->mpMap.data()) {
@@ -8142,7 +8153,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                 dockWidget->blockSignals(true);
                 dockWidget->setVisible(false);
                 dockWidget->blockSignals(false);
-                
+
                 // Restore host's default mapper for the other profile
                 if (auto pHost = mHostManager.getHost(dockProfileName)) {
                     if (auto pMap = pHost->mpMap.data()) {
@@ -8165,7 +8176,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
 
 #if defined(DEBUG_WINDOW_HANDLING)
     // Debug output to help track dock widget visibility changes
-    qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile:" << profileName 
+    qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile:" << profileName
              << "- Found visible dock widget:" << currentProfileHasVisibleDockWidget
              << "- Total dock widgets:" << dockWidgetsToProcess.size()
              << "- mpCurrentMapDockWidget set:" << (mpCurrentMapDockWidget != nullptr);
@@ -8177,17 +8188,17 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     if (!detachedWindow) {
         return;
     }
-    
+
     const QString mapKey = qsl("map_%1").arg(profileName);
     QPointer<QDockWidget> mainDockWidget = mMainWindowDockWidgetMap.value(mapKey);
-    
+
     if (!mainDockWidget) {
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetToDetachedWindow: No main window dock widget found for profile" << profileName;
 #endif
         return;
     }
-    
+
 #if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetToDetachedWindow: Transferring dock widget for profile" << profileName;
 
@@ -8208,33 +8219,33 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
 #endif
         return;
     }
-    
+
     // Remove the dock widget from the main window
     removeDockWidget(mainDockWidget);
-    
+
     // Disconnect existing signal connections to avoid conflicts
     mainDockWidget->disconnect();
-    
+
     // Clear from main window tracking
     mMainWindowDockWidgetMap.remove(mapKey);
     mMainWindowDockWidgetUserPreference.remove(mapKey);
     if (mpCurrentMapDockWidget == mainDockWidget) {
         mpCurrentMapDockWidget = nullptr;
     }
-    
+
     // Reparent the dock widget to the detached window
     mainDockWidget->setParent(detachedWindow);
     mainDockWidget->setObjectName(qsl("dockMap_%1_detached").arg(profileName));
-    
+
     // Transfer the user preference state first, before adding to tracking
     detachedWindow->setDockWidgetUserPreference(mapKey, intendedVisible);
-    
+
     // Add the dock widget to the detached window
     detachedWindow->QMainWindow::addDockWidget(Qt::RightDockWidgetArea, mainDockWidget);
-    
+
     // Transfer to detached window's tracking map with signal connections
     detachedWindow->addTransferredDockWidget(mapKey, mainDockWidget);
-    
+
     // Set the visibility to match the intended state - block signals to prevent overwriting user preference
     mainDockWidget->blockSignals(true);
     mainDockWidget->setVisible(intendedVisible);
@@ -8244,7 +8255,7 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
         // Update detached window's global reference if it's now visible
         detachedWindow->setMapDockWidget(mainDockWidget);
     }
-    
+
     // Update the mapper's parent
     mapperWidget->setParent(mainDockWidget);
 
@@ -8258,17 +8269,17 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     if (!detachedWindow) {
         return;
     }
-    
+
     const QString mapKey = qsl("map_%1").arg(profileName);
     QPointer<QDockWidget> detachedDockWidget = detachedWindow->getDockWidget(mapKey);
-    
+
     if (!detachedDockWidget) {
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: No detached window dock widget found for profile" << profileName;
 #endif
         return;
     }
-    
+
 #if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: Transferring dock widget for profile" << profileName;
 
@@ -8289,66 +8300,66 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
 #endif
         return;
     }
-    
+
     // Clear detached window's global reference if this was the active dock
     if (detachedWindow->getMapDockWidget() == detachedDockWidget) {
         detachedWindow->setMapDockWidget(nullptr);
     }
-    
+
     // Remove the dock widget from the detached window
     detachedWindow->QMainWindow::removeDockWidget(detachedDockWidget);
-    
+
     // Disconnect existing signal connections to avoid conflicts
     detachedDockWidget->disconnect();
-    
+
     // Clear from detached window tracking using the public API
     detachedWindow->removeDockWidget(mapKey);
-    
+
     // Reparent the dock widget to the main window
     detachedDockWidget->setParent(this);
     detachedDockWidget->setObjectName(qsl("dockMap_%1_main").arg(profileName));
-    
+
     // Add the dock widget to the main window
     addDockWidget(Qt::RightDockWidgetArea, detachedDockWidget);
-    
+
     // Transfer to main window's tracking map
     mMainWindowDockWidgetMap[mapKey] = detachedDockWidget;
-    
+
     // Transfer the user preference state as well
     mMainWindowDockWidgetUserPreference[mapKey] = intendedVisible;
-    
+
     // Reconnect signal for main window visibility tracking
     connect(detachedDockWidget, &QDockWidget::visibilityChanged, this, [this, mapKey](bool visible) {
         auto mapDockWidget = mMainWindowDockWidgetMap.value(mapKey);
         if (!mapDockWidget) {
             return;
         }
-        
+
         // Track user-initiated visibility changes - always update user preference
         // to ensure dock widget state is properly tracked regardless of which profile is active
         mMainWindowDockWidgetUserPreference[mapKey] = visible;
         qDebug() << "mudlet: User changed dock widget visibility for" << mapKey << "to" << visible;
-        
+
         // Extract profile name from mapKey to safely look up objects
         QString profileName = mapKey;
 
         if (profileName.startsWith("map_")) {
             profileName = profileName.mid(4); // Remove "map_" prefix
         }
-        
+
         // Safely get the host - it might be null during shutdown
         Host* pHost = mHostManager.getHost(profileName);
 
         if (!pHost) {
             return;
         }
-        
+
         auto pMap = pHost->mpMap.data();
 
         if (!pMap) {
             return;
         }
-        
+
         if (!visible) {
             // If this is the currently active map dock, clear the global reference
             if (mpCurrentMapDockWidget == mapDockWidget) {
@@ -8357,20 +8368,20 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
         } else {
             // When showing, set this as the active mapper for the main window
             mpCurrentMapDockWidget = mapDockWidget;
-            
+
             // Ensure the map's active mapper points to our main window instance
             auto mapWidget = mapDockWidget->widget();
             if (auto mainMapper = qobject_cast<dlgMapper*>(mapWidget)) {
                 pMap->mpMapper = mainMapper;
             }
         }
-        
+
         // Trigger dock widget visibility update for the current profile
         if (mpCurrentActiveHost && mpCurrentActiveHost->getName() == profileName) {
             updateMainWindowDockWidgetVisibilityForProfile(profileName);
         }
     });
-    
+
     // Set the visibility to match the intended state - block signals to prevent overwriting user preference
     detachedDockWidget->blockSignals(true);
     detachedDockWidget->setVisible(intendedVisible);
@@ -8380,10 +8391,10 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
         // Update main window's global reference if it's now visible
         mpCurrentMapDockWidget = detachedDockWidget;
     }
-    
+
     // Update the mapper's parent
     mapperWidget->setParent(detachedDockWidget);
-#if defined(DEBUG_WINDOW_HANDLING)    
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetFromDetachedWindow: Transfer completed for profile" << profileName << "wasVisible:" << wasVisible << "intendedVisible:" << intendedVisible;
 #endif
 }
@@ -8393,18 +8404,18 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
     if (!sourceWindow || !targetWindow) {
         return;
     }
-    
+
     const QString mapKey = qsl("map_%1").arg(profileName);
     QPointer<QDockWidget> sourceDockWidget = sourceWindow->getDockWidget(mapKey);
-    
+
     if (!sourceDockWidget) {
-#if defined(DEBUG_WINDOW_HANDLING)  
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: No dock widget found in source window for profile" << profileName;
 #endif
         return;
     }
 
-#if defined(DEBUG_WINDOW_HANDLING)  
+#if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: Transferring dock widget for profile" << profileName;
 #endif
 
@@ -8414,41 +8425,41 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
     // If the dock widget is currently visible, the user clearly wants it visible
     // If it's not visible, respect the stored user preference
     bool intendedVisible = wasVisible || sourceWindow->getDockWidgetUserPreference(mapKey);
-    
+
     // Get the mapper widget from the source dock widget
     auto mapperWidget = qobject_cast<dlgMapper*>(sourceDockWidget->widget());
 
     if (!mapperWidget) {
-#if defined(DEBUG_WINDOW_HANDLING)  
+#if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::transferDockWidgetBetweenDetachedWindows: No mapper widget found in dock widget";
 #endif
         return;
     }
-    
+
     // Clear source window's global reference if this was the active dock
     if (sourceWindow->getMapDockWidget() == sourceDockWidget) {
         sourceWindow->setMapDockWidget(nullptr);
     }
-    
+
     // Remove the dock widget from the source window
     sourceWindow->QMainWindow::removeDockWidget(sourceDockWidget);
-    
+
     // Clear from source window tracking using the public API
     sourceWindow->removeDockWidget(mapKey);
-    
+
     // Reparent the dock widget to the target window
     sourceDockWidget->setParent(targetWindow);
     sourceDockWidget->setObjectName(qsl("dockMap_%1_detached").arg(profileName));
-    
+
     // Add the dock widget to the target window
     targetWindow->QMainWindow::addDockWidget(Qt::RightDockWidgetArea, sourceDockWidget);
-    
+
     // Transfer to target window's tracking map
     targetWindow->addDockWidget(mapKey, sourceDockWidget);
-    
+
     // Transfer the user preference state as well
     targetWindow->setDockWidgetUserPreference(mapKey, intendedVisible);
-    
+
     // Set the visibility to match the intended state
     sourceDockWidget->setVisible(intendedVisible);
 
@@ -8456,7 +8467,7 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
         // Update target window's global reference if it's now visible
         targetWindow->setMapDockWidget(sourceDockWidget);
     }
-    
+
     // Update the mapper's parent
     mapperWidget->setParent(sourceDockWidget);
 
@@ -8472,9 +8483,9 @@ bool mudlet::hasOrphanedProfiles()
         if (!pHost || !pHost->mpConsole) {
             continue;
         }
-        
+
         const QString profileName = pHost->getName();
-        
+
         // Check if profile is in main window (has a tab)
         bool inMainWindow = false;
 
@@ -8484,10 +8495,10 @@ bool mudlet::hasOrphanedProfiles()
                 break;
             }
         }
-        
+
         // Check if profile is in a detached window
         bool inDetachedWindow = mDetachedWindows.contains(profileName);
-        
+
         // If profile is not visible in either location, it's orphaned
         if (!inMainWindow && !inDetachedWindow) {
             qWarning() << "hasOrphanedProfiles: Found orphaned profile:" << profileName;
@@ -8501,15 +8512,15 @@ bool mudlet::hasOrphanedProfiles()
 QStringList mudlet::getOrphanedProfiles()
 {
     QStringList orphanedProfiles;
-    
+
     // Find all loaded profiles that don't have visible windows
     for (const auto& pHost : mHostManager) {
         if (!pHost || !pHost->mpConsole) {
             continue;
         }
-        
+
         const QString profileName = pHost->getName();
-        
+
         // Check if profile is in main window (has a tab)
         bool inMainWindow = false;
 
@@ -8519,10 +8530,10 @@ QStringList mudlet::getOrphanedProfiles()
                 break;
             }
         }
-        
+
         // Check if profile is in a detached window
         bool inDetachedWindow = mDetachedWindows.contains(profileName);
-        
+
         // If profile is not visible in either location, it's orphaned
         if (!inMainWindow && !inDetachedWindow) {
             qWarning() << "getOrphanedProfiles: Found orphaned profile:" << profileName;
@@ -8536,16 +8547,16 @@ QStringList mudlet::getOrphanedProfiles()
 void mudlet::reattachOrphanedProfiles()
 {
     QStringList orphanedProfiles = getOrphanedProfiles();
-    
+
     if (orphanedProfiles.isEmpty()) {
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "reattachOrphanedProfiles: No orphaned profiles found";
 #endif
         return;
     }
-    
+
     qWarning() << "reattachOrphanedProfiles: Reattaching" << orphanedProfiles.size() << "orphaned profiles:" << orphanedProfiles;
-    
+
     // Reattach each orphaned profile to the main window
     for (const QString& profileName : orphanedProfiles) {
         Host* pHost = mHostManager.getHost(profileName);
@@ -8554,24 +8565,24 @@ void mudlet::reattachOrphanedProfiles()
             qWarning() << "reattachOrphanedProfiles: Invalid host for profile:" << profileName;
             continue;
         }
-        
+
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "reattachOrphanedProfiles: Reattaching orphaned profile:" << profileName;
 #endif
-        
+
         // Add console back to main window
         const int insertIndex = mpTabBar->count(); // Insert at end
         addConsoleToSplitter(pHost->mpConsole, insertIndex);
-        
+
         // Add tab back to tab bar
         const int newTabIndex = mpTabBar->insertTab(insertIndex, profileName);
         mpTabBar->setTabData(newTabIndex, profileName);
-        
+
         // Make it the current tab
         mpTabBar->setCurrentIndex(newTabIndex);
         activateProfile(pHost);
     }
-    
+
     // Update UI after reattachment
     updateMultiViewControls();
     updateMainWindowTabBarAutoHide();

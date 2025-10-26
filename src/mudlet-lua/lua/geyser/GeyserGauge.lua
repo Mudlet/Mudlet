@@ -21,6 +21,49 @@ Geyser.Gauge = Geyser.Container:new({
   strict = false,
   orientation = "horizontal" })
 
+--- Helper function to extract spacing values (margin/border/padding) from CSS
+-- @param css The CSS string to parse
+-- @param property The property name to extract (e.g., "margin", "border", "padding")
+-- @return left, right, top, bottom spacing values in pixels, or 0 if not found
+local function extractCSSSpacing(css, property)
+  if not css then return 0, 0, 0, 0 end
+  
+  -- Look for the property (e.g., "margin: 10px 30px;")
+  local pattern = property .. "%s*:%s*([^;]+)"
+  local value = css:match(pattern)
+  
+  if not value then return 0, 0, 0, 0 end
+  
+  -- Parse the values - CSS can have 1-4 values
+  local values = {}
+  for num in value:gmatch("(%d+%.?%d*)px") do
+    table.insert(values, tonumber(num))
+  end
+  
+  -- Handle border specially - extract width from "border: 2px solid color"
+  if property == "border" and #values == 0 then
+    local borderWidth = value:match("(%d+%.?%d*)px")
+    if borderWidth then
+      values = {tonumber(borderWidth)}
+    end
+  end
+  
+  if #values == 0 then
+    return 0, 0, 0, 0
+  elseif #values == 1 then
+    -- All sides same
+    return values[1], values[1], values[1], values[1]
+  elseif #values == 2 then
+    -- top/bottom, left/right
+    return values[2], values[2], values[1], values[1]
+  elseif #values == 4 then
+    -- top, right, bottom, left
+    return values[4], values[2], values[1], values[3]
+  else
+    return 0, 0, 0, 0
+  end
+end
+
 --- Sets the gauge amount.
 -- @param currentValue Current numeric value, or if maxValue is omitted, then
 --        it is assumed that currentValue is a value between 0 and 100 and is
@@ -41,18 +84,74 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   end
 -- prevent the gauge from overflowing its borders if currentValue > maxValue if gauge is set to be strict
   if self.strict and self.value > 100 then self.value = 100 end
+  
+  -- Calculate spacing from the back label's CSS (margins, borders, padding)
+  -- This fixes issue #5344: gauges with margins were misaligned
+  local leftOffset, rightOffset, topOffset, bottomOffset = 0, 0, 0, 0
+  
+  if self.backCSS then
+    local ml, mr, mt, mb = extractCSSSpacing(self.backCSS, "margin")
+    local bl, br, bt, bb = extractCSSSpacing(self.backCSS, "border")
+    local pl, pr, pt, pb = extractCSSSpacing(self.backCSS, "padding")
+    
+    leftOffset = ml + bl + pl
+    rightOffset = mr + br + pr
+    topOffset = mt + bt + pt
+    bottomOffset = mb + bb + pb
+  end
+  
   -- Update gauge in the requested orientation
-  local shift = tostring(self.value) .. "%"
+  -- Note: We use function-based constraints for dynamic sizing that accounts for margins
+  -- The front label can have its own borders and padding (margins are stripped in setStyleSheet)
+  -- Qt applies border/padding outside the widget's content area, so we don't need to compensate for them
+  
   if self.orientation == "horizontal" then
-    self.front:resize(shift, "100%")
+    -- Position the front label inside the back's content area
+    self.front:move(leftOffset .. "px", topOffset .. "px")
+    -- For width: we want value% of the CONTENT width (back label's content area)
+    -- Content width = back_label_width - leftOffset - rightOffset
+    local totalBackOffset = leftOffset + rightOffset
+    local gaugeValue = self.value
+    self.front:resize(
+      function() return math.floor((self.back.get_width() - totalBackOffset) * (gaugeValue / 100) + 0.5) end,
+      function() return math.floor(self.back.get_height() - topOffset - bottomOffset + 0.5) end
+    )
   elseif self.orientation == "vertical" then
-    self.front:move("0px", "-" .. shift)
-    self.front:resize("100%", "-0px") -- bind to bottom container border
+    -- For vertical (bottom-to-top), position needs to be calculated based on remaining space
+    -- At 100%: y = topOffset (fills from top to bottom of content area)
+    -- At 0%: y = topOffset + contentHeight (zero height at bottom)
+    local totalBackOffset = topOffset + bottomOffset
+    local gaugeValue = self.value
+    self.front:move(
+      leftOffset .. "px",
+      function() return topOffset + math.floor((self.back.get_height() - totalBackOffset) * (1 - gaugeValue / 100) + 0.5) end
+    )
+    self.front:resize(
+      function() return math.floor(self.back.get_width() - leftOffset - rightOffset + 0.5) end,
+      function() return math.floor((self.back.get_height() - totalBackOffset) * (gaugeValue / 100) + 0.5) end
+    )
   elseif self.orientation == "goofy" then
-    self.front:move("-" .. shift, "0px")
-    self.front:resize("-0px", "100%") -- bind to right container border
-  else -- batty
-    self.front:resize("100%", shift)
+    -- For goofy (right-to-left), position needs to be calculated based on remaining space
+    -- At 100%: x = leftOffset (fills from left to right edge)
+    -- At 0%: x = leftOffset + contentWidth (zero width at right edge)
+    local totalBackOffset = leftOffset + rightOffset
+    local gaugeValue = self.value
+    self.front:move(
+      function() return leftOffset + math.floor((self.back.get_width() - totalBackOffset) * (1 - gaugeValue / 100) + 0.5) end,
+      topOffset .. "px"
+    )
+    self.front:resize(
+      function() return math.floor((self.back.get_width() - totalBackOffset) * (gaugeValue / 100) + 0.5) end,
+      function() return math.floor(self.back.get_height() - topOffset - bottomOffset + 0.5) end
+    )
+  else -- batty (top to bottom)
+    self.front:move(leftOffset .. "px", topOffset .. "px")
+    local totalBackOffset = topOffset + bottomOffset
+    local gaugeValue = self.value
+    self.front:resize(
+      function() return math.floor(self.back.get_width() - leftOffset - rightOffset + 0.5) end,
+      function() return math.floor((self.back.get_height() - totalBackOffset) * (gaugeValue / 100) + 0.5) end
+    )
   end
 
   if text then
@@ -159,10 +258,30 @@ end
 -- @param cssback Style sheet for the back label
 -- @param cssText Style sheet for the text label
 function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
-  self.front:setStyleSheet(css)
-  self.back:setStyleSheet(cssback or css)
+  -- Store the original stylesheets
+  self.frontCSS = css
+  self.backCSS = cssback or css
+  self.textCSS = cssText
+  
+  -- Apply back stylesheet normally (this has margins/borders/padding)
+  self.back:setStyleSheet(self.backCSS)
+  
+  -- For the front label, strip ONLY margins (borders and padding are safe and allow styling)
+  -- Margins on the front label cause positioning issues, but borders/padding are fine
+  local frontCSSStripped = css
+  if frontCSSStripped then
+    frontCSSStripped = frontCSSStripped:gsub("%s*margin[^;]*;", "")
+  end
+  self.front:setStyleSheet(frontCSSStripped)
+  
+  -- Apply text stylesheet if provided
   if cssText ~= nil then
     self.text:setStyleSheet(cssText)
+  end
+  
+  -- Recalculate gauge positioning with the new stylesheet
+  if self.value then
+    self:setValue(self.value)
   end
 end
 

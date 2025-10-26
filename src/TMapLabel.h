@@ -24,13 +24,11 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QtGlobal>
 #include <QColor>
 #include <QPixmap>
 #include <QSizeF>
 #include <QVector3D>
-#include "post_guard.h"
 
 
 class TMapLabel

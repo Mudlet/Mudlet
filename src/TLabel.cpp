@@ -27,9 +27,7 @@
 #include "TDockWidget.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QtEvents>
-#include "post_guard.h"
 
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)

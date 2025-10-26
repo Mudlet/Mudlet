@@ -25,9 +25,7 @@
 
 #include "Host.h"
 
-#include "pre_guard.h"
 #include "ui_room_properties.h"
-#include "post_guard.h"
 
 
 class dlgRoomProperties : public QDialog, public Ui::room_properties

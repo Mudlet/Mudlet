@@ -23,11 +23,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QMultiMap>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 

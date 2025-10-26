@@ -49,7 +49,6 @@
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
 
-#include "pre_guard.h"
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QFileDialog>
@@ -58,7 +57,6 @@
 #include <QShortcut>
 #include <QShowEvent>
 #include <QToolBar>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -417,6 +415,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
     }
 
+    // Lua reserved keywords (highest priority for basic syntax)
     provider->add(qsl("and"), 14);
     provider->add(qsl("break"), 14);
     provider->add(qsl("else"), 14);
@@ -435,6 +434,166 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     provider->add(qsl("true"), 14);
     provider->add(qsl("until"), 14);
     provider->add(qsl("while"), 14);
+
+    // Standard Lua library functions (priority 4 - between Mudlet functions and keywords)
+    // String library
+    provider->add(qsl("string.byte"), 4, qsl("string.byte(s [, i [, j]])"));
+    provider->add(qsl("string.char"), 4, qsl("string.char(...)"));
+    provider->add(qsl("string.dump"), 4, qsl("string.dump(function)"));
+    provider->add(qsl("string.find"), 4, qsl("string.find(s, pattern [, init [, plain]])"));
+    provider->add(qsl("string.format"), 4, qsl("string.format(formatstring, ...)"));
+    provider->add(qsl("string.gmatch"), 4, qsl("string.gmatch(s, pattern)"));
+    provider->add(qsl("string.gsub"), 4, qsl("string.gsub(s, pattern, repl [, n])"));
+    provider->add(qsl("string.len"), 4, qsl("string.len(s)"));
+    provider->add(qsl("string.lower"), 4, qsl("string.lower(s)"));
+    provider->add(qsl("string.match"), 4, qsl("string.match(s, pattern [, init])"));
+    provider->add(qsl("string.rep"), 4, qsl("string.rep(s, n)"));
+    provider->add(qsl("string.reverse"), 4, qsl("string.reverse(s)"));
+    provider->add(qsl("string.sub"), 4, qsl("string.sub(s, i [, j])"));
+    provider->add(qsl("string.upper"), 4, qsl("string.upper(s)"));
+
+    // Table library
+    provider->add(qsl("table.concat"), 4, qsl("table.concat(list [, sep [, i [, j]]])"));
+    provider->add(qsl("table.insert"), 4, qsl("table.insert(list, [pos,] value)"));
+    provider->add(qsl("table.pack"), 4, qsl("table.pack(...)"));
+    provider->add(qsl("table.remove"), 4, qsl("table.remove(list [, pos])"));
+    provider->add(qsl("table.sort"), 4, qsl("table.sort(list [, comp])"));
+    provider->add(qsl("table.unpack"), 4, qsl("table.unpack(list [, i [, j]])"));
+
+    // Math library
+    provider->add(qsl("math.abs"), 4, qsl("math.abs(x)"));
+    provider->add(qsl("math.acos"), 4, qsl("math.acos(x)"));
+    provider->add(qsl("math.asin"), 4, qsl("math.asin(x)"));
+    provider->add(qsl("math.atan"), 4, qsl("math.atan(x)"));
+    provider->add(qsl("math.atan2"), 4, qsl("math.atan2(y, x)"));
+    provider->add(qsl("math.ceil"), 4, qsl("math.ceil(x)"));
+    provider->add(qsl("math.cos"), 4, qsl("math.cos(x)"));
+    provider->add(qsl("math.cosh"), 4, qsl("math.cosh(x)"));
+    provider->add(qsl("math.deg"), 4, qsl("math.deg(x)"));
+    provider->add(qsl("math.exp"), 4, qsl("math.exp(x)"));
+    provider->add(qsl("math.floor"), 4, qsl("math.floor(x)"));
+    provider->add(qsl("math.fmod"), 4, qsl("math.fmod(x, y)"));
+    provider->add(qsl("math.frexp"), 4, qsl("math.frexp(x)"));
+    provider->add(qsl("math.huge"), 4, qsl("math.huge"));
+    provider->add(qsl("math.ldexp"), 4, qsl("math.ldexp(m, e)"));
+    provider->add(qsl("math.log"), 4, qsl("math.log(x [, base])"));
+    provider->add(qsl("math.log10"), 4, qsl("math.log10(x)"));
+    provider->add(qsl("math.max"), 4, qsl("math.max(x, ...)"));
+    provider->add(qsl("math.min"), 4, qsl("math.min(x, ...)"));
+    provider->add(qsl("math.modf"), 4, qsl("math.modf(x)"));
+    provider->add(qsl("math.pi"), 4, qsl("math.pi"));
+    provider->add(qsl("math.pow"), 4, qsl("math.pow(x, y)"));
+    provider->add(qsl("math.rad"), 4, qsl("math.rad(x)"));
+    provider->add(qsl("math.random"), 4, qsl("math.random([m [, n]])"));
+    provider->add(qsl("math.randomseed"), 4, qsl("math.randomseed(x)"));
+    provider->add(qsl("math.sin"), 4, qsl("math.sin(x)"));
+    provider->add(qsl("math.sinh"), 4, qsl("math.sinh(x)"));
+    provider->add(qsl("math.sqrt"), 4, qsl("math.sqrt(x)"));
+    provider->add(qsl("math.tan"), 4, qsl("math.tan(x)"));
+    provider->add(qsl("math.tanh"), 4, qsl("math.tanh(x)"));
+
+    // IO library
+    provider->add(qsl("io.close"), 4, qsl("io.close([file])"));
+    provider->add(qsl("io.flush"), 4, qsl("io.flush()"));
+    provider->add(qsl("io.input"), 4, qsl("io.input([file])"));
+    provider->add(qsl("io.lines"), 4, qsl("io.lines([filename, ...])"));
+    provider->add(qsl("io.open"), 4, qsl("io.open(filename [, mode])"));
+    provider->add(qsl("io.output"), 4, qsl("io.output([file])"));
+    provider->add(qsl("io.popen"), 4, qsl("io.popen(prog [, mode])"));
+    provider->add(qsl("io.read"), 4, qsl("io.read(...)"));
+    provider->add(qsl("io.tmpfile"), 4, qsl("io.tmpfile()"));
+    provider->add(qsl("io.type"), 4, qsl("io.type(obj)"));
+    provider->add(qsl("io.write"), 4, qsl("io.write(...)"));
+
+    // OS library
+    provider->add(qsl("os.clock"), 4, qsl("os.clock()"));
+    provider->add(qsl("os.date"), 4, qsl("os.date([format [, time]])"));
+    provider->add(qsl("os.difftime"), 4, qsl("os.difftime(t2, t1)"));
+    provider->add(qsl("os.execute"), 4, qsl("os.execute([command])"));
+    provider->add(qsl("os.exit"), 4, qsl("os.exit([code [, close]])"));
+    provider->add(qsl("os.getenv"), 4, qsl("os.getenv(varname)"));
+    provider->add(qsl("os.remove"), 4, qsl("os.remove(filename)"));
+    provider->add(qsl("os.rename"), 4, qsl("os.rename(oldname, newname)"));
+    provider->add(qsl("os.setlocale"), 4, qsl("os.setlocale(locale [, category])"));
+    provider->add(qsl("os.time"), 4, qsl("os.time([table])"));
+    provider->add(qsl("os.tmpname"), 4, qsl("os.tmpname()"));
+
+    // Coroutine library
+    provider->add(qsl("coroutine.create"), 4, qsl("coroutine.create(f)"));
+    provider->add(qsl("coroutine.resume"), 4, qsl("coroutine.resume(co [, val1, ...])"));
+    provider->add(qsl("coroutine.running"), 4, qsl("coroutine.running()"));
+    provider->add(qsl("coroutine.status"), 4, qsl("coroutine.status(co)"));
+    provider->add(qsl("coroutine.wrap"), 4, qsl("coroutine.wrap(f)"));
+    provider->add(qsl("coroutine.yield"), 4, qsl("coroutine.yield(...)"));
+
+    // Debug library
+    provider->add(qsl("debug.debug"), 4, qsl("debug.debug()"));
+    provider->add(qsl("debug.gethook"), 4, qsl("debug.gethook([thread])"));
+    provider->add(qsl("debug.getinfo"), 4, qsl("debug.getinfo([thread,] f [, what])"));
+    provider->add(qsl("debug.getlocal"), 4, qsl("debug.getlocal([thread,] f, local)"));
+    provider->add(qsl("debug.getmetatable"), 4, qsl("debug.getmetatable(value)"));
+    provider->add(qsl("debug.getregistry"), 4, qsl("debug.getregistry()"));
+    provider->add(qsl("debug.getupvalue"), 4, qsl("debug.getupvalue(f, up)"));
+    provider->add(qsl("debug.getuservalue"), 4, qsl("debug.getuservalue(u)"));
+    provider->add(qsl("debug.sethook"), 4, qsl("debug.sethook([thread,] hook, mask [, count])"));
+    provider->add(qsl("debug.setlocal"), 4, qsl("debug.setlocal([thread,] level, local, value)"));
+    provider->add(qsl("debug.setmetatable"), 4, qsl("debug.setmetatable(value, table)"));
+    provider->add(qsl("debug.setupvalue"), 4, qsl("debug.setupvalue(f, up, value)"));
+    provider->add(qsl("debug.setuservalue"), 4, qsl("debug.setuservalue(udata, value)"));
+    provider->add(qsl("debug.traceback"), 4, qsl("debug.traceback([thread,] [message [, level]])"));
+    provider->add(qsl("debug.upvalueid"), 4, qsl("debug.upvalueid(f, n)"));
+    provider->add(qsl("debug.upvaluejoin"), 4, qsl("debug.upvaluejoin(f1, n1, f2, n2)"));
+
+    // Package library
+    provider->add(qsl("package.config"), 4, qsl("package.config"));
+    provider->add(qsl("package.cpath"), 4, qsl("package.cpath"));
+    provider->add(qsl("package.loaded"), 4, qsl("package.loaded"));
+    provider->add(qsl("package.loadlib"), 4, qsl("package.loadlib(libname, funcname)"));
+    provider->add(qsl("package.path"), 4, qsl("package.path"));
+    provider->add(qsl("package.preload"), 4, qsl("package.preload"));
+    provider->add(qsl("package.searchers"), 4, qsl("package.searchers"));
+    provider->add(qsl("package.searchpath"), 4, qsl("package.searchpath(name, path [, sep [, rep]])"));
+
+    // Mudlet framework namespaced functions (priority 4 - same as Lua stdlib)
+    // Geyser UI Framework
+    provider->add(qsl("Geyser.Container:new"), 4, qsl("Geyser.Container:new(cons, container)"));
+    provider->add(qsl("Geyser.Window:new"), 4, qsl("Geyser.Window:new(cons, container)"));
+    provider->add(qsl("Geyser.Label:new"), 4, qsl("Geyser.Label:new(cons, container)"));
+    provider->add(qsl("Geyser.MiniConsole:new"), 4, qsl("Geyser.MiniConsole:new(cons, container)"));
+    provider->add(qsl("Geyser.Button:new"), 4, qsl("Geyser.Button:new(cons, container)"));
+    provider->add(qsl("Geyser.Gauge:new"), 4, qsl("Geyser.Gauge:new(cons, container)"));
+    provider->add(qsl("Geyser.Mapper:new"), 4, qsl("Geyser.Mapper:new(cons, container)"));
+    provider->add(qsl("Geyser.UserWindow:new"), 4, qsl("Geyser.UserWindow:new(cons)"));
+    provider->add(qsl("Geyser.CommandLine:new"), 4, qsl("Geyser.CommandLine:new(cons, container)"));
+    provider->add(qsl("Geyser.HBox:new"), 4, qsl("Geyser.HBox:new(cons, container)"));
+    provider->add(qsl("Geyser.VBox:new"), 4, qsl("Geyser.VBox:new(cons, container)"));
+    provider->add(qsl("Geyser.ScrollBox:new"), 4, qsl("Geyser.ScrollBox:new(cons, container)"));
+    provider->add(qsl("Geyser.ScrollBox:new2"), 4, qsl("Geyser.ScrollBox:new2()"));
+    provider->add(qsl("Geyser.StyleSheet:new"), 4, qsl("Geyser.StyleSheet:new(stylesheet, parent, target)"));
+
+    // Geyser namespace functions
+    provider->add(qsl("Geyser.Color.parse"), 4, qsl("Geyser.Color.parse(color)"));
+    provider->add(qsl("Geyser.Color.hex"), 4, qsl("Geyser.Color.hex(color)"));
+    provider->add(qsl("Geyser.Color.hexa"), 4, qsl("Geyser.Color.hexa(color)"));
+    provider->add(qsl("Geyser.Color.hhex"), 4, qsl("Geyser.Color.hhex(color)"));
+    provider->add(qsl("Geyser.Color.hhexa"), 4, qsl("Geyser.Color.hhexa(color)"));
+    provider->add(qsl("Geyser.Color.hdec"), 4, qsl("Geyser.Color.hdec(color)"));
+    provider->add(qsl("Geyser.Color.hdeca"), 4, qsl("Geyser.Color.hdeca(color)"));
+
+    // Adjustable Container Framework
+    provider->add(qsl("Adjustable.Container:new"), 4, qsl("Adjustable.Container:new(cons, container)"));
+
+    // Database Framework
+    provider->add(qsl("db.create"), 4, qsl("db.create(db_name, schema)"));
+    provider->add(qsl("db.query"), 4, qsl("db.query(db_name, query, ...)"));
+    provider->add(qsl("db.insert"), 4, qsl("db.insert(db_name, sheet_name, values)"));
+    provider->add(qsl("db.update"), 4, qsl("db.update(db_name, sheet_name, values, query)"));
+    provider->add(qsl("db.delete"), 4, qsl("db.delete(db_name, sheet_name, query)"));
+    provider->add(qsl("db.fetch"), 4, qsl("db.fetch(db_name, query, ...)"));
+    provider->add(qsl("db.aggregate"), 4, qsl("db.aggregate(db_name, query, ...)"));
+
+    // DateTime utilities
+    provider->add(qsl("datetime.parse"), 4, qsl("datetime.parse(format, date_string)"));
 
     // Set the newly filled provider to be used by our Edbee instance
     edbee::Edbee::instance()->autoCompleteProviderList()->setParentProvider(provider);
@@ -664,9 +823,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     separator2->setSeparator(true);
 
     // Add context menu actions to all tree widgets
-    QList<QTreeWidget*> treeWidgets = {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, 
+    QList<QTreeWidget*> treeWidgets = {treeWidget_triggers, treeWidget_aliases, treeWidget_timers,
                                        treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables};
-    
+
     for (QTreeWidget* widget : treeWidgets) {
         widget->addAction(mAddItem);
         widget->addAction(mAddGroup);
@@ -1215,7 +1374,7 @@ void dlgTriggerEditor::readSettings()
     const QPoint savedPos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
-    
+
     // Use smart positioning instead of blindly restoring saved position
     // This ensures the dialog opens on the same screen as the active profile
     utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
@@ -1801,7 +1960,7 @@ void dlgTriggerEditor::searchKeys(const QString& text)
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || 
+            if (textList.at(index).isEmpty() ||
                !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
@@ -2857,7 +3016,7 @@ bool dlgTriggerEditor::showDeleteConfirmation(const QString& title, const QStrin
 {
     QSettings& settings = *mudlet::getQSettings();
     const bool dontAskAgain = settings.value("triggerEditor/dontAskDeleteConfirmation", false).toBool();
-    
+
     if (dontAskAgain) {
         return true;
     }
@@ -2873,11 +3032,11 @@ bool dlgTriggerEditor::showDeleteConfirmation(const QString& title, const QStrin
     msgBox.setCheckBox(dontAskCheckBox);
 
     int result = msgBox.exec();
-    
+
     if (dontAskCheckBox->isChecked()) {
         settings.setValue("triggerEditor/dontAskDeleteConfirmation", true);
     }
-    
+
     return result == QMessageBox::Yes;
 }
 
@@ -2890,7 +3049,7 @@ void dlgTriggerEditor::delete_alias()
 
     QStringList itemNames;
     QList<TAlias*> aliasesToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -2931,7 +3090,7 @@ void dlgTriggerEditor::delete_alias()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -2963,7 +3122,7 @@ void dlgTriggerEditor::delete_action()
 
     QStringList itemNames;
     QList<TAction*> actionsToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3004,7 +3163,7 @@ void dlgTriggerEditor::delete_action()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             // if active, deactivate.
             if (pT->isActive()) {
@@ -3032,7 +3191,7 @@ void dlgTriggerEditor::delete_action()
         mpCurrentActionItem = nullptr;
         clearActionForm();
     }
-    
+
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -3047,7 +3206,7 @@ void dlgTriggerEditor::delete_variable()
     QList<TVar*> varsToDelete;
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TVar* var = vu->getWVar(pItem);
         if (var) {
@@ -3088,7 +3247,7 @@ void dlgTriggerEditor::delete_variable()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TVar* var = vu->getWVar(pItem);
-        
+
         if (var) {
             lI->deleteVar(var);
             TVar* parent = var->getParent();
@@ -3096,7 +3255,7 @@ void dlgTriggerEditor::delete_variable()
                 parent->removeChild(var);
             }
             vu->removeVariable(var);
-            
+
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
             }
@@ -3127,7 +3286,7 @@ void dlgTriggerEditor::delete_script()
 
     QStringList itemNames;
     QList<TScript*> scriptsToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3168,7 +3327,7 @@ void dlgTriggerEditor::delete_script()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3200,7 +3359,7 @@ void dlgTriggerEditor::delete_key()
 
     QStringList itemNames;
     QList<TKey*> keysToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3241,7 +3400,7 @@ void dlgTriggerEditor::delete_key()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3273,7 +3432,7 @@ void dlgTriggerEditor::delete_trigger()
 
     QStringList itemNames;
     QList<TTrigger*> triggersToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3314,7 +3473,7 @@ void dlgTriggerEditor::delete_trigger()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3346,7 +3505,7 @@ void dlgTriggerEditor::delete_timer()
 
     QStringList itemNames;
     QList<TTimer*> timersToDelete;
-    
+
     for (QTreeWidgetItem* pItem : selectedItems) {
         TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
@@ -3387,7 +3546,7 @@ void dlgTriggerEditor::delete_timer()
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
-        
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -4347,7 +4506,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
                 pParentItem->parent()->insertChild(0, pNewItem);
             }
         }
-    } 
+    }
 
     if (!pNewTrigger) {
         // Fallback to insert a new root item
@@ -4374,7 +4533,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewTrigger->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
         qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
@@ -4432,9 +4591,9 @@ void dlgTriggerEditor::addTimer(bool isFolder)
                 pNewTimer = new TTimer(pParentTrigger->getParent(), mpHost);
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
-            } 
-        } 
-    } 
+            }
+        }
+    }
 
     if (!pNewTimer) {
         // Fallback to insert a new root item
@@ -4457,8 +4616,8 @@ void dlgTriggerEditor::addTimer(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewTimer->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
@@ -4488,15 +4647,10 @@ void dlgTriggerEditor::addVar(bool isFolder)
         mpSourceEditorEdbee->setEnabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
-        mpVarsMainArea->lineEdit_var_name->setText(QString());
-        mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Table name..."));
-
         clearDocument(mpSourceEditorEdbee, QLatin1String("NewTable"));
     } else {
         // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(true);
-        mpVarsMainArea->lineEdit_var_name->setText(QString());
-        mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Variable name..."));
         mpVarsMainArea->comboBox_variable_value_type->setDisabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
     }
@@ -4504,7 +4658,8 @@ void dlgTriggerEditor::addVar(bool isFolder)
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
 
-    QStringList nameList = { QString(isFolder ? tr("New table name") : tr("New variable name")) };
+    QStringList nameList = { QString(isFolder ? tr("table_variable") : tr("variable_name")) };
+    mpVarsMainArea->lineEdit_var_name->setText(nameList[0]);
     QTreeWidgetItem* pParentItem = nullptr;
     QTreeWidgetItem* pNewItem;
     QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
@@ -4546,6 +4701,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     mpCurrentVarItem = pNewItem;
     treeWidget_variables->setCurrentItem(pNewItem);
     slot_variableSelected(treeWidget_variables->currentItem());
+    saveVar();
 }
 
 void dlgTriggerEditor::addKey(bool isFolder)
@@ -4575,9 +4731,9 @@ void dlgTriggerEditor::addKey(bool isFolder)
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
             }
-        } 
-    } 
-    
+        }
+    }
+
     if (!pNewKey) {
         // Fallback to insert a new root item
         pNewKey = new TKey(name, mpHost);
@@ -4600,8 +4756,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewKey->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
@@ -4651,8 +4807,8 @@ void dlgTriggerEditor::addAlias(bool isFolder)
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
             }
-        } 
-    } 
+        }
+    }
 
     if (!pNewAlias) {
         //insert a new root item
@@ -4677,11 +4833,11 @@ void dlgTriggerEditor::addAlias(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewAlias->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
-    
+
     // Expand parent if applicable
     if (pParentItem) {
         pParentItem->setExpanded(true);
@@ -4695,7 +4851,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     clearDocument(mpSourceEditorEdbee); // New Alias
     mpAliasMainArea->lineEdit_alias_name->setText(name);
     mpAliasMainArea->label_idNumber->setText(QString::number(pNewAlias->getID()));
-    
+
     // Finalize selection
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
@@ -4758,8 +4914,8 @@ void dlgTriggerEditor::addAction(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewAction->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
@@ -4778,7 +4934,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     pNewAction->setDataSaved();
 
     mpHost->getActionUnit()->updateToolbar();
-    
+
     // Finalize selection
     mpCurrentActionItem = pNewItem;
     treeWidget_actions->setCurrentItem(pNewItem);
@@ -4811,10 +4967,10 @@ void dlgTriggerEditor::addScript(bool isFolder)
                 pNewScript = new TScript(pParentTrigger->getParent(), mpHost);
                 pNewItem = new QTreeWidgetItem(pParentItem->parent(), nameList);
                 pParentItem->parent()->insertChild(0, pNewItem);
-            } 
+            }
         }
-    } 
-    
+    }
+
     if (!pNewScript) {
         // Fallback to insert a new root item
         pNewScript = new TScript(name, mpHost);
@@ -4835,8 +4991,8 @@ void dlgTriggerEditor::addScript(bool isFolder)
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewScript->getID());
-    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? 
-        qsl(":/icons/folder-red.png") : 
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
+        qsl(":/icons/folder-red.png") :
         qsl(":/icons/document-save-as.png"))));
     pNewItem->setData(0, Qt::AccessibleDescriptionRole, isFolder ? descNewFolder : descNewItem);
 
@@ -4864,6 +5020,7 @@ void dlgTriggerEditor::selectTriggerByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_triggerSelected((*it));
+            treeWidget_triggers->clearSelection();
             treeWidget_triggers->setCurrentItem((*it), 0);
             treeWidget_triggers->scrollToItem((*it));
             mpCurrentTriggerItem = (*it);
@@ -4880,6 +5037,7 @@ void dlgTriggerEditor::selectTimerByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_timerSelected((*it));
+            treeWidget_timers->clearSelection();
             treeWidget_timers->setCurrentItem((*it), 0);
             treeWidget_timers->scrollToItem((*it));
             mpCurrentTimerItem = (*it);
@@ -4896,6 +5054,7 @@ void dlgTriggerEditor::selectAliasByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_aliasSelected((*it));
+            treeWidget_aliases->clearSelection();
             treeWidget_aliases->setCurrentItem((*it), 0);
             treeWidget_aliases->scrollToItem((*it));
             mpCurrentAliasItem = (*it);
@@ -4912,6 +5071,7 @@ void dlgTriggerEditor::selectScriptByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_scriptsSelected((*it));
+            treeWidget_scripts->clearSelection();
             treeWidget_scripts->setCurrentItem((*it), 0);
             treeWidget_scripts->scrollToItem((*it));
             mpCurrentScriptItem = (*it);
@@ -4928,6 +5088,7 @@ void dlgTriggerEditor::selectActionByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_actionSelected((*it));
+            treeWidget_actions->clearSelection();
             treeWidget_actions->setCurrentItem((*it), 0);
             treeWidget_actions->scrollToItem((*it));
             mpCurrentActionItem = (*it);
@@ -4944,6 +5105,7 @@ void dlgTriggerEditor::selectKeyByID(int id)
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
             slot_keySelected((*it));
+            treeWidget_keys->clearSelection();
             treeWidget_keys->setCurrentItem((*it), 0);
             treeWidget_keys->scrollToItem((*it));
             mpCurrentKeyItem = (*it);
@@ -5070,7 +5232,7 @@ void dlgTriggerEditor::saveTrigger()
     if (!pItem) {
         return;
     }
-    
+
     // Additional safety check: ensure the item's parent is still valid
     // and that the item is still part of the tree widget
     if (!pItem->parent() || pItem->treeWidget() != treeWidget_triggers) {
@@ -5286,7 +5448,7 @@ void dlgTriggerEditor::saveTimer()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_timers) {
         return;
@@ -5408,7 +5570,7 @@ void dlgTriggerEditor::saveAlias()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_aliases) {
         return;
@@ -5564,7 +5726,7 @@ void dlgTriggerEditor::saveAction()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_actions) {
         return;
@@ -5746,7 +5908,7 @@ void dlgTriggerEditor::saveScript()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_scripts) {
         return;
@@ -6128,7 +6290,7 @@ void dlgTriggerEditor::saveKey()
     if (!pItem) {
         return;
     }
-    
+
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_keys) {
         return;
@@ -6859,7 +7021,6 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
 
     if (!var) {
         mpVarsMainArea->checkBox_variable_hidden->setChecked(false);
-        mpVarsMainArea->lineEdit_var_name->clear();
         clearDocument(mpSourceEditorEdbee); // Var Select
         //check for temp item
         var = vu->getTVar(pItem);
@@ -8330,7 +8491,7 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 void dlgTriggerEditor::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
-    
+
     // Always reposition the dialog to the correct screen when shown
     // This ensures it follows the active profile, especially after reattachment
     utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
@@ -9594,23 +9755,23 @@ void dlgTriggerEditor::exportMultipleTriggersToClipboard(const QList<TTrigger*>&
     if (triggers.isEmpty()) {
         return;
     }
-    
+
     // Store multiple XML packages separated by a special delimiter
     // This allows the paste function to split and import each item individually
     QStringList xmlPackages;
-    
+
     for (TTrigger* trigger : triggers) {
         XMLexport writer(trigger);
-        
+
         // Get the XML for this trigger by temporarily using the clipboard
         QString originalClipboard = QApplication::clipboard()->text();
         writer.exportToClipboard(trigger);
         QString triggerXml = QApplication::clipboard()->text();
         QApplication::clipboard()->setText(originalClipboard);
-        
+
         xmlPackages << triggerXml;
     }
-    
+
     // Combine all XML packages with a special separator that paste can recognize
     QString combinedXml = xmlPackages.join("\n<!--MUDLET_MULTI_ITEM_SEPARATOR-->\n");
     QApplication::clipboard()->setText(combinedXml);
@@ -9658,7 +9819,7 @@ void dlgTriggerEditor::exportMultipleTimersToClipboard(const QList<TTimer*>& tim
     }
 
     QStringList xmlParts;
-    
+
     for (TTimer* timer : timers) {
         XMLexport writer(timer);
         QString originalClipboard = QApplication::clipboard()->text();
@@ -9667,7 +9828,7 @@ void dlgTriggerEditor::exportMultipleTimersToClipboard(const QList<TTimer*>& tim
         xmlParts << timerXml;
         QApplication::clipboard()->setText(originalClipboard);
     }
-    
+
     QString combinedXml = xmlParts.join("\n");
     QApplication::clipboard()->setText(combinedXml);
 }
@@ -9714,7 +9875,7 @@ void dlgTriggerEditor::exportMultipleAliasesToClipboard(const QList<TAlias*>& al
     }
 
     QStringList xmlParts;
-    
+
     for (TAlias* alias : aliases) {
         XMLexport writer(alias);
         QString originalClipboard = QApplication::clipboard()->text();
@@ -9723,7 +9884,7 @@ void dlgTriggerEditor::exportMultipleAliasesToClipboard(const QList<TAlias*>& al
         xmlParts << aliasXml;
         QApplication::clipboard()->setText(originalClipboard);
     }
-    
+
     QString combinedXml = xmlParts.join("\n");
     QApplication::clipboard()->setText(combinedXml);
 }
@@ -9770,7 +9931,7 @@ void dlgTriggerEditor::exportMultipleActionsToClipboard(const QList<TAction*>& a
     }
 
     QStringList xmlParts;
-    
+
     for (TAction* action : actions) {
         XMLexport writer(action);
         QString originalClipboard = QApplication::clipboard()->text();
@@ -9779,7 +9940,7 @@ void dlgTriggerEditor::exportMultipleActionsToClipboard(const QList<TAction*>& a
         xmlParts << actionXml;
         QApplication::clipboard()->setText(originalClipboard);
     }
-    
+
     QString combinedXml = xmlParts.join("\n");
     QApplication::clipboard()->setText(combinedXml);
 }
@@ -9826,7 +9987,7 @@ void dlgTriggerEditor::exportMultipleScriptsToClipboard(const QList<TScript*>& s
     }
 
     QStringList xmlParts;
-    
+
     for (TScript* script : scripts) {
         XMLexport writer(script);
         QString originalClipboard = QApplication::clipboard()->text();
@@ -9835,7 +9996,7 @@ void dlgTriggerEditor::exportMultipleScriptsToClipboard(const QList<TScript*>& s
         xmlParts << scriptXml;
         QApplication::clipboard()->setText(originalClipboard);
     }
-    
+
     QString combinedXml = xmlParts.join("\n");
     QApplication::clipboard()->setText(combinedXml);
 }
@@ -9882,7 +10043,7 @@ void dlgTriggerEditor::exportMultipleKeysToClipboard(const QList<TKey*>& keys)
     }
 
     QStringList xmlParts;
-    
+
     for (TKey* key : keys) {
         XMLexport writer(key);
         QString originalClipboard = QApplication::clipboard()->text();
@@ -9891,7 +10052,7 @@ void dlgTriggerEditor::exportMultipleKeysToClipboard(const QList<TKey*>& keys)
         xmlParts << keyXml;
         QApplication::clipboard()->setText(originalClipboard);
     }
-    
+
     QString combinedXml = xmlParts.join("\n");
     QApplication::clipboard()->setText(combinedXml);
 }
@@ -9964,7 +10125,7 @@ void dlgTriggerEditor::slot_createModule()
 
     // Open the package exporter dialog with module creation mode
     auto* packageExporter = new dlgPackageExporter(this, mpHost);
-    
+
     // Pre-select the current item for export
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -10000,7 +10161,7 @@ void dlgTriggerEditor::slot_createModule()
     default:
         break;
     }
-    
+
     // Set module creation mode
     packageExporter->setModuleCreationMode(true);
     packageExporter->show();
@@ -10071,30 +10232,30 @@ void dlgTriggerEditor::slot_pasteXml()
     // Check if clipboard contains multiple items (separated by our delimiter)
     QString clipboardText = QApplication::clipboard()->text();
     QStringList xmlPackages = clipboardText.split("\n<!--MUDLET_MULTI_ITEM_SEPARATOR-->\n");
-    
+
     EditorViewType importedItemType;
     int importedItemID;
-    
+
     if (xmlPackages.size() > 1) {
         // Multiple items detected - import each one individually
         QList<int> importedIDs;
         EditorViewType firstImportType = EditorViewType::cmUnknownView;
-        
+
         QString originalClipboard = QApplication::clipboard()->text();
-        
+
         for (const QString& xmlItem : xmlPackages) {
             QString xmlItemTrimmed = xmlItem.trimmed();
             if (xmlItemTrimmed.isEmpty()) {
                 continue; // Skip empty items
             }
-            
+
             // Temporarily set clipboard to single item
             QApplication::clipboard()->setText(xmlItemTrimmed);
-            
+
             // Import this single item
             XMLimport itemReader(mpHost);
             auto [itemType, itemID] = itemReader.importFromClipboard();
-            
+
             if (itemType != EditorViewType::cmUnknownView && itemID != 0) {
                 importedIDs << itemID;
                 if (firstImportType == EditorViewType::cmUnknownView) {
@@ -10102,10 +10263,10 @@ void dlgTriggerEditor::slot_pasteXml()
                 }
             }
         }
-        
+
         // Restore original clipboard once at the end
         QApplication::clipboard()->setText(originalClipboard);
-        
+
         if (!importedIDs.isEmpty()) {
             // For multiple items, we need to handle the reparenting here instead of later
             // since the later logic only handles one item at a time
@@ -10117,16 +10278,16 @@ void dlgTriggerEditor::slot_pasteXml()
                         targetIndex = treeWidget_triggers->indexFromItem(selectedItems.first());
                     }
                 }
-                
+
                 // Apply the same group detection logic for all imported triggers
                 if (targetIndex.isValid()) {
                     QTreeWidgetItem* targetItem = treeWidget_triggers->itemFromIndex(targetIndex);
                     int targetId = targetIndex.data(Qt::UserRole).toInt();
                     TTrigger* targetTrigger = mpHost->getTriggerUnit()->getTrigger(targetId);
-                    
-                    bool isGroup = (targetItem && targetItem->childCount() > 0) || 
+
+                    bool isGroup = (targetItem && targetItem->childCount() > 0) ||
                                   (targetTrigger && targetTrigger->isFolder());
-                    
+
                     for (int itemID : importedIDs) {
                         if (isGroup) {
                             mpHost->getTriggerUnit()->reParentTrigger(itemID, 0, targetId, -1, -1);
@@ -10138,11 +10299,11 @@ void dlgTriggerEditor::slot_pasteXml()
                     }
                 }
             }
-            
+
             // Use the first imported item's type and ID for the rest of the function
             importedItemType = firstImportType;
             importedItemID = importedIDs.first();
-            
+
             statusBar()->showMessage(tr("Pasted %1 items successfully").arg(importedIDs.size()), 3000);
         } else {
             return;
@@ -10173,17 +10334,17 @@ void dlgTriggerEditor::slot_pasteXml()
                 targetIndex = treeWidget_triggers->indexFromItem(selectedItems.first());
             }
         }
-        
+
         if (targetIndex.isValid()) {
             // Check if the selected item is a trigger group/folder
             QTreeWidgetItem* targetItem = treeWidget_triggers->itemFromIndex(targetIndex);
             int targetId = targetIndex.data(Qt::UserRole).toInt();
             TTrigger* targetTrigger = mpHost->getTriggerUnit()->getTrigger(targetId);
-            
+
             // Check if target is a group/folder (has children OR is a group trigger)
-            bool isGroup = (targetItem && targetItem->childCount() > 0) || 
+            bool isGroup = (targetItem && targetItem->childCount() > 0) ||
                           (targetTrigger && targetTrigger->isFolder());
-            
+
             if (isGroup) {
                 // Paste INSIDE the selected group/folder
                 mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, targetId, -1, -1);
@@ -10192,7 +10353,7 @@ void dlgTriggerEditor::slot_pasteXml()
                 auto parent = targetIndex.parent();
                 auto parentRow = parent.row();
                 auto parentId = parent.data(Qt::UserRole).toInt();
-                
+
                 const int siblingRow = targetIndex.row() + 1;
                 mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, parentId, parentRow, siblingRow);
             }
@@ -10210,7 +10371,7 @@ void dlgTriggerEditor::slot_pasteXml()
                 targetIndex = treeWidget_timers->indexFromItem(selectedItems.first());
             }
         }
-        
+
         if (targetIndex.isValid()) {
             auto parent = targetIndex.parent();
             auto parentRow = parent.row();
@@ -10231,7 +10392,7 @@ void dlgTriggerEditor::slot_pasteXml()
                 targetIndex = treeWidget_aliases->indexFromItem(selectedItems.first());
             }
         }
-        
+
         if (targetIndex.isValid()) {
             auto parent = targetIndex.parent();
             auto parentRow = parent.row();
@@ -10252,7 +10413,7 @@ void dlgTriggerEditor::slot_pasteXml()
                 targetIndex = treeWidget_scripts->indexFromItem(selectedItems.first());
             }
         }
-        
+
         if (targetIndex.isValid()) {
             auto parent = targetIndex.parent();
             auto parentRow = parent.row();
@@ -10273,7 +10434,7 @@ void dlgTriggerEditor::slot_pasteXml()
                 targetIndex = treeWidget_actions->indexFromItem(selectedItems.first());
             }
         }
-        
+
         if (targetIndex.isValid()) {
             auto parent = targetIndex.parent();
             auto parentRow = parent.row();
@@ -10294,7 +10455,7 @@ void dlgTriggerEditor::slot_pasteXml()
                 targetIndex = treeWidget_keys->indexFromItem(selectedItems.first());
             }
         }
-        
+
         if (targetIndex.isValid()) {
             auto parent = targetIndex.parent();
             auto parentRow = parent.row();
@@ -10510,7 +10671,7 @@ void dlgTriggerEditor::runScheduledCleanReset()
 void dlgTriggerEditor::slot_profileSaveAction()
 {
     slot_saveEdits();
-    
+
     auto [ok, filename, error] = mpHost->saveProfile(nullptr, nullptr, true);
 
     if (!ok) {
@@ -10538,7 +10699,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
         fileName.append(qsl(".xml"));
     }
     slot_saveEdits();
-    
+
     mpHost->saveProfileAs(fileName);
     mSavingAs = false;
 }
@@ -10927,7 +11088,10 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
-    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
+    // Don't apply Lua syntax highlighting for the Variables view since it displays plain data values, not code
+    if (mCurrentView != EditorViewType::cmVarsView) {
+        mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
+    }
     pEditorWidget->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
     auto config = mpSourceEditorEdbee->config();

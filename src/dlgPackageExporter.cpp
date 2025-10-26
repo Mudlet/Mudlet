@@ -32,7 +32,6 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QDesktopServices>
 #include <QDirIterator>
@@ -41,7 +40,6 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QTimer>
-#include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -535,7 +533,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         ui->pushButton_removeIcon->show();
     } else {
         ui->Icon->hide();
-        ui->pushButton_removeIcon->show();
+        ui->pushButton_removeIcon->hide();
     }
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -1232,7 +1230,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         }
     }
 
-    if (!writer.exportPackage(mXmlPathFileName, false)) {
+    if (!writer.exportPackage(mXmlPathFileName, false, true)) {
         //: This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened
         displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".")
                              .arg(mXmlPathFileName.toHtmlEscaped()), false);
