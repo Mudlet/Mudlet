@@ -245,25 +245,48 @@ void dlgPackageManager::slot_installPackageFromFile()
     }
 
     mpHost->installPackage(fileName, enums::PackageModuleType::Package);
+
+    // Refresh the package list to show newly installed package
+    resetPackageList();
 }
 
 void dlgPackageManager::slot_installPackageFromRepository()
-{ 
+{
     const QList<QListWidgetItem*> selected = packageList->selectedItems();
     if (selected.isEmpty()) {
         return;
     }
 
-    auto progress = new QProgressDialog(tr("Downloading packages..."), nullptr, 0, 0, this);
+    //: Package manager - cancel button text for download progress dialog
+    auto progress = new QProgressDialog(tr("Downloading packages..."), tr("Cancel"), 0, 0, this);
     progress->setWindowModality(Qt::WindowModal);
     progress->setAutoClose(true);
     progress->setMinimumDuration(0);
-    progress->show();     
+    progress->show();
 
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     auto pendingDownloads = std::make_shared<QHash<QString, QString>>();
     auto remainingDownloads = std::make_shared<int>(selected.size());
+    auto activeReplies = std::make_shared<QList<QNetworkReply*>>();
+    auto cancelled = std::make_shared<bool>(false);
     bool repoError = false;
+
+    // Handle cancellation
+    QObject::connect(progress, &QProgressDialog::canceled, [activeReplies, pendingDownloads, manager, progress, cancelled]() {
+        *cancelled = true;
+        for (QNetworkReply* reply : *activeReplies) {
+            if (reply) {
+                reply->abort();
+            }
+        }
+        // Clean up any partially downloaded files
+        for (const QString& filePath : pendingDownloads->values()) {
+            QFile::remove(filePath);
+        }
+        pendingDownloads->clear();
+        manager->deleteLater();
+        progress->deleteLater();
+    });
 
     for (QListWidgetItem* item : selected) {
         const QString packageName = item->text();
@@ -295,6 +318,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
         QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/%1").arg(QString::fromUtf8(encoded))));
         request.setTransferTimeout(30000);
         QNetworkReply *reply = manager->get(request);
+        activeReplies->append(reply);
 
         QFile *file = new QFile(outPath);
         if (!file->open(QIODevice::WriteOnly)) {
@@ -310,11 +334,20 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
         pendingDownloads->insert(packageName, outPath);
 
-        QObject::connect(reply, &QNetworkReply::finished, [reply, file, this, outPath, packageName, pendingDownloads, remainingDownloads, manager, progress]() {
+        QObject::connect(reply, &QNetworkReply::finished, this, [reply, file, this, outPath, packageName, pendingDownloads, remainingDownloads, manager, progress, cancelled, activeReplies]() {
             file->write(reply->readAll());
             file->close();
             reply->deleteLater();
             file->deleteLater();
+
+            // Remove this reply from active list
+            activeReplies->removeOne(reply);
+
+            // If cancelled, just clean up and return
+            if (*cancelled) {
+                QFile::remove(outPath);
+                return;
+            }
 
             if (reply->error() != QNetworkReply::NoError) {
                 //: Package manager: network error, package couldn't be downloaded
@@ -327,7 +360,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
                 for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
                     const QString &pkgName = it.key();
                     const QString &filePath = it.value();
-                    
+
                     if (mpHost) {
                         mpHost->installPackage(filePath, enums::PackageModuleType::Package);
                     }
@@ -338,6 +371,9 @@ void dlgPackageManager::slot_installPackageFromRepository()
                 progress->close();
                 progress->deleteLater();
                 manager->deleteLater();
+
+                // Refresh the package list to show newly installed packages
+                resetPackageList();
             }
         });
     }
@@ -397,16 +433,13 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
         pushButton_report->show();
         downloadIcon(packageName);
 
-        for (const QJsonValue& packageVal : repositoryPackages) {
-            QJsonObject packageObj = packageVal.toObject();
-            if (packageObj.value(qsl("mpackage")).toString() == packageName) {
-                fillPackageDetails(packageObj.value(qsl("mpackage")).toString(),
-                                   packageObj.value(qsl("title")).toString(),
-                                   packageObj.value(qsl("author")).toString(),
-                                   packageObj.value(qsl("version")).toString());
-                packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());                
-                break;
-            }
+        if (packageLookup.contains(packageName)) {
+            QJsonObject packageObj = packageLookup.value(packageName);
+            fillPackageDetails(packageObj.value(qsl("mpackage")).toString(),
+                               packageObj.value(qsl("title")).toString(),
+                               packageObj.value(qsl("author")).toString(),
+                               packageObj.value(qsl("version")).toString());
+            packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
         }
     }
 }
