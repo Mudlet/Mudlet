@@ -138,17 +138,17 @@ void TSpatialAudioSource::updateCartesianPosition()
     if (!mSpatialSound) {
         return;
     }
-    
+
     // Convert spherical to Cartesian coordinates
     // Azimuth: 0 = front, 90 = right, -90 = left, 180/-180 = behind
     // Elevation: 0 = level, 90 = above, -90 = below
     const float azimuthRad = qDegreesToRadians(mAzimuth);
     const float elevationRad = qDegreesToRadians(mElevation);
-    
+
     const float x = mDistance * qSin(azimuthRad) * qCos(elevationRad);
     const float y = mDistance * qSin(elevationRad);
     const float z = -mDistance * qCos(azimuthRad) * qCos(elevationRad);
-    
+
     mSpatialSound->setPosition(QVector3D(x, y, z));
 }
 
@@ -212,7 +212,7 @@ TSpatialAudioRoom::TSpatialAudioRoom(QAudioEngine* engine)
     : mAudioEngine(engine)
 {
     mAudioRoom = new QAudioRoom(engine);
-    
+
     // Set reasonable defaults
     mAudioRoom->setDimensions(QVector3D(10.0f, 10.0f, 4.0f));
     mAudioRoom->setReflectionGain(0.5f);
@@ -328,16 +328,16 @@ bool TSpatialAudio::initialize()
     if (mAudioEngine) {
         return true;  // Already initialized
     }
-    
+
     mAudioEngine = new QAudioEngine(this);
     mAudioEngine->setOutputMode(QAudioEngine::Headphone);  // Default to headphone mode
-    
+
     mAudioListener = new QAudioListener(mAudioEngine);
     mAudioListener->setPosition(QVector3D(0, 0, 0));
     mAudioListener->setRotation(QQuaternion());
-    
+
     mAudioEngine->start();
-    
+
     qDebug() << "TSpatialAudio: Initialized spatial audio engine";
     return true;
 }
@@ -347,18 +347,18 @@ void TSpatialAudio::shutdown()
     if (!mAudioEngine) {
         return;
     }
-    
+
     // Stop all sources first
     stopAllSources(ProtocolAPI);
     stopAllSources(ProtocolGMCP);
-    
+
     // Clear source containers
     mAPISpatialSources.clear();
     mGMCPSpatialSources.clear();
-    
+
     // Remove room
     removeRoom();
-    
+
     // Stop engine and let Qt parent-child cleanup handle deletion
     if (mAudioEngine) {
         mAudioEngine->stop();
@@ -366,7 +366,7 @@ void TSpatialAudio::shutdown()
         mAudioEngine = nullptr;
         mAudioListener = nullptr;  // Will be deleted with engine
     }
-    
+
     qDebug() << "TSpatialAudio: Shut down spatial audio engine";
 }
 
@@ -439,18 +439,18 @@ TSpatialAudioSource* TSpatialAudio::createSource(const QString& name, SourceProt
         qWarning() << "TSpatialAudio::createSource - Engine not initialized";
         return nullptr;
     }
-    
+
     QMap<QString, std::shared_ptr<TSpatialAudioSource>>& sources = 
         (protocol == ProtocolAPI) ? mAPISpatialSources : mGMCPSpatialSources;
-    
+
     if (sources.contains(name)) {
         qWarning() << "TSpatialAudio::createSource - Source already exists:" << name;
         return sources[name].get();
     }
-    
+
     auto source = std::make_shared<TSpatialAudioSource>(mAudioEngine, name);
     sources[name] = source;
-    
+
     return source.get();
 }
 
@@ -458,7 +458,7 @@ TSpatialAudioSource* TSpatialAudio::getSource(const QString& name, SourceProtoco
 {
     const QMap<QString, std::shared_ptr<TSpatialAudioSource>>& sources = 
         (protocol == ProtocolAPI) ? mAPISpatialSources : mGMCPSpatialSources;
-    
+
     auto it = sources.find(name);
     return it != sources.end() ? it.value().get() : nullptr;
 }
@@ -467,7 +467,7 @@ bool TSpatialAudio::removeSource(const QString& name, SourceProtocol protocol)
 {
     QMap<QString, std::shared_ptr<TSpatialAudioSource>>& sources = 
         (protocol == ProtocolAPI) ? mAPISpatialSources : mGMCPSpatialSources;
-    
+
     auto it = sources.find(name);
     if (it != sources.end()) {
         it.value()->stop();
@@ -481,7 +481,7 @@ void TSpatialAudio::stopAllSources(SourceProtocol protocol)
 {
     QMap<QString, std::shared_ptr<TSpatialAudioSource>>& sources = 
         (protocol == ProtocolAPI) ? mAPISpatialSources : mGMCPSpatialSources;
-    
+
     for (auto& source : sources) {
         source->stop();
     }
@@ -490,7 +490,7 @@ void TSpatialAudio::stopAllSources(SourceProtocol protocol)
 void TSpatialAudio::removeAllSources(SourceProtocol protocol)
 {
     stopAllSources(protocol);
-    
+
     if (protocol == ProtocolAPI) {
         mAPISpatialSources.clear();
     } else {
@@ -502,7 +502,7 @@ QStringList TSpatialAudio::listSources(SourceProtocol protocol) const
 {
     const QMap<QString, std::shared_ptr<TSpatialAudioSource>>& sources = 
         (protocol == ProtocolAPI) ? mAPISpatialSources : mGMCPSpatialSources;
-    
+
     return sources.keys();
 }
 
@@ -512,12 +512,12 @@ TSpatialAudioRoom* TSpatialAudio::createRoom()
         qWarning() << "TSpatialAudio::createRoom - Engine not initialized";
         return nullptr;
     }
-    
+
     if (mRoom) {
         qWarning() << "TSpatialAudio::createRoom - Room already exists";
         return mRoom;
     }
-    
+
     mRoom = new TSpatialAudioRoom(mAudioEngine);
     return mRoom;
 }
@@ -542,7 +542,7 @@ QString TSpatialAudio::resolveFilePath(const QString& key, const QString& fileNa
     if (!fileName.isEmpty()) {
         QString normalizedPath = fileName;
         normalizedPath.replace('\\', '/');
-        
+
         // Check if the file format is supported
         QFileInfo fileInfo(normalizedPath);
         const QString fileExtension = fileInfo.suffix();
@@ -555,10 +555,10 @@ QString TSpatialAudio::resolveFilePath(const QString& key, const QString& fileNa
             // Copy absolute path file to profile media folder
             const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
             QDir().mkpath(mediaPath);
-            
+
             const QString targetFileName = fileInfo.fileName();
             const QString targetPath = qsl("%1/%2").arg(mediaPath, targetFileName);
-            
+
             // Copy file if it doesn't exist or is different
             if (!QFile::exists(targetPath) || QFileInfo(normalizedPath).size() != QFileInfo(targetPath).size()) {
                 QFile::remove(targetPath);  // Remove old version if exists
@@ -574,17 +574,17 @@ QString TSpatialAudio::resolveFilePath(const QString& key, const QString& fileNa
             // Relative path - check in media folder
             const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
             const QString fullPath = qsl("%1/%2").arg(mediaPath, normalizedPath);
-            
+
             if (QFile::exists(fullPath)) {
                 return fullPath;
             }
-            
+
             // File doesn't exist - if URL provided, download it (url + fileName like TMedia)
             if (!url.isEmpty()) {
                 downloadFile(key, normalizedPath, url);
                 return QString();  // Will be available after download
             }
-            
+
             qWarning() << "TSpatialAudio::resolveFilePath - File not found:" << fullPath;
             return QString();
         }
@@ -593,7 +593,7 @@ QString TSpatialAudio::resolveFilePath(const QString& key, const QString& fileNa
         qWarning() << "TSpatialAudio::resolveFilePath - URL provided but no fileName specified";
         return QString();
     }
-    
+
     return QString();
 }
 
@@ -608,12 +608,12 @@ void TSpatialAudio::downloadFile(const QString& key, const QString& fileName, co
 {
     const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QDir mediaDir(mediaPath);
-    
+
     if (!mediaDir.mkpath(mediaPath)) {
         qWarning() << "TSpatialAudio::downloadFile - Failed to create media directory:" << mediaPath;
         return;
     }
-    
+
     // Create subdirectories if fileName contains slashes
     if (fileName.contains('/')) {
         const QString subPath = qsl("%1/%2").arg(mediaPath, fileName.section('/', 0, -2));
@@ -622,36 +622,36 @@ void TSpatialAudio::downloadFile(const QString& key, const QString& fileName, co
             return;
         }
     }
-    
+
     // Construct the full URL: url + fileName (like TMedia does)
     QString fullUrl = url;
     if (!fullUrl.endsWith('/')) {
         fullUrl += '/';
     }
     fullUrl += fileName;
-    
+
     QUrl fileUrl = QUrl::fromUserInput(fullUrl);
-    
+
     if (!fileUrl.isValid()) {
         qWarning() << "TSpatialAudio::downloadFile - Invalid URL:" << fullUrl;
         return;
     }
-    
+
     QNetworkRequest request(fileUrl);
     request.setHeader(QNetworkRequest::UserAgentHeader, qsl("Mudlet/%1").arg(APP_VERSION));
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-    
+
 #if !defined(QT_NO_SSL)
     if (fileUrl.scheme() == qsl("https")) {
         const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
         request.setSslConfiguration(config);
     }
 #endif
-    
+
     mpHost->updateProxySettings(mNetworkAccessManager);
     QNetworkReply* reply = mNetworkAccessManager->get(request);
     mPendingDownloads[reply] = PendingDownload{key, fileName, protocol};
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::downloadFile - Starting download:" << fullUrl 
              << "for key:" << key << "fileName:" << fileName;
@@ -661,44 +661,44 @@ void TSpatialAudio::downloadFile(const QString& key, const QString& fileName, co
 void TSpatialAudio::downloadFinished(QNetworkReply* reply)
 {
     reply->deleteLater();
-    
+
     if (!mPendingDownloads.contains(reply)) {
         return;
     }
-    
+
     const PendingDownload download = mPendingDownloads.take(reply);
     const QString& key = download.key;
     const QString& fileName = download.fileName;
-    
+
     if (reply->error() != QNetworkReply::NoError) {
         qWarning() << "TSpatialAudio::downloadFinished - Download failed for key:" << key 
                    << "fileName:" << fileName << "Error:" << reply->errorString();
         return;
     }
-    
+
     const QByteArray data = reply->readAll();
     if (data.isEmpty()) {
         qWarning() << "TSpatialAudio::downloadFinished - Downloaded file is empty for key:" << key;
         return;
     }
-    
+
     // Use the fileName we stored (not from URL)
     const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QString filePath = qsl("%1/%2").arg(mediaPath, fileName);
-    
+
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "TSpatialAudio::downloadFinished - Failed to open file for writing:" << filePath;
         return;
     }
-    
+
     file.write(data);
     file.close();
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::downloadFinished - Successfully downloaded and saved:" << filePath;
 #endif
-    
+
     // If source already exists, set the file (check both API and GMCP based on protocol)
     TSpatialAudioSource* source = getSource(download.key, download.protocol);
     if (source) {
@@ -790,7 +790,7 @@ bool TSpatialAudio::parseJSONByPosition(QJsonObject& json, float& azimuth, float
     }
 
     const QJsonValue posValue = json[qsl("position")];
-    
+
     // Support both array [azimuth, elevation, distance] and object {azimuth, elevation, distance}
     if (posValue.isArray()) {
         const QJsonArray posArray = posValue.toArray();
@@ -807,7 +807,7 @@ bool TSpatialAudio::parseJSONByPosition(QJsonObject& json, float& azimuth, float
         distance = static_cast<float>(posObj[qsl("distance")].toDouble(1.0));
         return true;
     }
-    
+
     return false;
 }
 
@@ -818,7 +818,7 @@ bool TSpatialAudio::parseJSONByListenerPosition(QJsonObject& json, float& x, flo
     }
 
     const QJsonValue posValue = json[qsl("position")];
-    
+
     if (posValue.isArray()) {
         const QJsonArray posArray = posValue.toArray();
         if (posArray.size() >= 3) {
@@ -834,7 +834,7 @@ bool TSpatialAudio::parseJSONByListenerPosition(QJsonObject& json, float& x, flo
         z = static_cast<float>(posObj[qsl("z")].toDouble(0.0));
         return true;
     }
-    
+
     return false;
 }
 
@@ -845,7 +845,7 @@ bool TSpatialAudio::parseJSONByListenerRotation(QJsonObject& json, float& yaw, f
     }
 
     const QJsonValue rotValue = json[qsl("rotation")];
-    
+
     if (rotValue.isArray()) {
         const QJsonArray rotArray = rotValue.toArray();
         if (rotArray.size() >= 3) {
@@ -861,7 +861,7 @@ bool TSpatialAudio::parseJSONByListenerRotation(QJsonObject& json, float& yaw, f
         roll = static_cast<float>(rotObj[qsl("roll")].toDouble(0.0));
         return true;
     }
-    
+
     return false;
 }
 
@@ -872,7 +872,7 @@ bool TSpatialAudio::parseJSONByRoom(QJsonObject& json, QVector3D& dimensions, fl
     }
 
     const QJsonObject roomObj = json[qsl("room")].toObject();
-    
+
     // Parse dimensions
     if (roomObj.contains(qsl("dimensions"))) {
         const QJsonValue dimValue = roomObj[qsl("dimensions")];
@@ -886,11 +886,11 @@ bool TSpatialAudio::parseJSONByRoom(QJsonObject& json, QVector3D& dimensions, fl
             }
         }
     }
-    
+
     reverb = static_cast<float>(roomObj[qsl("reverb")].toDouble(1.0));
     reflection = static_cast<float>(roomObj[qsl("reflection")].toDouble(1.0));
     material = roomObj[qsl("material")].toString(qsl("brick"));
-    
+
     return true;
 }
 
@@ -899,7 +899,7 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
 {
     const QString key = parseJSONByKey(json);
     const QString name = parseJSONByName(json);
-    
+
     if (key.isEmpty() || name.isEmpty()) {
         qWarning() << "TSpatialAudio::parseJSONForSpatialPlay - Missing key or name in GMCP message";
         return;
@@ -914,7 +914,7 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
     if (!source) {
         source = createSource(key, protocol);
     }
-    
+
     if (!source) {
         qWarning() << "TSpatialAudio::parseJSONForSpatialPlay - Failed to create source:" << key;
         return;
@@ -923,7 +923,7 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
     // Parse URL and resolve file path
     const QString url = parseJSONByUrl(json);
     const QString filePath = resolveFilePath(key, name, url, protocol);
-    
+
     if (!filePath.isEmpty()) {
         source->setSource(filePath);
     }
@@ -961,7 +961,7 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
             room->setDimensions(dimensions);
             room->setReverbGain(reverb);
             room->setReflectionGain(reflection);
-            
+
             // Convert material string to enum and apply to all walls
             const QAudioRoom::Material materialEnum = stringToMaterial(material);
             room->setWallMaterial(QAudioRoom::Wall::LeftWall, materialEnum);
@@ -977,7 +977,7 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
     if (mudlet* pMudlet = mudlet::self()) {
         const bool isMuted = (protocol == ProtocolGMCP && pMudlet->muteGame()) 
                           || (protocol == ProtocolAPI && pMudlet->muteAPI());
-        
+
         if (isMuted) {
 #ifdef DEBUG_SPATIAL_AUDIO
             qDebug() << "TSpatialAudio::parseJSONForSpatialPlay - Not playing due to mute state:" << key;
@@ -994,7 +994,7 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
 void TSpatialAudio::parseJSONForSpatialStop(QJsonObject& json, SourceProtocol protocol)
 {
     const QString key = parseJSONByKey(json);
-    
+
     if (key.isEmpty()) {
         // Stop all sources for this protocol
         stopAllSources(protocol);
@@ -1016,11 +1016,11 @@ void TSpatialAudio::parseJSONForSpatialStop(QJsonObject& json, SourceProtocol pr
 void TSpatialAudio::parseJSONForSpatialUpdate(QJsonObject& json, SourceProtocol protocol)
 {
     const QString key = parseJSONByKey(json);
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::parseJSONForSpatialUpdate - Called with key:" << key;
 #endif
-    
+
     if (key.isEmpty()) {
         qWarning() << "TSpatialAudio::parseJSONForSpatialUpdate - Missing key in GMCP message";
         return;
@@ -1031,7 +1031,7 @@ void TSpatialAudio::parseJSONForSpatialUpdate(QJsonObject& json, SourceProtocol 
         qWarning() << "TSpatialAudio::parseJSONForSpatialUpdate - Source not found:" << key << "protocol:" << (protocol == ProtocolAPI ? "API" : "GMCP");
         return;
     }
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::parseJSONForSpatialUpdate - Source found:" << key;
 #endif
@@ -1065,16 +1065,16 @@ void TSpatialAudio::parseJSONForSpatialUpdate(QJsonObject& json, SourceProtocol 
              << "isPlaying=" << source->isPlaying() 
              << "isPaused=" << source->isPaused();
 #endif
-    
+
     if (source->loops() != 0 && !source->isPlaying() && !source->isPaused()) {
         if (mudlet* pMudlet = mudlet::self()) {
             const bool isMuted = (protocol == ProtocolGMCP && pMudlet->muteGame()) 
                               || (protocol == ProtocolAPI && pMudlet->muteAPI());
-            
+
 #ifdef DEBUG_SPATIAL_AUDIO
             qDebug() << "TSpatialAudio::parseJSONForSpatialUpdate - Not playing, isMuted=" << isMuted;
 #endif
-            
+
             if (!isMuted) {
                 qDebug() << "TSpatialAudio::parseJSONForSpatialUpdate - Starting playback for previously muted source:" << key;
                 source->play();
@@ -1120,10 +1120,10 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
     const int bitsPerSample = 16;
     const int byteRate = sampleRate * numChannels * bitsPerSample / 8;
     const int blockAlign = numChannels * bitsPerSample / 8;
-    
+
     // Generate audio samples
     QVector<qint16> samples(numSamples);
-    
+
     switch (type) {
         case WhiteNoise: {
             // White noise: random samples with uniform distribution
@@ -1132,12 +1132,12 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
             }
             break;
         }
-        
+
         case PinkNoise: {
             // Pink noise using Voss-McCartney algorithm (simplified)
             // Pink noise has equal energy per octave
             float b0 = 0.0f, b1 = 0.0f, b2 = 0.0f, b3 = 0.0f, b4 = 0.0f, b5 = 0.0f, b6 = 0.0f;
-            
+
             for (int i = 0; i < numSamples; ++i) {
                 const float white = (QRandomGenerator::global()->bounded(65536) / 32768.0f) - 1.0f;
                 b0 = 0.99886f * b0 + white * 0.0555179f;
@@ -1148,12 +1148,12 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
                 b5 = -0.7616f * b5 - white * 0.0168980f;
                 const float pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362f;
                 b6 = white * 0.115926f;
-                
+
                 samples[i] = static_cast<qint16>(pink * 4096.0f);  // Scale appropriately
             }
             break;
         }
-        
+
         case SineWave: {
             // Pure sine wave at specified frequency
             const float angularFreq = 2.0f * M_PI * frequency / sampleRate;
@@ -1164,17 +1164,17 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
             break;
         }
     }
-    
+
     // Create WAV file in profile's media directory
     const QString mediaDir = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
-    
+
     // Ensure media directory exists
     QDir dir;
     if (!dir.mkpath(mediaDir)) {
         qWarning() << "TSpatialAudio::generateTestTone - Failed to create media directory:" << mediaDir;
         return QString();
     }
-    
+
     QString fileName;
     switch (type) {
         case WhiteNoise:
@@ -1187,9 +1187,9 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
             fileName = qsl("mudlet_sine_%1hz_%2s_%3sr.wav").arg(frequency).arg(durationSeconds).arg(sampleRate);
             break;
     }
-    
+
     const QString filePath = QDir(mediaDir).filePath(fileName);
-    
+
     // Check if file already exists
     if (QFile::exists(filePath)) {
 #ifdef DEBUG_SPATIAL_AUDIO
@@ -1197,26 +1197,26 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
 #endif
         return filePath;
     }
-    
+
     // Write WAV file
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "TSpatialAudio::generateTestTone - Failed to create file:" << filePath;
         return QString();
     }
-    
+
     QDataStream out(&file);
     out.setByteOrder(QDataStream::LittleEndian);
-    
+
     // WAV header
     const quint32 dataSize = numSamples * numChannels * bitsPerSample / 8;
     const quint32 fileSize = dataSize + 36;
-    
+
     // RIFF chunk
     file.write("RIFF");
     out << fileSize;
     file.write("WAVE");
-    
+
     // fmt chunk
     file.write("fmt ");
     out << quint32(16);              // fmt chunk size
@@ -1226,18 +1226,18 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
     out << quint32(byteRate);        // byte rate
     out << quint16(blockAlign);      // block align
     out << quint16(bitsPerSample);   // bits per sample
-    
+
     // data chunk
     file.write("data");
     out << dataSize;
-    
+
     // Write samples
     for (qint16 sample : samples) {
         out << sample;
     }
-    
+
     file.close();
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::generateTestTone - Generated tone:" << filePath;
 #endif
@@ -1250,13 +1250,13 @@ bool TSpatialAudio::createTestToneSource(const QString& name, ToneType type, flo
         qWarning() << "TSpatialAudio::createTestToneSource - Engine not initialized";
         return false;
     }
-    
+
     // Generate the tone file
     const QString filePath = generateTestTone(type, frequency, durationSeconds);
     if (filePath.isEmpty()) {
         return false;
     }
-    
+
     // Create or get the source
     TSpatialAudioSource* source = getSource(name, ProtocolAPI);
     if (!source) {
@@ -1266,15 +1266,15 @@ bool TSpatialAudio::createTestToneSource(const QString& name, ToneType type, flo
             return false;
         }
     }
-    
+
     // Set the generated file as the source
     source->setSource(filePath);
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::createTestToneSource - Created test tone source:" << name;
     qDebug() << "TSpatialAudio::createTestToneSource - File path:" << filePath;
 #endif
-    
+
     // Verify the file exists and is readable
     QFile testFile(filePath);
     if (!testFile.exists()) {
@@ -1284,7 +1284,7 @@ bool TSpatialAudio::createTestToneSource(const QString& name, ToneType type, flo
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::createTestToneSource - File size:" << testFile.size() << "bytes";
 #endif
-    
+
     return true;
 }
 
@@ -1294,13 +1294,13 @@ bool TSpatialAudio::createTestToneSource(const QString& name, ToneType type, flo
 QStringList TSpatialAudio::getSupportedAudioFormats()
 {
     QStringList supportedFormats;
-    
+
     // Runtime detection of supported audio formats from Qt6 Multimedia
     // This replaces hardcoded format lists and adapts to the actual capabilities
     // of the multimedia backend (FFmpeg, GStreamer, AVFoundation, etc.)
     QMediaFormat format;
     const QList<QMediaFormat::FileFormat> fileFormats = format.supportedFileFormats(QMediaFormat::Decode);
-    
+
     // Map Qt's enum values to string extensions
     for (const auto& format : fileFormats) {
         switch (format) {
@@ -1339,19 +1339,19 @@ QStringList TSpatialAudio::getSupportedAudioFormats()
                 break;
         }
     }
-    
+
     // Ensure we always support WAV as a fallback (since we can generate test tones)
     if (!supportedFormats.contains(qsl("wav"))) {
         supportedFormats.prepend(qsl("wav"));
     }
-    
+
     // Sort for consistent ordering
     supportedFormats.sort();
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::getSupportedAudioFormats - Detected formats:" << supportedFormats;
 #endif
-    
+
     return supportedFormats;
 }
 
@@ -1359,21 +1359,21 @@ bool TSpatialAudio::isFormatSupported(const QString& fileExtension)
 {
     // Check if format is in our supported list
     const QStringList supportedFormats = getSupportedAudioFormats();
-    
+
     // Normalize extension (remove leading dot if present, convert to lowercase)
     QString normalizedExt = fileExtension.toLower();
     if (normalizedExt.startsWith('.')) {
         normalizedExt = normalizedExt.mid(1);
     }
-    
+
     // Check against supported formats
     bool isSupported = supportedFormats.contains(normalizedExt);
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::isFormatSupported - Extension:" << normalizedExt 
              << "Supported:" << isSupported << "Available formats:" << supportedFormats;
 #endif
-    
+
     return isSupported;
 }
 
@@ -1382,7 +1382,7 @@ QStringList TSpatialAudio::getSupportedRoomMaterials()
     // Return all Qt6 QAudioRoom::Material enum values as strings
     // This ensures bidirectional compatibility between string names and Qt enums
     QStringList materials;
-    
+
     materials << qsl("brick");          // QAudioRoom::Material::BrickBare
     materials << qsl("brickpainted");   // QAudioRoom::Material::BrickPainted  
     materials << qsl("concrete");       // QAudioRoom::Material::ConcreteBlockCoarse
@@ -1410,14 +1410,14 @@ QStringList TSpatialAudio::getSupportedRoomMaterials()
     materials << qsl("parquetonconcrete"); // QAudioRoom::Material::ParquetOnConcrete
     materials << qsl("wateroricesurface"); // QAudioRoom::Material::WaterOrIceSurface
     materials << qsl("uniform");        // QAudioRoom::Material::UniformMaterial
-    
+
     return materials;
 }
 
 QAudioRoom::Material TSpatialAudio::stringToMaterial(const QString& materialName)
 {
     const QString name = materialName.toLower().replace("_", "").replace("-", "");
-    
+
     // Map string names to Qt enum values with comprehensive coverage
     // Note: Use "transparent" or "air" for open areas with no walls/reflections
     if (name == "brick" || name == "brickbare") {
@@ -1471,7 +1471,7 @@ QAudioRoom::Material TSpatialAudio::stringToMaterial(const QString& materialName
     } else if (name == "uniform" || name == "uniformmaterial") {
         return QAudioRoom::Material::UniformMaterial;
     }
-    
+
     // Default fallback
     return QAudioRoom::Material::BrickBare;
 }
@@ -1532,7 +1532,7 @@ QString TSpatialAudio::materialToString(QAudioRoom::Material material)
         case QAudioRoom::Material::UniformMaterial:
             return qsl("uniform");
     }
-    
+
     return qsl("brick");  // Default fallback
 }
 
@@ -1579,7 +1579,7 @@ void TSpatialAudio::sendCapabilitiesResponse()
 {
     QJsonObject capabilities;
     capabilities[qsl("version")] = qsl("1.0");
-    
+
     // Supported audio formats - query at runtime
     QJsonArray formats;
     const QStringList supportedFormats = getSupportedAudioFormats();
@@ -1589,12 +1589,12 @@ void TSpatialAudio::sendCapabilitiesResponse()
     }
 
     capabilities[qsl("formats")] = formats;
-    
+
     // Supported output modes
     QJsonArray outputModes;
     outputModes << qsl("stereo") << qsl("surround") << qsl("headphone");
     capabilities[qsl("output_modes")] = outputModes;
-    
+
     // Supported room materials - get complete list from Qt enum
     QJsonArray materials;
     const QStringList supportedMaterials = getSupportedRoomMaterials();
@@ -1604,12 +1604,12 @@ void TSpatialAudio::sendCapabilitiesResponse()
     }
 
     capabilities[qsl("room_materials")] = materials;
-    
+
     // Technical capabilities
     capabilities[qsl("max_sources")] = 32;
     capabilities[qsl("distance_model")] = qsl("inverse");
     capabilities[qsl("coordinate_system")] = qsl("spherical");
-    
+
     // Feature support
     QJsonObject features;
     features[qsl("positioning")] = true;
@@ -1620,12 +1620,12 @@ void TSpatialAudio::sendCapabilitiesResponse()
     features[qsl("volume_control")] = true;
     features[qsl("loops")] = true;
     capabilities[qsl("features")] = features;
-    
+
     // Send response
     QJsonDocument doc(capabilities);
     QString response = doc.toJson(QJsonDocument::Compact);
     sendGMCPResponse(qsl("Client.Media.Spatial.Capabilities"), response);
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::sendCapabilitiesResponse - Sent capabilities:" << response;
 #endif
@@ -1634,24 +1634,24 @@ void TSpatialAudio::sendCapabilitiesResponse()
 void TSpatialAudio::sendSettingsResponse()
 {
     QJsonObject settings;
-    
+
     // Master volume (convert from 0.0-1.0 to 0-100)
     settings[qsl("master_volume")] = static_cast<int>(masterVolume() * 100);
-    
+
     // Listener position and rotation
     QJsonObject listener;
     QVector3D pos = listenerPosition();
     QJsonArray position;
     position << pos.x() << pos.y() << pos.z();
     listener[qsl("position")] = position;
-    
+
     QQuaternion rot = listenerRotation();
     QVector3D euler = rot.toEulerAngles();
     QJsonArray rotation;
     rotation << euler.x() << euler.y() << euler.z();
     listener[qsl("rotation")] = rotation;
     settings[qsl("listener")] = listener;
-    
+
     // Room settings if available
     if (TSpatialAudioRoom* room = getRoom()) {
         QJsonObject roomObj;
@@ -1659,20 +1659,20 @@ void TSpatialAudio::sendSettingsResponse()
         QJsonArray dimensions;
         dimensions << dims.x() << dims.y() << dims.z();
         roomObj[qsl("dimensions")] = dimensions;
-        
+
         roomObj[qsl("reverb_gain")] = room->reverbGain();
         roomObj[qsl("reflection_gain")] = room->reflectionGain();
         roomObj[qsl("reverb_time")] = room->reverbTime();
         roomObj[qsl("reverb_brightness")] = room->reverbBrightness();
-        
+
         settings[qsl("room")] = roomObj;
     }
-    
+
     // Send response
     QJsonDocument doc(settings);
     QString response = doc.toJson(QJsonDocument::Compact);
     sendGMCPResponse(qsl("Client.Media.Spatial.Settings"), response);
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::sendSettingsResponse - Sent settings:" << response;
 #endif
@@ -1681,48 +1681,48 @@ void TSpatialAudio::sendSettingsResponse()
 void TSpatialAudio::sendStatusResponse()
 {
     QJsonObject status;
-    
+
     // Collect active GMCP sources only (server should not know about client API sources)
     QJsonArray activeSources;
     QStringList gmcpSources = listSources(ProtocolGMCP);
-    
+
     int activeCount = 0;
 
     for (const QString& sourceKey : gmcpSources) {
         TSpatialAudioSource* source = getSource(sourceKey, ProtocolGMCP);
-        
+
         if (source && source->isPlaying()) {
             QJsonObject sourceObj;
             sourceObj[qsl("key")] = sourceKey;
             sourceObj[qsl("status")] = source->isPaused() ? qsl("paused") : qsl("playing");
-            
+
             // Position in spherical coordinates
             QJsonArray position;
             position << source->azimuth() << source->elevation() << source->distance();
             sourceObj[qsl("position")] = position;
-            
+
             sourceObj[qsl("volume")] = static_cast<int>(source->volume() * 100);
             sourceObj[qsl("occlusion")] = source->occlusion();
             sourceObj[qsl("size")] = source->size();
             sourceObj[qsl("loops")] = source->loops();
-            
+
             activeSources << sourceObj;
             activeCount++;
         }
     }
-    
+
     status[qsl("active_sources")] = activeSources;
     status[qsl("source_count")] = activeCount;
     status[qsl("max_sources")] = 32;
-    
+
     // Engine status
     status[qsl("engine_initialized")] = isInitialized();
-    
+
     // Send response
     QJsonDocument doc(status);
     QString response = doc.toJson(QJsonDocument::Compact);
     sendGMCPResponse(qsl("Client.Media.Spatial.Status"), response);
-    
+
 #ifdef DEBUG_SPATIAL_AUDIO
     qDebug() << "TSpatialAudio::sendStatusResponse - Sent status:" << response;
 #endif

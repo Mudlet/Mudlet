@@ -41,14 +41,14 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const char* func = "playSpatialSound";
-    
+
     if (!lua_istable(L, 1)) {
         lua_pushfstring(L, "%s: bad argument #1 type (table expected, got %s)", func, luaL_typename(L, 1));
         return lua_error(L);
     }
-    
+
     TSpatialAudio* spatial = getSpatialAudio(host);
-    
+
     // Required: key (unique identifier)
     QString key;
     lua_getfield(L, 1, "key");
@@ -58,12 +58,12 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     if (key.isEmpty()) {
         lua_pushstring(L, "playSpatialSound: missing required field 'key'");
         return lua_error(L);
     }
-    
+
     // Optional: name (file path)
     QString fileName;
     lua_getfield(L, 1, "name");
@@ -79,7 +79,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // Optional: url (download path)
     QString url;
     lua_getfield(L, 1, "url");
@@ -89,13 +89,13 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // 'name' is required (either for local file or as filename to download)
     if (fileName.isEmpty()) {
         lua_pushstring(L, "playSpatialSound: 'name' field is required");
         return lua_error(L);
     }
-    
+
     // Create or get existing source
     TSpatialAudioSource* source = spatial->getSource(key);
     if (!source) {
@@ -105,7 +105,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
             return warnArgumentValue(L, func, qsl("failed to create source '%1'").arg(key));
         }
     }
-    
+
     // Resolve file path and handle downloading if needed
     QString resolvedPath = spatial->resolveFilePath(key, fileName, url);
 
@@ -118,7 +118,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
     } else {
         return warnArgumentValue(L, func, qsl("file not found: '%1'").arg(fileName));
     }
-    
+
     // Optional: position {azimuth, elevation, distance}
     lua_getfield(L, 1, "position");
 
@@ -126,19 +126,19 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
         lua_rawgeti(L, -1, 1);  // azimuth
         lua_rawgeti(L, -2, 2);  // elevation
         lua_rawgeti(L, -3, 3);  // distance
-        
+
         if (lua_isnumber(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
             float azimuth = lua_tonumber(L, -3);
             float elevation = lua_tonumber(L, -2);
             float distance = lua_tonumber(L, -1);
             source->setPosition(azimuth, elevation, distance);
         }
-        
+
         lua_pop(L, 3);  // pop azimuth, elevation, distance
     }
 
     lua_pop(L, 1);  // pop position table
-    
+
     // Optional: volume (0-100)
     lua_getfield(L, 1, "volume");
 
@@ -150,7 +150,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // Optional: occlusion
     lua_getfield(L, 1, "occlusion");
 
@@ -160,7 +160,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // Optional: loops (-1 for infinite)
     lua_getfield(L, 1, "loops");
 
@@ -170,7 +170,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // Optional: room acoustics {width, height, depth, reverb, reflection, material}
     lua_getfield(L, 1, "room");
     if (lua_istable(L, -1)) {
@@ -179,7 +179,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
         if (!room) {
             room = spatial->createRoom();
         }
-        
+
         if (room) {
             // Get room dimensions {width, height, depth}
             lua_getfield(L, -1, "dimensions");
@@ -188,19 +188,19 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
                 lua_rawgeti(L, -1, 1);  // width
                 lua_rawgeti(L, -2, 2);  // height
                 lua_rawgeti(L, -3, 3);  // depth
-                
+
                 if (lua_isnumber(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
                     float width = lua_tonumber(L, -3);
                     float height = lua_tonumber(L, -2);
                     float depth = lua_tonumber(L, -1);
                     room->setDimensions(width, height, depth);
                 }
-                
+
                 lua_pop(L, 3);  // pop width, height, depth
             }
 
             lua_pop(L, 1);  // pop dimensions table
-            
+
             // Get reverb gain
             lua_getfield(L, -1, "reverb");
 
@@ -210,7 +210,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
             }
 
             lua_pop(L, 1);
-            
+
             // Get reflection gain
             lua_getfield(L, -1, "reflection");
 
@@ -220,7 +220,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
             }
 
             lua_pop(L, 1);
-            
+
             // Get wall material (string name)
             // Note: setWallMaterial requires specifying which wall
             // For simplicity, apply to all walls
@@ -228,10 +228,10 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
 
             if (lua_isstring(L, -1)) {
                 QString material = QString::fromUtf8(lua_tostring(L, -1));
-                
+
                 // Use TSpatialAudio's helper function for comprehensive material mapping
                 QAudioRoom::Material mat = spatial->stringToMaterial(material);
-                
+
                 // Apply material to all walls
                 room->setWallMaterial(QAudioRoom::Wall::LeftWall, mat);
                 room->setWallMaterial(QAudioRoom::Wall::RightWall, mat);
@@ -246,7 +246,7 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);  // pop room table
-    
+
     // Check mute state before playing
     if (mudlet* pMudlet = mudlet::self()) {
         if (pMudlet->muteAPI()) {
@@ -259,10 +259,10 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
             return 1;
         }
     }
-    
+
     // Play the sound
     source->play();
-    
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -272,14 +272,14 @@ int TLuaInterpreter::stopSpatialSound(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const QString key = getVerifiedString(L, __func__, 1, "source key");
-    
+
     TSpatialAudio* spatial = getSpatialAudio(host);
     TSpatialAudioSource* source = spatial->getSource(key);
-    
+
     if (!source) {
         return warnArgumentValue(L, __func__, qsl("source '%1' not found").arg(key));
     }
-    
+
     source->stop();
     lua_pushboolean(L, true);
     return 1;
@@ -290,14 +290,14 @@ int TLuaInterpreter::pauseSpatialSound(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const QString key = getVerifiedString(L, __func__, 1, "source key");
-    
+
     TSpatialAudio* spatial = getSpatialAudio(host);
     TSpatialAudioSource* source = spatial->getSource(key);
-    
+
     if (!source) {
         return warnArgumentValue(L, __func__, qsl("source '%1' not found").arg(key));
     }
-    
+
     source->pause();
     lua_pushboolean(L, true);
     return 1;
@@ -308,40 +308,40 @@ int TLuaInterpreter::updateSpatialSound(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const char* func = "updateSpatialSound";
-    
+
     const QString key = getVerifiedString(L, func, 1, "source key");
-    
+
     if (!lua_istable(L, 2)) {
         lua_pushfstring(L, "%s: bad argument #2 type (table expected, got %s)", func, luaL_typename(L, 2));
         return lua_error(L);
     }
-    
+
     TSpatialAudio* spatial = getSpatialAudio(host);
     TSpatialAudioSource* source = spatial->getSource(key);
-    
+
     if (!source) {
         return warnArgumentValue(L, func, qsl("source '%1' not found").arg(key));
     }
-    
+
     // Optional: position {azimuth, elevation, distance}
     lua_getfield(L, 2, "position");
     if (lua_istable(L, -1)) {
         lua_rawgeti(L, -1, 1);  // azimuth
         lua_rawgeti(L, -2, 2);  // elevation
         lua_rawgeti(L, -3, 3);  // distance
-        
+
         if (lua_isnumber(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
             float azimuth = lua_tonumber(L, -3);
             float elevation = lua_tonumber(L, -2);
             float distance = lua_tonumber(L, -1);
             source->setPosition(azimuth, elevation, distance);
         }
-        
+
         lua_pop(L, 3);  // pop azimuth, elevation, distance
     }
 
     lua_pop(L, 1);  // pop position table
-    
+
     // Optional: volume (0-100)
     lua_getfield(L, 2, "volume");
 
@@ -353,7 +353,7 @@ int TLuaInterpreter::updateSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // Optional: occlusion
     lua_getfield(L, 2, "occlusion");
 
@@ -363,7 +363,7 @@ int TLuaInterpreter::updateSpatialSound(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // If source has loops configured (meaning it should be playing) but isn't currently playing,
     // check if we're no longer muted and start it
     if (source->loops() != 0 && !source->isPlaying() && !source->isPaused()) {
@@ -376,7 +376,7 @@ int TLuaInterpreter::updateSpatialSound(lua_State* L)
             }
         }
     }
-    
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -386,16 +386,16 @@ int TLuaInterpreter::getSpatialSounds(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TSpatialAudio* spatial = getSpatialAudio(host);
-    
+
     QStringList sources = spatial->listSources();
-    
+
     lua_createtable(L, sources.size(), 0);
 
     for (int i = 0; i < sources.size(); ++i) {
         lua_pushstring(L, sources[i].toUtf8().constData());
         lua_rawseti(L, -2, i + 1);
     }
-    
+
     return 1;
 }
 
@@ -404,13 +404,13 @@ int TLuaInterpreter::removeSpatialSound(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const QString key = getVerifiedString(L, __func__, 1, "source key");
-    
+
     TSpatialAudio* spatial = getSpatialAudio(host);
-    
+
     if (!spatial->removeSource(key)) {
         return warnArgumentValue(L, __func__, qsl("source '%1' not found").arg(key));
     }
-    
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -420,14 +420,14 @@ int TLuaInterpreter::setSpatialListener(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const char* func = "setSpatialListener";
-    
+
     if (!lua_istable(L, 1)) {
         lua_pushfstring(L, "%s: bad argument #1 type (table expected, got %s)", func, luaL_typename(L, 1));
         return lua_error(L);
     }
-    
+
     TSpatialAudio* spatial = getSpatialAudio(host);
-    
+
     // Optional: position {x, y, z}
     lua_getfield(L, 1, "position");
 
@@ -435,19 +435,19 @@ int TLuaInterpreter::setSpatialListener(lua_State* L)
         lua_rawgeti(L, -1, 1);  // x
         lua_rawgeti(L, -2, 2);  // y
         lua_rawgeti(L, -3, 3);  // z
-        
+
         if (lua_isnumber(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
             float x = lua_tonumber(L, -3);
             float y = lua_tonumber(L, -2);
             float z = lua_tonumber(L, -1);
             spatial->setListenerPosition(x, y, z);
         }
-        
+
         lua_pop(L, 3);  // pop x, y, z
     }
 
     lua_pop(L, 1);  // pop position table
-    
+
     // Optional: rotation {yaw, pitch, roll}
     lua_getfield(L, 1, "rotation");
 
@@ -455,19 +455,19 @@ int TLuaInterpreter::setSpatialListener(lua_State* L)
         lua_rawgeti(L, -1, 1);  // yaw
         lua_rawgeti(L, -2, 2);  // pitch
         lua_rawgeti(L, -3, 3);  // roll
-        
+
         if (lua_isnumber(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
             float yaw = lua_tonumber(L, -3);
             float pitch = lua_tonumber(L, -2);
             float roll = lua_tonumber(L, -1);
             spatial->setListenerRotation(yaw, pitch, roll);
         }
-        
+
         lua_pop(L, 3);  // pop yaw, pitch, roll
     }
 
     lua_pop(L, 1);  // pop rotation table
-    
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -477,13 +477,13 @@ int TLuaInterpreter::setSpatialMasterVolume(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     int volume = getVerifiedInt(L, __func__, 1, "volume");
-    
+
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
-    
+
     TSpatialAudio* spatial = getSpatialAudio(host);
     spatial->setMasterVolume(volume / 100.0f);
-    
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -492,15 +492,15 @@ int TLuaInterpreter::setSpatialMasterVolume(lua_State* L)
 int TLuaInterpreter::playSpatialTestTone(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    
+
     if (!lua_istable(L, 1)) {
         lua_pushnil(L);
         lua_pushstring(L, "playSpatialTestTone: options must be a table");
         return 2;
     }
-    
+
     TSpatialAudio* spatial = getSpatialAudio(host);
-    
+
     // Extract key
     lua_getfield(L, 1, "key");
     if (!lua_isstring(L, -1)) {
@@ -511,7 +511,7 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
 
     const QString key = lua_tostring(L, -1);
     lua_pop(L, 1);
-    
+
     // Extract type
     lua_getfield(L, 1, "type");
     if (!lua_isstring(L, -1)) {
@@ -522,7 +522,7 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
 
     const QString typeStr = QString(lua_tostring(L, -1)).toLower();
     lua_pop(L, 1);
-    
+
     TSpatialAudio::ToneType toneType;
 
     if (typeStr == "white") {
@@ -536,7 +536,7 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
         lua_pushstring(L, "playSpatialTestTone: type must be 'white', 'pink', or 'sine'");
         return 2;
     }
-    
+
     // Extract duration
     lua_getfield(L, 1, "duration");
 
@@ -548,7 +548,7 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
 
     const float duration = lua_tonumber(L, -1);
     lua_pop(L, 1);
-    
+
     // Extract frequency (optional, default 440 Hz)
     lua_getfield(L, 1, "frequency");
     float frequency = 440.0f;
@@ -558,7 +558,7 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // Extract position
     lua_getfield(L, 1, "azimuth");
 
@@ -570,7 +570,7 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
 
     const float azimuth = lua_tonumber(L, -1);
     lua_pop(L, 1);
-    
+
     lua_getfield(L, 1, "elevation");
 
     if (!lua_isnumber(L, -1)) {
@@ -581,7 +581,7 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
 
     const float elevation = lua_tonumber(L, -1);
     lua_pop(L, 1);
-    
+
     lua_getfield(L, 1, "distance");
 
     if (!lua_isnumber(L, -1)) {
@@ -592,14 +592,14 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
 
     const float distance = lua_tonumber(L, -1);
     lua_pop(L, 1);
-    
+
     // Create the test tone source
     if (!spatial->createTestToneSource(key, toneType, frequency, duration)) {
         lua_pushnil(L);
         lua_pushstring(L, "playSpatialTestTone: failed to create test tone");
         return 2;
     }
-    
+
     // Get the source and configure it
     TSpatialAudioSource* source = spatial->getSource(key, TSpatialAudio::ProtocolAPI);
 
@@ -608,10 +608,10 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
         lua_pushstring(L, "playSpatialTestTone: failed to get source");
         return 2;
     }
-    
+
     // Set position
     source->setPosition(azimuth, elevation, distance);
-    
+
     // Set optional parameters
     lua_getfield(L, 1, "volume");
 
@@ -625,7 +625,7 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     lua_getfield(L, 1, "loops");
 
     if (lua_isnumber(L, -1)) {
@@ -633,10 +633,10 @@ int TLuaInterpreter::playSpatialTestTone(lua_State* L)
     }
 
     lua_pop(L, 1);
-    
+
     // Play the sound
     source->play();
-    
+
     lua_pushboolean(L, true);
     return 1;
 }
