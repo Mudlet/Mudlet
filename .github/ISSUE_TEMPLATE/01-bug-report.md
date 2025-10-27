@@ -2,7 +2,7 @@
 name: Bug report
 about: Report a bug to help improve Mudlet
 title: ''
-labels: ['triage']
+labels: ['']
 assignees: ''
 type: 'bug'
 
