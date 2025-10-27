@@ -89,7 +89,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
@@ -121,7 +121,19 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} -y
+        sudo apt-get install \
+        ccache \
+        expect \
+        g++-${{matrix.gcc_compiler_version}} \
+        libassimp-dev \
+        libglu1-mesa-dev \
+        libpulse-dev \
+        libsecret-1-dev \
+        libzip-dev \
+        luarocks \
+        pcregrep \
+        pkg-config \
+        -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -167,7 +179,7 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{ matrix.language }}"
         upload: false
@@ -182,6 +194,6 @@ jobs:
         output: sarif-results/${{ matrix.language }}.sarif
 
     - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: sarif-results/${{ matrix.language }}.sarif

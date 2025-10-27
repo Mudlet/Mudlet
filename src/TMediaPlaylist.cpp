@@ -19,9 +19,7 @@
 
 #include "TMediaPlaylist.h"
 
-#include "pre_guard.h"
 #include <QRandomGenerator>
-#include "post_guard.h"
 
 TMediaPlaylist::TMediaPlaylist()
 : mCurrentIndex(0)

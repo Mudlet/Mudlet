@@ -25,12 +25,10 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QDebug>
 #include <QPointer>
 #include <QSharedPointer>
-#include "post_guard.h"
 
 #include <pcre.h>
 

@@ -110,7 +110,7 @@
     "disableModuleSync": "disableModuleSync(name)",
     "disableScript": "disableScript(name)",
     "disableScrollBar": "disableScrollBar([windowName])",
-    "disableScrolling": "diableScrolling([windowName])==",
+    "disableScrolling": "diableScrolling([windowName])",
     "disableTimer": "disableTimer(name)",
     "disableTrigger": "disableTrigger(name)",
     "disconnect": "disconnect()",

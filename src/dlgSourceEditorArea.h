@@ -24,9 +24,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_source_editor_area.h"
-#include "post_guard.h"
 
 #include "utils.h"
 
