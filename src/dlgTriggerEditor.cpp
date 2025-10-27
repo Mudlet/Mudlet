@@ -5222,7 +5222,8 @@ void dlgTriggerEditor::slot_itemEdited()
     }
 
     if (!packageName.isEmpty()) {
-        showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+        //: Package item warning shown in trigger editor when editing package items. Should only be announced to screen readers once per item, not repeatedly on every edit.
+        showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."), false);
     }
 }
 
@@ -6750,6 +6751,13 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                //: Package item warning shown in trigger editor. Announced to screen readers when selecting a package item.
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+            }
         }
 
     } else {
@@ -6799,6 +6807,13 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                //: Package item warning shown in trigger editor. Announced to screen readers when selecting a package item.
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+            }
         }
 
     } else {
@@ -6847,6 +6862,13 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                //: Package item warning shown in trigger editor. Announced to screen readers when selecting a package item.
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+            }
         }
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
@@ -7255,6 +7277,13 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                //: Package item warning shown in trigger editor. Announced to screen readers when selecting a package item.
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+            }
         }
     } else {
         // On root of treewidget_actions: - show help message instead
@@ -7340,6 +7369,13 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
                            "possibly by another script. The error was:%2%3").arg(qsl("<br>"), error.value()));
         } else if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                //: Package item warning shown in trigger editor. Announced to screen readers when selecting a package item.
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+            }
         }
 
     } else {
@@ -7394,6 +7430,13 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                //: Package item warning shown in trigger editor. Announced to screen readers when selecting a package item.
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+            }
         }
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
@@ -8832,7 +8875,7 @@ void dlgTriggerEditor::showError(const QString& text)
     }
 }
 
-void dlgTriggerEditor::showWarning(const QString& text)
+void dlgTriggerEditor::showWarning(const QString& text, bool announce)
 {
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
@@ -8844,7 +8887,7 @@ void dlgTriggerEditor::showWarning(const QString& text)
     disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
 
-    if (!mpHost->mIsProfileLoadingSequence) {
+    if (!mpHost->mIsProfileLoadingSequence && announce) {
         mudlet::self()->announce(text);
     }
 }

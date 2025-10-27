@@ -183,7 +183,7 @@ public:
     void changeEvent(QEvent* e) override;
     void fillout_form();
     void showError(const QString&);
-    void showWarning(const QString&);
+    void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
