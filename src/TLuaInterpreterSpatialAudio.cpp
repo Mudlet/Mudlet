@@ -228,18 +228,9 @@ int TLuaInterpreter::playSpatialSound(lua_State* L)
 
             if (lua_isstring(L, -1)) {
                 QString material = QString::fromUtf8(lua_tostring(L, -1));
-                QAudioRoom::Material mat = QAudioRoom::Material::BrickBare;
                 
-                // Map material name to enum
-                if (material == "brick") {
-                    mat = QAudioRoom::Material::BrickBare;
-                } else if (material == "concrete") {
-                    mat = QAudioRoom::Material::ConcreteBlockCoarse;
-                } else if (material == "wood") {
-                    mat = QAudioRoom::Material::WoodPanel;
-                } else if (material == "carpet") {
-                    mat = QAudioRoom::Material::FiberGlassInsulation;
-                }
+                // Use TSpatialAudio's helper function for comprehensive material mapping
+                QAudioRoom::Material mat = spatial->stringToMaterial(material);
                 
                 // Apply material to all walls
                 room->setWallMaterial(QAudioRoom::Wall::LeftWall, mat);
