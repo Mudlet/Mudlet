@@ -364,6 +364,8 @@ private:
     void clearKeyForm();
     void clearVarForm();
 
+    void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
+
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
     void expand_child_scripts(TScript* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -650,6 +652,7 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
+    QString descPackageItem;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
