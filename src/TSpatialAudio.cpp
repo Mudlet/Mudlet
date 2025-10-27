@@ -100,9 +100,11 @@ void TSpatialAudioSource::setSource(const QString& filePath)
     if (mSpatialSound) {
         mSource = filePath;
         QUrl url = QUrl::fromLocalFile(filePath);
+
         if (!url.isLocalFile() && filePath.startsWith(qsl("http"))) {
             url = QUrl(filePath);
         }
+
         mSpatialSound->setSource(url);
     }
 }
@@ -469,11 +471,13 @@ bool TSpatialAudio::removeSource(const QString& name, SourceProtocol protocol)
         (protocol == ProtocolAPI) ? mAPISpatialSources : mGMCPSpatialSources;
 
     auto it = sources.find(name);
+
     if (it != sources.end()) {
         it.value()->stop();
         sources.erase(it);
         return true;
     }
+
     return false;
 }
 
@@ -551,6 +555,7 @@ QString TSpatialAudio::resolveFilePath(const QString& key, const QString& fileNa
                        << "for file:" << fileName << "Supported formats:" << getSupportedAudioFormats();
             return QString();
         }
+
         if (fileInfo.isAbsolute()) {
             // Copy absolute path file to profile media folder
             const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mpHost->getName());
@@ -562,6 +567,7 @@ QString TSpatialAudio::resolveFilePath(const QString& key, const QString& fileNa
             // Copy file if it doesn't exist or is different
             if (!QFile::exists(targetPath) || QFileInfo(normalizedPath).size() != QFileInfo(targetPath).size()) {
                 QFile::remove(targetPath);  // Remove old version if exists
+
                 if (QFile::copy(normalizedPath, targetPath)) {
                     return targetPath;
                 } else {
@@ -569,6 +575,7 @@ QString TSpatialAudio::resolveFilePath(const QString& key, const QString& fileNa
                     return QString();
                 }
             }
+
             return targetPath;
         } else {
             // Relative path - check in media folder
@@ -617,6 +624,7 @@ void TSpatialAudio::downloadFile(const QString& key, const QString& fileName, co
     // Create subdirectories if fileName contains slashes
     if (fileName.contains('/')) {
         const QString subPath = qsl("%1/%2").arg(mediaPath, fileName.section('/', 0, -2));
+
         if (!QDir().mkpath(subPath)) {
             qWarning() << "TSpatialAudio::downloadFile - Failed to create subdirectory:" << subPath;
             return;
@@ -628,6 +636,7 @@ void TSpatialAudio::downloadFile(const QString& key, const QString& fileName, co
     if (!fullUrl.endsWith('/')) {
         fullUrl += '/';
     }
+
     fullUrl += fileName;
 
     QUrl fileUrl = QUrl::fromUserInput(fullUrl);
@@ -677,6 +686,7 @@ void TSpatialAudio::downloadFinished(QNetworkReply* reply)
     }
 
     const QByteArray data = reply->readAll();
+
     if (data.isEmpty()) {
         qWarning() << "TSpatialAudio::downloadFinished - Downloaded file is empty for key:" << key;
         return;
@@ -687,6 +697,7 @@ void TSpatialAudio::downloadFinished(QNetworkReply* reply)
     const QString filePath = qsl("%1/%2").arg(mediaPath, fileName);
 
     QFile file(filePath);
+
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "TSpatialAudio::downloadFinished - Failed to open file for writing:" << filePath;
         return;
@@ -701,6 +712,7 @@ void TSpatialAudio::downloadFinished(QNetworkReply* reply)
 
     // If source already exists, set the file (check both API and GMCP based on protocol)
     TSpatialAudioSource* source = getSource(download.key, download.protocol);
+
     if (source) {
         source->setSource(filePath);
 #ifdef DEBUG_SPATIAL_AUDIO
@@ -723,6 +735,7 @@ void TSpatialAudio::parseGMCP(QString& packageMessage, QString& gmcp)
     }
 
     auto document = QJsonDocument::fromJson(gmcp.toUtf8());
+
     if (!document.isObject()) {
         qWarning() << "TSpatialAudio::parseGMCP - Invalid JSON in GMCP message:" << packageMessage;
         return;
@@ -794,6 +807,7 @@ bool TSpatialAudio::parseJSONByPosition(QJsonObject& json, float& azimuth, float
     // Support both array [azimuth, elevation, distance] and object {azimuth, elevation, distance}
     if (posValue.isArray()) {
         const QJsonArray posArray = posValue.toArray();
+
         if (posArray.size() >= 3) {
             azimuth = static_cast<float>(posArray[0].toDouble(0.0));
             elevation = static_cast<float>(posArray[1].toDouble(0.0));
@@ -821,6 +835,7 @@ bool TSpatialAudio::parseJSONByListenerPosition(QJsonObject& json, float& x, flo
 
     if (posValue.isArray()) {
         const QJsonArray posArray = posValue.toArray();
+
         if (posArray.size() >= 3) {
             x = static_cast<float>(posArray[0].toDouble(0.0));
             y = static_cast<float>(posArray[1].toDouble(0.0));
@@ -848,6 +863,7 @@ bool TSpatialAudio::parseJSONByListenerRotation(QJsonObject& json, float& yaw, f
 
     if (rotValue.isArray()) {
         const QJsonArray rotArray = rotValue.toArray();
+
         if (rotArray.size() >= 3) {
             yaw = static_cast<float>(rotArray[0].toDouble(0.0));
             pitch = static_cast<float>(rotArray[1].toDouble(0.0));
@@ -876,8 +892,10 @@ bool TSpatialAudio::parseJSONByRoom(QJsonObject& json, QVector3D& dimensions, fl
     // Parse dimensions
     if (roomObj.contains(qsl("dimensions"))) {
         const QJsonValue dimValue = roomObj[qsl("dimensions")];
+
         if (dimValue.isArray()) {
             const QJsonArray dimArray = dimValue.toArray();
+
             if (dimArray.size() >= 3) {
                 dimensions = QVector3D(
                     static_cast<float>(dimArray[0].toDouble(10.0)),
@@ -911,6 +929,7 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
 
     // Get or create source
     TSpatialAudioSource* source = getSource(key, protocol);
+
     if (!source) {
         source = createSource(key, protocol);
     }
@@ -938,12 +957,14 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
 
     // Set occlusion
     const float occlusion = parseJSONByOcclusion(json);
+
     if (occlusion > 0.0f) {
         source->setOcclusion(occlusion);
     }
 
     // Set position
     float azimuth, elevation, distance;
+
     if (parseJSONByPosition(json, azimuth, elevation, distance)) {
         source->setPosition(azimuth, elevation, distance);
     }
@@ -952,11 +973,14 @@ void TSpatialAudio::parseJSONForSpatialPlay(QJsonObject& json, SourceProtocol pr
     QVector3D dimensions;
     float reverb, reflection;
     QString material;
+
     if (parseJSONByRoom(json, dimensions, reverb, reflection, material)) {
         TSpatialAudioRoom* room = getRoom();
+
         if (!room) {
             room = createRoom();
         }
+
         if (room) {
             room->setDimensions(dimensions);
             room->setReverbGain(reverb);
@@ -1005,6 +1029,7 @@ void TSpatialAudio::parseJSONForSpatialStop(QJsonObject& json, SourceProtocol pr
     }
 
     TSpatialAudioSource* source = getSource(key, protocol);
+
     if (source) {
         source->stop();
 #ifdef DEBUG_SPATIAL_AUDIO
@@ -1027,6 +1052,7 @@ void TSpatialAudio::parseJSONForSpatialUpdate(QJsonObject& json, SourceProtocol 
     }
 
     TSpatialAudioSource* source = getSource(key, protocol);
+
     if (!source) {
         qWarning() << "TSpatialAudio::parseJSONForSpatialUpdate - Source not found:" << key << "protocol:" << (protocol == ProtocolAPI ? "API" : "GMCP");
         return;
@@ -1038,6 +1064,7 @@ void TSpatialAudio::parseJSONForSpatialUpdate(QJsonObject& json, SourceProtocol 
 
     // Update position
     float azimuth, elevation, distance;
+
     if (parseJSONByPosition(json, azimuth, elevation, distance)) {
         source->setPosition(azimuth, elevation, distance);
 #ifdef DEBUG_SPATIAL_AUDIO
@@ -1087,6 +1114,7 @@ void TSpatialAudio::parseJSONForSpatialListener(QJsonObject& json)
 {
     // Update listener position
     float x, y, z;
+
     if (parseJSONByListenerPosition(json, x, y, z)) {
         setListenerPosition(x, y, z);
 #ifdef DEBUG_SPATIAL_AUDIO
@@ -1096,6 +1124,7 @@ void TSpatialAudio::parseJSONForSpatialListener(QJsonObject& json)
 
     // Update listener rotation
     float yaw, pitch, roll;
+
     if (parseJSONByListenerRotation(json, yaw, pitch, roll)) {
         setListenerRotation(yaw, pitch, roll);
 #ifdef DEBUG_SPATIAL_AUDIO
@@ -1170,12 +1199,14 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
 
     // Ensure media directory exists
     QDir dir;
+
     if (!dir.mkpath(mediaDir)) {
         qWarning() << "TSpatialAudio::generateTestTone - Failed to create media directory:" << mediaDir;
         return QString();
     }
 
     QString fileName;
+
     switch (type) {
         case WhiteNoise:
             fileName = qsl("mudlet_white_noise_%1s_%2hz.wav").arg(durationSeconds).arg(sampleRate);
@@ -1200,6 +1231,7 @@ QString TSpatialAudio::generateTestTone(ToneType type, float frequency, float du
 
     // Write WAV file
     QFile file(filePath);
+
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "TSpatialAudio::generateTestTone - Failed to create file:" << filePath;
         return QString();
@@ -1253,12 +1285,14 @@ bool TSpatialAudio::createTestToneSource(const QString& name, ToneType type, flo
 
     // Generate the tone file
     const QString filePath = generateTestTone(type, frequency, durationSeconds);
+
     if (filePath.isEmpty()) {
         return false;
     }
 
     // Create or get the source
     TSpatialAudioSource* source = getSource(name, ProtocolAPI);
+
     if (!source) {
         source = createSource(name, ProtocolAPI);
         if (!source) {
@@ -1362,6 +1396,7 @@ bool TSpatialAudio::isFormatSupported(const QString& fileExtension)
 
     // Normalize extension (remove leading dot if present, convert to lowercase)
     QString normalizedExt = fileExtension.toLower();
+
     if (normalizedExt.startsWith('.')) {
         normalizedExt = normalizedExt.mid(1);
     }
@@ -1498,12 +1533,10 @@ QString TSpatialAudio::materialToString(QAudioRoom::Material material)
             return qsl("glassthick");
         case QAudioRoom::Material::Grass:
             return qsl("grass");
-
         case QAudioRoom::Material::Marble:
             return qsl("marble");
         case QAudioRoom::Material::Metal:
             return qsl("metal");
-
         case QAudioRoom::Material::PlasterRough:
             return qsl("plasterrough");
         case QAudioRoom::Material::PlasterSmooth:
@@ -1514,7 +1547,6 @@ QString TSpatialAudio::materialToString(QAudioRoom::Material material)
             return qsl("polishedconcreteortile");
         case QAudioRoom::Material::Sheetrock:
             return qsl("sheetrock");
-
         case QAudioRoom::Material::WoodCeiling:
             return qsl("woodceiling");
         case QAudioRoom::Material::WoodPanel:
@@ -1558,6 +1590,7 @@ void TSpatialAudio::sendGMCPResponse(const QString& messageType, const QString& 
     output += TN_SB;
     output += OPT_GMCP;
     output += msg;
+
     if (!payload.empty()) {
         output += " ";
         output += payload;
