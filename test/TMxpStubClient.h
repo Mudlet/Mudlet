@@ -72,6 +72,8 @@ public:
 
     QStringList mHrefs, mHints;
 
+    QString mExpireName;
+
     QString mPublishedEntityName, mPublishedEntityValue;
 
     QString style;
@@ -198,6 +200,7 @@ public:
         qDebug().noquote() << qsl("setLink([%1], [%2], [%3])").arg(hrefs.join(", "), hints.join(", "), expireName);
         mHrefs = hrefs;
         mHints = hints;
+        mExpireName = expireName;
 
         return 1;
     }

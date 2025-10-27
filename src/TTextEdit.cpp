@@ -67,6 +67,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 {
     mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
+    Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
     mFontHeight = fontMetrics().height();
     mFontWidth = fontMetrics().averageCharWidth();
@@ -592,8 +593,17 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         }
     } else {
         if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            fgColors.append(charStyle.background());
-            bgColor = charStyle.foreground();
+            // When colors would be swapped (e.g., during selection)
+            // and foreground equals background (hidden text),
+            // only reverse one color to make the text readable
+            if (charStyle.foreground() == charStyle.background()) {
+                fgColors.append(charStyle.foreground());
+                // Invert background: use white for dark colors, black for light colors
+                bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
+            } else {
+                fgColors.append(charStyle.background());
+                bgColor = charStyle.foreground();
+            }
         } else {
             fgColors.append(charStyle.foreground());
             bgColor = charStyle.background();
