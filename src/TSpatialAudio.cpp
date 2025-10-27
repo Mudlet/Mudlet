@@ -1489,7 +1489,7 @@ QAudioRoom::Material TSpatialAudio::stringToMaterial(const QString& materialName
         return QAudioRoom::Material::PlywoodPanel;
     } else if (name == "tile" || name == "polishedconcrete" || name == "polishedconcreteortile") {
         return QAudioRoom::Material::PolishedConcreteOrTile;
-    } else if (name == "sheetrock") {
+    } else if (name == "sheetrock" || name == "stone") {
         return QAudioRoom::Material::Sheetrock;
     } else if (name == "water" || name == "ice" || name == "wateroriceereflector" || name == "wateroricesurface") {
         return QAudioRoom::Material::WaterOrIceSurface;
