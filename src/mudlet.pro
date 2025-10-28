@@ -402,7 +402,9 @@ unix:!macx {
         -lpugixml
 
     isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       LIBS += -lGLU
+       LIBS += \
+         -lGLU \
+         -lassimp
     }
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
