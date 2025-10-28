@@ -39,9 +39,9 @@ endif()
 if(WIN32)
   # APP_BUILD should now be be available
 
-  if(APP_BUILD matches "-ptb.+")
+  if(APP_BUILD MATCHES "-ptb.+")
     list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  elseif((APP_BUILD MATCHES "-dev.+" OR APP_BUILD MATCHES "-test.+"))
     # The above test may not be correct as it won't pick up builds where
     # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
     # "Packagers" they will likely want the original icon anyhow for their
@@ -439,19 +439,11 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
-# Enable sanitizers support
-include(../3rdparty/cmake-scripts/sanitizers.cmake)
-
-set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
-set_sanitizer_options(thread DEFAULT -fno-omit-frame-pointer)
-
-set(USE_SANITIZER
-      "address"
-      CACHE STRING
-      "Compile with sanitizers. Available sanitizers are: Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak")
-
-add_sanitizer_support(${USE_SANITIZER})
-message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
+if(NOT WIN32)
+  include(cmake/EnableSanitizers.cmake)
+else()
+  message(STATUS "Sanitizers disabled on Windows")
+endif()
 
 find_package(Qt6 6.4.0 REQUIRED
     COMPONENTS Core
