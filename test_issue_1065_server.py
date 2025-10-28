@@ -125,8 +125,9 @@ class TelnetTestServer:
             try:
                 client_socket.close()
                 print(f"\nClient {address} disconnected")
-            except:
-                pass
+            except OSError as e:
+                # Socket already closed or other socket error
+                print(f"Note: Error closing socket: {e}")
 
     def send_telnet_negotiation(self, client_socket):
         """Send initial telnet protocol negotiations"""
