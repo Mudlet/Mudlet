@@ -631,7 +631,7 @@ void dlgPackageExporter::slot_importIcon()
     }
     lastDir = QFileInfo(fileName).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
-    mPackagePath = lastDir;
+    mPackagePath = QDir::cleanPath(lastDir);
     emit signal_exportLocationChanged(mPackagePath);
     mPackageIconPath = fileName;
     const QIcon myIcon(mPackageIconPath);
@@ -1551,7 +1551,7 @@ void dlgPackageExporter::slot_addFiles()
 
         lastDir = fDialog->directory().absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
-        mPackagePath = lastDir;
+        mPackagePath = QDir::cleanPath(lastDir);
         emit signal_exportLocationChanged(mPackagePath);
     }
     fDialog->deleteLater();
@@ -1569,6 +1569,8 @@ void dlgPackageExporter::slot_openPackageLocation()
         return;
     }
 
+    // Clean path to remove trailing slashes before saving and displaying
+    mPackagePath = QDir::cleanPath(mPackagePath);
     settings.setValue("lastFileDialogLocation", mPackagePath);
     emit signal_exportLocationChanged(mPackagePath);
 }
