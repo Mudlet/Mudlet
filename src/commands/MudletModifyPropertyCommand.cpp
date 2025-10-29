@@ -1,0 +1,240 @@
+/***************************************************************************
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include "MudletModifyPropertyCommand.h"
+
+#include "EditorItemXMLHelpers.h"
+#include "Host.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
+
+MudletModifyPropertyCommand::MudletModifyPropertyCommand(EditorViewType viewType, int itemID,
+                                                         const QString& itemName,
+                                                         const QString& oldStateXML, const QString& newStateXML,
+                                                         Host* host)
+    : MudletCommand(generateText(viewType, itemName), host)
+    , mViewType(viewType)
+    , mItemID(itemID)
+    , mItemName(itemName)
+    , mOldStateXML(oldStateXML)
+    , mNewStateXML(newStateXML)
+{
+}
+
+void MudletModifyPropertyCommand::undo()
+{
+    // Restore item to old state from XML
+    switch (mViewType) {
+    case EditorViewType::cmTriggerView: {
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
+        if (pTrigger) {
+            if (!updateTriggerFromXML(pTrigger, mOldStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore trigger" << mItemName << "to old state";
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::undo() - Trigger" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmAliasView: {
+        TAlias* pAlias = mpHost->getAliasUnit()->getAlias(mItemID);
+        if (pAlias) {
+            if (!updateAliasFromXML(pAlias, mOldStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore alias" << mItemName << "to old state";
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::undo() - Alias" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmTimerView: {
+        TTimer* pTimer = mpHost->getTimerUnit()->getTimer(mItemID);
+        if (pTimer) {
+            if (!updateTimerFromXML(pTimer, mOldStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore timer" << mItemName << "to old state";
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::undo() - Timer" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmScriptView: {
+        TScript* pScript = mpHost->getScriptUnit()->getScript(mItemID);
+        if (pScript) {
+            if (!updateScriptFromXML(pScript, mOldStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore script" << mItemName << "to old state";
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::undo() - Script" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmKeysView: {
+        TKey* pKey = mpHost->getKeyUnit()->getKey(mItemID);
+        if (pKey) {
+            if (!updateKeyFromXML(pKey, mOldStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore key" << mItemName << "to old state";
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::undo() - Key" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmActionView: {
+        TAction* pAction = mpHost->getActionUnit()->getAction(mItemID);
+        if (pAction) {
+            if (!updateActionFromXML(pAction, mOldStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore action" << mItemName << "to old state";
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::undo() - Action" << mItemName << "not found";
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void MudletModifyPropertyCommand::redo()
+{
+    // Apply the new state
+    // Note: Unlike AddItemCommand, we don't skip the first redo because ModifyPropertyCommand
+    // doesn't use QUndoStack::push() automatically calling redo(). The change has already
+    // been applied by the time we create the command, so redo() is only called after undo().
+    switch (mViewType) {
+    case EditorViewType::cmTriggerView: {
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
+        if (pTrigger) {
+            if (!updateTriggerFromXML(pTrigger, mNewStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to trigger" << mItemName;
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::redo() - Trigger" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmAliasView: {
+        TAlias* pAlias = mpHost->getAliasUnit()->getAlias(mItemID);
+        if (pAlias) {
+            if (!updateAliasFromXML(pAlias, mNewStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to alias" << mItemName;
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::redo() - Alias" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmTimerView: {
+        TTimer* pTimer = mpHost->getTimerUnit()->getTimer(mItemID);
+        if (pTimer) {
+            if (!updateTimerFromXML(pTimer, mNewStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to timer" << mItemName;
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::redo() - Timer" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmScriptView: {
+        TScript* pScript = mpHost->getScriptUnit()->getScript(mItemID);
+        if (pScript) {
+            if (!updateScriptFromXML(pScript, mNewStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to script" << mItemName;
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::redo() - Script" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmKeysView: {
+        TKey* pKey = mpHost->getKeyUnit()->getKey(mItemID);
+        if (pKey) {
+            if (!updateKeyFromXML(pKey, mNewStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to key" << mItemName;
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::redo() - Key" << mItemName << "not found";
+        }
+        break;
+    }
+    case EditorViewType::cmActionView: {
+        TAction* pAction = mpHost->getActionUnit()->getAction(mItemID);
+        if (pAction) {
+            if (!updateActionFromXML(pAction, mNewStateXML)) {
+                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to action" << mItemName;
+            }
+        } else {
+            qWarning() << "MudletModifyPropertyCommand::redo() - Action" << mItemName << "not found";
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void MudletModifyPropertyCommand::remapItemID(int oldID, int newID)
+{
+    if (mItemID == oldID) {
+        mItemID = newID;
+    }
+}
+
+QString MudletModifyPropertyCommand::generateText(EditorViewType viewType, const QString& itemName)
+{
+    QString typeName;
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+        //: Undo/redo menu text for modifying a trigger's properties
+        typeName = QObject::tr("trigger");
+        break;
+    case EditorViewType::cmAliasView:
+        //: Undo/redo menu text for modifying an alias's properties
+        typeName = QObject::tr("alias");
+        break;
+    case EditorViewType::cmTimerView:
+        //: Undo/redo menu text for modifying a timer's properties
+        typeName = QObject::tr("timer");
+        break;
+    case EditorViewType::cmScriptView:
+        //: Undo/redo menu text for modifying a script's properties
+        typeName = QObject::tr("script");
+        break;
+    case EditorViewType::cmKeysView:
+        //: Undo/redo menu text for modifying a key binding's properties
+        typeName = QObject::tr("key");
+        break;
+    case EditorViewType::cmActionView:
+        //: Undo/redo menu text for modifying a button's properties
+        typeName = QObject::tr("button");
+        break;
+    default:
+        //: Undo/redo menu text for modifying an unknown item's properties
+        typeName = QObject::tr("item");
+        break;
+    }
+
+    //: Undo/redo menu text for modifying item properties. %1 = item type (e.g. "trigger"), %2 = item name
+    return QObject::tr("Modify %1 \"%2\"").arg(typeName, itemName);
+}

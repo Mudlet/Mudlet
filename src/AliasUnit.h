@@ -23,6 +23,8 @@
  ***************************************************************************/
 
 
+#include "utils.h"
+
 #include <QMultiMap>
 #include <QPointer>
 #include <QString>
@@ -31,7 +33,6 @@
 
 class Host;
 class TAlias;
-
 
 class AliasUnit
 {
@@ -58,6 +59,7 @@ public:
     void uninstall(const QString&);
     void _uninstall(TAlias* pChild, const QString& packageName);
     void reParentAlias(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     bool processDataStream(const QString&);
     void stopAllTriggers();
     void reenableAllTriggers();

@@ -460,3 +460,23 @@ jobs:
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
           exit 1
         fi
+
+    - name: (Linux) Run C++ undo/redo tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      timeout-minutes: 5
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
+
+    - name: (macOS) Run C++ undo/redo tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      timeout-minutes: 5
+      shell: bash
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
+
+    - name: Passed C++ undo/redo tests
+      if: matrix.run_tests == 'true'
+      run: |
+        if [ -e /tmp/undo-tests-failed ]
+        then
+          echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
+          exit 1
+        fi

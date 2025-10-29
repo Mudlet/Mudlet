@@ -82,9 +82,11 @@ set(mudlet_SRCS
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
+    ../test/dlgTriggerEditorUndoRedoTest.cpp
     dlgTriggerPatternEdit.cpp
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
+    EditorItemXMLHelpers.cpp
     EAction.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
@@ -101,7 +103,13 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    MudletUndoStack.cpp
     MxpTag.cpp
+    commands/MudletAddItemCommand.cpp
+    commands/MudletDeleteItemCommand.cpp
+    commands/MudletModifyPropertyCommand.cpp
+    commands/MudletMoveItemCommand.cpp
+    commands/MudletToggleActiveCommand.cpp
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
@@ -279,6 +287,7 @@ set(mudlet_HDRS
     dlgTriggerPatternEdit.h
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
+    EditorItemXMLHelpers.h
     EAction.h
     exitstreewidget.h
     FileOpenHandler.h
@@ -293,8 +302,15 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    MudletCommand.h
     MudletInstanceCoordinator.h
+    MudletUndoStack.h
     MxpTag.h
+    commands/MudletAddItemCommand.h
+    commands/MudletDeleteItemCommand.h
+    commands/MudletModifyPropertyCommand.h
+    commands/MudletMoveItemCommand.h
+    commands/MudletToggleActiveCommand.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h

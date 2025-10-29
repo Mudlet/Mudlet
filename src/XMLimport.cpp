@@ -214,11 +214,11 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 }
 
 // returns the type of item and ID of the first (root) element
-std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
+std::pair<EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
-    std::pair<dlgTriggerEditor::EditorViewType, int> result;
+    std::pair<EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
 
@@ -590,9 +590,9 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
+std::pair<EditorViewType, int> XMLimport::readPackage()
 {
-    dlgTriggerEditor::EditorViewType objectType = dlgTriggerEditor::EditorViewType::cmUnknownView;
+    EditorViewType objectType = EditorViewType::cmUnknownView;
     int rootItemID = -1;
     while (!atEnd()) {
         readNext();
@@ -603,27 +603,27 @@ std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
             if (name() == qsl("HostPackage")) {
                 readHostPackage();
             } else if (name() == qsl("TriggerPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmTriggerView;
+                objectType = EditorViewType::cmTriggerView;
                 rootItemID = readTriggerPackage();
             } else if (name() == qsl("TimerPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmTimerView;
+                objectType = EditorViewType::cmTimerView;
                 rootItemID = readTimerPackage();
             } else if (name() == qsl("AliasPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmAliasView;
+                objectType = EditorViewType::cmAliasView;
                 rootItemID = readAliasPackage();
             } else if (name() == qsl("ActionPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmActionView;
+                objectType = EditorViewType::cmActionView;
                 rootItemID = readActionPackage();
             } else if (name() == qsl("ScriptPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmScriptView;
+                objectType = EditorViewType::cmScriptView;
                 rootItemID = readScriptPackage();
             } else if (name() == qsl("KeyPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmKeysView;
+                objectType = EditorViewType::cmKeysView;
                 rootItemID = readKeyPackage();
             } else if (name() == qsl("HelpPackage")) {
                 readHelpPackage();
             } else if (name() == qsl("VariablePackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmVarsView;
+                objectType = EditorViewType::cmVarsView;
                 readVariablePackage();
             } else {
                 readUnknownElement(qsl("MudletPackage"));

@@ -53,12 +53,12 @@ public:
     explicit XMLimport(Host*);
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
-    std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
+    std::pair<EditorViewType, int> importFromClipboard();
 
 private:
     const QString YES = qsl("yes");
 
-    std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
+    std::pair<EditorViewType, int> readPackage();
 
     void readHostPackage();
     int readTriggerPackage();

@@ -26,7 +26,9 @@
  ***************************************************************************/
 
 
+#include "EditorViewType.h"
 #include "ui_trigger_editor.h"
+
 #include <QPointer>
 #include <unordered_map>
 
@@ -45,6 +47,7 @@
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
 #include "SingleLineTextEdit.h"
+#include "MudletUndoStack.h"
 
 #include <QDialog>
 #include <QFlag>
@@ -91,6 +94,9 @@ class dlgVarsMainArea;
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
+
+    // Allow external test suite to access private members
+    friend void runUndoRedoTestSuite(dlgTriggerEditor* editor);
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -160,18 +166,6 @@ public:
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
 
-    enum class EditorViewType {
-        cmUnknownView = 0,
-        cmTriggerView = 0x01,
-        cmTimerView = 0x02,
-        cmAliasView = 0x03,
-        cmScriptView = 0x04,
-        cmActionView = 0x05,
-        cmKeysView = 0x06,
-        cmVarsView = 0x07
-    };
-    Q_ENUM(EditorViewType)
-
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
@@ -215,6 +209,9 @@ public:
     void activeToggle_script();
     void activeToggle_timer();
     void activeToggle_trigger();
+    void slot_itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition);
+    void slot_batchMoveStarted();
+    void slot_batchMoveEnded();
     void delete_action();
     void delete_alias();
     void delete_key();
@@ -299,6 +296,10 @@ public slots:
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
     void slot_editorThemeChanged();
+    void slot_smartUndo();
+    void slot_smartRedo();
+    void slot_updateUndoRedoButtonStates();
+    void slot_runUndoRedoTests();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -320,6 +321,7 @@ private slots:
     void slot_searchSplitterMoved(const int pos, const int index);
     void slot_clickedMessageBox(const QString&);
     void slot_bannerDismissClicked();
+    void slot_itemsChanged(::EditorViewType viewType, QList<int> affectedItemIDs);
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -462,7 +464,6 @@ private:
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
-    bool showDeleteConfirmation(const QString& title, const QString& message);
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
     void checkForMoreThanOneTriggerItem();
@@ -582,12 +583,25 @@ private:
     QAction* mpExportAction = nullptr;
     QAction* mpCreateModuleAction = nullptr;
 
+    // Smart undo/redo actions (route based on focus):
+    QAction* mpUndoAction = nullptr;
+    QAction* mpRedoAction = nullptr;
+
+    // Undo system for item-level operations (using Qt's QUndoStack framework):
+    MudletUndoStack* mpUndoStack = nullptr;
+
+    // Guarded pointer to text editor's undo stack (for safe signal connections):
+    QPointer<edbee::TextUndoStack> mpTextUndoStack;
+
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
     bool mSavingAs = false;
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+
+    // tracks whether the initial profile load has completed (to avoid clearing undo stack on refreshes)
+    bool mInitialLoadDone = false;
 
     // profile autosave interval in minutes
     int mAutosaveInterval = 2;

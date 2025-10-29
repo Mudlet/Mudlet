@@ -35,6 +35,7 @@
 #include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
+#include "XMLexport.h"
 #include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
 #include "dlgColorTrigger.h"
@@ -45,6 +46,11 @@
 #include "dlgTriggerPatternEdit.h"
 #include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
+#include "commands/MudletAddItemCommand.h"
+#include "commands/MudletDeleteItemCommand.h"
+#include "commands/MudletModifyPropertyCommand.h"
+#include "commands/MudletMoveItemCommand.h"
+#include "commands/MudletToggleActiveCommand.h"
 #include "mudlet.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
@@ -57,6 +63,11 @@
 #include <QShortcut>
 #include <QShowEvent>
 #include <QToolBar>
+#include <sstream>
+#include <pugixml.hpp>
+
+// Forward declaration for undo/redo test suite (implemented in test/dlgTriggerEditorUndoRedoTest.cpp)
+void runUndoRedoTestSuite(dlgTriggerEditor* editor);
 
 using namespace std::chrono_literals;
 
@@ -407,6 +418,66 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorArea->addAction(sourceFindPreviousAction);
     connect(sourceFindPreviousAction, &QAction::triggered, this, &dlgTriggerEditor::slot_sourceFindPrevious);
 
+    // Initialize the undo system for item operations
+    mpUndoStack = new MudletUndoStack(this);
+    mpUndoStack->setUndoLimit(50);
+
+    // Create smart undo/redo actions with keyboard shortcuts
+    // These route to either text editor or item operations based on focus
+    mpUndoAction = new QAction(QIcon::fromTheme(qsl("edit-undo"), QIcon(qsl(":/icons/edit-undo.png"))), tr("Undo"), this);
+    mpUndoAction->setShortcut(QKeySequence(QKeySequence::Undo)); // Ctrl+Z
+    mpUndoAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mpUndoAction->setEnabled(false);
+    this->addAction(mpUndoAction);
+    connect(mpUndoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartUndo);
+
+    mpRedoAction = new QAction(QIcon::fromTheme(qsl("edit-redo"), QIcon(qsl(":/icons/edit-redo.png"))), tr("Redo"), this);
+    mpRedoAction->setShortcut(QKeySequence(QKeySequence::Redo)); // Ctrl+Y or Ctrl+Shift+Z
+    mpRedoAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mpRedoAction->setEnabled(false);
+    this->addAction(mpRedoAction);
+    connect(mpRedoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartRedo);
+
+    // Connect item undo system signals to update button states and tooltips
+    connect(mpUndoStack, &QUndoStack::canUndoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+    connect(mpUndoStack, &QUndoStack::canRedoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+
+    connect(mpUndoStack, &QUndoStack::undoTextChanged, this, [this](const QString& text) {
+        if (!text.isEmpty()) {
+            mpUndoAction->setToolTip(utils::richText(text));
+            mpUndoAction->setStatusTip(text);
+        } else {
+            mpUndoAction->setToolTip(utils::richText(tr("Undo")));
+            mpUndoAction->setStatusTip(tr("Undo"));
+        }
+    });
+    connect(mpUndoStack, &QUndoStack::redoTextChanged, this, [this](const QString& text) {
+        if (!text.isEmpty()) {
+            mpRedoAction->setToolTip(utils::richText(text));
+            mpRedoAction->setStatusTip(text);
+        } else {
+            mpRedoAction->setToolTip(utils::richText(tr("Redo")));
+            mpRedoAction->setStatusTip(tr("Redo"));
+        }
+    });
+
+    // Store guarded pointer to text editor's undo stack for safe signal connections
+    mpTextUndoStack = mpSourceEditorEdbee->controller()->textDocument()->textUndoStack();
+
+    // Connect text editor undo stack signals to update button states
+    connect(mpTextUndoStack, &edbee::TextUndoStack::undoExecuted,
+            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+    connect(mpTextUndoStack, &edbee::TextUndoStack::redoExecuted,
+            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+    connect(mpTextUndoStack, &edbee::TextUndoStack::changeAdded,
+            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+
+    // Set initial button states
+    slot_updateUndoRedoButtonStates();
+
+    // Connect undo system to tree widget refresh
+    connect(mpUndoStack, &MudletUndoStack::itemsChanged, this, &dlgTriggerEditor::slot_itemsChanged);
+
     auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
@@ -577,6 +648,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     showDebugAreaAction->setToolTip(utils::richText(tr("Show/Hide Debug Console (Ctrl+0) -> system will be <b><i>slower</i></b>.")));
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleCentralDebugConsole);
 
+    // Only show undo/redo test button in "Mudlet self-test" profile (tests are destructive)
+    QAction* runUndoRedoTestsAction = nullptr;
+    if (hostName == qsl("Mudlet self-test")) {
+        runUndoRedoTestsAction = new QAction(QIcon(qsl(":/icons/view-statistics.png")), tr("Test Undo/Redo"), this);
+        runUndoRedoTestsAction->setStatusTip(tr("Run internal undo/redo tests and output results to console"));
+        runUndoRedoTestsAction->setToolTip(tr("Run Undo/Redo Tests"));
+        connect(runUndoRedoTestsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_runUndoRedoTests);
+    }
 
     QAction* toggleActiveAction = new QAction(QIcon(qsl(":/icons/document-encrypt.png")), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
@@ -743,6 +822,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     toolBar->addSeparator();
 
+    // Add smart undo/redo toolbar buttons (route based on focus)
+    toolBar->addAction(mpUndoAction);
+    toolBar->addAction(mpRedoAction);
+
+    toolBar->addSeparator();
+
     toolBar->addAction(mAddItem);
     toolBar->addAction(mAddGroup);
 
@@ -771,6 +856,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(viewErrorsAction);
     toolBar2->addAction(viewStatsAction);
     toolBar2->addAction(showDebugAreaAction);
+    if (runUndoRedoTestsAction) {
+        toolBar2->addAction(runUndoRedoTestsAction);
+    }
 
     toolBar2->setMovable(true);
     //: This is the toolbar that is initially placed at the left side of the editor.
@@ -833,16 +921,34 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(comboBox_searchTerms, qOverload<int>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
     connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_triggerSelected);
     connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_triggers, &TTreeWidget::itemMoved, this, &dlgTriggerEditor::slot_itemMoved);
+    connect(treeWidget_triggers, &TTreeWidget::batchMoveStarted, this, &dlgTriggerEditor::slot_batchMoveStarted);
+    connect(treeWidget_triggers, &TTreeWidget::batchMoveEnded, this, &dlgTriggerEditor::slot_batchMoveEnded);
     connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_keySelected);
     connect(treeWidget_keys, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_keys, &TTreeWidget::itemMoved, this, &dlgTriggerEditor::slot_itemMoved);
+    connect(treeWidget_keys, &TTreeWidget::batchMoveStarted, this, &dlgTriggerEditor::slot_batchMoveStarted);
+    connect(treeWidget_keys, &TTreeWidget::batchMoveEnded, this, &dlgTriggerEditor::slot_batchMoveEnded);
     connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_timerSelected);
     connect(treeWidget_timers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_timers, &TTreeWidget::itemMoved, this, &dlgTriggerEditor::slot_itemMoved);
+    connect(treeWidget_timers, &TTreeWidget::batchMoveStarted, this, &dlgTriggerEditor::slot_batchMoveStarted);
+    connect(treeWidget_timers, &TTreeWidget::batchMoveEnded, this, &dlgTriggerEditor::slot_batchMoveEnded);
     connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_scriptsSelected);
     connect(treeWidget_scripts, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_scripts, &TTreeWidget::itemMoved, this, &dlgTriggerEditor::slot_itemMoved);
+    connect(treeWidget_scripts, &TTreeWidget::batchMoveStarted, this, &dlgTriggerEditor::slot_batchMoveStarted);
+    connect(treeWidget_scripts, &TTreeWidget::batchMoveEnded, this, &dlgTriggerEditor::slot_batchMoveEnded);
     connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_aliasSelected);
     connect(treeWidget_aliases, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_aliases, &TTreeWidget::itemMoved, this, &dlgTriggerEditor::slot_itemMoved);
+    connect(treeWidget_aliases, &TTreeWidget::batchMoveStarted, this, &dlgTriggerEditor::slot_batchMoveStarted);
+    connect(treeWidget_aliases, &TTreeWidget::batchMoveEnded, this, &dlgTriggerEditor::slot_batchMoveEnded);
     connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_actionSelected);
     connect(treeWidget_actions, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_actions, &TTreeWidget::itemMoved, this, &dlgTriggerEditor::slot_itemMoved);
+    connect(treeWidget_actions, &TTreeWidget::batchMoveStarted, this, &dlgTriggerEditor::slot_batchMoveStarted);
+    connect(treeWidget_actions, &TTreeWidget::batchMoveEnded, this, &dlgTriggerEditor::slot_batchMoveEnded);
     connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_variableSelected);
     connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_variableChanged);
     connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
@@ -1128,6 +1234,104 @@ void dlgTriggerEditor::slot_editorThemeChanged()
     }
 }
 
+void dlgTriggerEditor::slot_smartUndo()
+{
+    // Stack-based undo: prioritize text editor changes, then fall back to item operations
+    // This provides intuitive behavior - most recent change undoes first, regardless of focus
+
+    bool canUndoText = mpTextUndoStack && mpTextUndoStack->canUndo();
+    bool canUndoItems = mpUndoStack && mpUndoStack->canUndo();
+
+    if (canUndoText) {
+        // Undo text changes first (most recent edits in the script editor)
+        mpSourceEditorEdbee->controller()->undo();
+    } else if (canUndoItems) {
+        // Once text stack is empty, undo item operations (add/delete/move triggers/aliases/etc)
+        // Loop to skip commands invalidated by Lua API changes
+        const int maxAttempts = 100; // Safety limit to prevent infinite loops
+        int attempts = 0;
+        while (mpUndoStack->canUndo() && attempts < maxAttempts) {
+            mpUndoStack->undo();
+
+            // Check if the command that was just undone was valid
+            if (mpUndoStack->wasLastCommandValid()) {
+                // Valid command found and processed
+                break;
+            }
+
+            // Command was invalid (Lua changed the item), silently skip and try next
+            attempts++;
+        }
+    }
+
+    // Update button states after undo completes
+    slot_updateUndoRedoButtonStates();
+}
+
+void dlgTriggerEditor::slot_smartRedo()
+{
+    // Stack-based redo: prioritize text editor changes, then fall back to item operations
+    // This provides intuitive behavior - most recently undone change redoes first, regardless of focus
+
+    bool canRedoText = mpTextUndoStack && mpTextUndoStack->canRedo();
+    bool canRedoItems = mpUndoStack && mpUndoStack->canRedo();
+
+    if (canRedoText) {
+        // Redo text changes first (most recently undone edits in the script editor)
+        mpSourceEditorEdbee->controller()->redo();
+    } else if (canRedoItems) {
+        // Once text stack is empty, redo item operations
+        // Loop to skip commands invalidated by Lua API changes
+        const int maxAttempts = 100; // Safety limit to prevent infinite loops
+        int attempts = 0;
+        while (mpUndoStack->canRedo() && attempts < maxAttempts) {
+            mpUndoStack->redo();
+
+            // Check if the command that was just redone was valid
+            if (mpUndoStack->wasLastCommandValid()) {
+                // Valid command found and processed
+                break;
+            }
+
+            // Command was invalid (Lua changed the item), silently skip and try next
+            attempts++;
+        }
+    }
+
+    // Update button states after redo completes
+    slot_updateUndoRedoButtonStates();
+}
+
+void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
+{
+    // Early exit during shutdown - guards against accessing destroyed objects
+    if (!mpSourceEditorEdbee || !mpUndoAction || !mpRedoAction || !mpTextUndoStack) {
+        return;
+    }
+
+    // Check if EITHER the text editor OR the item undo system has undo/redo available
+    bool canUndoText = mpTextUndoStack->canUndo();
+    bool canUndoItems = mpUndoStack && mpUndoStack->canUndo();
+
+    bool canRedoText = mpTextUndoStack->canRedo();
+    bool canRedoItems = mpUndoStack && mpUndoStack->canRedo();
+
+    // Enable buttons if EITHER system has something to undo/redo
+    mpUndoAction->setEnabled(canUndoText || canUndoItems);
+    mpRedoAction->setEnabled(canRedoText || canRedoItems);
+}
+
+void dlgTriggerEditor::slot_runUndoRedoTests()
+{
+    // Safety check: only allow running in "Mudlet self-test" profile (tests are destructive)
+    if (mpHost->getName() != qsl("Mudlet self-test")) {
+        qWarning() << "Undo/Redo tests can only be run in the 'Mudlet self-test' profile";
+        return;
+    }
+
+    runUndoRedoTestSuite(this);
+}
+
 void dlgTriggerEditor::slot_hideVariable(bool status)
 {
     LuaInterface* lI = mpHost->getLuaInterface();
@@ -1201,6 +1405,15 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
+    // Disconnect ALL signals from undo systems to this object before destruction begins
+    if (mpTextUndoStack) {
+        disconnect(mpTextUndoStack, nullptr, this, nullptr);
+    }
+    if (mpUndoStack) {
+        disconnect(mpUndoStack, nullptr, this, nullptr);
+        mpUndoStack->clear();
+    }
+
     emit editorClosing();
     writeSettings();
     event->accept();
@@ -2851,33 +3064,6 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
     }
 }
 
-bool dlgTriggerEditor::showDeleteConfirmation(const QString& title, const QString& message)
-{
-    QSettings& settings = *mudlet::getQSettings();
-    const bool dontAskAgain = settings.value("triggerEditor/dontAskDeleteConfirmation", false).toBool();
-
-    if (dontAskAgain) {
-        return true;
-    }
-
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle(title);
-    msgBox.setText(message);
-    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-    msgBox.setDefaultButton(QMessageBox::No);
-    msgBox.setIcon(QMessageBox::Question);
-
-    QCheckBox* dontAskCheckBox = new QCheckBox(tr("Don't ask again"));
-    msgBox.setCheckBox(dontAskCheckBox);
-
-    int result = msgBox.exec();
-
-    if (dontAskCheckBox->isChecked()) {
-        settings.setValue("triggerEditor/dontAskDeleteConfirmation", true);
-    }
-
-    return result == QMessageBox::Yes;
-}
 
 void dlgTriggerEditor::delete_alias()
 {
@@ -2911,8 +3097,62 @@ void dlgTriggerEditor::delete_alias()
                     .arg(itemNames.join(", "));
     }
 
-    if (!showDeleteConfirmation(tr("Delete Alias(es)"), message)) {
-        return;
+    // Capture state of all items BEFORE deletion for undo
+    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+
+    // Recursive lambda to capture an alias and all its descendants
+    std::function<void(TAlias*, int, int)> captureAliasAndChildren = [&](TAlias* pT, int parentID, int positionInParent) {
+        if (!pT) {
+            return;
+        }
+
+        MudletDeleteItemCommand::DeletedItemInfo info;
+        info.itemID = pT->getID();
+        info.itemName = pT->getName();
+        info.parentID = parentID;
+        info.positionInParent = positionInParent;
+
+        // Export alias to XML snapshot
+        pugi::xml_document doc;
+        auto root = doc.append_child("AliasSnapshot");
+        XMLexport exporter(pT);
+        exporter.writeAlias(pT, root);
+        std::ostringstream oss;
+        doc.save(oss);
+        info.xmlSnapshot = QString::fromStdString(oss.str());
+
+        deletedItems.append(info);
+
+        // Recursively capture all children
+        if (pT->mpMyChildrenList) {
+            int i = 0;
+            for (auto* pChild : *pT->mpMyChildrenList) {
+                captureAliasAndChildren(pChild, pT->getID(), i);
+                ++i;
+            }
+        }
+    };
+
+    // Capture each selected alias and all its descendants
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
+        if (pT) {
+            // Determine parent ID and position
+            int parentID = -1;
+            int positionInParent = 0;
+
+            QTreeWidgetItem* pParentItem = pItem->parent();
+            if (pParentItem && pParentItem != mpAliasBaseItem) {
+                parentID = pParentItem->data(0, Qt::UserRole).toInt();
+                positionInParent = pParentItem->indexOfChild(pItem);
+            } else {
+                parentID = -1;
+                positionInParent = mpAliasBaseItem->indexOfChild(pItem);
+            }
+
+            // Recursively capture this alias and all its children
+            captureAliasAndChildren(pT, parentID, positionInParent);
+        }
     }
 
     // Sort items by their position in tree (top to bottom) to delete correctly
@@ -2939,6 +3179,16 @@ void dlgTriggerEditor::delete_alias()
             }
             delete pT;
         }
+    }
+
+    // Push undo command for the deleted aliases
+    if (!deletedItems.isEmpty()) {
+        auto* qtCmd = new MudletDeleteItemCommand(
+            EditorViewType::cmAliasView,
+            deletedItems,
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);
     }
 
     // Set new selection
@@ -2984,8 +3234,62 @@ void dlgTriggerEditor::delete_action()
                     .arg(itemNames.join(", "));
     }
 
-    if (!showDeleteConfirmation(tr("Delete Button(s)"), message)) {
-        return;
+    // Capture state of all items BEFORE deletion for undo
+    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+
+    // Recursive lambda to capture an action and all its descendants
+    std::function<void(TAction*, int, int)> captureActionAndChildren = [&](TAction* pT, int parentID, int positionInParent) {
+        if (!pT) {
+            return;
+        }
+
+        MudletDeleteItemCommand::DeletedItemInfo info;
+        info.itemID = pT->getID();
+        info.itemName = pT->getName();
+        info.parentID = parentID;
+        info.positionInParent = positionInParent;
+
+        // Export action to XML snapshot
+        pugi::xml_document doc;
+        auto root = doc.append_child("ActionSnapshot");
+        XMLexport exporter(pT);
+        exporter.writeAction(pT, root);
+        std::ostringstream oss;
+        doc.save(oss);
+        info.xmlSnapshot = QString::fromStdString(oss.str());
+
+        deletedItems.append(info);
+
+        // Recursively capture all children
+        if (pT->mpMyChildrenList) {
+            int i = 0;
+            for (auto* pChild : *pT->mpMyChildrenList) {
+                captureActionAndChildren(pChild, pT->getID(), i);
+                ++i;
+            }
+        }
+    };
+
+    // Capture each selected action and all its descendants
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
+        if (pT) {
+            // Determine parent ID and position
+            int parentID = -1;
+            int positionInParent = 0;
+
+            QTreeWidgetItem* pParentItem = pItem->parent();
+            if (pParentItem && pParentItem != mpActionBaseItem) {
+                parentID = pParentItem->data(0, Qt::UserRole).toInt();
+                positionInParent = pParentItem->indexOfChild(pItem);
+            } else {
+                parentID = -1;
+                positionInParent = mpActionBaseItem->indexOfChild(pItem);
+            }
+
+            // Recursively capture this action and all its children
+            captureActionAndChildren(pT, parentID, positionInParent);
+        }
     }
 
     // Sort items by their position in tree (top to bottom) to delete correctly
@@ -3019,6 +3323,16 @@ void dlgTriggerEditor::delete_action()
             }
             delete pT;
         }
+    }
+
+    // Push undo command for the deleted actions
+    if (!deletedItems.isEmpty()) {
+        auto* qtCmd = new MudletDeleteItemCommand(
+            EditorViewType::cmActionView,
+            deletedItems,
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);
     }
 
     // Set new selection
@@ -3066,10 +3380,6 @@ void dlgTriggerEditor::delete_variable()
         message = tr("Do you really want to delete %1 variables?\n\nItems to be deleted:\n%2")
                     .arg(varsToDelete.size())
                     .arg(itemNames.join(", "));
-    }
-
-    if (!showDeleteConfirmation(tr("Delete Variable(s)"), message)) {
-        return;
     }
 
     // Sort items by their position in tree (top to bottom) to delete correctly
@@ -3148,8 +3458,62 @@ void dlgTriggerEditor::delete_script()
                     .arg(itemNames.join(", "));
     }
 
-    if (!showDeleteConfirmation(tr("Delete Script(s)"), message)) {
-        return;
+    // Capture state of all items BEFORE deletion for undo
+    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+
+    // Recursive lambda to capture a script and all its descendants
+    std::function<void(TScript*, int, int)> captureScriptAndChildren = [&](TScript* pT, int parentID, int positionInParent) {
+        if (!pT) {
+            return;
+        }
+
+        MudletDeleteItemCommand::DeletedItemInfo info;
+        info.itemID = pT->getID();
+        info.itemName = pT->getName();
+        info.parentID = parentID;
+        info.positionInParent = positionInParent;
+
+        // Export script to XML snapshot
+        pugi::xml_document doc;
+        auto root = doc.append_child("ScriptSnapshot");
+        XMLexport exporter(pT);
+        exporter.writeScript(pT, root);
+        std::ostringstream oss;
+        doc.save(oss);
+        info.xmlSnapshot = QString::fromStdString(oss.str());
+
+        deletedItems.append(info);
+
+        // Recursively capture all children
+        if (pT->mpMyChildrenList) {
+            int i = 0;
+            for (auto* pChild : *pT->mpMyChildrenList) {
+                captureScriptAndChildren(pChild, pT->getID(), i);
+                ++i;
+            }
+        }
+    };
+
+    // Capture each selected script and all its descendants
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+        if (pT) {
+            // Determine parent ID and position
+            int parentID = -1;
+            int positionInParent = 0;
+
+            QTreeWidgetItem* pParentItem = pItem->parent();
+            if (pParentItem && pParentItem != mpScriptsBaseItem) {
+                parentID = pParentItem->data(0, Qt::UserRole).toInt();
+                positionInParent = pParentItem->indexOfChild(pItem);
+            } else {
+                parentID = -1;
+                positionInParent = mpScriptsBaseItem->indexOfChild(pItem);
+            }
+
+            // Recursively capture this script and all its children
+            captureScriptAndChildren(pT, parentID, positionInParent);
+        }
     }
 
     // Sort items by their position in tree (top to bottom) to delete correctly
@@ -3176,6 +3540,16 @@ void dlgTriggerEditor::delete_script()
             }
             delete pT;
         }
+    }
+
+    // Push undo command for the deleted scripts
+    if (!deletedItems.isEmpty()) {
+        auto* qtCmd = new MudletDeleteItemCommand(
+            EditorViewType::cmScriptView,
+            deletedItems,
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);
     }
 
     // Set new selection
@@ -3221,8 +3595,62 @@ void dlgTriggerEditor::delete_key()
                     .arg(itemNames.join(", "));
     }
 
-    if (!showDeleteConfirmation(tr("Delete Key(s)"), message)) {
-        return;
+    // Capture state of all items BEFORE deletion for undo
+    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+
+    // Recursive lambda to capture a key and all its descendants
+    std::function<void(TKey*, int, int)> captureKeyAndChildren = [&](TKey* pT, int parentID, int positionInParent) {
+        if (!pT) {
+            return;
+        }
+
+        MudletDeleteItemCommand::DeletedItemInfo info;
+        info.itemID = pT->getID();
+        info.itemName = pT->getName();
+        info.parentID = parentID;
+        info.positionInParent = positionInParent;
+
+        // Export key to XML snapshot
+        pugi::xml_document doc;
+        auto root = doc.append_child("KeySnapshot");
+        XMLexport exporter(pT);
+        exporter.writeKey(pT, root);
+        std::ostringstream oss;
+        doc.save(oss);
+        info.xmlSnapshot = QString::fromStdString(oss.str());
+
+        deletedItems.append(info);
+
+        // Recursively capture all children
+        if (pT->mpMyChildrenList) {
+            int i = 0;
+            for (auto* pChild : *pT->mpMyChildrenList) {
+                captureKeyAndChildren(pChild, pT->getID(), i);
+                ++i;
+            }
+        }
+    };
+
+    // Capture each selected key and all its descendants
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        if (pT) {
+            // Determine parent ID and position
+            int parentID = -1;
+            int positionInParent = 0;
+
+            QTreeWidgetItem* pParentItem = pItem->parent();
+            if (pParentItem && pParentItem != mpKeyBaseItem) {
+                parentID = pParentItem->data(0, Qt::UserRole).toInt();
+                positionInParent = pParentItem->indexOfChild(pItem);
+            } else {
+                parentID = -1;
+                positionInParent = mpKeyBaseItem->indexOfChild(pItem);
+            }
+
+            // Recursively capture this key and all its children
+            captureKeyAndChildren(pT, parentID, positionInParent);
+        }
     }
 
     // Sort items by their position in tree (top to bottom) to delete correctly
@@ -3249,6 +3677,16 @@ void dlgTriggerEditor::delete_key()
             }
             delete pT;
         }
+    }
+
+    // Push undo command for the deleted keys
+    if (!deletedItems.isEmpty()) {
+        auto* qtCmd = new MudletDeleteItemCommand(
+            EditorViewType::cmKeysView,
+            deletedItems,
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);
     }
 
     // Set new selection
@@ -3294,8 +3732,67 @@ void dlgTriggerEditor::delete_trigger()
                     .arg(itemNames.join(", "));
     }
 
-    if (!showDeleteConfirmation(tr("Delete Trigger(s)"), message)) {
-        return;
+    // Capture state of all items BEFORE deletion for undo
+    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+
+    // Recursive lambda to capture a trigger and all its descendants
+    std::function<void(TTrigger*, int, int)> captureTriggerAndChildren = [&](TTrigger* pT, int parentID, int positionInParent) {
+        if (!pT) {
+            return;
+        }
+
+        MudletDeleteItemCommand::DeletedItemInfo info;
+        info.itemID = pT->getID();
+        info.itemName = pT->getName();
+        info.parentID = parentID;
+        info.positionInParent = positionInParent;
+
+        // Export trigger to XML snapshot
+        pugi::xml_document doc;
+        auto root = doc.append_child("TriggerSnapshot");
+        XMLexport exporter(pT);
+        exporter.writeTrigger(pT, root);
+        std::ostringstream oss;
+        doc.save(oss);
+        info.xmlSnapshot = QString::fromStdString(oss.str());
+
+        deletedItems.append(info);
+
+        // Recursively capture all children
+        if (pT->mpMyChildrenList) {
+            int i = 0;
+            for (auto* pChild : *pT->mpMyChildrenList) {
+                captureTriggerAndChildren(pChild, pT->getID(), i);
+                ++i;
+            }
+        }
+    };
+
+    // Capture each selected trigger and all its descendants
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+        if (pT) {
+            // Determine parent ID and position
+            int parentID = -1;
+            int positionInParent = 0;
+
+            QTreeWidgetItem* pParentItem = pItem->parent();
+            if (pParentItem) {
+                if (pParentItem == mpTriggerBaseItem) {
+                    parentID = -1;
+                    positionInParent = mpTriggerBaseItem->indexOfChild(pItem);
+                } else {
+                    parentID = pParentItem->data(0, Qt::UserRole).toInt();
+                    positionInParent = pParentItem->indexOfChild(pItem);
+                }
+            } else {
+                parentID = -1;
+                positionInParent = treeWidget_triggers->indexOfTopLevelItem(pItem);
+            }
+
+            // Recursively capture this trigger and all its children
+            captureTriggerAndChildren(pT, parentID, positionInParent);
+        }
     }
 
     // Sort items by their position in tree (top to bottom) to delete correctly
@@ -3322,6 +3819,16 @@ void dlgTriggerEditor::delete_trigger()
             }
             delete pT;
         }
+    }
+
+    // Push undo command for the deleted triggers
+    if (!deletedItems.isEmpty()) {
+        auto* qtCmd = new MudletDeleteItemCommand(
+            EditorViewType::cmTriggerView,
+            deletedItems,
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);
     }
 
     // Set new selection
@@ -3367,8 +3874,62 @@ void dlgTriggerEditor::delete_timer()
                     .arg(itemNames.join(", "));
     }
 
-    if (!showDeleteConfirmation(tr("Delete Timer(s)"), message)) {
-        return;
+    // Capture state of all items BEFORE deletion for undo
+    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+
+    // Recursive lambda to capture a timer and all its descendants
+    std::function<void(TTimer*, int, int)> captureTimerAndChildren = [&](TTimer* pT, int parentID, int positionInParent) {
+        if (!pT) {
+            return;
+        }
+
+        MudletDeleteItemCommand::DeletedItemInfo info;
+        info.itemID = pT->getID();
+        info.itemName = pT->getName();
+        info.parentID = parentID;
+        info.positionInParent = positionInParent;
+
+        // Export timer to XML snapshot
+        pugi::xml_document doc;
+        auto root = doc.append_child("TimerSnapshot");
+        XMLexport exporter(pT);
+        exporter.writeTimer(pT, root);
+        std::ostringstream oss;
+        doc.save(oss);
+        info.xmlSnapshot = QString::fromStdString(oss.str());
+
+        deletedItems.append(info);
+
+        // Recursively capture all children
+        if (pT->mpMyChildrenList) {
+            int i = 0;
+            for (auto* pChild : *pT->mpMyChildrenList) {
+                captureTimerAndChildren(pChild, pT->getID(), i);
+                ++i;
+            }
+        }
+    };
+
+    // Capture each selected timer and all its descendants
+    for (QTreeWidgetItem* pItem : selectedItems) {
+        TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
+        if (pT) {
+            // Determine parent ID and position
+            int parentID = -1;
+            int positionInParent = 0;
+
+            QTreeWidgetItem* pParentItem = pItem->parent();
+            if (pParentItem && pParentItem != mpTimerBaseItem) {
+                parentID = pParentItem->data(0, Qt::UserRole).toInt();
+                positionInParent = pParentItem->indexOfChild(pItem);
+            } else {
+                parentID = -1;
+                positionInParent = mpTimerBaseItem->indexOfChild(pItem);
+            }
+
+            // Recursively capture this timer and all its children
+            captureTimerAndChildren(pT, parentID, positionInParent);
+        }
     }
 
     // Sort items by their position in tree (top to bottom) to delete correctly
@@ -3397,6 +3958,16 @@ void dlgTriggerEditor::delete_timer()
         }
     }
 
+    // Push undo command for the deleted timers
+    if (!deletedItems.isEmpty()) {
+        auto* qtCmd = new MudletDeleteItemCommand(
+            EditorViewType::cmTimerView,
+            deletedItems,
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentTimerItem = newSelection;
@@ -3423,7 +3994,10 @@ void dlgTriggerEditor::activeToggle_trigger()
         return;
     }
 
-    pT->setIsActive(!pT->shouldBeActive());
+    // Capture old state for undo
+    bool oldState = pT->shouldBeActive();
+    pT->setIsActive(!oldState);
+    bool newState = pT->isActive();
 
     if (pT->isFilterChain()) {
         if (pT->isActive()) {
@@ -3492,6 +4066,127 @@ void dlgTriggerEditor::activeToggle_trigger()
     if (pItem->childCount() > 0) {
         children_icon_triggers(pItem);
     }
+
+    // Push undo command for toggle operation
+    if (mpUndoStack && oldState != newState) {
+        auto* qtCmd = new MudletToggleActiveCommand(
+            EditorViewType::cmTriggerView,
+            pT->getID(),
+            oldState,
+            newState,
+            pT->getName(),
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+    }
+}
+
+void dlgTriggerEditor::slot_itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition)
+{
+    if (!mpUndoStack) {
+        return;
+    }
+
+    // Determine which view this move belongs to
+    EditorViewType viewType;
+    QString itemName;
+
+    // Check which tree widget has focus or which view is active
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView: {
+        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(itemID);
+        if (pT) {
+            viewType = EditorViewType::cmTriggerView;
+            itemName = pT->getName();
+        } else {
+            return;
+        }
+        break;
+    }
+    case EditorViewType::cmAliasView: {
+        TAlias* pA = mpHost->getAliasUnit()->getAlias(itemID);
+        if (pA) {
+            viewType = EditorViewType::cmAliasView;
+            itemName = pA->getName();
+        } else {
+            return;
+        }
+        break;
+    }
+    case EditorViewType::cmTimerView: {
+        TTimer* pT = mpHost->getTimerUnit()->getTimer(itemID);
+        if (pT) {
+            viewType = EditorViewType::cmTimerView;
+            itemName = pT->getName();
+        } else {
+            return;
+        }
+        break;
+    }
+    case EditorViewType::cmScriptView: {
+        TScript* pS = mpHost->getScriptUnit()->getScript(itemID);
+        if (pS) {
+            viewType = EditorViewType::cmScriptView;
+            itemName = pS->getName();
+        } else {
+            return;
+        }
+        break;
+    }
+    case EditorViewType::cmKeysView: {
+        TKey* pK = mpHost->getKeyUnit()->getKey(itemID);
+        if (pK) {
+            viewType = EditorViewType::cmKeysView;
+            itemName = pK->getName();
+        } else {
+            return;
+        }
+        break;
+    }
+    case EditorViewType::cmActionView: {
+        TAction* pA = mpHost->getActionUnit()->getAction(itemID);
+        if (pA) {
+            viewType = EditorViewType::cmActionView;
+            itemName = pA->getName();
+        } else {
+            return;
+        }
+        break;
+    }
+    default:
+        return;
+    }
+
+    // Push move command to undo system
+    auto* qtCmd = new MudletMoveItemCommand(
+        viewType,
+        itemID,
+        oldParentID,
+        newParentID,
+        oldPosition,
+        newPosition,
+        itemName,
+        mpHost
+    );
+    mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+}
+
+void dlgTriggerEditor::slot_batchMoveStarted()
+{
+    if (!mpUndoStack) {
+        return;
+    }
+
+    mpUndoStack->beginMacro(tr("Move items"));
+}
+
+void dlgTriggerEditor::slot_batchMoveEnded()
+{
+    if (!mpUndoStack) {
+        return;
+    }
+
+    mpUndoStack->endMacro();
 }
 
 void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent)
@@ -3589,11 +4284,17 @@ void dlgTriggerEditor::activeToggle_timer()
         return;
     }
 
+    // Capture old state for undo
+    bool oldState = pT->shouldBeActive();
+
     if (!pT->isOffsetTimer()) {
         pT->setIsActive(!pT->shouldBeActive());
     } else {
         pT->setShouldBeActive(!pT->shouldBeActive());
     }
+
+    // Capture new state after toggle
+    bool newState = pT->shouldBeActive();
 
     if (pT->isFolder()) {
         // disable or enable all timers in the respective branch
@@ -3680,6 +4381,19 @@ void dlgTriggerEditor::activeToggle_timer()
 
     if (pItem->childCount() > 0) {
         children_icon_timer(pItem);
+    }
+
+    // Push undo command for toggle operation
+    if (mpUndoStack && oldState != newState) {
+        auto* qtCmd = new MudletToggleActiveCommand(
+            EditorViewType::cmTimerView,
+            pT->getID(),
+            oldState,
+            newState,
+            pT->getName(),
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
 
@@ -3779,7 +4493,12 @@ void dlgTriggerEditor::activeToggle_alias()
     if (!pT) {
         return;
     }
+
+    // Capture old state for undo
+    bool oldState = pT->shouldBeActive();
     pT->setIsActive(!pT->shouldBeActive());
+    // Capture new state after toggle
+    bool newState = pT->isActive();
 
     if (pT->isFolder()) {
         if (pT->isActive()) {
@@ -3817,6 +4536,19 @@ void dlgTriggerEditor::activeToggle_alias()
 
     if (pItem->childCount() > 0) {
         children_icon_alias(pItem);
+    }
+
+    // Push undo command for toggle operation
+    if (mpUndoStack && oldState != newState) {
+        auto* qtCmd = new MudletToggleActiveCommand(
+            EditorViewType::cmAliasView,
+            pT->getID(),
+            oldState,
+            newState,
+            pT->getName(),
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
 
@@ -3898,7 +4630,11 @@ void dlgTriggerEditor::activeToggle_script()
         return;
     }
 
+    // Capture old state for undo
+    bool oldState = pT->shouldBeActive();
     pT->setIsActive(!pT->shouldBeActive());
+    // Capture new state after toggle
+    bool newState = pT->isActive();
 
     if (pT->isFolder()) {
         if (pT->isActive()) {
@@ -3935,6 +4671,19 @@ void dlgTriggerEditor::activeToggle_script()
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
     if (pItem->childCount() > 0) {
         children_icon_script(pItem);
+    }
+
+    // Push undo command for toggle operation
+    if (mpUndoStack && oldState != newState) {
+        auto* qtCmd = new MudletToggleActiveCommand(
+            EditorViewType::cmScriptView,
+            pT->getID(),
+            oldState,
+            newState,
+            pT->getName(),
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
 
@@ -4015,8 +4764,12 @@ void dlgTriggerEditor::activeToggle_action()
         return;
     }
 
+    // Capture old state for undo
+    bool oldState = pT->shouldBeActive();
     pT->setIsActive(!pT->shouldBeActive());
     pT->setDataChanged();
+    // Capture new state after toggle
+    bool newState = pT->isActive();
 
     if (pT->mpToolBar) {
         if (!pT->isActive()) {
@@ -4090,6 +4843,19 @@ void dlgTriggerEditor::activeToggle_action()
     mpHost->getActionUnit()->updateToolbar();
     if (pItem->childCount() > 0) {
         children_icon_action(pItem);
+    }
+
+    // Push undo command for toggle operation
+    if (mpUndoStack && oldState != newState) {
+        auto* qtCmd = new MudletToggleActiveCommand(
+            EditorViewType::cmActionView,
+            pT->getID(),
+            oldState,
+            newState,
+            pT->getName(),
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
 
@@ -4189,7 +4955,11 @@ void dlgTriggerEditor::activeToggle_key()
         return;
     }
 
+    // Capture old state for undo
+    bool oldState = pT->shouldBeActive();
     pT->setIsActive(!pT->shouldBeActive());
+    // Capture new state after toggle
+    bool newState = pT->isActive();
 
     if (pT->isFolder()) {
         if (pT->isActive()) {
@@ -4248,6 +5018,19 @@ void dlgTriggerEditor::activeToggle_key()
 
     if (pItem->childCount() > 0) {
         children_icon_key(pItem);
+    }
+
+    // Push undo command for toggle operation
+    if (mpUndoStack && oldState != newState) {
+        auto* qtCmd = new MudletToggleActiveCommand(
+            EditorViewType::cmKeysView,
+            pT->getID(),
+            oldState,
+            newState,
+            pT->getName(),
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
 
@@ -4319,7 +5102,11 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 {
     saveTrigger();
 
+    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New trigger group") : tr("New trigger");
+    if (mpUndoStack) {
+        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+    }
     QStringList nameList { name };
     const QStringList patterns;
     QList<int> const patternKinds;
@@ -4399,6 +5186,37 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     mpCurrentTriggerItem = pNewItem;
     treeWidget_triggers->setCurrentItem(pNewItem);
     slot_triggerSelected(treeWidget_triggers->currentItem());
+
+    // Push undo command for the newly added trigger
+    // IMPORTANT: Use the actual parent of pNewItem, not pParentItem which was the selected item
+    QTreeWidgetItem* actualParent = pNewItem->parent();
+    int parentID = (actualParent && actualParent != mpTriggerBaseItem)
+                   ? actualParent->data(0, Qt::UserRole).toInt()
+                   : -1;
+
+    // Get position of the newly added item in its parent
+    int positionInParent = 0;
+    if (actualParent) {
+        positionInParent = actualParent->indexOfChild(pNewItem);
+    } else {
+        positionInParent = treeWidget_triggers->indexOfTopLevelItem(pNewItem);
+    }
+
+    auto* qtCmd = new MudletAddItemCommand(
+        EditorViewType::cmTriggerView,
+        pNewTrigger->getID(),
+        parentID,
+        positionInParent,
+        isFolder,
+        name,
+        mpHost
+    );
+    mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+
+    // End macro - this groups the Add command with any Modify commands from slot_triggerSelected()
+    if (mpUndoStack) {
+        mpUndoStack->endMacro();
+    }
 }
 
 
@@ -4406,7 +5224,11 @@ void dlgTriggerEditor::addTimer(bool isFolder)
 {
     saveTimer();
 
+    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New timer group") : tr("New timer");
+    if (mpUndoStack) {
+        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+    }
     QStringList nameList = { name };
     const QString command = "";
     const QTime time;
@@ -4475,6 +5297,39 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem(pNewItem);
     slot_timerSelected(treeWidget_timers->currentItem());
+
+    // Push undo command
+    QTreeWidgetItem* actualParent = pNewItem->parent();
+    int parentID = (actualParent && actualParent != mpTimerBaseItem)
+                   ? actualParent->data(0, Qt::UserRole).toInt()
+                   : -1;
+
+    // Get position of the newly added item in its parent
+    int positionInParent = 0;
+    if (actualParent) {
+        positionInParent = actualParent->indexOfChild(pNewItem);
+    } else {
+        positionInParent = treeWidget_timers->indexOfTopLevelItem(pNewItem);
+    }
+
+    auto* qtCmd = new MudletAddItemCommand(
+        EditorViewType::cmTimerView,
+        pNewTimer->getID(),
+        parentID,
+        positionInParent,
+        isFolder,
+        name,
+        mpHost
+    );
+    mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+
+    // Process any pending events to ensure Modify commands are pushed before macro ends
+    QCoreApplication::processEvents();
+
+    // End macro - this groups the Add command with any Modify commands from slot_timerSelected()
+    if (mpUndoStack) {
+        mpUndoStack->endMacro();
+    }
 }
 
 void dlgTriggerEditor::addVar(bool isFolder)
@@ -4547,7 +5402,11 @@ void dlgTriggerEditor::addKey(bool isFolder)
 {
     saveKey();
 
+    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder? tr("New key group") : tr("New key");
+    if (mpUndoStack) {
+        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+    }
     QStringList nameList = { name };
     const QString script = "";
 
@@ -4614,6 +5473,39 @@ void dlgTriggerEditor::addKey(bool isFolder)
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem(pNewItem);
     slot_keySelected(treeWidget_keys->currentItem());
+
+    // Push undo command
+    QTreeWidgetItem* actualParent = pNewItem->parent();
+    int parentID = (actualParent && actualParent != mpKeyBaseItem)
+                   ? actualParent->data(0, Qt::UserRole).toInt()
+                   : -1;
+
+    // Get position of the newly added item in its parent
+    int positionInParent = 0;
+    if (actualParent) {
+        positionInParent = actualParent->indexOfChild(pNewItem);
+    } else {
+        positionInParent = treeWidget_keys->indexOfTopLevelItem(pNewItem);
+    }
+
+    auto* qtCmd = new MudletAddItemCommand(
+        EditorViewType::cmKeysView,
+        pNewKey->getID(),
+        parentID,
+        positionInParent,
+        isFolder,
+        name,
+        mpHost
+    );
+    mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+
+    // Process any pending events to ensure Modify commands are pushed before macro ends
+    QCoreApplication::processEvents();
+
+    // End macro - this groups the Add command with any Modify commands from slot_keySelected()
+    if (mpUndoStack) {
+        mpUndoStack->endMacro();
+    }
 }
 
 
@@ -4621,7 +5513,11 @@ void dlgTriggerEditor::addAlias(bool isFolder)
 {
     saveAlias();
 
+    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New alias group") : tr("New alias");
+    if (mpUndoStack) {
+        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+    }
     QStringList nameList = { name };
     const QString regex = "";
     const QString command = "";
@@ -4695,13 +5591,47 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
     slot_aliasSelected(treeWidget_aliases->currentItem());
+
+    // Push undo command
+    QTreeWidgetItem* actualParent = pNewItem->parent();
+    int parentID = (actualParent && actualParent != mpAliasBaseItem)
+                   ? actualParent->data(0, Qt::UserRole).toInt()
+                   : -1;
+
+    // Get position of the newly added item in its parent
+    int positionInParent = 0;
+    if (actualParent) {
+        positionInParent = actualParent->indexOfChild(pNewItem);
+    } else {
+        positionInParent = treeWidget_aliases->indexOfTopLevelItem(pNewItem);
+    }
+
+    auto* qtCmd = new MudletAddItemCommand(
+        EditorViewType::cmAliasView,
+        pNewAlias->getID(),
+        parentID,
+        positionInParent,
+        isFolder,
+        name,
+        mpHost
+    );
+    mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+
+    // End macro - this groups the Add command with any Modify commands from slot_aliasSelected()
+    if (mpUndoStack) {
+        mpUndoStack->endMacro();
+    }
 }
 
 void dlgTriggerEditor::addAction(bool isFolder)
 {
     saveAction();
 
+    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New menu") : tr("New button");
+    if (mpUndoStack) {
+        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+    }
     QStringList nameList = { name };
     const QString cmdButtonUp = "";
     const QString cmdButtonDown = "";
@@ -4778,13 +5708,51 @@ void dlgTriggerEditor::addAction(bool isFolder)
     mpCurrentActionItem = pNewItem;
     treeWidget_actions->setCurrentItem(pNewItem);
     slot_actionSelected(treeWidget_actions->currentItem());
+
+    // Push undo command
+    QTreeWidgetItem* actualParent = pNewItem->parent();
+    int parentID = (actualParent && actualParent != mpActionBaseItem)
+                   ? actualParent->data(0, Qt::UserRole).toInt()
+                   : -1;
+
+    // Get position of the newly added item in its parent
+    int positionInParent = 0;
+    if (actualParent) {
+        positionInParent = actualParent->indexOfChild(pNewItem);
+    } else {
+        positionInParent = treeWidget_actions->indexOfTopLevelItem(pNewItem);
+    }
+
+    auto* qtCmd = new MudletAddItemCommand(
+        EditorViewType::cmActionView,
+        pNewAction->getID(),
+        parentID,
+        positionInParent,
+        isFolder,
+        name,
+        mpHost
+    );
+    mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+
+    // Process any pending events to ensure Modify commands are pushed before macro ends
+    QCoreApplication::processEvents();
+
+    // End macro - this groups the Add command with any Modify commands from slot_actionSelected()
+    if (mpUndoStack) {
+        mpUndoStack->endMacro();
+    }
 }
 
 
 void dlgTriggerEditor::addScript(bool isFolder)
 {
     saveScript();
+
+    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New script group") : tr("New script");
+    if (mpUndoStack) {
+        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+    }
     QStringList nameList = { name };
     const QString script;
 
@@ -4850,6 +5818,36 @@ void dlgTriggerEditor::addScript(bool isFolder)
     mpCurrentScriptItem = pNewItem;
     treeWidget_scripts->setCurrentItem(pNewItem);
     slot_scriptsSelected(treeWidget_scripts->currentItem());
+
+    // Push undo command
+    QTreeWidgetItem* actualParent = pNewItem->parent();
+    int parentID = (actualParent && actualParent != mpScriptsBaseItem)
+                   ? actualParent->data(0, Qt::UserRole).toInt()
+                   : -1;
+
+    // Get position of the newly added item in its parent
+    int positionInParent = 0;
+    if (actualParent) {
+        positionInParent = actualParent->indexOfChild(pNewItem);
+    } else {
+        positionInParent = treeWidget_scripts->indexOfTopLevelItem(pNewItem);
+    }
+
+    auto* qtCmd = new MudletAddItemCommand(
+        EditorViewType::cmScriptView,
+        pNewScript->getID(),
+        parentID,
+        positionInParent,
+        isFolder,
+        name,
+        mpHost
+    );
+    mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+
+    // End macro - this groups the Add command with any Modify commands from slot_scriptsSelected()
+    if (mpUndoStack) {
+        mpUndoStack->endMacro();
+    }
 }
 
 void dlgTriggerEditor::selectTriggerByID(int id)
@@ -5131,6 +6129,16 @@ void dlgTriggerEditor::saveTrigger()
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (pT) {
+        // Capture OLD state before modifications (for undo)
+        QString oldStateXML;
+        pugi::xml_document oldDoc;
+        auto oldRoot = oldDoc.append_child("TriggerSnapshot");
+        XMLexport oldExporter(pT);
+        oldExporter.writeTrigger(pT, oldRoot);
+        std::ostringstream oldOss;
+        oldDoc.save(oldOss);
+        oldStateXML = QString::fromStdString(oldOss.str());
+
         pT->setName(name);
         pT->setCommand(command);
         pT->setRegexCodeList(patterns, patternKinds);
@@ -5278,6 +6286,29 @@ void dlgTriggerEditor::saveTrigger()
             showError(pT->getError());
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        // Capture NEW state after modifications (for redo)
+        QString newStateXML;
+        pugi::xml_document newDoc;
+        auto newRoot = newDoc.append_child("TriggerSnapshot");
+        XMLexport newExporter(pT);
+        newExporter.writeTrigger(pT, newRoot);
+        std::ostringstream newOss;
+        newDoc.save(newOss);
+        newStateXML = QString::fromStdString(newOss.str());
+
+        // Only push undo command if something actually changed
+        if (oldStateXML != newStateXML) {
+            auto* qtCmd = new MudletModifyPropertyCommand(
+                EditorViewType::cmTriggerView,
+                triggerID,
+                name,
+                oldStateXML,
+                newStateXML,
+                mpHost
+            );
+            mpUndoStack->pushCommand(qtCmd);
+        }
     }
 }
 
@@ -5301,6 +6332,16 @@ void dlgTriggerEditor::saveTimer()
     const int timerID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
+        // Capture OLD state before modifications (for undo)
+        QString oldStateXML;
+        pugi::xml_document oldDoc;
+        auto oldRoot = oldDoc.append_child("TimerSnapshot");
+        XMLexport oldExporter(pT);
+        oldExporter.writeTimer(pT, oldRoot);
+        std::ostringstream oldOss;
+        oldDoc.save(oldOss);
+        oldStateXML = QString::fromStdString(oldOss.str());
+
         pT->setName(name);
         const QString command = mpTimersMainArea->lineEdit_timer_command->text();
         const int hours = mpTimersMainArea->timeEdit_timer_hours->time().hour();
@@ -5400,6 +6441,29 @@ void dlgTriggerEditor::saveTimer()
             showError(pT->getError());
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        // Capture NEW state after modifications (for redo)
+        QString newStateXML;
+        pugi::xml_document newDoc;
+        auto newRoot = newDoc.append_child("TimerSnapshot");
+        XMLexport newExporter(pT);
+        newExporter.writeTimer(pT, newRoot);
+        std::ostringstream newOss;
+        newDoc.save(newOss);
+        newStateXML = QString::fromStdString(newOss.str());
+
+        // Only push undo command if something actually changed
+        if (oldStateXML != newStateXML) {
+            auto* qtCmd = new MudletModifyPropertyCommand(
+                EditorViewType::cmTimerView,
+                timerID,
+                name,
+                oldStateXML,
+                newStateXML,
+                mpHost
+            );
+            mpUndoStack->pushCommand(qtCmd);
+        }
     }
 }
 
@@ -5447,6 +6511,16 @@ void dlgTriggerEditor::saveAlias()
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
+        // Capture OLD state before modifications (for undo)
+        QString oldStateXML;
+        pugi::xml_document oldDoc;
+        auto oldRoot = oldDoc.append_child("AliasSnapshot");
+        XMLexport oldExporter(pT);
+        oldExporter.writeAlias(pT, oldRoot);
+        std::ostringstream oldOss;
+        oldDoc.save(oldOss);
+        oldStateXML = QString::fromStdString(oldOss.str());
+
         pT->setName(name);
         pT->setCommand(substitution);
         pT->setRegexCode(regex); // This could generate an error state if regex does not compile
@@ -5556,6 +6630,29 @@ void dlgTriggerEditor::saveAlias()
             showError(pT->getError());
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        // Capture NEW state after modifications (for redo)
+        QString newStateXML;
+        pugi::xml_document newDoc;
+        auto newRoot = newDoc.append_child("AliasSnapshot");
+        XMLexport newExporter(pT);
+        newExporter.writeAlias(pT, newRoot);
+        std::ostringstream newOss;
+        newDoc.save(newOss);
+        newStateXML = QString::fromStdString(newOss.str());
+
+        // Only push undo command if something actually changed
+        if (oldStateXML != newStateXML) {
+            auto* qtCmd = new MudletModifyPropertyCommand(
+                EditorViewType::cmAliasView,
+                triggerID,
+                name,
+                oldStateXML,
+                newStateXML,
+                mpHost
+            );
+            mpUndoStack->pushCommand(qtCmd);
+        }
     }
 }
 
@@ -5597,6 +6694,16 @@ void dlgTriggerEditor::saveAction()
     const int actionID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
+        // Capture OLD state before modifications (for undo)
+        QString oldStateXML;
+        pugi::xml_document oldDoc;
+        auto oldRoot = oldDoc.append_child("ActionSnapshot");
+        XMLexport oldExporter(pA);
+        oldExporter.writeAction(pA, oldRoot);
+        std::ostringstream oldOss;
+        oldDoc.save(oldOss);
+        oldStateXML = QString::fromStdString(oldOss.str());
+
         // Check if data has been changed before it gets updated.
         bool actionDataChanged = false;
         if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->plainTextEdit_action_css->toPlainText()) {
@@ -5709,6 +6816,29 @@ void dlgTriggerEditor::saveAction()
         if (pA->mLocation != 4 && pA->mpToolBar) {
             pA->mpToolBar->hide();
         }
+
+        // Capture NEW state after modifications (for redo)
+        QString newStateXML;
+        pugi::xml_document newDoc;
+        auto newRoot = newDoc.append_child("ActionSnapshot");
+        XMLexport newExporter(pA);
+        newExporter.writeAction(pA, newRoot);
+        std::ostringstream newOss;
+        newDoc.save(newOss);
+        newStateXML = QString::fromStdString(newOss.str());
+
+        // Only push undo command if something actually changed
+        if (oldStateXML != newStateXML) {
+            auto* qtCmd = new MudletModifyPropertyCommand(
+                EditorViewType::cmActionView,
+                actionID,
+                name,
+                oldStateXML,
+                newStateXML,
+                mpHost
+            );
+            mpUndoStack->pushCommand(qtCmd);
+        }
     }
 
     mpHost->getActionUnit()->updateToolbar();
@@ -5775,6 +6905,16 @@ void dlgTriggerEditor::saveScript()
     if (!pT) {
         return;
     }
+
+    // Capture OLD state before modifications (for undo)
+    QString oldStateXML;
+    pugi::xml_document oldDoc;
+    auto oldRoot = oldDoc.append_child("ScriptSnapshot");
+    XMLexport oldExporter(pT);
+    oldExporter.writeScript(pT, oldRoot);
+    std::ostringstream oldOss;
+    oldDoc.save(oldOss);
+    oldStateXML = QString::fromStdString(oldOss.str());
 
     pT->setName(name);
     pT->setEventHandlerList(handlerList);
@@ -5880,6 +7020,29 @@ void dlgTriggerEditor::saveScript()
         showError(pT->getError());
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+    // Capture NEW state after modifications (for redo)
+    QString newStateXML;
+    pugi::xml_document newDoc;
+    auto newRoot = newDoc.append_child("ScriptSnapshot");
+    XMLexport newExporter(pT);
+    newExporter.writeScript(pT, newRoot);
+    std::ostringstream newOss;
+    newDoc.save(newOss);
+    newStateXML = QString::fromStdString(newOss.str());
+
+    // Only push undo command if something actually changed
+    if (oldStateXML != newStateXML) {
+        auto* qtCmd = new MudletModifyPropertyCommand(
+            EditorViewType::cmScriptView,
+            scriptID,
+            name,
+            oldStateXML,
+            newStateXML,
+            mpHost
+        );
+        mpUndoStack->pushCommand(qtCmd);
+    }
 }
 
 void dlgTriggerEditor::clearEditorNotification() const
@@ -6147,6 +7310,16 @@ void dlgTriggerEditor::saveKey()
     const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
     if (pT) {
+        // Capture OLD state before modifications (for undo)
+        QString oldStateXML;
+        pugi::xml_document oldDoc;
+        auto oldRoot = oldDoc.append_child("KeySnapshot");
+        XMLexport oldExporter(pT);
+        oldExporter.writeKey(pT, oldRoot);
+        std::ostringstream oldOss;
+        oldDoc.save(oldOss);
+        oldStateXML = QString::fromStdString(oldOss.str());
+
         const QString old_name = pT->getName();
         pItem->setText(0, name);
         pT->setName(name);
@@ -6254,6 +7427,29 @@ void dlgTriggerEditor::saveKey()
             showError(pT->getError());
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+
+        // Capture NEW state after modifications (for redo)
+        QString newStateXML;
+        pugi::xml_document newDoc;
+        auto newRoot = newDoc.append_child("KeySnapshot");
+        XMLexport newExporter(pT);
+        newExporter.writeKey(pT, newRoot);
+        std::ostringstream newOss;
+        newDoc.save(newOss);
+        newStateXML = QString::fromStdString(newOss.str());
+
+        // Only push undo command if something actually changed
+        if (oldStateXML != newStateXML) {
+            auto* qtCmd = new MudletModifyPropertyCommand(
+                EditorViewType::cmKeysView,
+                triggerID,
+                name,
+                oldStateXML,
+                newStateXML,
+                mpHost
+            );
+            mpUndoStack->pushCommand(qtCmd);
+        }
     }
 }
 
@@ -7294,6 +8490,14 @@ void dlgTriggerEditor::fillout_form()
     populateKeys();
     mpKeyBaseItem->setExpanded(true);
     treeWidget_keys->setCurrentItem(mpKeyBaseItem);
+
+    // Clear undo stack after initial profile loading (only on first call)
+    // Only user actions after this point should be undo-able
+    if (mpUndoStack && !mInitialLoadDone) {
+        mpUndoStack->clear();
+
+        mInitialLoadDone = true;
+    }
 }
 
 void dlgTriggerEditor::populateKeys()
@@ -10930,6 +12134,20 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
     pEditorWidget->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
+    // Update the text undo stack pointer since we have a new document
+    // Disconnect from old undo stack if it exists
+    if (mpTextUndoStack) {
+        disconnect(mpTextUndoStack, nullptr, this, nullptr);
+    }
+    // Connect to the new document's undo stack
+    mpTextUndoStack = mpSourceEditorEdbeeDocument->textUndoStack();
+    connect(mpTextUndoStack, &edbee::TextUndoStack::undoExecuted,
+            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+    connect(mpTextUndoStack, &edbee::TextUndoStack::redoExecuted,
+            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+    connect(mpTextUndoStack, &edbee::TextUndoStack::changeAdded,
+            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
@@ -11056,12 +12274,18 @@ void dlgTriggerEditor::slot_editorContextMenu()
     auto formatAction = new QAction(tr("Format All"), menu);
     // appropriate shortcuts are automatically supplied by edbee here
     if (qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        menu->addAction(controller->createAction("undo", tr("Undo"), QIcon(), menu));
+        menu->addAction(controller->createAction("redo", tr("Redo"), QIcon(), menu));
+        menu->addSeparator();
         menu->addAction(controller->createAction("cut", tr("Cut"), QIcon(), menu));
         menu->addAction(controller->createAction("copy", tr("Copy"), QIcon(), menu));
         menu->addAction(controller->createAction("paste", tr("Paste"), QIcon(), menu));
         menu->addSeparator();
         menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon(), menu));
     } else {
+        menu->addAction(controller->createAction("undo", tr("Undo"), QIcon::fromTheme(qsl("edit-undo"), QIcon(qsl(":/icons/edit-undo.png"))), menu));
+        menu->addAction(controller->createAction("redo", tr("Redo"), QIcon::fromTheme(qsl("edit-redo"), QIcon(qsl(":/icons/edit-redo.png"))), menu));
+        menu->addSeparator();
         menu->addAction(controller->createAction("cut", tr("Cut"), QIcon::fromTheme(qsl("edit-cut"), QIcon(qsl(":/icons/edit-cut.png"))), menu));
         menu->addAction(controller->createAction("copy", tr("Copy"), QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))), menu));
         menu->addAction(controller->createAction("paste", tr("Paste"), QIcon::fromTheme(qsl("edit-paste"), QIcon(qsl(":/icons/edit-paste.png"))), menu));
@@ -11554,6 +12778,383 @@ void dlgTriggerEditor::slot_bannerDismissClicked()
     handleBannerDismiss();
 }
 
+// Helper function to find a tree item by its ID recursively
+QTreeWidgetItem* findItemByID(QTreeWidgetItem* parent, int itemID)
+{
+    if (!parent) {
+        return nullptr;
+    }
+
+    // Check if this item matches
+    if (parent->data(0, Qt::UserRole).toInt() == itemID) {
+        return parent;
+    }
+
+    // Recursively search children
+    for (int i = 0; i < parent->childCount(); ++i) {
+        QTreeWidgetItem* found = findItemByID(parent->child(i), itemID);
+        if (found) {
+            return found;
+        }
+    }
+
+    return nullptr;
+}
+
+// Helper function to collect IDs of all expanded items in a tree
+QSet<int> collectExpandedItemIDs(QTreeWidgetItem* parent)
+{
+    QSet<int> expandedIDs;
+    if (!parent) {
+        return expandedIDs;
+    }
+
+    // If this item is expanded, record its ID
+    if (parent->isExpanded()) {
+        int itemID = parent->data(0, Qt::UserRole).toInt();
+        if (itemID > 0) {  // Valid ID
+            expandedIDs.insert(itemID);
+        }
+    }
+
+    // Recursively collect from children
+    for (int i = 0; i < parent->childCount(); ++i) {
+        expandedIDs.unite(collectExpandedItemIDs(parent->child(i)));
+    }
+
+    return expandedIDs;
+}
+
+// Helper function to restore expansion state based on saved IDs
+void restoreExpansionState(QTreeWidgetItem* parent, const QSet<int>& expandedIDs)
+{
+    if (!parent) {
+        return;
+    }
+
+    // Check if this item should be expanded
+    int itemID = parent->data(0, Qt::UserRole).toInt();
+    if (itemID > 0 && expandedIDs.contains(itemID)) {
+        parent->setExpanded(true);
+    }
+
+    // Recursively restore for children
+    for (int i = 0; i < parent->childCount(); ++i) {
+        restoreExpansionState(parent->child(i), expandedIDs);
+    }
+}
+
+void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> affectedItemIDs)
+{
+    // Switch to the appropriate view if not already there
+    if (mCurrentView != viewType) {
+        switch (viewType) {
+        case EditorViewType::cmTriggerView:
+            slot_showTriggers();
+            break;
+        case EditorViewType::cmAliasView:
+            slot_showAliases();
+            break;
+        case EditorViewType::cmTimerView:
+            slot_showTimers();
+            break;
+        case EditorViewType::cmScriptView:
+            slot_showScripts();
+            break;
+        case EditorViewType::cmKeysView:
+            slot_showKeys();
+            break;
+        case EditorViewType::cmActionView:
+            slot_showActions();
+            break;
+        default:
+            break;
+        }
+    }
+
+    // Refresh the appropriate tree widget when items are added/deleted/modified via undo/redo
+    switch (viewType) {
+    case EditorViewType::cmTriggerView: {
+        // Clear the current item pointer to avoid use-after-free
+        mpCurrentTriggerItem = nullptr;
+
+        // Save expansion state before clearing the tree
+        QSet<int> expandedIDs = collectExpandedItemIDs(mpTriggerBaseItem);
+
+        // Block signals on the selection model to prevent it from emitting during tree deletion
+        // This prevents slot_triggerSelected from being called with dangling pointers
+        QItemSelectionModel* selModel = treeWidget_triggers->selectionModel();
+        selModel->blockSignals(true);
+
+        // Clear all children from the trigger base item
+        QList<QTreeWidgetItem*> children = mpTriggerBaseItem->takeChildren();
+        qDeleteAll(children);
+
+        // Unblock signals after deletion is complete
+        selModel->blockSignals(false);
+
+        // Repopulate the trigger tree
+        populateTriggers();
+
+        // Temporarily disable animation for instant expansion (looks better for undo/redo)
+        // Must be disabled before scrollToItem() which auto-expands parents
+        bool wasAnimated = treeWidget_triggers->isAnimated();
+        treeWidget_triggers->setAnimated(false);
+
+        // Restore expansion state
+        mpTriggerBaseItem->setExpanded(true);
+        restoreExpansionState(mpTriggerBaseItem, expandedIDs);
+
+        // Find and select the affected items
+        if (!affectedItemIDs.isEmpty()) {
+            QTreeWidgetItem* itemToSelect = findItemByID(mpTriggerBaseItem, affectedItemIDs.first());
+            if (itemToSelect) {
+                // Block signals on the selection model to prevent premature selection change cascades
+                // Note: Must block on selectionModel(), not the widget itself, as the signal originates from QItemSelectionModel
+                QItemSelectionModel* selModel = treeWidget_triggers->selectionModel();
+                selModel->blockSignals(true);
+                treeWidget_triggers->setCurrentItem(itemToSelect);
+                selModel->blockSignals(false);
+                treeWidget_triggers->scrollToItem(itemToSelect);
+                slot_triggerSelected(itemToSelect);
+            } else {
+                // Item not found (was deleted) - try to find and expand its parent
+                // For items in affectedItemIDs that aren't found, they were likely deleted
+                // The parent should have been tracked during the operation, but we can infer it
+                // by looking at triggers that have children matching our search pattern
+                TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(affectedItemIDs.first());
+                if (!pTrigger) {
+                    // Item doesn't exist - it was deleted. Find what was its parent.
+                    // We can't easily determine the parent of a deleted item without storing it,
+                    // so for now just ensure the base is expanded (already done above)
+                }
+            }
+        }
+
+        // Restore animation after all expansions are complete
+        treeWidget_triggers->setAnimated(wasAnimated);
+        break;
+    }
+    case EditorViewType::cmTimerView: {
+        mpCurrentTimerItem = nullptr;
+
+        // Save expansion state before clearing the tree
+        QSet<int> expandedIDs = collectExpandedItemIDs(mpTimerBaseItem);
+
+        // Block signals on the selection model to prevent it from emitting during tree deletion
+        // This prevents slot_timerSelected from being called with dangling pointers
+        QItemSelectionModel* selModel = treeWidget_timers->selectionModel();
+        selModel->blockSignals(true);
+
+        QList<QTreeWidgetItem*> children = mpTimerBaseItem->takeChildren();
+        qDeleteAll(children);
+
+        // Unblock signals after deletion is complete
+        selModel->blockSignals(false);
+
+        populateTimers();
+
+        // Temporarily disable animation for instant expansion (looks better for undo/redo)
+        bool wasAnimated = treeWidget_timers->isAnimated();
+        treeWidget_timers->setAnimated(false);
+
+        // Restore expansion state
+        mpTimerBaseItem->setExpanded(true);
+        restoreExpansionState(mpTimerBaseItem, expandedIDs);
+
+        if (!affectedItemIDs.isEmpty()) {
+            QTreeWidgetItem* itemToSelect = findItemByID(mpTimerBaseItem, affectedItemIDs.first());
+            if (itemToSelect) {
+                // Block signals on selection model to prevent premature selection change cascades
+                QItemSelectionModel* selModel = treeWidget_timers->selectionModel();
+                selModel->blockSignals(true);
+                treeWidget_timers->setCurrentItem(itemToSelect);
+                selModel->blockSignals(false);
+                treeWidget_timers->scrollToItem(itemToSelect);
+                slot_timerSelected(itemToSelect);
+            }
+        }
+
+        treeWidget_timers->setAnimated(wasAnimated);
+        break;
+    }
+    case EditorViewType::cmAliasView: {
+        mpCurrentAliasItem = nullptr;
+
+        // Save expansion state before clearing the tree
+        QSet<int> expandedIDs = collectExpandedItemIDs(mpAliasBaseItem);
+
+        // Block signals on the selection model to prevent it from emitting during tree deletion
+        // This prevents slot_aliasSelected from being called with dangling pointers
+        QItemSelectionModel* selModel = treeWidget_aliases->selectionModel();
+        selModel->blockSignals(true);
+
+        QList<QTreeWidgetItem*> children = mpAliasBaseItem->takeChildren();
+        qDeleteAll(children);
+
+        // Unblock signals after deletion is complete
+        selModel->blockSignals(false);
+
+        populateAliases();
+
+        // Temporarily disable animation for instant expansion (looks better for undo/redo)
+        bool wasAnimated = treeWidget_aliases->isAnimated();
+        treeWidget_aliases->setAnimated(false);
+
+        // Restore expansion state
+        mpAliasBaseItem->setExpanded(true);
+        restoreExpansionState(mpAliasBaseItem, expandedIDs);
+
+        if (!affectedItemIDs.isEmpty()) {
+            QTreeWidgetItem* itemToSelect = findItemByID(mpAliasBaseItem, affectedItemIDs.first());
+            if (itemToSelect) {
+                // Block signals on selection model to prevent premature selection change cascades
+                QItemSelectionModel* selModel = treeWidget_aliases->selectionModel();
+                selModel->blockSignals(true);
+                treeWidget_aliases->setCurrentItem(itemToSelect);
+                selModel->blockSignals(false);
+                treeWidget_aliases->scrollToItem(itemToSelect);
+                slot_aliasSelected(itemToSelect);
+            }
+        }
+
+        treeWidget_aliases->setAnimated(wasAnimated);
+        break;
+    }
+    case EditorViewType::cmScriptView: {
+        mpCurrentScriptItem = nullptr;
+
+        // Save expansion state before clearing the tree
+        QSet<int> expandedIDs = collectExpandedItemIDs(mpScriptsBaseItem);
+
+        // Block signals on the selection model to prevent it from emitting during tree deletion
+        // This prevents slot_scriptsSelected from being called with dangling pointers
+        QItemSelectionModel* selModel = treeWidget_scripts->selectionModel();
+        selModel->blockSignals(true);
+
+        QList<QTreeWidgetItem*> children = mpScriptsBaseItem->takeChildren();
+        qDeleteAll(children);
+
+        // Unblock signals after deletion is complete
+        selModel->blockSignals(false);
+
+        populateScripts();
+
+        // Temporarily disable animation for instant expansion (looks better for undo/redo)
+        bool wasAnimated = treeWidget_scripts->isAnimated();
+        treeWidget_scripts->setAnimated(false);
+
+        // Restore expansion state
+        mpScriptsBaseItem->setExpanded(true);
+        restoreExpansionState(mpScriptsBaseItem, expandedIDs);
+
+        if (!affectedItemIDs.isEmpty()) {
+            QTreeWidgetItem* itemToSelect = findItemByID(mpScriptsBaseItem, affectedItemIDs.first());
+            if (itemToSelect) {
+                // Block signals on selection model to prevent premature selection change cascades
+                QItemSelectionModel* selModel = treeWidget_scripts->selectionModel();
+                selModel->blockSignals(true);
+                treeWidget_scripts->setCurrentItem(itemToSelect);
+                selModel->blockSignals(false);
+                treeWidget_scripts->scrollToItem(itemToSelect);
+                slot_scriptsSelected(itemToSelect);
+            }
+        }
+
+        treeWidget_scripts->setAnimated(wasAnimated);
+        break;
+    }
+    case EditorViewType::cmActionView: {
+        mpCurrentActionItem = nullptr;
+
+        // Save expansion state before clearing the tree
+        QSet<int> expandedIDs = collectExpandedItemIDs(mpActionBaseItem);
+
+        // Block signals on the selection model to prevent it from emitting during tree deletion
+        // This prevents slot_actionSelected from being called with dangling pointers
+        QItemSelectionModel* selModel = treeWidget_actions->selectionModel();
+        selModel->blockSignals(true);
+
+        QList<QTreeWidgetItem*> children = mpActionBaseItem->takeChildren();
+        qDeleteAll(children);
+
+        // Unblock signals after deletion is complete
+        selModel->blockSignals(false);
+
+        populateActions();
+
+        // Temporarily disable animation for instant expansion (looks better for undo/redo)
+        bool wasAnimated = treeWidget_actions->isAnimated();
+        treeWidget_actions->setAnimated(false);
+
+        // Restore expansion state
+        mpActionBaseItem->setExpanded(true);
+        restoreExpansionState(mpActionBaseItem, expandedIDs);
+
+        if (!affectedItemIDs.isEmpty()) {
+            QTreeWidgetItem* itemToSelect = findItemByID(mpActionBaseItem, affectedItemIDs.first());
+            if (itemToSelect) {
+                // Block signals on selection model to prevent premature selection change cascades
+                QItemSelectionModel* selModel = treeWidget_actions->selectionModel();
+                selModel->blockSignals(true);
+                treeWidget_actions->setCurrentItem(itemToSelect);
+                selModel->blockSignals(false);
+                treeWidget_actions->scrollToItem(itemToSelect);
+                slot_actionSelected(itemToSelect);
+            }
+        }
+
+        treeWidget_actions->setAnimated(wasAnimated);
+        break;
+    }
+    case EditorViewType::cmKeysView: {
+        mpCurrentKeyItem = nullptr;
+
+        // Save expansion state before clearing the tree
+        QSet<int> expandedIDs = collectExpandedItemIDs(mpKeyBaseItem);
+
+        // Block signals on the selection model to prevent it from emitting during tree deletion
+        // This prevents slot_keySelected from being called with dangling pointers
+        QItemSelectionModel* selModel = treeWidget_keys->selectionModel();
+        selModel->blockSignals(true);
+
+        QList<QTreeWidgetItem*> children = mpKeyBaseItem->takeChildren();
+        qDeleteAll(children);
+
+        // Unblock signals after deletion is complete
+        selModel->blockSignals(false);
+
+        populateKeys();
+
+        // Temporarily disable animation for instant expansion (looks better for undo/redo)
+        bool wasAnimated = treeWidget_keys->isAnimated();
+        treeWidget_keys->setAnimated(false);
+
+        // Restore expansion state
+        mpKeyBaseItem->setExpanded(true);
+        restoreExpansionState(mpKeyBaseItem, expandedIDs);
+
+        if (!affectedItemIDs.isEmpty()) {
+            QTreeWidgetItem* itemToSelect = findItemByID(mpKeyBaseItem, affectedItemIDs.first());
+            if (itemToSelect) {
+                // Block signals on selection model to prevent premature selection change cascades
+                QItemSelectionModel* selModel = treeWidget_keys->selectionModel();
+                selModel->blockSignals(true);
+                treeWidget_keys->setCurrentItem(itemToSelect);
+                selModel->blockSignals(false);
+                treeWidget_keys->scrollToItem(itemToSelect);
+                slot_keySelected(itemToSelect);
+            }
+        }
+
+        treeWidget_keys->setAnimated(wasAnimated);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 void dlgTriggerEditor::handleBannerDismiss()
 {
     hideSystemMessageArea();
@@ -11623,28 +13224,68 @@ void dlgTriggerEditor::handlePermanentBannerDismiss()
 
 bool dlgTriggerEditor::bannerPermanentlyHidden(EditorViewType viewType)
 {
-    const QMetaEnum metaEnum = QMetaEnum::fromType<EditorViewType>();
-    const char* enumName = metaEnum.valueToKey(static_cast<int>(viewType));
-
-    if (!enumName) {
+    QString enumName;
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+        enumName = qsl("cmTriggerView");
+        break;
+    case EditorViewType::cmTimerView:
+        enumName = qsl("cmTimerView");
+        break;
+    case EditorViewType::cmAliasView:
+        enumName = qsl("cmAliasView");
+        break;
+    case EditorViewType::cmScriptView:
+        enumName = qsl("cmScriptView");
+        break;
+    case EditorViewType::cmActionView:
+        enumName = qsl("cmActionView");
+        break;
+    case EditorViewType::cmKeysView:
+        enumName = qsl("cmKeysView");
+        break;
+    case EditorViewType::cmVarsView:
+        enumName = qsl("cmVarsView");
+        break;
+    default:
         return false;
     }
 
     QSettings* settings = mudlet::getQSettings();
-    const QString key = qsl("Editor/banner_permanently_hidden/%1").arg(QString::fromLatin1(enumName).toLower());
+    const QString key = qsl("Editor/banner_permanently_hidden/%1").arg(enumName.toLower());
     return settings->value(key, false).toBool();
 }
 
 void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, bool hidden)
 {
-    const QMetaEnum metaEnum = QMetaEnum::fromType<EditorViewType>();
-    const char* enumName = metaEnum.valueToKey(static_cast<int>(viewType));
-
-    if (!enumName) {
+    QString enumName;
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+        enumName = qsl("cmTriggerView");
+        break;
+    case EditorViewType::cmTimerView:
+        enumName = qsl("cmTimerView");
+        break;
+    case EditorViewType::cmAliasView:
+        enumName = qsl("cmAliasView");
+        break;
+    case EditorViewType::cmScriptView:
+        enumName = qsl("cmScriptView");
+        break;
+    case EditorViewType::cmActionView:
+        enumName = qsl("cmActionView");
+        break;
+    case EditorViewType::cmKeysView:
+        enumName = qsl("cmKeysView");
+        break;
+    case EditorViewType::cmVarsView:
+        enumName = qsl("cmVarsView");
+        break;
+    default:
         return;
     }
 
     QSettings* settings = mudlet::getQSettings();
-    const QString key = qsl("Editor/banner_permanently_hidden/%1").arg(QString::fromLatin1(enumName).toLower());
+    const QString key = qsl("Editor/banner_permanently_hidden/%1").arg(enumName.toLower());
     settings->setValue(key, hidden);
 }

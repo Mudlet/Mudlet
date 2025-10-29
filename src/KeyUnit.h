@@ -24,6 +24,8 @@
  ***************************************************************************/
 
 
+#include "utils.h"
+
 #include <QMap>
 #include <QObject>
 #include <QPointer>
@@ -33,7 +35,6 @@
 
 class Host;
 class TKey;
-
 
 class KeyUnit : public QObject
 {
@@ -62,6 +63,7 @@ public:
     bool registerKey(TKey* pT);
     void unregisterKey(TKey* pT);
     void reParentKey(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
     QString getKeyName(const Qt::Key, const Qt::KeyboardModifiers) const;
