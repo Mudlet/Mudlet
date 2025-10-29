@@ -44,7 +44,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     connect(packageList, &QListWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleRemoveButton);
     connect(packageStatusList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_setPackageList);
     connect(pushButton_installFile, &QAbstractButton::clicked, this, &dlgPackageManager::slot_installPackageFromFile);
-    connect(pushButton_installRepo, &QAbstractButton::clicked, this, &dlgPackageManager::slot_installPackageFromRepository);    
+    connect(pushButton_installRepo, &QAbstractButton::clicked, this, &dlgPackageManager::slot_installPackageFromRepository);
     connect(pushButton_remove, &QAbstractButton::clicked, this, &dlgPackageManager::slot_removePackages);
     connect(pushButton_report, &QAbstractButton::clicked, this, &dlgPackageManager::slot_openBugWebsite);
     connect(pushButton_website, &QAbstractButton::clicked, this, &dlgPackageManager::slot_openPackageWebsite);
@@ -675,7 +675,8 @@ void dlgPackageManager::slot_toggleRemoveButton()
 
 void dlgPackageManager::closeEvent(QCloseEvent* event)
 {
-    if (mpHost) {
+    // Only emit signal to restore focus if we're not shutting down
+    if (mudlet::self() && !mudlet::self()->isGoingDown() && mpHost && !mpHost->isClosingDown()) {
         emit packageManagerClosing(mpHost->getName());
     }
     QDialog::closeEvent(event);
