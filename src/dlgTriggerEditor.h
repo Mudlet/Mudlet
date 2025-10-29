@@ -26,7 +26,7 @@
  ***************************************************************************/
 
 
-#include "EditorViewType.h"
+#include "MudletEditorCommand.h"
 #include "ui_trigger_editor.h"
 
 #include <QPointer>
@@ -50,6 +50,7 @@
 #include "MudletUndoStack.h"
 
 #include <QDialog>
+#include <QDockWidget>
 #include <QFlag>
 #include <QListWidgetItem>
 #include <QScrollArea>

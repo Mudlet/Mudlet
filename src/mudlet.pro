@@ -643,6 +643,7 @@ SOURCES += \
     dlgTriggersMainArea.cpp \
     dlgVarsMainArea.cpp \
     EAction.cpp \
+    EditorItemXMLHelpers.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
     FileOpenHandler.cpp \
@@ -659,6 +660,12 @@ SOURCES += \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
+    MudletAddItemCommand.cpp \
+    MudletDeleteItemCommand.cpp \
+    MudletModifyPropertyCommand.cpp \
+    MudletMoveItemCommand.cpp \
+    MudletToggleActiveCommand.cpp \
+    MudletUndoStack.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     SecureStringUtils.cpp \
@@ -790,6 +797,7 @@ HEADERS += \
     dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
     EAction.h \
+    EditorItemXMLHelpers.h \
     exitstreewidget.h \
     FileOpenHandler.h \
     GifTracker.h \
@@ -804,6 +812,13 @@ HEADERS += \
     mapInfoContributorManager.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
+    MudletEditorCommand.h \
+    MudletAddItemCommand.h \
+    MudletDeleteItemCommand.h \
+    MudletModifyPropertyCommand.h \
+    MudletMoveItemCommand.h \
+    MudletToggleActiveCommand.h \
+    MudletUndoStack.h \
     MxpTag.h \
     ScriptUnit.h \
     SecureStringUtils.h \

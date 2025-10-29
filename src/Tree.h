@@ -46,9 +46,9 @@ public:
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
     virtual void setID(const int id) { mID = id; }
-    // New safer API using enum for insertion mode
+    // Enum-based API for clear insertion mode specification
     void addChild(T* newChild, TreeItemInsertMode mode, int position = 0);
-    // Old API kept for backward compatibility (delegates to new API)
+    // Legacy integer-based position API - delegates to enum-based version
     void addChild(T* newChild, int parentPostion = -1, int parentPosition = -1);
     bool popChild(T* removeChild);
     void setParent(T* parent);
@@ -261,7 +261,7 @@ void Tree<T>::disableFamily()
     }
 }
 
-// New enum-based API implementation
+// Enum-based addChild implementation
 template <class T>
 void Tree<T>::addChild(T* newChild, TreeItemInsertMode mode, int position)
 {
@@ -280,7 +280,7 @@ void Tree<T>::addChild(T* newChild, TreeItemInsertMode mode, int position)
     }
 }
 
-// Old API for backward compatibility - delegates to new enum-based API
+// Legacy integer-based addChild - delegates to enum-based version
 template <class T>
 void Tree<T>::addChild(T* newChild, int parentPosition, int childPosition)
 {

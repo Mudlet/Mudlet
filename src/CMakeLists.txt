@@ -105,11 +105,11 @@ set(mudlet_SRCS
     MudletInstanceCoordinator.cpp
     MudletUndoStack.cpp
     MxpTag.cpp
-    commands/MudletAddItemCommand.cpp
-    commands/MudletDeleteItemCommand.cpp
-    commands/MudletModifyPropertyCommand.cpp
-    commands/MudletMoveItemCommand.cpp
-    commands/MudletToggleActiveCommand.cpp
+    MudletAddItemCommand.cpp
+    MudletDeleteItemCommand.cpp
+    MudletModifyPropertyCommand.cpp
+    MudletMoveItemCommand.cpp
+    MudletToggleActiveCommand.cpp
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
@@ -302,15 +302,15 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
-    MudletCommand.h
+    MudletEditorCommand.h
     MudletInstanceCoordinator.h
     MudletUndoStack.h
     MxpTag.h
-    commands/MudletAddItemCommand.h
-    commands/MudletDeleteItemCommand.h
-    commands/MudletModifyPropertyCommand.h
-    commands/MudletMoveItemCommand.h
-    commands/MudletToggleActiveCommand.h
+    MudletAddItemCommand.h
+    MudletDeleteItemCommand.h
+    MudletModifyPropertyCommand.h
+    MudletMoveItemCommand.h
+    MudletToggleActiveCommand.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h

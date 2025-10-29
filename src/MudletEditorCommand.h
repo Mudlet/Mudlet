@@ -1,8 +1,8 @@
-#ifndef MUDLET_MUDLETCOMMAND_H
-#define MUDLET_MUDLETCOMMAND_H
+#ifndef MUDLET_MUDLETEDITORCOMMAND_H
+#define MUDLET_MUDLETEDITORCOMMAND_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,58 +20,45 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "EditorViewType.h"
-
 #include <QList>
 #include <QUndoCommand>
 
 class Host;
 
-/*!
- * \brief Base class for all Mudlet undo commands using Qt's QUndoStack framework
- *
- * Extends QUndoCommand with Mudlet-specific functionality:
- * - EditorViewType tracking (which editor view triggered the command)
- * - Affected item IDs (for targeted UI updates)
- * - Item ID remapping (when items are deleted and recreated with new IDs)
- *
- * This class replaces the custom EditorCommand base class as part of the
- * migration to Qt's built-in undo framework.
- */
-class MudletCommand : public QUndoCommand
+// Editor view type enum - used by commands and dlgTriggerEditor
+enum class EditorViewType {
+    cmUnknownView = 0,
+    cmTriggerView = 0x01,
+    cmTimerView = 0x02,
+    cmAliasView = 0x03,
+    cmScriptView = 0x04,
+    cmActionView = 0x05,
+    cmKeysView = 0x06,
+    cmVarsView = 0x07
+};
+
+// Base class for editor undo commands. Extends QUndoCommand with:
+// - EditorViewType tracking (which editor view triggered the command)
+// - Affected item IDs (for targeted UI updates)
+// - Item ID remapping (when items are deleted and recreated with new IDs)
+class MudletEditorCommand : public QUndoCommand
 {
 public:
-    explicit MudletCommand(Host* host, QUndoCommand* parent = nullptr)
+    explicit MudletEditorCommand(Host* host, QUndoCommand* parent = nullptr)
         : QUndoCommand(parent), mpHost(host) {}
 
-    explicit MudletCommand(const QString& text, Host* host, QUndoCommand* parent = nullptr)
+    explicit MudletEditorCommand(const QString& text, Host* host, QUndoCommand* parent = nullptr)
         : QUndoCommand(text, parent), mpHost(host) {}
 
-    ~MudletCommand() override = default;
+    ~MudletEditorCommand() override = default;
 
-    // Mudlet-specific extensions
-
-    /*!
-     * \brief Returns the editor view type that triggered this command
-     * \return The view type (triggers, aliases, timers, etc.)
-     */
+    // Returns which editor view type this command belongs to (triggers, aliases, etc.)
     virtual EditorViewType viewType() const = 0;
 
-    /*!
-     * \brief Returns the list of item IDs affected by this command
-     * \return List of item IDs for targeted UI updates
-     */
+    // Returns list of item IDs affected by this command (for targeted UI updates)
     virtual QList<int> affectedItemIDs() const = 0;
 
-    /*!
-     * \brief Remaps an item ID when an item is deleted and recreated
-     *
-     * When an item is deleted and then restored via undo, it gets a new ID.
-     * This method updates any stored IDs in the command to reflect the change.
-     *
-     * \param oldID The original item ID
-     * \param newID The new item ID after recreation
-     */
+    // Updates stored IDs when items are deleted and recreated with new IDs
     virtual void remapItemID(int oldID, int newID) = 0;
 
     // QUndoCommand overrides (kept pure virtual to enforce implementation)
@@ -82,4 +69,4 @@ protected:
     Host* mpHost;
 };
 
-#endif // MUDLET_MUDLETCOMMAND_H
+#endif // MUDLET_MUDLETEDITORCOMMAND_H

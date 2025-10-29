@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,7 +30,7 @@
 
 MudletAddItemCommand::MudletAddItemCommand(EditorViewType viewType, int itemID, int parentID,
                                            int positionInParent, bool isFolder, const QString& itemName, Host* host)
-    : MudletCommand(generateText(viewType, itemName, isFolder), host)
+    : MudletEditorCommand(generateText(viewType, itemName, isFolder), host)
     , mViewType(viewType)
     , mItemID(itemID)
     , mParentID(parentID)
@@ -248,6 +248,7 @@ void MudletAddItemCommand::redo()
     }
 }
 
+// Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
 void MudletAddItemCommand::remapItemID(int oldID, int newID)
 {
     if (mItemID == oldID) {
@@ -263,38 +264,62 @@ void MudletAddItemCommand::remapItemID(int oldID, int newID)
 
 QString MudletAddItemCommand::generateText(EditorViewType viewType, const QString& itemName, bool isFolder)
 {
-    QString typeName;
     switch (viewType) {
     case EditorViewType::cmTriggerView:
-        //: Undo/redo menu text for adding a trigger or trigger folder
-        typeName = isFolder ? QObject::tr("trigger group") : QObject::tr("trigger");
-        break;
+        if (isFolder) {
+            //: Undo/redo menu text for adding a trigger folder
+            return QObject::tr("Add trigger group \"%1\"").arg(itemName);
+        } else {
+            //: Undo/redo menu text for adding a trigger
+            return QObject::tr("Add trigger \"%1\"").arg(itemName);
+        }
     case EditorViewType::cmAliasView:
-        //: Undo/redo menu text for adding an alias or alias folder
-        typeName = isFolder ? QObject::tr("alias group") : QObject::tr("alias");
-        break;
+        if (isFolder) {
+            //: Undo/redo menu text for adding an alias folder
+            return QObject::tr("Add alias group \"%1\"").arg(itemName);
+        } else {
+            //: Undo/redo menu text for adding an alias
+            return QObject::tr("Add alias \"%1\"").arg(itemName);
+        }
     case EditorViewType::cmTimerView:
-        //: Undo/redo menu text for adding a timer or timer folder
-        typeName = isFolder ? QObject::tr("timer group") : QObject::tr("timer");
-        break;
+        if (isFolder) {
+            //: Undo/redo menu text for adding a timer folder
+            return QObject::tr("Add timer group \"%1\"").arg(itemName);
+        } else {
+            //: Undo/redo menu text for adding a timer
+            return QObject::tr("Add timer \"%1\"").arg(itemName);
+        }
     case EditorViewType::cmScriptView:
-        //: Undo/redo menu text for adding a script or script folder
-        typeName = isFolder ? QObject::tr("script group") : QObject::tr("script");
-        break;
+        if (isFolder) {
+            //: Undo/redo menu text for adding a script folder
+            return QObject::tr("Add script group \"%1\"").arg(itemName);
+        } else {
+            //: Undo/redo menu text for adding a script
+            return QObject::tr("Add script \"%1\"").arg(itemName);
+        }
     case EditorViewType::cmKeysView:
-        //: Undo/redo menu text for adding a key binding or key folder
-        typeName = isFolder ? QObject::tr("key group") : QObject::tr("key");
-        break;
+        if (isFolder) {
+            //: Undo/redo menu text for adding a key folder
+            return QObject::tr("Add key group \"%1\"").arg(itemName);
+        } else {
+            //: Undo/redo menu text for adding a key binding
+            return QObject::tr("Add key \"%1\"").arg(itemName);
+        }
     case EditorViewType::cmActionView:
-        //: Undo/redo menu text for adding a button or button toolbar
-        typeName = isFolder ? QObject::tr("button group") : QObject::tr("button");
-        break;
+        if (isFolder) {
+            //: Undo/redo menu text for adding a button toolbar
+            return QObject::tr("Add button group \"%1\"").arg(itemName);
+        } else {
+            //: Undo/redo menu text for adding a button
+            return QObject::tr("Add button \"%1\"").arg(itemName);
+        }
     default:
-        //: Undo/redo menu text for adding an unknown item type
-        typeName = isFolder ? QObject::tr("group") : QObject::tr("item");
-        break;
+        if (isFolder) {
+            //: Undo/redo menu text for adding an unknown folder type
+            return QObject::tr("Add group \"%1\"").arg(itemName);
+        } else {
+            //: Undo/redo menu text for adding an unknown item type
+            return QObject::tr("Add item \"%1\"").arg(itemName);
+        }
     }
-
-    //: Undo/redo menu text. %1 = item type (e.g. "trigger"), %2 = item name
-    return QObject::tr("Add %1 \"%2\"").arg(typeName, itemName);
 }

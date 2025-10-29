@@ -63,9 +63,9 @@ public:
     bool killTrigger(const QString& name);
     bool registerTrigger(TTrigger* pT);
     void unregisterTrigger(TTrigger* pT);
-    // New safer API using enum for insertion mode
+    // Enum-based API for clear insertion mode specification
     void reParentTrigger(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
-    // Old API kept for backward compatibility (delegates to new API)
+    // Legacy integer-based position API - delegates to enum-based version
     void reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void processDataStream(const QString&, int);
     void compileAll();

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,9 +18,9 @@
  ***************************************************************************/
 
 #include "MudletUndoStack.h"
-#include "MudletCommand.h"
-#include "commands/MudletAddItemCommand.h"
-#include "commands/MudletDeleteItemCommand.h"
+#include "MudletEditorCommand.h"
+#include "MudletAddItemCommand.h"
+#include "MudletDeleteItemCommand.h"
 
 #include <QDebug>
 
@@ -95,8 +95,8 @@ void MudletUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorV
         return;
     }
 
-    // If this is a MudletCommand, collect its affected items
-    if (auto* mudletCmd = dynamic_cast<const MudletCommand*>(cmd)) {
+    // If this is a MudletEditorCommand, collect its affected items
+    if (auto* mudletCmd = dynamic_cast<const MudletEditorCommand*>(cmd)) {
         EditorViewType viewType = mudletCmd->viewType();
         QList<int> itemIDs = mudletCmd->affectedItemIDs();
 
@@ -203,6 +203,7 @@ void MudletUndoStack::redo()
     }
 }
 
+// Updates all stored item IDs across the entire undo stack when an item gets recreated with a new ID
 void MudletUndoStack::remapItemIDs(int oldID, int newID)
 {
     // Helper lambda to recursively remap IDs in a command and all its children
@@ -212,7 +213,7 @@ void MudletUndoStack::remapItemIDs(int oldID, int newID)
         }
 
         // Remap this command
-        if (auto* mudletCmd = dynamic_cast<MudletCommand*>(const_cast<QUndoCommand*>(cmd))) {
+        if (auto* mudletCmd = dynamic_cast<MudletEditorCommand*>(const_cast<QUndoCommand*>(cmd))) {
             mudletCmd->remapItemID(oldID, newID);
         }
 

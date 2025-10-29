@@ -2,7 +2,7 @@
 #define MUDLET_MUDLETDELETEITEMCOMMAND_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,26 +20,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletCommand.h"
-#include "EditorViewType.h"
+#include "MudletEditorCommand.h"
 
 #include <QList>
 #include <QString>
 
-/*!
- * \brief Qt undo command for deleting items
- *
- * Handles deletion of single or multiple items by storing XML snapshots.
- * Uses built-in batching (QList<DeletedItemInfo>) for efficiency - delete
- * operations naturally come as sets with ordering constraints.
- *
- * Key design decisions:
- * - Stores full item hierarchy in XML (children are included automatically)
- * - Handles ID remapping when items are restored (may get new IDs)
- * - Nullifies mpHost before deletion to prevent unregistration issues
- * - Sorts items for correct restoration order (parents before children)
- */
-class MudletDeleteItemCommand : public MudletCommand
+// Undo command for deleting items. Stores XML snapshots of deleted items (including children).
+// Handles single or multiple items efficiently. Nullifies mpHost before deletion to prevent
+// unregistration issues. Sorts items for correct restoration order (parents before children).
+class MudletDeleteItemCommand : public MudletEditorCommand
 {
 public:
     struct DeletedItemInfo {

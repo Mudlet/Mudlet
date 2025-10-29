@@ -1,8 +1,8 @@
-#ifndef MUDLET_EDITORVIEWTYPE_H
-#define MUDLET_EDITORVIEWTYPE_H
+#ifndef MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H
+#define MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,16 +20,34 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// Editor view type enum - used by both dlgTriggerEditor and EditorUndoSystem
-enum class EditorViewType {
-    cmUnknownView = 0,
-    cmTriggerView = 0x01,
-    cmTimerView = 0x02,
-    cmAliasView = 0x03,
-    cmScriptView = 0x04,
-    cmActionView = 0x05,
-    cmKeysView = 0x06,
-    cmVarsView = 0x07
+#include "MudletEditorCommand.h"
+
+#include <QString>
+
+// Undo command for modifying item properties. Stores complete XML snapshots of old and new states.
+// Updates items in place (no ID changes). No skip-first-redo needed (change already applied).
+class MudletModifyPropertyCommand : public MudletEditorCommand
+{
+public:
+    MudletModifyPropertyCommand(EditorViewType viewType, int itemID,
+                                const QString& itemName,
+                                const QString& oldStateXML, const QString& newStateXML,
+                                Host* host);
+
+    void undo() override;
+    void redo() override;
+    EditorViewType viewType() const override { return mViewType; }
+    QList<int> affectedItemIDs() const override { return {mItemID}; }
+    void remapItemID(int oldID, int newID) override;
+
+private:
+    static QString generateText(EditorViewType viewType, const QString& itemName);
+
+    EditorViewType mViewType;
+    int mItemID;
+    QString mItemName;
+    QString mOldStateXML;
+    QString mNewStateXML;
 };
 
-#endif // MUDLET_EDITORVIEWTYPE_H
+#endif // MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H

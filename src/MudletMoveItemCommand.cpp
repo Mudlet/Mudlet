@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,7 +32,7 @@ MudletMoveItemCommand::MudletMoveItemCommand(EditorViewType viewType, int itemID
                                              int oldParentID, int newParentID,
                                              int oldPosition, int newPosition,
                                              const QString& itemName, Host* host)
-    : MudletCommand(generateText(viewType, itemName), host)
+    : MudletEditorCommand(generateText(viewType, itemName), host)
     , mViewType(viewType)
     , mItemID(itemID)
     , mOldParentID(oldParentID)
@@ -60,6 +60,7 @@ void MudletMoveItemCommand::redo()
     moveItem(mOldParentID, mNewParentID, mNewPosition);
 }
 
+// Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
 void MudletMoveItemCommand::remapItemID(int oldID, int newID)
 {
     if (mItemID == oldID) {
@@ -108,38 +109,27 @@ void MudletMoveItemCommand::moveItem(int fromParentID, int toParentID, int posit
 
 QString MudletMoveItemCommand::generateText(EditorViewType viewType, const QString& itemName)
 {
-    QString typeName;
     switch (viewType) {
     case EditorViewType::cmTriggerView:
-        //: Undo/redo menu text for moving a trigger to a different folder
-        typeName = QObject::tr("trigger");
-        break;
+        //: Undo/redo menu text for moving a trigger
+        return QObject::tr("Move trigger \"%1\"").arg(itemName);
     case EditorViewType::cmAliasView:
-        //: Undo/redo menu text for moving an alias to a different folder
-        typeName = QObject::tr("alias");
-        break;
+        //: Undo/redo menu text for moving an alias
+        return QObject::tr("Move alias \"%1\"").arg(itemName);
     case EditorViewType::cmTimerView:
-        //: Undo/redo menu text for moving a timer to a different folder
-        typeName = QObject::tr("timer");
-        break;
+        //: Undo/redo menu text for moving a timer
+        return QObject::tr("Move timer \"%1\"").arg(itemName);
     case EditorViewType::cmScriptView:
-        //: Undo/redo menu text for moving a script to a different folder
-        typeName = QObject::tr("script");
-        break;
+        //: Undo/redo menu text for moving a script
+        return QObject::tr("Move script \"%1\"").arg(itemName);
     case EditorViewType::cmKeysView:
-        //: Undo/redo menu text for moving a key binding to a different folder
-        typeName = QObject::tr("key");
-        break;
+        //: Undo/redo menu text for moving a key binding
+        return QObject::tr("Move key \"%1\"").arg(itemName);
     case EditorViewType::cmActionView:
-        //: Undo/redo menu text for moving a button to a different toolbar
-        typeName = QObject::tr("button");
-        break;
+        //: Undo/redo menu text for moving a button
+        return QObject::tr("Move button \"%1\"").arg(itemName);
     default:
-        //: Undo/redo menu text for moving an unknown item to a different location
-        typeName = QObject::tr("item");
-        break;
+        //: Undo/redo menu text for moving an unknown item
+        return QObject::tr("Move item \"%1\"").arg(itemName);
     }
-
-    //: Undo/redo menu text for moving an item. %1 = item type (e.g. "trigger"), %2 = item name
-    return QObject::tr("Move %1 \"%2\"").arg(typeName, itemName);
 }

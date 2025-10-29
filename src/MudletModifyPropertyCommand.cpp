@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,7 +32,7 @@ MudletModifyPropertyCommand::MudletModifyPropertyCommand(EditorViewType viewType
                                                          const QString& itemName,
                                                          const QString& oldStateXML, const QString& newStateXML,
                                                          Host* host)
-    : MudletCommand(generateText(viewType, itemName), host)
+    : MudletEditorCommand(generateText(viewType, itemName), host)
     , mViewType(viewType)
     , mItemID(itemID)
     , mItemName(itemName)
@@ -194,6 +194,7 @@ void MudletModifyPropertyCommand::redo()
     }
 }
 
+// Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
 void MudletModifyPropertyCommand::remapItemID(int oldID, int newID)
 {
     if (mItemID == oldID) {
@@ -203,38 +204,27 @@ void MudletModifyPropertyCommand::remapItemID(int oldID, int newID)
 
 QString MudletModifyPropertyCommand::generateText(EditorViewType viewType, const QString& itemName)
 {
-    QString typeName;
     switch (viewType) {
     case EditorViewType::cmTriggerView:
         //: Undo/redo menu text for modifying a trigger's properties
-        typeName = QObject::tr("trigger");
-        break;
+        return QObject::tr("Modify trigger \"%1\"").arg(itemName);
     case EditorViewType::cmAliasView:
         //: Undo/redo menu text for modifying an alias's properties
-        typeName = QObject::tr("alias");
-        break;
+        return QObject::tr("Modify alias \"%1\"").arg(itemName);
     case EditorViewType::cmTimerView:
         //: Undo/redo menu text for modifying a timer's properties
-        typeName = QObject::tr("timer");
-        break;
+        return QObject::tr("Modify timer \"%1\"").arg(itemName);
     case EditorViewType::cmScriptView:
         //: Undo/redo menu text for modifying a script's properties
-        typeName = QObject::tr("script");
-        break;
+        return QObject::tr("Modify script \"%1\"").arg(itemName);
     case EditorViewType::cmKeysView:
         //: Undo/redo menu text for modifying a key binding's properties
-        typeName = QObject::tr("key");
-        break;
+        return QObject::tr("Modify key \"%1\"").arg(itemName);
     case EditorViewType::cmActionView:
         //: Undo/redo menu text for modifying a button's properties
-        typeName = QObject::tr("button");
-        break;
+        return QObject::tr("Modify button \"%1\"").arg(itemName);
     default:
         //: Undo/redo menu text for modifying an unknown item's properties
-        typeName = QObject::tr("item");
-        break;
+        return QObject::tr("Modify item \"%1\"").arg(itemName);
     }
-
-    //: Undo/redo menu text for modifying item properties. %1 = item type (e.g. "trigger"), %2 = item name
-    return QObject::tr("Modify %1 \"%2\"").arg(typeName, itemName);
 }

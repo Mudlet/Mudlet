@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,7 +44,6 @@
 // =============================================================================
 
 // Internal helper functions for compression (static to keep them local to this file)
-// Typical compression ratio: 3-5× (2 KB → 400-600 bytes)
 static QString compressXML(const QString& xml) {
     if (xml.isEmpty()) {
         return QString();
@@ -59,7 +58,6 @@ static QString decompressXML(const QString& data) {
         return QString();
     }
 
-    // Backward compatibility: check if data is already raw XML
     if (data.startsWith('<')) {
         return data;
     }

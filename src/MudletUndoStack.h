@@ -2,7 +2,7 @@
 #define MUDLET_MUDLETUNDOSTACK_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,23 +20,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "EditorViewType.h"
-
 #include <QList>
 #include <QMap>
 #include <QUndoStack>
 
-/*!
- * \brief Wrapper around Qt's QUndoStack with Mudlet-specific features
- *
- * Extends QUndoStack to add:
- * - itemsChanged signal for targeted UI updates
- * - remapItemIDs() method for ID tracking when items are recreated
- * - Overridden undo()/redo() to emit custom signals
- *
- * This class replaces the custom EditorUndoSystem as part of the migration
- * to Qt's built-in undo framework.
- */
+enum class EditorViewType;  // Forward declaration
+
+// Wrapper around QUndoStack with Mudlet-specific features:
+// - itemsChanged signal for targeted UI updates
+// - remapItemIDs() for ID tracking when items are recreated
+// - Overridden undo()/redo() to emit custom signals
 class MudletUndoStack : public QUndoStack
 {
     Q_OBJECT
@@ -44,16 +37,7 @@ class MudletUndoStack : public QUndoStack
 public:
     explicit MudletUndoStack(QObject* parent = nullptr);
 
-    /*!
-     * \brief Remaps item IDs in all commands on the stack
-     *
-     * When an item is deleted and restored via undo, it gets a new ID.
-     * This method updates all commands on the undo/redo stacks to reflect
-     * the ID change.
-     *
-     * \param oldID The original item ID
-     * \param newID The new item ID after recreation
-     */
+    // Updates all commands on the stack when an item gets a new ID after undo/redo
     void remapItemIDs(int oldID, int newID);
 
     // Wrapper for push() to track when we're adding a new command vs undo/redo
@@ -73,15 +57,7 @@ public:
     bool wasLastCommandValid() const;
 
 signals:
-    /*!
-     * \brief Emitted when items are modified by undo/redo operations
-     *
-     * This signal allows the UI to refresh only the affected items,
-     * rather than refreshing the entire tree.
-     *
-     * \param viewType The editor view type (triggers, aliases, etc.)
-     * \param affectedItemIDs List of item IDs that were modified
-     */
+    // Emitted when items are modified by undo/redo (allows targeted UI updates instead of full refresh)
     void itemsChanged(EditorViewType viewType, QList<int> affectedItemIDs);
 
 protected:

@@ -1,8 +1,8 @@
-#ifndef MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H
-#define MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H
+#ifndef MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
+#define MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,45 +20,36 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletCommand.h"
-#include "EditorViewType.h"
+#include "MudletEditorCommand.h"
 
-#include <QString>
-
-/*!
- * \brief Qt undo command for modifying item properties
- *
- * Handles property changes (name, pattern, script code, enabled state, etc.)
- * by storing complete XML snapshots of the old and new states. Unlike
- * AddItemCommand which creates/deletes items, this updates existing items in place.
- *
- * Key design decisions:
- * - Uses full XML snapshots for simplicity and correctness
- * - No skip-first-redo pattern needed (change already applied before push)
- * - updateXXXFromXML modifies items in place (no ID change, no remapping needed)
- */
-class MudletModifyPropertyCommand : public MudletCommand
+// Undo command for toggling active/inactive state of items (triggers, aliases, timers, etc.)
+class MudletToggleActiveCommand : public MudletEditorCommand
 {
 public:
-    MudletModifyPropertyCommand(EditorViewType viewType, int itemID,
-                                const QString& itemName,
-                                const QString& oldStateXML, const QString& newStateXML,
-                                Host* host);
+    MudletToggleActiveCommand(EditorViewType viewType, int itemID,
+                              bool oldState, bool newState,
+                              const QString& itemName, Host* host);
 
     void undo() override;
     void redo() override;
+
     EditorViewType viewType() const override { return mViewType; }
     QList<int> affectedItemIDs() const override { return {mItemID}; }
+
     void remapItemID(int oldID, int newID) override;
 
 private:
-    static QString generateText(EditorViewType viewType, const QString& itemName);
+    void setItemActiveState(int itemID, bool active);
+    static QString generateText(EditorViewType viewType,
+                                const QString& itemName,
+                                bool newState);
 
     EditorViewType mViewType;
     int mItemID;
+    bool mOldActiveState;
+    bool mNewActiveState;
     QString mItemName;
-    QString mOldStateXML;
-    QString mNewStateXML;
+    mutable bool mSkipFirstRedo = true;  // Skip initial redo() called by QUndoStack::push()
 };
 
-#endif // MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H
+#endif // MUDLET_MUDLETTOGGLEACTIVECOMMAND_H

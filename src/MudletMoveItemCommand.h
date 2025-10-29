@@ -1,8 +1,8 @@
-#ifndef MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
-#define MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
+#ifndef MUDLET_MUDLETMOVEITEMCOMMAND_H
+#define MUDLET_MUDLETMOVEITEMCOMMAND_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,42 +20,37 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletCommand.h"
+#include "MudletEditorCommand.h"
 
-/*!
- * \brief Command for toggling active/inactive state of triggers, aliases, etc.
- *
- * This is the Qt QUndoCommand version of the custom ToggleActiveCommand.
- * Handles activation/deactivation of all item types: triggers, aliases,
- * timers, scripts, keys, and actions.
- */
-class MudletToggleActiveCommand : public MudletCommand
+class Host;
+
+// Undo command for moving items. Handles reparenting and position changes in the editor tree.
+class MudletMoveItemCommand : public MudletEditorCommand
 {
 public:
-    MudletToggleActiveCommand(EditorViewType viewType, int itemID,
-                              bool oldState, bool newState,
-                              const QString& itemName, Host* host);
+    MudletMoveItemCommand(EditorViewType viewType, int itemID,
+                          int oldParentID, int newParentID,
+                          int oldPosition, int newPosition,
+                          const QString& itemName, Host* host);
 
     void undo() override;
     void redo() override;
-
     EditorViewType viewType() const override { return mViewType; }
     QList<int> affectedItemIDs() const override { return {mItemID}; }
-
     void remapItemID(int oldID, int newID) override;
 
 private:
-    void setItemActiveState(int itemID, bool active);
-    static QString generateText(EditorViewType viewType,
-                                const QString& itemName,
-                                bool newState);
+    void moveItem(int fromParentID, int toParentID, int position);
+    static QString generateText(EditorViewType viewType, const QString& itemName);
 
     EditorViewType mViewType;
     int mItemID;
-    bool mOldActiveState;
-    bool mNewActiveState;
+    int mOldParentID;
+    int mNewParentID;
+    int mOldPosition;
+    int mNewPosition;
     QString mItemName;
     mutable bool mSkipFirstRedo = true;  // Skip initial redo() called by QUndoStack::push()
 };
 
-#endif // MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
+#endif // MUDLET_MUDLETMOVEITEMCOMMAND_H

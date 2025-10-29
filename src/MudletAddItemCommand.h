@@ -2,7 +2,7 @@
 #define MUDLET_MUDLETADDITEMCOMMAND_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,18 +20,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletCommand.h"
+#include "MudletEditorCommand.h"
 
 class Host;
 
-/*!
- * \brief Qt undo command for adding new items
- *
- * Handles undo/redo of item additions. Undo exports the item to XML and deletes it.
- * Redo recreates the item from the XML snapshot. Since recreated items may get new IDs,
- * this command tracks ID changes and triggers remapping in the undo stack.
- */
-class MudletAddItemCommand : public MudletCommand
+// Undo command for adding items. Undo exports to XML and deletes; redo recreates from XML.
+// Tracks ID changes when items are recreated with new IDs.
+class MudletAddItemCommand : public MudletEditorCommand
 {
 public:
     MudletAddItemCommand(EditorViewType viewType, int itemID, int parentID,

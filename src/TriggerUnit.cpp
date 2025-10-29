@@ -120,7 +120,7 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     }
 }
 
-// New enum-based API implementation
+// Enum-based reParentTrigger implementation
 void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
 {
     TTrigger* pOldParent = getTriggerPrivate(oldParentID);
@@ -150,7 +150,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     }
 }
 
-// Old API for backward compatibility - delegates to new enum-based API
+// Legacy integer-based reParentTrigger - delegates to enum-based version
 void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
 {
     if (parentPosition == -1 || childPosition == -1) {

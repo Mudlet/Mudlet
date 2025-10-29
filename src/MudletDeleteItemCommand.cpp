@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,7 +31,7 @@
 #include <algorithm>
 
 MudletDeleteItemCommand::MudletDeleteItemCommand(EditorViewType viewType, const QList<DeletedItemInfo>& deletedItems, Host* host)
-: MudletCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host)
+: MudletEditorCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host)
 , mViewType(viewType)
 , mDeletedItems(deletedItems)
 {
@@ -740,44 +740,56 @@ void MudletDeleteItemCommand::redo() {
 }
 QString MudletDeleteItemCommand::generateText(EditorViewType viewType, int itemCount, const QString& firstName)
 {
-    QString typeName;
-    switch (viewType) {
-    case EditorViewType::cmTriggerView:
-        //: Undo/redo menu text for deleting trigger(s) - singular and plural forms
-        typeName = (itemCount == 1) ? QObject::tr("trigger") : QObject::tr("triggers");
-        break;
-    case EditorViewType::cmAliasView:
-        //: Undo/redo menu text for deleting alias(es) - singular and plural forms
-        typeName = (itemCount == 1) ? QObject::tr("alias") : QObject::tr("aliases");
-        break;
-    case EditorViewType::cmTimerView:
-        //: Undo/redo menu text for deleting timer(s) - singular and plural forms
-        typeName = (itemCount == 1) ? QObject::tr("timer") : QObject::tr("timers");
-        break;
-    case EditorViewType::cmScriptView:
-        //: Undo/redo menu text for deleting script(s) - singular and plural forms
-        typeName = (itemCount == 1) ? QObject::tr("script") : QObject::tr("scripts");
-        break;
-    case EditorViewType::cmKeysView:
-        //: Undo/redo menu text for deleting key binding(s) - singular and plural forms
-        typeName = (itemCount == 1) ? QObject::tr("key") : QObject::tr("keys");
-        break;
-    case EditorViewType::cmActionView:
-        //: Undo/redo menu text for deleting button(s) - singular and plural forms
-        typeName = (itemCount == 1) ? QObject::tr("button") : QObject::tr("buttons");
-        break;
-    default:
-        //: Undo/redo menu text for deleting unknown item(s) - singular and plural forms
-        typeName = (itemCount == 1) ? QObject::tr("item") : QObject::tr("items");
-        break;
-    }
-
     if (itemCount == 1) {
-        //: Undo/redo menu text for deleting a single item. %1 = item type (e.g. "trigger"), %2 = item name
-        return QObject::tr("Delete %1 \"%2\"").arg(typeName, firstName);
+        // Single item deletion - use item name
+        switch (viewType) {
+        case EditorViewType::cmTriggerView:
+            //: Undo/redo menu text for deleting a single trigger
+            return QObject::tr("Delete trigger \"%1\"").arg(firstName);
+        case EditorViewType::cmAliasView:
+            //: Undo/redo menu text for deleting a single alias
+            return QObject::tr("Delete alias \"%1\"").arg(firstName);
+        case EditorViewType::cmTimerView:
+            //: Undo/redo menu text for deleting a single timer
+            return QObject::tr("Delete timer \"%1\"").arg(firstName);
+        case EditorViewType::cmScriptView:
+            //: Undo/redo menu text for deleting a single script
+            return QObject::tr("Delete script \"%1\"").arg(firstName);
+        case EditorViewType::cmKeysView:
+            //: Undo/redo menu text for deleting a single key binding
+            return QObject::tr("Delete key \"%1\"").arg(firstName);
+        case EditorViewType::cmActionView:
+            //: Undo/redo menu text for deleting a single button
+            return QObject::tr("Delete button \"%1\"").arg(firstName);
+        default:
+            //: Undo/redo menu text for deleting a single unknown item
+            return QObject::tr("Delete item \"%1\"").arg(firstName);
+        }
     } else {
-        //: Undo/redo menu text for deleting multiple items. %1 = count, %2 = plural item type (e.g. "triggers")
-        return QObject::tr("Delete %1 %2").arg(itemCount).arg(typeName);
+        // Multiple items deletion - use count
+        switch (viewType) {
+        case EditorViewType::cmTriggerView:
+            //: Undo/redo menu text for deleting multiple triggers. %1 = count
+            return QObject::tr("Delete %1 triggers").arg(itemCount);
+        case EditorViewType::cmAliasView:
+            //: Undo/redo menu text for deleting multiple aliases. %1 = count
+            return QObject::tr("Delete %1 aliases").arg(itemCount);
+        case EditorViewType::cmTimerView:
+            //: Undo/redo menu text for deleting multiple timers. %1 = count
+            return QObject::tr("Delete %1 timers").arg(itemCount);
+        case EditorViewType::cmScriptView:
+            //: Undo/redo menu text for deleting multiple scripts. %1 = count
+            return QObject::tr("Delete %1 scripts").arg(itemCount);
+        case EditorViewType::cmKeysView:
+            //: Undo/redo menu text for deleting multiple key bindings. %1 = count
+            return QObject::tr("Delete %1 keys").arg(itemCount);
+        case EditorViewType::cmActionView:
+            //: Undo/redo menu text for deleting multiple buttons. %1 = count
+            return QObject::tr("Delete %1 buttons").arg(itemCount);
+        default:
+            //: Undo/redo menu text for deleting multiple unknown items. %1 = count
+            return QObject::tr("Delete %1 items").arg(itemCount);
+        }
     }
 }
 
@@ -790,6 +802,7 @@ QList<int> MudletDeleteItemCommand::affectedItemIDs() const
     return ids;
 }
 
+// Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
 void MudletDeleteItemCommand::remapItemID(int oldID, int newID)
 {
     for (auto& item : mDeletedItems) {
