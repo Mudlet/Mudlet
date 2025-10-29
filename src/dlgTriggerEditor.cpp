@@ -4342,7 +4342,7 @@ void dlgTriggerEditor::slot_batchMoveStarted()
         return;
     }
 
-    mpUndoStack->beginMacro(tr("Move items"));
+    mpUndoStack->beginMacro(tr("move items"));
 }
 
 void dlgTriggerEditor::slot_batchMoveEnded()
@@ -5270,7 +5270,8 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New trigger group") : tr("New trigger");
     if (mpUndoStack) {
-        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New trigger")
+        mpUndoStack->beginMacro(tr("add %1").arg(name));
     }
     QStringList nameList { name };
     const QStringList patterns;
@@ -5392,7 +5393,8 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New timer group") : tr("New timer");
     if (mpUndoStack) {
-        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New timer")
+        mpUndoStack->beginMacro(tr("add %1").arg(name));
     }
     QStringList nameList = { name };
     const QString command = "";
@@ -5570,7 +5572,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
     // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder? tr("New key group") : tr("New key");
     if (mpUndoStack) {
-        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New key")
+        mpUndoStack->beginMacro(tr("add %1").arg(name));
     }
     QStringList nameList = { name };
     const QString script = "";
@@ -5681,7 +5684,8 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New alias group") : tr("New alias");
     if (mpUndoStack) {
-        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New alias")
+        mpUndoStack->beginMacro(tr("add %1").arg(name));
     }
     QStringList nameList = { name };
     const QString regex = "";
@@ -5795,7 +5799,8 @@ void dlgTriggerEditor::addAction(bool isFolder)
     // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New menu") : tr("New button");
     if (mpUndoStack) {
-        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New button")
+        mpUndoStack->beginMacro(tr("add %1").arg(name));
     }
     QStringList nameList = { name };
     const QString cmdButtonUp = "";
@@ -5916,7 +5921,8 @@ void dlgTriggerEditor::addScript(bool isFolder)
     // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New script group") : tr("New script");
     if (mpUndoStack) {
-        mpUndoStack->beginMacro(tr("Add %1").arg(name));
+        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New script")
+        mpUndoStack->beginMacro(tr("add %1").arg(name));
     }
     QStringList nameList = { name };
     const QString script;
