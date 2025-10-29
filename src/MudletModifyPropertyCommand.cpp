@@ -207,24 +207,24 @@ QString MudletModifyPropertyCommand::generateText(EditorViewType viewType, const
     switch (viewType) {
     case EditorViewType::cmTriggerView:
         //: Undo/redo menu text for modifying a trigger's properties
-        return QObject::tr("Modify trigger \"%1\"").arg(itemName);
+        return QObject::tr("modify trigger \"%1\"").arg(itemName);
     case EditorViewType::cmAliasView:
         //: Undo/redo menu text for modifying an alias's properties
-        return QObject::tr("Modify alias \"%1\"").arg(itemName);
+        return QObject::tr("modify alias \"%1\"").arg(itemName);
     case EditorViewType::cmTimerView:
         //: Undo/redo menu text for modifying a timer's properties
-        return QObject::tr("Modify timer \"%1\"").arg(itemName);
+        return QObject::tr("modify timer \"%1\"").arg(itemName);
     case EditorViewType::cmScriptView:
         //: Undo/redo menu text for modifying a script's properties
-        return QObject::tr("Modify script \"%1\"").arg(itemName);
+        return QObject::tr("modify script \"%1\"").arg(itemName);
     case EditorViewType::cmKeysView:
         //: Undo/redo menu text for modifying a key binding's properties
-        return QObject::tr("Modify key \"%1\"").arg(itemName);
+        return QObject::tr("modify key \"%1\"").arg(itemName);
     case EditorViewType::cmActionView:
         //: Undo/redo menu text for modifying a button's properties
-        return QObject::tr("Modify button \"%1\"").arg(itemName);
+        return QObject::tr("modify button \"%1\"").arg(itemName);
     default:
         //: Undo/redo menu text for modifying an unknown item's properties
-        return QObject::tr("Modify item \"%1\"").arg(itemName);
+        return QObject::tr("modify item \"%1\"").arg(itemName);
     }
 }

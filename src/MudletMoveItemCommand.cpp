@@ -112,24 +112,24 @@ QString MudletMoveItemCommand::generateText(EditorViewType viewType, const QStri
     switch (viewType) {
     case EditorViewType::cmTriggerView:
         //: Undo/redo menu text for moving a trigger
-        return QObject::tr("Move trigger \"%1\"").arg(itemName);
+        return QObject::tr("move trigger \"%1\"").arg(itemName);
     case EditorViewType::cmAliasView:
         //: Undo/redo menu text for moving an alias
-        return QObject::tr("Move alias \"%1\"").arg(itemName);
+        return QObject::tr("move alias \"%1\"").arg(itemName);
     case EditorViewType::cmTimerView:
         //: Undo/redo menu text for moving a timer
-        return QObject::tr("Move timer \"%1\"").arg(itemName);
+        return QObject::tr("move timer \"%1\"").arg(itemName);
     case EditorViewType::cmScriptView:
         //: Undo/redo menu text for moving a script
-        return QObject::tr("Move script \"%1\"").arg(itemName);
+        return QObject::tr("move script \"%1\"").arg(itemName);
     case EditorViewType::cmKeysView:
         //: Undo/redo menu text for moving a key binding
-        return QObject::tr("Move key \"%1\"").arg(itemName);
+        return QObject::tr("move key \"%1\"").arg(itemName);
     case EditorViewType::cmActionView:
         //: Undo/redo menu text for moving a button
-        return QObject::tr("Move button \"%1\"").arg(itemName);
+        return QObject::tr("move button \"%1\"").arg(itemName);
     default:
         //: Undo/redo menu text for moving an unknown item
-        return QObject::tr("Move item \"%1\"").arg(itemName);
+        return QObject::tr("move item \"%1\"").arg(itemName);
     }
 }

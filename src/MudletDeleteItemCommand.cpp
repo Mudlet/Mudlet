@@ -745,50 +745,50 @@ QString MudletDeleteItemCommand::generateText(EditorViewType viewType, int itemC
         switch (viewType) {
         case EditorViewType::cmTriggerView:
             //: Undo/redo menu text for deleting a single trigger
-            return QObject::tr("Delete trigger \"%1\"").arg(firstName);
+            return QObject::tr("delete trigger \"%1\"").arg(firstName);
         case EditorViewType::cmAliasView:
             //: Undo/redo menu text for deleting a single alias
-            return QObject::tr("Delete alias \"%1\"").arg(firstName);
+            return QObject::tr("delete alias \"%1\"").arg(firstName);
         case EditorViewType::cmTimerView:
             //: Undo/redo menu text for deleting a single timer
-            return QObject::tr("Delete timer \"%1\"").arg(firstName);
+            return QObject::tr("delete timer \"%1\"").arg(firstName);
         case EditorViewType::cmScriptView:
             //: Undo/redo menu text for deleting a single script
-            return QObject::tr("Delete script \"%1\"").arg(firstName);
+            return QObject::tr("delete script \"%1\"").arg(firstName);
         case EditorViewType::cmKeysView:
             //: Undo/redo menu text for deleting a single key binding
-            return QObject::tr("Delete key \"%1\"").arg(firstName);
+            return QObject::tr("delete key \"%1\"").arg(firstName);
         case EditorViewType::cmActionView:
             //: Undo/redo menu text for deleting a single button
-            return QObject::tr("Delete button \"%1\"").arg(firstName);
+            return QObject::tr("delete button \"%1\"").arg(firstName);
         default:
             //: Undo/redo menu text for deleting a single unknown item
-            return QObject::tr("Delete item \"%1\"").arg(firstName);
+            return QObject::tr("delete item \"%1\"").arg(firstName);
         }
     } else {
         // Multiple items deletion - use count
         switch (viewType) {
         case EditorViewType::cmTriggerView:
             //: Undo/redo menu text for deleting multiple triggers. %1 = count
-            return QObject::tr("Delete %1 triggers").arg(itemCount);
+            return QObject::tr("delete %1 triggers").arg(itemCount);
         case EditorViewType::cmAliasView:
             //: Undo/redo menu text for deleting multiple aliases. %1 = count
-            return QObject::tr("Delete %1 aliases").arg(itemCount);
+            return QObject::tr("delete %1 aliases").arg(itemCount);
         case EditorViewType::cmTimerView:
             //: Undo/redo menu text for deleting multiple timers. %1 = count
-            return QObject::tr("Delete %1 timers").arg(itemCount);
+            return QObject::tr("delete %1 timers").arg(itemCount);
         case EditorViewType::cmScriptView:
             //: Undo/redo menu text for deleting multiple scripts. %1 = count
-            return QObject::tr("Delete %1 scripts").arg(itemCount);
+            return QObject::tr("delete %1 scripts").arg(itemCount);
         case EditorViewType::cmKeysView:
             //: Undo/redo menu text for deleting multiple key bindings. %1 = count
-            return QObject::tr("Delete %1 keys").arg(itemCount);
+            return QObject::tr("delete %1 keys").arg(itemCount);
         case EditorViewType::cmActionView:
             //: Undo/redo menu text for deleting multiple buttons. %1 = count
-            return QObject::tr("Delete %1 buttons").arg(itemCount);
+            return QObject::tr("delete %1 buttons").arg(itemCount);
         default:
             //: Undo/redo menu text for deleting multiple unknown items. %1 = count
-            return QObject::tr("Delete %1 items").arg(itemCount);
+            return QObject::tr("delete %1 items").arg(itemCount);
         }
     }
 }

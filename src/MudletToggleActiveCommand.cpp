@@ -136,50 +136,50 @@ QString MudletToggleActiveCommand::generateText(EditorViewType viewType,
         switch (viewType) {
         case EditorViewType::cmTriggerView:
             //: Undo/redo menu text for activating a trigger
-            return QObject::tr("Activate trigger \"%1\"").arg(itemName);
+            return QObject::tr("activate trigger \"%1\"").arg(itemName);
         case EditorViewType::cmAliasView:
             //: Undo/redo menu text for activating an alias
-            return QObject::tr("Activate alias \"%1\"").arg(itemName);
+            return QObject::tr("activate alias \"%1\"").arg(itemName);
         case EditorViewType::cmTimerView:
             //: Undo/redo menu text for activating a timer
-            return QObject::tr("Activate timer \"%1\"").arg(itemName);
+            return QObject::tr("activate timer \"%1\"").arg(itemName);
         case EditorViewType::cmScriptView:
             //: Undo/redo menu text for activating a script
-            return QObject::tr("Activate script \"%1\"").arg(itemName);
+            return QObject::tr("activate script \"%1\"").arg(itemName);
         case EditorViewType::cmKeysView:
             //: Undo/redo menu text for activating a key binding
-            return QObject::tr("Activate key \"%1\"").arg(itemName);
+            return QObject::tr("activate key \"%1\"").arg(itemName);
         case EditorViewType::cmActionView:
             //: Undo/redo menu text for activating a button
-            return QObject::tr("Activate button \"%1\"").arg(itemName);
+            return QObject::tr("activate button \"%1\"").arg(itemName);
         default:
             //: Undo/redo menu text for activating an unknown item
-            return QObject::tr("Activate item \"%1\"").arg(itemName);
+            return QObject::tr("activate item \"%1\"").arg(itemName);
         }
     } else {
         // Deactivating an item
         switch (viewType) {
         case EditorViewType::cmTriggerView:
             //: Undo/redo menu text for deactivating a trigger
-            return QObject::tr("Deactivate trigger \"%1\"").arg(itemName);
+            return QObject::tr("deactivate trigger \"%1\"").arg(itemName);
         case EditorViewType::cmAliasView:
             //: Undo/redo menu text for deactivating an alias
-            return QObject::tr("Deactivate alias \"%1\"").arg(itemName);
+            return QObject::tr("deactivate alias \"%1\"").arg(itemName);
         case EditorViewType::cmTimerView:
             //: Undo/redo menu text for deactivating a timer
-            return QObject::tr("Deactivate timer \"%1\"").arg(itemName);
+            return QObject::tr("deactivate timer \"%1\"").arg(itemName);
         case EditorViewType::cmScriptView:
             //: Undo/redo menu text for deactivating a script
-            return QObject::tr("Deactivate script \"%1\"").arg(itemName);
+            return QObject::tr("deactivate script \"%1\"").arg(itemName);
         case EditorViewType::cmKeysView:
             //: Undo/redo menu text for deactivating a key binding
-            return QObject::tr("Deactivate key \"%1\"").arg(itemName);
+            return QObject::tr("deactivate key \"%1\"").arg(itemName);
         case EditorViewType::cmActionView:
             //: Undo/redo menu text for deactivating a button
-            return QObject::tr("Deactivate button \"%1\"").arg(itemName);
+            return QObject::tr("deactivate button \"%1\"").arg(itemName);
         default:
             //: Undo/redo menu text for deactivating an unknown item
-            return QObject::tr("Deactivate item \"%1\"").arg(itemName);
+            return QObject::tr("deactivate item \"%1\"").arg(itemName);
         }
     }
 }
