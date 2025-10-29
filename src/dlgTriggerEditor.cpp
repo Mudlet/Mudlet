@@ -486,6 +486,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
     }
 
+    // Lua reserved keywords (highest priority for basic syntax)
     provider->add(qsl("and"), 14);
     provider->add(qsl("break"), 14);
     provider->add(qsl("else"), 14);
@@ -504,6 +505,166 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     provider->add(qsl("true"), 14);
     provider->add(qsl("until"), 14);
     provider->add(qsl("while"), 14);
+
+    // Standard Lua library functions (priority 4 - between Mudlet functions and keywords)
+    // String library
+    provider->add(qsl("string.byte"), 4, qsl("string.byte(s [, i [, j]])"));
+    provider->add(qsl("string.char"), 4, qsl("string.char(...)"));
+    provider->add(qsl("string.dump"), 4, qsl("string.dump(function)"));
+    provider->add(qsl("string.find"), 4, qsl("string.find(s, pattern [, init [, plain]])"));
+    provider->add(qsl("string.format"), 4, qsl("string.format(formatstring, ...)"));
+    provider->add(qsl("string.gmatch"), 4, qsl("string.gmatch(s, pattern)"));
+    provider->add(qsl("string.gsub"), 4, qsl("string.gsub(s, pattern, repl [, n])"));
+    provider->add(qsl("string.len"), 4, qsl("string.len(s)"));
+    provider->add(qsl("string.lower"), 4, qsl("string.lower(s)"));
+    provider->add(qsl("string.match"), 4, qsl("string.match(s, pattern [, init])"));
+    provider->add(qsl("string.rep"), 4, qsl("string.rep(s, n)"));
+    provider->add(qsl("string.reverse"), 4, qsl("string.reverse(s)"));
+    provider->add(qsl("string.sub"), 4, qsl("string.sub(s, i [, j])"));
+    provider->add(qsl("string.upper"), 4, qsl("string.upper(s)"));
+
+    // Table library
+    provider->add(qsl("table.concat"), 4, qsl("table.concat(list [, sep [, i [, j]]])"));
+    provider->add(qsl("table.insert"), 4, qsl("table.insert(list, [pos,] value)"));
+    provider->add(qsl("table.pack"), 4, qsl("table.pack(...)"));
+    provider->add(qsl("table.remove"), 4, qsl("table.remove(list [, pos])"));
+    provider->add(qsl("table.sort"), 4, qsl("table.sort(list [, comp])"));
+    provider->add(qsl("table.unpack"), 4, qsl("table.unpack(list [, i [, j]])"));
+
+    // Math library
+    provider->add(qsl("math.abs"), 4, qsl("math.abs(x)"));
+    provider->add(qsl("math.acos"), 4, qsl("math.acos(x)"));
+    provider->add(qsl("math.asin"), 4, qsl("math.asin(x)"));
+    provider->add(qsl("math.atan"), 4, qsl("math.atan(x)"));
+    provider->add(qsl("math.atan2"), 4, qsl("math.atan2(y, x)"));
+    provider->add(qsl("math.ceil"), 4, qsl("math.ceil(x)"));
+    provider->add(qsl("math.cos"), 4, qsl("math.cos(x)"));
+    provider->add(qsl("math.cosh"), 4, qsl("math.cosh(x)"));
+    provider->add(qsl("math.deg"), 4, qsl("math.deg(x)"));
+    provider->add(qsl("math.exp"), 4, qsl("math.exp(x)"));
+    provider->add(qsl("math.floor"), 4, qsl("math.floor(x)"));
+    provider->add(qsl("math.fmod"), 4, qsl("math.fmod(x, y)"));
+    provider->add(qsl("math.frexp"), 4, qsl("math.frexp(x)"));
+    provider->add(qsl("math.huge"), 4, qsl("math.huge"));
+    provider->add(qsl("math.ldexp"), 4, qsl("math.ldexp(m, e)"));
+    provider->add(qsl("math.log"), 4, qsl("math.log(x [, base])"));
+    provider->add(qsl("math.log10"), 4, qsl("math.log10(x)"));
+    provider->add(qsl("math.max"), 4, qsl("math.max(x, ...)"));
+    provider->add(qsl("math.min"), 4, qsl("math.min(x, ...)"));
+    provider->add(qsl("math.modf"), 4, qsl("math.modf(x)"));
+    provider->add(qsl("math.pi"), 4, qsl("math.pi"));
+    provider->add(qsl("math.pow"), 4, qsl("math.pow(x, y)"));
+    provider->add(qsl("math.rad"), 4, qsl("math.rad(x)"));
+    provider->add(qsl("math.random"), 4, qsl("math.random([m [, n]])"));
+    provider->add(qsl("math.randomseed"), 4, qsl("math.randomseed(x)"));
+    provider->add(qsl("math.sin"), 4, qsl("math.sin(x)"));
+    provider->add(qsl("math.sinh"), 4, qsl("math.sinh(x)"));
+    provider->add(qsl("math.sqrt"), 4, qsl("math.sqrt(x)"));
+    provider->add(qsl("math.tan"), 4, qsl("math.tan(x)"));
+    provider->add(qsl("math.tanh"), 4, qsl("math.tanh(x)"));
+
+    // IO library
+    provider->add(qsl("io.close"), 4, qsl("io.close([file])"));
+    provider->add(qsl("io.flush"), 4, qsl("io.flush()"));
+    provider->add(qsl("io.input"), 4, qsl("io.input([file])"));
+    provider->add(qsl("io.lines"), 4, qsl("io.lines([filename, ...])"));
+    provider->add(qsl("io.open"), 4, qsl("io.open(filename [, mode])"));
+    provider->add(qsl("io.output"), 4, qsl("io.output([file])"));
+    provider->add(qsl("io.popen"), 4, qsl("io.popen(prog [, mode])"));
+    provider->add(qsl("io.read"), 4, qsl("io.read(...)"));
+    provider->add(qsl("io.tmpfile"), 4, qsl("io.tmpfile()"));
+    provider->add(qsl("io.type"), 4, qsl("io.type(obj)"));
+    provider->add(qsl("io.write"), 4, qsl("io.write(...)"));
+
+    // OS library
+    provider->add(qsl("os.clock"), 4, qsl("os.clock()"));
+    provider->add(qsl("os.date"), 4, qsl("os.date([format [, time]])"));
+    provider->add(qsl("os.difftime"), 4, qsl("os.difftime(t2, t1)"));
+    provider->add(qsl("os.execute"), 4, qsl("os.execute([command])"));
+    provider->add(qsl("os.exit"), 4, qsl("os.exit([code [, close]])"));
+    provider->add(qsl("os.getenv"), 4, qsl("os.getenv(varname)"));
+    provider->add(qsl("os.remove"), 4, qsl("os.remove(filename)"));
+    provider->add(qsl("os.rename"), 4, qsl("os.rename(oldname, newname)"));
+    provider->add(qsl("os.setlocale"), 4, qsl("os.setlocale(locale [, category])"));
+    provider->add(qsl("os.time"), 4, qsl("os.time([table])"));
+    provider->add(qsl("os.tmpname"), 4, qsl("os.tmpname()"));
+
+    // Coroutine library
+    provider->add(qsl("coroutine.create"), 4, qsl("coroutine.create(f)"));
+    provider->add(qsl("coroutine.resume"), 4, qsl("coroutine.resume(co [, val1, ...])"));
+    provider->add(qsl("coroutine.running"), 4, qsl("coroutine.running()"));
+    provider->add(qsl("coroutine.status"), 4, qsl("coroutine.status(co)"));
+    provider->add(qsl("coroutine.wrap"), 4, qsl("coroutine.wrap(f)"));
+    provider->add(qsl("coroutine.yield"), 4, qsl("coroutine.yield(...)"));
+
+    // Debug library
+    provider->add(qsl("debug.debug"), 4, qsl("debug.debug()"));
+    provider->add(qsl("debug.gethook"), 4, qsl("debug.gethook([thread])"));
+    provider->add(qsl("debug.getinfo"), 4, qsl("debug.getinfo([thread,] f [, what])"));
+    provider->add(qsl("debug.getlocal"), 4, qsl("debug.getlocal([thread,] f, local)"));
+    provider->add(qsl("debug.getmetatable"), 4, qsl("debug.getmetatable(value)"));
+    provider->add(qsl("debug.getregistry"), 4, qsl("debug.getregistry()"));
+    provider->add(qsl("debug.getupvalue"), 4, qsl("debug.getupvalue(f, up)"));
+    provider->add(qsl("debug.getuservalue"), 4, qsl("debug.getuservalue(u)"));
+    provider->add(qsl("debug.sethook"), 4, qsl("debug.sethook([thread,] hook, mask [, count])"));
+    provider->add(qsl("debug.setlocal"), 4, qsl("debug.setlocal([thread,] level, local, value)"));
+    provider->add(qsl("debug.setmetatable"), 4, qsl("debug.setmetatable(value, table)"));
+    provider->add(qsl("debug.setupvalue"), 4, qsl("debug.setupvalue(f, up, value)"));
+    provider->add(qsl("debug.setuservalue"), 4, qsl("debug.setuservalue(udata, value)"));
+    provider->add(qsl("debug.traceback"), 4, qsl("debug.traceback([thread,] [message [, level]])"));
+    provider->add(qsl("debug.upvalueid"), 4, qsl("debug.upvalueid(f, n)"));
+    provider->add(qsl("debug.upvaluejoin"), 4, qsl("debug.upvaluejoin(f1, n1, f2, n2)"));
+
+    // Package library
+    provider->add(qsl("package.config"), 4, qsl("package.config"));
+    provider->add(qsl("package.cpath"), 4, qsl("package.cpath"));
+    provider->add(qsl("package.loaded"), 4, qsl("package.loaded"));
+    provider->add(qsl("package.loadlib"), 4, qsl("package.loadlib(libname, funcname)"));
+    provider->add(qsl("package.path"), 4, qsl("package.path"));
+    provider->add(qsl("package.preload"), 4, qsl("package.preload"));
+    provider->add(qsl("package.searchers"), 4, qsl("package.searchers"));
+    provider->add(qsl("package.searchpath"), 4, qsl("package.searchpath(name, path [, sep [, rep]])"));
+
+    // Mudlet framework namespaced functions (priority 4 - same as Lua stdlib)
+    // Geyser UI Framework
+    provider->add(qsl("Geyser.Container:new"), 4, qsl("Geyser.Container:new(cons, container)"));
+    provider->add(qsl("Geyser.Window:new"), 4, qsl("Geyser.Window:new(cons, container)"));
+    provider->add(qsl("Geyser.Label:new"), 4, qsl("Geyser.Label:new(cons, container)"));
+    provider->add(qsl("Geyser.MiniConsole:new"), 4, qsl("Geyser.MiniConsole:new(cons, container)"));
+    provider->add(qsl("Geyser.Button:new"), 4, qsl("Geyser.Button:new(cons, container)"));
+    provider->add(qsl("Geyser.Gauge:new"), 4, qsl("Geyser.Gauge:new(cons, container)"));
+    provider->add(qsl("Geyser.Mapper:new"), 4, qsl("Geyser.Mapper:new(cons, container)"));
+    provider->add(qsl("Geyser.UserWindow:new"), 4, qsl("Geyser.UserWindow:new(cons)"));
+    provider->add(qsl("Geyser.CommandLine:new"), 4, qsl("Geyser.CommandLine:new(cons, container)"));
+    provider->add(qsl("Geyser.HBox:new"), 4, qsl("Geyser.HBox:new(cons, container)"));
+    provider->add(qsl("Geyser.VBox:new"), 4, qsl("Geyser.VBox:new(cons, container)"));
+    provider->add(qsl("Geyser.ScrollBox:new"), 4, qsl("Geyser.ScrollBox:new(cons, container)"));
+    provider->add(qsl("Geyser.ScrollBox:new2"), 4, qsl("Geyser.ScrollBox:new2()"));
+    provider->add(qsl("Geyser.StyleSheet:new"), 4, qsl("Geyser.StyleSheet:new(stylesheet, parent, target)"));
+
+    // Geyser namespace functions
+    provider->add(qsl("Geyser.Color.parse"), 4, qsl("Geyser.Color.parse(color)"));
+    provider->add(qsl("Geyser.Color.hex"), 4, qsl("Geyser.Color.hex(color)"));
+    provider->add(qsl("Geyser.Color.hexa"), 4, qsl("Geyser.Color.hexa(color)"));
+    provider->add(qsl("Geyser.Color.hhex"), 4, qsl("Geyser.Color.hhex(color)"));
+    provider->add(qsl("Geyser.Color.hhexa"), 4, qsl("Geyser.Color.hhexa(color)"));
+    provider->add(qsl("Geyser.Color.hdec"), 4, qsl("Geyser.Color.hdec(color)"));
+    provider->add(qsl("Geyser.Color.hdeca"), 4, qsl("Geyser.Color.hdeca(color)"));
+
+    // Adjustable Container Framework
+    provider->add(qsl("Adjustable.Container:new"), 4, qsl("Adjustable.Container:new(cons, container)"));
+
+    // Database Framework
+    provider->add(qsl("db.create"), 4, qsl("db.create(db_name, schema)"));
+    provider->add(qsl("db.query"), 4, qsl("db.query(db_name, query, ...)"));
+    provider->add(qsl("db.insert"), 4, qsl("db.insert(db_name, sheet_name, values)"));
+    provider->add(qsl("db.update"), 4, qsl("db.update(db_name, sheet_name, values, query)"));
+    provider->add(qsl("db.delete"), 4, qsl("db.delete(db_name, sheet_name, query)"));
+    provider->add(qsl("db.fetch"), 4, qsl("db.fetch(db_name, query, ...)"));
+    provider->add(qsl("db.aggregate"), 4, qsl("db.aggregate(db_name, query, ...)"));
+
+    // DateTime utilities
+    provider->add(qsl("datetime.parse"), 4, qsl("datetime.parse(format, date_string)"));
 
     // Set the newly filled provider to be used by our Edbee instance
     edbee::Edbee::instance()->autoCompleteProviderList()->setParentProvider(provider);
@@ -1500,7 +1661,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript:
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
                     break;
                 case SearchResultIsName:
                     mpTriggersMainArea->lineEdit_trigger_name->setFocus(Qt::OtherFocusReason);
@@ -1554,7 +1715,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript:
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
                     controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
                     break;
                 case SearchResultIsName:
@@ -1602,7 +1763,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript:
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
                     break;
                 case SearchResultIsName:
                     mpScriptsMainArea->lineEdit_script_name->setFocus(Qt::OtherFocusReason);
@@ -1653,7 +1814,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript:
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
                     break;
                 case SearchResultIsName:
                     mpActionsMainArea->lineEdit_action_name->setFocus(Qt::OtherFocusReason);
@@ -1717,7 +1878,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript:
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
                     break;
                 case SearchResultIsName:
                     mpTimersMainArea->lineEdit_timer_name->setFocus(Qt::OtherFocusReason);
@@ -1759,7 +1920,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                 switch (pItem->data(0, TypeRole).toInt()) {
                 case SearchResultIsScript:
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
                     break;
                 case SearchResultIsName:
                     mpTriggersMainArea->lineEdit_trigger_name->setFocus(Qt::OtherFocusReason);
@@ -1818,7 +1979,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     break;
                 case SearchResultIsValue:
                     mpSourceEditorEdbee->setFocus();
-                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->moveCaretTo(static_cast<size_t>(pItem->data(0, PatternOrLineRole).toInt()), static_cast<size_t>(pItem->data(0, PositionRole).toInt()), false);
                     break;
                 default:
                     qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a VAR type item but handler for element of type:"
@@ -12131,7 +12292,10 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
-    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
+    // Don't apply Lua syntax highlighting for the Variables view since it displays plain data values, not code
+    if (mCurrentView != EditorViewType::cmVarsView) {
+        mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
+    }
     pEditorWidget->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
     // Update the text undo stack pointer since we have a new document

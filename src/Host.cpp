@@ -3061,6 +3061,11 @@ void Host::updateAnsi16ColorsInTable()
     mLuaInterpreter.updateAnsi16ColorsInTable();
 }
 
+void Host::updateExtendedAnsiColorsInTable()
+{
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
+}
+
 void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter, const quint8 innerDiameter, const QColor& outerColor, const QColor& innerColor)
 {
     mPlayerRoomStyle = styleCode;
