@@ -4984,9 +4984,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         return {false, qsl("Area %1 has invalid dimensions").arg(areaId)};
     }
 
-    // Use zoom level to determine appropriate scale - similar to paintEvent
-    const float xyzoom = pArea->get2DMapZoom();
-
     // Calculate room size based on area dimensions - auto-sizing approach
     // Aim for reasonable room sizes that fit well regardless of area size
     const int targetImageDimension = 1024; // Target around 1024 pixels for the larger dimension
@@ -4995,11 +4992,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const int minRoomSize = 8;
     const int maxRoomSize = 50; // Prevent rooms from being too large
     const int finalRoomSize = qBound(minRoomSize, roomSize, maxRoomSize);
-
-    // Store room-based dimensions for export
-    const float exportRoomWidth = finalRoomSize;
-    const float exportRoomHeight = finalRoomSize;
-
 
     // Calculate image size based on actual area content
     const int padding = finalRoomSize * 2;
@@ -5073,17 +5065,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const float exitWidth = 1 / eSize * finalRoomSize * rSize;
     pen.setWidthF(exitWidth);
 
-    // Use the same Z-level filtering and drawing approach as paintEvent
-
-    // Get the current Z level from the area center
-    TRoom* centerRoom = nullptr;
-    for (int roomId : pArea->rooms) {
-        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (pRoom) {
-            centerRoom = pRoom;
-            break;
-        }
-    }
     // Use the same Z-level filtering and drawing approach as paintEvent
     const int exportZLevel = zLevel.has_value() ? zLevel.value() : mMapCenterZ;
 
@@ -5337,8 +5318,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                         if (room->customLinesArrow.value(exitKey, false)) {
                             QLineF arrowLine = QLineF(polyLinePoints.last(), polyLinePoints.at(polyLinePoints.size() - 2));
                             arrowLine.setLength(exitWidth * 5.0);
-                            const QPointF arrowTip = arrowLine.p1();
-                            const QPointF arrowBase = arrowLine.p2();
 
                             QLineF arrowHead1 = arrowLine;
                             arrowHead1.setLength(exitWidth * 3.0);

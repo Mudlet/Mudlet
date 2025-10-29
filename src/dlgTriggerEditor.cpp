@@ -1371,7 +1371,6 @@ void dlgTriggerEditor::readSettings()
 {
     QSettings& settings = *mudlet::getQSettings();
 
-    const QPoint savedPos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
 
@@ -9097,7 +9096,7 @@ void dlgTriggerEditor::slot_sourceReplace()
 {
     auto controller = mpSourceEditorEdbee->controller();
     auto replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
-    for (int i = 0; i < controller->textSelection()->rangeCount(); i++) {
+    for (size_t i = 0; i < controller->textSelection()->rangeCount(); i++) {
         auto &range = controller->textSelection()->range(i);
         if (mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
             slot_sourceFindNext();
