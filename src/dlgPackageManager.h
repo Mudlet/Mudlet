@@ -24,6 +24,7 @@
 
 
 #include "Host.h"
+#include "PackageItemDelegate.h"
 
 #include "ui_package_manager.h"
 #include <QDialog>
@@ -67,7 +68,8 @@ private:
     void fillPackageDetails(const QString &name, const QString &title, const QString &author, const QString &version);
 
     Host* mpHost = nullptr;
-    QHash<QString, QJsonObject> packageLookup;    
+    PackageItemDelegate* mpPackageItemDelegate = nullptr;
+    QHash<QString, QJsonObject> packageLookup;
     QJsonArray repositoryPackages;
     QListWidgetItem* statusAvailable;
     QListWidgetItem* statusInstalled;

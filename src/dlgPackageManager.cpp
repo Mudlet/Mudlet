@@ -66,6 +66,10 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 
     packageList->setSortingEnabled(true);
 
+    // Set up custom delegate for package list to show name and description
+    mpPackageItemDelegate = new PackageItemDelegate(this);
+    packageList->setItemDelegate(mpPackageItemDelegate);
+
     repositoryPackages = QJsonArray();
     if (!readPackageRepositoryFile()) {
         downloadRepositoryIndex();
@@ -524,6 +528,9 @@ void dlgPackageManager::slot_searchTextChanged(const QString &searchText)
                 author.contains(searchText, Qt::CaseInsensitive)) {
 
                 QListWidgetItem *item = new QListWidgetItem(name);
+                if (!title.isEmpty()) {
+                    item->setData(Qt::UserRole, title);
+                }
                 const auto iconName = value.value(qsl("icon"));
                 if (!iconName.isEmpty()) {
                     const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
@@ -551,6 +558,9 @@ void dlgPackageManager::slot_searchTextChanged(const QString &searchText)
                 author.contains(searchText, Qt::CaseInsensitive)) {
 
                 QListWidgetItem *item = new QListWidgetItem(name);
+                if (!title.isEmpty()) {
+                    item->setData(Qt::UserRole, title);
+                }
                 if (pkg.contains(qsl("icon"))) {
                     const QPixmap pixmap(pkg[qsl("icon")].toString());
                     item->setIcon(QIcon(pixmap));
@@ -577,12 +587,16 @@ void dlgPackageManager::slot_setPackageList()
 
     const auto status = packageStatusList->currentItem();
     
-    if (status == statusInstalled) { 
+    if (status == statusInstalled) {
         for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
             auto item = new QListWidgetItem();
             item->setText(mpHost->mInstalledPackages.at(i));
             const auto packageInfo{mpHost->mPackageInfo.value(item->text())};
             const auto iconName = packageInfo.value(qsl("icon"));
+            const auto title = packageInfo.value(qsl("title"));
+            if (!title.isEmpty()) {
+                item->setData(Qt::UserRole, title);
+            }
             if (!iconName.isEmpty()) {
                 const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
                 item->setIcon(QIcon(iconDir));
@@ -598,12 +612,16 @@ void dlgPackageManager::slot_setPackageList()
 
         if (!readPackageRepositoryFile()) {
             return;
-        }        
+        }
         for (const QJsonValue& packageVal : repositoryPackages) {
             auto item = new QListWidgetItem();
             const QJsonObject packageObj = packageVal.toObject();
             const QString packageName = packageObj.value("mpackage").toString();
+            const QString title = packageObj.value("title").toString();
             item->setText(packageName);
+            if (!title.isEmpty()) {
+                item->setData(Qt::UserRole, title);
+            }
             packageList->addItem(item);
         }
     }
