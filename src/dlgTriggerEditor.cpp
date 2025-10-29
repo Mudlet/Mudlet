@@ -444,8 +444,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(mpUndoStack, &QUndoStack::undoTextChanged, this, [this](const QString& text) {
         if (!text.isEmpty()) {
-            mpUndoAction->setToolTip(utils::richText(text));
-            mpUndoAction->setStatusTip(text);
+            //: Tooltip for undo action. %1 is the action being undone (e.g., "Activate trigger \"foo\"")
+            QString undoText = tr("Undo: %1").arg(text);
+            mpUndoAction->setToolTip(utils::richText(undoText));
+            mpUndoAction->setStatusTip(undoText);
         } else {
             mpUndoAction->setToolTip(utils::richText(tr("Undo")));
             mpUndoAction->setStatusTip(tr("Undo"));
@@ -453,8 +455,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     });
     connect(mpUndoStack, &QUndoStack::redoTextChanged, this, [this](const QString& text) {
         if (!text.isEmpty()) {
-            mpRedoAction->setToolTip(utils::richText(text));
-            mpRedoAction->setStatusTip(text);
+            //: Tooltip for redo action. %1 is the action being redone (e.g., "Activate trigger \"foo\"")
+            QString redoText = tr("Redo: %1").arg(text);
+            mpRedoAction->setToolTip(utils::richText(redoText));
+            mpRedoAction->setStatusTip(redoText);
         } else {
             mpRedoAction->setToolTip(utils::richText(tr("Redo")));
             mpRedoAction->setStatusTip(tr("Redo"));
