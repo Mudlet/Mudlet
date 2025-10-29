@@ -13082,17 +13082,47 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 treeWidget_triggers->scrollToItem(itemToSelect);
                 slot_triggerSelected(itemToSelect);
             } else {
-                // Item not found (was deleted) - try to find and expand its parent
-                // For items in affectedItemIDs that aren't found, they were likely deleted
-                // The parent should have been tracked during the operation, but we can infer it
-                // by looking at triggers that have children matching our search pattern
-                TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(affectedItemIDs.first());
-                if (!pTrigger) {
-                    // Item doesn't exist - it was deleted. Find what was its parent.
-                    // We can't easily determine the parent of a deleted item without storing it,
-                    // so for now just ensure the base is expanded (already done above)
+                // Item not found (was deleted) - clear the trigger pattern UI
+                // to avoid showing stale patterns from previously selected trigger
+                for (int i = 0; i < 50; i++) {
+                    mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
+                    if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
+                        mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
+                    }
+                    mTriggerPatternEdit[i]->pushButton_fgColor->hide();
+                    mTriggerPatternEdit[i]->pushButton_bgColor->hide();
+                    mTriggerPatternEdit[i]->label_prompt->hide();
+                    mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
+                    // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
+                    mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
+                    mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
                 }
+
+                // Also clear other trigger-related UI fields
+                mpTriggersMainArea->lineEdit_trigger_name->clear();
+                mpTriggersMainArea->label_idNumber->clear();
+                clearDocument(mpSourceEditorEdbee);
+                mpTriggersMainArea->lineEdit_trigger_command->clear();
             }
+        } else {
+            // affectedItemIDs is empty - also clear the trigger pattern UI
+            for (int i = 0; i < 50; i++) {
+                mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
+                if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
+                    mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
+                }
+                mTriggerPatternEdit[i]->pushButton_fgColor->hide();
+                mTriggerPatternEdit[i]->pushButton_bgColor->hide();
+                mTriggerPatternEdit[i]->label_prompt->hide();
+                mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
+                mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
+                mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
+            }
+
+            mpTriggersMainArea->lineEdit_trigger_name->clear();
+            mpTriggersMainArea->label_idNumber->clear();
+            clearDocument(mpSourceEditorEdbee);
+            mpTriggersMainArea->lineEdit_trigger_command->clear();
         }
 
         // Restore animation after all expansions are complete

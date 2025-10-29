@@ -21,6 +21,7 @@
 #include "MudletUndoStack.h"
 #include "TTreeWidget.h"
 #include "Host.h"
+#include "dlgTriggerPatternEdit.h"
 
 #include <QTreeWidgetItem>
 #include <QDebug>
@@ -1519,6 +1520,166 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         }
     }
 
+    // ====================================================================================
+    // CATEGORY 11: UI Pattern Clearing Tests (6 tests)
+    // ====================================================================================
+    qDebug() << "\n=== CATEGORY 11: UI Pattern Clearing Tests ===";
+
+    // Test: Trigger patterns cleared when item not found after delete
+    {
+        qDebug() << "\n--- Category 11: Trigger Pattern UI Clearing ---";
+
+        // Show triggers view
+        editor->slot_showTriggers();
+
+        // Clean up first
+        while (editor->mpTriggerBaseItem->childCount() > 0) {
+            editor->treeWidget_triggers->setCurrentItem(editor->mpTriggerBaseItem->child(0));
+            editor->slot_deleteItemOrGroup();
+        }
+        editor->mpUndoStack->clear();
+
+        // Add a trigger with multiple patterns
+        editor->addTrigger(false);
+
+        if (editor->mpTriggerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* trigger = editor->mpTriggerBaseItem->child(0);
+            int triggerID = trigger->data(0, Qt::UserRole).toInt();
+            TTrigger* pT = editor->mpHost->getTriggerUnit()->getTrigger(triggerID);
+
+            if (pT) {
+                // Set up multiple patterns on the trigger
+                QStringList patterns;
+                QList<int> patternTypes;
+                patterns << "pattern1" << "pattern2" << "pattern3";
+                patternTypes << REGEX_SUBSTRING << REGEX_PERL << REGEX_BEGIN_OF_LINE_SUBSTRING;
+                pT->setRegexCodeList(patterns, patternTypes);
+
+                // Select the trigger to load patterns into UI
+                editor->treeWidget_triggers->setCurrentItem(trigger);
+                editor->slot_triggerSelected(trigger);
+
+                // Verify patterns are loaded in UI
+                bool patternsLoaded = true;
+                for (int i = 0; i < 3; i++) {
+                    QString uiPattern = editor->mTriggerPatternEdit[i]->singleLineTextEdit_pattern->toPlainText();
+                    if (uiPattern != patterns[i]) {
+                        patternsLoaded = false;
+                        break;
+                    }
+                }
+
+                if (patternsLoaded) {
+                    TEST_PASS("Trigger: Patterns loaded in UI");
+
+                    // Now delete the trigger
+                    editor->treeWidget_triggers->setCurrentItem(trigger);
+                    editor->slot_deleteItemOrGroup();
+
+                    // Trigger the itemsChanged signal manually (simulating what happens during undo)
+                    // This will attempt to find and select the deleted trigger, fail, and should clear the UI
+                    QList<int> affectedIDs;
+                    affectedIDs << triggerID; // This ID no longer exists
+                    editor->slot_itemsChanged(EditorViewType::cmTriggerView, affectedIDs);
+
+                    // Verify patterns are cleared in UI
+                    bool patternsCleared = true;
+                    for (int i = 0; i < 3; i++) {
+                        QString uiPattern = editor->mTriggerPatternEdit[i]->singleLineTextEdit_pattern->toPlainText();
+                        if (!uiPattern.isEmpty()) {
+                            patternsCleared = false;
+                            qDebug() << "Pattern" << i << "not cleared:" << uiPattern;
+                            break;
+                        }
+                    }
+
+                    if (patternsCleared) {
+                        TEST_PASS("Trigger: Patterns cleared when item not found");
+                    } else {
+                        TEST_FAIL("Trigger: Patterns not cleared when item not found");
+                    }
+
+                    // Also check that name/ID fields are cleared
+                    bool fieldsCleared = editor->mpTriggersMainArea->lineEdit_trigger_name->text().isEmpty()
+                                      && editor->mpTriggersMainArea->label_idNumber->text().isEmpty();
+                    if (fieldsCleared) {
+                        TEST_PASS("Trigger: Name/ID fields cleared");
+                    } else {
+                        TEST_FAIL("Trigger: Name/ID fields not cleared");
+                    }
+                } else {
+                    TEST_FAIL("Trigger: Patterns not loaded in UI initially");
+                }
+            } else {
+                TEST_FAIL("Trigger: Failed to get trigger object");
+            }
+        } else {
+            TEST_FAIL("Trigger: Failed to add trigger");
+        }
+
+        // Cleanup
+        editor->mpUndoStack->clear();
+    }
+
+    // Test: Trigger patterns cleared when affectedItemIDs is empty
+    {
+        // Clean up first
+        while (editor->mpTriggerBaseItem->childCount() > 0) {
+            editor->treeWidget_triggers->setCurrentItem(editor->mpTriggerBaseItem->child(0));
+            editor->slot_deleteItemOrGroup();
+        }
+        editor->mpUndoStack->clear();
+
+        // Add a trigger with patterns
+        editor->addTrigger(false);
+
+        if (editor->mpTriggerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* trigger = editor->mpTriggerBaseItem->child(0);
+            int triggerID = trigger->data(0, Qt::UserRole).toInt();
+            TTrigger* pT = editor->mpHost->getTriggerUnit()->getTrigger(triggerID);
+
+            if (pT) {
+                // Set up patterns
+                QStringList patterns;
+                QList<int> patternTypes;
+                patterns << "test1" << "test2";
+                patternTypes << REGEX_SUBSTRING << REGEX_PERL;
+                pT->setRegexCodeList(patterns, patternTypes);
+
+                // Select to load UI
+                editor->treeWidget_triggers->setCurrentItem(trigger);
+                editor->slot_triggerSelected(trigger);
+
+                // Trigger itemsChanged with empty list (simulating a scenario where no items are affected)
+                QList<int> emptyList;
+                editor->slot_itemsChanged(EditorViewType::cmTriggerView, emptyList);
+
+                // Verify patterns are cleared
+                bool patternsCleared = true;
+                for (int i = 0; i < 2; i++) {
+                    QString uiPattern = editor->mTriggerPatternEdit[i]->singleLineTextEdit_pattern->toPlainText();
+                    if (!uiPattern.isEmpty()) {
+                        patternsCleared = false;
+                        break;
+                    }
+                }
+
+                if (patternsCleared) {
+                    TEST_PASS("Trigger: Patterns cleared when affectedItemIDs empty");
+                } else {
+                    TEST_FAIL("Trigger: Patterns not cleared when affectedItemIDs empty");
+                }
+            } else {
+                TEST_FAIL("Trigger: Failed to get trigger for empty ID test");
+            }
+        } else {
+            TEST_FAIL("Trigger: Failed to add trigger for empty ID test");
+        }
+
+        // Cleanup
+        editor->mpUndoStack->clear();
+    }
+
 
     // ====================================================================================
     // Final Summary
@@ -1536,7 +1697,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         qDebug() << "  STATUS: ✗ SOME TESTS FAILED";
     }
     qDebug() << "========================================";
-    qDebug() << "\nCoverage: All 10 categories tested";
+    qDebug() << "\nCoverage: All 11 categories tested";
     qDebug() << "  Category 1: Core Operations";
     qDebug() << "  Category 2: Parent-Only Selection";
     qDebug() << "  Category 3: Multi-selection";
@@ -1547,6 +1708,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
     qDebug() << "  Category 8: Large Batch Operations";
     qDebug() << "  Category 9: State Consistency";
     qDebug() << "  Category 10: Error Recovery";
+    qDebug() << "  Category 11: UI Pattern Clearing";
 
     // Write failure marker file for CI detection
     if (failedTests > 0) {
