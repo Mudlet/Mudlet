@@ -632,6 +632,7 @@ SOURCES += \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
     dlgPackageManager.cpp \
+    PackageItemDelegate.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
@@ -779,6 +780,7 @@ HEADERS += \
     dlgNotepad.h \
     dlgPackageExporter.h \
     dlgPackageManager.h \
+    PackageItemDelegate.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \
