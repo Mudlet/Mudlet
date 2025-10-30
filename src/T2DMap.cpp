@@ -62,6 +62,7 @@
 #include <QStandardPaths>
 #include <QtEvents>
 #include <QtUiTools>
+#include <QWidget>
 
 #include <cmath>
 
@@ -70,8 +71,6 @@
 
 // qsls cannot be shared so define a common instance to use when
 // there are multiple places where they are used within this file:
-
-T2DMap::~T2DMap() = default;
 
 // replacement parameter supplied at point of use:
 const QString& key_plain = qsl("%1");
@@ -284,31 +283,44 @@ bool T2DMap::InteractionDispatcher::dispatch(MapInteractionContext& context) con
 bool T2DMap::eventFilter(QObject* watched, QEvent* event)
 {
     if (mActiveContextMenu && event && event->type() == QEvent::MouseButtonPress) {
+        if (auto* activeMenu = mActiveContextMenu.data()) {
+            if (watched == activeMenu) {
+                return QObject::eventFilter(watched, event);
+            }
+
+            if (auto* watchedWidget = qobject_cast<QWidget*>(watched); watchedWidget && activeMenu->isAncestorOf(watchedWidget)) {
+                return QObject::eventFilter(watched, event);
+            }
+        }
+
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
-        if (mouseEvent && mouseEvent->button() == Qt::RightButton) {
-            const QPoint globalPos = mouseEvent->globalPosition().toPoint();
-            const QPoint localPos = mapFromGlobal(globalPos);
+        if (mouseEvent) {
+            const auto button = mouseEvent->button();
+            if (button == Qt::LeftButton || button == Qt::RightButton) {
+                const QPoint globalPos = mouseEvent->globalPosition().toPoint();
+                const QPoint localPos = mapFromGlobal(globalPos);
 
-            if (rect().contains(localPos)) {
-                auto menu = mActiveContextMenu;
-                mActiveContextMenu.clear();
+                if (rect().contains(localPos)) {
+                    auto menu = mActiveContextMenu;
+                    mActiveContextMenu.clear();
 
-                if (menu) {
-                    menu->close();
+                    if (menu) {
+                        menu->close();
+                    }
+
+                    const QPointF localPosF(localPos);
+                    const QPointF globalPosF(globalPos);
+
+                    auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF,
+                        button, button, mouseEvent->modifiers());
+                    auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF,
+                        button, Qt::NoButton, mouseEvent->modifiers());
+
+                    QCoreApplication::postEvent(this, pressEvent);
+                    QCoreApplication::postEvent(this, releaseEvent);
+
+                    return true;
                 }
-
-                const QPointF localPosF(localPos);
-                const QPointF globalPosF(globalPos);
-
-                auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF,
-                    Qt::RightButton, Qt::RightButton, mouseEvent->modifiers());
-                auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF,
-                    Qt::RightButton, Qt::NoButton, mouseEvent->modifiers());
-
-                QCoreApplication::postEvent(this, pressEvent);
-                QCoreApplication::postEvent(this, releaseEvent);
-
-                return true;
             }
         }
     }
@@ -323,6 +335,13 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 {
+
+    if (auto* app = qApp) {
+        // This allows to forward clicks to widget even if popup menu is opened, therefore e.g. one click is enough to close popup and select room
+        // No more need to first close popup and then perform click on ob
+        app->installEventFilter(this);
+    }
+
     mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -387,6 +406,13 @@ T2DMap::T2DMap(QWidget* parent)
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
+}
+
+T2DMap::~T2DMap()
+{
+    if (auto* app = qApp) {
+        app->removeEventFilter(this);
+    }
 }
 
 void T2DMap::init()
