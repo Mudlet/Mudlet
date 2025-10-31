@@ -74,11 +74,15 @@ function Geyser.Label:decho(message)
   message = message or self.message
   self.message = message
 
-  -- Get label's default format to preserve its colors
-  local labelFormat = getLabelFormat(self.name)
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
 
-  -- Convert decho formatted text to HTML, preserving label's default colors
-  local htmlContent = decho2html(message, labelFormat)
+  -- Convert decho formatted text to HTML, preserving label's colors
+  local htmlContent = decho2html(message, resetFormat)
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -118,11 +122,15 @@ function Geyser.Label:hecho(message)
   message = message or self.message
   self.message = message
 
-  -- Get label's default format to preserve its colors
-  local labelFormat = getLabelFormat(self.name)
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
 
-  -- Convert hecho formatted text to HTML, preserving label's default colors
-  local htmlContent = hecho2html(message, labelFormat)
+  -- Convert hecho formatted text to HTML, preserving label's colors
+  local htmlContent = hecho2html(message, resetFormat)
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -162,11 +170,15 @@ function Geyser.Label:cecho(message)
   message = message or self.message
   self.message = message
 
-  -- Get label's default format to preserve its colors
-  local labelFormat = getLabelFormat(self.name)
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
 
-  -- Convert cecho formatted text to HTML, preserving label's default colors
-  local htmlContent = cecho2html(message, labelFormat)
+  -- Convert cecho formatted text to HTML, preserving label's colors
+  local htmlContent = cecho2html(message, resetFormat)
 
   -- Apply label's formatting settings
   local ft = self.formatTable
