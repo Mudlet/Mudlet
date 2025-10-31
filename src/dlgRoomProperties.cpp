@@ -248,7 +248,7 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
                 %2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
                 The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
                 */
-                displayStrings.append(tr("%1 (count: %2)", "Format for room symbol with usage count")
+                displayStrings.append(tr("%1 (count: %2)")
                     .arg(itSymbolUsed.key(), QString::number(itSymbolUsed.value())));
             }
         }
