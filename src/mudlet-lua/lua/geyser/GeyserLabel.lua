@@ -74,8 +74,11 @@ function Geyser.Label:decho(message)
   message = message or self.message
   self.message = message
 
-  -- Convert decho formatted text to HTML, preserving colors
-  local htmlContent = decho2html(message)
+  -- Get label's default format to preserve its colors
+  local labelFormat = getLabelFormat(self.name)
+
+  -- Convert decho formatted text to HTML, preserving label's default colors
+  local htmlContent = decho2html(message, labelFormat)
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -115,8 +118,11 @@ function Geyser.Label:hecho(message)
   message = message or self.message
   self.message = message
 
-  -- Convert hecho formatted text to HTML, preserving colors
-  local htmlContent = hecho2html(message)
+  -- Get label's default format to preserve its colors
+  local labelFormat = getLabelFormat(self.name)
+
+  -- Convert hecho formatted text to HTML, preserving label's default colors
+  local htmlContent = hecho2html(message, labelFormat)
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -156,8 +162,11 @@ function Geyser.Label:cecho(message)
   message = message or self.message
   self.message = message
 
-  -- Convert cecho formatted text to HTML, preserving colors
-  local htmlContent = cecho2html(message)
+  -- Get label's default format to preserve its colors
+  local labelFormat = getLabelFormat(self.name)
+
+  -- Convert cecho formatted text to HTML, preserving label's default colors
+  local htmlContent = cecho2html(message, labelFormat)
 
   -- Apply label's formatting settings
   local ft = self.formatTable
