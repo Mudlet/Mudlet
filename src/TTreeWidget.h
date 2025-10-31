@@ -24,10 +24,8 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QPointer>
 #include <QTreeWidget>
-#include "post_guard.h"
 
 class Host;
 

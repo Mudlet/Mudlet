@@ -24,12 +24,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 

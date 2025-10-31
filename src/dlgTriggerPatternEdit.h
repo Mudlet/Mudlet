@@ -23,8 +23,8 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_trigger_pattern_edit.h"
+#include <QPalette>
 #include "post_guard.h"
 
 class QAction;
@@ -37,6 +37,8 @@ public:
     Q_DISABLE_COPY(dlgTriggerPatternEdit)
     explicit dlgTriggerPatternEdit(QWidget*);
 
+    void applyThemePalette(const QPalette& editorPalette);
+
     int mRow = 0;
 
 
@@ -44,6 +46,19 @@ public slots:
     void slot_triggerTypeComboBoxChanged(const int);
 
 
+private:
+    void resetThemePalette();
+
+    QPalette mDefaultPalette;
+    QPalette mDefaultPatternNumberPalette;
+    QPalette mDefaultPromptPalette;
+    QPalette mDefaultComboPalette;
+    QPalette mDefaultSpinPalette;
+    QPalette mDefaultForegroundButtonPalette;
+    QPalette mDefaultBackgroundButtonPalette;
+    QPalette mDefaultPatternEditPalette;
+    QPalette mDefaultPatternEditViewportPalette;
+    bool mDefaultPatternEditViewportAutoFillBackground = false;
 };
 
 #endif // MUDLET_DLGTRIGGERPATTERNEDIT_H

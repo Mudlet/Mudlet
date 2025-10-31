@@ -60,7 +60,6 @@
 #include <limits>
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -74,7 +73,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
@@ -462,7 +460,64 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
     const Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->deleteLabel(labelName); !success) {
-        return warnArgumentValue(L, __func__, message);
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteMiniConsole
+int TLuaInterpreter::deleteMiniConsole(lua_State* L)
+{
+    const QString miniConsoleName = getVerifiedString(L, __func__, 1, "miniconsole name");
+    const Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->deleteMiniConsole(miniConsoleName); !success) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteCommandLine
+int TLuaInterpreter::deleteCommandLine(lua_State* L)
+{
+    const QString commandLineName = getVerifiedString(L, __func__, 1, "command line name");
+
+    if (isMain(commandLineName)) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "the main command line cannot be deleted");
+        return 2;
+    }
+
+    const Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->deleteCommandLine(commandLineName); !success) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteScrollBox
+int TLuaInterpreter::deleteScrollBox(lua_State* L)
+{
+    const QString scrollBoxName = getVerifiedString(L, __func__, 1, "scrollbox name");
+    const Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->deleteScrollBox(scrollBoxName); !success) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
     }
 
     lua_pushboolean(L, true);

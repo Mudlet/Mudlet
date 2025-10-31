@@ -24,9 +24,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QString>
-#include "post_guard.h"
 
 #include <iostream>
 #include <list>
@@ -145,6 +143,7 @@ Tree<T>::~Tree()
         delete pChild;
     }
     delete mpMyChildrenList;
+    mpMyChildrenList = nullptr;
     if (mpParent) {
         mpParent->popChild(static_cast<T*>(this)); // tell parent about my death
         if (std::uncaught_exceptions()) {
@@ -233,6 +232,10 @@ void Tree<T>::deactivate()
 template <class T>
 bool Tree<T>::isActive() const
 {
+    // Check if object is in a valid state (not being destroyed)
+    if (!mpMyChildrenList) {
+        return false;
+    }
     return (mActive && canBeActivated());
 }
 

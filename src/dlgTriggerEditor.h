@@ -26,11 +26,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_trigger_editor.h"
 #include <QPointer>
 #include <unordered_map>
-#include "post_guard.h"
 
 #include "TAction.h"
 #include "TAlias.h"
@@ -48,13 +46,16 @@
 #include "dlgVarsMainArea.h"
 #include "SingleLineTextEdit.h"
 
-#include "pre_guard.h"
 #include <QDialog>
 #include <QFlag>
+#include <QIcon>
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
 #include <QDesktopServices>
+#include <QSet>
+#include <QStringList>
+#include <QVector>
 #include "post_guard.h"
 
 // Edbee editor includes
@@ -86,10 +87,14 @@ class dlgAliasMainArea;
 class dlgScriptsMainArea;
 class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
+class QLabel;
+class QFrame;
+class QToolButton;
 class TAction;
 class TKey;
 class TConsole;
 class dlgVarsMainArea;
+class QShortcut;
 
 
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
@@ -187,7 +192,7 @@ public:
     void changeEvent(QEvent* e) override;
     void fillout_form();
     void showError(const QString&);
-    void showWarning(const QString&);
+    void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
@@ -311,6 +316,7 @@ private slots:
     void slot_toggleSearchIncludeVariables(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_changedPattern();
+    void slot_lineSpacerChanged(int value);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
@@ -323,6 +329,7 @@ private slots:
     void slot_itemEdited();
     void slot_searchSplitterMoved(const int pos, const int index);
     void slot_clickedMessageBox(const QString&);
+    void slot_addPattern();
     void slot_bannerDismissClicked();
     void slot_moveObjectUp();
     void slot_moveObjectDown();
@@ -372,6 +379,8 @@ private:
     void clearActionForm();
     void clearKeyForm();
     void clearVarForm();
+
+    void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
 
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -463,10 +472,17 @@ private:
     void recursiveSearchVariables(TVar*, QList<TVar*>&, bool);
 
     void createSearchOptionIcon();
-    void clearEditorNotification() const;
+    void clearEditorNotification();
     void runScheduledCleanReset();
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
+    void createPatternItem(int index);
+    void showPatternItems(int count);
+    void updatePatternPlaceholders();
+    [[nodiscard]] QString patternPlaceholderText(int patternType) const;
+    void handlePatternChange(dlgTriggerPatternEdit* patternItem, bool hasContentHint);
+    void applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWidget);
+
     void keyGrabCallback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
@@ -481,6 +497,14 @@ private:
     TTimer* getTimerFromTreeItem(QTreeWidgetItem* item);
     TKey* getKeyFromTreeItem(QTreeWidgetItem* item);
     TAction* getActionFromTreeItem(QTreeWidgetItem* item);
+    void updatePatternTabOrder();
+    QWidget* firstFocusablePatternWidget(const dlgTriggerPatternEdit* patternItem) const;
+    bool focusNextPatternItem(const dlgTriggerPatternEdit* currentItem);
+    bool focusPreviousPatternItem(const dlgTriggerPatternEdit* currentItem);
+
+    bool focusPatternItem(const int row, const Qt::FocusReason reason = Qt::TabFocusReason);
+    void setupPatternNavigationShortcuts();
+    void updatePatternNavigationHint();
 
 
     // PLACEMARKER 3/3 save button texts need to be kept in sync
@@ -532,6 +556,14 @@ private:
 
     QScrollArea* mpScrollArea = nullptr;
     QWidget* mpWidget_triggerItems = nullptr;
+    QFrame* mPatternNavigationHintBanner = nullptr;
+    QLabel* mPatternNavigationHintLabel = nullptr;
+    QToolButton* mPatternNavigationHintCloseButton = nullptr;
+    bool mPatternNavigationHintHidden = false;
+    void handlePatternNavigationHintDismiss();
+    void showPatternNavigationHintUndoToast();
+    void undoPatternNavigationHintDismiss();
+    void handlePatternNavigationHintPermanentDismiss();
     // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
     // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
     QWidget *mpNonCodeWidgets = nullptr;
@@ -552,6 +584,13 @@ private:
     bool mIsGrabKey = false;
     QPointer<Host> mpHost;
     QList<dlgTriggerPatternEdit*> mTriggerPatternEdit;
+    int mVisiblePatternCount = 0;
+    QStringList mPatternList;
+    QVector<QIcon> mPatternIcons;
+    
+    QShortcut* mFirstPatternShortcut = nullptr;
+    QShortcut* mLastPatternShortcut = nullptr;
+    QVector<QShortcut*> mPatternNavigationShortcuts;
     bool mChangingVar = false;
 
     QTextDocument* mpSourceEditorDocument = nullptr;
@@ -618,11 +657,11 @@ private:
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;
-    
+
     struct introOption {
         QString name;
         QString headline;
-        QString contents;  
+        QString contents;
     };
 
     struct introTextParts {
@@ -633,19 +672,27 @@ private:
     QMap<EditorViewType, introTextParts> introAddItem;
 
     void showIntro(const QString& = QString());
+    void showHideableBanner(const QString& content, const QString& bannerKey);
+    [[nodiscard]] QString bannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
+    [[nodiscard]] QString legacyBannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
+    [[nodiscard]] QString profileSettingsPrefix() const;
+    [[nodiscard]] QString patternNavigationHintSettingsKey() const;
 
     // Banner state tracking
     QTimer* mpBannerUndoTimer = nullptr;
     EditorViewType mLastDismissedBannerView = EditorViewType::cmUnknownView;
     QString mLastDismissedBannerContent;
+    QString mCurrentBannerKey;
+    QString mLastDismissedBannerKey;
+    QSet<QString> mTemporarilyHiddenBanners;
 
     // Banner methods
     void handleBannerDismiss();
     void showBannerUndoToast();
     void undoBannerDismiss();
     void handlePermanentBannerDismiss();
-    bool bannerPermanentlyHidden(EditorViewType viewType);
-    void setBannerPermanentlyHidden(EditorViewType viewType, bool hidden);
+    bool bannerPermanentlyHidden(EditorViewType viewType, const QString& bannerKey = QString(), bool includeBasePreference = true);
+    void setBannerPermanentlyHidden(EditorViewType viewType, const QString& bannerKey, bool hidden);
 
     QString descActive;
     QString descInactive;
@@ -659,6 +706,7 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
+    QString descPackageItem;
 
     enum class MoveDirection {
         Up,

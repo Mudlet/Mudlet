@@ -21,10 +21,8 @@
 
 #include "utils.h" // For qsl(...)
 
-#include "pre_guard.h"
 #include <QString>
 #include <QList>
-#include "post_guard.h"
 
 struct GameDetail
 {

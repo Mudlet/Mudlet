@@ -24,10 +24,8 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QAction>
 #include <QPointer>
-#include "post_guard.h"
 
 class Host;
 
