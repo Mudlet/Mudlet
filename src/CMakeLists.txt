@@ -199,6 +199,7 @@ set(mudlet_SRCS
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
+    WideComboBox.cpp
     XMLexport.cpp
     XMLimport.cpp)
 
@@ -388,6 +389,7 @@ set(mudlet_HDRS
     utils.h
     VarUnit.h
     widechar_width.h
+    WideComboBox.h
     XMLexport.h
     XMLimport.h
     enums.h)
