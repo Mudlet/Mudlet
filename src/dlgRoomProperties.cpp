@@ -286,7 +286,7 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
                 %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
                 The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
                 */
-                displayStrings.append(tr("%1 (count: %2)", "Format for room weight with usage count")
+                displayStrings.append(tr("%1 (count: %2)")
                     .arg(QString::number(itWeightUsed.key()), QString::number(itWeightUsed.value())));
             }
         }
