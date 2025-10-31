@@ -443,25 +443,31 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpUndoStack, &QUndoStack::canRedoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
 
     connect(mpUndoStack, &QUndoStack::undoTextChanged, this, [this](const QString& text) {
+        QString shortcut = mpUndoAction->shortcut().toString(QKeySequence::NativeText);
         if (!text.isEmpty()) {
-            //: Tooltip for undo action. %1 is the action being undone (e.g., "Activate trigger \"foo\"")
-            QString undoText = tr("Undo: %1").arg(text);
+            //: Tooltip for undo action. %1 is the action being undone (e.g., "Activate trigger \"foo\""), %2 is the keyboard shortcut
+            QString undoText = tr("Undo: %1 (%2)").arg(text, shortcut);
             mpUndoAction->setToolTip(utils::richText(undoText));
             mpUndoAction->setStatusTip(undoText);
         } else {
-            mpUndoAction->setToolTip(utils::richText(tr("Undo")));
-            mpUndoAction->setStatusTip(tr("Undo"));
+            //: Tooltip for undo action when no specific action. %1 is the keyboard shortcut
+            QString undoText = tr("Undo (%1)").arg(shortcut);
+            mpUndoAction->setToolTip(utils::richText(undoText));
+            mpUndoAction->setStatusTip(undoText);
         }
     });
     connect(mpUndoStack, &QUndoStack::redoTextChanged, this, [this](const QString& text) {
+        QString shortcut = mpRedoAction->shortcut().toString(QKeySequence::NativeText);
         if (!text.isEmpty()) {
-            //: Tooltip for redo action. %1 is the action being redone (e.g., "Activate trigger \"foo\"")
-            QString redoText = tr("Redo: %1").arg(text);
+            //: Tooltip for redo action. %1 is the action being redone (e.g., "Activate trigger \"foo\""), %2 is the keyboard shortcut
+            QString redoText = tr("Redo: %1 (%2)").arg(text, shortcut);
             mpRedoAction->setToolTip(utils::richText(redoText));
             mpRedoAction->setStatusTip(redoText);
         } else {
-            mpRedoAction->setToolTip(utils::richText(tr("Redo")));
-            mpRedoAction->setStatusTip(tr("Redo"));
+            //: Tooltip for redo action when no specific action. %1 is the keyboard shortcut
+            QString redoText = tr("Redo (%1)").arg(shortcut);
+            mpRedoAction->setToolTip(utils::richText(redoText));
+            mpRedoAction->setStatusTip(redoText);
         }
     });
 
@@ -470,11 +476,26 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Connect text editor undo stack signals to update button states
     connect(mpTextUndoStack, &edbee::TextUndoStack::undoExecuted,
-            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+            this, [this]() {
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "dlgTriggerEditor - edbee undoExecuted signal received";
+#endif
+                slot_updateUndoRedoButtonStates();
+            });
     connect(mpTextUndoStack, &edbee::TextUndoStack::redoExecuted,
-            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+            this, [this]() {
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "dlgTriggerEditor - edbee redoExecuted signal received";
+#endif
+                slot_updateUndoRedoButtonStates();
+            });
     connect(mpTextUndoStack, &edbee::TextUndoStack::changeAdded,
-            this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+            this, [this]() {
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "dlgTriggerEditor - edbee changeAdded signal received";
+#endif
+                slot_updateUndoRedoButtonStates();
+            });
 
     // Set initial button states
     slot_updateUndoRedoButtonStates();
@@ -1407,11 +1428,21 @@ void dlgTriggerEditor::slot_smartUndo()
     bool canUndoText = mpTextUndoStack && mpTextUndoStack->canUndo();
     bool canUndoItems = mpUndoStack && mpUndoStack->canUndo();
 
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "dlgTriggerEditor::slot_smartUndo() - canUndoText:" << canUndoText << "canUndoItems:" << canUndoItems;
+#endif
+
     if (canUndoText) {
         // Undo text changes first (most recent edits in the script editor)
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "dlgTriggerEditor::slot_smartUndo() - Performing text undo via edbee";
+#endif
         mpSourceEditorEdbee->controller()->undo();
     } else if (canUndoItems) {
         // Once text stack is empty, undo item operations (add/delete/move triggers/aliases/etc)
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "dlgTriggerEditor::slot_smartUndo() - Performing item undo";
+#endif
         // Loop to skip commands invalidated by Lua API changes
         const int maxAttempts = 100; // Safety limit to prevent infinite loops
         int attempts = 0;
@@ -1421,10 +1452,16 @@ void dlgTriggerEditor::slot_smartUndo()
             // Check if the command that was just undone was valid
             if (mpUndoStack->wasLastCommandValid()) {
                 // Valid command found and processed
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "dlgTriggerEditor::slot_smartUndo() - Valid command undone after" << (attempts + 1) << "attempts";
+#endif
                 break;
             }
 
             // Command was invalid (Lua changed the item), silently skip and try next
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "dlgTriggerEditor::slot_smartUndo() - Invalid command, trying next (attempt" << (attempts + 1) << ")";
+#endif
             attempts++;
         }
     }
@@ -1441,11 +1478,21 @@ void dlgTriggerEditor::slot_smartRedo()
     bool canRedoText = mpTextUndoStack && mpTextUndoStack->canRedo();
     bool canRedoItems = mpUndoStack && mpUndoStack->canRedo();
 
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "dlgTriggerEditor::slot_smartRedo() - canRedoText:" << canRedoText << "canRedoItems:" << canRedoItems;
+#endif
+
     if (canRedoText) {
         // Redo text changes first (most recently undone edits in the script editor)
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "dlgTriggerEditor::slot_smartRedo() - Performing text redo via edbee";
+#endif
         mpSourceEditorEdbee->controller()->redo();
     } else if (canRedoItems) {
         // Once text stack is empty, redo item operations
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "dlgTriggerEditor::slot_smartRedo() - Performing item redo";
+#endif
         // Loop to skip commands invalidated by Lua API changes
         const int maxAttempts = 100; // Safety limit to prevent infinite loops
         int attempts = 0;
@@ -1455,10 +1502,16 @@ void dlgTriggerEditor::slot_smartRedo()
             // Check if the command that was just redone was valid
             if (mpUndoStack->wasLastCommandValid()) {
                 // Valid command found and processed
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "dlgTriggerEditor::slot_smartRedo() - Valid command redone after" << (attempts + 1) << "attempts";
+#endif
                 break;
             }
 
             // Command was invalid (Lua changed the item), silently skip and try next
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "dlgTriggerEditor::slot_smartRedo() - Invalid command, trying next (attempt" << (attempts + 1) << ")";
+#endif
             attempts++;
         }
     }
@@ -1480,6 +1533,11 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
 
     bool canRedoText = mpTextUndoStack->canRedo();
     bool canRedoItems = mpUndoStack && mpUndoStack->canRedo();
+
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "dlgTriggerEditor::slot_updateUndoRedoButtonStates() - Text: undo=" << canUndoText
+             << "redo=" << canRedoText << "| Items: undo=" << canUndoItems << "redo=" << canRedoItems;
+#endif
 
     // Enable buttons if EITHER system has something to undo/redo
     mpUndoAction->setEnabled(canUndoText || canUndoItems);
