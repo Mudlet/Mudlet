@@ -24,9 +24,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QString>
-#include "post_guard.h"
 
 #include <iostream>
 #include <list>

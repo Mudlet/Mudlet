@@ -27,9 +27,26 @@
 #include "mudlet.h"
 #include "TTimer.h"
 
+#include <functional>
+
 TimerUnit::~TimerUnit()
 {
-    for (auto&& timer : std::as_const(mQTimerSet)) {
+    // Set mpHost to null on all timers (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto timer : mTimerRootNodeList) {
+        timer->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TTimer*)> nullifyChildren = [&nullifyChildren](TTimer* t) {
+            for (auto child : *t->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(timer);
+    }
+    // Delete all TTimer objects - each TTimer destructor will handle its own QTimer
+    for (auto timer : mTimerRootNodeList) {
         delete timer;
     }
 }

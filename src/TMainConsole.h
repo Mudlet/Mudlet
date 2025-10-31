@@ -27,12 +27,10 @@
 
 #include "TConsole.h"
 #include "TScrollBox.h"
-#include "pre_guard.h"
 #include <QFile>
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
-#include "post_guard.h"
 
 #include <hunspell/hunspell.h>
 
@@ -77,6 +75,9 @@ public:
     std::optional<QString> getLabelStyleSheet(const QString& name) const;
     std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
+    std::pair<bool, QString> deleteMiniConsole(const QString&);
+    std::pair<bool, QString> deleteCommandLine(const QString&);
+    std::pair<bool, QString> deleteScrollBox(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);

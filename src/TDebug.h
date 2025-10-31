@@ -25,13 +25,11 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QColor>
 #include <QList>
 #include <QMap>
 #include <QQueue>
 #include <QString>
-#include "post_guard.h"
 
 #include "utils.h"
 

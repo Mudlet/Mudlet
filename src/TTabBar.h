@@ -21,7 +21,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QProxyStyle>
 #include <QSet>
 #include <QString>
@@ -29,7 +28,6 @@
 #include <QDrag>
 #include <QMimeData>
 #include <QApplication>
-#include "post_guard.h"
 
 #include "utils.h"
 

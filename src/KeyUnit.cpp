@@ -27,6 +27,8 @@
 #include "Host.h"
 #include "TKey.h"
 
+#include <functional>
+
 KeyUnit::KeyUnit(Host* pHost)
 : mRunAllKeyMatches(false)
 , mpHost(pHost)
@@ -34,6 +36,27 @@ KeyUnit::KeyUnit(Host* pHost)
 , mModuleMember(false)
 {
     setupKeyNames();
+}
+
+KeyUnit::~KeyUnit()
+{
+    // Set mpHost to null on all keys (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto key : mKeyRootNodeList) {
+        key->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TKey*)> nullifyChildren = [&nullifyChildren](TKey* k) {
+            for (auto child : *k->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(key);
+    }
+    for (auto key : mKeyRootNodeList) {
+        delete key;
+    }
 }
 
 void KeyUnit::resetStats()

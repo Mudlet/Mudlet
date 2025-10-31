@@ -1,8 +1,5 @@
-#ifndef MUDLET_TESTDBG_H
-#define MUDLET_TESTDBG_H
-
 /***************************************************************************
- *   Copyright (C) 2012-2013 by Ahmed Charles - acharles@outlook.com       *
+ *   Copyright (C) 2025 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,12 +17,27 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-#include <stdlib.h>
-#define DBG_NEW new (_NORMAL_BLOCK, __FILE__, __LINE__)
-#define new DBG_NEW
-#endif // _MSC_VER && _DEBUG
+#ifndef MUDLET_SELECTIONRECTANGLEHANDLER_H
+#define MUDLET_SELECTIONRECTANGLEHANDLER_H
 
-#endif // MUDLET_TESTDBG_H
+#include "T2DMap.h"
+
+class SelectionRectangleHandler : public T2DMap::IInteractionHandler
+{
+public:
+    explicit SelectionRectangleHandler(T2DMap& mapWidget);
+
+    bool matches(const T2DMap::MapInteractionContext& context) const override;
+    bool handle(T2DMap::MapInteractionContext& context) override;
+
+private:
+    bool handleMousePress(T2DMap::MapInteractionContext& context) const;
+    bool handleMouseMove(T2DMap::MapInteractionContext& context) const;
+    bool handleMouseRelease(T2DMap::MapInteractionContext& context) const;
+
+    void populateMultiSelectionWidget() const;
+
+    T2DMap& mMapWidget;
+};
+
+#endif // MUDLET_SELECTIONRECTANGLEHANDLER_H
