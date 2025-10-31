@@ -402,7 +402,9 @@ unix:!macx {
         -lpugixml
 
     isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       LIBS += -lGLU
+       LIBS += \
+         -lGLU \
+         -lassimp
     }
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
@@ -670,6 +672,7 @@ SOURCES += \
     CustomLineDrawHandler.cpp \
     CustomLineEditContextMenuHandler.cpp \
     CustomLineEditHandler.cpp \
+    CustomLineSession.cpp \
     LabelInteractionHandler.cpp \
     PanInteractionHandler.cpp \
     RoomContextMenuHandler.cpp \
@@ -814,6 +817,7 @@ HEADERS += \
     CustomLineDrawHandler.h \
     CustomLineEditContextMenuHandler.h \
     CustomLineEditHandler.h \
+    CustomLineSession.h \
     LabelInteractionHandler.h \
     PanInteractionHandler.h \
     RoomContextMenuHandler.h \
