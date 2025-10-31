@@ -1534,11 +1534,6 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
     bool canRedoText = mpTextUndoStack->canRedo();
     bool canRedoItems = mpUndoStack && mpUndoStack->canRedo();
 
-#if defined(DEBUG_UNDO_REDO)
-    qDebug() << "dlgTriggerEditor::slot_updateUndoRedoButtonStates() - Text: undo=" << canUndoText
-             << "redo=" << canRedoText << "| Items: undo=" << canUndoItems << "redo=" << canRedoItems;
-#endif
-
     // Enable buttons if EITHER system has something to undo/redo
     mpUndoAction->setEnabled(canUndoText || canUndoItems);
     mpRedoAction->setEnabled(canRedoText || canRedoItems);
@@ -6537,6 +6532,11 @@ void dlgTriggerEditor::saveTrigger()
                 mpHost
             );
             mpUndoStack->pushCommand(qtCmd);
+
+            // Clear edbee undo stack after save to make Save a commit point
+            if (mpTextUndoStack) {
+                mpTextUndoStack->clear();
+            }
         }
     }
 }
@@ -6692,6 +6692,11 @@ void dlgTriggerEditor::saveTimer()
                 mpHost
             );
             mpUndoStack->pushCommand(qtCmd);
+
+            // Clear edbee undo stack after save to make Save a commit point
+            if (mpTextUndoStack) {
+                mpTextUndoStack->clear();
+            }
         }
     }
 }
@@ -6881,6 +6886,11 @@ void dlgTriggerEditor::saveAlias()
                 mpHost
             );
             mpUndoStack->pushCommand(qtCmd);
+
+            // Clear edbee undo stack after save to make Save a commit point
+            if (mpTextUndoStack) {
+                mpTextUndoStack->clear();
+            }
         }
     }
 }
@@ -7067,6 +7077,11 @@ void dlgTriggerEditor::saveAction()
                 mpHost
             );
             mpUndoStack->pushCommand(qtCmd);
+
+            // Clear edbee undo stack after save to make Save a commit point
+            if (mpTextUndoStack) {
+                mpTextUndoStack->clear();
+            }
         }
     }
 
@@ -7271,6 +7286,11 @@ void dlgTriggerEditor::saveScript()
             mpHost
         );
         mpUndoStack->pushCommand(qtCmd);
+
+        // Clear edbee undo stack after save to make Save a commit point
+        if (mpTextUndoStack) {
+            mpTextUndoStack->clear();
+        }
     }
 }
 
@@ -7678,6 +7698,11 @@ void dlgTriggerEditor::saveKey()
                 mpHost
             );
             mpUndoStack->pushCommand(qtCmd);
+
+            // Clear edbee undo stack after save to make Save a commit point
+            if (mpTextUndoStack) {
+                mpTextUndoStack->clear();
+            }
         }
     }
 }
