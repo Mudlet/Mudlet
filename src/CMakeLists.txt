@@ -122,6 +122,7 @@ set(mudlet_SRCS
     CustomLineEditHandler.cpp
     CustomLineSession.cpp
     LabelInteractionHandler.cpp
+    PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp
@@ -322,6 +323,7 @@ set(mudlet_HDRS
     CustomLineEditHandler.h
     CustomLineSession.h
     LabelInteractionHandler.h
+    PackageItemDelegate.h
     PanInteractionHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h

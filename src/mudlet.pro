@@ -406,7 +406,9 @@ unix:!macx {
         -lpugixml
 
     isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       LIBS += -lGLU
+       LIBS += \
+         -lGLU \
+         -lassimp
     }
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
@@ -634,6 +636,7 @@ SOURCES += \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
     dlgPackageManager.cpp \
+    PackageItemDelegate.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
@@ -788,6 +791,7 @@ HEADERS += \
     dlgNotepad.h \
     dlgPackageExporter.h \
     dlgPackageManager.h \
+    PackageItemDelegate.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \

@@ -2019,7 +2019,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     raiseEvent(detailedInstallEvent);
 
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     if (mpModuleManager) {
         mpModuleManager->layoutModules();
@@ -2210,7 +2210,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mpEditorDialog->doCleanReset();
     }
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     return true;
 }

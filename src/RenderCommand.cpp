@@ -39,6 +39,9 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLBuffer& indexBuffer,
                                QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+    Q_UNUSED(texCoordBuffer)
+
     GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA);
 
     // Set uniforms
@@ -74,6 +77,9 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
                                 QOpenGLBuffer& indexBuffer,
                                 QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+    Q_UNUSED(texCoordBuffer)
+
     GeometryData lineGeometry = geometryManager->generateLineGeometry(mVertices, mColors);
 
     if (lineGeometry.isEmpty()) {
@@ -112,6 +118,9 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
                                     QOpenGLBuffer& indexBuffer,
                                     QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+    Q_UNUSED(texCoordBuffer)
+
     GeometryData triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
 
     if (triangleGeometry.isEmpty()) {
@@ -149,6 +158,8 @@ void RenderTexturedTrianglesCommand::execute(QOpenGLFunctions* gl,
                                            QOpenGLBuffer& indexBuffer,
                                            QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+
     if (mGeometry.isEmpty()) {
         return;
     }
@@ -202,6 +213,9 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
                                          QOpenGLBuffer& indexBuffer,
                                          QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+    Q_UNUSED(texCoordBuffer)
+
     if (mInstances.isEmpty()) {
         return;
     }
@@ -243,6 +257,16 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
                             QOpenGLBuffer& indexBuffer,
                             QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(shader)
+    Q_UNUSED(geometryManager)
+    Q_UNUSED(resourceManager)
+    Q_UNUSED(vao)
+    Q_UNUSED(vertexBuffer)
+    Q_UNUSED(colorBuffer)
+    Q_UNUSED(normalBuffer)
+    Q_UNUSED(indexBuffer)
+    Q_UNUSED(texCoordBuffer)
+
     switch (mStateType) {
         case ENABLE_DEPTH_TEST:
             gl->glEnable(GL_DEPTH_TEST);
