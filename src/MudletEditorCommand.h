@@ -21,9 +21,14 @@
  ***************************************************************************/
 
 #include <QList>
+#include <QObject>
 #include <QUndoCommand>
 
 class Host;
+
+// Namespace wrapper for EditorViewType to enable Q_ENUM_NS
+namespace EditorViewTypes {
+Q_NAMESPACE
 
 // Editor view type enum - used by commands and dlgTriggerEditor
 enum class EditorViewType {
@@ -36,6 +41,11 @@ enum class EditorViewType {
     cmKeysView = 0x06,
     cmVarsView = 0x07
 };
+Q_ENUM_NS(EditorViewType)
+
+}
+
+using EditorViewTypes::EditorViewType;
 
 // Base class for editor undo commands. Extends QUndoCommand with:
 // - EditorViewType tracking (which editor view triggered the command)

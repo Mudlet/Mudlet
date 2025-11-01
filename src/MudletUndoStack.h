@@ -24,7 +24,7 @@
 #include <QMap>
 #include <QUndoStack>
 
-enum class EditorViewType;  // Forward declaration
+#include "MudletEditorCommand.h"
 
 // Wrapper around QUndoStack with Mudlet-specific features:
 // - itemsChanged signal for targeted UI updates
