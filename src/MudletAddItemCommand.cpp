@@ -42,6 +42,9 @@ MudletAddItemCommand::MudletAddItemCommand(EditorViewType viewType, int itemID, 
 
 void MudletAddItemCommand::undo()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletAddItemCommand::undo() - Undoing add for item" << mItemName << "(ID:" << mItemID << ")";
+#endif
     // Export the item to XML before deleting (for redo)
     if (mItemSnapshot.isEmpty()) {
         switch (mViewType) {
@@ -149,9 +152,15 @@ void MudletAddItemCommand::undo()
 
 void MudletAddItemCommand::redo()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletAddItemCommand::redo() - Redoing add for item" << mItemName << "(ID:" << mItemID << ")";
+#endif
     // Skip the first redo() which is automatically called by QUndoStack::push()
     // The item has already been added by the user action
     if (mSkipFirstRedo) {
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "MudletAddItemCommand::redo() - Skipping first redo (item already added)";
+#endif
         mSkipFirstRedo = false;
         return;
     }

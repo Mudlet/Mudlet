@@ -64,6 +64,10 @@ void MudletUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
         return;
     }
 
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletUndoStack::emitChangesForCommand() - Processing command:" << cmd->text();
+#endif
+
     // Collect all affected items by view type from this command and all children
     QMap<EditorViewType, QList<int>> affectedItemsByView;
     collectAffectedItems(cmd, affectedItemsByView);
@@ -83,6 +87,10 @@ void MudletUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
                 }
             }
             if (allValid) {
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletUndoStack::emitChangesForCommand() - Emitting itemsChanged for view type"
+                         << static_cast<int>(it.key()) << "with" << itemIDs.size() << "items:" << itemIDs;
+#endif
                 emit itemsChanged(it.key(), itemIDs);
             }
         }
@@ -120,14 +128,23 @@ void MudletUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorV
 
 void MudletUndoStack::pushCommand(QUndoCommand* cmd)
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletUndoStack::pushCommand() - Pushing command:" << (cmd ? cmd->text() : QStringLiteral("null"));
+#endif
     // Set flag to indicate we're in a push operation
     mInPushOperation = true;
     push(cmd);
     mInPushOperation = false;
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletUndoStack::pushCommand() - Stack now has" << count() << "commands, index:" << index();
+#endif
 }
 
 void MudletUndoStack::beginMacro(const QString& text)
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletUndoStack::beginMacro() - Starting macro:" << text;
+#endif
     // Set flag to indicate we're starting a macro push operation
     mInMacroPush = true;
     QUndoStack::beginMacro(text);
@@ -135,6 +152,9 @@ void MudletUndoStack::beginMacro(const QString& text)
 
 void MudletUndoStack::endMacro()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletUndoStack::endMacro() - Ending macro, stack has" << count() << "commands";
+#endif
     // Call the base implementation first
     QUndoStack::endMacro();
 
@@ -147,6 +167,10 @@ void MudletUndoStack::undo()
     // Get the command that will be undone (if any)
     if (index() > 0) {
         const QUndoCommand* cmd = command(index() - 1);
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "MudletUndoStack::undo() - Undoing command:" << (cmd ? cmd->text() : QStringLiteral("null"))
+                 << "at index" << (index() - 1);
+#endif
 
         // Call the base class undo
         QUndoStack::undo();
@@ -154,13 +178,22 @@ void MudletUndoStack::undo()
         // Check if this is a DeleteItemCommand that restored items with new IDs
         if (auto* deleteCmd = dynamic_cast<const MudletDeleteItemCommand*>(cmd)) {
             QList<QPair<int, int>> idChanges = deleteCmd->getIDChanges();
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "MudletUndoStack::undo() - DeleteItemCommand restored items with ID changes:" << idChanges.size();
+#endif
             for (const auto& change : idChanges) {
                 int oldID = change.first;
                 int newID = change.second;
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletUndoStack::undo() - Remapping ID" << oldID << "->" << newID;
+#endif
                 remapItemIDs(oldID, newID);
             }
         }
     } else {
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "MudletUndoStack::undo() - No command to undo (index is 0)";
+#endif
         // No command to undo
         QUndoStack::undo();
     }
@@ -171,6 +204,10 @@ void MudletUndoStack::redo()
     // Get the command that will be redone (if any)
     if (index() < count()) {
         const QUndoCommand* cmd = command(index());
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "MudletUndoStack::redo() - Redoing command:" << (cmd ? cmd->text() : QStringLiteral("null"))
+                 << "at index" << index();
+#endif
 
         // Check if this is an AddItemCommand (need to check before redo since ID may change)
         // Note: AddItemCommands might be wrapped in a macro with ModifyPropertyCommand
@@ -195,9 +232,15 @@ void MudletUndoStack::redo()
         // Check if the item ID changed during redo
         if (addCmd && addCmd->didItemIDChange()) {
             int newItemID = addCmd->getNewItemID();
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "MudletUndoStack::redo() - AddItemCommand ID changed:" << oldItemID << "->" << newItemID;
+#endif
             remapItemIDs(oldItemID, newItemID);
         }
     } else {
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "MudletUndoStack::redo() - No command to redo (index >= count)";
+#endif
         // No command to redo
         QUndoStack::redo();
     }
@@ -206,6 +249,9 @@ void MudletUndoStack::redo()
 // Updates all stored item IDs across the entire undo stack when an item gets recreated with a new ID
 void MudletUndoStack::remapItemIDs(int oldID, int newID)
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletUndoStack::remapItemIDs() - Remapping" << oldID << "->" << newID << "across" << count() << "commands";
+#endif
     // Helper lambda to recursively remap IDs in a command and all its children
     std::function<void(const QUndoCommand*)> remapRecursive = [&](const QUndoCommand* cmd) {
         if (!cmd) {

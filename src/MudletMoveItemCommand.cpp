@@ -45,14 +45,25 @@ MudletMoveItemCommand::MudletMoveItemCommand(EditorViewType viewType, int itemID
 
 void MudletMoveItemCommand::undo()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletMoveItemCommand::undo() - Moving" << mItemName << "(ID:" << mItemID << ")"
+             << "from parent" << mNewParentID << "to parent" << mOldParentID << "at position" << mOldPosition;
+#endif
     moveItem(mNewParentID, mOldParentID, mOldPosition);
 }
 
 void MudletMoveItemCommand::redo()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletMoveItemCommand::redo() - Moving" << mItemName << "(ID:" << mItemID << ")"
+             << "from parent" << mOldParentID << "to parent" << mNewParentID << "at position" << mNewPosition;
+#endif
     // Skip the first redo() which is automatically called by QUndoStack::push()
     // The move has already been performed by TTreeWidget::rowsInserted()
     if (mSkipFirstRedo) {
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "MudletMoveItemCommand::redo() - Skipping first redo (move already performed)";
+#endif
         mSkipFirstRedo = false;
         return;
     }

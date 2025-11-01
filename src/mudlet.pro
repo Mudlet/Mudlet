@@ -343,9 +343,13 @@ DEFINES+=DEBUG_TELNET=1
 # transfers, profile switching, and detached window management:
 # DEFINES+=DEBUG_WINDOW_HANDLING
 #
-# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# * Enable player icon adjustment controls in the 3D mapper for debugging and
 # alignment purposes - these are normally hidden in production builds:
 # DEFINES+=DEBUG_PLAYER_ICON_CONTROLS
+#
+# * Produce qDebug() messages about undo/redo operations in the trigger editor,
+# including command execution, stack operations, and edbee text undo integration:
+# DEFINES+=DEBUG_UNDO_REDO
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted

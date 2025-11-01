@@ -38,6 +38,9 @@ MudletDeleteItemCommand::MudletDeleteItemCommand(EditorViewType viewType, const 
 }
 
 void MudletDeleteItemCommand::undo() {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletDeleteItemCommand::undo() - Restoring" << mDeletedItems.size() << "deleted items";
+#endif
     // Clear ID changes from any previous undo
     mIDChanges.clear();
 
@@ -495,6 +498,9 @@ void MudletDeleteItemCommand::undo() {
 }
 
 void MudletDeleteItemCommand::redo() {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletDeleteItemCommand::redo() - Deleting" << mDeletedItems.size() << "items again";
+#endif
     // Delete items again
     // Note: When the command is first created, items are already deleted,
     // but we never call redo() at that point. The first time redo() is called is after

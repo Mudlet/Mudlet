@@ -43,6 +43,9 @@ MudletModifyPropertyCommand::MudletModifyPropertyCommand(EditorViewType viewType
 
 void MudletModifyPropertyCommand::undo()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletModifyPropertyCommand::undo() - Restoring" << mItemName << "(ID:" << mItemID << ") to old state";
+#endif
     // Restore item to old state from XML
     switch (mViewType) {
     case EditorViewType::cmTriggerView: {
@@ -118,6 +121,9 @@ void MudletModifyPropertyCommand::undo()
 
 void MudletModifyPropertyCommand::redo()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletModifyPropertyCommand::redo() - Applying new state to" << mItemName << "(ID:" << mItemID << ")";
+#endif
     // Apply the new state
     // Note: Unlike AddItemCommand, we don't skip the first redo because ModifyPropertyCommand
     // doesn't use QUndoStack::push() automatically calling redo(). The change has already

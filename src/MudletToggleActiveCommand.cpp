@@ -41,14 +41,25 @@ MudletToggleActiveCommand::MudletToggleActiveCommand(EditorViewType viewType, in
 
 void MudletToggleActiveCommand::undo()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletToggleActiveCommand::undo() - Setting" << mItemName << "(ID:" << mItemID << ")"
+             << "active state to" << mOldActiveState;
+#endif
     setItemActiveState(mItemID, mOldActiveState);
 }
 
 void MudletToggleActiveCommand::redo()
 {
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "MudletToggleActiveCommand::redo() - Setting" << mItemName << "(ID:" << mItemID << ")"
+             << "active state to" << mNewActiveState;
+#endif
     // Skip the first redo() which is automatically called by QUndoStack::push()
     // The state change has already been performed before pushing to the stack
     if (mSkipFirstRedo) {
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "MudletToggleActiveCommand::redo() - Skipping first redo (state already changed)";
+#endif
         mSkipFirstRedo = false;
         return;
     }

@@ -606,9 +606,13 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 #   transfers, profile switching, and detached window management:
 # target_compile_definitions(mudlet PRIVATE DEBUG_WINDOW_HANDLING)
 #
-# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
 # target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
+#
+# * Produce qDebug() messages about undo/redo operations in the trigger editor,
+#   including command execution, stack operations, and edbee text undo integration:
+target_compile_definitions(mudlet PRIVATE DEBUG_UNDO_REDO)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
