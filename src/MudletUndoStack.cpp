@@ -164,6 +164,9 @@ void MudletUndoStack::endMacro()
 
 void MudletUndoStack::undo()
 {
+    // Track that we're performing an undo operation
+    mLastOperationType = LastOperationType::Undo;
+
     // Get the command that will be undone (if any)
     if (index() > 0) {
         const QUndoCommand* cmd = command(index() - 1);
@@ -201,6 +204,9 @@ void MudletUndoStack::undo()
 
 void MudletUndoStack::redo()
 {
+    // Track that we're performing a redo operation
+    mLastOperationType = LastOperationType::Redo;
+
     // Get the command that will be redone (if any)
     if (index() < count()) {
         const QUndoCommand* cmd = command(index());
@@ -279,10 +285,19 @@ void MudletUndoStack::remapItemIDs(int oldID, int newID)
 
 bool MudletUndoStack::wasLastCommandValid() const
 {
-    // Get the command that was just undone or redone
-    // For undo: index() points to next command to redo, so last undone is at index()
-    // For redo: index() - 1 is the command that was just redone
-    int lastCommandIndex = mPreviousIndex > index() ? index() : index() - 1;
+    // Determine which command was just executed based on the operation type
+    int lastCommandIndex = -1;
+
+    if (mLastOperationType == LastOperationType::Undo) {
+        // After undo: index() points to the next command to redo, which is the command that was just undone
+        lastCommandIndex = index();
+    } else if (mLastOperationType == LastOperationType::Redo) {
+        // After redo: index() points to the command after the one that was just redone
+        lastCommandIndex = index() - 1;
+    } else {
+        // No operation performed yet
+        return true;
+    }
 
     if (lastCommandIndex < 0 || lastCommandIndex >= count()) {
         return true; // No command to check, consider it valid

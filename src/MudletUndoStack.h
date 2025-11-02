@@ -71,9 +71,16 @@ private:
     // Helper to recursively collect affected items from a command and its children
     void collectAffectedItems(const QUndoCommand* cmd, QMap<EditorViewType, QList<int>>& affectedItemsByView);
 
+    enum class LastOperationType {
+        None,
+        Undo,
+        Redo
+    };
+
     int mPreviousIndex = 0;  // Track previous index to determine undo vs redo
     bool mInPushOperation = false;  // Track if we're currently pushing a command
     bool mInMacroPush = false;  // Track if we're in a macro push operation (beginMacro -> endMacro)
+    LastOperationType mLastOperationType = LastOperationType::None;  // Track last operation type for wasLastCommandValid()
 };
 
 #endif // MUDLET_MUDLETUNDOSTACK_H
