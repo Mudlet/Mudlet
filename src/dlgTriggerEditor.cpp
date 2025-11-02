@@ -14118,7 +14118,7 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
             } else {
                 // Item not found (was deleted) - clear the trigger pattern UI
                 // to avoid showing stale patterns from previously selected trigger
-                for (int i = 0; i < 50; i++) {
+                for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
                     mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
                     if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
                         mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
@@ -14140,7 +14140,7 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
             }
         } else {
             // affectedItemIDs is empty - also clear the trigger pattern UI
-            for (int i = 0; i < 50; i++) {
+            for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
                 mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
                 if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
                     mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
