@@ -43,7 +43,7 @@ enum class EditorViewType {
 };
 Q_ENUM_NS(EditorViewType)
 
-}
+}  // namespace EditorViewTypes
 
 using EditorViewTypes::EditorViewType;
 

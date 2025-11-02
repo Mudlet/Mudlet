@@ -1847,8 +1847,7 @@ void dlgTriggerEditor::updatePatternNavigationHint()
         "<li>Press <strong>Ctrl+L</strong> to jump to the last visible pattern field.</li>"
         "<li>Press <strong>Ctrl+Up</strong> or <strong>Ctrl+Down</strong> to move between pattern fields.</li>"
         "<li>Press <strong>Ctrl+Tab</strong> to toggle the Lua code editor.</li>"
-        "</ul>"
-    ));
+        "</ul>"));
     
 }
 
