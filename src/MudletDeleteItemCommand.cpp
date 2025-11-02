@@ -122,7 +122,6 @@ void MudletDeleteItemCommand::undo() {
             if (!pRestoredTrigger) {
                 qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore trigger" << info.itemName;
             } else {
-                // Valid restore completed
                 mLastOperationWasValid = true;
                 int newID = pRestoredTrigger->getID();
                 int oldID = info.itemID;
@@ -190,6 +189,7 @@ void MudletDeleteItemCommand::undo() {
             if (!pRestoredAlias) {
                 qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore alias" << info.itemName;
             } else {
+                mLastOperationWasValid = true;
                 int newID = pRestoredAlias->getID();
                 int oldID = info.itemID;
 
@@ -252,6 +252,7 @@ void MudletDeleteItemCommand::undo() {
             if (!pRestoredTimer) {
                 qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore timer" << info.itemName;
             } else {
+                mLastOperationWasValid = true;
                 int newID = pRestoredTimer->getID();
                 int oldID = info.itemID;
 
@@ -314,6 +315,7 @@ void MudletDeleteItemCommand::undo() {
             if (!pRestoredScript) {
                 qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore script" << info.itemName;
             } else {
+                mLastOperationWasValid = true;
                 int newID = pRestoredScript->getID();
                 int oldID = info.itemID;
 
@@ -376,6 +378,7 @@ void MudletDeleteItemCommand::undo() {
             if (!pRestoredKey) {
                 qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore key" << info.itemName;
             } else {
+                mLastOperationWasValid = true;
                 int newID = pRestoredKey->getID();
                 int oldID = info.itemID;
 
@@ -438,6 +441,7 @@ void MudletDeleteItemCommand::undo() {
             if (!pRestoredAction) {
                 qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore action" << info.itemName;
             } else {
+                mLastOperationWasValid = true;
                 int newID = pRestoredAction->getID();
                 int oldID = info.itemID;
 

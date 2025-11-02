@@ -1312,6 +1312,93 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         }
     }
 
+    // Test: Sequential delete operations across types - single undo should undo only ONE operation
+    // This tests the bug where missing mLastOperationWasValid caused multiple operations to undo at once
+    {
+        qDebug() << "\n--- Category 7: Sequential Delete Across Types ---";
+
+        // Clean up all types first
+        for (const auto& type : itemTypes) {
+            type.showView();
+            CLEANUP_ALL(type);
+        }
+
+        // Get references to specific item types for clarity
+        const auto& scripts = itemTypes[3];  // Script
+        const auto& aliases = itemTypes[2];  // Alias
+        const auto& triggers = itemTypes[0]; // Trigger
+
+        // Add one item to each type
+        scripts.showView();
+        scripts.addItem();
+        int scriptsCountAfterAdd = scripts.baseItem->childCount();
+
+        aliases.showView();
+        aliases.addItem();
+        int aliasesCountAfterAdd = aliases.baseItem->childCount();
+
+        triggers.showView();
+        triggers.addItem();
+        int triggersCountAfterAdd = triggers.baseItem->childCount();
+
+        if (scriptsCountAfterAdd == 1 && aliasesCountAfterAdd == 1 && triggersCountAfterAdd == 1) {
+            // Delete scripts first
+            scripts.showView();
+            scripts.treeWidget->setCurrentItem(scripts.baseItem->child(0));
+            editor->slot_deleteItemOrGroup();
+
+            // Delete aliases second
+            aliases.showView();
+            aliases.treeWidget->setCurrentItem(aliases.baseItem->child(0));
+            editor->slot_deleteItemOrGroup();
+
+            // Delete triggers third
+            triggers.showView();
+            triggers.treeWidget->setCurrentItem(triggers.baseItem->child(0));
+            editor->slot_deleteItemOrGroup();
+
+            // Now all three should be deleted
+            if (scripts.baseItem->childCount() == 0 && aliases.baseItem->childCount() == 0 && triggers.baseItem->childCount() == 0) {
+                // First undo should restore ONLY triggers (most recent delete)
+                editor->mpUndoStack->undo();
+
+                if (triggers.baseItem->childCount() == 1 && aliases.baseItem->childCount() == 0 && scripts.baseItem->childCount() == 0) {
+                    TEST_PASS("Sequential delete: First undo restores only triggers");
+
+                    // Second undo should restore ONLY aliases
+                    editor->mpUndoStack->undo();
+
+                    if (triggers.baseItem->childCount() == 1 && aliases.baseItem->childCount() == 1 && scripts.baseItem->childCount() == 0) {
+                        TEST_PASS("Sequential delete: Second undo restores only aliases");
+
+                        // Third undo should restore ONLY scripts
+                        editor->mpUndoStack->undo();
+
+                        if (triggers.baseItem->childCount() == 1 && aliases.baseItem->childCount() == 1 && scripts.baseItem->childCount() == 1) {
+                            TEST_PASS("Sequential delete: Third undo restores only scripts");
+                        } else {
+                            TEST_FAIL("Sequential delete: Third undo did not restore scripts correctly");
+                        }
+                    } else {
+                        TEST_FAIL("Sequential delete: Second undo restored wrong items (BUG: multiple operations undone at once!)");
+                    }
+                } else {
+                    TEST_FAIL("Sequential delete: First undo restored wrong items (BUG: multiple operations undone at once!)");
+                }
+            } else {
+                TEST_FAIL("Sequential delete: Items not all deleted");
+            }
+        } else {
+            TEST_FAIL("Sequential delete: Failed to add items to all types");
+        }
+
+        // Clean up
+        for (const auto& type : itemTypes) {
+            type.showView();
+            CLEANUP_ALL(type);
+        }
+    }
+
     // ====================================================================================
     // CATEGORY 8: Large Batch Operations (12 tests)
     // ====================================================================================
