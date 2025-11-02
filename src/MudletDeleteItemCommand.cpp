@@ -48,44 +48,88 @@ void MudletDeleteItemCommand::undo() {
     mLastOperationWasValid = false;
 
     // Restore all deleted items from their XML snapshots
-    // Sort items to restore in correct order:
-    // 1. Parents before children (items whose parent is not in deleted list come first)
-    // 2. Siblings in position order (lower position first)
-    QList<DeletedItemInfo> sortedItems = mDeletedItems;
-    std::sort(sortedItems.begin(), sortedItems.end(), [&sortedItems](const DeletedItemInfo& a, const DeletedItemInfo& b) {
-        // Check if parent is in the deleted list
-        bool aParentDeleted = std::any_of(sortedItems.begin(), sortedItems.end(),
-                                          [&a](const DeletedItemInfo& item) { return item.itemID == a.parentID; });
-        bool bParentDeleted = std::any_of(sortedItems.begin(), sortedItems.end(),
-                                          [&b](const DeletedItemInfo& item) { return item.itemID == b.parentID; });
+    // Use topological sort to ensure parents are ALWAYS restored before children (any depth)
+    QList<DeletedItemInfo> sortedItems;
+    QSet<int> processedIDs;  // Track which items have been added to sortedItems
+    QList<DeletedItemInfo> remainingItems = mDeletedItems;
 
-        // Items whose parent is not deleted come first
-        if (aParentDeleted != bParentDeleted) {
-            return !aParentDeleted; // a comes first if its parent is not deleted
+    // Keep processing until all items are sorted
+    while (!remainingItems.isEmpty()) {
+        bool madeProgress = false;
+
+        // Process items from end to allow safe removal during iteration
+        for (int i = remainingItems.size() - 1; i >= 0; --i) {
+            const auto& item = remainingItems[i];
+
+            // Determine if this item can be restored now
+            bool canRestore = false;
+            if (item.parentID == -1) {
+                // Root item (no parent) - can always restore
+                canRestore = true;
+            } else {
+                // Check if parent was also deleted
+                bool parentWasDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(),
+                                                   [&item](const DeletedItemInfo& info) {
+                                                       return info.itemID == item.parentID;
+                                                   });
+                if (parentWasDeleted) {
+                    // Parent was deleted - check if it's already been processed
+                    if (processedIDs.contains(item.parentID)) {
+                        canRestore = true;
+                    }
+                } else {
+                    // Parent wasn't deleted, so it still exists in the tree - can restore
+                    canRestore = true;
+                }
+            }
+
+            if (canRestore) {
+                sortedItems.append(item);
+                processedIDs.insert(item.itemID);
+                remainingItems.removeAt(i);
+                madeProgress = true;
+            }
         }
 
-        // Within same parent, sort by position (ascending)
-        if (a.parentID == b.parentID) {
-            return a.positionInParent < b.positionInParent;
+        // Safety check for circular dependencies or broken references
+        if (!madeProgress && !remainingItems.isEmpty()) {
+            qWarning() << "MudletDeleteItemCommand::undo() - Could not resolve parent-child dependencies for"
+                       << remainingItems.size() << "items, adding them anyway";
+            sortedItems.append(remainingItems);
+            break;
         }
+    }
 
-        // Different parents, maintain original order
-        return false;
-    });
+    // Build a set of original deleted item IDs for fast skipRestore lookup
+    // Also store original parent IDs since sortedItems will be modified during iteration
+    QSet<int> originalDeletedIDs;
+    QMap<int, int> originalParentIDs;  // itemID -> original parentID
+    for (const auto& item : sortedItems) {
+        originalDeletedIDs.insert(item.itemID);
+        originalParentIDs[item.itemID] = item.parentID;
+    }
 
     for (int i = 0; i < sortedItems.size(); ++i) {
         auto& info = sortedItems[i];
 
         // Skip items whose parent was also deleted - they'll be restored from parent's XML
+        // Use the ORIGINAL parentID (before any updates during iteration)
         bool skipRestore = false;
-        if (info.parentID != -1) {
-            bool parentWasDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(),
-                                                [&info](const DeletedItemInfo& item) {
-                                                    return item.itemID == info.parentID;
-                                                });
+        int origParentID = originalParentIDs[info.itemID];
+        if (origParentID != -1) {
+            bool parentWasDeleted = originalDeletedIDs.contains(origParentID);
             if (parentWasDeleted) {
                 skipRestore = true;
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletDeleteItemCommand::undo() - Skipping" << info.itemName << "(ID:" << info.itemID
+                         << ") - parent (ID:" << info.parentID << ") was also deleted, will be restored from parent's XML";
+#endif
             }
+        }
+
+        if (skipRestore) {
+            // Item was restored from parent's XML - no need to restore individually
+            continue;
         }
 
         // Find the corresponding item in mDeletedItems to update the ID
@@ -94,16 +138,16 @@ void MudletDeleteItemCommand::undo() {
                                    return item.itemName == info.itemName && item.parentID == info.parentID;
                                });
         if (it == mDeletedItems.end()) {
-            qWarning() << "MudletDeleteItemCommand::undo() - Could not find item in original list:" << info.itemName;
+            qWarning() << "MudletDeleteItemCommand::undo() - Could not find item in original list:" << info.itemName
+                       << "with parentID=" << info.parentID;
             continue;
         }
         auto& originalInfo = *it;
 
-        if (skipRestore) {
-            // Item was restored from parent's XML, but we still need to find its new ID for redo
-            // This will be done after parent is restored
-            continue;
-        }
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "MudletDeleteItemCommand::undo() - Restoring" << info.itemName << "(ID:" << info.itemID
+                 << ", parentID:" << info.parentID << ") individually";
+#endif
 
         switch (mViewType) {
         case EditorViewType::cmTriggerView: {
@@ -169,6 +213,12 @@ void MudletDeleteItemCommand::undo() {
                             int childNewID = pChild->getID();
                             if (childOldID != childNewID) {
                                 childIt->itemID = childNewID;
+                                // Update grandchildren's parentID references in mDeletedItems
+                                for (auto& item : mDeletedItems) {
+                                    if (item.parentID == childOldID) {
+                                        item.parentID = childNewID;
+                                    }
+                                }
                                 // Recursively update grandchildren
                                 updateChildIDs(pChild, childNewID);
                             }
@@ -233,6 +283,12 @@ void MudletDeleteItemCommand::undo() {
                             int childNewID = pChild->getID();
                             if (childOldID != childNewID) {
                                 childIt->itemID = childNewID;
+                                // Update grandchildren's parentID references in mDeletedItems
+                                for (auto& item : mDeletedItems) {
+                                    if (item.parentID == childOldID) {
+                                        item.parentID = childNewID;
+                                    }
+                                }
                                 updateChildIDs(pChild, childNewID);
                             }
                         }
@@ -296,6 +352,12 @@ void MudletDeleteItemCommand::undo() {
                             int childNewID = pChild->getID();
                             if (childOldID != childNewID) {
                                 childIt->itemID = childNewID;
+                                // Update grandchildren's parentID references in mDeletedItems
+                                for (auto& item : mDeletedItems) {
+                                    if (item.parentID == childOldID) {
+                                        item.parentID = childNewID;
+                                    }
+                                }
                                 updateChildIDs(pChild, childNewID);
                             }
                         }
@@ -359,6 +421,12 @@ void MudletDeleteItemCommand::undo() {
                             int childNewID = pChild->getID();
                             if (childOldID != childNewID) {
                                 childIt->itemID = childNewID;
+                                // Update grandchildren's parentID references in mDeletedItems
+                                for (auto& item : mDeletedItems) {
+                                    if (item.parentID == childOldID) {
+                                        item.parentID = childNewID;
+                                    }
+                                }
                                 updateChildIDs(pChild, childNewID);
                             }
                         }
@@ -422,6 +490,12 @@ void MudletDeleteItemCommand::undo() {
                             int childNewID = pChild->getID();
                             if (childOldID != childNewID) {
                                 childIt->itemID = childNewID;
+                                // Update grandchildren's parentID references in mDeletedItems
+                                for (auto& item : mDeletedItems) {
+                                    if (item.parentID == childOldID) {
+                                        item.parentID = childNewID;
+                                    }
+                                }
                                 updateChildIDs(pChild, childNewID);
                             }
                         }
@@ -485,6 +559,12 @@ void MudletDeleteItemCommand::undo() {
                             int childNewID = pChild->getID();
                             if (childOldID != childNewID) {
                                 childIt->itemID = childNewID;
+                                // Update grandchildren's parentID references in mDeletedItems
+                                for (auto& item : mDeletedItems) {
+                                    if (item.parentID == childOldID) {
+                                        item.parentID = childNewID;
+                                    }
+                                }
                                 updateChildIDs(pChild, childNewID);
                             }
                         }
