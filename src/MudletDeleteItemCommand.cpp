@@ -175,7 +175,7 @@ void MudletDeleteItemCommand::undo() {
                         }
                     }
                 };
-                updateChildIDs(pRestoredTrigger, oldID);
+                updateChildIDs(pRestoredTrigger, newID);
             }
             break;
         }
@@ -238,7 +238,7 @@ void MudletDeleteItemCommand::undo() {
                         }
                     }
                 };
-                updateChildIDs(pRestoredAlias, oldID);
+                updateChildIDs(pRestoredAlias, newID);
             }
             break;
         }
@@ -301,7 +301,7 @@ void MudletDeleteItemCommand::undo() {
                         }
                     }
                 };
-                updateChildIDs(pRestoredTimer, oldID);
+                updateChildIDs(pRestoredTimer, newID);
             }
             break;
         }
@@ -364,7 +364,7 @@ void MudletDeleteItemCommand::undo() {
                         }
                     }
                 };
-                updateChildIDs(pRestoredScript, oldID);
+                updateChildIDs(pRestoredScript, newID);
             }
             break;
         }
@@ -427,7 +427,7 @@ void MudletDeleteItemCommand::undo() {
                         }
                     }
                 };
-                updateChildIDs(pRestoredKey, oldID);
+                updateChildIDs(pRestoredKey, newID);
             }
             break;
         }
@@ -490,7 +490,7 @@ void MudletDeleteItemCommand::undo() {
                         }
                     }
                 };
-                updateChildIDs(pRestoredAction, oldID);
+                updateChildIDs(pRestoredAction, newID);
             }
             break;
         }
@@ -693,7 +693,20 @@ void MudletDeleteItemCommand::redo() {
 
     // Now manually unregister and delete all items
     // Since mpHost is null, destructors won't try to unregister, so we must do it manually
+    // Only delete items whose parent is not also being deleted (parent deletion handles children)
     for (const auto& info : mDeletedItems) {
+        // Skip items whose parent is also in the deletion list
+        // (they will be automatically deleted when the parent is deleted)
+        if (info.parentID != -1) {
+            bool parentBeingDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(),
+                                                   [&info](const DeletedItemInfo& item) {
+                                                       return item.itemID == info.parentID;
+                                                   });
+            if (parentBeingDeleted) {
+                continue; // Skip this item - it will be deleted by its parent
+            }
+        }
+
         switch (mViewType) {
         case EditorViewType::cmTriggerView: {
             TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(info.itemID);
