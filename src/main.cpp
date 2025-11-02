@@ -829,7 +829,8 @@ bool runUpdate()
 }
 #endif // defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 
-void initializeQRCResources() {
+void initializeQRCResources()
+{
     #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
         qInitResources_additional_splash_screens();
     #endif
