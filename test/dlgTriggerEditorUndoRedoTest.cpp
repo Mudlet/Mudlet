@@ -1458,7 +1458,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
     }
 
     // ====================================================================================
-    // CATEGORY 9: State Consistency Tests (18 tests)
+    // CATEGORY 9: State Consistency Tests (24 tests)
     // ====================================================================================
     qDebug() << "\n=== CATEGORY 9: State Consistency Tests ===";
 
@@ -1523,6 +1523,73 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
             } else {
                 TEST_FAIL(itemType.name + ": Failed to create folder for relationship test");
             }
+        }
+
+        // Test: Deep nested hierarchy preserved after undo (grandparent→parent→children)
+        {
+            // Create a 3-level nested structure with multiple children at level 3
+            itemType.addFolder(); // Grandparent
+            QTreeWidgetItem* grandparent = itemType.baseItem->child(0);
+
+            if (grandparent) {
+                itemType.treeWidget->setCurrentItem(grandparent);
+                itemType.addFolder(); // Parent
+                QTreeWidgetItem* parent = grandparent->child(0);
+
+                if (parent) {
+                    // Add 5 children to the parent
+                    itemType.treeWidget->setCurrentItem(parent);
+                    for (int i = 0; i < 5; i++) {
+                        itemType.addItem();
+                    }
+
+                    int childrenCount = parent->childCount();
+
+                    // Delete the grandparent (should delete entire tree)
+                    itemType.treeWidget->setCurrentItem(grandparent);
+                    int baseCountBefore = itemType.baseItem->childCount();
+                    editor->slot_deleteItemOrGroup();
+
+                    if (itemType.baseItem->childCount() < baseCountBefore) {
+                        // Undo to restore the entire hierarchy
+                        editor->mpUndoStack->undo();
+
+                        // Verify hierarchy is fully restored
+                        QTreeWidgetItem* restoredGP = itemType.baseItem->child(0);
+                        bool hierarchyPreserved = false;
+
+                        if (restoredGP && restoredGP->childCount() == 1) {
+                            QTreeWidgetItem* restoredP = restoredGP->child(0);
+                            if (restoredP && restoredP->childCount() == childrenCount) {
+                                // Verify all children are under parent (not at root)
+                                bool allChildrenNested = true;
+                                for (int i = 0; i < childrenCount; i++) {
+                                    QTreeWidgetItem* child = restoredP->child(i);
+                                    if (!child) {
+                                        allChildrenNested = false;
+                                        break;
+                                    }
+                                }
+                                hierarchyPreserved = allChildrenNested;
+                            }
+                        }
+
+                        if (hierarchyPreserved) {
+                            TEST_PASS(itemType.name + ": Deep nested hierarchy preserved after undo");
+                        } else {
+                            TEST_FAIL(itemType.name + ": Deep nested hierarchy not preserved - children may be at root level");
+                        }
+                    } else {
+                        TEST_FAIL(itemType.name + ": Grandparent deletion failed");
+                    }
+                } else {
+                    TEST_FAIL(itemType.name + ": Failed to create parent folder");
+                }
+            } else {
+                TEST_FAIL(itemType.name + ": Failed to create grandparent folder");
+            }
+
+            CLEANUP_ALL(itemType);
         }
 
         // Test: Stack command count consistency
