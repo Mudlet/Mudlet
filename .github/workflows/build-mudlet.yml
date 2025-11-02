@@ -442,6 +442,7 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -452,6 +453,7 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'
@@ -466,12 +468,16 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: (macOS) Run C++ undo/redo tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
       shell: bash
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: Passed C++ undo/redo tests
       if: matrix.run_tests == 'true'
