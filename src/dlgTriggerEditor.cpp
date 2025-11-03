@@ -3780,24 +3780,53 @@ void dlgTriggerEditor::delete_alias()
         }
     };
 
+    // Helper lambda to calculate position in data model (not tree widget)
+    auto calculatePosition = [](TAlias* item) -> int {
+        if (!item) {
+            return 0;
+        }
+        TAlias* parent = item->getParent();
+        if (!parent) {
+            return 0;
+        }
+        auto* childrenList = parent->getChildrenList();
+        if (!childrenList) {
+            return 0;
+        }
+        int position = 0;
+        for (auto* child : *childrenList) {
+            if (child == item) {
+                return position;
+            }
+            position++;
+        }
+        return 0;
+    };
+
     // Capture each selected alias and all its descendants
     for (QTreeWidgetItem* pItem : selectedItems) {
         TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
         if (pT) {
-            // Determine parent ID and position
             int parentID = -1;
             int positionInParent = 0;
 
-            QTreeWidgetItem* pParentItem = pItem->parent();
-            if (pParentItem && pParentItem != mpAliasBaseItem) {
-                parentID = pParentItem->data(0, Qt::UserRole).toInt();
-                positionInParent = pParentItem->indexOfChild(pItem);
+            TAlias* parent = pT->getParent();
+            if (parent) {
+                parentID = parent->getID();
+                positionInParent = calculatePosition(pT);
             } else {
                 parentID = -1;
-                positionInParent = mpAliasBaseItem->indexOfChild(pItem);
+                auto rootList = mpHost->getAliasUnit()->getAliasRootNodeList();
+                int pos = 0;
+                for (auto* rootItem : rootList) {
+                    if (rootItem == pT) {
+                        positionInParent = pos;
+                        break;
+                    }
+                    pos++;
+                }
             }
 
-            // Recursively capture this alias and all its children
             captureAliasAndChildren(pT, parentID, positionInParent);
         }
     }
@@ -12390,6 +12419,12 @@ void dlgTriggerEditor::slot_copyXml()
 // FIXME: The switch cases in here need to handle EditorViewType::cmVarsView but how is not clear
 void dlgTriggerEditor::slot_pasteXml()
 {
+    // Begin macro to group all paste operations into one undo operation
+    if (mpUndoStack) {
+        //: Undo/redo text for pasting items
+        mpUndoStack->beginMacro(tr("paste"));
+    }
+
     XMLimport reader(mpHost);
 
     switch (mCurrentView) {
@@ -12425,10 +12460,9 @@ void dlgTriggerEditor::slot_pasteXml()
 
     EditorViewType importedItemType;
     int importedItemID;
+    QList<int> importedIDs;
 
     if (xmlPackages.size() > 1) {
-        // Multiple items detected - import each one individually
-        QList<int> importedIDs;
         EditorViewType firstImportType = EditorViewType::cmUnknownView;
 
         QString originalClipboard = QApplication::clipboard()->text();
@@ -12496,6 +12530,9 @@ void dlgTriggerEditor::slot_pasteXml()
 
             statusBar()->showMessage(tr("Pasted %1 items successfully").arg(importedIDs.size()), 3000);
         } else {
+            if (mpUndoStack) {
+                mpUndoStack->endMacro();
+            }
             return;
         }
     } else {
@@ -12506,6 +12543,9 @@ void dlgTriggerEditor::slot_pasteXml()
 
         // don't reset the view if what we pasted wasn't a Mudlet editor item
         if (importedItemType == EditorViewType::cmUnknownView && importedItemID == 0) {
+            if (mpUndoStack) {
+                mpUndoStack->endMacro();
+            }
             return;
         }
     }
@@ -12666,6 +12706,214 @@ void dlgTriggerEditor::slot_pasteXml()
         break;
     }
 
+    // Register undo commands for the pasted items
+    if (mpUndoStack) {
+        // Helper lambda to calculate position within parent's children
+        auto calculatePositionInParent = [](auto* item) -> int {
+            if (!item) {
+                return 0;
+            }
+            auto* parent = item->getParent();
+            if (!parent) {
+                return 0;
+            }
+            auto* childrenList = parent->getChildrenList();
+            if (!childrenList) {
+                return 0;
+            }
+            int position = 0;
+            for (auto* child : *childrenList) {
+                if (child == item) {
+                    return position;
+                }
+                position++;
+            }
+            return 0;
+        };
+
+        // Helper lambda to register an undo command for a single pasted item
+        auto registerUndoCommand = [&](EditorViewType viewType, int itemID) {
+            QString itemName;
+            int parentID = -1;
+            int positionInParent = 0;
+            bool isFolder = false;
+
+            switch (viewType) {
+            case EditorViewType::cmTriggerView: {
+                TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(itemID);
+                if (pT) {
+                    itemName = pT->getName();
+                    isFolder = pT->isFolder();
+                    auto* parent = pT->getParent();
+                    if (parent) {
+                        parentID = parent->getID();
+                        positionInParent = calculatePositionInParent(pT);
+                    } else {
+                        parentID = -1;
+                        auto rootList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+                        int pos = 0;
+                        for (auto* rootItem : rootList) {
+                            if (rootItem == pT) {
+                                positionInParent = pos;
+                                break;
+                            }
+                            pos++;
+                        }
+                    }
+                }
+                break;
+            }
+            case EditorViewType::cmTimerView: {
+                TTimer* pT = mpHost->getTimerUnit()->getTimer(itemID);
+                if (pT) {
+                    itemName = pT->getName();
+                    isFolder = pT->isFolder();
+                    auto* parent = pT->getParent();
+                    if (parent) {
+                        parentID = parent->getID();
+                        positionInParent = calculatePositionInParent(pT);
+                    } else {
+                        parentID = -1;
+                        auto rootList = mpHost->getTimerUnit()->getTimerRootNodeList();
+                        int pos = 0;
+                        for (auto* rootItem : rootList) {
+                            if (rootItem == pT) {
+                                positionInParent = pos;
+                                break;
+                            }
+                            pos++;
+                        }
+                    }
+                }
+                break;
+            }
+            case EditorViewType::cmAliasView: {
+                TAlias* pA = mpHost->getAliasUnit()->getAlias(itemID);
+                if (pA) {
+                    itemName = pA->getName();
+                    isFolder = pA->isFolder();
+                    auto* parent = pA->getParent();
+                    if (parent) {
+                        parentID = parent->getID();
+                        positionInParent = calculatePositionInParent(pA);
+                    } else {
+                        parentID = -1;
+                        auto rootList = mpHost->getAliasUnit()->getAliasRootNodeList();
+                        int pos = 0;
+                        for (auto* rootItem : rootList) {
+                            if (rootItem == pA) {
+                                positionInParent = pos;
+                                break;
+                            }
+                            pos++;
+                        }
+                    }
+                }
+                break;
+            }
+            case EditorViewType::cmScriptView: {
+                TScript* pS = mpHost->getScriptUnit()->getScript(itemID);
+                if (pS) {
+                    itemName = pS->getName();
+                    isFolder = pS->isFolder();
+                    auto* parent = pS->getParent();
+                    if (parent) {
+                        parentID = parent->getID();
+                        positionInParent = calculatePositionInParent(pS);
+                    } else {
+                        parentID = -1;
+                        auto rootList = mpHost->getScriptUnit()->getScriptRootNodeList();
+                        int pos = 0;
+                        for (auto* rootItem : rootList) {
+                            if (rootItem == pS) {
+                                positionInParent = pos;
+                                break;
+                            }
+                            pos++;
+                        }
+                    }
+                }
+                break;
+            }
+            case EditorViewType::cmActionView: {
+                TAction* pA = mpHost->getActionUnit()->getAction(itemID);
+                if (pA) {
+                    itemName = pA->getName();
+                    isFolder = pA->isFolder();
+                    auto* parent = pA->getParent();
+                    if (parent) {
+                        parentID = parent->getID();
+                        positionInParent = calculatePositionInParent(pA);
+                    } else {
+                        parentID = -1;
+                        auto rootList = mpHost->getActionUnit()->getActionRootNodeList();
+                        int pos = 0;
+                        for (auto* rootItem : rootList) {
+                            if (rootItem == pA) {
+                                positionInParent = pos;
+                                break;
+                            }
+                            pos++;
+                        }
+                    }
+                }
+                break;
+            }
+            case EditorViewType::cmKeysView: {
+                TKey* pK = mpHost->getKeyUnit()->getKey(itemID);
+                if (pK) {
+                    itemName = pK->getName();
+                    isFolder = pK->isFolder();
+                    auto* parent = pK->getParent();
+                    if (parent) {
+                        parentID = parent->getID();
+                        positionInParent = calculatePositionInParent(pK);
+                    } else {
+                        parentID = -1;
+                        auto rootList = mpHost->getKeyUnit()->getKeyRootNodeList();
+                        int pos = 0;
+                        for (auto* rootItem : rootList) {
+                            if (rootItem == pK) {
+                                positionInParent = pos;
+                                break;
+                            }
+                            pos++;
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                return;
+            }
+
+            if (!itemName.isEmpty()) {
+                auto* qtCmd = new MudletAddItemCommand(
+                    viewType,
+                    itemID,
+                    parentID,
+                    positionInParent,
+                    isFolder,
+                    itemName,
+                    mpHost);
+                mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
+            }
+        };
+
+        // Register undo commands for all imported items
+        if (xmlPackages.size() > 1) {
+            // Multiple items were pasted
+            if (!importedIDs.isEmpty()) {
+                for (int itemID : importedIDs) {
+                    registerUndoCommand(importedItemType, itemID);
+                }
+            }
+        } else {
+            // Single item was pasted
+            registerUndoCommand(importedItemType, importedItemID);
+        }
+    }
+
     // flag for re-rendering so the new item shows up in the right spot
     mNeedUpdateData = true;
 
@@ -12731,6 +12979,10 @@ void dlgTriggerEditor::slot_pasteXml()
     case EditorViewType::cmUnknownView:
         qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmUnknownView!\"";
         break;
+    }
+
+    if (mpUndoStack) {
+        mpUndoStack->endMacro();
     }
 }
 
