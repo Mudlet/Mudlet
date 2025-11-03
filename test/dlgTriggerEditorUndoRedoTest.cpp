@@ -22,6 +22,7 @@
 #include "TTreeWidget.h"
 #include "Host.h"
 #include "dlgTriggerPatternEdit.h"
+#include "dlgActionMainArea.h"
 
 #include <QTreeWidgetItem>
 #include <QDebug>
@@ -36,7 +37,7 @@
  * This test suite validates undo/redo functionality across all editor item types:
  * Triggers, Timers, Aliases, Scripts, Keys, and Actions.
  *
- * Tests cover 10 categories:
+ * Tests cover 14 categories addressing QA issues found in previous undo/redo PRs:
  * - Category 1: Core Operations - add, delete, undo, redo
  * - Category 2: Parent-only selection - deleting parent with children
  * - Category 3: Multi-selection - parent + all children selected
@@ -47,6 +48,10 @@
  * - Category 8: Large Batch Operations - testing with many items
  * - Category 9: State Consistency - ID validity, parent-child relationships
  * - Category 10: Error Recovery - stack integrity, cleanup verification
+ * - Category 11: Edit Operations - pattern, name, type, timer, color, rotation edits
+ * - Category 12: Crash Prevention - empty deletion, pattern type switch
+ * - Category 13: Bug-Specific Tests - premature undo, name wiped, script duplication
+ * - Category 14: UI Pattern Clearing - proper UI cleanup when items deleted
  *
  * @param editor Pointer to the trigger editor dialog
  */
@@ -1675,13 +1680,588 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
     }
 
     // ====================================================================================
-    // CATEGORY 11: UI Pattern Clearing Tests (6 tests)
+    // CATEGORY 11: Edit Operations Tests
     // ====================================================================================
-    qDebug() << "\n=== CATEGORY 11: UI Pattern Clearing Tests ===";
+    qDebug() << "\n=== CATEGORY 11: Edit Operations Tests ===";
+
+    // Test: Trigger pattern edits
+    {
+        qDebug() << "\n--- Category 11: Trigger Pattern Edits ---";
+        editor->slot_showTriggers();
+        CLEANUP_ALL(itemTypes[0]); // Clean triggers
+
+        // Add a trigger
+        editor->addTrigger(false);
+        if (editor->mpTriggerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* trigger = editor->mpTriggerBaseItem->child(0);
+            int triggerID = trigger->data(0, Qt::UserRole).toInt();
+            TTrigger* pT = editor->mpHost->getTriggerUnit()->getTrigger(triggerID);
+
+            if (pT) {
+                // Select the trigger to load UI
+                editor->treeWidget_triggers->setCurrentItem(trigger);
+                editor->slot_triggerSelected(trigger);
+
+                // Clear undo stack so we only test the modify operation
+                editor->mpUndoStack->clear();
+
+                // First, add an initial pattern (new triggers start with no patterns)
+                QString initialPattern = "initial pattern";
+                if (editor->mTriggerPatternEdit.size() > 0) {
+                    editor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(initialPattern);
+                    editor->saveTrigger();
+                }
+
+                // Now edit the pattern
+                QString originalPattern = pT->getPatternsList().value(0);
+                QString newPattern = "test pattern edit";
+
+                if (editor->mTriggerPatternEdit.size() > 0) {
+                    editor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(newPattern);
+                    editor->saveTrigger();
+                }
+
+                // Verify the pattern was changed
+                if (pT->getPatternsList().value(0) == newPattern) {
+                    TEST_PASS("Trigger: Pattern edit applied");
+
+                    // Undo the edit
+                    editor->mpUndoStack->undo();
+
+                    // Verify pattern was restored
+                    if (pT->getPatternsList().value(0) == originalPattern) {
+                        TEST_PASS("Trigger: Pattern edit undo works");
+
+                        // Redo the edit
+                        editor->mpUndoStack->redo();
+                        if (pT->getPatternsList().value(0) == newPattern) {
+                            TEST_PASS("Trigger: Pattern edit redo works");
+                        } else {
+                            TEST_FAIL("Trigger: Pattern edit redo failed");
+                        }
+                    } else {
+                        TEST_FAIL("Trigger: Pattern edit undo failed");
+                    }
+                } else {
+                    TEST_FAIL("Trigger: Pattern edit not applied");
+                }
+            } else {
+                TEST_FAIL("Trigger: Failed to get trigger for pattern edit test");
+            }
+        } else {
+            TEST_FAIL("Trigger: Failed to add trigger for pattern edit test");
+        }
+        CLEANUP_ALL(itemTypes[0]);
+    }
+
+    // Test: Trigger name edits
+    {
+        qDebug() << "\n--- Category 11: Trigger Name Edits ---";
+        editor->slot_showTriggers();
+        CLEANUP_ALL(itemTypes[0]);
+
+        editor->addTrigger(false);
+        if (editor->mpTriggerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* trigger = editor->mpTriggerBaseItem->child(0);
+            int triggerID = trigger->data(0, Qt::UserRole).toInt();
+            TTrigger* pT = editor->mpHost->getTriggerUnit()->getTrigger(triggerID);
+
+            if (pT) {
+                editor->treeWidget_triggers->setCurrentItem(trigger);
+                editor->slot_triggerSelected(trigger);
+
+                // Clear undo stack so we only test the modify operation
+                editor->mpUndoStack->clear();
+
+                QString originalName = pT->getName();
+                QString newName = "Edited Trigger Name";
+
+                editor->mpTriggersMainArea->lineEdit_trigger_name->setText(newName);
+
+                // Save to create undo command
+                editor->saveTrigger();
+
+                if (pT->getName() == newName) {
+                    TEST_PASS("Trigger: Name edit applied");
+
+                    editor->mpUndoStack->undo();
+                    if (pT->getName() == originalName) {
+                        TEST_PASS("Trigger: Name edit undo works");
+
+                        editor->mpUndoStack->redo();
+                        if (pT->getName() == newName) {
+                            TEST_PASS("Trigger: Name edit redo works");
+                        } else {
+                            TEST_FAIL("Trigger: Name edit redo failed");
+                        }
+                    } else {
+                        TEST_FAIL("Trigger: Name edit undo failed");
+                    }
+                } else {
+                    TEST_FAIL("Trigger: Name edit not applied");
+                }
+            } else {
+                TEST_FAIL("Trigger: Failed to get trigger for name edit test");
+            }
+        } else {
+            TEST_FAIL("Trigger: Failed to add trigger for name edit test");
+        }
+        CLEANUP_ALL(itemTypes[0]);
+    }
+
+    // Test: Trigger type changes
+    {
+        qDebug() << "\n--- Category 11: Trigger Type Changes ---";
+        editor->slot_showTriggers();
+        CLEANUP_ALL(itemTypes[0]);
+
+        editor->addTrigger(false);
+        if (editor->mpTriggerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* trigger = editor->mpTriggerBaseItem->child(0);
+            int triggerID = trigger->data(0, Qt::UserRole).toInt();
+            TTrigger* pT = editor->mpHost->getTriggerUnit()->getTrigger(triggerID);
+
+            if (pT) {
+                editor->treeWidget_triggers->setCurrentItem(trigger);
+                editor->slot_triggerSelected(trigger);
+
+                // Clear undo stack so we only test the modify operation
+                editor->mpUndoStack->clear();
+
+                // First, ensure trigger has a pattern (new triggers start with no patterns)
+                if (editor->mTriggerPatternEdit.size() > 0) {
+                    editor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText("test");
+                    editor->saveTrigger();
+                }
+
+                // Now change the pattern type from substring to perl regex
+                QList<int> patternTypes = pT->getRegexCodePropertyList();
+                if (patternTypes.isEmpty()) {
+                    TEST_FAIL("Trigger: No pattern types exist to change");
+                } else {
+                    int originalType = patternTypes.value(0);
+                    int newType = REGEX_PERL;
+
+                    if (editor->mTriggerPatternEdit.size() > 0) {
+                        editor->mTriggerPatternEdit[0]->comboBox_patternType->setCurrentIndex(1); // Index 1 = REGEX_PERL
+                        editor->saveTrigger();
+                    }
+
+                    if (pT->getRegexCodePropertyList().value(0) == newType) {
+                        TEST_PASS("Trigger: Type change applied");
+
+                        editor->mpUndoStack->undo();
+                        if (pT->getRegexCodePropertyList().value(0) == originalType) {
+                            TEST_PASS("Trigger: Type change undo works");
+
+                            editor->mpUndoStack->redo();
+                            if (pT->getRegexCodePropertyList().value(0) == newType) {
+                                TEST_PASS("Trigger: Type change redo works");
+                            } else {
+                                TEST_FAIL("Trigger: Type change redo failed");
+                            }
+                        } else {
+                            TEST_FAIL("Trigger: Type change undo failed");
+                        }
+                    } else {
+                        TEST_FAIL("Trigger: Type change not applied");
+                    }
+                }
+            } else {
+                TEST_FAIL("Trigger: Failed to get trigger for type change test");
+            }
+        } else {
+            TEST_FAIL("Trigger: Failed to add trigger for type change test");
+        }
+        CLEANUP_ALL(itemTypes[0]);
+    }
+
+    // Test: Timer time values
+    {
+        qDebug() << "\n--- Category 11: Timer Time Values ---";
+        editor->slot_showTimers();
+        CLEANUP_ALL(itemTypes[1]); // Clean timers
+
+        editor->addTimer(false);
+        if (editor->mpTimerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* timer = editor->mpTimerBaseItem->child(0);
+            int timerID = timer->data(0, Qt::UserRole).toInt();
+            TTimer* pTimer = editor->mpHost->getTimerUnit()->getTimer(timerID);
+
+            if (pTimer) {
+                editor->treeWidget_timers->setCurrentItem(timer);
+                editor->slot_timerSelected(timer);
+
+                // Clear undo stack so we only test the modify operation
+                editor->mpUndoStack->clear();
+
+                QTime originalTime = pTimer->getTime();
+                // Set new time: 1 minute 30.5 seconds
+                QTime newMinutes(0, 1, 0, 0);
+                QTime newSeconds(0, 0, 30, 0);
+                QTime newMsecs(0, 0, 0, 500);
+
+                editor->mpTimersMainArea->timeEdit_timer_minutes->setTime(newMinutes);
+                editor->mpTimersMainArea->timeEdit_timer_seconds->setTime(newSeconds);
+                editor->mpTimersMainArea->timeEdit_timer_msecs->setTime(newMsecs);
+
+                // Save to create undo command
+                editor->saveTimer();
+
+                QTime expectedTime(0, 1, 30, 500);
+                if (pTimer->getTime() == expectedTime) {
+                    TEST_PASS("Timer: Time value edit applied");
+
+                    editor->mpUndoStack->undo();
+                    if (pTimer->getTime() == originalTime) {
+                        TEST_PASS("Timer: Time value undo works");
+
+                        editor->mpUndoStack->redo();
+                        if (pTimer->getTime() == expectedTime) {
+                            TEST_PASS("Timer: Time value redo works");
+                        } else {
+                            TEST_FAIL("Timer: Time value redo failed");
+                        }
+                    } else {
+                        TEST_FAIL("Timer: Time value undo failed");
+                    }
+                } else {
+                    TEST_FAIL("Timer: Time value edit not applied");
+                }
+            } else {
+                TEST_FAIL("Timer: Failed to get timer for time edit test");
+            }
+        } else {
+            TEST_FAIL("Timer: Failed to add timer for time edit test");
+        }
+        CLEANUP_ALL(itemTypes[1]);
+    }
+
+    // Test: Trigger highlighting color
+    {
+        qDebug() << "\n--- Category 11: Trigger Highlighting ---";
+        editor->slot_showTriggers();
+        CLEANUP_ALL(itemTypes[0]);
+
+        editor->addTrigger(false);
+        if (editor->mpTriggerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* trigger = editor->mpTriggerBaseItem->child(0);
+            int triggerID = trigger->data(0, Qt::UserRole).toInt();
+            TTrigger* pT = editor->mpHost->getTriggerUnit()->getTrigger(triggerID);
+
+            if (pT) {
+                editor->treeWidget_triggers->setCurrentItem(trigger);
+                editor->slot_triggerSelected(trigger);
+
+                // Clear undo stack so we only test the modify operation
+                editor->mpUndoStack->clear();
+
+                QColor originalFgColor = pT->getFgColor();
+                QColor newFgColor(255, 0, 0); // Red
+
+                // Set color directly (simulating color picker)
+                pT->setColorizerFgColor(newFgColor);
+
+                // Save to create undo command
+                editor->saveTrigger();
+
+                if (pT->getFgColor() == newFgColor) {
+                    TEST_PASS("Trigger: Highlighting color change applied");
+
+                    editor->mpUndoStack->undo();
+                    if (pT->getFgColor() == originalFgColor) {
+                        TEST_PASS("Trigger: Highlighting color undo works");
+
+                        editor->mpUndoStack->redo();
+                        if (pT->getFgColor() == newFgColor) {
+                            TEST_PASS("Trigger: Highlighting color redo works");
+                        } else {
+                            TEST_FAIL("Trigger: Highlighting color redo failed");
+                        }
+                    } else {
+                        TEST_FAIL("Trigger: Highlighting color undo failed");
+                    }
+                } else {
+                    TEST_FAIL("Trigger: Highlighting color change not applied");
+                }
+            } else {
+                TEST_FAIL("Trigger: Failed to get trigger for color test");
+            }
+        } else {
+            TEST_FAIL("Trigger: Failed to add trigger for color test");
+        }
+        CLEANUP_ALL(itemTypes[0]);
+    }
+
+    // Test: Button rotation field
+    {
+        qDebug() << "\n--- Category 11: Button Rotation ---";
+        editor->slot_showActions();
+        CLEANUP_ALL(itemTypes[5]); // Clean actions/buttons
+
+        editor->addAction(false);
+        if (editor->mpActionBaseItem->childCount() > 0) {
+            QTreeWidgetItem* button = editor->mpActionBaseItem->child(0);
+            int buttonID = button->data(0, Qt::UserRole).toInt();
+            TAction* pAction = editor->mpHost->getActionUnit()->getAction(buttonID);
+
+            if (pAction) {
+                editor->treeWidget_actions->setCurrentItem(button);
+                editor->slot_actionSelected(button);
+
+                // Clear undo stack so we only test the modify operation
+                editor->mpUndoStack->clear();
+
+                // Get original rotation (stored in comboBox)
+                int originalRotationIndex = editor->mpActionsMainArea->comboBox_action_button_rotation->currentIndex();
+
+                // Set new rotation: index 1 = 90° left, index 2 = 90° right
+                int newRotationIndex = 1;
+                editor->mpActionsMainArea->comboBox_action_button_rotation->setCurrentIndex(newRotationIndex);
+
+                // Save to create undo command
+                editor->saveAction();
+
+                if (editor->mpActionsMainArea->comboBox_action_button_rotation->currentIndex() == newRotationIndex) {
+                    TEST_PASS("Button: Rotation change applied");
+
+                    editor->mpUndoStack->undo();
+
+                    // Re-fetch tree widget item after undo (old item was deleted by slot_itemsChanged)
+                    if (editor->mpActionBaseItem->childCount() > 0) {
+                        button = editor->mpActionBaseItem->child(0);
+                        editor->slot_actionSelected(button);
+
+                        if (editor->mpActionsMainArea->comboBox_action_button_rotation->currentIndex() == originalRotationIndex) {
+                            TEST_PASS("Button: Rotation undo works");
+
+                            editor->mpUndoStack->redo();
+
+                            // Re-fetch tree widget item after redo
+                            if (editor->mpActionBaseItem->childCount() > 0) {
+                                button = editor->mpActionBaseItem->child(0);
+                                editor->slot_actionSelected(button);
+
+                                if (editor->mpActionsMainArea->comboBox_action_button_rotation->currentIndex() == newRotationIndex) {
+                                    TEST_PASS("Button: Rotation redo works");
+                                } else {
+                                    TEST_FAIL("Button: Rotation redo failed");
+                                }
+                            } else {
+                                TEST_FAIL("Button: Rotation redo - no button in tree");
+                            }
+                        } else {
+                            TEST_FAIL("Button: Rotation undo failed");
+                        }
+                    } else {
+                        TEST_FAIL("Button: Rotation undo - no button in tree");
+                    }
+                } else {
+                    TEST_FAIL("Button: Rotation change not applied");
+                }
+            } else {
+                TEST_FAIL("Button: Failed to get button for rotation test");
+            }
+        } else {
+            TEST_FAIL("Button: Failed to add button for rotation test");
+        }
+        CLEANUP_ALL(itemTypes[5]);
+    }
+
+    // ====================================================================================
+    // CATEGORY 12: Crash Prevention Tests
+    // ====================================================================================
+    qDebug() << "\n=== CATEGORY 12: Crash Prevention Tests ===";
+
+    // Test: Empty object deletion
+    {
+        qDebug() << "\n--- Category 12: Empty Object Deletion ---";
+        editor->slot_showTriggers();
+        CLEANUP_ALL(itemTypes[0]);
+
+        // Try to delete when nothing is selected
+        editor->treeWidget_triggers->clearSelection();
+        editor->treeWidget_triggers->setCurrentItem(nullptr);
+
+        bool crashOccurred = false;
+        try {
+            editor->slot_deleteItemOrGroup();
+            TEST_PASS("Empty object deletion: No crash when nothing selected");
+        } catch (...) {
+            crashOccurred = true;
+            TEST_FAIL("Empty object deletion: Crashed when nothing selected");
+        }
+
+        if (!crashOccurred) {
+            // Try to delete the base item itself
+            editor->treeWidget_triggers->setCurrentItem(editor->mpTriggerBaseItem);
+            try {
+                editor->slot_deleteItemOrGroup();
+                TEST_PASS("Empty object deletion: No crash when base item selected");
+            } catch (...) {
+                TEST_FAIL("Empty object deletion: Crashed when base item selected");
+            }
+        }
+    }
+
+    // Test: Pattern type switch crash
+    {
+        qDebug() << "\n--- Category 12: Pattern Type Switch ---";
+        editor->slot_showTriggers();
+        CLEANUP_ALL(itemTypes[0]);
+
+        editor->addTrigger(false);
+        if (editor->mpTriggerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* trigger = editor->mpTriggerBaseItem->child(0);
+            editor->treeWidget_triggers->setCurrentItem(trigger);
+            editor->slot_triggerSelected(trigger);
+
+            // Switch pattern types multiple times
+            bool crashOccurred = false;
+            try {
+                for (int i = 0; i < 5; i++) {
+                    editor->mTriggerPatternEdit[0]->comboBox_patternType->setCurrentIndex(0); // REGEX_SUBSTRING
+                    editor->saveTrigger();
+                    editor->mTriggerPatternEdit[0]->comboBox_patternType->setCurrentIndex(1); // REGEX_PERL
+                    editor->saveTrigger();
+                    editor->mTriggerPatternEdit[0]->comboBox_patternType->setCurrentIndex(2); // REGEX_BEGIN_OF_LINE_SUBSTRING
+                    editor->saveTrigger();
+                }
+                TEST_PASS("Pattern type switch: No crash on multiple switches");
+
+                // Now try clicking undo
+                if (editor->mpUndoStack->canUndo()) {
+                    editor->mpUndoStack->undo();
+                    TEST_PASS("Pattern type switch: No crash on undo after type switches");
+                }
+            } catch (...) {
+                TEST_FAIL("Pattern type switch: Crash occurred during type switching");
+            }
+        } else {
+            TEST_FAIL("Pattern type switch: Failed to add trigger");
+        }
+        CLEANUP_ALL(itemTypes[0]);
+    }
+
+    // ====================================================================================
+    // CATEGORY 13: Bug-Specific Tests
+    // ====================================================================================
+    qDebug() << "\n=== CATEGORY 13: Bug-Specific Tests ===";
+
+    // Test: Premature undo activation
+    {
+        qDebug() << "\n--- Category 13: Premature Undo Activation ---";
+        editor->slot_showTriggers();
+        CLEANUP_ALL(itemTypes[0]);
+
+        int initialCount = editor->mpTriggerBaseItem->childCount();
+
+        // Open editor, select an item (or baseItem), click undo without making changes
+        editor->treeWidget_triggers->setCurrentItem(editor->mpTriggerBaseItem);
+
+        bool canUndoBefore = editor->mpUndoStack->canUndo();
+        editor->mpUndoStack->undo();
+
+        int countAfterUndo = editor->mpTriggerBaseItem->childCount();
+
+        if (!canUndoBefore || countAfterUndo == initialCount) {
+            TEST_PASS("Premature undo: No items disappeared when undo clicked without changes");
+        } else {
+            TEST_FAIL("Premature undo: Items disappeared incorrectly (BUG!)");
+        }
+    }
+
+    // Test: Trigger name wiped when creating group
+    {
+        qDebug() << "\n--- Category 13: Trigger Name Wiped ---";
+        editor->slot_showTriggers();
+        CLEANUP_ALL(itemTypes[0]);
+
+        // Create a trigger with a name
+        editor->addTrigger(false);
+        if (editor->mpTriggerBaseItem->childCount() > 0) {
+            QTreeWidgetItem* trigger = editor->mpTriggerBaseItem->child(0);
+            int triggerID = trigger->data(0, Qt::UserRole).toInt();
+            TTrigger* pT = editor->mpHost->getTriggerUnit()->getTrigger(triggerID);
+
+            if (pT) {
+                QString triggerName = "Test Trigger Name";
+                editor->treeWidget_triggers->setCurrentItem(trigger);
+                editor->slot_triggerSelected(trigger);
+                editor->mpTriggersMainArea->lineEdit_trigger_name->setText(triggerName);
+
+                // Save to persist the name
+                editor->saveTrigger();
+
+                QString nameAfterSave = pT->getName();
+
+                // Now create a new group
+                editor->addTrigger(true);
+
+                // Check if the original trigger's name is still intact
+                QString nameAfterGroupCreation = pT->getName();
+
+                if (nameAfterGroupCreation == triggerName && nameAfterGroupCreation == nameAfterSave) {
+                    TEST_PASS("Trigger name wiped: Name preserved after group creation");
+                } else {
+                    TEST_FAIL("Trigger name wiped: Name was wiped when group created (BUG!)");
+                }
+            } else {
+                TEST_FAIL("Trigger name wiped: Failed to get trigger");
+            }
+        } else {
+            TEST_FAIL("Trigger name wiped: Failed to add trigger");
+        }
+        CLEANUP_ALL(itemTypes[0]);
+    }
+
+    // Test: Script duplication on undo
+    {
+        qDebug() << "\n--- Category 13: Script Duplication ---";
+        editor->slot_showScripts();
+        CLEANUP_ALL(itemTypes[3]); // Clean scripts
+
+        // Add a script
+        editor->addScript(false);
+        int countAfterAdd = editor->mpScriptsBaseItem->childCount();
+
+        if (countAfterAdd == 1) {
+            QTreeWidgetItem* script = editor->mpScriptsBaseItem->child(0);
+            editor->treeWidget_scripts->setCurrentItem(script);
+
+            // Delete the script
+            editor->slot_deleteItemOrGroup();
+
+            if (editor->mpScriptsBaseItem->childCount() == 0) {
+                // Undo the delete
+                editor->mpUndoStack->undo();
+
+                int countAfterUndo = editor->mpScriptsBaseItem->childCount();
+
+                if (countAfterUndo == 1) {
+                    TEST_PASS("Script duplication: Exactly 1 script restored (no duplication)");
+                } else if (countAfterUndo > 1) {
+                    TEST_FAIL("Script duplication: ALL scripts duplicated on undo (BUG!)");
+                } else {
+                    TEST_FAIL("Script duplication: No script restored");
+                }
+            } else {
+                TEST_FAIL("Script duplication: Script not deleted");
+            }
+        } else {
+            TEST_FAIL("Script duplication: Failed to add script");
+        }
+        CLEANUP_ALL(itemTypes[3]);
+    }
+
+    // ====================================================================================
+    // CATEGORY 14: UI Pattern Clearing Tests (6 tests)
+    // ====================================================================================
+    qDebug() << "\n=== CATEGORY 14: UI Pattern Clearing Tests ===";
 
     // Test: Trigger patterns cleared when item not found after delete
     {
-        qDebug() << "\n--- Category 11: Trigger Pattern UI Clearing ---";
+        qDebug() << "\n--- Category 14: Trigger Pattern UI Clearing ---";
 
         // Show triggers view
         editor->slot_showTriggers();
@@ -1851,7 +2431,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         qDebug() << "  STATUS: ✗ SOME TESTS FAILED";
     }
     qDebug() << "========================================";
-    qDebug() << "\nCoverage: All 11 categories tested";
+    qDebug() << "\nCoverage: All 14 categories tested";
     qDebug() << "  Category 1: Core Operations";
     qDebug() << "  Category 2: Parent-Only Selection";
     qDebug() << "  Category 3: Multi-selection";
@@ -1862,7 +2442,10 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
     qDebug() << "  Category 8: Large Batch Operations";
     qDebug() << "  Category 9: State Consistency";
     qDebug() << "  Category 10: Error Recovery";
-    qDebug() << "  Category 11: UI Pattern Clearing";
+    qDebug() << "  Category 11: Edit Operations (Pattern, Name, Type, Timer, Color, Rotation)";
+    qDebug() << "  Category 12: Crash Prevention (Empty Deletion, Pattern Type Switch)";
+    qDebug() << "  Category 13: Bug-Specific Tests (Premature Undo, Name Wiped, Script Duplication)";
+    qDebug() << "  Category 14: UI Pattern Clearing";
 
     // Write failure marker file for CI detection
     if (failedTests > 0) {
