@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGTRIGGERPATTERNEDIT_H
-#define MUDLET_DLGTRIGGERPATTERNEDIT_H
-
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,42 +18,19 @@
  ***************************************************************************/
 
 
-#include "ui_trigger_pattern_edit.h"
-#include <QPalette>
-#include "post_guard.h"
+#ifndef WIDECOMBOBOX_H
+#define WIDECOMBOBOX_H
 
-class QAction;
+#include <QComboBox>
+#include <QObject>
 
-class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
-{
+class WideComboBox : public QComboBox {
     Q_OBJECT
-
 public:
-    Q_DISABLE_COPY(dlgTriggerPatternEdit)
-    explicit dlgTriggerPatternEdit(QWidget*);
+    using QComboBox::QComboBox; // inherit constructors
 
-    void applyThemePalette(const QPalette& editorPalette);
-
-    int mRow = 0;
-
-
-public slots:
-    void slot_triggerTypeComboBoxChanged(const int);
-
-
-private:
-    void resetThemePalette();
-
-    QPalette mDefaultPalette;
-    QPalette mDefaultPatternNumberPalette;
-    QPalette mDefaultPromptPalette;
-    QPalette mDefaultComboPalette;
-    QPalette mDefaultSpinPalette;
-    QPalette mDefaultForegroundButtonPalette;
-    QPalette mDefaultBackgroundButtonPalette;
-    QPalette mDefaultPatternEditPalette;
-    QPalette mDefaultPatternEditViewportPalette;
-    bool mDefaultPatternEditViewportAutoFillBackground = false;
+protected:
+    void showPopup() override;
 };
 
-#endif // MUDLET_DLGTRIGGERPATTERNEDIT_H
+#endif // WIDECOMBOBOX_H

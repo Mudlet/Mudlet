@@ -636,7 +636,6 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isUnderlineDotted = attributes & TChar::UnderlineDotted;
     const bool isUnderlineDashed = attributes & TChar::UnderlineDashed;
     const bool hasAdvancedUnderline = isUnderlineWavy || isUnderlineDotted || isUnderlineDashed;
-    const bool hasCustomDecorationColors = charStyle.hasCustomUnderlineColor() || charStyle.hasCustomOverlineColor() || charStyle.hasCustomStrikeoutColor();
 
     // If we have advanced underline styles or custom decoration colors, disable Qt's built-in decorations
     // and draw them manually later

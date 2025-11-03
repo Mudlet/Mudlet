@@ -109,11 +109,6 @@
        <height>29</height>
       </size>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>7</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>Foreground color ignored</string>
      </property>
@@ -132,11 +127,6 @@
        <width>16777215</width>
        <height>29</height>
       </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>7</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>Background color ignored</string>
@@ -159,11 +149,6 @@
        <width>16777215</width>
        <height>29</height>
       </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>7</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>match on the prompt line</string>

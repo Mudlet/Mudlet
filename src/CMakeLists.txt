@@ -43,9 +43,9 @@ endif()
 if(WIN32)
   # APP_BUILD should now be be available
 
-  if(APP_BUILD matches "-ptb.+")
+  if(APP_BUILD MATCHES "-ptb.+")
     list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  elseif((APP_BUILD MATCHES "-dev.+" OR APP_BUILD MATCHES "-test.+"))
     # The above test may not be correct as it won't pick up builds where
     # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
     # "Packagers" they will likely want the original icon anyhow for their
@@ -118,6 +118,7 @@ set(mudlet_SRCS
     CustomLineEditHandler.cpp
     CustomLineSession.cpp
     LabelInteractionHandler.cpp
+    PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp
@@ -202,6 +203,7 @@ set(mudlet_SRCS
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
+    WideComboBox.cpp
     XMLexport.cpp
     XMLimport.cpp)
 
@@ -310,6 +312,7 @@ set(mudlet_HDRS
     CustomLineEditHandler.h
     CustomLineSession.h
     LabelInteractionHandler.h
+    PackageItemDelegate.h
     PanInteractionHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
@@ -390,6 +393,7 @@ set(mudlet_HDRS
     utils.h
     VarUnit.h
     widechar_width.h
+    WideComboBox.h
     XMLexport.h
     XMLimport.h
     enums.h)
@@ -441,6 +445,12 @@ endmacro()
 set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
 if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
+endif()
+
+if(NOT WIN32)
+  include(cmake/EnableSanitizers.cmake)
+else()
+  message(STATUS "Sanitizers disabled on Windows")
 endif()
 
 find_package(Qt6 6.4.0 REQUIRED

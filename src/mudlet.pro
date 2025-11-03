@@ -615,6 +615,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
+    WideComboBox.cpp \
     ctelnet.cpp \
     DarkTheme.cpp \
     discord.cpp \
@@ -632,6 +633,7 @@ SOURCES += \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
     dlgPackageManager.cpp \
+    PackageItemDelegate.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
@@ -762,6 +764,7 @@ HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    WideComboBox.h \
     ctelnet.h \
     DarkTheme.h \
     discord.h \
@@ -779,6 +782,7 @@ HEADERS += \
     dlgNotepad.h \
     dlgPackageExporter.h \
     dlgPackageManager.h \
+    PackageItemDelegate.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \
