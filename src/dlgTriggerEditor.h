@@ -630,6 +630,7 @@ private:
     // Smart undo/redo actions (route based on focus):
     QAction* mpUndoAction = nullptr;
     QAction* mpRedoAction = nullptr;
+    QAction* mpRunUndoRedoTestsAction = nullptr;
 
     // Undo system for item-level operations (using Qt's QUndoStack framework):
     MudletUndoStack* mpUndoStack = nullptr;

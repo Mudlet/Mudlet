@@ -858,12 +858,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleCentralDebugConsole);
 
     // Only show undo/redo test button in "Mudlet self-test" profile (tests are destructive)
-    QAction* runUndoRedoTestsAction = nullptr;
     if (hostName == qsl("Mudlet self-test")) {
-        runUndoRedoTestsAction = new QAction(QIcon(qsl(":/icons/view-statistics.png")), tr("Test Undo/Redo"), this);
-        runUndoRedoTestsAction->setStatusTip(tr("Run internal undo/redo tests and output results to console"));
-        runUndoRedoTestsAction->setToolTip(tr("Run Undo/Redo Tests"));
-        connect(runUndoRedoTestsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_runUndoRedoTests);
+        mpRunUndoRedoTestsAction = new QAction(QIcon(qsl(":/icons/view-statistics.png")), tr("Test Undo/Redo"), this);
+        mpRunUndoRedoTestsAction->setStatusTip(tr("Run internal undo/redo tests and output results to console"));
+        mpRunUndoRedoTestsAction->setToolTip(tr("Run Undo/Redo Tests"));
+        connect(mpRunUndoRedoTestsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_runUndoRedoTests);
     }
 
     QAction* toggleActiveAction = new QAction(QIcon(qsl(":/icons/document-encrypt.png")), tr("Activate"), this);
@@ -1065,8 +1064,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(viewErrorsAction);
     toolBar2->addAction(viewStatsAction);
     toolBar2->addAction(showDebugAreaAction);
-    if (runUndoRedoTestsAction) {
-        toolBar2->addAction(runUndoRedoTestsAction);
+    if (mpRunUndoRedoTestsAction) {
+        toolBar2->addAction(mpRunUndoRedoTestsAction);
     }
 
     toolBar2->setMovable(true);
@@ -1585,7 +1584,17 @@ void dlgTriggerEditor::slot_runUndoRedoTests()
         return;
     }
 
+    // Disable the test button while tests are running
+    if (mpRunUndoRedoTestsAction) {
+        mpRunUndoRedoTestsAction->setEnabled(false);
+    }
+
     runUndoRedoTestSuite(this);
+
+    // Re-enable the test button after tests complete
+    if (mpRunUndoRedoTestsAction) {
+        mpRunUndoRedoTestsAction->setEnabled(true);
+    }
 }
 
 void dlgTriggerEditor::applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWidget)
