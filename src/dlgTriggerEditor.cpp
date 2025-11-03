@@ -3824,8 +3824,7 @@ void dlgTriggerEditor::delete_alias()
         auto* qtCmd = new MudletDeleteItemCommand(
             EditorViewType::cmAliasView,
             deletedItems,
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);
     }
 
@@ -3968,8 +3967,7 @@ void dlgTriggerEditor::delete_action()
         auto* qtCmd = new MudletDeleteItemCommand(
             EditorViewType::cmActionView,
             deletedItems,
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);
     }
 
@@ -4185,8 +4183,7 @@ void dlgTriggerEditor::delete_script()
         auto* qtCmd = new MudletDeleteItemCommand(
             EditorViewType::cmScriptView,
             deletedItems,
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);
     }
 
@@ -4322,8 +4319,7 @@ void dlgTriggerEditor::delete_key()
         auto* qtCmd = new MudletDeleteItemCommand(
             EditorViewType::cmKeysView,
             deletedItems,
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);
     }
 
@@ -4464,8 +4460,7 @@ void dlgTriggerEditor::delete_trigger()
         auto* qtCmd = new MudletDeleteItemCommand(
             EditorViewType::cmTriggerView,
             deletedItems,
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);
     }
 
@@ -4601,8 +4596,7 @@ void dlgTriggerEditor::delete_timer()
         auto* qtCmd = new MudletDeleteItemCommand(
             EditorViewType::cmTimerView,
             deletedItems,
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);
     }
 
@@ -4713,8 +4707,7 @@ void dlgTriggerEditor::activeToggle_trigger()
             oldState,
             newState,
             pT->getName(),
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
@@ -4804,8 +4797,7 @@ void dlgTriggerEditor::slot_itemMoved(int itemID, int oldParentID, int newParent
         oldPosition,
         newPosition,
         itemName,
-        mpHost
-    );
+        mpHost);
     mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
 }
 
@@ -5029,8 +5021,7 @@ void dlgTriggerEditor::activeToggle_timer()
             oldState,
             newState,
             pT->getName(),
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
@@ -5184,8 +5175,7 @@ void dlgTriggerEditor::activeToggle_alias()
             oldState,
             newState,
             pT->getName(),
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
@@ -5319,8 +5309,7 @@ void dlgTriggerEditor::activeToggle_script()
             oldState,
             newState,
             pT->getName(),
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
@@ -5491,8 +5480,7 @@ void dlgTriggerEditor::activeToggle_action()
             oldState,
             newState,
             pT->getName(),
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
@@ -5666,8 +5654,7 @@ void dlgTriggerEditor::activeToggle_key()
             oldState,
             newState,
             pT->getName(),
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
     }
 }
@@ -5848,8 +5835,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
         positionInParent,
         isFolder,
         name,
-        mpHost
-    );
+        mpHost);
     mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
 
     // End macro - this groups the Add command with any Modify commands from slot_triggerSelected()
@@ -5959,8 +5945,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
         positionInParent,
         isFolder,
         name,
-        mpHost
-    );
+        mpHost);
     mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
 
     // Process any pending events to ensure Modify commands are pushed before macro ends
@@ -6136,8 +6121,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
         positionInParent,
         isFolder,
         name,
-        mpHost
-    );
+        mpHost);
     mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
 
     // Process any pending events to ensure Modify commands are pushed before macro ends
@@ -6255,8 +6239,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
         positionInParent,
         isFolder,
         name,
-        mpHost
-    );
+        mpHost);
     mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
 
     // End macro - this groups the Add command with any Modify commands from slot_aliasSelected()
@@ -6373,8 +6356,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
         positionInParent,
         isFolder,
         name,
-        mpHost
-    );
+        mpHost);
     mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
 
     // Process any pending events to ensure Modify commands are pushed before macro ends
@@ -6484,8 +6466,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
         positionInParent,
         isFolder,
         name,
-        mpHost
-    );
+        mpHost);
     mpUndoStack->pushCommand(qtCmd);  // Qt takes ownership
 
     // End macro - this groups the Add command with any Modify commands from slot_scriptsSelected()
@@ -6950,8 +6931,7 @@ void dlgTriggerEditor::saveTrigger()
                 name,
                 oldStateXML,
                 newStateXML,
-                mpHost
-            );
+                mpHost);
             mpUndoStack->pushCommand(qtCmd);
 
             // Clear edbee undo stack after save to make Save a commit point
@@ -7110,8 +7090,7 @@ void dlgTriggerEditor::saveTimer()
                 name,
                 oldStateXML,
                 newStateXML,
-                mpHost
-            );
+                mpHost);
             mpUndoStack->pushCommand(qtCmd);
 
             // Clear edbee undo stack after save to make Save a commit point
@@ -7304,8 +7283,7 @@ void dlgTriggerEditor::saveAlias()
                 name,
                 oldStateXML,
                 newStateXML,
-                mpHost
-            );
+                mpHost);
             mpUndoStack->pushCommand(qtCmd);
 
             // Clear edbee undo stack after save to make Save a commit point
@@ -7495,8 +7473,7 @@ void dlgTriggerEditor::saveAction()
                 name,
                 oldStateXML,
                 newStateXML,
-                mpHost
-            );
+                mpHost);
             mpUndoStack->pushCommand(qtCmd);
 
             // Clear edbee undo stack after save to make Save a commit point
@@ -7704,8 +7681,7 @@ void dlgTriggerEditor::saveScript()
             name,
             oldStateXML,
             newStateXML,
-            mpHost
-        );
+            mpHost);
         mpUndoStack->pushCommand(qtCmd);
 
         // Clear edbee undo stack after save to make Save a commit point
@@ -8131,8 +8107,7 @@ void dlgTriggerEditor::saveKey()
                 name,
                 oldStateXML,
                 newStateXML,
-                mpHost
-            );
+                mpHost);
             mpUndoStack->pushCommand(qtCmd);
 
             // Clear edbee undo stack after save to make Save a commit point
