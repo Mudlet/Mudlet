@@ -12419,12 +12419,6 @@ void dlgTriggerEditor::slot_copyXml()
 // FIXME: The switch cases in here need to handle EditorViewType::cmVarsView but how is not clear
 void dlgTriggerEditor::slot_pasteXml()
 {
-    // Begin macro to group all paste operations into one undo operation
-    if (mpUndoStack) {
-        //: Undo/redo text for pasting items
-        mpUndoStack->beginMacro(tr("paste"));
-    }
-
     XMLimport reader(mpHost);
 
     switch (mCurrentView) {
@@ -12530,9 +12524,7 @@ void dlgTriggerEditor::slot_pasteXml()
 
             statusBar()->showMessage(tr("Pasted %1 items successfully").arg(importedIDs.size()), 3000);
         } else {
-            if (mpUndoStack) {
-                mpUndoStack->endMacro();
-            }
+            // No items were imported - don't create undo action
             return;
         }
     } else {
@@ -12543,11 +12535,14 @@ void dlgTriggerEditor::slot_pasteXml()
 
         // don't reset the view if what we pasted wasn't a Mudlet editor item
         if (importedItemType == EditorViewType::cmUnknownView && importedItemID == 0) {
-            if (mpUndoStack) {
-                mpUndoStack->endMacro();
-            }
+            // No valid item was imported - don't create undo action
             return;
         }
+    }
+
+    if (mpUndoStack) {
+        //: Undo/redo text for pasting items
+        mpUndoStack->beginMacro(tr("paste"));
     }
 
     mCurrentView = static_cast<EditorViewType>(importedItemType);
