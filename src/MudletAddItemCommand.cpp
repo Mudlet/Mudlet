@@ -49,27 +49,139 @@ void MudletAddItemCommand::undo()
     // Clear old descendant IDs from any previous undo
     mOldDescendantIDs.clear();
 
-    // Export the item to XML before deleting (for redo)
+    // ALWAYS collect descendant IDs before deletion (needed for remapping on redo)
+    // This must happen every time because IDs change on each recreation
+    switch (mViewType) {
+    case EditorViewType::cmTriggerView: {
+        TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
+        if (trigger) {
+            std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
+                if (!t) return;
+                mOldDescendantIDs.append(t->getID());
+                auto* children = t->getChildrenList();
+                if (children) {
+                    for (auto* child : *children) {
+                        collectIDs(child);
+                    }
+                }
+            };
+            collectIDs(trigger);
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "MudletAddItemCommand::undo() - Deleting trigger with IDs:" << mOldDescendantIDs;
+#endif
+        }
+        break;
+    }
+    case EditorViewType::cmAliasView: {
+        TAlias* alias = mpHost->getAliasUnit()->getAlias(mItemID);
+        if (alias) {
+            std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
+                if (!a) return;
+                mOldDescendantIDs.append(a->getID());
+                auto* children = a->getChildrenList();
+                if (children) {
+                    for (auto* child : *children) {
+                        collectIDs(child);
+                    }
+                }
+            };
+            collectIDs(alias);
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "MudletAddItemCommand::undo() - Deleting alias with IDs:" << mOldDescendantIDs;
+#endif
+        }
+        break;
+    }
+    case EditorViewType::cmTimerView: {
+        TTimer* timer = mpHost->getTimerUnit()->getTimer(mItemID);
+        if (timer) {
+            std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
+                if (!t) return;
+                mOldDescendantIDs.append(t->getID());
+                auto* children = t->getChildrenList();
+                if (children) {
+                    for (auto* child : *children) {
+                        collectIDs(child);
+                    }
+                }
+            };
+            collectIDs(timer);
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "MudletAddItemCommand::undo() - Deleting timer with IDs:" << mOldDescendantIDs;
+#endif
+        }
+        break;
+    }
+    case EditorViewType::cmScriptView: {
+        TScript* script = mpHost->getScriptUnit()->getScript(mItemID);
+        if (script) {
+            std::function<void(TScript*)> collectIDs = [&](TScript* s) {
+                if (!s) return;
+                mOldDescendantIDs.append(s->getID());
+                auto* children = s->getChildrenList();
+                if (children) {
+                    for (auto* child : *children) {
+                        collectIDs(child);
+                    }
+                }
+            };
+            collectIDs(script);
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "MudletAddItemCommand::undo() - Deleting script with IDs:" << mOldDescendantIDs;
+#endif
+        }
+        break;
+    }
+    case EditorViewType::cmKeysView: {
+        TKey* key = mpHost->getKeyUnit()->getKey(mItemID);
+        if (key) {
+            std::function<void(TKey*)> collectIDs = [&](TKey* k) {
+                if (!k) return;
+                mOldDescendantIDs.append(k->getID());
+                auto* children = k->getChildrenList();
+                if (children) {
+                    for (auto* child : *children) {
+                        collectIDs(child);
+                    }
+                }
+            };
+            collectIDs(key);
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "MudletAddItemCommand::undo() - Deleting key with IDs:" << mOldDescendantIDs;
+#endif
+        }
+        break;
+    }
+    case EditorViewType::cmActionView: {
+        TAction* action = mpHost->getActionUnit()->getAction(mItemID);
+        if (action) {
+            std::function<void(TAction*)> collectIDs = [&](TAction* a) {
+                if (!a) return;
+                mOldDescendantIDs.append(a->getID());
+                auto* children = a->getChildrenList();
+                if (children) {
+                    for (auto* child : *children) {
+                        collectIDs(child);
+                    }
+                }
+            };
+            collectIDs(action);
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "MudletAddItemCommand::undo() - Deleting action with IDs:" << mOldDescendantIDs;
+#endif
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    // Export the item to XML before deleting (for redo) - only needed once
     if (mItemSnapshot.isEmpty()) {
         switch (mViewType) {
         case EditorViewType::cmTriggerView: {
             TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
             if (trigger) {
-                // Collect all descendant IDs before deletion (for remapping after recreation)
-                std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
-                    if (!t) return;
-                    mOldDescendantIDs.append(t->getID());
-                    auto* children = t->getChildrenList();
-                    if (children) {
-                        for (auto* child : *children) {
-                            collectIDs(child);
-                        }
-                    }
-                };
-                collectIDs(trigger);
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletAddItemCommand::undo() - Deleting trigger with IDs:" << mOldDescendantIDs;
-#endif
                 mItemSnapshot = exportTriggerToXML(trigger);
             }
             break;
@@ -77,21 +189,6 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmAliasView: {
             TAlias* alias = mpHost->getAliasUnit()->getAlias(mItemID);
             if (alias) {
-                // Collect all descendant IDs before deletion
-                std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
-                    if (!a) return;
-                    mOldDescendantIDs.append(a->getID());
-                    auto* children = a->getChildrenList();
-                    if (children) {
-                        for (auto* child : *children) {
-                            collectIDs(child);
-                        }
-                    }
-                };
-                collectIDs(alias);
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletAddItemCommand::undo() - Deleting alias with IDs:" << mOldDescendantIDs;
-#endif
                 mItemSnapshot = exportAliasToXML(alias);
             }
             break;
@@ -99,21 +196,6 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmTimerView: {
             TTimer* timer = mpHost->getTimerUnit()->getTimer(mItemID);
             if (timer) {
-                // Collect all descendant IDs before deletion
-                std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
-                    if (!t) return;
-                    mOldDescendantIDs.append(t->getID());
-                    auto* children = t->getChildrenList();
-                    if (children) {
-                        for (auto* child : *children) {
-                            collectIDs(child);
-                        }
-                    }
-                };
-                collectIDs(timer);
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletAddItemCommand::undo() - Deleting timer with IDs:" << mOldDescendantIDs;
-#endif
                 mItemSnapshot = exportTimerToXML(timer);
             }
             break;
@@ -121,21 +203,6 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmScriptView: {
             TScript* script = mpHost->getScriptUnit()->getScript(mItemID);
             if (script) {
-                // Collect all descendant IDs before deletion
-                std::function<void(TScript*)> collectIDs = [&](TScript* s) {
-                    if (!s) return;
-                    mOldDescendantIDs.append(s->getID());
-                    auto* children = s->getChildrenList();
-                    if (children) {
-                        for (auto* child : *children) {
-                            collectIDs(child);
-                        }
-                    }
-                };
-                collectIDs(script);
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletAddItemCommand::undo() - Deleting script with IDs:" << mOldDescendantIDs;
-#endif
                 mItemSnapshot = exportScriptToXML(script);
             }
             break;
@@ -143,21 +210,6 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmKeysView: {
             TKey* key = mpHost->getKeyUnit()->getKey(mItemID);
             if (key) {
-                // Collect all descendant IDs before deletion
-                std::function<void(TKey*)> collectIDs = [&](TKey* k) {
-                    if (!k) return;
-                    mOldDescendantIDs.append(k->getID());
-                    auto* children = k->getChildrenList();
-                    if (children) {
-                        for (auto* child : *children) {
-                            collectIDs(child);
-                        }
-                    }
-                };
-                collectIDs(key);
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletAddItemCommand::undo() - Deleting key with IDs:" << mOldDescendantIDs;
-#endif
                 mItemSnapshot = exportKeyToXML(key);
             }
             break;
@@ -165,21 +217,6 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmActionView: {
             TAction* action = mpHost->getActionUnit()->getAction(mItemID);
             if (action) {
-                // Collect all descendant IDs before deletion
-                std::function<void(TAction*)> collectIDs = [&](TAction* a) {
-                    if (!a) return;
-                    mOldDescendantIDs.append(a->getID());
-                    auto* children = a->getChildrenList();
-                    if (children) {
-                        for (auto* child : *children) {
-                            collectIDs(child);
-                        }
-                    }
-                };
-                collectIDs(action);
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletAddItemCommand::undo() - Deleting action with IDs:" << mOldDescendantIDs;
-#endif
                 mItemSnapshot = exportActionToXML(action);
             }
             break;
