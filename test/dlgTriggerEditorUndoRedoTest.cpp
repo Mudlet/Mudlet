@@ -892,76 +892,97 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         // Test: Multiple undo/redo cycles with nested hierarchy and moves (regression test)
         // This tests that child ID remapping works across multiple cycles
         {
-            // Create hierarchy: parent with 2 children, one child has a grandchild
+            // Create hierarchy: parent folder with 2 child folders, one child folder has a grandchild
             itemType.addFolder();
             QTreeWidgetItem* parent = itemType.baseItem->child(0);
             if (parent) {
-                // Add first child
+                // Add first child folder
                 itemType.treeWidget->setCurrentItem(parent);
-                itemType.addItem();
+                itemType.addFolder();
+                QCoreApplication::processEvents();
 
-                // Add second child that will have its own child
+                // Add second child folder that will have a grandchild
                 itemType.treeWidget->setCurrentItem(parent);
-                itemType.addItem();
+                itemType.addFolder();
+                QCoreApplication::processEvents();
 
-                QTreeWidgetItem* childWithGrandchild = parent->child(1);
-                if (childWithGrandchild) {
-                    // Add grandchild
+                if (parent->childCount() == 2) {
+                    QTreeWidgetItem* childWithGrandchild = parent->child(0); // Most recent folder
+
+                    // Add grandchild item under the child folder
                     itemType.treeWidget->setCurrentItem(childWithGrandchild);
                     itemType.addItem();
+                    QCoreApplication::processEvents();
 
-                    if (parent->childCount() == 2 && childWithGrandchild->childCount() == 1) {
+                    if (childWithGrandchild->childCount() == 1) {
                         // Now move the grandchild to be a direct child of parent
                         QTreeWidgetItem* grandchild = childWithGrandchild->child(0);
                         int grandchildID = grandchild->data(0, Qt::UserRole).toInt();
+                        int oldParentID = childWithGrandchild->data(0, Qt::UserRole).toInt();
+                        int newParentID = parent->data(0, Qt::UserRole).toInt();
+                        int oldPosition = 0; // First child
 
                         // Simulate drag-drop by manually reparenting
                         childWithGrandchild->takeChild(0);
                         parent->addChild(grandchild);
+                        int newPosition = parent->indexOfChild(grandchild);
 
-                        // Test multiple undo/redo cycles
-                        bool allCyclesPassed = true;
-                        for (int cycle = 0; cycle < 3; cycle++) {
-                            // Undo the move, then undo the add
-                            editor->mpUndoStack->undo(); // Undo move (if tracked)
-                            editor->mpUndoStack->undo(); // Undo add of parent
+                        // Trigger the move command to be recorded in undo stack
+                        editor->slot_itemMoved(grandchildID, oldParentID, newParentID, oldPosition, newPosition);
 
-                            if (itemType.baseItem->childCount() != 0) {
-                                allCyclesPassed = false;
-                                break;
+                        // Verify structure before testing cycles
+                        if (parent->childCount() == 3 && childWithGrandchild->childCount() == 0) {
+                            // Test multiple undo/redo cycles
+                            bool allCyclesPassed = true;
+
+                            for (int cycle = 0; cycle < 3; cycle++) {
+                                // Undo all operations (parent folder + 2 child folders + 1 grandchild + move)
+                                for (int i = 0; i < 10 && editor->mpUndoStack->canUndo() && itemType.baseItem->childCount() > 0; i++) {
+                                    editor->mpUndoStack->undo();
+                                }
+
+                                if (itemType.baseItem->childCount() != 0) {
+                                    allCyclesPassed = false;
+                                    break;
+                                }
+
+                                // Redo all operations
+                                for (int i = 0; i < 10 && editor->mpUndoStack->canRedo(); i++) {
+                                    editor->mpUndoStack->redo();
+                                }
+
+                                // Verify structure restored with move
+                                QTreeWidgetItem* restoredParent = itemType.baseItem->child(0);
+                                if (!restoredParent || restoredParent->childCount() != 3) {
+                                    allCyclesPassed = false;
+                                    break;
+                                }
+
+                                // Verify the moved grandchild is still a direct child of parent (not nested)
+                                QTreeWidgetItem* childFolder = restoredParent->child(0);
+                                if (!childFolder || childFolder->childCount() != 0) {
+                                    allCyclesPassed = false;
+                                    break;
+                                }
                             }
 
-                            // Redo add, then redo move (if tracked)
-                            editor->mpUndoStack->redo(); // Redo add
-                            editor->mpUndoStack->redo(); // Redo move (if tracked)
-
-                            QTreeWidgetItem* restoredParent = itemType.baseItem->child(0);
-                            if (!restoredParent || restoredParent->childCount() != 3) {
-                                allCyclesPassed = false;
-                                break;
+                            if (allCyclesPassed) {
+                                TEST_PASS(itemType.name + ": Multiple cycles with nested hierarchy, moves, and ID remapping");
+                            } else {
+                                TEST_FAIL(itemType.name + ": Multiple cycle with moves ID remapping failed");
                             }
 
-                            // Verify the moved child still exists and has correct structure
-                            QTreeWidgetItem* movedChild = restoredParent->child(2);
-                            if (!movedChild) {
-                                allCyclesPassed = false;
-                                break;
-                            }
-                        }
-
-                        if (allCyclesPassed) {
-                            TEST_PASS(itemType.name + ": Multiple cycles with nested moves and ID remapping");
+                            CLEANUP_ALL(itemType);
                         } else {
-                            TEST_FAIL(itemType.name + ": Multiple cycle ID remapping failed");
+                            TEST_FAIL(itemType.name + ": Move operation failed for cycle test");
+                            CLEANUP_ALL(itemType);
                         }
-
-                        CLEANUP_ALL(itemType);
                     } else {
-                        TEST_FAIL(itemType.name + ": Failed to create grandchild for cycle test");
+                        TEST_FAIL(itemType.name + ": Failed to create grandchild for cycle test (expected 1, got " + QString::number(childWithGrandchild->childCount()) + ")");
                         CLEANUP_ALL(itemType);
                     }
                 } else {
-                    TEST_FAIL(itemType.name + ": Failed to create child with grandchild for cycle test");
+                    TEST_FAIL(itemType.name + ": Failed to create child folders for cycle test (expected 2, got " + QString::number(parent->childCount()) + ")");
                     CLEANUP_ALL(itemType);
                 }
             } else {
