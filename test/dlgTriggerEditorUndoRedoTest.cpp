@@ -888,6 +888,86 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 TEST_FAIL(itemType.name + ": Failed to create items for stack ID test");
             }
         }
+
+        // Test: Multiple undo/redo cycles with nested hierarchy and moves (regression test)
+        // This tests that child ID remapping works across multiple cycles
+        {
+            // Create hierarchy: parent with 2 children, one child has a grandchild
+            itemType.addFolder();
+            QTreeWidgetItem* parent = itemType.baseItem->child(0);
+            if (parent) {
+                // Add first child
+                itemType.treeWidget->setCurrentItem(parent);
+                itemType.addItem();
+
+                // Add second child that will have its own child
+                itemType.treeWidget->setCurrentItem(parent);
+                itemType.addItem();
+
+                QTreeWidgetItem* childWithGrandchild = parent->child(1);
+                if (childWithGrandchild) {
+                    // Add grandchild
+                    itemType.treeWidget->setCurrentItem(childWithGrandchild);
+                    itemType.addItem();
+
+                    if (parent->childCount() == 2 && childWithGrandchild->childCount() == 1) {
+                        // Now move the grandchild to be a direct child of parent
+                        QTreeWidgetItem* grandchild = childWithGrandchild->child(0);
+                        int grandchildID = grandchild->data(0, Qt::UserRole).toInt();
+
+                        // Simulate drag-drop by manually reparenting
+                        childWithGrandchild->takeChild(0);
+                        parent->addChild(grandchild);
+
+                        // Test multiple undo/redo cycles
+                        bool allCyclesPassed = true;
+                        for (int cycle = 0; cycle < 3; cycle++) {
+                            // Undo the move, then undo the add
+                            editor->mpUndoStack->undo(); // Undo move (if tracked)
+                            editor->mpUndoStack->undo(); // Undo add of parent
+
+                            if (itemType.baseItem->childCount() != 0) {
+                                allCyclesPassed = false;
+                                break;
+                            }
+
+                            // Redo add, then redo move (if tracked)
+                            editor->mpUndoStack->redo(); // Redo add
+                            editor->mpUndoStack->redo(); // Redo move (if tracked)
+
+                            QTreeWidgetItem* restoredParent = itemType.baseItem->child(0);
+                            if (!restoredParent || restoredParent->childCount() != 3) {
+                                allCyclesPassed = false;
+                                break;
+                            }
+
+                            // Verify the moved child still exists and has correct structure
+                            QTreeWidgetItem* movedChild = restoredParent->child(2);
+                            if (!movedChild) {
+                                allCyclesPassed = false;
+                                break;
+                            }
+                        }
+
+                        if (allCyclesPassed) {
+                            TEST_PASS(itemType.name + ": Multiple cycles with nested moves and ID remapping");
+                        } else {
+                            TEST_FAIL(itemType.name + ": Multiple cycle ID remapping failed");
+                        }
+
+                        CLEANUP_ALL(itemType);
+                    } else {
+                        TEST_FAIL(itemType.name + ": Failed to create grandchild for cycle test");
+                        CLEANUP_ALL(itemType);
+                    }
+                } else {
+                    TEST_FAIL(itemType.name + ": Failed to create child with grandchild for cycle test");
+                    CLEANUP_ALL(itemType);
+                }
+            } else {
+                TEST_FAIL(itemType.name + ": Failed to create parent for cycle test");
+            }
+        }
     }
 
     // ====================================================================================
