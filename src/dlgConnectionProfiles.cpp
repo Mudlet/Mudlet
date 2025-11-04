@@ -300,6 +300,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mSearchTextTimer.setSingleShot(true);
     QCoreApplication::instance()->installEventFilter(this);
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
+
+    profile_history->view()->setTextElideMode(Qt::ElideNone);
 }
 
 dlgConnectionProfiles::~dlgConnectionProfiles()

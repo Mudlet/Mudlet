@@ -22,6 +22,10 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
+set(LIB_MUDLET_TARGET "mudlet_core")
+set(EXE_MUDLET_NAME "mudlet")
+set(EXE_MUDLET_TARGET "mudlet_executable")
+
 set(mudlet_RCCS mudlet.qrc)
 configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
 
@@ -39,9 +43,9 @@ endif()
 if(WIN32)
   # APP_BUILD should now be be available
 
-  if(APP_BUILD matches "-ptb.+")
+  if(APP_BUILD MATCHES "-ptb.+")
     list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  elseif((APP_BUILD MATCHES "-dev.+" OR APP_BUILD MATCHES "-test.+"))
     # The above test may not be correct as it won't pick up builds where
     # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
     # "Packagers" they will likely want the original icon anyhow for their
@@ -207,6 +211,7 @@ set(mudlet_SRCS
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
+    WideComboBox.cpp
     XMLexport.cpp
     XMLimport.cpp)
 
@@ -404,6 +409,7 @@ set(mudlet_HDRS
     utils.h
     VarUnit.h
     widechar_width.h
+    WideComboBox.h
     XMLexport.h
     XMLimport.h
     enums.h)
@@ -457,19 +463,11 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
-# Enable sanitizers support
-include(../3rdparty/cmake-scripts/sanitizers.cmake)
-
-set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
-set_sanitizer_options(thread DEFAULT -fno-omit-frame-pointer)
-
-set(USE_SANITIZER
-      "address"
-      CACHE STRING
-      "Compile with sanitizers. Available sanitizers are: Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak")
-
-add_sanitizer_support(${USE_SANITIZER})
-message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
+if(NOT WIN32)
+  include(cmake/EnableSanitizers.cmake)
+else()
+  message(STATUS "Sanitizers disabled on Windows")
+endif()
 
 find_package(Qt6 6.4.0 REQUIRED
     COMPONENTS Core
@@ -542,12 +540,12 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
-
-# Enable symbol exports from the main executable so that dynamically loaded Lua modules
-# can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
-# will fail to load with "undefined symbol" errors.
-set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
+add_library(${LIB_MUDLET_TARGET} STATIC
+    ${mudlet_SRCS}
+    ${mudlet_RCCS}
+    ${mudlet_HDRS}
+    ${mudlet_UIS}
+)
 
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
@@ -562,51 +560,51 @@ set_target_properties(mudlet PROPERTIES ENABLE_EXPORTS ON)
 # * Produce a timestamped message on the OS's command line when an autosave of
 #   the map file gets requested and when such a request gets actioned (or
 #   rejected because the profile is being loaded):
-# target_compile_definitions(mudlet PRIVATE DEBUG_MAPAUTOSAVE)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_MAPAUTOSAVE)
 #
 # * Produce all the time the surprise that normally will only occur on the
 #   first day of the fourth month of the Gregorian calendar year:
-# target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_EASTER_EGGS)
 #
 # * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
 #   commands for suboptions - change the value to 2 to get a bit more detail
 #   about the size or nature of the command:
-target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_TELNET=1)
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
 #   the single bytes of pure ASCII text:
-# target_compile_definitions(mudlet PRIVATE DEBUG_UTF8_PROCESSING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_UTF8_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of GB2312/GBK/GB18030 data when
 #   it is not the single bytes of pure ASCII text:
-# target_compile_definitions(mudlet PRIVATE DEBUG_GB_PROCESSING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GB_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of BIG5 data when it is not the
 #   single bytes of pure ASCII text:
-# target_compile_definitions(mudlet PRIVATE DEBUG_BIG5_PROCESSING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_BIG5_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of EUC-KR data when it is not
 #   the single bytes of pure ASCII text:
-# target_compile_definitions(mudlet PRIVATE DEBUG_EUC_KR_PROCESSING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_EUC_KR_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI SGR sequences:
-#   target_compile_definitions(mudlet PRIVATE DEBUG_SGR_PROCESSING)
+#   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI OSC sequences:
-# target_compile_definitions(mudlet PRIVATE DEBUG_OSC_PROCESSING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_OSC_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI MXP sequences although
 #   there is not much against this item at present {only an announcement of the
 #   type (?) of an `\x1b[?z` received}:
-# target_compile_definitions(mudlet PRIVATE DEBUG_MXP_PROCESSING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_MXP_PROCESSING)
 #
 # * Enable the features associated with reporting problems in processing Unicode
 #   codepoints that cannot be displayed on screen in a `TConsole`:
-# target_compile_definitions(mudlet PRIVATE DEBUG_CODEPOINT_PROBLEMS)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_CODEPOINT_PROBLEMS)
 #
 # * Produce qDebug() messages about window handling operations like dock widget
 #   transfers, profile switching, and detached window management:
-# target_compile_definitions(mudlet PRIVATE DEBUG_WINDOW_HANDLING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_WINDOW_HANDLING)
 #
 # * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
@@ -616,15 +614,17 @@ target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 #   including command execution, stack operations, and edbee text undo integration:
 target_compile_definitions(mudlet PRIVATE DEBUG_UNDO_REDO)
 
-target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
-set_target_properties(mudlet PROPERTIES
+target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
+
+set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
   AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
 
 if(USE_FONTS)
-  target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
 endif()
 
 if(UNIX)
@@ -634,19 +634,19 @@ endif(UNIX)
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
-target_compile_definitions(mudlet
+target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
 if(USE_OWN_QTKEYCHAIN)
-    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
 # Define shader hot-reloading if enabled
 if(USE_SHADER_HOT_RELOAD AND USE_3DMAPPER)
-  target_compile_definitions(mudlet PRIVATE MUDLET_SHADER_HOT_RELOAD=1)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC MUDLET_SHADER_HOT_RELOAD=1)
 endif()
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
@@ -654,14 +654,14 @@ endif()
 # for an #ifdef because we need a symbol that is defined BEFORE we include
 # any Qt header file!
 if(WIN32)
-    target_compile_definitions(mudlet PRIVATE INCLUDE_WINSOCK2)
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_WINSOCK2)
 endif()
 
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
 target_compile_definitions(communi PUBLIC IRC_STATIC)
 
 target_link_libraries(
-        mudlet
+        ${LIB_MUDLET_TARGET}
         communi
         edbee-lib
         QTagEdit
@@ -676,51 +676,82 @@ target_link_libraries(
 #       nanobench
         ${QT_LIBS})
 
+target_include_directories(${LIB_MUDLET_TARGET} INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/include
+)
+
 if (SYSINFO_LIBRARY)
-  target_link_libraries(mudlet ${SYSINFO_LIBRARY} ${KVM_LIBRARY})
+  target_link_libraries(${LIB_MUDLET_TARGET} ${SYSINFO_LIBRARY} ${KVM_LIBRARY})
 endif (SYSINFO_LIBRARY)
 
 if (SYSINFO_INCLUDE_DIR)
-  target_include_directories(mudlet INTERFACE ${SYSINFO_INCLUDE_DIR})
+  target_include_directories(${LIB_MUDLET_TARGET} INTERFACE ${SYSINFO_INCLUDE_DIR})
 endif (SYSINFO_INCLUDE_DIR)
 
 if(USE_UPDATER)
-  target_link_libraries(mudlet dblsqd)
-  target_compile_definitions(mudlet PRIVATE INCLUDE_UPDATER)
+  target_link_libraries(${LIB_MUDLET_TARGET} dblsqd)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_UPDATER)
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
-  target_link_libraries(mudlet OpenGL::GLU)
-  target_link_libraries(mudlet assimp::assimp)
-  target_compile_definitions(mudlet PRIVATE INCLUDE_3DMAPPER)
+  target_link_libraries(${LIB_MUDLET_TARGET} OpenGL::GLU)
+  target_link_libraries(${LIB_MUDLET_TARGET} assimp::assimp)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_3DMAPPER)
 endif()
 
 
 if(USE_VARIABLE_SPLASH_SCREEN)
-  target_compile_definitions(mudlet PRIVATE INCLUDE_VARIABLE_SPLASH_SCREEN)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
 endif()
 
+target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
+
+# Enable sanitizers support
+include(../3rdparty/cmake-scripts/sanitizers.cmake)
+
+set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
+set_sanitizer_options(thread DEFAULT -fno-omit-frame-pointer)
+
+set(USE_SANITIZER
+      "address"
+      CACHE STRING
+      "Compile with sanitizers. Available sanitizers are: \
+      Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak")
+
+add_sanitizer_support(${USE_SANITIZER})
+message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
+
+add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
+set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
+target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
+
+# Enable symbol exports from the main executable so that dynamically loaded Lua modules
+# can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
+# will fail to load with "undefined symbol" errors.
+set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
+
 if(WIN32)
-  target_link_libraries(mudlet ws2_32)
-  set_target_properties(mudlet PROPERTIES WIN32_EXECUTABLE ON)
+  target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
+  set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
-  target_compile_definitions(mudlet PRIVATE UNICODE _UNICODE)
+  target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)
 endif()
 
 if(APPLE)
-  target_link_libraries(mudlet "-framework AppKit")
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
-    target_sources(mudlet PRIVATE
+    target_sources(${LIB_MUDLET_TARGET} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.mm")
     find_package(Sparkle)
-    target_link_libraries(mudlet "-framework AppKit" Sparkle::Sparkle)
+    target_link_libraries(${LIB_MUDLET_TARGET} "-framework AppKit" Sparkle::Sparkle)
   endif(USE_UPDATER)
 
-  set_target_properties(mudlet PROPERTIES
+  set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
     MACOSX_BUNDLE ON
     MACOSX_BUNDLE_BUNDLE_NAME Mudlet
     MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${APP_BUILD}
@@ -729,19 +760,19 @@ if(APPLE)
   )
 
   if(${APP_BUILD} MATCHES "-ptb.+")
-    set_target_properties(mudlet PROPERTIES
+    set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
       MACOSX_BUNDLE_ICON_FILE mudlet_ptb.icns
       MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${APP_BUILD}
     )
     file(GLOB ICON_FILE "icons/mudlet_ptb.icns")
   elseif((${APP_BUILD} MATCHES "-dev.+") OR (${APP_BUILD} MATCHES "-test.+"))
-    set_target_properties(mudlet PROPERTIES
+    set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
       MACOSX_BUNDLE_ICON_FILE mudlet_dev.icns
       MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${APP_BUILD}
     )
     file(GLOB ICON_FILE "icons/mudlet_dev.icns")
   else()
-    set_target_properties(mudlet PROPERTIES
+    set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
       MACOSX_BUNDLE_ICON_FILE mudlet.icns
       MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}
     )
@@ -752,7 +783,7 @@ if(APPLE)
   file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
   file(GLOB DIC_FILES "*.dic")
   file(GLOB AFF_FILES "*.aff")
-  target_sources(mudlet PRIVATE ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES} ${ICON_FILE})
+  target_sources(${EXE_MUDLET_TARGET} PUBLIC ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES} ${ICON_FILE})
 
   set_source_files_properties(${DIC_FILES} ${AFF_FILES} ${ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
   foreach(FILE ${MUDLET_LUA_FILES})
@@ -768,8 +799,6 @@ if(APPLE)
     set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/translations/${PATH_IN_BUNDLE})
   endforeach()
 endif()
-
-target_compile_options(mudlet PRIVATE -Wno-deprecated)
 
 # *nix "make install" provision:
 if(UNIX AND NOT APPLE)
@@ -809,7 +838,7 @@ if(UNIX AND NOT APPLE)
     WORLD_READ)
 
   install(
-    TARGETS mudlet
+    TARGETS ${EXE_MUDLET_TARGET}
     RUNTIME
       DESTINATION "bin"
       PERMISSIONS
