@@ -43,6 +43,10 @@ public:
     int getOldItemID() const { return mOldItemID; }
     int getNewItemID() const { return mItemID; }
 
+    // Get all ID changes that occurred during redo (oldID -> newID mapping)
+    // Includes the item itself and all its descendants
+    QList<QPair<int, int>> getIDChanges() const { return mIDChanges; }
+
 private:
     static QString generateText(EditorViewType viewType, const QString& itemName, bool isFolder);
 
@@ -55,6 +59,11 @@ private:
     QString mItemName;
     QString mItemSnapshot;
     mutable bool mSkipFirstRedo = true;  // Skip initial redo() called by QUndoStack::push()
+
+    // Track ID changes for item and all descendants when recreated (oldID -> newID)
+    QList<QPair<int, int>> mIDChanges;
+    // Track all descendant IDs before deletion (for mapping to new IDs after recreation)
+    QList<int> mOldDescendantIDs;
 };
 
 #endif // MUDLET_MUDLETADDITEMCOMMAND_H

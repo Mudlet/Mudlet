@@ -45,12 +45,31 @@ void MudletAddItemCommand::undo()
 #if defined(DEBUG_UNDO_REDO)
     qDebug() << "MudletAddItemCommand::undo() - Undoing add for item" << mItemName << "(ID:" << mItemID << ")";
 #endif
+
+    // Clear old descendant IDs from any previous undo
+    mOldDescendantIDs.clear();
+
     // Export the item to XML before deleting (for redo)
     if (mItemSnapshot.isEmpty()) {
         switch (mViewType) {
         case EditorViewType::cmTriggerView: {
             TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
             if (trigger) {
+                // Collect all descendant IDs before deletion (for remapping after recreation)
+                std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
+                    if (!t) return;
+                    mOldDescendantIDs.append(t->getID());
+                    auto* children = t->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(trigger);
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletAddItemCommand::undo() - Deleting trigger with IDs:" << mOldDescendantIDs;
+#endif
                 mItemSnapshot = exportTriggerToXML(trigger);
             }
             break;
@@ -58,6 +77,21 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmAliasView: {
             TAlias* alias = mpHost->getAliasUnit()->getAlias(mItemID);
             if (alias) {
+                // Collect all descendant IDs before deletion
+                std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
+                    if (!a) return;
+                    mOldDescendantIDs.append(a->getID());
+                    auto* children = a->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(alias);
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletAddItemCommand::undo() - Deleting alias with IDs:" << mOldDescendantIDs;
+#endif
                 mItemSnapshot = exportAliasToXML(alias);
             }
             break;
@@ -65,6 +99,21 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmTimerView: {
             TTimer* timer = mpHost->getTimerUnit()->getTimer(mItemID);
             if (timer) {
+                // Collect all descendant IDs before deletion
+                std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
+                    if (!t) return;
+                    mOldDescendantIDs.append(t->getID());
+                    auto* children = t->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(timer);
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletAddItemCommand::undo() - Deleting timer with IDs:" << mOldDescendantIDs;
+#endif
                 mItemSnapshot = exportTimerToXML(timer);
             }
             break;
@@ -72,6 +121,21 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmScriptView: {
             TScript* script = mpHost->getScriptUnit()->getScript(mItemID);
             if (script) {
+                // Collect all descendant IDs before deletion
+                std::function<void(TScript*)> collectIDs = [&](TScript* s) {
+                    if (!s) return;
+                    mOldDescendantIDs.append(s->getID());
+                    auto* children = s->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(script);
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletAddItemCommand::undo() - Deleting script with IDs:" << mOldDescendantIDs;
+#endif
                 mItemSnapshot = exportScriptToXML(script);
             }
             break;
@@ -79,6 +143,21 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmKeysView: {
             TKey* key = mpHost->getKeyUnit()->getKey(mItemID);
             if (key) {
+                // Collect all descendant IDs before deletion
+                std::function<void(TKey*)> collectIDs = [&](TKey* k) {
+                    if (!k) return;
+                    mOldDescendantIDs.append(k->getID());
+                    auto* children = k->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(key);
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletAddItemCommand::undo() - Deleting key with IDs:" << mOldDescendantIDs;
+#endif
                 mItemSnapshot = exportKeyToXML(key);
             }
             break;
@@ -86,6 +165,21 @@ void MudletAddItemCommand::undo()
         case EditorViewType::cmActionView: {
             TAction* action = mpHost->getActionUnit()->getAction(mItemID);
             if (action) {
+                // Collect all descendant IDs before deletion
+                std::function<void(TAction*)> collectIDs = [&](TAction* a) {
+                    if (!a) return;
+                    mOldDescendantIDs.append(a->getID());
+                    auto* children = a->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(action);
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletAddItemCommand::undo() - Deleting action with IDs:" << mOldDescendantIDs;
+#endif
                 mItemSnapshot = exportActionToXML(action);
             }
             break;
@@ -165,6 +259,9 @@ void MudletAddItemCommand::redo()
         return;
     }
 
+    // Clear ID changes from any previous redo
+    mIDChanges.clear();
+
     // Recreate the item from XML snapshot
     // Note: The first time redo() is actually executed (after undo), we need to recreate the item
     if (!mItemSnapshot.isEmpty()) {
@@ -181,6 +278,28 @@ void MudletAddItemCommand::redo()
             TTrigger* pNewTrigger = importTriggerFromXML(mItemSnapshot, pParent, mpHost, mPositionInParent);
             if (pNewTrigger) {
                 mItemID = pNewTrigger->getID();
+
+                // Collect all new descendant IDs and map to old IDs
+                QList<int> newDescendantIDs;
+                std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
+                    if (!t) return;
+                    newDescendantIDs.append(t->getID());
+                    auto* children = t->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(pNewTrigger);
+
+                if (mOldDescendantIDs.size() == newDescendantIDs.size()) {
+                    for (int i = 0; i < mOldDescendantIDs.size(); ++i) {
+                        if (mOldDescendantIDs[i] != newDescendantIDs[i]) {
+                            mIDChanges.append(qMakePair(mOldDescendantIDs[i], newDescendantIDs[i]));
+                        }
+                    }
+                }
             } else {
                 qWarning() << "MudletAddItemCommand::redo() - Failed to recreate trigger from snapshot";
             }
@@ -194,6 +313,28 @@ void MudletAddItemCommand::redo()
             TAlias* pNewAlias = importAliasFromXML(mItemSnapshot, pAliasParent, mpHost, mPositionInParent);
             if (pNewAlias) {
                 mItemID = pNewAlias->getID();
+
+                // Collect all new descendant IDs and map to old IDs
+                QList<int> newDescendantIDs;
+                std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
+                    if (!a) return;
+                    newDescendantIDs.append(a->getID());
+                    auto* children = a->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(pNewAlias);
+
+                if (mOldDescendantIDs.size() == newDescendantIDs.size()) {
+                    for (int i = 0; i < mOldDescendantIDs.size(); ++i) {
+                        if (mOldDescendantIDs[i] != newDescendantIDs[i]) {
+                            mIDChanges.append(qMakePair(mOldDescendantIDs[i], newDescendantIDs[i]));
+                        }
+                    }
+                }
             } else {
                 qWarning() << "MudletAddItemCommand::redo() - Failed to recreate alias from snapshot";
             }
@@ -207,6 +348,28 @@ void MudletAddItemCommand::redo()
             TTimer* pNewTimer = importTimerFromXML(mItemSnapshot, pTimerParent, mpHost, mPositionInParent);
             if (pNewTimer) {
                 mItemID = pNewTimer->getID();
+
+                // Collect all new descendant IDs and map to old IDs
+                QList<int> newDescendantIDs;
+                std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
+                    if (!t) return;
+                    newDescendantIDs.append(t->getID());
+                    auto* children = t->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(pNewTimer);
+
+                if (mOldDescendantIDs.size() == newDescendantIDs.size()) {
+                    for (int i = 0; i < mOldDescendantIDs.size(); ++i) {
+                        if (mOldDescendantIDs[i] != newDescendantIDs[i]) {
+                            mIDChanges.append(qMakePair(mOldDescendantIDs[i], newDescendantIDs[i]));
+                        }
+                    }
+                }
             } else {
                 qWarning() << "MudletAddItemCommand::redo() - Failed to recreate timer from snapshot";
             }
@@ -220,6 +383,42 @@ void MudletAddItemCommand::redo()
             TScript* pNewScript = importScriptFromXML(mItemSnapshot, pScriptParent, mpHost, mPositionInParent);
             if (pNewScript) {
                 mItemID = pNewScript->getID();
+
+                // Collect all new descendant IDs after recreation
+                QList<int> newDescendantIDs;
+                std::function<void(TScript*)> collectIDs = [&](TScript* s) {
+                    if (!s) return;
+                    newDescendantIDs.append(s->getID());
+                    auto* children = s->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(pNewScript);
+
+#if defined(DEBUG_UNDO_REDO)
+                qDebug() << "MudletAddItemCommand::redo() - Old IDs:" << mOldDescendantIDs;
+                qDebug() << "MudletAddItemCommand::redo() - New IDs:" << newDescendantIDs;
+#endif
+
+                // Map old IDs to new IDs (they're in same traversal order)
+                if (mOldDescendantIDs.size() == newDescendantIDs.size()) {
+                    for (int i = 0; i < mOldDescendantIDs.size(); ++i) {
+                        int oldID = mOldDescendantIDs[i];
+                        int newID = newDescendantIDs[i];
+                        if (oldID != newID) {
+                            mIDChanges.append(qMakePair(oldID, newID));
+#if defined(DEBUG_UNDO_REDO)
+                            qDebug() << "MudletAddItemCommand::redo() - ID mapping:" << oldID << "->" << newID;
+#endif
+                        }
+                    }
+                } else {
+                    qWarning() << "MudletAddItemCommand::redo() - ID count mismatch! Old:" << mOldDescendantIDs.size()
+                               << "New:" << newDescendantIDs.size();
+                }
             } else {
                 qWarning() << "MudletAddItemCommand::redo() - Failed to recreate script from snapshot";
             }
@@ -233,6 +432,28 @@ void MudletAddItemCommand::redo()
             TKey* pNewKey = importKeyFromXML(mItemSnapshot, pKeyParent, mpHost, mPositionInParent);
             if (pNewKey) {
                 mItemID = pNewKey->getID();
+
+                // Collect all new descendant IDs and map to old IDs
+                QList<int> newDescendantIDs;
+                std::function<void(TKey*)> collectIDs = [&](TKey* k) {
+                    if (!k) return;
+                    newDescendantIDs.append(k->getID());
+                    auto* children = k->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(pNewKey);
+
+                if (mOldDescendantIDs.size() == newDescendantIDs.size()) {
+                    for (int i = 0; i < mOldDescendantIDs.size(); ++i) {
+                        if (mOldDescendantIDs[i] != newDescendantIDs[i]) {
+                            mIDChanges.append(qMakePair(mOldDescendantIDs[i], newDescendantIDs[i]));
+                        }
+                    }
+                }
             } else {
                 qWarning() << "MudletAddItemCommand::redo() - Failed to recreate key from snapshot";
             }
@@ -246,6 +467,28 @@ void MudletAddItemCommand::redo()
             TAction* pNewAction = importActionFromXML(mItemSnapshot, pActionParent, mpHost, mPositionInParent);
             if (pNewAction) {
                 mItemID = pNewAction->getID();
+
+                // Collect all new descendant IDs and map to old IDs
+                QList<int> newDescendantIDs;
+                std::function<void(TAction*)> collectIDs = [&](TAction* a) {
+                    if (!a) return;
+                    newDescendantIDs.append(a->getID());
+                    auto* children = a->getChildrenList();
+                    if (children) {
+                        for (auto* child : *children) {
+                            collectIDs(child);
+                        }
+                    }
+                };
+                collectIDs(pNewAction);
+
+                if (mOldDescendantIDs.size() == newDescendantIDs.size()) {
+                    for (int i = 0; i < mOldDescendantIDs.size(); ++i) {
+                        if (mOldDescendantIDs[i] != newDescendantIDs[i]) {
+                            mIDChanges.append(qMakePair(mOldDescendantIDs[i], newDescendantIDs[i]));
+                        }
+                    }
+                }
             } else {
                 qWarning() << "MudletAddItemCommand::redo() - Failed to recreate action from snapshot";
             }

@@ -235,13 +235,22 @@ void MudletUndoStack::redo()
         // Call the base class redo
         QUndoStack::redo();
 
-        // Check if the item ID changed during redo
-        if (addCmd && addCmd->didItemIDChange()) {
-            int newItemID = addCmd->getNewItemID();
+        // Check if this is an AddItemCommand that restored items with new IDs
+        if (addCmd) {
+            QList<QPair<int, int>> idChanges = addCmd->getIDChanges();
+            if (!idChanges.isEmpty()) {
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "MudletUndoStack::redo() - AddItemCommand ID changed:" << oldItemID << "->" << newItemID;
+                qDebug() << "MudletUndoStack::redo() - AddItemCommand restored items with ID changes:" << idChanges.size();
 #endif
-            remapItemIDs(oldItemID, newItemID);
+                for (const auto& change : idChanges) {
+                    int oldID = change.first;
+                    int newID = change.second;
+#if defined(DEBUG_UNDO_REDO)
+                    qDebug() << "MudletUndoStack::redo() - Remapping ID" << oldID << "->" << newID;
+#endif
+                    remapItemIDs(oldID, newID);
+                }
+            }
         }
     } else {
 #if defined(DEBUG_UNDO_REDO)
