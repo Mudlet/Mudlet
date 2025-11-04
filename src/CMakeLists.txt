@@ -707,21 +707,6 @@ endif()
 
 target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
-# Enable sanitizers support
-include(../3rdparty/cmake-scripts/sanitizers.cmake)
-
-set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
-set_sanitizer_options(thread DEFAULT -fno-omit-frame-pointer)
-
-set(USE_SANITIZER
-      "address"
-      CACHE STRING
-      "Compile with sanitizers. Available sanitizers are: \
-      Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak")
-
-add_sanitizer_support(${USE_SANITIZER})
-message(STATUS "Compiling with the following sanitizer(s) enabled: ${USE_SANITIZER}")
-
 add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
 target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
