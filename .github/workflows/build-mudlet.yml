@@ -304,7 +304,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
-          -DUSE_SANITIZER=${{ env.MUDLET_SANITIZERS }}
+          -DUSE_SANITIZER="${{ env.MUDLET_SANITIZERS }}"
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address undefined leak' || '' }}

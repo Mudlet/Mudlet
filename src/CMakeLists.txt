@@ -612,7 +612,7 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_TELNET=1)
 #
 # * Produce qDebug() messages about undo/redo operations in the trigger editor,
 #   including command execution, stack operations, and edbee text undo integration:
-target_compile_definitions(mudlet PRIVATE DEBUG_UNDO_REDO)
+target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
 
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
