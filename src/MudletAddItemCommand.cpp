@@ -55,8 +55,9 @@ void MudletAddItemCommand::undo()
         TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
         if (trigger) {
             std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
-                if (!t)
+                if (!t) {
                     return;
+                }
                 mOldDescendantIDs.append(t->getID());
                 auto* children = t->getChildrenList();
                 if (children) {
@@ -76,8 +77,9 @@ void MudletAddItemCommand::undo()
         TAlias* alias = mpHost->getAliasUnit()->getAlias(mItemID);
         if (alias) {
             std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
-                if (!a)
+                if (!a) {
                     return;
+                }
                 mOldDescendantIDs.append(a->getID());
                 auto* children = a->getChildrenList();
                 if (children) {
@@ -97,8 +99,9 @@ void MudletAddItemCommand::undo()
         TTimer* timer = mpHost->getTimerUnit()->getTimer(mItemID);
         if (timer) {
             std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
-                if (!t)
+                if (!t) {
                     return;
+                }
                 mOldDescendantIDs.append(t->getID());
                 auto* children = t->getChildrenList();
                 if (children) {
@@ -118,8 +121,9 @@ void MudletAddItemCommand::undo()
         TScript* script = mpHost->getScriptUnit()->getScript(mItemID);
         if (script) {
             std::function<void(TScript*)> collectIDs = [&](TScript* s) {
-                if (!s)
+                if (!s) {
                     return;
+                }
                 mOldDescendantIDs.append(s->getID());
                 auto* children = s->getChildrenList();
                 if (children) {
@@ -139,8 +143,9 @@ void MudletAddItemCommand::undo()
         TKey* key = mpHost->getKeyUnit()->getKey(mItemID);
         if (key) {
             std::function<void(TKey*)> collectIDs = [&](TKey* k) {
-                if (!k)
+                if (!k) {
                     return;
+                }
                 mOldDescendantIDs.append(k->getID());
                 auto* children = k->getChildrenList();
                 if (children) {
@@ -160,8 +165,9 @@ void MudletAddItemCommand::undo()
         TAction* action = mpHost->getActionUnit()->getAction(mItemID);
         if (action) {
             std::function<void(TAction*)> collectIDs = [&](TAction* a) {
-                if (!a)
+                if (!a) {
                     return;
+                }
                 mOldDescendantIDs.append(a->getID());
                 auto* children = a->getChildrenList();
                 if (children) {
