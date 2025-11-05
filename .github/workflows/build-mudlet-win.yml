@@ -63,6 +63,7 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        MINGW_PREFIX: $${{ env.MINGW_PREFIX }}
         # This should export the following to the GitHub "environment" for later
         # steps:
         # ABORT_WORKFLOW - Only created by PublicTest builds when it is not
@@ -80,7 +81,9 @@ jobs:
         #   "release" - default, currently only value that can be used, will be set to this if not previously defined
         #   "debug" - not yet supported, but intended to include extra debug information and be built for debugging
         # VERSION - the x.y.z (only) part of the Mudlet version number, without any suffix
-      run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+      run: |
+        export -p
+        $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     - name: (Windows) Run Lua tests
       if: ! env.ABORT_WORKFLOW
