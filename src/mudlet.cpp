@@ -4301,6 +4301,12 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
+    // Guard against loading the same profile multiple times (fixes #1195)
+    if (mHostManager.hostLoaded(profile_name)) {
+        qDebug() << "Profile" << profile_name << "already loaded, skipping duplicate autologin";
+        return;
+    }
+
     loadProfile(profile_name, true);
 
     slot_connectionDialogueFinished(profile_name, true);
