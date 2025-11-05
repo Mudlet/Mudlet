@@ -7292,6 +7292,14 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             }
             // Use operator[] so we have write access to the array/list member:
             dlgTriggerPatternEdit* pPatternItem = mTriggerPatternEdit[i];
+
+            // Block signals to prevent flooding NVDA with PropertyChanged events during bulk updates (issue #8462)
+            pPatternItem->comboBox_patternType->blockSignals(true);
+            pPatternItem->singleLineTextEdit_pattern->blockSignals(true);
+            pPatternItem->pushButton_fgColor->blockSignals(true);
+            pPatternItem->pushButton_bgColor->blockSignals(true);
+            pPatternItem->spinBox_lineSpacer->blockSignals(true);
+
             const int pType = propertyList.at(i);
             if (!pType) {
                 // If the control is for the default (0) case nudge the setting
@@ -7356,17 +7364,33 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
                 }
                 pPatternItem->singleLineTextEdit_pattern->setPlainText(patternList.at(i));
             }
+
+            // Unblock signals after all updates are complete for this pattern widget
+            pPatternItem->comboBox_patternType->blockSignals(false);
+            pPatternItem->singleLineTextEdit_pattern->blockSignals(false);
+            pPatternItem->pushButton_fgColor->blockSignals(false);
+            pPatternItem->pushButton_bgColor->blockSignals(false);
+            pPatternItem->spinBox_lineSpacer->blockSignals(false);
         }
 
         // reset the rest of the patterns that don't have any data
         for (int i = patternList.size(); i < mVisiblePatternCount; i++) {
             auto* patternItem = mTriggerPatternEdit[i];
+
+            // Block signals for reset operations as well
+            patternItem->comboBox_patternType->blockSignals(true);
+            patternItem->singleLineTextEdit_pattern->blockSignals(true);
+
             patternItem->singleLineTextEdit_pattern->clear();
             patternItem->pushButton_fgColor->hide();
             patternItem->pushButton_bgColor->hide();
             patternItem->label_prompt->hide();
             patternItem->spinBox_lineSpacer->hide();
             patternItem->comboBox_patternType->setCurrentIndex(0);
+
+            // Unblock signals
+            patternItem->comboBox_patternType->blockSignals(false);
+            patternItem->singleLineTextEdit_pattern->blockSignals(false);
         }
         // Scroll to the last used pattern:
         mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), mVisiblePatternCount - 1)));
