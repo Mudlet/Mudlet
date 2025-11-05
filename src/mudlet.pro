@@ -421,9 +421,7 @@ unix:!macx {
         # https://www.msys2.org/news/#2023-12-13-starting-to-drop-some-32-bit-packages
         # although it might be possible for dedicated parties to build them
         # locally for a while:
-        error($$escape_expand("Build aborted as environmental variable MINGW_PREFIX not found.\\n"
-        "It is set to the root of the MINGW64/CLANG64/UCRT64 part typically this:\\n"\
-        "'/mingw64' {64 Bit (MINGW64) Mudlet built on a 64 Bit Host}\\n"))
+        error($$escape_expand("Build aborted as environmental variable MINGW_PREFIX not set to the root of\\nthe MINGW64/CLANG64/UCRT64 part typically this is:\\n'/mingw64' {64 Bit (MINGW64) Mudlet built on a 64 Bit Host}\\n"))
     }
     # For users/developers building with MSYS2 on Windows:
     # AND for CI building with MSYS2 for Windows in a GH Workflow:
