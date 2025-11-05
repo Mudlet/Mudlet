@@ -449,14 +449,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // These route to either text editor or item operations based on focus
     mpUndoAction = new QAction(QIcon::fromTheme(qsl("edit-undo"), QIcon(qsl(":/icons/edit-undo.png"))), tr("Undo"), this);
     mpUndoAction->setShortcut(QKeySequence(QKeySequence::Undo)); // Ctrl+Z
-    mpUndoAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mpUndoAction->setShortcutContext(Qt::WindowShortcut);
     mpUndoAction->setEnabled(false);
     this->addAction(mpUndoAction);
     connect(mpUndoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartUndo);
 
     mpRedoAction = new QAction(QIcon::fromTheme(qsl("edit-redo"), QIcon(qsl(":/icons/edit-redo.png"))), tr("Redo"), this);
     mpRedoAction->setShortcut(QKeySequence(QKeySequence::Redo)); // Ctrl+Y or Ctrl+Shift+Z
-    mpRedoAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mpRedoAction->setShortcutContext(Qt::WindowShortcut);
     mpRedoAction->setEnabled(false);
     this->addAction(mpRedoAction);
     connect(mpRedoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartRedo);
