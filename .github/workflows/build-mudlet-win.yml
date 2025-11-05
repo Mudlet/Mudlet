@@ -79,6 +79,7 @@ jobs:
         # BUILD_CONFIG - whether to produce an optimised or a debuggable build
         #   "release" - default, currently only value that can be used, will be set to this if not previously defined
         #   "debug" - not yet supported, but intended to include extra debug information and be built for debugging
+        # MUDLET_VERSION_BUILD - something that identifies the build
         # VERSION - the x.y.z (only) part of the Mudlet version number, without any suffix
       run: |
         export -p
@@ -122,6 +123,7 @@ jobs:
       env:
         BUILD_ACTION: ${{ env.BUILD_ACTION }}
         BUILD_COMMIT: ${{ env.BUILD_COMMIT }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         MUDLET_VERSION_BUILD: ${{ env.MUDLET_VERSION_BUILD }}
       run: |
         export -p
@@ -153,7 +155,6 @@ jobs:
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
         DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
-        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
