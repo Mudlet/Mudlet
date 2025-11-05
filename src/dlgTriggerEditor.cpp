@@ -493,27 +493,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // Store guarded pointer to text editor's undo stack for safe signal connections
     mpTextUndoStack = mpSourceEditorEdbee->controller()->textDocument()->textUndoStack();
 
-    connect(mpTextUndoStack, &edbee::TextUndoStack::undoExecuted,
-            this, [this]() {
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "dlgTriggerEditor - edbee undoExecuted signal received";
-#endif
-                slot_updateUndoRedoButtonStates();
-            });
-    connect(mpTextUndoStack, &edbee::TextUndoStack::redoExecuted,
-            this, [this]() {
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "dlgTriggerEditor - edbee redoExecuted signal received";
-#endif
-                slot_updateUndoRedoButtonStates();
-            });
-    connect(mpTextUndoStack, &edbee::TextUndoStack::changeAdded,
-            this, [this]() {
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "dlgTriggerEditor - edbee changeAdded signal received";
-#endif
-                slot_updateUndoRedoButtonStates();
-            });
+    connect(mpTextUndoStack, &edbee::TextUndoStack::undoExecuted, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+    connect(mpTextUndoStack, &edbee::TextUndoStack::redoExecuted, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
+    connect(mpTextUndoStack, &edbee::TextUndoStack::changeAdded, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
 
     slot_updateUndoRedoButtonStates();
 
