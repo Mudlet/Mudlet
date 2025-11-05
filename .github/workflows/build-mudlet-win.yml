@@ -59,6 +59,7 @@ jobs:
     - name: (Windows) Build
       shell: msys2 {0}
       env:
+        GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}

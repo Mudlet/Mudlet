@@ -28,12 +28,13 @@ set -x
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
 # 2 - Unsupported MSYS2/MINGGW shell type
+# 5 - Invalid configuration
 # 9 - squirrel error
 
 # Check if we're building from the Mudlet/Mudlet repository and not a fork
 if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
-  ecoh "This is not the main Mudlet repository - aborting!"
-  exit 2
+  echo "This is not the main Mudlet repository - aborting!"
+  exit 5
 fi
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
@@ -52,7 +53,7 @@ if [ -z "${BUILD_ACTION}" ]; then
   echo "BUILD_ACTION not set in environment, check preceding steps!"
   exit 10
 elif [ "${BUILD_ACTION}" == "Unknown" ] || [ "${BUILD_ACTION}" == "Archive" ]; then
-  # Don't proceed further in this step - successfully
+  # Don't proceed further in this step - but abort in a "successful" manner
   echo "BUILD_ACTION being \"${BUILD_ACTION}\" means no deployment step so exiting this step immediately!"
   exit 0
 fi
