@@ -440,12 +440,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     sourceFindPreviousAction->setShortcut(QKeySequence(QKeySequence::FindPrevious));
     mpSourceEditorArea->addAction(sourceFindPreviousAction);
     connect(sourceFindPreviousAction, &QAction::triggered, this, &dlgTriggerEditor::slot_sourceFindPrevious);
-
-    // Initialize the undo system for item operations
     mpUndoStack = new MudletUndoStack(this);
     mpUndoStack->setUndoLimit(50);
 
-    // Create smart undo/redo actions with keyboard shortcuts
     // These route to either text editor or item operations based on focus
     mpUndoAction = new QAction(QIcon::fromTheme(qsl("edit-undo"), QIcon(qsl(":/icons/edit-undo.png"))), tr("Undo"), this);
     mpUndoAction->setShortcut(QKeySequence(QKeySequence::Undo)); // Ctrl+Z
@@ -461,7 +458,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     this->addAction(mpRedoAction);
     connect(mpRedoAction, &QAction::triggered, this, &dlgTriggerEditor::slot_smartRedo);
 
-    // Connect item undo system signals to update button states and tooltips
     connect(mpUndoStack, &QUndoStack::canUndoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
     connect(mpUndoStack, &QUndoStack::canRedoChanged, this, &dlgTriggerEditor::slot_updateUndoRedoButtonStates);
 
@@ -497,7 +493,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // Store guarded pointer to text editor's undo stack for safe signal connections
     mpTextUndoStack = mpSourceEditorEdbee->controller()->textDocument()->textUndoStack();
 
-    // Connect text editor undo stack signals to update button states
     connect(mpTextUndoStack, &edbee::TextUndoStack::undoExecuted,
             this, [this]() {
 #if defined(DEBUG_UNDO_REDO)
@@ -520,10 +515,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                 slot_updateUndoRedoButtonStates();
             });
 
-    // Set initial button states
     slot_updateUndoRedoButtonStates();
 
-    // Connect undo system to tree widget refresh
     connect(mpUndoStack, &MudletUndoStack::itemsChanged, this, &dlgTriggerEditor::slot_itemsChanged);
 
     auto* provider = new edbee::StringTextAutoCompleteProvider();
@@ -1470,13 +1463,11 @@ void dlgTriggerEditor::slot_smartUndo()
 #endif
 
     if (canUndoText) {
-        // Undo text changes first (most recent edits in the script editor)
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "dlgTriggerEditor::slot_smartUndo() - Performing text undo via edbee";
 #endif
         mpSourceEditorEdbee->controller()->undo();
     } else if (canUndoItems) {
-        // Once text stack is empty, undo item operations (add/delete/move triggers/aliases/etc)
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "dlgTriggerEditor::slot_smartUndo() - Performing item undo";
 #endif
@@ -1486,9 +1477,7 @@ void dlgTriggerEditor::slot_smartUndo()
         while (mpUndoStack->canUndo() && attempts < maxAttempts) {
             mpUndoStack->undo();
 
-            // Check if the command that was just undone was valid
             if (mpUndoStack->wasLastCommandValid()) {
-                // Valid command found and processed
 #if defined(DEBUG_UNDO_REDO)
                 qDebug() << "dlgTriggerEditor::slot_smartUndo() - Valid command undone after" << (attempts + 1) << "attempts";
 #endif
@@ -1503,7 +1492,6 @@ void dlgTriggerEditor::slot_smartUndo()
         }
     }
 
-    // Update button states after undo completes
     slot_updateUndoRedoButtonStates();
 }
 
@@ -1520,13 +1508,11 @@ void dlgTriggerEditor::slot_smartRedo()
 #endif
 
     if (canRedoText) {
-        // Redo text changes first (most recently undone edits in the script editor)
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "dlgTriggerEditor::slot_smartRedo() - Performing text redo via edbee";
 #endif
         mpSourceEditorEdbee->controller()->redo();
     } else if (canRedoItems) {
-        // Once text stack is empty, redo item operations
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "dlgTriggerEditor::slot_smartRedo() - Performing item redo";
 #endif
@@ -1536,9 +1522,7 @@ void dlgTriggerEditor::slot_smartRedo()
         while (mpUndoStack->canRedo() && attempts < maxAttempts) {
             mpUndoStack->redo();
 
-            // Check if the command that was just redone was valid
             if (mpUndoStack->wasLastCommandValid()) {
-                // Valid command found and processed
 #if defined(DEBUG_UNDO_REDO)
                 qDebug() << "dlgTriggerEditor::slot_smartRedo() - Valid command redone after" << (attempts + 1) << "attempts";
 #endif
@@ -1553,7 +1537,6 @@ void dlgTriggerEditor::slot_smartRedo()
         }
     }
 
-    // Update button states after redo completes
     slot_updateUndoRedoButtonStates();
 }
 
@@ -1564,14 +1547,12 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
         return;
     }
 
-    // Check if EITHER the text editor OR the item undo system has undo/redo available
     bool canUndoText = mpTextUndoStack->canUndo();
     bool canUndoItems = mpUndoStack && mpUndoStack->canUndo();
 
     bool canRedoText = mpTextUndoStack->canRedo();
     bool canRedoItems = mpUndoStack && mpUndoStack->canRedo();
 
-    // Enable buttons if EITHER system has something to undo/redo
     mpUndoAction->setEnabled(canUndoText || canUndoItems);
     mpRedoAction->setEnabled(canRedoText || canRedoItems);
 }
@@ -1584,14 +1565,12 @@ void dlgTriggerEditor::slot_runUndoRedoTests()
         return;
     }
 
-    // Disable the test button while tests are running
     if (mpRunUndoRedoTestsAction) {
         mpRunUndoRedoTestsAction->setEnabled(false);
     }
 
     runUndoRedoTestSuite(this);
 
-    // Re-enable the test button after tests complete
     if (mpRunUndoRedoTestsAction) {
         mpRunUndoRedoTestsAction->setEnabled(true);
     }
@@ -3759,7 +3738,6 @@ void dlgTriggerEditor::delete_alias()
         info.parentID = parentID;
         info.positionInParent = positionInParent;
 
-        // Export alias to XML snapshot
         pugi::xml_document doc;
         auto root = doc.append_child("AliasSnapshot");
         XMLexport exporter(pT);
@@ -3770,7 +3748,6 @@ void dlgTriggerEditor::delete_alias()
 
         deletedItems.append(info);
 
-        // Recursively capture all children
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
@@ -3935,7 +3912,6 @@ void dlgTriggerEditor::delete_action()
 
         deletedItems.append(info);
 
-        // Recursively capture all children
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
@@ -4158,7 +4134,6 @@ void dlgTriggerEditor::delete_script()
 
         deletedItems.append(info);
 
-        // Recursively capture all children
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
@@ -4294,7 +4269,6 @@ void dlgTriggerEditor::delete_key()
 
         deletedItems.append(info);
 
-        // Recursively capture all children
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
@@ -4430,7 +4404,6 @@ void dlgTriggerEditor::delete_trigger()
 
         deletedItems.append(info);
 
-        // Recursively capture all children
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
@@ -4571,7 +4544,6 @@ void dlgTriggerEditor::delete_timer()
 
         deletedItems.append(info);
 
-        // Recursively capture all children
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
