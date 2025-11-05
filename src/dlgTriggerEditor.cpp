@@ -11500,16 +11500,17 @@ void dlgTriggerEditor::slot_import()
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
 
-    slot_profileSaveAction();
-
-    fillout_form();
-
+    // Nullify current item pointers before saving to prevent use-after-free
     mpCurrentTriggerItem = nullptr;
     mpCurrentTimerItem = nullptr;
     mpCurrentAliasItem = nullptr;
     mpCurrentScriptItem = nullptr;
     mpCurrentActionItem = nullptr;
     mpCurrentKeyItem = nullptr;
+
+    slot_profileSaveAction();
+
+    fillout_form();
 
     slot_showTriggers();
 }
