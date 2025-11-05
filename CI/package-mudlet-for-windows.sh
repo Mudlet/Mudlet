@@ -155,17 +155,17 @@ mapfile -t NEEDED_LIBS < <("${MINGW_PREFIX}/bin/ntldd" --recursive ./mudlet.exe 
   | /usr/bin/grep -i "${MSYSTEM}" \
   | /usr/bin/cut -d ">" -f2 \
   | /usr/bin/cut -d "(" -f1 \
-  | /usr/bin/sort -u )
+  | /usr/bin/sort -u)
 
 echo ""
 echo "Copying identified libraries from Mudlet executable and plugins..."
 for LIB in "${NEEDED_LIBS[@]}"; do
   # The paths that ntldd return are "Windows" form ones:
   # "C:\msys64\mingw64\bin\file.dll" so run them through cygpath to convert them
-  # to POSIX style ones: "/mingw64/bin/file.dll":
-  LIB_WINPATHFILE="$(cygpath -au "${LIB}")"
-  echo "Copying: \"${LIB_WINPATHFILE}\", i.e. \"${LIB}\"."
-  cp -p -v "${LIB_WINPATHFILE}" .
+  # to POSIX style ones: "/mingw64/bin/file.dll"
+  # Don't double-quote the argument to cygpath - extra spaces around the
+  # contained value REALLY messes things up!
+  cp -p -v "$(cygpath -au ${LIB})" .
 done
 echo "    ... done copying identified libraries."
 
