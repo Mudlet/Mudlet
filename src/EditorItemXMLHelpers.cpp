@@ -62,7 +62,6 @@ static QString decompressXML(const QString& data) {
         return data;
     }
 
-    // Decompress Base64-encoded compressed data
     QByteArray compressed = QByteArray::fromBase64(data.toLatin1());
     QByteArray decompressed = qUncompress(compressed);
     if (decompressed.isEmpty()) {
@@ -90,7 +89,6 @@ QString exportTriggerToXML(TTrigger* trigger) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-// Export a single alias to XML string
 QString exportAliasToXML(TAlias* alias) {
     if (!alias) {
         return QString();
@@ -107,7 +105,6 @@ QString exportAliasToXML(TAlias* alias) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-// Export a single timer to XML string
 QString exportTimerToXML(TTimer* timer) {
     if (!timer) {
         return QString();
@@ -124,7 +121,6 @@ QString exportTimerToXML(TTimer* timer) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-// Export a single script to XML string
 QString exportScriptToXML(TScript* script) {
     if (!script) {
         return QString();
@@ -141,7 +137,6 @@ QString exportScriptToXML(TScript* script) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-// Export a single key to XML string
 QString exportKeyToXML(TKey* key) {
     if (!key) {
         return QString();
@@ -158,7 +153,6 @@ QString exportKeyToXML(TKey* key) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-// Export a single action to XML string
 QString exportActionToXML(TAction* action) {
     if (!action) {
         return QString();
@@ -175,7 +169,6 @@ QString exportActionToXML(TAction* action) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-// Helper to get item name based on view type and ID
 QString getItemName(EditorViewType viewType, int itemID, Host* host) {
     switch (viewType) {
     case EditorViewType::cmTriggerView: {
@@ -207,7 +200,6 @@ QString getItemName(EditorViewType viewType, int itemID, Host* host) {
     }
 }
 
-// Helper to get view type name
 QString getViewTypeName(EditorViewType viewType) {
     switch (viewType) {
     case EditorViewType::cmTriggerView:
@@ -234,13 +226,11 @@ QString getViewTypeName(EditorViewType viewType) {
     }
 }
 
-// Import a single trigger from XML string
 TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Host* host, int position) {
     if (xmlSnapshot.isEmpty() || !host) {
         return nullptr;
     }
 
-    // Decompress XML
     QString xml = decompressXML(xmlSnapshot);
     if (xml.isEmpty()) {
         qWarning() << "importTriggerFromXML: Failed to decompress XML";
@@ -260,7 +250,6 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
         return nullptr;
     }
 
-    // Find the Trigger or TriggerGroup element
     auto triggerNode = root.child("Trigger");
     if (!triggerNode) {
         triggerNode = root.child("TriggerGroup");
@@ -270,10 +259,8 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
         return nullptr;
     }
 
-    // Create new trigger without parent (so it doesn't auto-add to end)
     auto pT = new TTrigger(nullptr, host);
 
-    // Manually add to parent at the correct position
     if (pParent) {
         pT->setParent(pParent);
         // Use explicit enum mode for clarity
@@ -283,7 +270,6 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
         // Root level trigger - register first (adds to end of root list)
         host->getTriggerUnit()->registerTrigger(pT);
 
-        // Now reposition it if a specific position was requested
         auto rootListSize = host->getTriggerUnit()->getTriggerRootNodeList().size();
 
         if (position != -1 && position < rootListSize) {
@@ -292,7 +278,6 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
         }
     }
 
-    // Read attributes
     pT->setIsActive(QString::fromStdString(triggerNode.attribute("isActive").value()) == "yes");
     pT->setIsFolder(QString::fromStdString(triggerNode.attribute("isFolder").value()) == "yes");
     pT->setTemporary(QString::fromStdString(triggerNode.attribute("isTempTrigger").value()) == "yes");
@@ -303,11 +288,9 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
     pT->mSoundTrigger = QString::fromStdString(triggerNode.attribute("isSoundTrigger").value()) == "yes";
     pT->mColorTrigger = QString::fromStdString(triggerNode.attribute("isColorTrigger").value()) == "yes";
 
-    // Temporary storage for pattern data
     QStringList patterns;
     QList<int> patternKinds;
 
-    // Read child elements
     for (auto node : triggerNode.children()) {
         QString nodeName = QString::fromStdString(node.name());
         QString nodeValue = QString::fromStdString(node.child_value());
@@ -337,31 +320,25 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
         } else if (nodeName == "mSoundFile") {
             pT->setSound(nodeValue);
         } else if (nodeName == "regexCodeList") {
-            // Read pattern list
             for (auto patternNode : node.children("string")) {
                 patterns << QString::fromStdString(patternNode.child_value());
             }
         } else if (nodeName == "regexCodePropertyList") {
-            // Read pattern property list
             for (auto propertyNode : node.children("integer")) {
                 patternKinds << QString::fromStdString(propertyNode.child_value()).toInt();
             }
         }
     }
 
-    // Set the regex patterns
     if (!patterns.isEmpty()) {
         pT->setRegexCodeList(patterns, patternKinds);
     }
 
-    // Compile and validate the trigger to ensure error states are computed
     pT->compileAll();
 
-    // Recursively import child triggers
     for (auto childNode : triggerNode.children()) {
         QString childNodeName = QString::fromStdString(childNode.name());
         if (childNodeName == "Trigger" || childNodeName == "TriggerGroup") {
-            // Create XML snapshot for the child
             pugi::xml_document childDoc;
             auto childRoot = childDoc.append_child("TriggerSnapshot");
             childRoot.append_copy(childNode);
@@ -378,7 +355,6 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
     return pT;
 }
 
-// Update an existing trigger from XML string
 bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot) {
     if (!pT || xmlSnapshot.isEmpty()) {
         return false;
@@ -404,7 +380,6 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot) {
         return false;
     }
 
-    // Update attributes
     pT->setIsActive(QString::fromStdString(triggerNode.attribute("isActive").value()) == "yes");
     pT->setIsFolder(QString::fromStdString(triggerNode.attribute("isFolder").value()) == "yes");
     pT->setTemporary(QString::fromStdString(triggerNode.attribute("isTempTrigger").value()) == "yes");
@@ -415,11 +390,9 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot) {
     pT->mSoundTrigger = QString::fromStdString(triggerNode.attribute("isSoundTrigger").value()) == "yes";
     pT->mColorTrigger = QString::fromStdString(triggerNode.attribute("isColorTrigger").value()) == "yes";
 
-    // Temporary storage for pattern data
     QStringList patterns;
     QList<int> patternKinds;
 
-    // Update child elements
     for (auto node : triggerNode.children()) {
         QString nodeName = QString::fromStdString(node.name());
         QString nodeValue = QString::fromStdString(node.child_value());
@@ -459,12 +432,10 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot) {
         }
     }
 
-    // Update the regex patterns
     if (!patterns.isEmpty()) {
         pT->setRegexCodeList(patterns, patternKinds);
     }
 
-    // Compile and validate the trigger to ensure error states are computed
     pT->compileAll();
 
     return true;
@@ -480,7 +451,6 @@ TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* ho
         return nullptr;
     }
 
-    // Decompress XML
     QString xml = decompressXML(xmlSnapshot);
     if (xml.isEmpty()) {
         qWarning() << "importAliasFromXML: Failed to decompress XML";
@@ -550,7 +520,6 @@ TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* ho
         }
     }
 
-    // Compile the alias
     pA->compileAll();
 
     // Recursively import child aliases
@@ -621,7 +590,6 @@ bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot) {
         }
     }
 
-    // Compile the alias
     pA->compileAll();
 
     return true;
@@ -637,7 +605,6 @@ TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* ho
         return nullptr;
     }
 
-    // Decompress XML
     QString xml = decompressXML(xmlSnapshot);
     if (xml.isEmpty()) {
         qWarning() << "importTimerFromXML: Failed to decompress XML";
@@ -707,7 +674,6 @@ TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* ho
         }
     }
 
-    // Compile the timer
     pT->compileAll();
 
     // Recursively import child timers
@@ -778,7 +744,6 @@ bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot) {
         }
     }
 
-    // Compile the timer
     pT->compileAll();
 
     return true;
@@ -794,7 +759,6 @@ TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host*
         return nullptr;
     }
 
-    // Decompress XML
     QString xml = decompressXML(xmlSnapshot);
     if (xml.isEmpty()) {
         qWarning() << "importScriptFromXML: Failed to decompress XML";
@@ -869,7 +833,6 @@ TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host*
         pS->setEventHandlerList(eventHandlers);
     }
 
-    // Compile the script
     pS->compileAll();
 
     // Recursively import child scripts
@@ -945,7 +908,6 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot) {
         pS->setEventHandlerList(eventHandlers);
     }
 
-    // Compile the script
     pS->compileAll();
 
     return true;
@@ -961,7 +923,6 @@ TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, in
         return nullptr;
     }
 
-    // Decompress XML
     QString xml = decompressXML(xmlSnapshot);
     if (xml.isEmpty()) {
         qWarning() << "importKeyFromXML: Failed to decompress XML";
@@ -1032,7 +993,6 @@ TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, in
         }
     }
 
-    // Compile the key
     pK->compileAll();
 
     // Recursively import child keys
@@ -1104,7 +1064,6 @@ bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot) {
         }
     }
 
-    // Compile the key
     pK->compileAll();
 
     return true;
@@ -1120,7 +1079,6 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
         return nullptr;
     }
 
-    // Decompress XML
     QString xml = decompressXML(xmlSnapshot);
     if (xml.isEmpty()) {
         qWarning() << "importActionFromXML: Failed to decompress XML";
@@ -1214,7 +1172,6 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
         }
     }
 
-    // Compile the action
     pA->compileAll();
 
     // Recursively import child actions
@@ -1309,7 +1266,6 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot) {
         }
     }
 
-    // Compile the action
     pA->compileAll();
 
     return true;
