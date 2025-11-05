@@ -51,6 +51,13 @@
 
 using namespace std::chrono_literals;
 
+extern void qInitResources_mudlet();
+extern void qInitResources_qm();
+extern void qInitResources_additional_splash_screens();
+extern void qInitResources_mudlet_fonts_common();
+extern void qInitResources_mudlet_fonts_posix();
+void        initializeQRCResources();
+
 #if defined(Q_OS_WINDOWS)
 bool runUpdate();
 #endif
@@ -150,6 +157,7 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 
 int main(int argc, char* argv[])
 {
+    initializeQRCResources();
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {
@@ -819,4 +827,21 @@ bool runUpdate()
     }
     return false;
 }
-#endif
+#endif // defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+
+void initializeQRCResources()
+{
+    #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
+        qInitResources_additional_splash_screens();
+    #endif
+
+    #ifdef INCLUDE_FONTS
+        qInitResources_mudlet_fonts_common();
+        #if defined(__linux__) || defined(__FreeBSD__)
+            qInitResources_mudlet_fonts_posix();
+        #endif
+    #endif
+
+    qInitResources_mudlet();
+    qInitResources_qm();
+}
