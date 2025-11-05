@@ -24,18 +24,18 @@
 #include <QMap>
 #include <QUndoStack>
 
-#include "MudletEditorCommand.h"
+#include "EditorCommand.h"
 
 // Wrapper around QUndoStack with Mudlet-specific features:
 // - itemsChanged signal for targeted UI updates
 // - remapItemIDs() for ID tracking when items are recreated
 // - Overridden undo()/redo() to emit custom signals
-class MudletUndoStack : public QUndoStack
+class EditorUndoStack : public QUndoStack
 {
     Q_OBJECT
 
 public:
-    explicit MudletUndoStack(QObject* parent = nullptr);
+    explicit EditorUndoStack(QObject* parent = nullptr);
 
     // Updates all commands on the stack when an item gets a new ID after undo/redo
     void remapItemIDs(int oldID, int newID);

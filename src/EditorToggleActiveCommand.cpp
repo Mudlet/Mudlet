@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletToggleActiveCommand.h"
+#include "EditorToggleActiveCommand.h"
 
 #include "Host.h"
 #include "TAction.h"
@@ -27,29 +27,29 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-MudletToggleActiveCommand::MudletToggleActiveCommand(EditorViewType viewType, int itemID, bool oldState, bool newState, const QString& itemName, Host* host)
-: MudletEditorCommand(generateText(viewType, itemName, newState), host), mViewType(viewType), mItemID(itemID), mOldActiveState(oldState), mNewActiveState(newState), mItemName(itemName)
+EditorToggleActiveCommand::EditorToggleActiveCommand(EditorViewType viewType, int itemID, bool oldState, bool newState, const QString& itemName, Host* host)
+: EditorCommand(generateText(viewType, itemName, newState), host), mViewType(viewType), mItemID(itemID), mOldActiveState(oldState), mNewActiveState(newState), mItemName(itemName)
 {
 }
 
-void MudletToggleActiveCommand::undo()
+void EditorToggleActiveCommand::undo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletToggleActiveCommand::undo() - Setting" << mItemName << "(ID:" << mItemID << ")" << "active state to" << mOldActiveState;
+    qDebug() << "EditorToggleActiveCommand::undo() - Setting" << mItemName << "(ID:" << mItemID << ")" << "active state to" << mOldActiveState;
 #endif
     setItemActiveState(mItemID, mOldActiveState);
 }
 
-void MudletToggleActiveCommand::redo()
+void EditorToggleActiveCommand::redo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletToggleActiveCommand::redo() - Setting" << mItemName << "(ID:" << mItemID << ")" << "active state to" << mNewActiveState;
+    qDebug() << "EditorToggleActiveCommand::redo() - Setting" << mItemName << "(ID:" << mItemID << ")" << "active state to" << mNewActiveState;
 #endif
     // Skip the first redo() which is automatically called by QUndoStack::push()
     // The state change has already been performed before pushing to the stack
     if (mSkipFirstRedo) {
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletToggleActiveCommand::redo() - Skipping first redo (state already changed)";
+        qDebug() << "EditorToggleActiveCommand::redo() - Skipping first redo (state already changed)";
 #endif
         mSkipFirstRedo = false;
         return;
@@ -59,14 +59,14 @@ void MudletToggleActiveCommand::redo()
 }
 
 // Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
-void MudletToggleActiveCommand::remapItemID(int oldID, int newID)
+void EditorToggleActiveCommand::remapItemID(int oldID, int newID)
 {
     if (mItemID == oldID) {
         mItemID = newID;
     }
 }
 
-void MudletToggleActiveCommand::setItemActiveState(int itemID, bool active)
+void EditorToggleActiveCommand::setItemActiveState(int itemID, bool active)
 {
     switch (mViewType) {
     case EditorViewType::cmTriggerView: {
@@ -74,7 +74,7 @@ void MudletToggleActiveCommand::setItemActiveState(int itemID, bool active)
         if (pT) {
             pT->setIsActive(active);
         } else {
-            qWarning() << "MudletToggleActiveCommand::setItemActiveState() - Trigger" << itemID << "not found";
+            qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Trigger" << itemID << "not found";
         }
         break;
     }
@@ -83,7 +83,7 @@ void MudletToggleActiveCommand::setItemActiveState(int itemID, bool active)
         if (pA) {
             pA->setIsActive(active);
         } else {
-            qWarning() << "MudletToggleActiveCommand::setItemActiveState() - Alias" << itemID << "not found";
+            qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Alias" << itemID << "not found";
         }
         break;
     }
@@ -92,7 +92,7 @@ void MudletToggleActiveCommand::setItemActiveState(int itemID, bool active)
         if (pT) {
             pT->setIsActive(active);
         } else {
-            qWarning() << "MudletToggleActiveCommand::setItemActiveState() - Timer" << itemID << "not found";
+            qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Timer" << itemID << "not found";
         }
         break;
     }
@@ -101,7 +101,7 @@ void MudletToggleActiveCommand::setItemActiveState(int itemID, bool active)
         if (pS) {
             pS->setIsActive(active);
         } else {
-            qWarning() << "MudletToggleActiveCommand::setItemActiveState() - Script" << itemID << "not found";
+            qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Script" << itemID << "not found";
         }
         break;
     }
@@ -110,7 +110,7 @@ void MudletToggleActiveCommand::setItemActiveState(int itemID, bool active)
         if (pK) {
             pK->setIsActive(active);
         } else {
-            qWarning() << "MudletToggleActiveCommand::setItemActiveState() - Key" << itemID << "not found";
+            qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Key" << itemID << "not found";
         }
         break;
     }
@@ -119,17 +119,17 @@ void MudletToggleActiveCommand::setItemActiveState(int itemID, bool active)
         if (pA) {
             pA->setIsActive(active);
         } else {
-            qWarning() << "MudletToggleActiveCommand::setItemActiveState() - Action" << itemID << "not found";
+            qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Action" << itemID << "not found";
         }
         break;
     }
     default:
-        qWarning() << "MudletToggleActiveCommand::setItemActiveState() - Unknown view type";
+        qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Unknown view type";
         break;
     }
 }
 
-QString MudletToggleActiveCommand::generateText(EditorViewType viewType, const QString& itemName, bool newState)
+QString EditorToggleActiveCommand::generateText(EditorViewType viewType, const QString& itemName, bool newState)
 {
     if (newState) {
         // Activating an item

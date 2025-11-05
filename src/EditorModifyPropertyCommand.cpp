@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletModifyPropertyCommand.h"
+#include "EditorModifyPropertyCommand.h"
 
 #include "EditorItemXMLHelpers.h"
 #include "Host.h"
@@ -28,15 +28,15 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-MudletModifyPropertyCommand::MudletModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host)
-: MudletEditorCommand(generateText(viewType, itemName), host), mViewType(viewType), mItemID(itemID), mItemName(itemName), mOldStateXML(oldStateXML), mNewStateXML(newStateXML)
+EditorModifyPropertyCommand::EditorModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host)
+: EditorCommand(generateText(viewType, itemName), host), mViewType(viewType), mItemID(itemID), mItemName(itemName), mOldStateXML(oldStateXML), mNewStateXML(newStateXML)
 {
 }
 
-void MudletModifyPropertyCommand::undo()
+void EditorModifyPropertyCommand::undo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletModifyPropertyCommand::undo() - Restoring" << mItemName << "(ID:" << mItemID << ") to old state";
+    qDebug() << "EditorModifyPropertyCommand::undo() - Restoring" << mItemName << "(ID:" << mItemID << ") to old state";
 #endif
     // Restore item to old state from XML
     switch (mViewType) {
@@ -44,10 +44,10 @@ void MudletModifyPropertyCommand::undo()
         TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
         if (pTrigger) {
             if (!updateTriggerFromXML(pTrigger, mOldStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore trigger" << mItemName << "to old state";
+                qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore trigger" << mItemName << "to old state";
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::undo() - Trigger" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::undo() - Trigger" << mItemName << "not found";
         }
         break;
     }
@@ -55,10 +55,10 @@ void MudletModifyPropertyCommand::undo()
         TAlias* pAlias = mpHost->getAliasUnit()->getAlias(mItemID);
         if (pAlias) {
             if (!updateAliasFromXML(pAlias, mOldStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore alias" << mItemName << "to old state";
+                qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore alias" << mItemName << "to old state";
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::undo() - Alias" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::undo() - Alias" << mItemName << "not found";
         }
         break;
     }
@@ -66,10 +66,10 @@ void MudletModifyPropertyCommand::undo()
         TTimer* pTimer = mpHost->getTimerUnit()->getTimer(mItemID);
         if (pTimer) {
             if (!updateTimerFromXML(pTimer, mOldStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore timer" << mItemName << "to old state";
+                qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore timer" << mItemName << "to old state";
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::undo() - Timer" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::undo() - Timer" << mItemName << "not found";
         }
         break;
     }
@@ -77,10 +77,10 @@ void MudletModifyPropertyCommand::undo()
         TScript* pScript = mpHost->getScriptUnit()->getScript(mItemID);
         if (pScript) {
             if (!updateScriptFromXML(pScript, mOldStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore script" << mItemName << "to old state";
+                qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore script" << mItemName << "to old state";
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::undo() - Script" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::undo() - Script" << mItemName << "not found";
         }
         break;
     }
@@ -88,10 +88,10 @@ void MudletModifyPropertyCommand::undo()
         TKey* pKey = mpHost->getKeyUnit()->getKey(mItemID);
         if (pKey) {
             if (!updateKeyFromXML(pKey, mOldStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore key" << mItemName << "to old state";
+                qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore key" << mItemName << "to old state";
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::undo() - Key" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::undo() - Key" << mItemName << "not found";
         }
         break;
     }
@@ -99,10 +99,10 @@ void MudletModifyPropertyCommand::undo()
         TAction* pAction = mpHost->getActionUnit()->getAction(mItemID);
         if (pAction) {
             if (!updateActionFromXML(pAction, mOldStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::undo() - Failed to restore action" << mItemName << "to old state";
+                qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore action" << mItemName << "to old state";
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::undo() - Action" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::undo() - Action" << mItemName << "not found";
         }
         break;
     }
@@ -111,10 +111,10 @@ void MudletModifyPropertyCommand::undo()
     }
 }
 
-void MudletModifyPropertyCommand::redo()
+void EditorModifyPropertyCommand::redo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletModifyPropertyCommand::redo() - Applying new state to" << mItemName << "(ID:" << mItemID << ")";
+    qDebug() << "EditorModifyPropertyCommand::redo() - Applying new state to" << mItemName << "(ID:" << mItemID << ")";
 #endif
     // Apply the new state
     // Note: Unlike AddItemCommand, we don't skip the first redo because ModifyPropertyCommand
@@ -125,10 +125,10 @@ void MudletModifyPropertyCommand::redo()
         TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
         if (pTrigger) {
             if (!updateTriggerFromXML(pTrigger, mNewStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to trigger" << mItemName;
+                qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to trigger" << mItemName;
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::redo() - Trigger" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::redo() - Trigger" << mItemName << "not found";
         }
         break;
     }
@@ -136,10 +136,10 @@ void MudletModifyPropertyCommand::redo()
         TAlias* pAlias = mpHost->getAliasUnit()->getAlias(mItemID);
         if (pAlias) {
             if (!updateAliasFromXML(pAlias, mNewStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to alias" << mItemName;
+                qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to alias" << mItemName;
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::redo() - Alias" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::redo() - Alias" << mItemName << "not found";
         }
         break;
     }
@@ -147,10 +147,10 @@ void MudletModifyPropertyCommand::redo()
         TTimer* pTimer = mpHost->getTimerUnit()->getTimer(mItemID);
         if (pTimer) {
             if (!updateTimerFromXML(pTimer, mNewStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to timer" << mItemName;
+                qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to timer" << mItemName;
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::redo() - Timer" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::redo() - Timer" << mItemName << "not found";
         }
         break;
     }
@@ -158,10 +158,10 @@ void MudletModifyPropertyCommand::redo()
         TScript* pScript = mpHost->getScriptUnit()->getScript(mItemID);
         if (pScript) {
             if (!updateScriptFromXML(pScript, mNewStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to script" << mItemName;
+                qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to script" << mItemName;
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::redo() - Script" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::redo() - Script" << mItemName << "not found";
         }
         break;
     }
@@ -169,10 +169,10 @@ void MudletModifyPropertyCommand::redo()
         TKey* pKey = mpHost->getKeyUnit()->getKey(mItemID);
         if (pKey) {
             if (!updateKeyFromXML(pKey, mNewStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to key" << mItemName;
+                qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to key" << mItemName;
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::redo() - Key" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::redo() - Key" << mItemName << "not found";
         }
         break;
     }
@@ -180,10 +180,10 @@ void MudletModifyPropertyCommand::redo()
         TAction* pAction = mpHost->getActionUnit()->getAction(mItemID);
         if (pAction) {
             if (!updateActionFromXML(pAction, mNewStateXML)) {
-                qWarning() << "MudletModifyPropertyCommand::redo() - Failed to apply new state to action" << mItemName;
+                qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to action" << mItemName;
             }
         } else {
-            qWarning() << "MudletModifyPropertyCommand::redo() - Action" << mItemName << "not found";
+            qWarning() << "EditorModifyPropertyCommand::redo() - Action" << mItemName << "not found";
         }
         break;
     }
@@ -193,14 +193,14 @@ void MudletModifyPropertyCommand::redo()
 }
 
 // Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
-void MudletModifyPropertyCommand::remapItemID(int oldID, int newID)
+void EditorModifyPropertyCommand::remapItemID(int oldID, int newID)
 {
     if (mItemID == oldID) {
         mItemID = newID;
     }
 }
 
-QString MudletModifyPropertyCommand::generateText(EditorViewType viewType, const QString& itemName)
+QString EditorModifyPropertyCommand::generateText(EditorViewType viewType, const QString& itemName)
 {
     switch (viewType) {
     case EditorViewType::cmTriggerView:

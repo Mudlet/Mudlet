@@ -72,7 +72,7 @@ static QString decompressXML(const QString& data) {
     return QString::fromUtf8(decompressed);
 }
 
-// XML Export/Import functions - used by both EditorUndoSystem and MudletAddItemCommand
+// XML Export/Import functions - used by both EditorUndoSystem and EditorAddItemCommand
 QString exportTriggerToXML(TTrigger* trigger) {
     if (!trigger) {
         return QString();

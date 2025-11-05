@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletAddItemCommand.h"
+#include "EditorAddItemCommand.h"
 
 #include "EditorItemXMLHelpers.h"
 #include "Host.h"
@@ -28,8 +28,8 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-MudletAddItemCommand::MudletAddItemCommand(EditorViewType viewType, int itemID, int parentID, int positionInParent, bool isFolder, const QString& itemName, Host* host)
-: MudletEditorCommand(generateText(viewType, itemName, isFolder), host)
+EditorAddItemCommand::EditorAddItemCommand(EditorViewType viewType, int itemID, int parentID, int positionInParent, bool isFolder, const QString& itemName, Host* host)
+: EditorCommand(generateText(viewType, itemName, isFolder), host)
 , mViewType(viewType)
 , mItemID(itemID)
 , mParentID(parentID)
@@ -39,10 +39,10 @@ MudletAddItemCommand::MudletAddItemCommand(EditorViewType viewType, int itemID, 
 {
 }
 
-void MudletAddItemCommand::undo()
+void EditorAddItemCommand::undo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletAddItemCommand::undo() - Undoing add for item" << mItemName << "(ID:" << mItemID << ")";
+    qDebug() << "EditorAddItemCommand::undo() - Undoing add for item" << mItemName << "(ID:" << mItemID << ")";
 #endif
 
     // Clear old descendant IDs from any previous undo
@@ -68,7 +68,7 @@ void MudletAddItemCommand::undo()
             };
             collectIDs(trigger);
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "MudletAddItemCommand::undo() - Deleting trigger with IDs:" << mOldDescendantIDs;
+            qDebug() << "EditorAddItemCommand::undo() - Deleting trigger with IDs:" << mOldDescendantIDs;
 #endif
         }
         break;
@@ -90,7 +90,7 @@ void MudletAddItemCommand::undo()
             };
             collectIDs(alias);
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "MudletAddItemCommand::undo() - Deleting alias with IDs:" << mOldDescendantIDs;
+            qDebug() << "EditorAddItemCommand::undo() - Deleting alias with IDs:" << mOldDescendantIDs;
 #endif
         }
         break;
@@ -112,7 +112,7 @@ void MudletAddItemCommand::undo()
             };
             collectIDs(timer);
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "MudletAddItemCommand::undo() - Deleting timer with IDs:" << mOldDescendantIDs;
+            qDebug() << "EditorAddItemCommand::undo() - Deleting timer with IDs:" << mOldDescendantIDs;
 #endif
         }
         break;
@@ -134,7 +134,7 @@ void MudletAddItemCommand::undo()
             };
             collectIDs(script);
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "MudletAddItemCommand::undo() - Deleting script with IDs:" << mOldDescendantIDs;
+            qDebug() << "EditorAddItemCommand::undo() - Deleting script with IDs:" << mOldDescendantIDs;
 #endif
         }
         break;
@@ -156,7 +156,7 @@ void MudletAddItemCommand::undo()
             };
             collectIDs(key);
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "MudletAddItemCommand::undo() - Deleting key with IDs:" << mOldDescendantIDs;
+            qDebug() << "EditorAddItemCommand::undo() - Deleting key with IDs:" << mOldDescendantIDs;
 #endif
         }
         break;
@@ -178,7 +178,7 @@ void MudletAddItemCommand::undo()
             };
             collectIDs(action);
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "MudletAddItemCommand::undo() - Deleting action with IDs:" << mOldDescendantIDs;
+            qDebug() << "EditorAddItemCommand::undo() - Deleting action with IDs:" << mOldDescendantIDs;
 #endif
         }
         break;
@@ -237,7 +237,7 @@ void MudletAddItemCommand::undo()
         }
     }
 
-    // Delete the item (unregister first to match MudletDeleteItemCommand pattern)
+    // Delete the item (unregister first to match EditorDeleteItemCommand pattern)
     switch (mViewType) {
     case EditorViewType::cmTriggerView: {
         TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
@@ -292,16 +292,16 @@ void MudletAddItemCommand::undo()
     }
 }
 
-void MudletAddItemCommand::redo()
+void EditorAddItemCommand::redo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletAddItemCommand::redo() - Redoing add for item" << mItemName << "(ID:" << mItemID << ")";
+    qDebug() << "EditorAddItemCommand::redo() - Redoing add for item" << mItemName << "(ID:" << mItemID << ")";
 #endif
     // Skip the first redo() which is automatically called by QUndoStack::push()
     // The item has already been added by the user action
     if (mSkipFirstRedo) {
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletAddItemCommand::redo() - Skipping first redo (item already added)";
+        qDebug() << "EditorAddItemCommand::redo() - Skipping first redo (item already added)";
 #endif
         mSkipFirstRedo = false;
         return;
@@ -350,7 +350,7 @@ void MudletAddItemCommand::redo()
                     }
                 }
             } else {
-                qWarning() << "MudletAddItemCommand::redo() - Failed to recreate trigger from snapshot";
+                qWarning() << "EditorAddItemCommand::redo() - Failed to recreate trigger from snapshot";
             }
             break;
         }
@@ -386,7 +386,7 @@ void MudletAddItemCommand::redo()
                     }
                 }
             } else {
-                qWarning() << "MudletAddItemCommand::redo() - Failed to recreate alias from snapshot";
+                qWarning() << "EditorAddItemCommand::redo() - Failed to recreate alias from snapshot";
             }
             break;
         }
@@ -422,7 +422,7 @@ void MudletAddItemCommand::redo()
                     }
                 }
             } else {
-                qWarning() << "MudletAddItemCommand::redo() - Failed to recreate timer from snapshot";
+                qWarning() << "EditorAddItemCommand::redo() - Failed to recreate timer from snapshot";
             }
             break;
         }
@@ -451,8 +451,8 @@ void MudletAddItemCommand::redo()
                 collectIDs(pNewScript);
 
 #if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletAddItemCommand::redo() - Old IDs:" << mOldDescendantIDs;
-                qDebug() << "MudletAddItemCommand::redo() - New IDs:" << newDescendantIDs;
+                qDebug() << "EditorAddItemCommand::redo() - Old IDs:" << mOldDescendantIDs;
+                qDebug() << "EditorAddItemCommand::redo() - New IDs:" << newDescendantIDs;
 #endif
 
                 // Map old IDs to new IDs (they're in same traversal order)
@@ -463,15 +463,15 @@ void MudletAddItemCommand::redo()
                         if (oldID != newID) {
                             mIDChanges.append(qMakePair(oldID, newID));
 #if defined(DEBUG_UNDO_REDO)
-                            qDebug() << "MudletAddItemCommand::redo() - ID mapping:" << oldID << "->" << newID;
+                            qDebug() << "EditorAddItemCommand::redo() - ID mapping:" << oldID << "->" << newID;
 #endif
                         }
                     }
                 } else {
-                    qWarning() << "MudletAddItemCommand::redo() - ID count mismatch! Old:" << mOldDescendantIDs.size() << "New:" << newDescendantIDs.size();
+                    qWarning() << "EditorAddItemCommand::redo() - ID count mismatch! Old:" << mOldDescendantIDs.size() << "New:" << newDescendantIDs.size();
                 }
             } else {
-                qWarning() << "MudletAddItemCommand::redo() - Failed to recreate script from snapshot";
+                qWarning() << "EditorAddItemCommand::redo() - Failed to recreate script from snapshot";
             }
             break;
         }
@@ -507,7 +507,7 @@ void MudletAddItemCommand::redo()
                     }
                 }
             } else {
-                qWarning() << "MudletAddItemCommand::redo() - Failed to recreate key from snapshot";
+                qWarning() << "EditorAddItemCommand::redo() - Failed to recreate key from snapshot";
             }
             break;
         }
@@ -543,7 +543,7 @@ void MudletAddItemCommand::redo()
                     }
                 }
             } else {
-                qWarning() << "MudletAddItemCommand::redo() - Failed to recreate action from snapshot";
+                qWarning() << "EditorAddItemCommand::redo() - Failed to recreate action from snapshot";
             }
             break;
         }
@@ -554,7 +554,7 @@ void MudletAddItemCommand::redo()
 }
 
 // Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
-void MudletAddItemCommand::remapItemID(int oldID, int newID)
+void EditorAddItemCommand::remapItemID(int oldID, int newID)
 {
     if (mItemID == oldID) {
         mItemID = newID;
@@ -567,7 +567,7 @@ void MudletAddItemCommand::remapItemID(int oldID, int newID)
     }
 }
 
-QString MudletAddItemCommand::generateText(EditorViewType viewType, const QString& itemName, bool isFolder)
+QString EditorAddItemCommand::generateText(EditorViewType viewType, const QString& itemName, bool isFolder)
 {
     switch (viewType) {
     case EditorViewType::cmTriggerView:

@@ -669,12 +669,12 @@ SOURCES += \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
-    MudletAddItemCommand.cpp \
-    MudletDeleteItemCommand.cpp \
-    MudletModifyPropertyCommand.cpp \
-    MudletMoveItemCommand.cpp \
-    MudletToggleActiveCommand.cpp \
-    MudletUndoStack.cpp \
+    EditorAddItemCommand.cpp \
+    EditorDeleteItemCommand.cpp \
+    EditorModifyPropertyCommand.cpp \
+    EditorMoveItemCommand.cpp \
+    EditorToggleActiveCommand.cpp \
+    EditorUndoStack.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     SecureStringUtils.cpp \
@@ -823,13 +823,13 @@ HEADERS += \
     mapInfoContributorManager.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
-    MudletEditorCommand.h \
-    MudletAddItemCommand.h \
-    MudletDeleteItemCommand.h \
-    MudletModifyPropertyCommand.h \
-    MudletMoveItemCommand.h \
-    MudletToggleActiveCommand.h \
-    MudletUndoStack.h \
+    EditorCommand.h \
+    EditorAddItemCommand.h \
+    EditorDeleteItemCommand.h \
+    EditorModifyPropertyCommand.h \
+    EditorMoveItemCommand.h \
+    EditorToggleActiveCommand.h \
+    EditorUndoStack.h \
     MxpTag.h \
     ScriptUnit.h \
     SecureStringUtils.h \

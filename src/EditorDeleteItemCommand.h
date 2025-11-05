@@ -1,5 +1,5 @@
-#ifndef MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
-#define MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
+#ifndef MUDLET_MUDLETDELETEITEMCOMMAND_H
+#define MUDLET_MUDLETDELETEITEMCOMMAND_H
 
 /***************************************************************************
  *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
@@ -20,32 +20,49 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletEditorCommand.h"
+#include "EditorCommand.h"
 
-// Undo command for toggling active/inactive state of items (triggers, aliases, timers, etc.)
-class MudletToggleActiveCommand : public MudletEditorCommand
+#include <QList>
+#include <QString>
+
+// Undo command for deleting items. Stores XML snapshots of deleted items (including children).
+// Handles single or multiple items efficiently. Nullifies mpHost before deletion to prevent
+// unregistration issues. Sorts items for correct restoration order (parents before children).
+class EditorDeleteItemCommand : public EditorCommand
 {
 public:
-    MudletToggleActiveCommand(EditorViewType viewType, int itemID, bool oldState, bool newState, const QString& itemName, Host* host);
+    struct DeletedItemInfo
+    {
+        int itemID;
+        int parentID;
+        int positionInParent;
+        QString xmlSnapshot;
+        QString itemName;
+    };
+
+    EditorDeleteItemCommand(EditorViewType viewType, const QList<DeletedItemInfo>& deletedItems, Host* host);
 
     void undo() override;
     void redo() override;
-
     EditorViewType viewType() const override { return mViewType; }
-    QList<int> affectedItemIDs() const override { return {mItemID}; }
-
+    QList<int> affectedItemIDs() const override;
     void remapItemID(int oldID, int newID) override;
 
+    // Get ID changes that occurred during undo (oldID -> newID mapping)
+    // Returns a list of pairs: first = oldID, second = newID
+    QList<QPair<int, int>> getIDChanges() const { return mIDChanges; }
+
+    // Check if the last undo/redo operation processed any valid items
+    // Returns false if all items were skipped due to Lua API conflicts
+    bool wasValid() const { return mLastOperationWasValid; }
+
 private:
-    void setItemActiveState(int itemID, bool active);
-    static QString generateText(EditorViewType viewType, const QString& itemName, bool newState);
+    static QString generateText(EditorViewType viewType, int itemCount, const QString& firstName);
 
     EditorViewType mViewType;
-    int mItemID;
-    bool mOldActiveState;
-    bool mNewActiveState;
-    QString mItemName;
-    mutable bool mSkipFirstRedo = true; // Skip initial redo() called by QUndoStack::push()
+    QList<DeletedItemInfo> mDeletedItems;
+    QList<QPair<int, int>> mIDChanges; // Track ID changes during undo (oldID, newID)
+    bool mLastOperationWasValid{true}; // Track if last undo/redo processed any valid items
 };
 
-#endif // MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
+#endif // MUDLET_MUDLETDELETEITEMCOMMAND_H

@@ -20,16 +20,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletEditorCommand.h"
+#include "EditorCommand.h"
 
 #include <QString>
 
 // Undo command for modifying item properties. Stores complete XML snapshots of old and new states.
 // Updates items in place (no ID changes). No skip-first-redo needed (change already applied).
-class MudletModifyPropertyCommand : public MudletEditorCommand
+class EditorModifyPropertyCommand : public EditorCommand
 {
 public:
-    MudletModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host);
+    EditorModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host);
 
     void undo() override;
     void redo() override;

@@ -17,14 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletUndoStack.h"
-#include "MudletAddItemCommand.h"
-#include "MudletDeleteItemCommand.h"
-#include "MudletEditorCommand.h"
+#include "EditorUndoStack.h"
+#include "EditorAddItemCommand.h"
+#include "EditorDeleteItemCommand.h"
+#include "EditorCommand.h"
 
 #include <QDebug>
 
-MudletUndoStack::MudletUndoStack(QObject* parent) : QUndoStack(parent)
+EditorUndoStack::EditorUndoStack(QObject* parent) : QUndoStack(parent)
 {
     // Connect to indexChanged signal to emit itemsChanged after undo/redo
     connect(this, &QUndoStack::indexChanged, this, [this](int newIndex) {
@@ -57,14 +57,14 @@ MudletUndoStack::MudletUndoStack(QObject* parent) : QUndoStack(parent)
     });
 }
 
-void MudletUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
+void EditorUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
 {
     if (!cmd) {
         return;
     }
 
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletUndoStack::emitChangesForCommand() - Processing command:" << cmd->text();
+    qDebug() << "EditorUndoStack::emitChangesForCommand() - Processing command:" << cmd->text();
 #endif
 
     // Collect all affected items by view type from this command and all children
@@ -81,13 +81,13 @@ void MudletUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
             for (int id : itemIDs) {
                 if (id <= 0) {
                     allValid = false;
-                    qWarning() << "MudletUndoStack::emitChangesForCommand() - Invalid item ID" << id << "found, skipping emission";
+                    qWarning() << "EditorUndoStack::emitChangesForCommand() - Invalid item ID" << id << "found, skipping emission";
                     break;
                 }
             }
             if (allValid) {
 #if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletUndoStack::emitChangesForCommand() - Emitting itemsChanged for view type" << static_cast<int>(it.key()) << "with" << itemIDs.size() << "items:" << itemIDs;
+                qDebug() << "EditorUndoStack::emitChangesForCommand() - Emitting itemsChanged for view type" << static_cast<int>(it.key()) << "with" << itemIDs.size() << "items:" << itemIDs;
 #endif
                 emit itemsChanged(it.key(), itemIDs);
             }
@@ -95,14 +95,14 @@ void MudletUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
     }
 }
 
-void MudletUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorViewType, QList<int>>& affectedItemsByView)
+void EditorUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorViewType, QList<int>>& affectedItemsByView)
 {
     if (!cmd) {
         return;
     }
 
-    // If this is a MudletEditorCommand, collect its affected items
-    if (auto* mudletCmd = dynamic_cast<const MudletEditorCommand*>(cmd)) {
+    // If this is a EditorCommand, collect its affected items
+    if (auto* mudletCmd = dynamic_cast<const EditorCommand*>(cmd)) {
         EditorViewType viewType = mudletCmd->viewType();
         QList<int> itemIDs = mudletCmd->affectedItemIDs();
 
@@ -124,34 +124,34 @@ void MudletUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorV
     }
 }
 
-void MudletUndoStack::pushCommand(QUndoCommand* cmd)
+void EditorUndoStack::pushCommand(QUndoCommand* cmd)
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletUndoStack::pushCommand() - Pushing command:" << (cmd ? cmd->text() : QStringLiteral("null"));
+    qDebug() << "EditorUndoStack::pushCommand() - Pushing command:" << (cmd ? cmd->text() : QStringLiteral("null"));
 #endif
     // Set flag to indicate we're in a push operation
     mInPushOperation = true;
     push(cmd);
     mInPushOperation = false;
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletUndoStack::pushCommand() - Stack now has" << count() << "commands, index:" << index();
+    qDebug() << "EditorUndoStack::pushCommand() - Stack now has" << count() << "commands, index:" << index();
 #endif
 }
 
-void MudletUndoStack::beginMacro(const QString& text)
+void EditorUndoStack::beginMacro(const QString& text)
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletUndoStack::beginMacro() - Starting macro:" << text;
+    qDebug() << "EditorUndoStack::beginMacro() - Starting macro:" << text;
 #endif
     // Set flag to indicate we're starting a macro push operation
     mInMacroPush = true;
     QUndoStack::beginMacro(text);
 }
 
-void MudletUndoStack::endMacro()
+void EditorUndoStack::endMacro()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletUndoStack::endMacro() - Ending macro, stack has" << count() << "commands";
+    qDebug() << "EditorUndoStack::endMacro() - Ending macro, stack has" << count() << "commands";
 #endif
     // Call the base implementation first
     QUndoStack::endMacro();
@@ -160,7 +160,7 @@ void MudletUndoStack::endMacro()
     mInMacroPush = false;
 }
 
-void MudletUndoStack::undo()
+void EditorUndoStack::undo()
 {
     // Track that we're performing an undo operation
     mLastOperationType = LastOperationType::Undo;
@@ -169,37 +169,37 @@ void MudletUndoStack::undo()
     if (index() > 0) {
         const QUndoCommand* cmd = command(index() - 1);
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletUndoStack::undo() - Undoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << (index() - 1);
+        qDebug() << "EditorUndoStack::undo() - Undoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << (index() - 1);
 #endif
 
         // Call the base class undo
         QUndoStack::undo();
 
         // Check if this is a DeleteItemCommand that restored items with new IDs
-        if (auto* deleteCmd = dynamic_cast<const MudletDeleteItemCommand*>(cmd)) {
+        if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(cmd)) {
             QList<QPair<int, int>> idChanges = deleteCmd->getIDChanges();
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "MudletUndoStack::undo() - DeleteItemCommand restored items with ID changes:" << idChanges.size();
+            qDebug() << "EditorUndoStack::undo() - DeleteItemCommand restored items with ID changes:" << idChanges.size();
 #endif
             for (const auto& change : idChanges) {
                 int oldID = change.first;
                 int newID = change.second;
 #if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletUndoStack::undo() - Remapping ID" << oldID << "->" << newID;
+                qDebug() << "EditorUndoStack::undo() - Remapping ID" << oldID << "->" << newID;
 #endif
                 remapItemIDs(oldID, newID);
             }
         }
     } else {
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletUndoStack::undo() - No command to undo (index is 0)";
+        qDebug() << "EditorUndoStack::undo() - No command to undo (index is 0)";
 #endif
         // No command to undo
         QUndoStack::undo();
     }
 }
 
-void MudletUndoStack::redo()
+void EditorUndoStack::redo()
 {
     // Track that we're performing a redo operation
     mLastOperationType = LastOperationType::Redo;
@@ -208,18 +208,18 @@ void MudletUndoStack::redo()
     if (index() < count()) {
         const QUndoCommand* cmd = command(index());
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletUndoStack::redo() - Redoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << index();
+        qDebug() << "EditorUndoStack::redo() - Redoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << index();
 #endif
 
         // Check if this is an AddItemCommand (need to check before redo since ID may change)
         // Note: AddItemCommands might be wrapped in a macro with ModifyPropertyCommand
-        const MudletAddItemCommand* addCmd = dynamic_cast<const MudletAddItemCommand*>(cmd);
+        const EditorAddItemCommand* addCmd = dynamic_cast<const EditorAddItemCommand*>(cmd);
 
         // If not a direct AddItemCommand, check if it's a macro containing one
         if (!addCmd && cmd->childCount() > 0) {
             const QUndoCommand* firstChild = cmd->child(0);
             if (firstChild) {
-                addCmd = dynamic_cast<const MudletAddItemCommand*>(firstChild);
+                addCmd = dynamic_cast<const EditorAddItemCommand*>(firstChild);
             }
         }
 
@@ -236,13 +236,13 @@ void MudletUndoStack::redo()
             QList<QPair<int, int>> idChanges = addCmd->getIDChanges();
             if (!idChanges.isEmpty()) {
 #if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletUndoStack::redo() - AddItemCommand restored items with ID changes:" << idChanges.size();
+                qDebug() << "EditorUndoStack::redo() - AddItemCommand restored items with ID changes:" << idChanges.size();
 #endif
                 for (const auto& change : idChanges) {
                     int oldID = change.first;
                     int newID = change.second;
 #if defined(DEBUG_UNDO_REDO)
-                    qDebug() << "MudletUndoStack::redo() - Remapping ID" << oldID << "->" << newID;
+                    qDebug() << "EditorUndoStack::redo() - Remapping ID" << oldID << "->" << newID;
 #endif
                     remapItemIDs(oldID, newID);
                 }
@@ -250,7 +250,7 @@ void MudletUndoStack::redo()
         }
     } else {
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletUndoStack::redo() - No command to redo (index >= count)";
+        qDebug() << "EditorUndoStack::redo() - No command to redo (index >= count)";
 #endif
         // No command to redo
         QUndoStack::redo();
@@ -258,10 +258,10 @@ void MudletUndoStack::redo()
 }
 
 // Updates all stored item IDs across the entire undo stack when an item gets recreated with a new ID
-void MudletUndoStack::remapItemIDs(int oldID, int newID)
+void EditorUndoStack::remapItemIDs(int oldID, int newID)
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletUndoStack::remapItemIDs() - Remapping" << oldID << "->" << newID << "across" << count() << "commands";
+    qDebug() << "EditorUndoStack::remapItemIDs() - Remapping" << oldID << "->" << newID << "across" << count() << "commands";
 #endif
     // Helper lambda to recursively remap IDs in a command and all its children
     std::function<void(const QUndoCommand*)> remapRecursive = [&](const QUndoCommand* cmd) {
@@ -270,7 +270,7 @@ void MudletUndoStack::remapItemIDs(int oldID, int newID)
         }
 
         // Remap this command
-        if (auto* mudletCmd = dynamic_cast<MudletEditorCommand*>(const_cast<QUndoCommand*>(cmd))) {
+        if (auto* mudletCmd = dynamic_cast<EditorCommand*>(const_cast<QUndoCommand*>(cmd))) {
             mudletCmd->remapItemID(oldID, newID);
         }
 
@@ -288,7 +288,7 @@ void MudletUndoStack::remapItemIDs(int oldID, int newID)
     }
 }
 
-bool MudletUndoStack::wasLastCommandValid() const
+bool EditorUndoStack::wasLastCommandValid() const
 {
     // Determine which command was just executed based on the operation type
     int lastCommandIndex = -1;
@@ -313,8 +313,8 @@ bool MudletUndoStack::wasLastCommandValid() const
         return true;
     }
 
-    // Check if it's a MudletDeleteItemCommand and query its validity
-    if (auto* deleteCmd = dynamic_cast<const MudletDeleteItemCommand*>(cmd)) {
+    // Check if it's a EditorDeleteItemCommand and query its validity
+    if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(cmd)) {
         return deleteCmd->wasValid();
     }
 

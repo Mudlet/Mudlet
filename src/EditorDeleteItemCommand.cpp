@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletDeleteItemCommand.h"
+#include "EditorDeleteItemCommand.h"
 
 #include "EditorItemXMLHelpers.h"
 #include "Host.h"
@@ -30,15 +30,15 @@
 
 #include <algorithm>
 
-MudletDeleteItemCommand::MudletDeleteItemCommand(EditorViewType viewType, const QList<DeletedItemInfo>& deletedItems, Host* host)
-: MudletEditorCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host), mViewType(viewType), mDeletedItems(deletedItems)
+EditorDeleteItemCommand::EditorDeleteItemCommand(EditorViewType viewType, const QList<DeletedItemInfo>& deletedItems, Host* host)
+: EditorCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host), mViewType(viewType), mDeletedItems(deletedItems)
 {
 }
 
-void MudletDeleteItemCommand::undo()
+void EditorDeleteItemCommand::undo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletDeleteItemCommand::undo() - Restoring" << mDeletedItems.size() << "deleted items";
+    qDebug() << "EditorDeleteItemCommand::undo() - Restoring" << mDeletedItems.size() << "deleted items";
 #endif
     // Clear ID changes from any previous undo
     mIDChanges.clear();
@@ -89,7 +89,7 @@ void MudletDeleteItemCommand::undo()
 
         // Safety check for circular dependencies or broken references
         if (!madeProgress && !remainingItems.isEmpty()) {
-            qWarning() << "MudletDeleteItemCommand::undo() - Could not resolve parent-child dependencies for" << remainingItems.size() << "items, adding them anyway";
+            qWarning() << "EditorDeleteItemCommand::undo() - Could not resolve parent-child dependencies for" << remainingItems.size() << "items, adding them anyway";
             sortedItems.append(remainingItems);
             break;
         }
@@ -116,7 +116,7 @@ void MudletDeleteItemCommand::undo()
             if (parentWasDeleted) {
                 skipRestore = true;
 #if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletDeleteItemCommand::undo() - Skipping" << info.itemName << "(ID:" << info.itemID << ") - parent (ID:" << info.parentID
+                qDebug() << "EditorDeleteItemCommand::undo() - Skipping" << info.itemName << "(ID:" << info.itemID << ") - parent (ID:" << info.parentID
                          << ") was also deleted, will be restored from parent's XML";
 #endif
             }
@@ -130,13 +130,13 @@ void MudletDeleteItemCommand::undo()
         // Find the corresponding item in mDeletedItems to update the ID
         auto it = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) { return item.itemName == info.itemName && item.parentID == info.parentID; });
         if (it == mDeletedItems.end()) {
-            qWarning() << "MudletDeleteItemCommand::undo() - Could not find item in original list:" << info.itemName << "with parentID=" << info.parentID;
+            qWarning() << "EditorDeleteItemCommand::undo() - Could not find item in original list:" << info.itemName << "with parentID=" << info.parentID;
             continue;
         }
         auto& originalInfo = *it;
 
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletDeleteItemCommand::undo() - Restoring" << info.itemName << "(ID:" << info.itemID << ", parentID:" << info.parentID << ") individually";
+        qDebug() << "EditorDeleteItemCommand::undo() - Restoring" << info.itemName << "(ID:" << info.itemID << ", parentID:" << info.parentID << ") individually";
 #endif
 
         switch (mViewType) {
@@ -146,14 +146,14 @@ void MudletDeleteItemCommand::undo()
             if (info.parentID != -1) {
                 pParent = mpHost->getTriggerUnit()->getTrigger(info.parentID);
                 if (!pParent) {
-                    qWarning() << "MudletDeleteItemCommand::undo() - Parent trigger not found for" << info.itemName << "parentID=" << info.parentID;
+                    qWarning() << "EditorDeleteItemCommand::undo() - Parent trigger not found for" << info.itemName << "parentID=" << info.parentID;
                 }
             }
 
             // Restore the trigger from XML snapshot at its original position
             TTrigger* pRestoredTrigger = importTriggerFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredTrigger) {
-                qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore trigger" << info.itemName;
+                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore trigger" << info.itemName;
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredTrigger->getID();
@@ -224,7 +224,7 @@ void MudletDeleteItemCommand::undo()
 
             TAlias* pRestoredAlias = importAliasFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredAlias) {
-                qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore alias" << info.itemName;
+                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore alias" << info.itemName;
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredAlias->getID();
@@ -291,7 +291,7 @@ void MudletDeleteItemCommand::undo()
 
             TTimer* pRestoredTimer = importTimerFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredTimer) {
-                qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore timer" << info.itemName;
+                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore timer" << info.itemName;
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredTimer->getID();
@@ -358,7 +358,7 @@ void MudletDeleteItemCommand::undo()
 
             TScript* pRestoredScript = importScriptFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredScript) {
-                qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore script" << info.itemName;
+                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore script" << info.itemName;
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredScript->getID();
@@ -425,7 +425,7 @@ void MudletDeleteItemCommand::undo()
 
             TKey* pRestoredKey = importKeyFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredKey) {
-                qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore key" << info.itemName;
+                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore key" << info.itemName;
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredKey->getID();
@@ -492,7 +492,7 @@ void MudletDeleteItemCommand::undo()
 
             TAction* pRestoredAction = importActionFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredAction) {
-                qWarning() << "MudletDeleteItemCommand::undo() - Failed to restore action" << info.itemName;
+                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore action" << info.itemName;
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredAction->getID();
@@ -552,16 +552,16 @@ void MudletDeleteItemCommand::undo()
             break;
         }
         default:
-            qWarning() << "MudletDeleteItemCommand::undo() - Unknown item type";
+            qWarning() << "EditorDeleteItemCommand::undo() - Unknown item type";
             break;
         }
     }
 }
 
-void MudletDeleteItemCommand::redo()
+void EditorDeleteItemCommand::redo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletDeleteItemCommand::redo() - Deleting" << mDeletedItems.size() << "items again";
+    qDebug() << "EditorDeleteItemCommand::redo() - Deleting" << mDeletedItems.size() << "items again";
 #endif
     // Delete items again
     // Note: When the command is first created, items are already deleted,
@@ -580,11 +580,11 @@ void MudletDeleteItemCommand::redo()
             TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(info.itemID);
             // Validate: item exists and has expected name (prevents deleting wrong item if ID reused)
             if (!trigger) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Trigger" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Trigger" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
                 continue;
             }
             if (trigger->getName() != info.itemName) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Trigger ID" << info.itemID << "expected name" << info.itemName << "but found" << trigger->getName() << ", skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Trigger ID" << info.itemID << "expected name" << info.itemName << "but found" << trigger->getName() << ", skipping";
                 continue;
             }
             // Valid item found
@@ -606,11 +606,11 @@ void MudletDeleteItemCommand::redo()
             TAlias* alias = mpHost->getAliasUnit()->getAlias(info.itemID);
             // Validate: item exists and has expected name
             if (!alias) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Alias" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Alias" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
                 continue;
             }
             if (alias->getName() != info.itemName) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Alias ID" << info.itemID << "expected name" << info.itemName << "but found" << alias->getName() << ", skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Alias ID" << info.itemID << "expected name" << info.itemName << "but found" << alias->getName() << ", skipping";
                 continue;
             }
             // Valid item found
@@ -632,11 +632,11 @@ void MudletDeleteItemCommand::redo()
             TTimer* timer = mpHost->getTimerUnit()->getTimer(info.itemID);
             // Validate: item exists and has expected name
             if (!timer) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Timer" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Timer" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
                 continue;
             }
             if (timer->getName() != info.itemName) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Timer ID" << info.itemID << "expected name" << info.itemName << "but found" << timer->getName() << ", skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Timer ID" << info.itemID << "expected name" << info.itemName << "but found" << timer->getName() << ", skipping";
                 continue;
             }
             // Valid item found
@@ -658,11 +658,11 @@ void MudletDeleteItemCommand::redo()
             TScript* script = mpHost->getScriptUnit()->getScript(info.itemID);
             // Validate: item exists and has expected name
             if (!script) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Script" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Script" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
                 continue;
             }
             if (script->getName() != info.itemName) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Script ID" << info.itemID << "expected name" << info.itemName << "but found" << script->getName() << ", skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Script ID" << info.itemID << "expected name" << info.itemName << "but found" << script->getName() << ", skipping";
                 continue;
             }
             // Valid item found
@@ -684,11 +684,11 @@ void MudletDeleteItemCommand::redo()
             TKey* key = mpHost->getKeyUnit()->getKey(info.itemID);
             // Validate: item exists and has expected name
             if (!key) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Key" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Key" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
                 continue;
             }
             if (key->getName() != info.itemName) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Key ID" << info.itemID << "expected name" << info.itemName << "but found" << key->getName() << ", skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Key ID" << info.itemID << "expected name" << info.itemName << "but found" << key->getName() << ", skipping";
                 continue;
             }
             // Valid item found
@@ -710,11 +710,11 @@ void MudletDeleteItemCommand::redo()
             TAction* action = mpHost->getActionUnit()->getAction(info.itemID);
             // Validate: item exists and has expected name
             if (!action) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Action" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Action" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
                 continue;
             }
             if (action->getName() != info.itemName) {
-                qWarning() << "MudletDeleteItemCommand::redo() - Action ID" << info.itemID << "expected name" << info.itemName << "but found" << action->getName() << ", skipping";
+                qWarning() << "EditorDeleteItemCommand::redo() - Action ID" << info.itemID << "expected name" << info.itemName << "but found" << action->getName() << ", skipping";
                 continue;
             }
             // Valid item found
@@ -804,7 +804,7 @@ void MudletDeleteItemCommand::redo()
         }
     }
 }
-QString MudletDeleteItemCommand::generateText(EditorViewType viewType, int itemCount, const QString& firstName)
+QString EditorDeleteItemCommand::generateText(EditorViewType viewType, int itemCount, const QString& firstName)
 {
     if (itemCount == 1) {
         // Single item deletion - use item name
@@ -859,7 +859,7 @@ QString MudletDeleteItemCommand::generateText(EditorViewType viewType, int itemC
     }
 }
 
-QList<int> MudletDeleteItemCommand::affectedItemIDs() const
+QList<int> EditorDeleteItemCommand::affectedItemIDs() const
 {
     QList<int> ids;
     for (const auto& item : mDeletedItems) {
@@ -869,7 +869,7 @@ QList<int> MudletDeleteItemCommand::affectedItemIDs() const
 }
 
 // Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
-void MudletDeleteItemCommand::remapItemID(int oldID, int newID)
+void EditorDeleteItemCommand::remapItemID(int oldID, int newID)
 {
     for (auto& item : mDeletedItems) {
         if (item.itemID == oldID) {

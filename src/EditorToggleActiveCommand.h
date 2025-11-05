@@ -1,5 +1,5 @@
-#ifndef MUDLET_MUDLETADDITEMCOMMAND_H
-#define MUDLET_MUDLETADDITEMCOMMAND_H
+#ifndef MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
+#define MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
 
 /***************************************************************************
  *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
@@ -20,49 +20,32 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletEditorCommand.h"
+#include "EditorCommand.h"
 
-class Host;
-
-// Undo command for adding items. Undo exports to XML and deletes; redo recreates from XML.
-// Tracks ID changes when items are recreated with new IDs.
-class MudletAddItemCommand : public MudletEditorCommand
+// Undo command for toggling active/inactive state of items (triggers, aliases, timers, etc.)
+class EditorToggleActiveCommand : public EditorCommand
 {
 public:
-    MudletAddItemCommand(EditorViewType viewType, int itemID, int parentID, int positionInParent, bool isFolder, const QString& itemName, Host* host);
+    EditorToggleActiveCommand(EditorViewType viewType, int itemID, bool oldState, bool newState, const QString& itemName, Host* host);
 
     void undo() override;
     void redo() override;
+
     EditorViewType viewType() const override { return mViewType; }
     QList<int> affectedItemIDs() const override { return {mItemID}; }
+
     void remapItemID(int oldID, int newID) override;
 
-    // Check if item ID changed during redo (when item was recreated)
-    bool didItemIDChange() const { return mOldItemID != -1 && mOldItemID != mItemID; }
-    int getOldItemID() const { return mOldItemID; }
-    int getNewItemID() const { return mItemID; }
-
-    // Get all ID changes that occurred during redo (oldID -> newID mapping)
-    // Includes the item itself and all its descendants
-    QList<QPair<int, int>> getIDChanges() const { return mIDChanges; }
-
 private:
-    static QString generateText(EditorViewType viewType, const QString& itemName, bool isFolder);
+    void setItemActiveState(int itemID, bool active);
+    static QString generateText(EditorViewType viewType, const QString& itemName, bool newState);
 
     EditorViewType mViewType;
     int mItemID;
-    int mOldItemID = -1; // Tracks old ID before redo, for ID remapping
-    int mParentID;
-    int mPositionInParent;
-    bool mIsFolder;
+    bool mOldActiveState;
+    bool mNewActiveState;
     QString mItemName;
-    QString mItemSnapshot;
     mutable bool mSkipFirstRedo = true; // Skip initial redo() called by QUndoStack::push()
-
-    // Track ID changes for item and all descendants when recreated (oldID -> newID)
-    QList<QPair<int, int>> mIDChanges;
-    // Track all descendant IDs before deletion (for mapping to new IDs after recreation)
-    QList<int> mOldDescendantIDs;
 };
 
-#endif // MUDLET_MUDLETADDITEMCOMMAND_H
+#endif // MUDLET_MUDLETTOGGLEACTIVECOMMAND_H

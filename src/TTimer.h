@@ -41,7 +41,7 @@ class TTimer : public Tree<TTimer>
     friend class XMLexport;
     friend class XMLimport;
     friend class DeleteItemCommand;
-    friend class MudletDeleteItemCommand;
+    friend class EditorDeleteItemCommand;
 
 public:
     ~TTimer() override;

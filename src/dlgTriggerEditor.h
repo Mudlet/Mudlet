@@ -26,7 +26,7 @@
  ***************************************************************************/
 
 
-#include "MudletEditorCommand.h"
+#include "EditorCommand.h"
 #include "ui_trigger_editor.h"
 
 #include <QPointer>
@@ -47,7 +47,7 @@
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
 #include "SingleLineTextEdit.h"
-#include "MudletUndoStack.h"
+#include "EditorUndoStack.h"
 
 #include <QDialog>
 #include <QDockWidget>
@@ -633,7 +633,7 @@ private:
     QAction* mpRunUndoRedoTestsAction = nullptr;
 
     // Undo system for item-level operations (using Qt's QUndoStack framework):
-    MudletUndoStack* mpUndoStack = nullptr;
+    EditorUndoStack* mpUndoStack = nullptr;
 
     // Guarded pointer to text editor's undo stack (for safe signal connections):
     QPointer<edbee::TextUndoStack> mpTextUndoStack;

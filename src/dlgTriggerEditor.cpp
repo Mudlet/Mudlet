@@ -46,11 +46,11 @@
 #include "dlgTriggerPatternEdit.h"
 #include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
-#include "MudletAddItemCommand.h"
-#include "MudletDeleteItemCommand.h"
-#include "MudletModifyPropertyCommand.h"
-#include "MudletMoveItemCommand.h"
-#include "MudletToggleActiveCommand.h"
+#include "EditorAddItemCommand.h"
+#include "EditorDeleteItemCommand.h"
+#include "EditorModifyPropertyCommand.h"
+#include "EditorMoveItemCommand.h"
+#include "EditorToggleActiveCommand.h"
 #include "mudlet.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
@@ -440,7 +440,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     sourceFindPreviousAction->setShortcut(QKeySequence(QKeySequence::FindPrevious));
     mpSourceEditorArea->addAction(sourceFindPreviousAction);
     connect(sourceFindPreviousAction, &QAction::triggered, this, &dlgTriggerEditor::slot_sourceFindPrevious);
-    mpUndoStack = new MudletUndoStack(this);
+    mpUndoStack = new EditorUndoStack(this);
     mpUndoStack->setUndoLimit(50);
 
     // These route to either text editor or item operations based on focus
@@ -499,7 +499,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     slot_updateUndoRedoButtonStates();
 
-    connect(mpUndoStack, &MudletUndoStack::itemsChanged, this, &dlgTriggerEditor::slot_itemsChanged);
+    connect(mpUndoStack, &EditorUndoStack::itemsChanged, this, &dlgTriggerEditor::slot_itemsChanged);
 
     auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
@@ -3706,7 +3706,7 @@ void dlgTriggerEditor::delete_alias()
     }
 
     // Capture state of all items BEFORE deletion for undo
-    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+    QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture an alias and all its descendants
     std::function<void(TAlias*, int, int)> captureAliasAndChildren = [&](TAlias* pT, int parentID, int positionInParent) {
@@ -3714,7 +3714,7 @@ void dlgTriggerEditor::delete_alias()
             return;
         }
 
-        MudletDeleteItemCommand::DeletedItemInfo info;
+        EditorDeleteItemCommand::DeletedItemInfo info;
         info.itemID = pT->getID();
         info.itemName = pT->getName();
         info.parentID = parentID;
@@ -3817,7 +3817,7 @@ void dlgTriggerEditor::delete_alias()
     }
 
     if (!deletedItems.isEmpty()) {
-        auto* qtCmd = new MudletDeleteItemCommand(
+        auto* qtCmd = new EditorDeleteItemCommand(
             EditorViewType::cmAliasView,
             deletedItems,
             mpHost);
@@ -3868,7 +3868,7 @@ void dlgTriggerEditor::delete_action()
     }
 
     // Capture state of all items BEFORE deletion for undo
-    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+    QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture an action and all its descendants
     std::function<void(TAction*, int, int)> captureActionAndChildren = [&](TAction* pT, int parentID, int positionInParent) {
@@ -3876,7 +3876,7 @@ void dlgTriggerEditor::delete_action()
             return;
         }
 
-        MudletDeleteItemCommand::DeletedItemInfo info;
+        EditorDeleteItemCommand::DeletedItemInfo info;
         info.itemID = pT->getID();
         info.itemName = pT->getName();
         info.parentID = parentID;
@@ -3958,7 +3958,7 @@ void dlgTriggerEditor::delete_action()
     }
 
     if (!deletedItems.isEmpty()) {
-        auto* qtCmd = new MudletDeleteItemCommand(
+        auto* qtCmd = new EditorDeleteItemCommand(
             EditorViewType::cmActionView,
             deletedItems,
             mpHost);
@@ -4089,7 +4089,7 @@ void dlgTriggerEditor::delete_script()
     }
 
     // Capture state of all items BEFORE deletion for undo
-    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+    QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture a script and all its descendants
     std::function<void(TScript*, int, int)> captureScriptAndChildren = [&](TScript* pT, int parentID, int positionInParent) {
@@ -4097,7 +4097,7 @@ void dlgTriggerEditor::delete_script()
             return;
         }
 
-        MudletDeleteItemCommand::DeletedItemInfo info;
+        EditorDeleteItemCommand::DeletedItemInfo info;
         info.itemID = pT->getID();
         info.itemName = pT->getName();
         info.parentID = parentID;
@@ -4172,7 +4172,7 @@ void dlgTriggerEditor::delete_script()
     }
 
     if (!deletedItems.isEmpty()) {
-        auto* qtCmd = new MudletDeleteItemCommand(
+        auto* qtCmd = new EditorDeleteItemCommand(
             EditorViewType::cmScriptView,
             deletedItems,
             mpHost);
@@ -4223,7 +4223,7 @@ void dlgTriggerEditor::delete_key()
     }
 
     // Capture state of all items BEFORE deletion for undo
-    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+    QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture a key and all its descendants
     std::function<void(TKey*, int, int)> captureKeyAndChildren = [&](TKey* pT, int parentID, int positionInParent) {
@@ -4231,7 +4231,7 @@ void dlgTriggerEditor::delete_key()
             return;
         }
 
-        MudletDeleteItemCommand::DeletedItemInfo info;
+        EditorDeleteItemCommand::DeletedItemInfo info;
         info.itemID = pT->getID();
         info.itemName = pT->getName();
         info.parentID = parentID;
@@ -4306,7 +4306,7 @@ void dlgTriggerEditor::delete_key()
     }
 
     if (!deletedItems.isEmpty()) {
-        auto* qtCmd = new MudletDeleteItemCommand(
+        auto* qtCmd = new EditorDeleteItemCommand(
             EditorViewType::cmKeysView,
             deletedItems,
             mpHost);
@@ -4357,7 +4357,7 @@ void dlgTriggerEditor::delete_trigger()
     }
 
     // Capture state of all items BEFORE deletion for undo
-    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+    QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture a trigger and all its descendants
     std::function<void(TTrigger*, int, int)> captureTriggerAndChildren = [&](TTrigger* pT, int parentID, int positionInParent) {
@@ -4365,7 +4365,7 @@ void dlgTriggerEditor::delete_trigger()
             return;
         }
 
-        MudletDeleteItemCommand::DeletedItemInfo info;
+        EditorDeleteItemCommand::DeletedItemInfo info;
         info.itemID = pT->getID();
         info.itemName = pT->getName();
         info.parentID = parentID;
@@ -4445,7 +4445,7 @@ void dlgTriggerEditor::delete_trigger()
     }
 
     if (!deletedItems.isEmpty()) {
-        auto* qtCmd = new MudletDeleteItemCommand(
+        auto* qtCmd = new EditorDeleteItemCommand(
             EditorViewType::cmTriggerView,
             deletedItems,
             mpHost);
@@ -4496,7 +4496,7 @@ void dlgTriggerEditor::delete_timer()
     }
 
     // Capture state of all items BEFORE deletion for undo
-    QList<MudletDeleteItemCommand::DeletedItemInfo> deletedItems;
+    QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture a timer and all its descendants
     std::function<void(TTimer*, int, int)> captureTimerAndChildren = [&](TTimer* pT, int parentID, int positionInParent) {
@@ -4504,7 +4504,7 @@ void dlgTriggerEditor::delete_timer()
             return;
         }
 
-        MudletDeleteItemCommand::DeletedItemInfo info;
+        EditorDeleteItemCommand::DeletedItemInfo info;
         info.itemID = pT->getID();
         info.itemName = pT->getName();
         info.parentID = parentID;
@@ -4579,7 +4579,7 @@ void dlgTriggerEditor::delete_timer()
     }
 
     if (!deletedItems.isEmpty()) {
-        auto* qtCmd = new MudletDeleteItemCommand(
+        auto* qtCmd = new EditorDeleteItemCommand(
             EditorViewType::cmTimerView,
             deletedItems,
             mpHost);
@@ -4686,7 +4686,7 @@ void dlgTriggerEditor::activeToggle_trigger()
     }
 
     if (mpUndoStack && oldState != newState) {
-        auto* qtCmd = new MudletToggleActiveCommand(
+        auto* qtCmd = new EditorToggleActiveCommand(
             EditorViewType::cmTriggerView,
             pT->getID(),
             oldState,
@@ -4774,7 +4774,7 @@ void dlgTriggerEditor::slot_itemMoved(int itemID, int oldParentID, int newParent
     }
 
     // Push move command to undo system
-    auto* qtCmd = new MudletMoveItemCommand(
+    auto* qtCmd = new EditorMoveItemCommand(
         viewType,
         itemID,
         oldParentID,
@@ -4999,7 +4999,7 @@ void dlgTriggerEditor::activeToggle_timer()
     }
 
     if (mpUndoStack && oldState != newState) {
-        auto* qtCmd = new MudletToggleActiveCommand(
+        auto* qtCmd = new EditorToggleActiveCommand(
             EditorViewType::cmTimerView,
             pT->getID(),
             oldState,
@@ -5152,7 +5152,7 @@ void dlgTriggerEditor::activeToggle_alias()
     }
 
     if (mpUndoStack && oldState != newState) {
-        auto* qtCmd = new MudletToggleActiveCommand(
+        auto* qtCmd = new EditorToggleActiveCommand(
             EditorViewType::cmAliasView,
             pT->getID(),
             oldState,
@@ -5285,7 +5285,7 @@ void dlgTriggerEditor::activeToggle_script()
     }
 
     if (mpUndoStack && oldState != newState) {
-        auto* qtCmd = new MudletToggleActiveCommand(
+        auto* qtCmd = new EditorToggleActiveCommand(
             EditorViewType::cmScriptView,
             pT->getID(),
             oldState,
@@ -5455,7 +5455,7 @@ void dlgTriggerEditor::activeToggle_action()
     }
 
     if (mpUndoStack && oldState != newState) {
-        auto* qtCmd = new MudletToggleActiveCommand(
+        auto* qtCmd = new EditorToggleActiveCommand(
             EditorViewType::cmActionView,
             pT->getID(),
             oldState,
@@ -5628,7 +5628,7 @@ void dlgTriggerEditor::activeToggle_key()
     }
 
     if (mpUndoStack && oldState != newState) {
-        auto* qtCmd = new MudletToggleActiveCommand(
+        auto* qtCmd = new EditorToggleActiveCommand(
             EditorViewType::cmKeysView,
             pT->getID(),
             oldState,
@@ -5805,7 +5805,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
         positionInParent = treeWidget_triggers->indexOfTopLevelItem(pNewItem);
     }
 
-    auto* qtCmd = new MudletAddItemCommand(
+    auto* qtCmd = new EditorAddItemCommand(
         EditorViewType::cmTriggerView,
         pNewTrigger->getID(),
         parentID,
@@ -5913,7 +5913,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
         positionInParent = treeWidget_timers->indexOfTopLevelItem(pNewItem);
     }
 
-    auto* qtCmd = new MudletAddItemCommand(
+    auto* qtCmd = new EditorAddItemCommand(
         EditorViewType::cmTimerView,
         pNewTimer->getID(),
         parentID,
@@ -6087,7 +6087,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
         positionInParent = treeWidget_keys->indexOfTopLevelItem(pNewItem);
     }
 
-    auto* qtCmd = new MudletAddItemCommand(
+    auto* qtCmd = new EditorAddItemCommand(
         EditorViewType::cmKeysView,
         pNewKey->getID(),
         parentID,
@@ -6203,7 +6203,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
         positionInParent = treeWidget_aliases->indexOfTopLevelItem(pNewItem);
     }
 
-    auto* qtCmd = new MudletAddItemCommand(
+    auto* qtCmd = new EditorAddItemCommand(
         EditorViewType::cmAliasView,
         pNewAlias->getID(),
         parentID,
@@ -6318,7 +6318,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
         positionInParent = treeWidget_actions->indexOfTopLevelItem(pNewItem);
     }
 
-    auto* qtCmd = new MudletAddItemCommand(
+    auto* qtCmd = new EditorAddItemCommand(
         EditorViewType::cmActionView,
         pNewAction->getID(),
         parentID,
@@ -6426,7 +6426,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
         positionInParent = treeWidget_scripts->indexOfTopLevelItem(pNewItem);
     }
 
-    auto* qtCmd = new MudletAddItemCommand(
+    auto* qtCmd = new EditorAddItemCommand(
         EditorViewType::cmScriptView,
         pNewScript->getID(),
         parentID,
@@ -6892,7 +6892,7 @@ void dlgTriggerEditor::saveTrigger()
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
-            auto* qtCmd = new MudletModifyPropertyCommand(
+            auto* qtCmd = new EditorModifyPropertyCommand(
                 EditorViewType::cmTriggerView,
                 triggerID,
                 name,
@@ -7051,7 +7051,7 @@ void dlgTriggerEditor::saveTimer()
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
-            auto* qtCmd = new MudletModifyPropertyCommand(
+            auto* qtCmd = new EditorModifyPropertyCommand(
                 EditorViewType::cmTimerView,
                 timerID,
                 name,
@@ -7244,7 +7244,7 @@ void dlgTriggerEditor::saveAlias()
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
-            auto* qtCmd = new MudletModifyPropertyCommand(
+            auto* qtCmd = new EditorModifyPropertyCommand(
                 EditorViewType::cmAliasView,
                 triggerID,
                 name,
@@ -7434,7 +7434,7 @@ void dlgTriggerEditor::saveAction()
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
-            auto* qtCmd = new MudletModifyPropertyCommand(
+            auto* qtCmd = new EditorModifyPropertyCommand(
                 EditorViewType::cmActionView,
                 actionID,
                 name,
@@ -7642,7 +7642,7 @@ void dlgTriggerEditor::saveScript()
 
     // Only push undo command if something actually changed
     if (oldStateXML != newStateXML) {
-        auto* qtCmd = new MudletModifyPropertyCommand(
+        auto* qtCmd = new EditorModifyPropertyCommand(
             EditorViewType::cmScriptView,
             scriptID,
             name,
@@ -8068,7 +8068,7 @@ void dlgTriggerEditor::saveKey()
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
-            auto* qtCmd = new MudletModifyPropertyCommand(
+            auto* qtCmd = new EditorModifyPropertyCommand(
                 EditorViewType::cmKeysView,
                 triggerID,
                 name,
@@ -12812,7 +12812,7 @@ void dlgTriggerEditor::slot_pasteXml()
             }
 
             if (!itemName.isEmpty()) {
-                auto* qtCmd = new MudletAddItemCommand(
+                auto* qtCmd = new EditorAddItemCommand(
                     viewType,
                     itemID,
                     parentID,

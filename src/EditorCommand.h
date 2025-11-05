@@ -42,14 +42,14 @@ using EditorViewTypes::EditorViewType;
 // - EditorViewType tracking (which editor view triggered the command)
 // - Affected item IDs (for targeted UI updates)
 // - Item ID remapping (when items are deleted and recreated with new IDs)
-class MudletEditorCommand : public QUndoCommand
+class EditorCommand : public QUndoCommand
 {
 public:
-    explicit MudletEditorCommand(Host* host, QUndoCommand* parent = nullptr) : QUndoCommand(parent), mpHost(host) {}
+    explicit EditorCommand(Host* host, QUndoCommand* parent = nullptr) : QUndoCommand(parent), mpHost(host) {}
 
-    explicit MudletEditorCommand(const QString& text, Host* host, QUndoCommand* parent = nullptr) : QUndoCommand(text, parent), mpHost(host) {}
+    explicit EditorCommand(const QString& text, Host* host, QUndoCommand* parent = nullptr) : QUndoCommand(text, parent), mpHost(host) {}
 
-    ~MudletEditorCommand() override = default;
+    ~EditorCommand() override = default;
 
     // Returns which editor view type this command belongs to (triggers, aliases, etc.)
     virtual EditorViewType viewType() const = 0;

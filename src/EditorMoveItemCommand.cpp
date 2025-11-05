@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletMoveItemCommand.h"
+#include "EditorMoveItemCommand.h"
 
 #include "Host.h"
 #include "TAction.h"
@@ -28,8 +28,8 @@
 #include "TTrigger.h"
 #include "utils.h"
 
-MudletMoveItemCommand::MudletMoveItemCommand(EditorViewType viewType, int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition, const QString& itemName, Host* host)
-: MudletEditorCommand(generateText(viewType, itemName), host)
+EditorMoveItemCommand::EditorMoveItemCommand(EditorViewType viewType, int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition, const QString& itemName, Host* host)
+: EditorCommand(generateText(viewType, itemName), host)
 , mViewType(viewType)
 , mItemID(itemID)
 , mOldParentID(oldParentID)
@@ -40,24 +40,24 @@ MudletMoveItemCommand::MudletMoveItemCommand(EditorViewType viewType, int itemID
 {
 }
 
-void MudletMoveItemCommand::undo()
+void EditorMoveItemCommand::undo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletMoveItemCommand::undo() - Moving" << mItemName << "(ID:" << mItemID << ")" << "from parent" << mNewParentID << "to parent" << mOldParentID << "at position" << mOldPosition;
+    qDebug() << "EditorMoveItemCommand::undo() - Moving" << mItemName << "(ID:" << mItemID << ")" << "from parent" << mNewParentID << "to parent" << mOldParentID << "at position" << mOldPosition;
 #endif
     moveItem(mNewParentID, mOldParentID, mOldPosition);
 }
 
-void MudletMoveItemCommand::redo()
+void EditorMoveItemCommand::redo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletMoveItemCommand::redo() - Moving" << mItemName << "(ID:" << mItemID << ")" << "from parent" << mOldParentID << "to parent" << mNewParentID << "at position" << mNewPosition;
+    qDebug() << "EditorMoveItemCommand::redo() - Moving" << mItemName << "(ID:" << mItemID << ")" << "from parent" << mOldParentID << "to parent" << mNewParentID << "at position" << mNewPosition;
 #endif
     // Skip the first redo() which is automatically called by QUndoStack::push()
     // The move has already been performed by TTreeWidget::rowsInserted()
     if (mSkipFirstRedo) {
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletMoveItemCommand::redo() - Skipping first redo (move already performed)";
+        qDebug() << "EditorMoveItemCommand::redo() - Skipping first redo (move already performed)";
 #endif
         mSkipFirstRedo = false;
         return;
@@ -67,7 +67,7 @@ void MudletMoveItemCommand::redo()
 }
 
 // Updates stored IDs when items are deleted and recreated (e.g., during undo/redo)
-void MudletMoveItemCommand::remapItemID(int oldID, int newID)
+void EditorMoveItemCommand::remapItemID(int oldID, int newID)
 {
     if (mItemID == oldID) {
         mItemID = newID;
@@ -80,7 +80,7 @@ void MudletMoveItemCommand::remapItemID(int oldID, int newID)
     }
 }
 
-void MudletMoveItemCommand::moveItem(int fromParentID, int toParentID, int position)
+void EditorMoveItemCommand::moveItem(int fromParentID, int toParentID, int position)
 {
     switch (mViewType) {
     case EditorViewType::cmTriggerView: {
@@ -108,12 +108,12 @@ void MudletMoveItemCommand::moveItem(int fromParentID, int toParentID, int posit
         break;
     }
     default:
-        qWarning() << "MudletMoveItemCommand::moveItem() - Unknown view type";
+        qWarning() << "EditorMoveItemCommand::moveItem() - Unknown view type";
         break;
     }
 }
 
-QString MudletMoveItemCommand::generateText(EditorViewType viewType, const QString& itemName)
+QString EditorMoveItemCommand::generateText(EditorViewType viewType, const QString& itemName)
 {
     switch (viewType) {
     case EditorViewType::cmTriggerView:

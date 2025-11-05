@@ -107,13 +107,13 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
-    MudletUndoStack.cpp
+    EditorUndoStack.cpp
     MxpTag.cpp
-    MudletAddItemCommand.cpp
-    MudletDeleteItemCommand.cpp
-    MudletModifyPropertyCommand.cpp
-    MudletMoveItemCommand.cpp
-    MudletToggleActiveCommand.cpp
+    EditorAddItemCommand.cpp
+    EditorDeleteItemCommand.cpp
+    EditorModifyPropertyCommand.cpp
+    EditorMoveItemCommand.cpp
+    EditorToggleActiveCommand.cpp
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
@@ -308,15 +308,15 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
-    MudletEditorCommand.h
+    EditorCommand.h
     MudletInstanceCoordinator.h
-    MudletUndoStack.h
+    EditorUndoStack.h
     MxpTag.h
-    MudletAddItemCommand.h
-    MudletDeleteItemCommand.h
-    MudletModifyPropertyCommand.h
-    MudletMoveItemCommand.h
-    MudletToggleActiveCommand.h
+    EditorAddItemCommand.h
+    EditorDeleteItemCommand.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
