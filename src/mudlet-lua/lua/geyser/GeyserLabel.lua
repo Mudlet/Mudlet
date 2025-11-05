@@ -922,6 +922,18 @@ function Geyser.Label:new (cons, container)
   return me
 end
 
+--- Deletes the label using the C++ deleteLabel function
+-- Note: Nested labels (in nestedLabels array) have their own containers
+-- and will be deleted through their container's cascading delete mechanism.
+-- The nestedLabels array is for organizational purposes only.
+function Geyser.Label:type_delete()
+  -- Clean up nested label references to avoid dangling references
+  if self.nestedLabels then
+    self.nestedLabels = {}
+  end
+  deleteLabel(self.name)
+end
+
 --- Overridden constructor to use add2
 function Geyser.Label:new2 (cons, container)
   cons = cons or {}

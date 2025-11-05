@@ -21,8 +21,19 @@
 
 
 #include "dlgTriggerPatternEdit.h"
-#include "TTrigger.h"
 
+#include "pre_guard.h"
+#include <QAbstractButton>
+#include <QAbstractItemView>
+#include <QAbstractScrollArea>
+#include <QAbstractSpinBox>
+#include <QPlainTextEdit>
+#include <QColor>
+#include <QComboBox>
+#include <QLineEdit>
+#include <QPalette>
+#include <QWidget>
+#include "post_guard.h"
 #include <QAction>
 #include <QDebug>
 
@@ -31,6 +42,20 @@ dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pParentWidget)
 {
     // init generated dialog
     setupUi(this);
+
+    mDefaultPalette = palette();
+    mDefaultPatternNumberPalette = label_patternNumber->palette();
+    mDefaultPromptPalette = label_prompt->palette();
+    mDefaultComboPalette = comboBox_patternType->palette();
+    mDefaultSpinPalette = spinBox_lineSpacer->palette();
+    mDefaultForegroundButtonPalette = pushButton_fgColor->palette();
+    mDefaultBackgroundButtonPalette = pushButton_bgColor->palette();
+    mDefaultPatternEditPalette = singleLineTextEdit_pattern->palette();
+    if (auto* patternViewport = singleLineTextEdit_pattern->viewport()) {
+        mDefaultPatternEditViewportPalette = patternViewport->palette();
+        mDefaultPatternEditViewportAutoFillBackground = patternViewport->autoFillBackground();
+    }
+
     // delay the connection so the pattern type is available for the slot
     connect(comboBox_patternType, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged, Qt::QueuedConnection);
 }
@@ -39,26 +64,93 @@ void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
 {
     label_colorIcon->setPixmap(comboBox_patternType->itemIcon(index).pixmap(15, 15));
 
-    const bool firstRow = comboBox_patternType->itemData(0).toInt() == 0;
-    if (!firstRow) {
+}
+
+void dlgTriggerPatternEdit::applyThemePalette(const QPalette& editorPalette)
+{
+    const QColor baseColor = editorPalette.color(QPalette::Base);
+    const QColor textColor = editorPalette.color(QPalette::Text);
+
+    if (!baseColor.isValid() || !textColor.isValid()) {
+        resetThemePalette();
         return;
     }
 
-    switch (comboBox_patternType->currentIndex()) {
-    case REGEX_SUBSTRING:
-        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (anywhere in the game output)"));
-        break;
-    case REGEX_PERL:
-        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (as a regular expression pattern)"));
-        break;
-    case REGEX_BEGIN_OF_LINE_SUBSTRING:
-        singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (from beginning of the line)"));
-        break;
-    case REGEX_EXACT_MATCH:
-        singleLineTextEdit_pattern->setPlaceholderText(tr("Exact line to match"));
-        break;
-    case REGEX_LUA_CODE:
-        singleLineTextEdit_pattern->setPlaceholderText(tr("Lua code to run (return true to match)"));
-        break;
+    setPalette(editorPalette);
+    setAutoFillBackground(false);
+
+    auto applyToWidget = [&](QWidget* widget) {
+        if (!widget) {
+            return;
+        }
+
+        widget->setPalette(editorPalette);
+
+        if (auto* spinBox = qobject_cast<QAbstractSpinBox*>(widget)) {
+            if (auto* lineEdit = spinBox->findChild<QLineEdit*>()) {
+                lineEdit->setPalette(editorPalette);
+            }
+        }
+
+        if (auto* comboBox = qobject_cast<QComboBox*>(widget)) {
+            if (auto* view = comboBox->view()) {
+                view->setPalette(editorPalette);
+            }
+        }
+
+        if (auto* button = qobject_cast<QAbstractButton*>(widget)) {
+            button->setAutoFillBackground(false);
+        }
+
+        if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(widget)) {
+            if (auto* viewport = plainTextEdit->viewport()) {
+                viewport->setPalette(editorPalette);
+                viewport->setAutoFillBackground(true);
+            }
+        } else if (auto* scrollArea = qobject_cast<QAbstractScrollArea*>(widget)) {
+            if (auto* viewport = scrollArea->viewport()) {
+                viewport->setPalette(editorPalette);
+                viewport->setAutoFillBackground(true);
+            }
+        }
+    };
+
+    applyToWidget(label_colorIcon);
+    applyToWidget(label_patternNumber);
+    applyToWidget(label_prompt);
+    applyToWidget(comboBox_patternType);
+    applyToWidget(spinBox_lineSpacer);
+    applyToWidget(pushButton_fgColor);
+    applyToWidget(pushButton_bgColor);
+    applyToWidget(singleLineTextEdit_pattern);
+}
+
+void dlgTriggerPatternEdit::resetThemePalette()
+{
+    setAutoFillBackground(false);
+    setPalette(mDefaultPalette);
+
+    label_patternNumber->setPalette(mDefaultPatternNumberPalette);
+    label_prompt->setPalette(mDefaultPromptPalette);
+    comboBox_patternType->setPalette(mDefaultComboPalette);
+    spinBox_lineSpacer->setPalette(mDefaultSpinPalette);
+    pushButton_fgColor->setPalette(mDefaultForegroundButtonPalette);
+    pushButton_bgColor->setPalette(mDefaultBackgroundButtonPalette);
+    singleLineTextEdit_pattern->setPalette(mDefaultPatternEditPalette);
+
+    if (auto* patternViewport = singleLineTextEdit_pattern->viewport()) {
+        patternViewport->setPalette(mDefaultPatternEditViewportPalette);
+        patternViewport->setAutoFillBackground(mDefaultPatternEditViewportAutoFillBackground);
     }
+
+    if (auto* spinBoxLineEdit = spinBox_lineSpacer->findChild<QLineEdit*>()) {
+        spinBoxLineEdit->setPalette(mDefaultSpinPalette);
+    }
+
+    if (auto* comboBoxView = comboBox_patternType->view()) {
+        comboBoxView->setPalette(mDefaultComboPalette);
+    }
+
+    pushButton_fgColor->setAutoFillBackground(false);
+    pushButton_bgColor->setAutoFillBackground(false);
 }

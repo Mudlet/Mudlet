@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGTRIGGERPATTERNEDIT_H
-#define MUDLET_DLGTRIGGERPATTERNEDIT_H
-
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,42 +18,19 @@
  ***************************************************************************/
 
 
-#include "ui_trigger_pattern_edit.h"
-#include <QPalette>
-#include "post_guard.h"
+#include "WideComboBox.h"
+#include <QScrollBar>
+#include <QAbstractItemView>
 
-class QAction;
+void WideComboBox::showPopup() {
+    // compute width of widest content.
+    int maxWidth = view()->sizeHintForColumn(0);
+    if (maxWidth > 0) {
+        maxWidth += view()->verticalScrollBar()->sizeHint().width();
+    }
 
-class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
-{
-    Q_OBJECT
+    // temporarily adjust popup width.
+    view()->setMinimumWidth(maxWidth);
 
-public:
-    Q_DISABLE_COPY(dlgTriggerPatternEdit)
-    explicit dlgTriggerPatternEdit(QWidget*);
-
-    void applyThemePalette(const QPalette& editorPalette);
-
-    int mRow = 0;
-
-
-public slots:
-    void slot_triggerTypeComboBoxChanged(const int);
-
-
-private:
-    void resetThemePalette();
-
-    QPalette mDefaultPalette;
-    QPalette mDefaultPatternNumberPalette;
-    QPalette mDefaultPromptPalette;
-    QPalette mDefaultComboPalette;
-    QPalette mDefaultSpinPalette;
-    QPalette mDefaultForegroundButtonPalette;
-    QPalette mDefaultBackgroundButtonPalette;
-    QPalette mDefaultPatternEditPalette;
-    QPalette mDefaultPatternEditViewportPalette;
-    bool mDefaultPatternEditViewportAutoFillBackground = false;
-};
-
-#endif // MUDLET_DLGTRIGGERPATTERNEDIT_H
+    QComboBox::showPopup();
+}

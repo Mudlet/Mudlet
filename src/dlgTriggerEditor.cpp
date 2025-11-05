@@ -50,15 +50,34 @@
 #include "edbee/models/textdocumentscopes.h"
 
 #include <QCheckBox>
+#include <QAbstractButton>
 #include <QColorDialog>
 #include <QFileDialog>
+#include <QFont>
+#include <QFrame>
+#include <QHBoxLayout>
+#include <QIcon>
+#include <QLabel>
+#include <QMargins>
 #include <QMessageBox>
+#include <QMetaEnum>
+#include <QPalette>
+#include <QPoint>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSpinBox>
+#include <QStyle>
+#include <QTextCursor>
 #include <QShowEvent>
+#include <QToolButton>
 #include <QToolBar>
+#include <QVBoxLayout>
+
+#include "post_guard.h"
 
 using namespace std::chrono_literals;
+
+static const auto patternNavigationBannerKey = qsl("pattern-navigation");
 
 // Used as a QObject::property so that we can keep track of the color for the
 // trigger colorizer buttons loaded from a trigger even if the user disables
@@ -284,8 +303,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     descActiveOffsetTimer = tr("activated offset timer");
     //: A timer that starts after another timer is currently turned off
     descInactiveOffsetTimer = tr("deactivated offset timer");
+    //: Accessible description for a newly created folder, shown after the folder name
     descNewFolder = tr("new folder");
+    //: Accessible description for a newly created item, shown after the item name
     descNewItem = tr("new item");
+    //: Accessible description indicating an item belongs to a package, shown after the item name. Keep short, as it's appended to other descriptions like "activated, package item"
+    descPackageItem = tr("package item");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
     const QString hostName{mpHost->getName()};
@@ -1160,6 +1183,54 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     lay1->setSpacing(0);
     mpScrollArea->setWidget(mpWidget_triggerItems);
 
+    lay1->addStretch();
+
+    mPatternNavigationHintBanner = new QFrame(mpWidget_triggerItems);
+    mPatternNavigationHintBanner->setObjectName(qsl("patternNavigationHintBanner"));
+    mPatternNavigationHintBanner->setFrameShape(QFrame::StyledPanel);
+    mPatternNavigationHintBanner->setFrameShadow(QFrame::Raised);
+    mPatternNavigationHintBanner->setFocusPolicy(Qt::StrongFocus);
+
+    auto* patternNavigationHintLayout = new QHBoxLayout(mPatternNavigationHintBanner);
+    patternNavigationHintLayout->setContentsMargins(12, 12, 12, 12);
+    patternNavigationHintLayout->setSpacing(8);
+
+    auto* patternNavigationHintIcon = new QLabel(mPatternNavigationHintBanner);
+    patternNavigationHintIcon->setObjectName(qsl("patternNavigationHintIcon"));
+    patternNavigationHintIcon->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    const int patternNavigationHintIconSize = qMax(24, style()->pixelMetric(QStyle::PM_SmallIconSize, nullptr, mPatternNavigationHintBanner));
+    patternNavigationHintIcon->setPixmap(QIcon(qsl(":/icons/dialog-information.png")).pixmap(patternNavigationHintIconSize, patternNavigationHintIconSize));
+    patternNavigationHintLayout->addWidget(patternNavigationHintIcon);
+
+    mPatternNavigationHintLabel = new QLabel(mPatternNavigationHintBanner);
+    mPatternNavigationHintLabel->setObjectName(qsl("patternNavigationHintLabel"));
+    mPatternNavigationHintLabel->setWordWrap(true);
+    mPatternNavigationHintLabel->setTextFormat(Qt::RichText);
+    mPatternNavigationHintLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    mPatternNavigationHintLabel->setTextInteractionFlags(Qt::TextSelectableByKeyboard | Qt::TextSelectableByMouse);
+    QFont hintFont = mPatternNavigationHintLabel->font();
+    hintFont.setPointSizeF(qMax(7.0, hintFont.pointSizeF() - 1.0));
+    mPatternNavigationHintLabel->setFont(hintFont);
+    patternNavigationHintLayout->addWidget(mPatternNavigationHintLabel, 1);
+
+    mPatternNavigationHintCloseButton = new QToolButton(mPatternNavigationHintBanner);
+    mPatternNavigationHintCloseButton->setObjectName(qsl("patternNavigationHintCloseButton"));
+    mPatternNavigationHintCloseButton->setAutoRaise(true);
+    mPatternNavigationHintCloseButton->setIcon(style()->standardIcon(QStyle::SP_TitleBarCloseButton));
+    //: Tooltip for the button that hides the pattern navigation hint banner.
+    mPatternNavigationHintCloseButton->setToolTip(tr("Hide this hint"));
+    patternNavigationHintLayout->addWidget(mPatternNavigationHintCloseButton);
+    patternNavigationHintLayout->setAlignment(mPatternNavigationHintCloseButton, Qt::AlignTop);
+
+    connect(mPatternNavigationHintCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::handlePatternNavigationHintDismiss);
+
+    updatePatternNavigationHint();
+    lay1->insertWidget(lay1->count() - 1, mPatternNavigationHintBanner);
+
+    if (mPatternNavigationHintHidden && mPatternNavigationHintBanner) {
+        mPatternNavigationHintBanner->hide();
+    }
+
     QPixmap pixMap_subString(256, 256);
     pixMap_subString.fill(Qt::black);
     const QIcon icon_subString(pixMap_subString);
@@ -1192,61 +1263,28 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     pixMap_prompt.fill(Qt::yellow);
     const QIcon icon_prompt(pixMap_prompt);
 
-    QStringList patternList;
-    patternList << tr("substring")
-                << tr("perl regex")
-                << tr("start of line")
-                << tr("exact match")
-                << tr("lua function")
-                << tr("line spacer")
-                << tr("color trigger")
-                << tr("prompt");
+    mPatternList << tr("substring")
+                 << tr("perl regex")
+                 << tr("start of line")
+                 << tr("exact match")
+                 << tr("lua function")
+                 << tr("line spacer")
+                 << tr("color trigger")
+                 << tr("prompt");
 
-    for (int i = 0; i < 50; i++) {
-        auto pItem = new dlgTriggerPatternEdit(mpWidget_triggerItems);
-        QComboBox* pBox = pItem->comboBox_patternType;
-        pBox->addItems(patternList);
-        pBox->setItemData(0, QVariant(i));
-        pBox->setItemIcon(0, icon_subString);
-        pBox->setItemIcon(1, icon_perl_regex);
-        pBox->setItemIcon(2, icon_begin_of_line_substring);
-        pBox->setItemIcon(3, icon_exact_match);
-        pBox->setItemIcon(4, icon_lua_function);
-        pBox->setItemIcon(5, icon_line_spacer);
-        pBox->setItemIcon(6, icon_color_trigger);
-        pBox->setItemIcon(7, icon_prompt);
-        connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
-        connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
-        connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
-        connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
-        connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+    mPatternIcons = {icon_subString,
+                     icon_perl_regex,
+                     icon_begin_of_line_substring,
+                     icon_exact_match,
+                     icon_lua_function,
+                     icon_line_spacer,
+                     icon_color_trigger,
+                     icon_prompt};
 
-        mpWidget_triggerItems->layout()->addWidget(pItem);
 
-        mTriggerPatternEdit.push_back(pItem);
-        pItem->mRow = i;
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->label_prompt->hide();
-        pItem->spinBox_lineSpacer->hide();
-        pItem->label_patternNumber->setText(QString::number(i+1));
-        pItem->label_patternNumber->show();
-
-        // Populate default of false
-        lineEditShouldMarkSpaces[pItem->singleLineTextEdit_pattern] = false;
-
-/*
-        auto mpFont = mpHost->getDisplayFont();
-        mpFont.setPixelSize(pItem->singleLineTextEdit_pattern->height() / 2);
-        pItem->singleLineTextEdit_pattern->setFont(mpFont);
-*/
-        // align a fraction lower
-        //pItem->singleLineTextEdit_pattern->setStyleSheet("SingleLineTextEdit { padding-top: 3px; }");
-
-        if (i == 0) {
-            pItem->singleLineTextEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
-        }
-    }
+    showPatternItems(2);
+    setupPatternNavigationShortcuts();
+    updatePatternTabOrder();
 
     connect(mpHost, &Host::signal_editorThemeChanged, this, &dlgTriggerEditor::slot_editorThemeChanged);
     // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
@@ -1284,9 +1322,375 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 
 void dlgTriggerEditor::slot_editorThemeChanged()
 {
-    for (int i = 0; i < 50; i++) {
-        mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->setTheme(mpHost->mEditorTheme);
+    for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
+        applyPatternWidgetStyle(mTriggerPatternEdit.at(i));
     }
+}
+
+void dlgTriggerEditor::applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWidget)
+{
+    if (!patternWidget || !mpHost) {
+        return;
+    }
+
+    QPalette referencePalette;
+    QFont referenceFont;
+    bool hasReference = false;
+
+    if (mpTriggersMainArea && mpTriggersMainArea->lineEdit_trigger_name) {
+        referencePalette = mpTriggersMainArea->lineEdit_trigger_name->palette();
+        referenceFont = mpTriggersMainArea->lineEdit_trigger_name->font();
+        hasReference = true;
+    }
+
+    patternWidget->singleLineTextEdit_pattern->setTheme(mpHost->mEditorTheme);
+    if (!hasReference) {
+        referencePalette = patternWidget->singleLineTextEdit_pattern->palette();
+        referenceFont = mpHost->getDisplayFont();
+    }
+    patternWidget->applyThemePalette(referencePalette);
+    patternWidget->singleLineTextEdit_pattern->setFont(referenceFont);
+}
+
+void dlgTriggerEditor::createPatternItem(int index)
+{
+    auto* pItem = new dlgTriggerPatternEdit(mpWidget_triggerItems);
+    QComboBox* pBox = pItem->comboBox_patternType;
+    pBox->addItems(mPatternList);
+    pBox->setItemData(0, QVariant(index));
+    for (int i = 0; i < mPatternIcons.size(); ++i) {
+        pBox->setItemIcon(i, mPatternIcons.at(i));
+    }
+    connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
+    connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
+    connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
+    connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
+    connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(pItem->spinBox_lineSpacer, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_lineSpacerChanged);
+    connect(pItem->spinBox_lineSpacer, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_itemEdited);
+
+    auto* pLayout = static_cast<QVBoxLayout*>(mpWidget_triggerItems->layout());
+    int insertIndex = pLayout->count() - 1;
+    if (mPatternNavigationHintBanner) {
+        const int hintIndex = pLayout->indexOf(mPatternNavigationHintBanner);
+        if (hintIndex >= 0) {
+            insertIndex = hintIndex;
+        }
+    }
+    pLayout->insertWidget(insertIndex, pItem);
+
+    mTriggerPatternEdit.push_back(pItem);
+    pItem->mRow = index;
+    pItem->pushButton_fgColor->hide();
+    pItem->pushButton_bgColor->hide();
+    pItem->label_prompt->hide();
+    pItem->spinBox_lineSpacer->hide();
+    pItem->label_patternNumber->setText(QString::number(index + 1));
+    pItem->label_patternNumber->show();
+
+    lineEditShouldMarkSpaces[pItem->singleLineTextEdit_pattern] = false;
+
+    pItem->singleLineTextEdit_pattern->installEventFilter(this);
+    applyPatternWidgetStyle(pItem);
+    pItem->spinBox_lineSpacer->installEventFilter(this);
+}
+
+void dlgTriggerEditor::showPatternItems(int count)
+{
+    count = qBound(0, count, 50);
+    while (mTriggerPatternEdit.size() < count) {
+        createPatternItem(mTriggerPatternEdit.size());
+    }
+
+    for (int i = 0; i < mTriggerPatternEdit.size(); ++i) {
+        auto* pItem = mTriggerPatternEdit[i];
+        if (!pItem) {
+            continue;
+        }
+
+        if (i < count) {
+            pItem->show();
+
+            const int currentType = pItem->comboBox_patternType->currentIndex();
+            if (currentType >= 0) {
+                pItem->slot_triggerTypeComboBoxChanged(currentType);
+            }
+        } else {
+            auto* edit = pItem->singleLineTextEdit_pattern;
+            edit->blockSignals(true);
+            edit->clear();
+            edit->blockSignals(false);
+            lineEditShouldMarkSpaces[edit] = false;
+
+            auto* combo = pItem->comboBox_patternType;
+            combo->blockSignals(true);
+            combo->setCurrentIndex(REGEX_SUBSTRING);
+            combo->blockSignals(false);
+
+            pItem->slot_triggerTypeComboBoxChanged(REGEX_SUBSTRING);
+
+            pItem->pushButton_fgColor->hide();
+            pItem->pushButton_bgColor->hide();
+            pItem->label_prompt->hide();
+            pItem->spinBox_lineSpacer->hide();
+            pItem->hide();
+        }
+    }
+
+    mVisiblePatternCount = count;
+    updatePatternPlaceholders();
+    updatePatternTabOrder();
+    updatePatternNavigationHint();
+}
+
+void dlgTriggerEditor::updatePatternPlaceholders()
+{
+    for (int i = 0; i < mVisiblePatternCount; ++i) {
+        auto* patternItem = mTriggerPatternEdit.value(i, nullptr);
+        if (!patternItem) {
+            continue;
+        }
+
+        auto* edit = patternItem->singleLineTextEdit_pattern;
+        if (!edit) {
+            continue;
+        }
+
+        if (!edit->isVisible() || !edit->toPlainText().isEmpty()) {
+            edit->setPlaceholderText(QString());
+            continue;
+        }
+
+        const QString placeholder = patternPlaceholderText(patternItem->comboBox_patternType->currentIndex());
+        edit->setPlaceholderText(placeholder);
+    }
+}
+
+QString dlgTriggerEditor::patternPlaceholderText(const int patternType) const
+{
+    switch (patternType) {
+    case REGEX_SUBSTRING:
+        return tr("Text to find (anywhere in the game output)");
+    case REGEX_PERL:
+        return tr("Text to find (as a regular expression pattern)");
+    case REGEX_BEGIN_OF_LINE_SUBSTRING:
+        return tr("Text to find (from beginning of the line)");
+    case REGEX_EXACT_MATCH:
+        return tr("Exact line to match");
+    case REGEX_LUA_CODE:
+        return tr("Lua code to run (return true to match)");
+    default:
+        return QString();
+    }
+}
+
+void dlgTriggerEditor::setupPatternNavigationShortcuts()
+{
+    if (mFirstPatternShortcut) {
+        mFirstPatternShortcut->deleteLater();
+        mFirstPatternShortcut = nullptr;
+    }
+
+    if (mLastPatternShortcut) {
+        mLastPatternShortcut->deleteLater();
+        mLastPatternShortcut = nullptr;
+    }
+
+    for (auto* shortcut : mPatternNavigationShortcuts) {
+        if (shortcut) {
+            shortcut->deleteLater();
+        }
+    }
+    mPatternNavigationShortcuts.clear();
+
+    if (!mpTriggersMainArea) {
+        return;
+    }
+
+    mFirstPatternShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), mpTriggersMainArea);
+    mFirstPatternShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(mFirstPatternShortcut, &QShortcut::activated, this, [this]() {
+        if (mVisiblePatternCount < 1) {
+            return;
+        }
+        focusPatternItem(0, Qt::ShortcutFocusReason);
+    });
+
+
+    mLastPatternShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), mpTriggersMainArea);
+    mLastPatternShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(mLastPatternShortcut, &QShortcut::activated, this, [this]() {
+        if (mVisiblePatternCount < 1) {
+            return;
+        }
+        focusPatternItem(mVisiblePatternCount - 1, Qt::ShortcutFocusReason);
+    });
+
+    const bool enableShortcuts = mCurrentView == EditorViewType::cmTriggerView;
+    if (mFirstPatternShortcut) {
+        mFirstPatternShortcut->setEnabled(enableShortcuts);
+    }
+
+    if (mLastPatternShortcut) {
+        mLastPatternShortcut->setEnabled(enableShortcuts);
+    }
+}
+
+void dlgTriggerEditor::updatePatternNavigationHint()
+{
+    if (!mPatternNavigationHintBanner || !mPatternNavigationHintLabel) {
+        return;
+    }
+
+    const bool permanentlyHidden = bannerPermanentlyHidden(EditorViewType::cmTriggerView, patternNavigationBannerKey, false);
+    mPatternNavigationHintBanner->setVisible(!mPatternNavigationHintHidden && !permanentlyHidden);
+
+    constexpr int baseHorizontalPadding = 12;
+    constexpr int baseVerticalPadding = 12;
+
+    int leftMargin = 0;
+    if (mpWidget_triggerItems && mPatternNavigationHintBanner->isVisible()) {
+        const QPoint hintPos = mPatternNavigationHintBanner->mapTo(mpWidget_triggerItems, QPoint());
+        const int itemCount = qMin(mVisiblePatternCount, mTriggerPatternEdit.size());
+        for (int i = 0; i < itemCount; ++i) {
+            auto* patternItem = mTriggerPatternEdit.value(i, nullptr);
+            if (!patternItem || !patternItem->isVisible()) {
+                continue;
+            }
+        }
+    }
+
+    const QString settingsKey = bannerSettingsKey(EditorViewType::cmTriggerView, patternNavigationBannerKey);
+    const QString baseKey = bannerSettingsKey(EditorViewType::cmTriggerView, QString());
+    if (settingsKey.isEmpty()) {
+        return;
+    }
+
+    const int topMargin = qMax(baseVerticalPadding, mPatternNavigationHintLabel->fontMetrics().lineSpacing());
+    if (auto* bannerLayout = qobject_cast<QHBoxLayout*>(mPatternNavigationHintBanner->layout())) {
+        const QMargins currentMargins = bannerLayout->contentsMargins();
+        const int desiredLeft = baseHorizontalPadding + leftMargin;
+        if (currentMargins.left() != desiredLeft || currentMargins.top() != topMargin
+            || currentMargins.right() != baseHorizontalPadding || currentMargins.bottom() != baseVerticalPadding) {
+            bannerLayout->setContentsMargins(desiredLeft, topMargin, baseHorizontalPadding, baseVerticalPadding);
+        }
+    }
+
+    mPatternNavigationHintLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+    //: Hint shown below trigger patterns explaining navigation shortcuts. Contains HTML markup.
+    mPatternNavigationHintLabel->setText(tr(
+        "<p><strong>Navigation shortcuts</strong></p>"
+        "<ul>"
+        "<li>Press <strong>Ctrl+F</strong> to focus the first pattern field.</li>"
+        "<li>Press <strong>Ctrl+L</strong> to jump to the last visible pattern field.</li>"
+        "<li>Press <strong>Ctrl+Up</strong> or <strong>Ctrl+Down</strong> to move between pattern fields.</li>"
+        "<li>Press <strong>Ctrl+Tab</strong> to toggle the Lua code editor.</li>"
+        "</ul>"
+    ));
+    
+}
+
+
+void dlgTriggerEditor::handlePatternNavigationHintDismiss()
+{
+    mPatternNavigationHintHidden = true;
+    if (mPatternNavigationHintBanner) {
+        mPatternNavigationHintBanner->hide();
+    }
+
+    if (auto* settings = mudlet::getQSettings()) {
+        const QString patternHintKey = patternNavigationHintSettingsKey();
+        settings->setValue(patternHintKey, true);
+    }
+
+    showPatternNavigationHintUndoToast();
+}
+
+void dlgTriggerEditor::showPatternNavigationHintUndoToast()
+{
+    if (!mpSystemMessageArea) {
+        return;
+    }
+
+    if (mpBannerUndoTimer) {
+        mpBannerUndoTimer->stop();
+        mpBannerUndoTimer->deleteLater();
+    }
+
+    mCurrentBannerKey.clear();
+
+    mpBannerUndoTimer = new QTimer(this);
+    mpBannerUndoTimer->setSingleShot(true);
+    mpBannerUndoTimer->setInterval(std::chrono::seconds(5));
+
+    //: Toast notification shown when user dismisses the trigger pattern navigation hint. Allows them to undo or permanently hide the hint.
+    const QString toastMessage = tr("Hint hidden. <a href='undo' style='color: inherit; text-decoration: underline;'>Undo</a> | <a href='hide-permanently' style='color: inherit; text-decoration: underline;'>Hide permanently</a>");
+
+    mpSystemMessageArea->notificationAreaIconLabelError->hide();
+    mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+    mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+    mpSystemMessageArea->notificationAreaMessageBox->setText(toastMessage);
+    mpSystemMessageArea->show();
+
+    connect(mpBannerUndoTimer, &QTimer::timeout, this, &dlgTriggerEditor::hideSystemMessageArea);
+    mpBannerUndoTimer->start();
+
+    disconnect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, nullptr, nullptr);
+    connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this, [this](const QString& link) {
+        if (link == QLatin1String("undo")) {
+            undoPatternNavigationHintDismiss();
+        } else if (link == QLatin1String("hide-permanently")) {
+            handlePatternNavigationHintPermanentDismiss();
+        } else {
+            slot_clickedMessageBox(link);
+        }
+    });
+}
+
+void dlgTriggerEditor::undoPatternNavigationHintDismiss()
+{
+    if (mpBannerUndoTimer) {
+        mpBannerUndoTimer->stop();
+        mpBannerUndoTimer->deleteLater();
+        mpBannerUndoTimer = nullptr;
+    }
+
+    mPatternNavigationHintHidden = false;
+    if (auto* settings = mudlet::getQSettings()) {
+        const QString patternHintKey = patternNavigationHintSettingsKey();
+        settings->setValue(patternHintKey, false);
+    }
+
+    setBannerPermanentlyHidden(EditorViewType::cmTriggerView, patternNavigationBannerKey, false);
+
+    updatePatternNavigationHint();
+    hideSystemMessageArea();
+}
+
+void dlgTriggerEditor::handlePatternNavigationHintPermanentDismiss()
+{
+    if (mpBannerUndoTimer) {
+        mpBannerUndoTimer->stop();
+        mpBannerUndoTimer->deleteLater();
+        mpBannerUndoTimer = nullptr;
+    }
+
+    mPatternNavigationHintHidden = true;
+    if (auto* settings = mudlet::getQSettings()) {
+        const QString patternHintKey = patternNavigationHintSettingsKey();
+        settings->setValue(patternHintKey, true);
+    }
+
+    setBannerPermanentlyHidden(EditorViewType::cmTriggerView, patternNavigationBannerKey, true);
+
+    hideSystemMessageArea();
+}
+
+
+void dlgTriggerEditor::slot_addPattern()
+{
+    showPatternItems(mVisiblePatternCount + 1);
 }
 
 void dlgTriggerEditor::slot_hideVariable(bool status)
@@ -1371,7 +1775,6 @@ void dlgTriggerEditor::readSettings()
 {
     QSettings& settings = *mudlet::getQSettings();
 
-    const QPoint savedPos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
 
@@ -1389,6 +1792,21 @@ void dlgTriggerEditor::readSettings()
     mTimerEditorSplitterState = settings.value("mTimerEditorSplitterState", QByteArray()).toByteArray();
     mVarEditorSplitterState = settings.value("mVarEditorSplitterState", QByteArray()).toByteArray();
     mSearchSplitterState = settings.value("mSearchSplitterState", QByteArray()).toByteArray();
+
+    const QString patternHintKey = patternNavigationHintSettingsKey();
+    const QString legacyPatternHintKey = qsl("patternNavigationHintHidden");
+    if (!patternHintKey.isEmpty() && patternHintKey != legacyPatternHintKey && settings.contains(legacyPatternHintKey)) {
+        settings.remove(legacyPatternHintKey);
+    }
+
+    mPatternNavigationHintHidden = settings.value(patternHintKey, false).toBool();
+
+    const bool permanentlyHidden = bannerPermanentlyHidden(EditorViewType::cmTriggerView, patternNavigationBannerKey, false);
+    if (mPatternNavigationHintHidden && !permanentlyHidden) {
+        mPatternNavigationHintHidden = false;
+        settings.setValue(patternHintKey, false);
+        updatePatternNavigationHint();
+    }
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -1406,6 +1824,9 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("mTimerEditorSplitterState", mTimerEditorSplitterState);
     settings.setValue("mVarEditorSplitterState", mVarEditorSplitterState);
     settings.setValue("mSearchSplitterState", mSearchSplitterState);
+
+    const QString patternHintKey = patternNavigationHintSettingsKey();
+    settings.setValue(patternHintKey, mPatternNavigationHintHidden);
 }
 
 void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
@@ -4891,7 +5312,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     }
     // Otherwise: insert a new root item
     if (!pNewAction) {
-        name = tr("New toolbar");
+        name = isFolder ? tr("New toolbar") : tr("New button");
         pNewAction = new TAction(name, mpHost);
         pNewAction->setCommandButtonUp(cmdButtonUp);
         QStringList nl;
@@ -5222,7 +5643,8 @@ void dlgTriggerEditor::slot_itemEdited()
     }
 
     if (!packageName.isEmpty()) {
-        showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."));
+        //: Package item warning shown in trigger editor when editing package items. Should only be announced to screen readers once per item, not repeatedly on every edit.
+        showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."), false);
     }
 }
 
@@ -5244,8 +5666,8 @@ void dlgTriggerEditor::saveTrigger()
     const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
     QStringList patterns;
     QList<int> patternKinds;
-    int  validItems = 0;
-    for (int i = 0; i < 50; i++) {
+    int validItems = 0;
+    for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
         QString pattern = mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->toPlainText();
 
         // Spaces in the pattern may be marked with middle dots, convert them back
@@ -6043,9 +6465,24 @@ void dlgTriggerEditor::saveScript()
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
-void dlgTriggerEditor::clearEditorNotification() const
+void dlgTriggerEditor::clearEditorNotification()
 {
     mpSystemMessageArea->hide();
+    mCurrentBannerKey.clear();
+}
+
+void dlgTriggerEditor::updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription)
+{
+    // Append package description to existing accessible description
+    // Screen readers will announce: "Item Name, [current description], package item"
+    QString newDescription;
+    if (currentDescription.isEmpty()) {
+        newDescription = descPackageItem;
+    } else {
+        // Combine descriptions: e.g., "activated, package item"
+        newDescription = currentDescription + qsl(", ") + descPackageItem;
+    }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, newDescription);
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int newValueType)
@@ -6480,20 +6917,245 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
     }
 
     checkForMoreThanOneTriggerItem();
+    updatePatternTabOrder();
+    updatePatternPlaceholders();
+    updatePatternNavigationHint();
+}
+
+void dlgTriggerEditor::handlePatternChange(dlgTriggerPatternEdit* patternItem, bool hasContentHint)
+{
+    checkForMoreThanOneTriggerItem();
+
+    bool hasContent = hasContentHint;
+    bool forceLineSpacerActive = false;
+    if (patternItem) {
+        const int type = patternItem->comboBox_patternType->currentIndex();
+        if (type == REGEX_PROMPT) {
+            hasContent = true;
+        } else if (type == REGEX_LINE_SPACER) {
+            forceLineSpacerActive = hasContentHint;
+            if (!forceLineSpacerActive) {
+                hasContent = patternItem->spinBox_lineSpacer->value() > 0;
+            } else {
+                hasContent = true;
+            }
+        }
+
+        if (patternItem->mRow == mVisiblePatternCount - 1 && hasContent && mVisiblePatternCount < 50) {
+            showPatternItems(mVisiblePatternCount + 1);
+        }
+    }
+
+    int lastActive = -1;
+    for (int i = 0; i < mVisiblePatternCount; ++i) {
+        auto* item = mTriggerPatternEdit[i];
+        bool itemHasContent = !item->singleLineTextEdit_pattern->toPlainText().isEmpty();
+        const int type = item->comboBox_patternType->currentIndex();
+        if (type == REGEX_PROMPT) {
+            itemHasContent = true;
+        } else if (type == REGEX_LINE_SPACER) {
+            itemHasContent = item->spinBox_lineSpacer->value() > 0
+                             || item->spinBox_lineSpacer->isVisible();
+            if (forceLineSpacerActive && item == patternItem) {
+                itemHasContent = true;
+            }
+        }
+
+        if (itemHasContent) {
+            lastActive = i;
+        }
+    }
+
+    const int desiredCount = qMax(lastActive + 2, 2);
+    if (desiredCount != mVisiblePatternCount) {
+        showPatternItems(desiredCount);
+    } else {
+        updatePatternPlaceholders();
+    }
+}
+
+QWidget* dlgTriggerEditor::firstFocusablePatternWidget(const dlgTriggerPatternEdit* patternItem) const
+{
+    if (!patternItem) {
+        return nullptr;
+    }
+
+    if (patternItem->singleLineTextEdit_pattern->isVisible()) {
+        return patternItem->singleLineTextEdit_pattern;
+    }
+    if (patternItem->spinBox_lineSpacer->isVisible()) {
+        return patternItem->spinBox_lineSpacer;
+    }
+    if (patternItem->pushButton_fgColor->isVisible()) {
+        return patternItem->pushButton_fgColor;
+    }
+    if (patternItem->pushButton_bgColor->isVisible()) {
+        return patternItem->pushButton_bgColor;
+    }
+
+    return patternItem->comboBox_patternType;
+}
+
+bool dlgTriggerEditor::focusPatternItem(const int row, const Qt::FocusReason reason)
+{
+    if (row < 0 || row >= mVisiblePatternCount || row >= mTriggerPatternEdit.size()) {
+        return false;
+    }
+
+    auto* patternItem = mTriggerPatternEdit.value(row, nullptr);
+    if (!patternItem || !patternItem->isVisible()) {
+        return false;
+    }
+
+    QWidget* target = firstFocusablePatternWidget(patternItem);
+    if (!target) {
+        return false;
+    }
+
+    mpScrollArea->ensureWidgetVisible(patternItem);
+    target->setFocus(reason);
+
+    if (auto* edit = qobject_cast<SingleLineTextEdit*>(target)) {
+        auto cursor = edit->textCursor();
+        cursor.select(QTextCursor::Document);
+        edit->setTextCursor(cursor);
+    } else if (auto* spinBox = qobject_cast<QSpinBox*>(target)) {
+        spinBox->selectAll();
+    }
+
+    return true;
+}
+
+bool dlgTriggerEditor::focusNextPatternItem(const dlgTriggerPatternEdit* currentItem)
+{
+    if (!currentItem) {
+        return false;
+    }
+
+    int nextRow = currentItem->mRow + 1;
+    while (nextRow < mVisiblePatternCount && nextRow < mTriggerPatternEdit.size()) {
+        auto* nextItem = mTriggerPatternEdit.value(nextRow, nullptr);
+        if (nextItem && nextItem->isVisible()) {
+            return focusPatternItem(nextRow);
+        }
+        ++nextRow;
+    }
+
+    return false;
+}
+
+
+bool dlgTriggerEditor::focusPreviousPatternItem(const dlgTriggerPatternEdit* currentItem)
+{
+    if (!currentItem) {
+        return false;
+    }
+
+    int previousRow = currentItem->mRow - 1;
+    while (previousRow >= 0) {
+        auto* previousItem = mTriggerPatternEdit.value(previousRow, nullptr);
+        if (previousItem && previousItem->isVisible()) {
+            return focusPatternItem(previousRow);
+        }
+        --previousRow;
+    }
+
+    return false;
+}
+
+
+void dlgTriggerEditor::updatePatternTabOrder()
+{
+    if (!mpTriggersMainArea) {
+        return;
+    }
+
+    QWidget* previous = mpTriggersMainArea->lineEdit_trigger_name;
+    auto addToChain = [&previous, this](QWidget* next) {
+        if (!next || !previous) {
+            if (next) {
+                previous = next;
+            }
+            return;
+        }
+
+        if (!next->isVisibleTo(mpTriggersMainArea)) {
+            return;
+        }
+
+        QWidget::setTabOrder(previous, next);
+        previous = next;
+    };
+
+    addToChain(mpTriggersMainArea->toolButton_toggleExtraControls);
+    addToChain(mpTriggersMainArea->lineEdit_trigger_command);
+
+    for (int i = 0; i < mVisiblePatternCount && i < mTriggerPatternEdit.size(); ++i) {
+        auto* item = mTriggerPatternEdit.value(i, nullptr);
+        if (!item || !item->isVisible()) {
+            continue;
+        }
+
+        QWidget* first = firstFocusablePatternWidget(item);
+        addToChain(first);
+
+        if (item->spinBox_lineSpacer->isVisible() && item->spinBox_lineSpacer != first) {
+            addToChain(item->spinBox_lineSpacer);
+        }
+        if (item->pushButton_fgColor->isVisible()) {
+            addToChain(item->pushButton_fgColor);
+        }
+        if (item->pushButton_bgColor->isVisible()) {
+            addToChain(item->pushButton_bgColor);
+        }
+        if (item->comboBox_patternType->isVisible()) {
+            addToChain(item->comboBox_patternType);
+        }
+    }
+    addToChain(mpTriggersMainArea->spinBox_stayOpen);
+    addToChain(mpTriggersMainArea->groupBox_soundTrigger);
+    addToChain(mpTriggersMainArea->pushButtonSound);
+    addToChain(mpTriggersMainArea->toolButton_clearSoundFile);
+    addToChain(mpTriggersMainArea->spinBox_lineMargin);
+    addToChain(mpTriggersMainArea->checkBox_filterTrigger);
+    addToChain(mpTriggersMainArea->checkBox_perlSlashGOption);
+    addToChain(mpTriggersMainArea->groupBox_triggerColorizer);
+    addToChain(mpTriggersMainArea->pushButtonFgColor);
+    addToChain(mpTriggersMainArea->pushButtonBgColor);
+    addToChain(mPatternNavigationHintBanner);
+    addToChain(mpSourceEditorEdbee);
+
 }
 
 void dlgTriggerEditor::slot_changedPattern()
 {
     SingleLineTextEdit* textEdit = qobject_cast<SingleLineTextEdit*>(sender());
 
-    if (lineEditShouldMarkSpaces[textEdit]) {
+    if (textEdit && lineEditShouldMarkSpaces[textEdit]) {
         markQTextEdit(textEdit);
         textEdit->blockSignals(true);
         textEdit->rehighlight();
         textEdit->blockSignals(false);
     }
 
-    checkForMoreThanOneTriggerItem();
+    auto* patternItem = textEdit ? qobject_cast<dlgTriggerPatternEdit*>(textEdit->parentWidget()) : nullptr;
+    const bool hasText = textEdit && !textEdit->toPlainText().isEmpty();
+    handlePatternChange(patternItem, hasText);
+}
+
+void dlgTriggerEditor::slot_lineSpacerChanged(int value)
+{
+    auto* spinBox = qobject_cast<QSpinBox*>(sender());
+    if (!spinBox) {
+        return;
+    }
+
+    auto* patternItem = qobject_cast<dlgTriggerPatternEdit*>(spinBox->parentWidget());
+    if (!patternItem) {
+        return;
+    }
+
+    handlePatternChange(patternItem, value > 0);
 }
 
 // This can get called after the lineEdit contents has changed and it is now a
@@ -6507,11 +7169,11 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
     }
 
     const int row = pBox->itemData(0).toInt();
-    if (row < 0 || row >= 50) {
+    if (row < 0 || row >= mTriggerPatternEdit.size()) {
         return;
     }
 
-    // This is the collection of widgets that make up one of the 50 patterns
+    // This is the collection of widgets that make up one of the patterns
     // in the dlgTriggerMainArea:
     dlgTriggerPatternEdit* pPatternItem = mTriggerPatternEdit[row];
     setupPatternControls(type, pPatternItem);
@@ -6580,6 +7242,10 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
             pPatternItem->singleLineTextEdit_pattern->clear();
         }
     }
+
+    const bool hasText = !pPatternItem->singleLineTextEdit_pattern->toPlainText().isEmpty();
+    const bool treatAsContent = hasText || type == REGEX_PROMPT || type == REGEX_LINE_SPACER;
+    handlePatternChange(pPatternItem, treatAsContent);
 }
 
 void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
@@ -6619,10 +7285,8 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             return;
         }
 
-        for (int i = 0; i < patternList.size(); i++) {
-            if (i >= 50) {
-                break; // pattern list is limited to 50 at the moment
-            }
+        showPatternItems(qMax(patternList.size(), 2));
+        for (int i = 0; i < patternList.size() && i < mTriggerPatternEdit.size(); i++) {
             if (i >= pT->mColorPatternList.size()) {
                 break;
             }
@@ -6695,21 +7359,17 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         }
 
         // reset the rest of the patterns that don't have any data
-        for (int i = patternList.size(); i < 50; i++) {
-            mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
-            if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
-                mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
-            }
-            mTriggerPatternEdit[i]->pushButton_fgColor->hide();
-            mTriggerPatternEdit[i]->pushButton_bgColor->hide();
-            mTriggerPatternEdit[i]->label_prompt->hide();
-            mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
-            // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
-            mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
-            mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
+        for (int i = patternList.size(); i < mVisiblePatternCount; i++) {
+            auto* patternItem = mTriggerPatternEdit[i];
+            patternItem->singleLineTextEdit_pattern->clear();
+            patternItem->pushButton_fgColor->hide();
+            patternItem->pushButton_bgColor->hide();
+            patternItem->label_prompt->hide();
+            patternItem->spinBox_lineSpacer->hide();
+            patternItem->comboBox_patternType->setCurrentIndex(0);
         }
         // Scroll to the last used pattern:
-        mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), 49)));
+        mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), mVisiblePatternCount - 1)));
         const QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
         mpTriggersMainArea->label_idNumber->setText(QString::number(ID));
@@ -6750,6 +7410,26 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                // Update accessibility description for screen readers (appears after item name)
+                QString currentDesc = pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+                updatePackageItemAccessibility(pItem, currentDesc);
+
+                // Show visual warning banner (without screen reader announcement to avoid spam)
+                //: Package item warning banner shown in trigger editor when selecting package items
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."), false);
+
+                // Announce full educational message only on first package item encountered
+                static bool firstPackageAnnounced = false;
+                if (!firstPackageAnnounced) {
+                    //: First-time educational message for screen reader users about package items
+                    mudlet::self()->announce(tr("Package item. Copy before editing to preserve changes."));
+                    firstPackageAnnounced = true;
+                }
+            }
         }
 
     } else {
@@ -6799,6 +7479,26 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                // Update accessibility description for screen readers (appears after item name)
+                QString currentDesc = pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+                updatePackageItemAccessibility(pItem, currentDesc);
+
+                // Show visual warning banner (without screen reader announcement to avoid spam)
+                //: Package item warning banner shown in trigger editor when selecting package items
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."), false);
+
+                // Announce full educational message only on first package item encountered
+                static bool firstPackageAnnounced = false;
+                if (!firstPackageAnnounced) {
+                    //: First-time educational message for screen reader users about package items
+                    mudlet::self()->announce(tr("Package item. Copy before editing to preserve changes."));
+                    firstPackageAnnounced = true;
+                }
+            }
         }
 
     } else {
@@ -6847,6 +7547,26 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                // Update accessibility description for screen readers (appears after item name)
+                QString currentDesc = pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+                updatePackageItemAccessibility(pItem, currentDesc);
+
+                // Show visual warning banner (without screen reader announcement to avoid spam)
+                //: Package item warning banner shown in trigger editor when selecting package items
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."), false);
+
+                // Announce full educational message only on first package item encountered
+                static bool firstPackageAnnounced = false;
+                if (!firstPackageAnnounced) {
+                    //: First-time educational message for screen reader users about package items
+                    mudlet::self()->announce(tr("Package item. Copy before editing to preserve changes."));
+                    firstPackageAnnounced = true;
+                }
+            }
         }
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
@@ -7255,6 +7975,26 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                // Update accessibility description for screen readers (appears after item name)
+                QString currentDesc = pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+                updatePackageItemAccessibility(pItem, currentDesc);
+
+                // Show visual warning banner (without screen reader announcement to avoid spam)
+                //: Package item warning banner shown in trigger editor when selecting package items
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."), false);
+
+                // Announce full educational message only on first package item encountered
+                static bool firstPackageAnnounced = false;
+                if (!firstPackageAnnounced) {
+                    //: First-time educational message for screen reader users about package items
+                    mudlet::self()->announce(tr("Package item. Copy before editing to preserve changes."));
+                    firstPackageAnnounced = true;
+                }
+            }
         }
     } else {
         // On root of treewidget_actions: - show help message instead
@@ -7340,6 +8080,26 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
                            "possibly by another script. The error was:%2%3").arg(qsl("<br>"), error.value()));
         } else if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                // Update accessibility description for screen readers (appears after item name)
+                QString currentDesc = pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+                updatePackageItemAccessibility(pItem, currentDesc);
+
+                // Show visual warning banner (without screen reader announcement to avoid spam)
+                //: Package item warning banner shown in trigger editor when selecting package items
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."), false);
+
+                // Announce full educational message only on first package item encountered
+                static bool firstPackageAnnounced = false;
+                if (!firstPackageAnnounced) {
+                    //: First-time educational message for screen reader users about package items
+                    mudlet::self()->announce(tr("Package item. Copy before editing to preserve changes."));
+                    firstPackageAnnounced = true;
+                }
+            }
         }
 
     } else {
@@ -7394,6 +8154,26 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
 
         if (!pT->state()) {
             showError(pT->getError());
+        } else {
+            // Show package warning if this item belongs to a package
+            QString packageName = pT->packageName(pT);
+            if (!packageName.isEmpty()) {
+                // Update accessibility description for screen readers (appears after item name)
+                QString currentDesc = pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+                updatePackageItemAccessibility(pItem, currentDesc);
+
+                // Show visual warning banner (without screen reader announcement to avoid spam)
+                //: Package item warning banner shown in trigger editor when selecting package items
+                showWarning(tr("This item is part of a package. To best preserve your changes, copy this item before editing as package upgrades may overwrite modifications."), false);
+
+                // Announce full educational message only on first package item encountered
+                static bool firstPackageAnnounced = false;
+                if (!firstPackageAnnounced) {
+                    //: First-time educational message for screen reader users about package items
+                    mudlet::self()->announce(tr("Package item. Copy before editing to preserve changes."));
+                    firstPackageAnnounced = true;
+                }
+            }
         }
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
@@ -8549,6 +9329,20 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     mpTriggersMainArea->setVisible(view == EditorViewType::cmTriggerView);
     treeWidget_triggers->setVisible(view == EditorViewType::cmTriggerView);
 
+    const bool enablePatternShortcuts = view == EditorViewType::cmTriggerView;
+
+    if (mFirstPatternShortcut) {
+        mFirstPatternShortcut->setEnabled(enablePatternShortcuts);
+    }
+    for (auto* shortcut : mPatternNavigationShortcuts) {
+        if (shortcut) {
+            shortcut->setEnabled(enablePatternShortcuts);
+        }
+    }
+    if (mLastPatternShortcut) {
+        mLastPatternShortcut->setEnabled(enablePatternShortcuts);
+    }
+
     mpVarsMainArea->setVisible(view == EditorViewType::cmVarsView);
     treeWidget_variables->setVisible(view == EditorViewType::cmVarsView);
     checkBox_displayAllVariables->setVisible(view == EditorViewType::cmVarsView);
@@ -8822,6 +9616,7 @@ void dlgTriggerEditor::showError(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+    mCurrentBannerKey.clear();
 
     // Reconnect close button to normal hide behavior (not banner dismiss)
     disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
@@ -8832,19 +9627,20 @@ void dlgTriggerEditor::showError(const QString& text)
     }
 }
 
-void dlgTriggerEditor::showWarning(const QString& text)
+void dlgTriggerEditor::showWarning(const QString& text, bool announce)
 {
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+    mCurrentBannerKey.clear();
 
     // Reconnect close button to normal hide behavior (not banner dismiss)
     disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
 
-    if (!mpHost->mIsProfileLoadingSequence) {
+    if (!mpHost->mIsProfileLoadingSequence && announce) {
         mudlet::self()->announce(text);
     }
 }
@@ -8856,6 +9652,7 @@ void dlgTriggerEditor::showInfo(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(text);
     mpSystemMessageArea->show();
+    mCurrentBannerKey.clear();
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
@@ -8868,7 +9665,16 @@ void dlgTriggerEditor::showIntro(const QString& desiredOption)
         return;
     }
 
-    if (bannerPermanentlyHidden(mCurrentView)) {
+    static const auto bannerKey = qsl("intro");
+    bool includeBasePreference = true;
+    if (mCurrentView == EditorViewType::cmTriggerView) {
+        // The trigger intro banner predates the global suppression toggle, so keep
+        // honouring only its explicit "hide permanently" preference to ensure it
+        // still shows up for profiles that never opted out directly.
+        includeBasePreference = false;
+    }
+
+    if (bannerPermanentlyHidden(mCurrentView, bannerKey, includeBasePreference)) {
         return;
     }
 
@@ -8884,13 +9690,117 @@ void dlgTriggerEditor::showIntro(const QString& desiredOption)
     QString content = qsl("<p>%1</p><ul>%2</ul>")
         .arg(introAddCurrentItem.summary, introTextOptions);
 
-    mLastDismissedBannerContent = content;
-    mLastDismissedBannerView = mCurrentView;
+    showHideableBanner(content, bannerKey);
+}
+
+void dlgTriggerEditor::showHideableBanner(const QString& content, const QString& bannerKey)
+{
+    if (!mpSystemMessageArea) {
+        return;
+    }
+
+    const QString settingsKey = bannerSettingsKey(mCurrentView, bannerKey);
+    const QString baseKey = bannerSettingsKey(mCurrentView, QString());
+    if (settingsKey.isEmpty()) {
+        return;
+    }
+
+    if (mTemporarilyHiddenBanners.contains(settingsKey) || (!bannerKey.isEmpty() && mTemporarilyHiddenBanners.contains(baseKey))) {
+        return;
+    }
+
+    bool includeBasePreference = true;
+    if (mCurrentView == EditorViewType::cmTriggerView && bannerKey == qsl("intro")) {
+        // Match the behaviour in showIntro(): ignore the view-wide suppression
+        // switch so the legacy trigger intro reappears unless it was hidden via
+        // its own banner controls.
+        includeBasePreference = false;
+    }
+
+    if (bannerPermanentlyHidden(mCurrentView, bannerKey, includeBasePreference)) {
+        return;
+    }
+
+    if (mpSystemMessageArea->isVisible() && mCurrentBannerKey != bannerKey
+        && !mpSystemMessageArea->notificationAreaMessageBox->text().isEmpty()) {
+        return;
+    }
+
+    if (mpSystemMessageArea->isVisible() && mCurrentBannerKey == bannerKey
+        && mpSystemMessageArea->notificationAreaMessageBox->text() == content) {
+        return;
+    }
 
     disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+    disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
 
+    disconnect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, nullptr, nullptr);
+    connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this, &dlgTriggerEditor::slot_clickedMessageBox);
+
     showInfo(content);
+    mCurrentBannerKey = bannerKey;
+}
+
+QString dlgTriggerEditor::bannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const
+{
+    const QString legacyKey = legacyBannerSettingsKey(viewType, bannerKey);
+    if (legacyKey.isEmpty()) {
+        return legacyKey;
+    }
+
+    const QString prefix = profileSettingsPrefix();
+    if (prefix.isEmpty()) {
+        return legacyKey;
+    }
+
+    return qsl("%1/%2").arg(prefix, legacyKey);
+}
+
+QString dlgTriggerEditor::legacyBannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const
+{
+    const QMetaEnum metaEnum = QMetaEnum::fromType<EditorViewType>();
+    const char* enumName = metaEnum.valueToKey(static_cast<int>(viewType));
+
+    if (!enumName) {
+        return QString();
+    }
+
+    QString key = QString::fromLatin1(enumName).toLower();
+    if (!bannerKey.isEmpty()) {
+        key += qsl("/%1").arg(bannerKey);
+    }
+
+    return key;
+}
+
+QString dlgTriggerEditor::profileSettingsPrefix() const
+{
+    if (!mpHost) {
+        return QString();
+    }
+
+    const QString profileName = mpHost->getName();
+    if (profileName.isEmpty()) {
+        return QString();
+    }
+
+    const QString sanitized = utils::sanitizeForPath(profileName);
+    if (sanitized.isEmpty()) {
+        return QString();
+    }
+
+    return qsl("profiles/%1").arg(sanitized);
+}
+
+QString dlgTriggerEditor::patternNavigationHintSettingsKey() const
+{
+    const QString prefix = profileSettingsPrefix();
+    if (prefix.isEmpty()) {
+        return qsl("patternNavigationHintHidden");
+    }
+
+    return qsl("%1/patternNavigationHintHidden").arg(prefix);
 }
 
 void dlgTriggerEditor::slot_showActions()
@@ -9097,7 +10007,7 @@ void dlgTriggerEditor::slot_sourceReplace()
 {
     auto controller = mpSourceEditorEdbee->controller();
     auto replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
-    for (int i = 0; i < controller->textSelection()->rangeCount(); i++) {
+    for (size_t i = 0; i < controller->textSelection()->rangeCount(); i++) {
         auto &range = controller->textSelection()->range(i);
         if (mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
             slot_sourceFindNext();
@@ -10704,24 +11614,47 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     mSavingAs = false;
 }
 
-bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)
+bool dlgTriggerEditor::eventFilter(QObject* watched, QEvent* event)
 {
+    if (mIsGrabKey) {
+        if (event->type() == QEvent::KeyPress) {
+            auto* keyEvent = static_cast<QKeyEvent*>(event);
+            switch (keyEvent->key()) {
+            case Qt::Key_Up:
+            case Qt::Key_Down:
+            case Qt::Key_Left:
+            case Qt::Key_Right:
+            case Qt::Key_Escape:
+                this->event(event);
+                return true;
+            default:
+                return false;
+            }
+        }
+        return false;
+    }
+
     if (event->type() == QEvent::KeyPress) {
-        auto *keyEvent = static_cast<QKeyEvent *>(event);
-        switch (keyEvent->key())
-        {
-        case Qt::Key_Up:
-        case Qt::Key_Down:
-        case Qt::Key_Left:
-        case Qt::Key_Right:
-        case Qt::Key_Escape: // This one is needed to allow it to be used to CANCEL the key grab
-            this->event(event);
-            return true;
-        default:
-            return false;
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        const Qt::KeyboardModifiers modifiers = keyEvent->modifiers();
+        const Qt::KeyboardModifiers additionalModifiers = modifiers & (Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier | Qt::GroupSwitchModifier | Qt::KeypadModifier);
+        if (modifiers.testFlag(Qt::ControlModifier) && additionalModifiers == Qt::NoModifier) {
+            if (auto* edit = qobject_cast<SingleLineTextEdit*>(watched)) {
+                auto* patternItem = qobject_cast<dlgTriggerPatternEdit*>(edit->parentWidget());
+                if (keyEvent->key() == Qt::Key_Down) {
+                    if (focusNextPatternItem(patternItem)) {
+                        return true;
+                    }
+                } else if (keyEvent->key() == Qt::Key_Up) {
+                    if (focusPreviousPatternItem(patternItem)) {
+                        return true;
+                    }
+                }
+            }
         }
     }
-    return false;
+
+    return QMainWindow::eventFilter(watched, event);
 }
 
 bool dlgTriggerEditor::event(QEvent* event)
@@ -11406,6 +12339,8 @@ void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
     if (mpTriggersMainArea->widget_right->isVisible() != isShown) {
         mpTriggersMainArea->widget_right->setVisible(isShown);
     }
+
+    updatePatternTabOrder();
 }
 
 void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
@@ -11644,6 +12579,12 @@ void dlgTriggerEditor::hideSystemMessageArea()
 // In case the profile was reset while the editor was out of focus, checks for any script loading errors and displays them
 void dlgTriggerEditor::changeEvent(QEvent* e)
 {
+    QMainWindow::changeEvent(e);
+
+    if (e->type() == QEvent::LanguageChange) {
+        updatePatternNavigationHint();
+    }
+
     if (e->type() == QEvent::ActivationChange && this->isActiveWindow()) {
         if (mCurrentView == EditorViewType::cmScriptView) {
             auto scriptTreeWidgetItem = treeWidget_scripts->currentItem();
@@ -11720,7 +12661,17 @@ void dlgTriggerEditor::slot_bannerDismissClicked()
 
 void dlgTriggerEditor::handleBannerDismiss()
 {
+    mLastDismissedBannerView = mCurrentView;
+    mLastDismissedBannerContent = mpSystemMessageArea->notificationAreaMessageBox->text();
+    mLastDismissedBannerKey = mCurrentBannerKey;
+
+    const QString settingsKey = bannerSettingsKey(mCurrentView, mCurrentBannerKey);
+    if (!settingsKey.isEmpty()) {
+        mTemporarilyHiddenBanners.insert(settingsKey);
+    }
+
     hideSystemMessageArea();
+    mCurrentBannerKey.clear();
     showBannerUndoToast();
 }
 
@@ -11730,6 +12681,8 @@ void dlgTriggerEditor::showBannerUndoToast()
         mpBannerUndoTimer->stop();
         mpBannerUndoTimer->deleteLater();
     }
+
+    mCurrentBannerKey.clear();
 
     mpBannerUndoTimer = new QTimer(this);
     mpBannerUndoTimer->setSingleShot(true);
@@ -11767,48 +12720,89 @@ void dlgTriggerEditor::undoBannerDismiss()
         mpBannerUndoTimer = nullptr;
     }
 
-    if (mLastDismissedBannerView == mCurrentView && !mLastDismissedBannerContent.isEmpty()) {
-        mpSystemMessageArea->notificationAreaIconLabelError->hide();
-        mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-        mpSystemMessageArea->notificationAreaIconLabelInformation->show();
-        mpSystemMessageArea->notificationAreaMessageBox->setText(mLastDismissedBannerContent);
-        mpSystemMessageArea->show();
+    const QString settingsKey = bannerSettingsKey(mLastDismissedBannerView, mLastDismissedBannerKey);
+    if (!settingsKey.isEmpty()) {
+        mTemporarilyHiddenBanners.remove(settingsKey);
+    }
 
-        connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this, &dlgTriggerEditor::slot_clickedMessageBox);
+    setBannerPermanentlyHidden(mLastDismissedBannerView, mLastDismissedBannerKey, false);
+
+    // Remove the undo toast before restoring the banner so the new content can
+    // be shown immediately without being blocked by the active notification.
+    if (mpSystemMessageArea) {
+        mpSystemMessageArea->hide();
+    }
+    mCurrentBannerKey.clear();
+
+    if (mLastDismissedBannerView == mCurrentView && !mLastDismissedBannerContent.isEmpty()) {
+        showHideableBanner(mLastDismissedBannerContent, mLastDismissedBannerKey);
     }
 }
 
 
 void dlgTriggerEditor::handlePermanentBannerDismiss()
 {
-    setBannerPermanentlyHidden(mCurrentView, true);
+    setBannerPermanentlyHidden(mLastDismissedBannerView, mLastDismissedBannerKey, true);
     hideSystemMessageArea();
+    mCurrentBannerKey.clear();
 }
 
-bool dlgTriggerEditor::bannerPermanentlyHidden(EditorViewType viewType)
+bool dlgTriggerEditor::bannerPermanentlyHidden(EditorViewType viewType, const QString& bannerKey, bool includeBasePreference)
 {
-    const QMetaEnum metaEnum = QMetaEnum::fromType<EditorViewType>();
-    const char* enumName = metaEnum.valueToKey(static_cast<int>(viewType));
-
-    if (!enumName) {
+    const QString key = bannerSettingsKey(viewType, bannerKey);
+    const QString baseKey = bannerSettingsKey(viewType, QString());
+    const QString legacyKey = legacyBannerSettingsKey(viewType, bannerKey);
+    const QString legacyBaseKey = legacyBannerSettingsKey(viewType, QString());
+    if (key.isEmpty()) {
         return false;
     }
 
     QSettings* settings = mudlet::getQSettings();
-    const QString key = qsl("Editor/banner_permanently_hidden/%1").arg(QString::fromLatin1(enumName).toLower());
-    return settings->value(key, false).toBool();
+    if (!settings) {
+        return false;
+    }
+
+    auto migrateLegacyKey = [settings](const QString& newKey, const QString& oldKey) {
+        if (newKey.isEmpty() || oldKey.isEmpty() || newKey == oldKey) {
+            return;
+        }
+
+        const QString oldPath = qsl("Editor/banner_permanently_hidden/%1").arg(oldKey);
+        if (!settings->contains(oldPath)) {
+            return;
+        }
+
+        settings->remove(oldPath);
+    };
+
+    migrateLegacyKey(key, legacyKey);
+    migrateLegacyKey(baseKey, legacyBaseKey);
+
+    if (includeBasePreference && !bannerKey.isEmpty() && !baseKey.isEmpty()) {
+        if (settings->value(qsl("Editor/banner_permanently_hidden/%1").arg(baseKey), false).toBool()) {
+            return true;
+        }
+    }
+
+    return settings->value(qsl("Editor/banner_permanently_hidden/%1").arg(key), false).toBool();
 }
 
-void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, bool hidden)
+void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, const QString& bannerKey, bool hidden)
 {
-    const QMetaEnum metaEnum = QMetaEnum::fromType<EditorViewType>();
-    const char* enumName = metaEnum.valueToKey(static_cast<int>(viewType));
-
-    if (!enumName) {
+    const QString key = bannerSettingsKey(viewType, bannerKey);
+    const QString legacyKey = legacyBannerSettingsKey(viewType, bannerKey);
+    if (key.isEmpty()) {
         return;
     }
 
     QSettings* settings = mudlet::getQSettings();
-    const QString key = qsl("Editor/banner_permanently_hidden/%1").arg(QString::fromLatin1(enumName).toLower());
-    settings->setValue(key, hidden);
+    settings->setValue(qsl("Editor/banner_permanently_hidden/%1").arg(key), hidden);
+
+    if (!legacyKey.isEmpty() && legacyKey != key) {
+        settings->remove(qsl("Editor/banner_permanently_hidden/%1").arg(legacyKey));
+    }
+
+    if (!hidden) {
+        mTemporarilyHiddenBanners.remove(key);
+    }
 }

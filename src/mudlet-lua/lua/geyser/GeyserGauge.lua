@@ -375,6 +375,15 @@ function Geyser.Gauge:new (cons, container)
   return me
 end
 
+--- Deletes the gauge
+-- Note: The child labels (back, front, text) are already in windowList
+-- and will be deleted by the parent Container:delete() method, so we
+-- don't need to explicitly delete them here to avoid double-deletion.
+function Geyser.Gauge:type_delete()
+  -- Children are automatically deleted by Container:delete()
+  -- No additional cleanup needed
+end
+
 -- Overridden constructor to use add2
 function Geyser.Gauge:new2 (cons, container)
   cons = cons or {}

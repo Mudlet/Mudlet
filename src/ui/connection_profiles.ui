@@ -693,7 +693,7 @@
               </widget>
              </item>
              <item row="2" column="1">
-              <widget class="QComboBox" name="profile_history">
+              <widget class="WideComboBox" name="profile_history">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -939,6 +939,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>WideComboBox</class>
+   <extends>QComboBox</extends>
+   <header>WideComboBox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>listWidget_profiles</tabstop>
   <tabstop>welcome_message</tabstop>
