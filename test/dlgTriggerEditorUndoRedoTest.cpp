@@ -18,7 +18,7 @@
  ***************************************************************************/
 
 #include "dlgTriggerEditor.h"
-#include "MudletUndoStack.h"
+#include "EditorUndoStack.h"
 #include "TTreeWidget.h"
 #include "Host.h"
 #include "dlgTriggerPatternEdit.h"
