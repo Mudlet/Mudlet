@@ -307,7 +307,7 @@ jobs:
           -DUSE_SANITIZER="${{ env.MUDLET_SANITIZERS }}"
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
-        MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address undefined leak' || '' }}
+        MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
