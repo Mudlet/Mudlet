@@ -119,7 +119,7 @@ fi
 cd "${PACKAGE_DIR}" || exit 1
 echo ""
 
-echo "Copying wanted compiled files from ${GITHUB_WORKSPACE}/build-${MSYSTEM} to ${PACKAGE_DIR} ..."
+echo "Copying wanted compiled files from ${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM} to ${PACKAGE_DIR} ..."
 echo ""
 
 cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
@@ -158,7 +158,9 @@ for LIB in "${NEEDED_LIBS[@]}"; do
   # The paths that ntldd return are "Windows" form ones:
   # "C:\msys64\mingw64\bin\file.dll" so run them through cygpath to convert them
   # to POSIX style ones: "/mingw64/bin/file.dll":
-  cp -p -v "$(cygpath -au "${LIB}")" .
+  LIB_WINPATHFILE="$(cygpath -au "${LIB}")"
+  echo "Copying: \"${LIB_WINPATHFILE}\""
+  cp -p -v "${LIB_WINPATHFILE}" .
 done
 echo "    ... done copying identified libraries."
 
