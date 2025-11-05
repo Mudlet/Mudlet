@@ -29,8 +29,7 @@ class Host;
 class MudletAddItemCommand : public MudletEditorCommand
 {
 public:
-    MudletAddItemCommand(EditorViewType viewType, int itemID, int parentID,
-                         int positionInParent, bool isFolder, const QString& itemName, Host* host);
+    MudletAddItemCommand(EditorViewType viewType, int itemID, int parentID, int positionInParent, bool isFolder, const QString& itemName, Host* host);
 
     void undo() override;
     void redo() override;
@@ -58,7 +57,7 @@ private:
     bool mIsFolder;
     QString mItemName;
     QString mItemSnapshot;
-    mutable bool mSkipFirstRedo = true;  // Skip initial redo() called by QUndoStack::push()
+    mutable bool mSkipFirstRedo = true; // Skip initial redo() called by QUndoStack::push()
 
     // Track ID changes for item and all descendants when recreated (oldID -> newID)
     QList<QPair<int, int>> mIDChanges;

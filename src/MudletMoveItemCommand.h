@@ -28,10 +28,7 @@ class Host;
 class MudletMoveItemCommand : public MudletEditorCommand
 {
 public:
-    MudletMoveItemCommand(EditorViewType viewType, int itemID,
-                          int oldParentID, int newParentID,
-                          int oldPosition, int newPosition,
-                          const QString& itemName, Host* host);
+    MudletMoveItemCommand(EditorViewType viewType, int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition, const QString& itemName, Host* host);
 
     void undo() override;
     void redo() override;
@@ -50,7 +47,7 @@ private:
     int mOldPosition;
     int mNewPosition;
     QString mItemName;
-    mutable bool mSkipFirstRedo = true;  // Skip initial redo() called by QUndoStack::push()
+    mutable bool mSkipFirstRedo = true; // Skip initial redo() called by QUndoStack::push()
 };
 
 #endif // MUDLET_MUDLETMOVEITEMCOMMAND_H

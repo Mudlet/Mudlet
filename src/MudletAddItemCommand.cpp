@@ -28,15 +28,14 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-MudletAddItemCommand::MudletAddItemCommand(EditorViewType viewType, int itemID, int parentID,
-                                           int positionInParent, bool isFolder, const QString& itemName, Host* host)
-    : MudletEditorCommand(generateText(viewType, itemName, isFolder), host)
-    , mViewType(viewType)
-    , mItemID(itemID)
-    , mParentID(parentID)
-    , mPositionInParent(positionInParent)
-    , mIsFolder(isFolder)
-    , mItemName(itemName)
+MudletAddItemCommand::MudletAddItemCommand(EditorViewType viewType, int itemID, int parentID, int positionInParent, bool isFolder, const QString& itemName, Host* host)
+: MudletEditorCommand(generateText(viewType, itemName, isFolder), host)
+, mViewType(viewType)
+, mItemID(itemID)
+, mParentID(parentID)
+, mPositionInParent(positionInParent)
+, mIsFolder(isFolder)
+, mItemName(itemName)
 {
 }
 
@@ -56,7 +55,8 @@ void MudletAddItemCommand::undo()
         TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
         if (trigger) {
             std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
-                if (!t) return;
+                if (!t)
+                    return;
                 mOldDescendantIDs.append(t->getID());
                 auto* children = t->getChildrenList();
                 if (children) {
@@ -76,7 +76,8 @@ void MudletAddItemCommand::undo()
         TAlias* alias = mpHost->getAliasUnit()->getAlias(mItemID);
         if (alias) {
             std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
-                if (!a) return;
+                if (!a)
+                    return;
                 mOldDescendantIDs.append(a->getID());
                 auto* children = a->getChildrenList();
                 if (children) {
@@ -96,7 +97,8 @@ void MudletAddItemCommand::undo()
         TTimer* timer = mpHost->getTimerUnit()->getTimer(mItemID);
         if (timer) {
             std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
-                if (!t) return;
+                if (!t)
+                    return;
                 mOldDescendantIDs.append(t->getID());
                 auto* children = t->getChildrenList();
                 if (children) {
@@ -116,7 +118,8 @@ void MudletAddItemCommand::undo()
         TScript* script = mpHost->getScriptUnit()->getScript(mItemID);
         if (script) {
             std::function<void(TScript*)> collectIDs = [&](TScript* s) {
-                if (!s) return;
+                if (!s)
+                    return;
                 mOldDescendantIDs.append(s->getID());
                 auto* children = s->getChildrenList();
                 if (children) {
@@ -136,7 +139,8 @@ void MudletAddItemCommand::undo()
         TKey* key = mpHost->getKeyUnit()->getKey(mItemID);
         if (key) {
             std::function<void(TKey*)> collectIDs = [&](TKey* k) {
-                if (!k) return;
+                if (!k)
+                    return;
                 mOldDescendantIDs.append(k->getID());
                 auto* children = k->getChildrenList();
                 if (children) {
@@ -156,7 +160,8 @@ void MudletAddItemCommand::undo()
         TAction* action = mpHost->getActionUnit()->getAction(mItemID);
         if (action) {
             std::function<void(TAction*)> collectIDs = [&](TAction* a) {
-                if (!a) return;
+                if (!a)
+                    return;
                 mOldDescendantIDs.append(a->getID());
                 auto* children = a->getChildrenList();
                 if (children) {
@@ -319,7 +324,8 @@ void MudletAddItemCommand::redo()
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
                 std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
-                    if (!t) return;
+                    if (!t)
+                        return;
                     newDescendantIDs.append(t->getID());
                     auto* children = t->getChildrenList();
                     if (children) {
@@ -354,7 +360,8 @@ void MudletAddItemCommand::redo()
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
                 std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
-                    if (!a) return;
+                    if (!a)
+                        return;
                     newDescendantIDs.append(a->getID());
                     auto* children = a->getChildrenList();
                     if (children) {
@@ -389,7 +396,8 @@ void MudletAddItemCommand::redo()
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
                 std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
-                    if (!t) return;
+                    if (!t)
+                        return;
                     newDescendantIDs.append(t->getID());
                     auto* children = t->getChildrenList();
                     if (children) {
@@ -424,7 +432,8 @@ void MudletAddItemCommand::redo()
                 // Collect all new descendant IDs after recreation
                 QList<int> newDescendantIDs;
                 std::function<void(TScript*)> collectIDs = [&](TScript* s) {
-                    if (!s) return;
+                    if (!s)
+                        return;
                     newDescendantIDs.append(s->getID());
                     auto* children = s->getChildrenList();
                     if (children) {
@@ -453,8 +462,7 @@ void MudletAddItemCommand::redo()
                         }
                     }
                 } else {
-                    qWarning() << "MudletAddItemCommand::redo() - ID count mismatch! Old:" << mOldDescendantIDs.size()
-                               << "New:" << newDescendantIDs.size();
+                    qWarning() << "MudletAddItemCommand::redo() - ID count mismatch! Old:" << mOldDescendantIDs.size() << "New:" << newDescendantIDs.size();
                 }
             } else {
                 qWarning() << "MudletAddItemCommand::redo() - Failed to recreate script from snapshot";
@@ -473,7 +481,8 @@ void MudletAddItemCommand::redo()
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
                 std::function<void(TKey*)> collectIDs = [&](TKey* k) {
-                    if (!k) return;
+                    if (!k)
+                        return;
                     newDescendantIDs.append(k->getID());
                     auto* children = k->getChildrenList();
                     if (children) {
@@ -508,7 +517,8 @@ void MudletAddItemCommand::redo()
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
                 std::function<void(TAction*)> collectIDs = [&](TAction* a) {
-                    if (!a) return;
+                    if (!a)
+                        return;
                     newDescendantIDs.append(a->getID());
                     auto* children = a->getChildrenList();
                     if (children) {

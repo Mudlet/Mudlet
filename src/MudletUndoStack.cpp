@@ -18,14 +18,13 @@
  ***************************************************************************/
 
 #include "MudletUndoStack.h"
-#include "MudletEditorCommand.h"
 #include "MudletAddItemCommand.h"
 #include "MudletDeleteItemCommand.h"
+#include "MudletEditorCommand.h"
 
 #include <QDebug>
 
-MudletUndoStack::MudletUndoStack(QObject* parent)
-    : QUndoStack(parent)
+MudletUndoStack::MudletUndoStack(QObject* parent) : QUndoStack(parent)
 {
     // Connect to indexChanged signal to emit itemsChanged after undo/redo
     connect(this, &QUndoStack::indexChanged, this, [this](int newIndex) {
@@ -88,8 +87,7 @@ void MudletUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
             }
             if (allValid) {
 #if defined(DEBUG_UNDO_REDO)
-                qDebug() << "MudletUndoStack::emitChangesForCommand() - Emitting itemsChanged for view type"
-                         << static_cast<int>(it.key()) << "with" << itemIDs.size() << "items:" << itemIDs;
+                qDebug() << "MudletUndoStack::emitChangesForCommand() - Emitting itemsChanged for view type" << static_cast<int>(it.key()) << "with" << itemIDs.size() << "items:" << itemIDs;
 #endif
                 emit itemsChanged(it.key(), itemIDs);
             }
@@ -171,8 +169,7 @@ void MudletUndoStack::undo()
     if (index() > 0) {
         const QUndoCommand* cmd = command(index() - 1);
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletUndoStack::undo() - Undoing command:" << (cmd ? cmd->text() : QStringLiteral("null"))
-                 << "at index" << (index() - 1);
+        qDebug() << "MudletUndoStack::undo() - Undoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << (index() - 1);
 #endif
 
         // Call the base class undo
@@ -211,8 +208,7 @@ void MudletUndoStack::redo()
     if (index() < count()) {
         const QUndoCommand* cmd = command(index());
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "MudletUndoStack::redo() - Redoing command:" << (cmd ? cmd->text() : QStringLiteral("null"))
-                 << "at index" << index();
+        qDebug() << "MudletUndoStack::redo() - Redoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << index();
 #endif
 
         // Check if this is an AddItemCommand (need to check before redo since ID may change)

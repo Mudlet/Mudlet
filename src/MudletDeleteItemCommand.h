@@ -31,7 +31,8 @@
 class MudletDeleteItemCommand : public MudletEditorCommand
 {
 public:
-    struct DeletedItemInfo {
+    struct DeletedItemInfo
+    {
         int itemID;
         int parentID;
         int positionInParent;
@@ -60,8 +61,8 @@ private:
 
     EditorViewType mViewType;
     QList<DeletedItemInfo> mDeletedItems;
-    QList<QPair<int, int>> mIDChanges;  // Track ID changes during undo (oldID, newID)
-    bool mLastOperationWasValid{true};  // Track if last undo/redo processed any valid items
+    QList<QPair<int, int>> mIDChanges; // Track ID changes during undo (oldID, newID)
+    bool mLastOperationWasValid{true}; // Track if last undo/redo processed any valid items
 };
 
 #endif // MUDLET_MUDLETDELETEITEMCOMMAND_H

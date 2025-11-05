@@ -31,19 +31,10 @@ namespace EditorViewTypes {
 Q_NAMESPACE
 
 // Editor view type enum - used by commands and dlgTriggerEditor
-enum class EditorViewType {
-    cmUnknownView = 0,
-    cmTriggerView = 0x01,
-    cmTimerView = 0x02,
-    cmAliasView = 0x03,
-    cmScriptView = 0x04,
-    cmActionView = 0x05,
-    cmKeysView = 0x06,
-    cmVarsView = 0x07
-};
+enum class EditorViewType { cmUnknownView = 0, cmTriggerView = 0x01, cmTimerView = 0x02, cmAliasView = 0x03, cmScriptView = 0x04, cmActionView = 0x05, cmKeysView = 0x06, cmVarsView = 0x07 };
 Q_ENUM_NS(EditorViewType)
 
-}  // namespace EditorViewTypes
+} // namespace EditorViewTypes
 
 using EditorViewTypes::EditorViewType;
 
@@ -54,11 +45,9 @@ using EditorViewTypes::EditorViewType;
 class MudletEditorCommand : public QUndoCommand
 {
 public:
-    explicit MudletEditorCommand(Host* host, QUndoCommand* parent = nullptr)
-        : QUndoCommand(parent), mpHost(host) {}
+    explicit MudletEditorCommand(Host* host, QUndoCommand* parent = nullptr) : QUndoCommand(parent), mpHost(host) {}
 
-    explicit MudletEditorCommand(const QString& text, Host* host, QUndoCommand* parent = nullptr)
-        : QUndoCommand(text, parent), mpHost(host) {}
+    explicit MudletEditorCommand(const QString& text, Host* host, QUndoCommand* parent = nullptr) : QUndoCommand(text, parent), mpHost(host) {}
 
     ~MudletEditorCommand() override = default;
 

@@ -28,26 +28,22 @@
 #include "TTrigger.h"
 #include "utils.h"
 
-MudletMoveItemCommand::MudletMoveItemCommand(EditorViewType viewType, int itemID,
-                                             int oldParentID, int newParentID,
-                                             int oldPosition, int newPosition,
-                                             const QString& itemName, Host* host)
-    : MudletEditorCommand(generateText(viewType, itemName), host)
-    , mViewType(viewType)
-    , mItemID(itemID)
-    , mOldParentID(oldParentID)
-    , mNewParentID(newParentID)
-    , mOldPosition(oldPosition)
-    , mNewPosition(newPosition)
-    , mItemName(itemName)
+MudletMoveItemCommand::MudletMoveItemCommand(EditorViewType viewType, int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition, const QString& itemName, Host* host)
+: MudletEditorCommand(generateText(viewType, itemName), host)
+, mViewType(viewType)
+, mItemID(itemID)
+, mOldParentID(oldParentID)
+, mNewParentID(newParentID)
+, mOldPosition(oldPosition)
+, mNewPosition(newPosition)
+, mItemName(itemName)
 {
 }
 
 void MudletMoveItemCommand::undo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletMoveItemCommand::undo() - Moving" << mItemName << "(ID:" << mItemID << ")"
-             << "from parent" << mNewParentID << "to parent" << mOldParentID << "at position" << mOldPosition;
+    qDebug() << "MudletMoveItemCommand::undo() - Moving" << mItemName << "(ID:" << mItemID << ")" << "from parent" << mNewParentID << "to parent" << mOldParentID << "at position" << mOldPosition;
 #endif
     moveItem(mNewParentID, mOldParentID, mOldPosition);
 }
@@ -55,8 +51,7 @@ void MudletMoveItemCommand::undo()
 void MudletMoveItemCommand::redo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletMoveItemCommand::redo() - Moving" << mItemName << "(ID:" << mItemID << ")"
-             << "from parent" << mOldParentID << "to parent" << mNewParentID << "at position" << mNewPosition;
+    qDebug() << "MudletMoveItemCommand::redo() - Moving" << mItemName << "(ID:" << mItemID << ")" << "from parent" << mOldParentID << "to parent" << mNewParentID << "at position" << mNewPosition;
 #endif
     // Skip the first redo() which is automatically called by QUndoStack::push()
     // The move has already been performed by TTreeWidget::rowsInserted()

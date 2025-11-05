@@ -29,10 +29,7 @@
 class MudletModifyPropertyCommand : public MudletEditorCommand
 {
 public:
-    MudletModifyPropertyCommand(EditorViewType viewType, int itemID,
-                                const QString& itemName,
-                                const QString& oldStateXML, const QString& newStateXML,
-                                Host* host);
+    MudletModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host);
 
     void undo() override;
     void redo() override;

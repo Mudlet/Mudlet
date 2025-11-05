@@ -27,23 +27,15 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-MudletToggleActiveCommand::MudletToggleActiveCommand(EditorViewType viewType, int itemID,
-                                                     bool oldState, bool newState,
-                                                     const QString& itemName, Host* host)
-    : MudletEditorCommand(generateText(viewType, itemName, newState), host)
-    , mViewType(viewType)
-    , mItemID(itemID)
-    , mOldActiveState(oldState)
-    , mNewActiveState(newState)
-    , mItemName(itemName)
+MudletToggleActiveCommand::MudletToggleActiveCommand(EditorViewType viewType, int itemID, bool oldState, bool newState, const QString& itemName, Host* host)
+: MudletEditorCommand(generateText(viewType, itemName, newState), host), mViewType(viewType), mItemID(itemID), mOldActiveState(oldState), mNewActiveState(newState), mItemName(itemName)
 {
 }
 
 void MudletToggleActiveCommand::undo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletToggleActiveCommand::undo() - Setting" << mItemName << "(ID:" << mItemID << ")"
-             << "active state to" << mOldActiveState;
+    qDebug() << "MudletToggleActiveCommand::undo() - Setting" << mItemName << "(ID:" << mItemID << ")" << "active state to" << mOldActiveState;
 #endif
     setItemActiveState(mItemID, mOldActiveState);
 }
@@ -51,8 +43,7 @@ void MudletToggleActiveCommand::undo()
 void MudletToggleActiveCommand::redo()
 {
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "MudletToggleActiveCommand::redo() - Setting" << mItemName << "(ID:" << mItemID << ")"
-             << "active state to" << mNewActiveState;
+    qDebug() << "MudletToggleActiveCommand::redo() - Setting" << mItemName << "(ID:" << mItemID << ")" << "active state to" << mNewActiveState;
 #endif
     // Skip the first redo() which is automatically called by QUndoStack::push()
     // The state change has already been performed before pushing to the stack
@@ -138,9 +129,7 @@ void MudletToggleActiveCommand::setItemActiveState(int itemID, bool active)
     }
 }
 
-QString MudletToggleActiveCommand::generateText(EditorViewType viewType,
-                                                const QString& itemName,
-                                                bool newState)
+QString MudletToggleActiveCommand::generateText(EditorViewType viewType, const QString& itemName, bool newState)
 {
     if (newState) {
         // Activating an item

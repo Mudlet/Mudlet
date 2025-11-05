@@ -28,16 +28,8 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-MudletModifyPropertyCommand::MudletModifyPropertyCommand(EditorViewType viewType, int itemID,
-                                                         const QString& itemName,
-                                                         const QString& oldStateXML, const QString& newStateXML,
-                                                         Host* host)
-    : MudletEditorCommand(generateText(viewType, itemName), host)
-    , mViewType(viewType)
-    , mItemID(itemID)
-    , mItemName(itemName)
-    , mOldStateXML(oldStateXML)
-    , mNewStateXML(newStateXML)
+MudletModifyPropertyCommand::MudletModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host)
+: MudletEditorCommand(generateText(viewType, itemName), host), mViewType(viewType), mItemID(itemID), mItemName(itemName), mOldStateXML(oldStateXML), mNewStateXML(newStateXML)
 {
 }
 

@@ -26,9 +26,7 @@
 class MudletToggleActiveCommand : public MudletEditorCommand
 {
 public:
-    MudletToggleActiveCommand(EditorViewType viewType, int itemID,
-                              bool oldState, bool newState,
-                              const QString& itemName, Host* host);
+    MudletToggleActiveCommand(EditorViewType viewType, int itemID, bool oldState, bool newState, const QString& itemName, Host* host);
 
     void undo() override;
     void redo() override;
@@ -40,16 +38,14 @@ public:
 
 private:
     void setItemActiveState(int itemID, bool active);
-    static QString generateText(EditorViewType viewType,
-                                const QString& itemName,
-                                bool newState);
+    static QString generateText(EditorViewType viewType, const QString& itemName, bool newState);
 
     EditorViewType mViewType;
     int mItemID;
     bool mOldActiveState;
     bool mNewActiveState;
     QString mItemName;
-    mutable bool mSkipFirstRedo = true;  // Skip initial redo() called by QUndoStack::push()
+    mutable bool mSkipFirstRedo = true; // Skip initial redo() called by QUndoStack::push()
 };
 
 #endif // MUDLET_MUDLETTOGGLEACTIVECOMMAND_H
