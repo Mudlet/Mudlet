@@ -84,7 +84,7 @@ if [[ "${GITHUB_REPO_NAME}" == "Mudlet/Mudlet" ]]; then
       YESTERDAY_DATE=$(date --date="yesterday" +%f)
       if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
         echo "=== No new commits, aborting public test build generation ==="
-        echo "ABORT_WORKFLOW=1" >> ${GITHUB_ENV}
+        echo "ABORT_WORKFLOW='true'" >> ${GITHUB_ENV}
         exit 0
       fi
 
