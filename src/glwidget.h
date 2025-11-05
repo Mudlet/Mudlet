@@ -30,11 +30,9 @@
 #include <winsock2.h>
 #endif
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QOpenGLWidget>
 #include <QPointer>
-#include "post_guard.h"
 
 class Host;
 class TMap;
@@ -115,7 +113,7 @@ private:
 
     float mScale = 1.0;
     int mTargetRoomId = 0;
-    
+
     // Frame timing for benchmarking
     QElapsedTimer mFrameTimer;
 };

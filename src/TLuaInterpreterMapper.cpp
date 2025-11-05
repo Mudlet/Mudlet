@@ -63,7 +63,6 @@
 #include <limits>
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -77,7 +76,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
@@ -3988,10 +3986,10 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
 
     // filePath parameter is required
     const QString filePath = getVerifiedString(L, __func__, 2, "file path");
-    
+
     std::optional<int> zLevel = std::nullopt;
     bool exportAllZLevels = false;
-    
+
     if (lua_gettop(L) > 2) {
         // Check if the third parameter is a boolean (true means export all Z levels)
         if (lua_type(L, 3) == LUA_TBOOLEAN) {
@@ -4004,7 +4002,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
             zLevel = getVerifiedInt(L, __func__, 3, "z level", true);
         }
     }
-    
+
     // NOTE: Zoom parameter temporarily disabled due to blurry room symbol rendering at zoom > 2.0
     qreal zoom = 2.0;
 
@@ -4018,7 +4016,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
     }
 
     auto [success, message] = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);
-    
+
     lua_pushboolean(L, success);
     if (!success) {
         lua_pushstring(L, message.toUtf8().constData());

@@ -17,10 +17,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
+// Restore the macros disabled in pre_guard.h so Mudlet keeps MSVC leak checks.
 #if defined(_DEBUG) && defined(_MSC_VER)
 #pragma pop_macro("new")
 #pragma pop_macro("malloc")
 #pragma pop_macro("realloc")
 #pragma pop_macro("free")
 #endif // _DEBUG && _MSC_VER
+

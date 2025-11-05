@@ -29,9 +29,7 @@
 #endif
 
 
-#include "pre_guard.h"
 #include <QObject>
-#include "post_guard.h"
 
 class Updater : public QObject
 {

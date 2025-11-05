@@ -437,7 +437,7 @@
          <item>
           <widget class="QSpinBox" name="spinBox_lineMargin">
            <property name="toolTip">
-            <string>&lt;p&gt;Within how many lines must all conditions be true to fire the trigger?&lt;/p&gt;</string>
+            <string>&lt;p&gt;&lt;b&gt;Multi-line Trigger Range&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Specifies within how many consecutive lines all trigger patterns must match.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Example:&lt;/b&gt; If set to 3 and pattern 1 matches on line 100, pattern 2 must match somewhere between lines 100-103 for the trigger to fire.&lt;/p&gt;</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>
@@ -446,10 +446,10 @@
             <string extracomment="This text represents what is shown in the spinBox_lineMargin control when it is at it minimum value and replaces the normal value and the normal prefix and suffix that would otherwise surround it before this or those elements are inserted in the middle of the groupBox_multiLineTrigger and the label_multiLineTrigger text.">OR / Multi-item</string>
            </property>
            <property name="suffix">
-            <string extracomment="This text is appended after the numeric value shown in the spin box (so that it and the prefix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text.">)</string>
+            <string extracomment="This text is appended after the numeric value shown in the spin box (so that it and the prefix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text."> lines)</string>
            </property>
            <property name="prefix">
-            <string extracomment="This text is prepended before the numeric value shown in the spin box (so that it and the suffix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text. For locales using spaces between words ensure a space is left at the end to separate the text from the number that is shown from the control after it.">AND / Multi-line (delta: </string>
+            <string extracomment="This text is prepended before the numeric value shown in the spin box (so that it and the suffix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text. For locales using spaces between words ensure a space is left at the end to separate the text from the number that is shown from the control after it.">AND / Multi-line (within: </string>
            </property>
            <property name="minimum">
             <number>-1</number>
