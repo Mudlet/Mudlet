@@ -1216,7 +1216,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mPatternNavigationHintCloseButton = new QToolButton(mPatternNavigationHintBanner);
     mPatternNavigationHintCloseButton->setObjectName(qsl("patternNavigationHintCloseButton"));
     mPatternNavigationHintCloseButton->setAutoRaise(true);
-    mPatternNavigationHintCloseButton->setIcon(style()->standardIcon(QStyle::SP_TitleBarCloseButton));
+    mPatternNavigationHintCloseButton->setIcon(QIcon::fromTheme(qsl("application-exit"), QIcon(qsl(":/icons/application-exit.png"))));
     //: Tooltip for the button that hides the pattern navigation hint banner.
     mPatternNavigationHintCloseButton->setToolTip(tr("Hide this hint"));
     patternNavigationHintLayout->addWidget(mPatternNavigationHintCloseButton);
@@ -1507,7 +1507,7 @@ void dlgTriggerEditor::setupPatternNavigationShortcuts()
         return;
     }
 
-    mFirstPatternShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), mpTriggersMainArea);
+    mFirstPatternShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), mpTriggersMainArea);
     mFirstPatternShortcut->setContext(Qt::WidgetWithChildrenShortcut);
     connect(mFirstPatternShortcut, &QShortcut::activated, this, [this]() {
         if (mVisiblePatternCount < 1) {
@@ -1582,7 +1582,7 @@ void dlgTriggerEditor::updatePatternNavigationHint()
     mPatternNavigationHintLabel->setText(tr(
         "<p><strong>Navigation shortcuts</strong></p>"
         "<ul>"
-        "<li>Press <strong>Ctrl+F</strong> to focus the first pattern field.</li>"
+        "<li>Press <strong>Ctrl+K</strong> to focus the first pattern field.</li>"
         "<li>Press <strong>Ctrl+L</strong> to jump to the last visible pattern field.</li>"
         "<li>Press <strong>Ctrl+Up</strong> or <strong>Ctrl+Down</strong> to move between pattern fields.</li>"
         "<li>Press <strong>Ctrl+Tab</strong> to toggle the Lua code editor.</li>"
