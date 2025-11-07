@@ -15,19 +15,27 @@
 <context>
     <name>MapInfoContributorManager</name>
     <message numerus="yes">
-        <location filename="../../src/mapInfoContributorManager.cpp" line="220"/>
         <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
         <extracomment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</extracomment>
-        <translation>
+        <translation type="vanished">
             <numerusform>{unused} Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</numerusform>
             <numerusform>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/mapInfoContributorManager.cpp" line="208"/>
+        <source>Room&#xa0;ID:&#xa0;%1 Position&#xa0;on&#xa0;Map: (%2,%3,%4) ‑ꃎnter of %n selected rooms</source>
+        <extracomment>This text uses non-breaking spaces (Unicode U+00A0) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be. When translating, please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected: %1 is the room ID number for which %2, %3, %4 are the x, y, and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
         </translation>
     </message>
 </context>
 <context>
     <name>ModernGLWidget</name>
     <message numerus="yes">
-        <location filename="../../src/modern_glwidget.cpp" line="245"/>
+        <location filename="../../src/modern_glwidget.cpp" line="252"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
             <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
@@ -38,7 +46,7 @@
 <context>
     <name>T2DMap</name>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="1504"/>
+        <location filename="../../src/T2DMap.cpp" line="1531"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
             <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
@@ -118,12 +126,29 @@ be in these areas...</numerusform>
 <context>
     <name>dlgPackageManager</name>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageManager.cpp" line="241"/>
         <source>Remove %n package(s)</source>
         <extracomment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</extracomment>
-        <translation>
+        <translation type="vanished">
             <numerusform>Remove %n package</numerusform>
             <numerusform>Remove %n packages</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/dlgPackageManager.cpp" line="642"/>
+        <source>Install (%n)</source>
+        <extracomment>Message on button in package manager to install one or more (%n is the count of) selected package(s).</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/dlgPackageManager.cpp" line="664"/>
+        <source>Remove (%n)</source>
+        <extracomment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
         </translation>
     </message>
 </context>
@@ -244,7 +269,7 @@ be in these areas...</numerusform>
 <context>
     <name>mudlet</name>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="5349"/>
+        <location filename="../../src/mudlet.cpp" line="5350"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
         <translation>
@@ -253,7 +278,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="5367"/>
+        <location filename="../../src/mudlet.cpp" line="5368"/>
         <source>Review %n update(s)...</source>
         <extracomment>Review update(s) menu item, %n is the count of how many updates are available</extracomment>
         <translation>
@@ -262,7 +287,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="5370"/>
+        <location filename="../../src/mudlet.cpp" line="5371"/>
         <source>Review the update(s) available...</source>
         <extracomment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</extracomment>
         <translation>
