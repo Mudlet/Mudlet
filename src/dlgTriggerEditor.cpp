@@ -1216,6 +1216,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mPatternNavigationHintCloseButton = new QToolButton(mPatternNavigationHintBanner);
     mPatternNavigationHintCloseButton->setObjectName(qsl("patternNavigationHintCloseButton"));
     mPatternNavigationHintCloseButton->setAutoRaise(true);
+    mPatternNavigationHintCloseButton->setFixedSize(16, 16);
     mPatternNavigationHintCloseButton->setIcon(QIcon::fromTheme(qsl("dialog-close"), QIcon(qsl(":/icons/dialog-close.png"))));
     //: Tooltip for the button that hides the pattern navigation hint banner.
     mPatternNavigationHintCloseButton->setToolTip(tr("Hide this hint"));
