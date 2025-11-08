@@ -64,10 +64,11 @@ fi
 BUILD_ACTION="Unknown"
 
 # We'll need this later on so grab it now - lifted from travis.set-build-info.sh:
-VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${GITHUB_WORKSPACE}/src/mudlet.pro")
-VERSION=$(echo "${VERSION}" | tr '[:upper:]' '[:lower:]')
+VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${GITHUB_WORKSPACE}/src/mudlet.pro" | tr '[:upper:]' '[:lower:]')
 export VERSION
 
+MAKE_PORTABLE='false'
+export MAKE_PORTABLE
 # Check that we are running on Mudlet's own GH infrastructure:
 if [[ "${GITHUB_REPO_NAME}" == "Mudlet/Mudlet" ]]; then
   # Check if GITHUB_REPO_TAG is "false"
@@ -93,6 +94,7 @@ if [[ "${GITHUB_REPO_NAME}" == "Mudlet/Mudlet" ]]; then
       CURRENT_DATE=$(date +%F)
       MUDLET_VERSION_BUILD="-ptb-${CURRENT_DATE}"
       BUILD_ACTION="PublicTest"
+      MAKE_PORTABLE='true'
 
     else
       # Either a PR build or a testing (PR merged into development branch) build
@@ -101,6 +103,8 @@ if [[ "${GITHUB_REPO_NAME}" == "Mudlet/Mudlet" ]]; then
         BUILD_COMMIT=$(git rev-parse --short "${GITHUB_PULL_REQUEST_HEAD_SHA}")
         MUDLET_VERSION_BUILD="-pr${GITHUB_PULL_REQUEST_NUMBER}"
         BUILD_ACTION="PullRequest"
+        # TODO: remove before merging the PR that adds this
+        MAKE_PORTABLE='true'
       else
         BUILD_COMMIT=$(git rev-parse --short HEAD)
         BUILD_ACTION="Testing"
@@ -110,11 +114,10 @@ if [[ "${GITHUB_REPO_NAME}" == "Mudlet/Mudlet" ]]; then
   else
     # Could be a release build - although this will not happen without manual
     # intervention by Vadi to adjust the QMake/CMake project meta-build files
-    # in a way that is known to him - in the meantime fail unconditionally!
-    echo "Release type builds not enabled - aborting!"
-    exit 3
+    # in a way that is known to him!
 
     BUILD_ACTION="Release"
+    MAKE_PORTABLE='true'
   fi
 
 else
@@ -226,6 +229,7 @@ cd ~ || exit 1
   echo "BUILD_CONFIG=$BUILD_CONFIG"
   echo "MUDLET_VERSION_BUILD=$MUDLET_VERSION_BUILD"
   echo "VERSION=$VERSION"
+  echo "MAKE_PORTABLE=$MAKE_PORTABLE"
 } >> "${GITHUB_ENV}"
 
 exit 0

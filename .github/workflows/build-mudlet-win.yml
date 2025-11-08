@@ -81,6 +81,10 @@ jobs:
         #   "release" - default, currently only value that can be used, will be set to this if not previously defined
         #   "debug" - not yet supported, but intended to include extra debug information and be built for debugging
         # MUDLET_VERSION_BUILD - something that identifies the build
+        # MAKE_PORTABLE - if 'true' then also produce a "portable" version
+        #   approprate to the BUILD_CONFIG. Normally this would be the case for
+        #   "Release" and "PublicTest" but during development/debugging of this
+        #   it may also include the "PullRequest" ones.
         # VERSION - the x.y.z (only) part of the Mudlet version number, without any suffix
       run: |
         export -p
@@ -159,6 +163,7 @@ jobs:
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        MAKE_PORTABLE: ${{ env.MAKE_PORTABLE }}
         MUDLET_VERSION_BUILD: ${{ env.MUDLET_VERSION_BUILD }}
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
       run: |
@@ -167,7 +172,7 @@ jobs:
 
     - name: Create portable artifact for uploading
       uses: actions/upload-artifact@v4
-      if: env.PORTABLE_ARTIFACT_NAME
+      if: env.MAKE_PORTABLE == 'true' && env.PORTABLE_ARTIFACT_NAME
       with:
         name: ${{env.PORTABLE_ARTIFACT_NAME}}
         path: ${{env.PORTABLE_ARTIFACT_WINPATHORFILE}}
@@ -212,7 +217,7 @@ jobs:
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
     - name: Upload portable artifact to make.mudlet.org
-      if: env.PORTABLE_ARTIFACT_NAME
+      if: env.MAKE_PORTABLE == 'true' && env.PORTABLE_ARTIFACT_NAME
       shell: msys2 {0}
       # The artifact creation process zipped (well "stored", as there is no
       # compression) the self-extracting archive which does need "unzipping" but

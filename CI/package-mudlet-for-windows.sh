@@ -145,12 +145,8 @@ echo "Examining Mudlet application and Qt plugins to identify other needed libra
 # ${MSYSTEM} is UPPERCASE but the paths ww need to consider are lowercase so
 # make that grep case-insensitive; we can't use ${MINGW_PREFIX} as the library
 # paths are output in Windows path format and it is a POSIX format value:
-echo "Unparsed ntldd output:"
-"${MINGW_PREFIX}/bin/ntldd" --recursive ./mudlet.exe \
-  ./{generic,iconengines,imageformats,multimedia,networkinformation,platforms,styles,texttospeech,tls}/*.dll
-
 mapfile -t NEEDED_LIBS < <("${MINGW_PREFIX}/bin/ntldd" --recursive ./mudlet.exe \
-  ./{generic,iconengines,imageformats,multimedia,networkinformation,platforms,styles,texttospeech,tls}/*.dll \
+  ./*/*.dll \
   | /usr/bin/grep -v "Qt6" \
   | /usr/bin/grep -i "${MSYSTEM}" \
   | /usr/bin/cut -d ">" -f2 \
@@ -160,9 +156,8 @@ mapfile -t NEEDED_LIBS < <("${MINGW_PREFIX}/bin/ntldd" --recursive ./mudlet.exe 
 echo ""
 echo "Copying identified libraries from Mudlet executable and plugins..."
 for LIB in "${NEEDED_LIBS[@]}"; do
-  # The paths that ntldd return are "Windows" form ones:
-  # "C:\msys64\mingw64\bin\file.dll" so run them through cygpath to convert them
-  # to POSIX style ones: "/mingw64/bin/file.dll"
+  # The paths that ntldd return are "Windows" form ones so run them through
+  # cygpath to convert them to POSIX style ones.
   # Don't double-quote the argument to cygpath - extra spaces around the
   # contained value REALLY messes things up!
   cp -p -v "$(cygpath -au ${LIB})" .

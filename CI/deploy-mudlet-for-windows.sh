@@ -54,7 +54,7 @@ if [ -z "${BUILD_ACTION}" ]; then
   exit 10
 elif [ "${BUILD_ACTION}" == "Unknown" ] || [ "${BUILD_ACTION}" == "Archive" ]; then
   # Don't proceed further in this step - but abort in a "successful" manner
-  echo "BUILD_ACTION being \"${BUILD_ACTION}\" means no deployment step so exiting this step immediately!"
+  echo "BUILD_ACTION being \"${BUILD_ACTION}\" means no deployment so exiting this step in the workflow immediately!"
   exit 0
 fi
 
@@ -92,6 +92,9 @@ else
   #    "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678
   echo "BUILDING MUDLET ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
 fi
+if [ "${MAKE_PORTABLE}" == 'true' ]; then
+  echo "Also producing a portable version of the above."
+fi
 
 PACKAGE_PATH="$(cygpath -au "${GITHUB_WORKSPACE}/package-${MSYSTEM}-${BUILD_CONFIG}")"
 PACKAGE_WINPATH="$(cygpath -aw "${PACKAGE_PATH}")"
@@ -103,50 +106,52 @@ if [ "${BUILD_ACTION}" == "PullRequest" ] || [ "${BUILD_ACTION}" == "Testing" ];
   echo "Renaming mudlet.exe to ${PACKAGE_EXE}"
   mv "${PACKAGE_PATH}/mudlet.exe" "${PACKAGE_PATH}/${PACKAGE_EXE}"
 
-  # Although the "portable" version is also a compressed archive it is a self
-  # extracting executable one - which we have to make ourselves and include the
-  # "portable.txt" sentinel file. By putting that file into ${PACKAGE_PATH} and
-  # creating the self-extracting archive file then removing the sentinel we do
-  # not have to copy all the files in ${PACKAGE_PATH} to another location to
-  # make the portable one. Note that the creation of the original (zip) artifact
-  # is done by the GH action using the files placed in ${PACKAGE_PATH} as a
-  # separate workflow step.
-  echo "=== Preparing Portable artifact for upload to make.mudlet.org ==="
+  if [ "${MAKE_PORTABLE}" == 'true' ]; then
+    # Although the "portable" version is also a compressed archive it is a self
+    # extracting executable one - which we have to make ourselves and include
+    # the "portable.txt" sentinel file. By putting that file into
+    # ${PACKAGE_PATH} and creating the self-extracting archive file then
+    # removing the sentinel we do not have to copy all the files in
+    # ${PACKAGE_PATH} to another location to make the portable one. Note that
+    # the creation of the original (zip) artifact is done by the GH action using
+    # the files placed in ${PACKAGE_PATH} as a separate workflow step.
+    echo "=== Preparing Portable artifact for upload to make.mudlet.org ==="
 
-  # Create portable.txt file to enable portable mode (empty file) - meaning
-  # store the game data and settings under the directory where the executable is
-  # located when it is extracted:
-  touch "${PACKAGE_PATH}/portable.txt"
-  echo "Created empty portable.txt file: ${PACKAGE_PATH}/portable.txt"
+    # Create portable.txt file to enable portable mode (empty file) - meaning
+    # store the game data and settings under the directory where the executable
+    # is located when it is extracted:
+    touch "${PACKAGE_PATH}/portable.txt"
+    echo "Created empty portable.txt file: ${PACKAGE_PATH}/portable.txt"
 
-  # This name is more specific than originally coded but that was only targeting
-  # "Release" builds
-  if [ "${BUILD_ACTION}" == "PullRequest" ]; then
-    PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-pr${GITHUB_PULL_REQUEST_NUMBER}-${BUILD_COMMIT}-windows-64-portable.exe"
-  else
-    PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-testing-${BUILD_COMMIT}-windows-64-portable.exe"
+    # This name is more specific than originally coded but that was only
+    # targeting "Release" builds
+    if [ "${BUILD_ACTION}" == "PullRequest" ]; then
+      PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-pr${GITHUB_PULL_REQUEST_NUMBER}-${BUILD_COMMIT}-windows-64-portable.exe"
+    else
+      PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-testing-${BUILD_COMMIT}-windows-64-portable.exe"
+    fi
+    PORTABLE_ARTIFACT_WINPATHORFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
+
+    echo "Creating self-extracting archive from directory: $(basename "${PACKAGE_PATH}")"
+    # Actually create the portable ZIP archive - put it in the root of our
+    # working area:
+    7z a -mx9 -bt -sfx "$(cygpath -au "${PORTABLE_ARTIFACT_WINPATHORFILE}")"
+
+    # Make the detail available to the workflow file so it can be passed to the
+    # upload action
+    {
+      echo "PORTABLE_ARTIFACT_NAME=${PORTABLE_ARTIFACT_NAME}"
+      echo "PORTABLE_ARTIFACT_WINPATHORFILE=${PORTABLE_ARTIFACT_WINPATHORFILE}"
+    } >> "${GITHUB_ENV}"
+
+    echo ""
+    echo "Created portable self-extracting archive: ${PORTABLE_FILENAME}"
+
+    # Remove sentinel file:
+    rm "${PACKAGE_PATH}/portable.txt"
+    echo ""
+    echo "Removed portable.txt sentinel file"
   fi
-  PORTABLE_ARTIFACT_WINPATHORFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
-
-  echo "Creating self-extracting archive from directory: $(basename "${PACKAGE_PATH}")"
-  # Actually create the portable ZIP archive - put it in the root of our working
-  # area:
-  7z a -mx9 -bt -sfx "$(cygpath -au "${PORTABLE_ARTIFACT_WINPATHORFILE}")"
-
-  # Make the detail available to the workflow file so it can be passed to the
-  # upload action
-  {
-    echo "PORTABLE_ARTIFACT_NAME=${PORTABLE_ARTIFACT_NAME}"
-    echo "PORTABLE_ARTIFACT_WINPATHORFILE=${PORTABLE_ARTIFACT_WINPATHORFILE}"
-  } >> "${GITHUB_ENV}"
-
-  echo ""
-  echo "Created portable self-extracting archive: ${PORTABLE_FILENAME}"
-
-  # Remove sentinel file:
-  rm "${PACKAGE_PATH}/portable.txt"
-  echo ""
-  echo "Removed portable.txt sentinel file"
 
   # Define the upload filename - MUDLET_VERSION_BUILD will at least be something
   # like "-testing" or "-pr####" but NOT "-ptb-*" {PR commits did previously
@@ -182,7 +187,9 @@ else
     # it so it doesn't get mixed up with the Release one:
     PACKAGE_EXE="Mudlet PTB.exe"
     INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64"
-    PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64-portable.exe"
+    if [ "${MAKE_PORTABLE}" == 'true' ]; then
+      PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64-portable.exe"
+    fi
     # Allow public test builds to be installed side by side with the release
     # builds by renaming the app as well
     # No dots in the <id>: according to the guidelines by Squirrel
@@ -203,7 +210,9 @@ else
     echo "=== Creating a release build ==="
     PACKAGE_EXE="Mudlet.exe"
     INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64"
-    PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64-portable.exe"
+    if [ "${MAKE_PORTABLE}" == 'true' ]; then
+      PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64-portable.exe"
+    fi
     NAME_SUFFIX='_64_'
     INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet.ico")
     ID='Mudlet_64_'
@@ -240,46 +249,48 @@ else
       "${PACKAGE_EXE_WINPATHFILE}" "${PACKAGE_WINPATH}\\**\\*.dll"
   fi
 
-  echo "=== Preparing (signed) portable artifact for upload to make.mudlet.org ==="
+  if [ "${MAKE_PORTABLE}" == 'true' ]; then
+    echo "=== Preparing (signed) portable artifact for upload to make.mudlet.org ==="
 
-  # Create portable.txt file to enable portable mode (empty file) - meaning
-  # store the game data and settings under the directory where the executable is
-  # located when it is extracted:
-  touch "${PACKAGE_PATH}/portable.txt"
-  echo "Created empty portable.txt file: ${PACKAGE_PATH}/portable.txt"
+    # Create portable.txt file to enable portable mode (empty file) - meaning
+    # store the game data and settings under the directory where the executable
+    # is located when it is extracted:
+    touch "${PACKAGE_PATH}/portable.txt"
+    echo "Created empty portable.txt file: ${PACKAGE_PATH}/portable.txt"
 
-  PORTABLE_ARTIFACT_PATHORFILE="$(cygpath -au "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
-  PORTABLE_ARTIFACT_WINPATHORFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
+    PORTABLE_ARTIFACT_PATHORFILE="$(cygpath -au "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
+    PORTABLE_ARTIFACT_WINPATHORFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
 
-  echo "Creating self-extracting archive from directory: $(basename "${PACKAGE_PATH}")"
-  # Actually create the portable ZIP archive - put it in the root of our working
-  # area:
-  7z a -mx9 -bt -sfx "$(cygpath -au "${PORTABLE_ARTIFACT_WINPATHORFILE}")"
+    echo "Creating self-extracting archive from directory: $(basename "${PACKAGE_PATH}")"
+    # Actually create the portable ZIP archive - put it in the root of our
+    # working area:
+    7z a -mx9 -bt -sfx "$(cygpath -au "${PORTABLE_ARTIFACT_WINPATHORFILE}")"
 
-  if [ -n "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Signing Mudlet portable self-extracting archive ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${PORTABLE_ARTIFACT_WINPATHORFILE}"
+    if [ -n "${AZURE_ACCESS_TOKEN}" ]; then
+      echo "=== Signing Mudlet portable self-extracting archive ==="
+      java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
+        --storetype TRUSTEDSIGNING \
+        --keystore eus.codesigning.azure.net \
+        --storepass "${AZURE_ACCESS_TOKEN}" \
+        --alias Mudlet/Mudlet \
+        "${PORTABLE_ARTIFACT_WINPATHORFILE}"
+    fi
+
+    # Make the detail available to the workflow file so it can be passed to the
+    # upload action
+    {
+      echo "PORTABLE_ARTIFACT_NAME=${PORTABLE_ARTIFACT_NAME}"
+      echo "PORTABLE_ARTIFACT_WINPATHORFILE=${PORTABLE_ARTIFACT_WINPATHORFILE}"
+    } >> "${GITHUB_ENV}"
+
+    echo ""
+    echo "Created portable self-extracting archive: ${PORTABLE_FILENAME}"
+
+    # Remove sentinel file:
+    rm "${PACKAGE_PATH}/portable.txt"
+    echo ""
+    echo "Removed portable.txt sentinel file"
   fi
-
-  # Make the detail available to the workflow file so it can be passed to the
-  # upload action
-  {
-    echo "PORTABLE_ARTIFACT_NAME=${PORTABLE_ARTIFACT_NAME}"
-    echo "PORTABLE_ARTIFACT_WINPATHORFILE=${PORTABLE_ARTIFACT_WINPATHORFILE}"
-  } >> "${GITHUB_ENV}"
-
-  echo ""
-  echo "Created portable self-extracting archive: ${PORTABLE_FILENAME}"
-
-  # Remove sentinel file:
-  rm "${PACKAGE_PATH}/portable.txt"
-  echo ""
-  echo "Removed portable.txt sentinel file"
 
   echo "=== Preparing an intermediate artifact of the (signed) code ==="
   # This intermediate will NOT be uploaded but will remain on the GH server as
@@ -419,14 +430,12 @@ EOF
 
     echo "=== Uploading portable ZIP to mudlet.org ==="
     # Check if portable ZIP exists
-    if [[ -f "${PORTABLE_ARTIFACT_PATHORFILE}" ]]; then
-
+    if [ "${MAKE_PORTABLE}" == 'true' ] && [ -f "${PORTABLE_ARTIFACT_PATHORFILE}" ]; then
       # Create SSH key file for portable upload
       echo "${DEPLOY_SSH_KEY}" > temp_key_file_portable
       powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
 
       # Upload portable ZIP via SCP with proper naming
-      # FIXME: to support more than just "Release" builds
       powershell.exe <<EOF
 \$PORTABLE_ARTIFACT_WINPATHORFILE = "${PORTABLE_ARTIFACT_WINPATHORFILE}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
