@@ -15,20 +15,12 @@
 <context>
     <name>MapInfoContributorManager</name>
     <message numerus="yes">
-        <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
-        <extracomment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</extracomment>
-        <translation type="vanished">
-            <numerusform>{unused} Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</numerusform>
-            <numerusform>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <location filename="../../src/mapInfoContributorManager.cpp" line="208"/>
-        <source>Room&#xa0;ID:&#xa0;%1 Position&#xa0;on&#xa0;Map: (%2,%3,%4) ‑ꃎnter of %n selected rooms</source>
+        <source>Room&#xa0;ID:&#xa0;%1 Position&#xa0;on&#xa0;Map: (%2,%3,%4) ‑&#xa0;center of %n selected rooms</source>
         <extracomment>This text uses non-breaking spaces (Unicode U+00A0) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be. When translating, please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected: %1 is the room ID number for which %2, %3, %4 are the x, y, and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</extracomment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>{unused} Room&#xa0;ID:&#xa0;%1 Position&#xa0;on&#xa0;Map: (%2,%3,%4) ‑&#xa0;center of %n selected room</numerusform>
+            <numerusform>Room&#xa0;ID:&#xa0;%1 Position&#xa0;on&#xa0;Map: (%2,%3,%4) ‑&#xa0;center of %n selected rooms</numerusform>
         </translation>
     </message>
 </context>
@@ -126,29 +118,21 @@ be in these areas...</numerusform>
 <context>
     <name>dlgPackageManager</name>
     <message numerus="yes">
-        <source>Remove %n package(s)</source>
-        <extracomment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</extracomment>
-        <translation type="vanished">
-            <numerusform>Remove %n package</numerusform>
-            <numerusform>Remove %n packages</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <location filename="../../src/dlgPackageManager.cpp" line="642"/>
         <source>Install (%n)</source>
         <extracomment>Message on button in package manager to install one or more (%n is the count of) selected package(s).</extracomment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>Install (%n)</numerusform>
+            <numerusform>Install (%n)</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <location filename="../../src/dlgPackageManager.cpp" line="664"/>
         <source>Remove (%n)</source>
         <extracomment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</extracomment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>Remove (%n)</numerusform>
+            <numerusform>Remove (%n)</numerusform>
         </translation>
     </message>
 </context>
@@ -238,31 +222,6 @@ be in these areas...</numerusform>
  • an existing symbol from the list,
  • enter one or more characters to set a new symbol,
  • clear to unset.</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for all of the %n selected room(s), or enter a space to clear the symbol:</source>
-        <comment>%n is the total number of rooms involved.</comment>
-        <translation type="vanished">
-            <numerusform>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for the %n selected room, or enter a space to clear the symbol:</numerusform>
-            <numerusform>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for all of the %n selected rooms, or enter a space to clear the symbol:</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>To change the symbol for all of the %n selected room(s), please choose:
- • an existing symbol from the list below (sorted by most commonly used first)
- • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
- • enter a space to clear any existing symbols</source>
-        <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
-        <translation type="vanished">
-            <numerusform>To change the symbol for the %n selected rooms, please choose:
- • an existing symbol from the list below (sorted by most commonly used first)
- • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
- • enter a space to clear any existing symbols</numerusform>
-            <numerusform>To change the symbol for all of the %n selected rooms, please choose:
- • an existing symbol from the list below (sorted by most commonly used first)
- • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
- • enter a space to clear any existing symbols</numerusform>
         </translation>
     </message>
 </context>
