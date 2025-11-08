@@ -63,14 +63,29 @@ using namespace std::chrono_literals;
 #include "sentry.h"
 #endif
 #if defined(INCLUDE_SENTRY)
+
 struct VersionInfo {
+
     bool isRelease;
+
     bool isPublicTest;
+
     bool isTesting;
+
 };
-    
+
+
+// Global/static storage to ensure the data referenced by before_send remains
+
+// valid for the lifetime of the process.
+static VersionInfo g_sentryVersionInfo{false, false, false};
+
 sentry_value_t before_send(sentry_value_t event, void* hint, void* closure) {
-    auto* versions = static_cast<VersionInfo*>(closure);
+
+    Q_UNUSED(hint);
+    Q_UNUSED(closure);
+    auto* versions = &g_sentryVersionInfo;
+
     
     // Check if mudlet::self() is initialized to avoid crashes during early startup
     auto* mudletInstance = mudlet::self();
@@ -246,10 +261,20 @@ int main(int argc, char* argv[])
     qDebug() << "crashpad_handler path is: " << sentryCrashHandler;
     sentry_options_set_database_path(options, sentryPath.toLocal8Bit().constData());
     sentry_options_set_handler_path(options, sentryCrashHandler.toLocal8Bit().constData());
-    sentry_options_set_release(options, "mudlet @" APP_VERSION);
-    sentry_options_set_debug(options, false);
-    VersionInfo versions{releaseVersion, publicTestVersion, testingVersion};
-    sentry_options_set_before_send(options, before_send, &versions);
+    
+        sentry_options_set_release(options, "mudlet @" APP_VERSION);
+
+        sentry_options_set_debug(options, false);
+
+    
+        // Initialize global version info used by before_send callback
+        g_sentryVersionInfo.isRelease = releaseVersion;
+        g_sentryVersionInfo.isPublicTest = publicTestVersion;
+        g_sentryVersionInfo.isTesting = testingVersion;
+    
+        // Use the global/static VersionInfo to avoid lifetime issues
+        sentry_options_set_before_send(options, before_send, nullptr);
+
     if (releaseVersion) {
         sentry_options_set_environment(options, "release");
     } else if (publicTestVersion) {
