@@ -92,15 +92,15 @@ echo "=== Installing needed packages ==="
 pacman_attempts=0
 while true; do
   if /usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt-multimedia-wmf" \
-    "mingw-w64-${BUILDCOMPONENT}-qt-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt-translations" \
-    "mingw-w64-${BUILDCOMPONENT}-qt-tools" \
-    "mingw-w64-${BUILDCOMPONENT}-qt-5compat" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-translations" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
     "mingw-w64-${BUILDCOMPONENT}-angleproject" \
     "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6" \
     git \

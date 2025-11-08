@@ -202,6 +202,36 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
+#ifdef Q_OS_WINDOWS
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        if (qgetenv("MSYSTEM").isNull()) {
+            // print stdout to console if Mudlet is started in a console in Windows
+            // credit to https://stackoverflow.com/a/41701133 for the workaround
+            freopen("CONOUT$", "w", stdout);
+            freopen("CONOUT$", "w", stderr);
+        } else {
+            // simply print qt logs into stdout and stderr if it's MSYS2
+            qInstallMessageHandler(msys2QtMessageHandler);
+        }
+    }
+#endif
+
+#if defined(Q_OS_MACOS)
+    // Workaround for horrible mac rendering issues once the mapper widget
+    // is open - see https://bugreports.qt.io/browse/QTBUG-41257
+    QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+#elif defined(Q_OS_FREEBSD)
+#if defined(INCLUDE_3DMAPPER)
+    // Cure for diagnostic:
+    // "Qt WebEngine seems to be initialized from a plugin. Please set
+    // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
+    // before constructing QGuiApplication."
+    QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif // INCLUDE_3DMAPPER
+#endif
+
+    auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
     const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
@@ -233,35 +263,6 @@ int main(int argc, char* argv[])
     // Make sure everything flushes
     auto sentryClose = qScopeGuard([] { sentry_close(); });
 #endif
-#ifdef Q_OS_WINDOWS
-    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
-        if (qgetenv("MSYSTEM").isNull()) {
-            // print stdout to console if Mudlet is started in a console in Windows
-            // credit to https://stackoverflow.com/a/41701133 for the workaround
-            freopen("CONOUT$", "w", stdout);
-            freopen("CONOUT$", "w", stderr);
-        } else {
-            // simply print qt logs into stdout and stderr if it's MSYS2
-            qInstallMessageHandler(msys2QtMessageHandler);
-        }
-    }
-#endif
-
-#if defined(Q_OS_MACOS)
-    // Workaround for horrible mac rendering issues once the mapper widget
-    // is open - see https://bugreports.qt.io/browse/QTBUG-41257
-    QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
-#elif defined(Q_OS_FREEBSD)
-#if defined(INCLUDE_3DMAPPER)
-    // Cure for diagnostic:
-    // "Qt WebEngine seems to be initialized from a plugin. Please set
-    // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
-    // before constructing QGuiApplication."
-    QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-#endif // INCLUDE_3DMAPPER
-#endif
-
-    auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
 
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);

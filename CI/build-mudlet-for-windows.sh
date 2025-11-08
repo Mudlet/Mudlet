@@ -182,20 +182,17 @@ EOF
   
   # Build Sentry using CMake with Crashpad backend
   echo "  Debug: Running cmake configure..."
-  cmake . -DCMAKE_INSTALL_PREFIX="$(pwd)/install" -DCMAKE_TOOLCHAIN_FILE=toolchains/msys2.cmake
-  if [ $? -ne 0 ]; then
+  if ! cmake . -DCMAKE_INSTALL_PREFIX="$(pwd)/install" -DCMAKE_TOOLCHAIN_FILE=toolchains/msys2.cmake; then
     echo "  Error: CMake configure failed"
     exit 1
   fi
   echo "  Debug: Running build with cmake..."
-  cmake --build . --parallel "${NUMBER_OF_PROCESSORS:-1}"
-  if [ $? -ne 0 ]; then
+  if ! cmake --build . --parallel "${NUMBER_OF_PROCESSORS:-1}"; then
     echo "  Error: Sentry build failed"
     exit 1
   fi
   echo "  Debug: Running install..."
-  cmake --install .
-  if [ $? -ne 0 ]; then
+  if ! cmake --install .; then
     echo "  Error: Sentry install failed"
     exit 1
   fi
@@ -269,7 +266,7 @@ if [ "${WITH_SENTRY}" = "yes" ]; then
   )
   
   CRASHPAD_FOUND=false
-  for CRASHPAD_PATH in "${CRASHPAD_LOCATIONS[ @]}"; do
+  for CRASHPAD_PATH in "${CRASHPAD_LOCATIONS[@]}"; do
     if [ -f "$CRASHPAD_PATH" ]; then
       cp "$CRASHPAD_PATH" .
       echo "  crashpad_handler.exe copied from: $CRASHPAD_PATH"
@@ -281,7 +278,7 @@ if [ "${WITH_SENTRY}" = "yes" ]; then
   if [ "$CRASHPAD_FOUND" = false ]; then
     echo "  Warning: crashpad_handler.exe not found in any expected locations"
     echo "  Debug: Searched locations:"
-    for CRASHPAD_PATH in "${CRASHPAD_LOCATIONS[ @]}"; do
+    for CRASHPAD_PATH in "${CRASHPAD_LOCATIONS[@]}"; do
       echo "    - $CRASHPAD_PATH"
     done
   fi
