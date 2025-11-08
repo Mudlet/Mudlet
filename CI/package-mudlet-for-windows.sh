@@ -95,15 +95,18 @@ echo ""
 echo "Copying wanted compiled files from ${GITHUB_WORKSPACE}/build-${MSYSTEM} to ${GITHUB_WORKSPACE}/package-${MSYSTEM} ..."
 echo ""
 
-if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" ]; then
+if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build/src/mudlet_executable.exe" ]; then
   echo "ERROR: no Mudlet executable found - did the previous build"
   echo "complete sucessfully?"
   exit 6
 fi
 
-cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
-if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+cp "${GITHUB_WORKSPACE_UNIX_PATH}/build/src/mudlet_executable.exe" "${PACKAGE_DIR}/mudlet.exe"
+if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build/src/mudlet_executable.exe.debug" ]; then
+  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build/src/mudlet_executable.exe.debug" "${PACKAGE_DIR}/mudlet.exe.debug"
+fi
+if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build/_deps/sentry-build/crashpad_build/handler/crashpad_handler.exe" ]; then
+  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build/_deps/sentry-build/crashpad_build/handler/crashpad_handler.exe" "${PACKAGE_DIR}/"
 fi
 
 # The location that windeployqt6 puts the Qt translation files by default is "./translations"

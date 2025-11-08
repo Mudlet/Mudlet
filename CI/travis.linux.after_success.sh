@@ -42,7 +42,7 @@ then
   COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
   YESTERDAY_DATE=$(date -d "yesterday" '+%F' | tr -d '-')
 
-  git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git -b add-sentry "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/generic-linux"
 

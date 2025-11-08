@@ -683,6 +683,16 @@ if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
 endif()
 
+if (USE_SENTRY)
+  target_link_libraries(${LIB_MUDLET_TARGET} sentry::sentry)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE INCLUDE_SENTRY)
+  add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
+    $<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/crashpad_handler
+  )
+endif()
+
 target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
 add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)

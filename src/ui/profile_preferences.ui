@@ -4475,6 +4475,35 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_crashReports">
+         <property name="title">
+          <string>Crash reports</string>
+         </property>
+         <layout class="QVBoxLayout" name="vBoxLayout_groupBox_crashReports">
+          <item>
+           <widget class="QCheckBox" name="checkBox_crashreportsOfficial">
+            <property name="toolTip">
+             <string>&lt;p&gt;Submit crash reports for official releases to Mudlet developers to help them fix crashes.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Send crash reports for official releases</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_crashreportsTesting">
+            <property name="toolTip">
+             <string>&lt;p&gt;Submit crash reports for testing (PTB) releases to Mudlet developers to help them fix crashes.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Send crash reports for testing releases</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>

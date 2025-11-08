@@ -30,7 +30,6 @@
 #      [ SUPPORTED_SYSTEMS "List" "Of" "Systems"]
 #    )
 ###########################################################################
-
 macro(include_optional_module)
 
   # parse readable arguments
@@ -42,7 +41,6 @@ macro(include_optional_module)
     OPTIONAL_MODULE "${OPTIONAL_MODULE_OPTIONS}"
     "${OPTIONAL_MODULE_ONE_VALUE_ARGS}" "${OPTIONAL_MODULE_MULTI_VALUE_ARGS}"
     ${ARGN})
-
   # check arguments for existence
   if(NOT OPTIONAL_MODULE_ENVIRONMENT_VARIABLE)
     message(

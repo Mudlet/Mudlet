@@ -279,6 +279,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     label_invalidFontError->hide();
     label_variableWidthFontWarning->hide();
 
+    checkBox_crashreportsOfficial->setChecked(mudlet::self()->smSendCrashesForReleases);
+        checkBox_crashreportsTesting->setChecked(mudlet::self()->smSendCrashesForTesting);
+    // only show the "Crash reports" section for testing/PTB releases if we're on one,
+    // otherwise don't add visual clutter
+    if (!mudlet::self()->releaseVersion) {
+        checkBox_crashreportsTesting->show();
+    } else {
+        checkBox_crashreportsTesting->hide();
+    }
+
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
         auto& translation = pMudlet->mTranslationsMap[code];
@@ -4714,6 +4724,9 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 
 void dlgProfilePreferences::closeEvent(QCloseEvent* event)
 {
+    mudlet::self()->smSendCrashesForReleases = checkBox_crashreportsOfficial->isChecked();
+    mudlet::self()->smSendCrashesForTesting = checkBox_crashreportsTesting->isChecked();
+
     cancelShortcutCaptures();
 
     if (mpHost) {

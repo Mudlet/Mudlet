@@ -2714,18 +2714,14 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mAppearance = static_cast<enums::Appearance>(appearance);
     }
 
+    smSendCrashesForReleases = settings.value(qsl("sendCrashesForReleases"), QVariant(false)).toBool();
+    smSendCrashesForTesting = settings.value(qsl("sendCrashesForTesting"), QVariant(true)).toBool();
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
         qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage << "\" to a recognised locale, reverting to the POSIX 'C' one.";
         return;
     }
-
-// #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
-//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
-// #else
-//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
-// #endif
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -2938,6 +2934,8 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+    settings.setValue(qsl("sendCrashesForReleases"), smSendCrashesForReleases);
+    settings.setValue(qsl("sendCrashesForTesting"), smSendCrashesForTesting);
     mpSettings->setValue("AI/modelPath", mAIModelPath);
     mpSettings->setValue("AI/autoStart", mAIAutoStart);
 

@@ -147,6 +147,14 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
+                        OPTION_VARIABLE USE_QT6
+                        READABLE_NAME "build with Qt6 (if installed)")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SENTRY
+                        OPTION_VARIABLE USE_SENTRY
+                        READABLE_NAME "build with sentry.io"
+                        DEFAULT_VALUE OFF)
+
 
 find_package(Qt6 6.8.2 REQUIRED)
 
@@ -214,6 +222,7 @@ find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+  message(STATUS "Using ccache")
 endif(CCACHE_FOUND)
 
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
@@ -223,6 +232,13 @@ add_subdirectory(translations/translated)
 add_subdirectory(src)
 add_subdirectory(test)
 
+if (USE_SENTRY)
+  set(SENTRY_VERSION 0.10.0)
+  set(SENTRY_BACKEND "crashpad" CACHE STRING "Use crashpad backend" FORCE)
+  set(SENTRY_INTEGRATION_QT "ON" CACHE STRING "Enable Qt integration" FORCE)
+  set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/sentry ${CMAKE_MODULE_PATH})
+  include(BuildSentry)
+endif()
 if(USE_UPDATER)
   add_subdirectory(3rdparty/dblsqd)
 endif()

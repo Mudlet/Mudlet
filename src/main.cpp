@@ -43,6 +43,9 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
+#ifdef INCLUDE_SENTRY
+#include "sentry.h"
+#endif
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -158,6 +161,28 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
+#ifdef INCLUDE_SENTRY
+    sentry_options_t *options = sentry_options_new();
+    sentry_options_set_dsn(options, "https://354199e8f0214f5693242529583d6751@sentry.io/1299444");
+    sentry_options_set_release(options, APP_VERSION);
+    sentry_options_set_database_path(options, ".sentry-native");
+    sentry_options_set_handler_path(options, "crashpad_handler");
+    sentry_options_set_environment(options, mudlet::smSendCrashesForTesting ? "ptb" : "production");
+    sentry_options_set_debug(options, 1);
+
+    sentry_init(options);
+
+    sentry_value_t user = sentry_value_new_object();
+    sentry_value_set_by_key(user, "ip_address", sentry_value_new_string("{{auto}}"));
+    sentry_set_user(user);
+
+    sentry_set_extra("operating system", sentry_value_new_string(QSysInfo::prettyProductName().toStdString().c_str()));
+    sentry_set_extra("qt version", sentry_value_new_string(qVersion()));
+    sentry_set_extra("build version", sentry_value_new_string(APP_VERSION));
+
+    sentry_set_level(SENTRY_LEVEL_INFO);
+    sentry_capture_event(sentry_value_new_message_event(SENTRY_LEVEL_INFO, "main", "Mudlet is starting up"));
+#endif
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {
