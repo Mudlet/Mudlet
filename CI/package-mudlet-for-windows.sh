@@ -230,9 +230,8 @@ cp -v -p -t ./translations/lua "${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/m
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
-cp -v -p -t .
-    "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff \
-    "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
+cp -v -p -t . "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff
+cp -v -p -t . "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
 
 echo ""
 

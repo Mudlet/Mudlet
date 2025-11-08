@@ -65,7 +65,7 @@ jobs:
     - name: (Windows) Build
       shell: msys2 {0}
       working-directory: build
-      run: ${{github.workspace}}/CI/build-mudlet-for-windows.sh
+      run: ../CI/build-mudlet-for-windows.sh
 
     - name: (Windows) Run Lua tests
       timeout-minutes: 5
