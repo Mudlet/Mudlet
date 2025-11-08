@@ -672,6 +672,11 @@ if(USE_UPDATER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_UPDATER)
 endif(USE_UPDATER)
 
+if (USE_SENTRY)
+  target_link_libraries(${LIB_MUDLET_TARGET} sentry::sentry)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE INCLUDE_SENTRY)
+endif()
+
 if(USE_3DMAPPER)
   target_link_libraries(${LIB_MUDLET_TARGET} OpenGL::GLU)
   target_link_libraries(${LIB_MUDLET_TARGET} assimp::assimp)
@@ -683,21 +688,19 @@ if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
 endif()
 
+target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
+
+add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
+set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
+target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
+
 if (USE_SENTRY)
-  target_link_libraries(${LIB_MUDLET_TARGET} sentry::sentry)
-  target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE INCLUDE_SENTRY)
   add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
     $<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/crashpad_handler
   )
 endif()
-
-target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
-
-add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
-set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
-target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
