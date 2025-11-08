@@ -3202,6 +3202,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
     }
 
+    mudlet::self()->smSendCrashesForReleases = checkBox_crashreportsOfficial->isChecked();
+    mudlet::self()->smSendCrashesForTesting = checkBox_crashreportsTesting->isChecked();
 #if defined(INCLUDE_UPDATER)
     if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER")) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
@@ -4724,9 +4726,6 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 
 void dlgProfilePreferences::closeEvent(QCloseEvent* event)
 {
-    mudlet::self()->smSendCrashesForReleases = checkBox_crashreportsOfficial->isChecked();
-    mudlet::self()->smSendCrashesForTesting = checkBox_crashreportsTesting->isChecked();
-
     cancelShortcutCaptures();
 
     if (mpHost) {

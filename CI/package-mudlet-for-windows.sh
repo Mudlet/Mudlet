@@ -39,12 +39,13 @@
 # have been run.
 
 # Exit codes:
-# 0 - Everything is fine. 8-)
+# 0 - Everything is fine. 8-) 
 # 1 - Failure to change to a directory
 # 2 - Unsupported MSYS2/MINGGW shell type
 # 3 - Unsupported build type
 # 4 - Directory to be used to assemble the package is NOT empty
 # 6 - No Mudlet.exe file found to work with
+# 7 - Sentry enabled but crashpad_handler.exe is missing
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
@@ -95,20 +96,31 @@ echo ""
 echo "Copying wanted compiled files from ${GITHUB_WORKSPACE}/build-${MSYSTEM} to ${GITHUB_WORKSPACE}/package-${MSYSTEM} ..."
 echo ""
 
-if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build/src/mudlet_executable.exe" ]; then
+if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" ]; then
   echo "ERROR: no Mudlet executable found - did the previous build"
   echo "complete sucessfully?"
   exit 6
 fi
 
-cp "${GITHUB_WORKSPACE_UNIX_PATH}/build/src/mudlet_executable.exe" "${PACKAGE_DIR}/mudlet.exe"
-if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build/src/mudlet_executable.exe.debug" ]; then
-  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build/src/mudlet_executable.exe.debug" "${PACKAGE_DIR}/mudlet.exe.debug"
-fi
-if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build/_deps/sentry-build/crashpad_build/handler/crashpad_handler.exe" ]; then
-  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build/_deps/sentry-build/crashpad_build/handler/crashpad_handler.exe" "${PACKAGE_DIR}/"
+cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
+if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
+  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
+# Copy crashpad_handler.exe if Sentry is enabled
+if [ "${WITH_SENTRY}" = "yes" ]; then
+  CRASHPAD_HANDLER_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_handler.exe"
+  if [ -f "${CRASHPAD_HANDLER_PATH}" ]; then
+    cp "${CRASHPAD_HANDLER_PATH}" "${PACKAGE_DIR}/"
+    echo "  crashpad_handler.exe copied for Sentry crash reporting"
+  else
+    echo "Warning: Sentry is enabled but crashpad_handler.exe was not found"
+    echo "         Expected location: ${CRASHPAD_HANDLER_PATH}"
+    echo "         Crash reporting may not work properly"
+    echo "         Check the Sentry build process in build-mudlet-for-windows.sh"
+    exit 7
+  fi
+fi
 # The location that windeployqt6 puts the Qt translation files by default is "./translations"
 # unfortunately this is not what
 # "QLibraryInfo::path(QLibraryInfo::TranslationsPath)" in the calls to
@@ -129,7 +141,7 @@ fi
 # can manifest as being unable to "require" the library within lua
 # and doing the above "ntldd" check revealed that, for instance,
 # "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
-#
+# 
 echo ""
 echo "Examining Mudlet application to identify other needed libraries..."
 NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
@@ -151,7 +163,7 @@ echo "Copying other, known to be needed, libraries in..."
 # libjasper to libwebpdemux-2 are additional image format handlers that Qt can
 # use if they are present.
 # libsqlite3 and libyajl are needed by lua modules (luasql-sqlite3) and at Mudlet run time.
-cp -v -p -t . \
+cp -v -p -t .
     "${MINGW_INTERNAL_BASE_DIR}/bin/libjasper.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libjpeg-8.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libtiff-6.dll" \
@@ -164,7 +176,7 @@ echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness - but we
 # only do 64-bits now:
-cp -v -p -t . \
+cp -v -p -t .
     "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
 
@@ -180,7 +192,7 @@ echo ""
 # the rock for those will also have to be installed and their C(.dll)/Lua (.lua)
 # files included here:
 echo "Copying lua C libraries in..."
-cp -v -p -t . \
+cp -v -p -t .
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lfs.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
@@ -218,7 +230,7 @@ cp -v -p -t ./translations/lua "${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/m
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
-cp -v -p -t . \
+cp -v -p -t .
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
 
@@ -267,7 +279,7 @@ echo "Created portable ZIP: ${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
 echo ""
 
 # For debugging purposes:
-# echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows "~/src/mudlet/package"):"
+# echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows "~/src/mudlet/package"):
 # /usr/bin/ls -aRl
 # echo ""
 

@@ -30,7 +30,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
-            gcc_compiler_version: 10
+            gcc_compiler_version: 11
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
@@ -45,7 +45,7 @@ jobs:
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            gcc_compiler_version: 10
+            gcc_compiler_version: 11
             qt: '6.9.0'
           - os: macos-13
             buildname: 'macos (x86_64) / c++, lua tests'
@@ -219,13 +219,15 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
       run: |
+        # Add the PPA for necessary GCC version
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get update
-
+        sudo apt-get update
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
-          libxkbcommon-x11-0 imagemagick libassimp-dev -y
+        sudo apt-get install libcurl4-openssl-dev libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev \
+        libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} libxkbcommon-x11-0 imagemagick libassimp-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -250,6 +252,9 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
+    - name: Enable sentry.io for releases
+      if: matrix.deploy == 'deploy'
+      run: echo "WITH_SENTRY=yes" >> $GITHUB_ENV
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
@@ -401,6 +406,38 @@ jobs:
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
         TRIPLET: ${{matrix.triplet}}
 
+    - name: Upload debug symbols and source to sentry.io
+      if: env.WITH_SENTRY == 'yes'
+      env:
+        SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+      run: |
+        if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+          echo "No SENTRY_AUTH_TOKEN available, skipping debug symbol upload"
+          exit 0
+        fi
+        sudo pip install --upgrade sentry-cli
+        export SENTRY_ORG=mudlet
+        export SENTRY_PROJECT=mudlet
+        export SENTRY_VERSION=${{env.VERSION}}${{env.MUDLET_VERSION_BUILD}}
+        # setup version within sentry
+        sentry-cli releases new $SENTRY_VERSION
+        sentry-cli releases set-commits $SENTRY_VERSION --auto
+        sentry-cli releases finalize $SENTRY_VERSION
+        # upload debug symbols and source code to sentry
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          # On macOS, upload the app bundle and find .dylib files for Luarocks
+          if [ -d "${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
+            MUDLET_BINARY="${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app"
+          elif [ -d "${{runner.workspace}}/b/ninja/Mudlet PTB.app" ]; then
+            MUDLET_BINARY="${{runner.workspace}}/b/ninja/Mudlet PTB.app"
+          else
+            MUDLET_BINARY="${{runner.workspace}}/b/ninja/src/mudlet.app"
+          fi
+          sentry-cli debug-files upload --include-sources --wait "$MUDLET_BINARY" $(find ~/.luarocks -name "*.dylib" -o -name "*.so")
+        else
+          # On Linux, upload the binary and find .so files for Luarocks
+          sentry-cli debug-files upload --include-sources --wait ${{runner.workspace}}/b/ninja/src/mudlet $(find ~/.luarocks -name "*.so")
+        fi
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v5
       if: env.UPLOAD_FILENAME
@@ -417,7 +454,9 @@ jobs:
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
-      run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
+      run: |
+        cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
+        cp -f ${{runner.workspace}}/b/ninja/src/crashpad_handler ${{github.workspace}}/src
       shell: bash
 
     - name: (macOS) Prep binary for running tests

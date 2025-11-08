@@ -4475,28 +4475,22 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_crashReports">
+        <widget class="QGroupBox" name="groupBox">
          <property name="title">
-          <string>Crash reports</string>
+          <string>Crash reporting</string>
          </property>
-         <layout class="QVBoxLayout" name="vBoxLayout_groupBox_crashReports">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
            <widget class="QCheckBox" name="checkBox_crashreportsOfficial">
-            <property name="toolTip">
-             <string>&lt;p&gt;Submit crash reports for official releases to Mudlet developers to help them fix crashes.&lt;/p&gt;</string>
-            </property>
             <property name="text">
-             <string>Send crash reports for official releases</string>
+             <string>Send crash reports when running the official release</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QCheckBox" name="checkBox_crashreportsTesting">
-            <property name="toolTip">
-             <string>&lt;p&gt;Submit crash reports for testing (PTB) releases to Mudlet developers to help them fix crashes.&lt;/p&gt;</string>
-            </property>
             <property name="text">
-             <string>Send crash reports for testing releases</string>
+             <string>Send crash reports when running test versions</string>
             </property>
            </widget>
           </item>

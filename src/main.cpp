@@ -34,6 +34,8 @@
 #include <QCommandLineOption>
 #include <QPainter>
 #include <QPointer>
+#include <QScopeGuard>
+#include <QStandardPaths>
 #include <QScreen>
 #include <QSettings>
 #include <QSplashScreen>
@@ -43,9 +45,6 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
-#ifdef INCLUDE_SENTRY
-#include "sentry.h"
-#endif
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -53,6 +52,48 @@
 #endif
 
 using namespace std::chrono_literals;
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+// Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
+// leak detection does not work when it is not defined.
+#include <pcre.h>
+#include <Windows.h>
+#endif // _MSC_VER && _DEBUG
+#if defined(INCLUDE_SENTRY)
+#include "sentry.h"
+#endif
+#if defined(INCLUDE_SENTRY)
+struct VersionInfo {
+    bool isRelease;
+    bool isPublicTest;
+    bool isTesting;
+};
+    
+sentry_value_t before_send(sentry_value_t event, void* hint, void* closure) {
+    auto* versions = static_cast<VersionInfo*>(closure);
+    
+    // Check if mudlet::self() is initialized to avoid crashes during early startup
+    auto* mudletInstance = mudlet::self();
+    if (!mudletInstance) {
+        // If mudlet is not initialized yet, don't send crashes
+        return sentry_value_new_null();
+    }
+    
+    if (versions->isRelease) {
+        if (!mudletInstance->smSendCrashesForReleases) {
+            return sentry_value_new_null();
+        }
+    } else if (versions->isPublicTest || versions->isTesting) {
+        if (!mudletInstance->smSendCrashesForTesting) {
+            return sentry_value_new_null();
+        }
+    } else {
+        // Development builds - don't send crashes
+        return sentry_value_new_null();
+    }
+    return event;
+}
+#endif
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -161,27 +202,36 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
-#ifdef INCLUDE_SENTRY
-    sentry_options_t *options = sentry_options_new();
-    sentry_options_set_dsn(options, "https://354199e8f0214f5693242529583d6751@sentry.io/1299444");
-    sentry_options_set_release(options, APP_VERSION);
-    sentry_options_set_database_path(options, ".sentry-native");
-    sentry_options_set_handler_path(options, "crashpad_handler");
-    sentry_options_set_environment(options, mudlet::smSendCrashesForTesting ? "ptb" : "production");
-    sentry_options_set_debug(options, 1);
-
+    QFile gitShaFile(":/app-build.txt");
+    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+    const bool releaseVersion = appBuild.isEmpty();
+    const bool publicTestVersion = appBuild.startsWith("-ptb");
+    const bool testingVersion = appBuild.startsWith("-testing");
+#if defined(INCLUDE_SENTRY)
+    sentry_options_t* options = sentry_options_new();
+    sentry_options_set_dsn(options, "https://362a6ffaa959436292d8d5eb35ff0aea @o1070874.ingest.us.sentry.io/6067272");
+    QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
+    QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
+    qDebug() << "crashpad_handler path is: " << sentryCrashHandler;
+    sentry_options_set_database_path(options, sentryPath.toLocal8Bit().constData());
+    sentry_options_set_handler_path(options, sentryCrashHandler.toLocal8Bit().constData());
+    sentry_options_set_release(options, "mudlet @" APP_VERSION);
+    sentry_options_set_debug(options, false);
+    VersionInfo versions{releaseVersion, publicTestVersion, testingVersion};
+    sentry_options_set_before_send(options, before_send, &versions);
+    if (releaseVersion) {
+        sentry_options_set_environment(options, "release");
+    } else if (publicTestVersion) {
+        sentry_options_set_environment(options, "public-test-build");
+    } else if (testingVersion) {
+        sentry_options_set_environment(options, "testing");
+    } else {
+        sentry_options_set_environment(options, "development");
+    }
     sentry_init(options);
-
-    sentry_value_t user = sentry_value_new_object();
-    sentry_value_set_by_key(user, "ip_address", sentry_value_new_string("{{auto}}"));
-    sentry_set_user(user);
-
-    sentry_set_extra("operating system", sentry_value_new_string(QSysInfo::prettyProductName().toStdString().c_str()));
-    sentry_set_extra("qt version", sentry_value_new_string(qVersion()));
-    sentry_set_extra("build version", sentry_value_new_string(APP_VERSION));
-
-    sentry_set_level(SENTRY_LEVEL_INFO);
-    sentry_capture_event(sentry_value_new_message_event(SENTRY_LEVEL_INFO, "main", "Mudlet is starting up"));
+    // Make sure everything flushes
+    auto sentryClose = qScopeGuard([] { sentry_close(); });
 #endif
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -227,15 +277,6 @@ int main(int argc, char* argv[])
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(qsl("Mudlet"));
-
-    QFile gitShaFile(":/app-build.txt");
-    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "main: failed to open app-build.txt for reading:" << gitShaFile.errorString();
-    }
-    const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-
-    const bool releaseVersion = appBuild.isEmpty();
-    const bool publicTestVersion = appBuild.startsWith("-ptb");
 
     if (publicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
