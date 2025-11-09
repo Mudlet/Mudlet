@@ -68,6 +68,150 @@ function Geyser.Label:rawEcho(message)
   self:autoAdjustSize()
 end
 
+--- Prints a message to the label with decho color formatting, preserving label's font size and formatting.
+-- @param message The message to print. Uses decho color codes like "<255,0,0>text" for colors.
+function Geyser.Label:decho(message)
+  message = message or self.message
+  self.message = message
+
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
+
+  -- Convert decho formatted text to HTML, preserving label's colors
+  local htmlContent = decho2html(message, resetFormat)
+
+  -- Apply label's formatting settings
+  local ft = self.formatTable
+  local fs = ft.fontSize
+  local alignment = ft.alignment
+  if alignment ~= "" then
+    alignment = string.format([[align="%s" ]], alignment)
+  end
+  if ft.bold then
+    htmlContent = "<b>" .. htmlContent .. "</b>"
+  end
+  if ft.italics then
+    htmlContent = "<i>" .. htmlContent .. "</i>"
+  end
+  if ft.underline then
+    htmlContent = "<u>" .. htmlContent .. "</u>"
+  end
+  if ft.strikethrough then
+    htmlContent = "<s>" .. htmlContent .. "</s>"
+  end
+  if self.font and self.font ~= "" then
+    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
+  end
+  if not fs then
+    fs = tostring(self.fontSize)
+  end
+  fs = "font-size: " .. fs .. "pt; "
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
+  [[">]] .. htmlContent .. [[</div>]]
+  echo(self.name, htmlContent)
+  self:autoAdjustSize()
+end
+
+--- Prints a message to the label with hecho color formatting, preserving label's font size and formatting.
+-- @param message The message to print. Uses hecho color codes like "|cff0000text" for colors.
+function Geyser.Label:hecho(message)
+  message = message or self.message
+  self.message = message
+
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
+
+  -- Convert hecho formatted text to HTML, preserving label's colors
+  local htmlContent = hecho2html(message, resetFormat)
+
+  -- Apply label's formatting settings
+  local ft = self.formatTable
+  local fs = ft.fontSize
+  local alignment = ft.alignment
+  if alignment ~= "" then
+    alignment = string.format([[align="%s" ]], alignment)
+  end
+  if ft.bold then
+    htmlContent = "<b>" .. htmlContent .. "</b>"
+  end
+  if ft.italics then
+    htmlContent = "<i>" .. htmlContent .. "</i>"
+  end
+  if ft.underline then
+    htmlContent = "<u>" .. htmlContent .. "</u>"
+  end
+  if ft.strikethrough then
+    htmlContent = "<s>" .. htmlContent .. "</s>"
+  end
+  if self.font and self.font ~= "" then
+    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
+  end
+  if not fs then
+    fs = tostring(self.fontSize)
+  end
+  fs = "font-size: " .. fs .. "pt; "
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
+  [[">]] .. htmlContent .. [[</div>]]
+  echo(self.name, htmlContent)
+  self:autoAdjustSize()
+end
+
+--- Prints a message to the label with cecho color formatting, preserving label's font size and formatting.
+-- @param message The message to print. Uses cecho color codes like "<red>text" for colors.
+function Geyser.Label:cecho(message)
+  message = message or self.message
+  self.message = message
+
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
+
+  -- Convert cecho formatted text to HTML, preserving label's colors
+  local htmlContent = cecho2html(message, resetFormat)
+
+  -- Apply label's formatting settings
+  local ft = self.formatTable
+  local fs = ft.fontSize
+  local alignment = ft.alignment
+  if alignment ~= "" then
+    alignment = string.format([[align="%s" ]], alignment)
+  end
+  if ft.bold then
+    htmlContent = "<b>" .. htmlContent .. "</b>"
+  end
+  if ft.italics then
+    htmlContent = "<i>" .. htmlContent .. "</i>"
+  end
+  if ft.underline then
+    htmlContent = "<u>" .. htmlContent .. "</u>"
+  end
+  if ft.strikethrough then
+    htmlContent = "<s>" .. htmlContent .. "</s>"
+  end
+  if self.font and self.font ~= "" then
+    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
+  end
+  if not fs then
+    fs = tostring(self.fontSize)
+  end
+  fs = "font-size: " .. fs .. "pt; "
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
+  [[">]] .. htmlContent .. [[</div>]]
+  echo(self.name, htmlContent)
+  self:autoAdjustSize()
+end
+
 --- sets the color of the text on the label
 -- @param color the color you want the text to be. Can use color names such as "red", decho codes such as "<255,0,0>" and hex codes such as "#ff0000"
 function Geyser.Label:setFgColor(color)
