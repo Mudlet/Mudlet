@@ -34,7 +34,6 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QJsonParseError>
@@ -42,7 +41,6 @@
 #include <QProgressDialog>
 #include <QPainter>
 #include <QBuffer>
-#include "post_guard.h"
 
 
 TMap::TMap(Host* pH, const QString& profileName)

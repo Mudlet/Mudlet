@@ -21,9 +21,7 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
-#include "pre_guard.h"
 #include <QDebug>
-#include "post_guard.h"
 
 bool TMxpProcessor::setMode(const QString& code)
 {
@@ -152,10 +150,19 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
+    if (ch == '<'
+    && mMxpTagBuilder.isInsideTag()
+    && !mMxpTagBuilder.isQuotedSequence()
+    && !mMxpTagBuilder.isInsideComment()) {
+        lastEntityValue = QStringLiteral("<") + QString::fromStdString(mMxpTagBuilder.getRawTagContent());
+        mMxpTagBuilder.resetForNewTag();
+        return HANDLER_INSERT_ENTITY_LIT;
+    }
+
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         return HANDLER_NEXT_CHAR;
     }
-
+    
     if (mMxpTagBuilder.hasTag()) {
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
@@ -165,6 +172,13 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         }
 
         TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
+
+        // If tag was not handled (not valid MXP and not a custom element), display it as-is
+        if (result == MXP_TAG_NOT_HANDLED) {
+            lastEntityValue = tag->toString();
+            return HANDLER_INSERT_ENTITY_LIT;
+        }
+
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
     }
 

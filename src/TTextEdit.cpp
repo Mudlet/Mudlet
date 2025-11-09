@@ -34,7 +34,6 @@
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
-#include "pre_guard.h"
 #include <chrono>
 #include <cmath>
 #include <QtEvents>
@@ -54,7 +53,6 @@
 #include <QTextBoundaryFinder>
 #include <QToolTip>
 #include <QVersionNumber>
-#include "post_guard.h"
 
 // Renders text on screen
 // Text data stored separately in a TBuffer
@@ -69,6 +67,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 {
     mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
+    Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
     mFontHeight = fontMetrics().height();
     mFontWidth = fontMetrics().averageCharWidth();
@@ -243,7 +242,7 @@ void TTextEdit::updateScreenView()
     if (!mpHost || !mpConsole) {
         return;
     }
-    
+
     mFontWidth = fontMetrics().averageCharWidth();
     mFontHeight = fontMetrics().height();
     if (isHidden()) {
@@ -594,8 +593,17 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         }
     } else {
         if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            fgColors.append(charStyle.background());
-            bgColor = charStyle.foreground();
+            // When colors would be swapped (e.g., during selection)
+            // and foreground equals background (hidden text),
+            // only reverse one color to make the text readable
+            if (charStyle.foreground() == charStyle.background()) {
+                fgColors.append(charStyle.foreground());
+                // Invert background: use white for dark colors, black for light colors
+                bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
+            } else {
+                fgColors.append(charStyle.background());
+                bgColor = charStyle.foreground();
+            }
         } else {
             fgColors.append(charStyle.foreground());
             bgColor = charStyle.background();
@@ -622,20 +630,19 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
-    
+
     // Check for advanced underline styles or custom decoration colors
     const bool isUnderlineWavy = attributes & TChar::UnderlineWavy;
     const bool isUnderlineDotted = attributes & TChar::UnderlineDotted;
     const bool isUnderlineDashed = attributes & TChar::UnderlineDashed;
     const bool hasAdvancedUnderline = isUnderlineWavy || isUnderlineDotted || isUnderlineDashed;
-    const bool hasCustomDecorationColors = charStyle.hasCustomUnderlineColor() || charStyle.hasCustomOverlineColor() || charStyle.hasCustomStrikeoutColor();
-    
+
     // If we have advanced underline styles or custom decoration colors, disable Qt's built-in decorations
     // and draw them manually later
     const bool useQtUnderline = isUnderline && !hasAdvancedUnderline && !charStyle.hasCustomUnderlineColor();
     const bool useQtOverline = isOverline && !charStyle.hasCustomOverlineColor();
     const bool useQtStrikeOut = isStrikeOut && !charStyle.hasCustomStrikeoutColor();
-    
+
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
     if ((painter.font().bold() != isBold)
@@ -661,7 +668,7 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         painter.setPen(fgColor);
     }
     painter.drawText(textRect, Qt::AlignCenter|Qt::TextDontClip|Qt::TextSingleLine, grapheme);
-    
+
     // Draw custom decorations (colored underlines, overlines, strikethrough)
     drawCustomDecorations(painter, fgColor, textRect, charStyle);
 }
@@ -670,37 +677,37 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
 {
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     QFontMetrics fm(painter.font());
-    
+
     // Calculate decoration positions
     int underlineY = textRect.bottom() - 1;
     int overlineY = textRect.top() + 1;
     int strikeoutY = textRect.top() + textRect.height() / 2;
     int lineWidth = 1;
-    
+
     // Draw underline decorations
     if (attributes & TChar::Underline) {
         QColor underlineColor = charStyle.hasCustomUnderlineColor() ? charStyle.underlineColor() : defaultColor;
         QPen pen(underlineColor);
         pen.setWidth(lineWidth);
-        
+
         bool isWavy = attributes & TChar::UnderlineWavy;
         bool isDotted = attributes & TChar::UnderlineDotted;
         bool isDashed = attributes & TChar::UnderlineDashed;
-        
+
         if (isWavy) {
             // Draw wavy underline
             pen.setStyle(Qt::SolidLine);
             painter.setPen(pen);
-            
+
             const int amplitude = 1;
             const int wavelength = 8;
             QPainterPath wavePath;
-            
+
             bool firstPoint = true;
             for (int x = textRect.left(); x <= textRect.right(); x += 2) {
                 double phase = (x - textRect.left()) * 2.0 * M_PI / wavelength;
                 int y = underlineY + amplitude * sin(phase);
-                
+
                 if (firstPoint) {
                     wavePath.moveTo(x, y);
                     firstPoint = false;
@@ -709,17 +716,17 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
                 }
             }
             painter.drawPath(wavePath);
-            
+
         } else if (isDotted) {
             pen.setStyle(Qt::DotLine);
             painter.setPen(pen);
             painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
-            
+
         } else if (isDashed) {
             pen.setStyle(Qt::DashLine);
             painter.setPen(pen);
             painter.drawLine(textRect.left(), underlineY, textRect.right(), underlineY);
-            
+
         } else {
             // Solid underline (only draw if we have custom color or advanced style)
             if (charStyle.hasCustomUnderlineColor() || isWavy || isDotted || isDashed) {
@@ -729,7 +736,7 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
             }
         }
     }
-    
+
     // Draw overline decorations
     if (attributes & TChar::Overline) {
         QColor overlineColor = charStyle.hasCustomOverlineColor() ? charStyle.overlineColor() : defaultColor;
@@ -739,7 +746,7 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
         painter.setPen(pen);
         painter.drawLine(textRect.left(), overlineY, textRect.right(), overlineY);
     }
-    
+
     // Draw strikethrough decorations
     if (attributes & TChar::StrikeOut) {
         QColor strikeoutColor = charStyle.hasCustomStrikeoutColor() ? charStyle.strikeoutColor() : defaultColor;
@@ -1219,13 +1226,13 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
         if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
             if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
                 int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
-                
+
                 setCursor(Qt::PointingHandCursor);
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
                 QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
                 // If a special tooltip hint was given, use that one.
                 QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
-                
+
                 // Update hover state for CSS pseudo-class support
                 if (mpBuffer->getHoveredLink() != linkIndex) {
                     mpBuffer->setHoveredLink(linkIndex);
@@ -1234,7 +1241,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
             } else {
                 setCursor(Qt::IBeamCursor);
                 QToolTip::hideText();
-                
+
                 // Clear hover state if we're not over a link
                 if (mpBuffer->getHoveredLink() != 0) {
                     mpBuffer->setHoveredLink(0);
@@ -1407,20 +1414,20 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
-                        
+
                         // Set active state for CSS pseudo-class support
                         mpBuffer->setActiveLink(linkIndex);
                         forceUpdate(); // Trigger re-render with active state
-                        
+
                         if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
                         } else {
                             mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoLink"));
                         }
-                        
+
                         // Mark link as visited after execution (will update to visited state)
                         mpBuffer->markLinkAsVisited(linkIndex);
-                        
+
                         return;
                     }
                 }
@@ -1862,7 +1869,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
         mCtrlSelecting = false;
-        
+
         // Clear active state on mouse release
         if (mpBuffer->getActiveLink() != 0) {
             mpBuffer->setActiveLink(0);
@@ -2066,7 +2073,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
-    
+
     // Safety check: during destruction, mpHost or mpConsole might be null
     if (mpHost && mpConsole) {
         if (!mIsLowerPane && mpConsole->getType() == TConsole::MainConsole) {
@@ -2075,7 +2082,7 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     }
 
     QWidget::resizeEvent(event);
-    
+
     if (mpConsole && !mIsLowerPane
         && (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole))) {
 
@@ -3163,12 +3170,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 if (!commands.isEmpty()) {
                     // Mark the link as visited
                     mpBuffer->markLinkAsVisited(focusedLink);
-                    
+
                     // Execute the command(s)
                     for (const auto& cmd : commands) {
                         mpHost->send(cmd);
                     }
-                    
+
                     // Don't move the caret for this key press
                     QWidget::keyPressEvent(event);
                     return;

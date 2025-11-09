@@ -22,7 +22,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QTextCodec>
 #include <QApplication>
 #include <QChar>
@@ -30,7 +29,6 @@
 #include <QPair>
 #include <QString>
 #include <QVector>
-#include "post_guard.h"
 
 // a map of encoding names to encodings
 class TEncodingTable

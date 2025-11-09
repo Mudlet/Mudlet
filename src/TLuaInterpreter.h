@@ -31,7 +31,6 @@
 #include "TTrigger.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QEvent>
 #include <QFileSystemWatcher>
 #include <QNetworkAccessManager>
@@ -47,7 +46,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -409,6 +407,9 @@ public:
     static int createLabelMainWindow(lua_State*, const QString& labelName);
     static int createLabelUserWindow(lua_State*, const QString& windowName, const QString& labelName);
     static int deleteLabel(lua_State*);
+    static int deleteMiniConsole(lua_State*);
+    static int deleteCommandLine(lua_State*);
+    static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);

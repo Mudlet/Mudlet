@@ -27,6 +27,29 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
+#include <functional>
+
+TriggerUnit::~TriggerUnit()
+{
+    // Set mpHost to null on all triggers (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TTrigger*)> nullifyChildren = [&nullifyChildren](TTrigger* t) {
+            for (auto child : *t->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(trigger);
+    }
+    for (auto trigger : mTriggerRootNodeList) {
+        delete trigger;
+    }
+}
+
 void TriggerUnit::resetStats()
 {
     statsItemsTotal = 0;

@@ -31,7 +31,6 @@
 #include <winsock2.h>
 #endif
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QMatrix4x4>
 #include <QVector3D>
@@ -44,7 +43,6 @@
 #include <QPointer>
 #include <QTimer>
 #include <QEasingCurve>
-#include "post_guard.h"
 
 #include "GeometryManager.h"
 #include "RenderCommandQueue.h"
@@ -65,7 +63,7 @@ public:
     Q_DISABLE_COPY(ModernGLWidget)
     ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
     ~ModernGLWidget() override;
-
+    
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
     void shiftCamera(float, float, float);
@@ -98,6 +96,15 @@ public slots:
     void slot_defaultView();
     void slot_sideView();
     void slot_topView();
+    void slot_setPlayerIconHeight(int value);
+    void slot_setPlayerIconRotationX(int angle);
+    void slot_setPlayerIconRotationY(int angle);
+    void slot_setPlayerIconRotationZ(int angle);
+    void slot_setPlayerIconScale(int value);
+    void slot_resetPlayerIcon();
+
+signals:
+    void resetPlayerIconSliders(int height, int rotX, int rotY, int rotZ, int scale);
 
 private slots:
     void onCameraAnimationTick();
@@ -109,6 +116,7 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
 public:
     TMap* mpMap = nullptr;
@@ -120,18 +128,19 @@ private:
     QOpenGLBuffer mColorBuffer;
     QOpenGLBuffer mNormalBuffer;
     QOpenGLBuffer mIndexBuffer;
+    QOpenGLBuffer mTexCoordBuffer;
     QOpenGLBuffer mInstanceBuffer;
     QOpenGLVertexArrayObject mVAO;
-    
+
     // Geometry management
     GeometryManager mGeometryManager;
-    
+
     // Render command queue
     RenderCommandQueue mRenderCommandQueue;
-    
+
     // Resource management
     ResourceManager mResourceManager;
-    
+
     // Camera management
     CameraController mCameraController;
 
@@ -154,7 +163,7 @@ private:
     int mMapCenterZ = 0;
     bool mShiftMode = false;
     int mFontHeight = 20;
-
+    
     // Scales the size of rooms compared to the space between them - currently
     // hard coded to be a quarter (would be equivalent to a 2D room size setting
     // of "2.5"):
@@ -164,10 +173,17 @@ private:
     int mShowTopLevels = 999999;
     int mShowBottomLevels = 999999;
     int mTargetRoomId = 0;
-    
+
+    // Player icon adjustment settings
+    float mPlayerIconHeight = 0.41f;     // Default height above room (in units)
+    float mPlayerIconRotationX = -54.0f; // Rotation around X axis (degrees)
+    float mPlayerIconRotationY = 100.0f; // Rotation around Y axis (degrees)
+    float mPlayerIconRotationZ = 37.0f;  // Rotation around Z axis (degrees)
+    float mPlayerIconScale = 0.0055f;    // Default scale factor
+
     // Frame timing for benchmarking
     QElapsedTimer mFrameTimer;
-    
+
     // Smooth camera animation
     QTimer* mCameraAnimationTimer = nullptr;
     int mTargetAID = 0;
@@ -175,7 +191,7 @@ private:
     float mTargetMapCenterY = 0.0f;
     float mTargetMapCenterZ = 0.0f;
     float mStartMapCenterX = 0.0f;
-    float mStartMapCenterY = 0.0f; 
+    float mStartMapCenterY = 0.0f;
     float mStartMapCenterZ = 0.0f;
     float mCurrentAnimationX = 0.0f; // Floating point current position during animation
     float mCurrentAnimationY = 0.0f;
