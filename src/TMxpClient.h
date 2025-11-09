@@ -103,6 +103,9 @@ public:
     }
 
     virtual void setCaptionForSendEvent(const QString& caption) { Q_UNUSED(caption) }
+    
+    // Check if force MXP should prevent server from changing default mode
+    virtual bool shouldLockModeToSecure() const { return false; }
 };
 
 #endif //MUDLET_TMXPCLIENT_H

@@ -138,6 +138,8 @@ public:
     void setCaptionForSendEvent(const QString& caption) override;
 
     QStack<TMxpEvent> mPendingSendEvents;
+    
+    bool shouldLockModeToSecure() const override;
 
 private:
     bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const;

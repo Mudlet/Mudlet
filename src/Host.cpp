@@ -338,7 +338,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
         if (getForceMXPProcessorOn()) {
             mMxpProcessor.enable();
-            qDebug() << "MXP enabled (forced)";
+            // When force-enabling MXP (typically for games like IRE MUDs that don't
+            // negotiate properly), lock to secure mode for compatibility
+            mMxpProcessor.setMode(6); // Lock secure mode
         }
     });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
@@ -346,11 +348,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         if (enabled) {
             if (!mMxpProcessor.isEnabled()) {
                 mMxpProcessor.enable();
-                qDebug() << "MXP enabled (forced)";
+                // When force-enabling MXP (typically for games like IRE MUDs that don't
+                // negotiate properly), lock to secure mode for compatibility with games
+                // that use secure tags without sending mode switches
+                mMxpProcessor.setMode(6); // Lock secure mode
             }
         } else if (mMxpProcessor.isEnabled() && !mTelnet.isMXPEnabled()) {
             mMxpProcessor.disable();
-            qDebug() << "MXP disabled (forced)";
         }
     });
 
