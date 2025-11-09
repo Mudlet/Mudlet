@@ -81,7 +81,7 @@ jobs:
         LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
         export LUA_CPATH
 
-        ${{github.workspace}}/build/src/mudlet_executable.exe --profile "Mudlet self-test"
+        ${{github.workspace}}/build/build-MINGW64/release/mudlet.exe --profile "Mudlet self-test"
 
     - name: Passed Lua tests
       shell: msys2 {0}
