@@ -23,6 +23,7 @@
 
 #include "dlgMapper.h"
 
+#include "mudlet.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TMap.h"
@@ -619,6 +620,6 @@ int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffs
 void dlgMapper::slot_openVideoGuide()
 {
     if (mpHost) {
-        mpHost->openWebPage("https://youtu.be/m6nqwbvEJXc?si=px9Abm1CsU-UXRkJ");
+        mudlet::self()->openWebPage("https://youtu.be/m6nqwbvEJXc?si=px9Abm1CsU-UXRkJ");
     }
 }
