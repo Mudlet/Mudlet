@@ -164,6 +164,9 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     }
     
     if (mMxpTagBuilder.hasTag()) {
+        // Save raw tag content before it gets cleared by buildTag()
+        const QString rawTagContent = QStringLiteral("<") + QString::fromStdString(mMxpTagBuilder.getRawTagContent()) + QStringLiteral(">");
+        
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
         //        qDebug() << "TAG RECEIVED: " << tag->asString();
@@ -175,7 +178,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
         // If tag was not handled (not valid MXP and not a custom element), display it as-is
         if (result == MXP_TAG_NOT_HANDLED) {
-            lastEntityValue = tag->toString();
+            lastEntityValue = rawTagContent;
             return HANDLER_INSERT_ENTITY_LIT;
         }
 

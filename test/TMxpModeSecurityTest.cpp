@@ -234,6 +234,68 @@ private slots:
 
         QVERIFY(client.rejectedTagCount > 0);
     }
+
+    /**
+     * Test that unhandled tags with non-ASCII (UTF-8) characters are displayed correctly.
+     * This addresses issue #8482 where Chinese characters in unhandled tags were shown as ????.
+     */
+    void testUnhandledTagsWithChineseCharacters()
+    {
+        TMxpStubClient stub;
+        TMxpProcessor processor(&stub);
+        
+        // Test input with Chinese characters in angle brackets
+        // The tag <冷酷> should not be recognized as valid MXP and should be displayed as-is
+        std::string input = "昆仑三圣 何足道 <冷酷>";
+        
+        QString collectedOutput;
+        
+        for (char ch : input) {
+            TMxpProcessingResult result = processor.processMxpInput(ch, true);
+            
+            if (result == HANDLER_INSERT_ENTITY_LIT) {
+                // This is the unhandled tag content that should be displayed
+                QString entityValue = processor.getEntityValue();
+                collectedOutput += entityValue;
+            } else if (result == HANDLER_FALL_THROUGH) {
+                // Regular characters that fall through
+                collectedOutput += QChar(ch);
+            }
+        }
+        
+        // Verify the Chinese characters in the unhandled tag are preserved
+        QString expected = QStringLiteral("<冷酷>");
+        QVERIFY2(collectedOutput.contains(expected), 
+                 qPrintable(QString("Expected '%1' to contain '%2'").arg(collectedOutput, expected)));
+        
+        // Verify we don't have question marks which would indicate encoding corruption
+        QVERIFY2(!collectedOutput.contains(QString("?").repeated(4)), 
+                 "Output should not contain repeated question marks which indicates encoding corruption");
+    }
+
+    /**
+     * Test unhandled tags with various Unicode characters
+     */
+    void testUnhandledTagsWithUnicodeCharacters()
+    {
+        TMxpStubClient stub;
+        TMxpProcessor processor(&stub);
+        
+        // Test with various Unicode characters (Japanese, Korean, Arabic)
+        std::string input = "<日本語> <한글> <العربية>";
+        
+        for (char ch : input) {
+            TMxpProcessingResult result = processor.processMxpInput(ch, true);
+            
+            if (result == HANDLER_INSERT_ENTITY_LIT) {
+                QString entityValue = processor.getEntityValue();
+                
+                // Verify we're getting properly encoded UTF-8 strings, not question marks
+                QVERIFY2(!entityValue.contains("?"), 
+                         qPrintable(QString("Entity value '%1' contains '?' indicating encoding corruption").arg(entityValue)));
+            }
+        }
+    }
 };
 
 QTEST_MAIN(TMxpModeSecurityTest)
