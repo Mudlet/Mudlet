@@ -1918,6 +1918,8 @@ map.help.quick_start = [[
     4. &lt;link: 1&gt;map help&lt;/link&gt;
        This will bring up a more detailed help file, starting with the available
        help topics.
+    5. &lt;urllink: https://youtu.be/m6nqwbvEJXc?si=px9Abm1CsU-UXRkJ&gt;Video guide&lt;/urllink&gt;
+       Watch a video guide on how to set up the mapper.
 ]]
 map.help.room_find = [[
     &lt;cyan&gt;Room Find&lt;reset&gt;

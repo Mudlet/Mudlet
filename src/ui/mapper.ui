@@ -561,20 +561,6 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_info">
-           <property name="text">
-            <string>Info</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_videoGuide">
-           <property name="text">
-            <string>Video Guide</string>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QPushButton" name="pushButton_exportArea">
            <property name="text">
             <string>Export</string>
