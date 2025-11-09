@@ -137,6 +137,10 @@ public:
 
     void setCaptionForSendEvent(const QString& caption) override;
 
+    int getWrapWidth() const override;
+
+    void insertText(const QString& text) override;
+
     QStack<TMxpEvent> mPendingSendEvents;
 
 private:

@@ -103,6 +103,12 @@ public:
     }
 
     virtual void setCaptionForSendEvent(const QString& caption) { Q_UNUSED(caption) }
+
+    // Get the console wrap width for layout purposes (e.g., HR tag)
+    virtual int getWrapWidth() const { return 80; } // Default fallback
+    
+    // Insert text directly into the output (e.g., for HR tag)
+    virtual void insertText(const QString& text) { Q_UNUSED(text) }
 };
 
 #endif //MUDLET_TMXPCLIENT_H
