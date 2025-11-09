@@ -72,6 +72,7 @@ public slots:
     void slot_setShowRoomIds(bool showRoomIds);
     void slot_updateInfoContributors();
     void slot_switchArea(const int);
+    void slot_openVideoGuide();
 
     static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
                             int roomID, int displayAreaId, int selectionSize, QColor& infoColor,

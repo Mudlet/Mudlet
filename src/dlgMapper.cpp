@@ -132,6 +132,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     pushButton_info->setMenu(menu);
 
     connect(pushButton_exportArea, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_exportAreaToImage);
+    connect(pushButton_videoGuide, &QAbstractButton::clicked, this, &dlgMapper::slot_openVideoGuide);
 
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
@@ -613,4 +614,11 @@ int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffs
                     infoText);
     painter.restore();
     return mapInfoRect.height();
+}
+
+void dlgMapper::slot_openVideoGuide()
+{
+    if (mpHost) {
+        mpHost->openWebPage("https://youtu.be/m6nqwbvEJXc?si=px9Abm1CsU-UXRkJ");
+    }
 }
