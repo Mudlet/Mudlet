@@ -3531,7 +3531,7 @@ int TLuaInterpreter::setExitStub(lua_State* L)
     return 0;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeightFilter
-// Function passed to setExitWeightFilter should return numeric exit weight (current or mod
+// Function passed to setExitWeightFilter should return numeric exit weight (current or modified)
 // Scripts may return false or the string "block" from the callback which will prevent the exit from being added to the pathfinding graph.
 int TLuaInterpreter::setExitWeightFilter(lua_State* L)
 {
