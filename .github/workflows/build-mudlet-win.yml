@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       scheduled:
-        description: 'Imitate a scheduled build'
+        description: "Imitate a scheduled build"
         required: false
-        default: 'false'
+        default: "false"
   schedule:
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
 
 jobs:
   compile-mudlet:
@@ -23,210 +23,210 @@ jobs:
       matrix:
         include:
           - os: windows-2022
-            buildname: 'windows64'
+            buildname: "windows64"
 
     steps:
-    - name: Checkout Mudlet source code
-      uses: actions/checkout@v5
-      with:
-        submodules: true
-        fetch-depth: 0
+      - name: Checkout Mudlet source code
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+          fetch-depth: 0
 
-    - name: (Windows) Setup MSYS2
-      if: matrix.buildname == 'windows64'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: true
+      - name: (Windows) Setup MSYS2
+        if: matrix.buildname == 'windows64'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
 
-    - name: (Windows) Build Environment Setup
-      shell: msys2 {0}
-      env:
-        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-      run: |
-        $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
-        $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
+      - name: (Windows) Build Environment Setup
+        shell: msys2 {0}
+        env:
+          GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
+          $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
-    - name: Enable sentry.io for Windows releases
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'
-      shell: msys2 {0}
-      run: echo "WITH_SENTRY=yes" >> $GITHUB_ENV
+      - name: Enable sentry.io for Windows releases
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'
+        shell: msys2 {0}
+        run: echo "WITH_SENTRY=yes" >> $GITHUB_ENV
 
-    - name: Restore ccache
-      id: restore-ccache
-      uses: actions/cache/restore@v4
-      with:
-        path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
+      - name: Restore ccache
+        id: restore-ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{runner.workspace}}/ccache
+          key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
+          restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
 
-    - name: (Windows) Create build directory
-      run: mkdir build
+      - name: (Windows) Create build directory
+        run: mkdir build
 
-    - name: (Windows) Build
-      shell: msys2 {0}
-      working-directory: build
-      run: ../CI/build-mudlet-for-windows.sh
+      - name: (Windows) Build
+        shell: msys2 {0}
+        working-directory: build
+        run: ../CI/build-mudlet-for-windows.sh
 
-    - name: (Windows) Run Lua tests
-      timeout-minutes: 5
-      shell: msys2 {0}
-      env:
-        AUTORUN_BUSTED_TESTS: 'true'
-        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
-        QUIT_MUDLET_AFTER_TESTS: 'true'
-      run: |
-        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
-        export LUA_PATH
-        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
-        export LUA_CPATH
+      - name: (Windows) Run Lua tests
+        timeout-minutes: 5
+        shell: msys2 {0}
+        env:
+          AUTORUN_BUSTED_TESTS: "true"
+          TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+          QUIT_MUDLET_AFTER_TESTS: "true"
+        run: |
+          LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+          export LUA_PATH
+          LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+          export LUA_CPATH
 
-        "${{github.workspace}}/build/build-MINGW64/release/mudlet.exe" --profile "Mudlet self-test"
+          "${{github.workspace}}/build-MINGW64/release/mudlet.exe" --profile "Mudlet self-test"
 
-    - name: Passed Lua tests
-      shell: msys2 {0}
-      run: |
-        if [ -e $TEMP/busted-tests-failed ]
-        then
-          echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
-          exit 1
-        fi
-
-    - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: ${{runner.workspace}}/ccache
-        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-
-    - name: (Windows) Package
-      shell: msys2 {0}
-      run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
-
-    - name: Upload debug symbols to sentry.io (Windows)
-      if: env.WITH_SENTRY == 'yes'
-      shell: msys2 {0}
-      env:
-        SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
-      run: |
-        if [ -z "$SENTRY_AUTH_TOKEN" ]; then
-          echo "No SENTRY_AUTH_TOKEN available, skipping debug symbol upload"
-          exit 0
-        fi
-        echo "Debug: Installing sentry-cli..."
-        pip install --upgrade sentry-cli
-        export SENTRY_ORG=mudlet
-        export SENTRY_PROJECT=mudlet
-        export SENTRY_VERSION=${{env.VERSION}}${{env.MUDLET_VERSION_BUILD}}
-        echo "Debug: Sentry version: $SENTRY_VERSION"
-        # setup version within sentry
-        echo "Debug: Creating Sentry release..."
-        sentry-cli releases new $SENTRY_VERSION
-        sentry-cli releases set-commits $SENTRY_VERSION --auto
-        sentry-cli releases finalize $SENTRY_VERSION
-        # upload debug symbols and source code to sentry for Windows
-        echo "Debug: Looking for Mudlet binary and debug symbols..."
-        
-        # Convert Windows path to Unix path for debugging
-        GITHUB_WORKSPACE_UNIX="$(cygpath -au "${GITHUB_WORKSPACE}")"
-        echo "Debug: GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
-        echo "Debug: GITHUB_WORKSPACE_UNIX: $GITHUB_WORKSPACE_UNIX"
-        
-        MUDLET_BINARY="${GITHUB_WORKSPACE_UNIX}/build-MINGW64/release/mudlet.exe"
-        echo "Debug: Looking for binary at: $MUDLET_BINARY"
-        
-        if [ -f "$MUDLET_BINARY" ]; then
-          echo "Debug: Found Mudlet binary"
-          
-          # Find Luarocks DLL files and debug symbols
-          echo "Debug: Looking for Luarocks DLLs..."
-          LUAROCKS_DLLS=$(find ~/.luarocks-MINGW64 -name "*.dll" 2>/dev/null || echo "")
-          if [ -n "$LUAROCKS_DLLS" ]; then
-            echo "Debug: Found Luarocks DLLs:"
-            echo "$LUAROCKS_DLLS"
-          else
-            echo "Debug: No Luarocks DLLs found"
+      - name: Passed Lua tests
+        shell: msys2 {0}
+        run: |
+          if [ -e $TEMP/busted-tests-failed ]
+          then
+            echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
+            exit 1
           fi
-          
-          DEBUG_SYMBOLS=""
-          DEBUG_SYMBOL_PATH="${GITHUB_WORKSPACE_UNIX}/build-MINGW64/release/mudlet.exe.debug"
-          echo "Debug: Looking for debug symbols at: $DEBUG_SYMBOL_PATH"
-          if [ -f "$DEBUG_SYMBOL_PATH" ]; then
-            DEBUG_SYMBOLS="$DEBUG_SYMBOL_PATH"
-            echo "Debug: Found debug symbols"
-          else
-            echo "Debug: No debug symbols found"
+
+      - name: Save ccache
+        if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{runner.workspace}}/ccache
+          key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
+      - name: (Windows) Package
+        shell: msys2 {0}
+        run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
+
+      - name: Upload debug symbols to sentry.io (Windows)
+        if: env.WITH_SENTRY == 'yes'
+        shell: msys2 {0}
+        env:
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "No SENTRY_AUTH_TOKEN available, skipping debug symbol upload"
+            exit 0
           fi
-          
-          echo "Debug: Uploading to Sentry..."
-          sentry-cli debug-files upload --include-sources --wait "$MUDLET_BINARY" $DEBUG_SYMBOLS $LUAROCKS_DLLS
-          echo "Windows debug symbols uploaded to Sentry"
-        else
-          echo "Warning: Mudlet binary not found at $MUDLET_BINARY"
-          echo "Debug: Contents of build directory:"
-          ls -la "${GITHUB_WORKSPACE_UNIX}/build-MINGW64/" || echo "build-MINGW64 directory not found"
-          ls -la "${GITHUB_WORKSPACE_UNIX}/build-MINGW64/release/" || echo "release directory not found"
-        fi
-    - name: (Windows) Login to Azure
-      uses: azure/login@v2
-      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+          echo "Debug: Installing sentry-cli..."
+          pip install --upgrade sentry-cli
+          export SENTRY_ORG=mudlet
+          export SENTRY_PROJECT=mudlet
+          export SENTRY_VERSION=${{env.VERSION}}${{env.MUDLET_VERSION_BUILD}}
+          echo "Debug: Sentry version: $SENTRY_VERSION"
+          # setup version within sentry
+          echo "Debug: Creating Sentry release..."
+          sentry-cli releases new $SENTRY_VERSION
+          sentry-cli releases set-commits $SENTRY_VERSION --auto
+          sentry-cli releases finalize $SENTRY_VERSION
+          # upload debug symbols and source code to sentry for Windows
+          echo "Debug: Looking for Mudlet binary and debug symbols..."
 
-    - name: Get Azure access token for code signing
-      shell: pwsh
-      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
-      run: |
-        $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
-        "::add-mask::$token"
-        "AZURE_ACCESS_TOKEN=$token" | Add-Content -Path $env:GITHUB_ENV
+          # Convert Windows path to Unix path for debugging
+          GITHUB_WORKSPACE_UNIX="$(cygpath -au "${GITHUB_WORKSPACE}")"
+          echo "Debug: GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          echo "Debug: GITHUB_WORKSPACE_UNIX: $GITHUB_WORKSPACE_UNIX"
 
-    - name: (Windows) Deploy
-      shell: msys2 {0}
-      env:
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
-        X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
-        DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
-        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
-        AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
-        GITHUB_REPO_NAME: ${{ github.repository }}
-        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
-        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
+          MUDLET_BINARY="${GITHUB_WORKSPACE_UNIX}/build-MINGW64/release/mudlet.exe"
+          echo "Debug: Looking for binary at: $MUDLET_BINARY"
 
-    - name: Create intermediate artifact for debugging
-      uses: actions/upload-artifact@v5
-      if: env.INTERMEDIATE_ARTIFACT_NAME
-      with:
-        name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
-        path: ${{env.INTERMEDIATE_ARTIFACT_WINPATHORFILE}}
-        compression-level: ${{env.INTERMEDIATE_ARTIFACT_COMPRESSION}}
-        if-no-files-found: ignore
+          if [ -f "$MUDLET_BINARY" ]; then
+            echo "Debug: Found Mudlet binary"
 
-    - name: Create artifact for later uploading
-      # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
-      # the given name - the Environmental variables are created by the
-      # deploy-mudlet-for-windows.sh script:
-      uses: actions/upload-artifact@v5
-      if: env.ARTIFACT_NAME
-      with:
-        name: ${{env.ARTIFACT_NAME}}
-        path: ${{env.ARTIFACT_WINPATHORFILE}}
-        compression-level: ${{env.ARTIFACT_COMPRESSION}}
+            # Find Luarocks DLL files and debug symbols
+            echo "Debug: Looking for Luarocks DLLs..."
+            LUAROCKS_DLLS=$(find ~/.luarocks-MINGW64 -name "*.dll" 2>/dev/null || echo "")
+            if [ -n "$LUAROCKS_DLLS" ]; then
+              echo "Debug: Found Luarocks DLLs:"
+              echo "$LUAROCKS_DLLS"
+            else
+              echo "Debug: No Luarocks DLLs found"
+            fi
 
-    - name: Upload artifact to make.mudlet.org
-      shell: msys2 {0}
-      if: env.ARTIFACT_NAME
-      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+            DEBUG_SYMBOLS=""
+            DEBUG_SYMBOL_PATH="${GITHUB_WORKSPACE_UNIX}/build-MINGW64/release/mudlet.exe.debug"
+            echo "Debug: Looking for debug symbols at: $DEBUG_SYMBOL_PATH"
+            if [ -f "$DEBUG_SYMBOL_PATH" ]; then
+              DEBUG_SYMBOLS="$DEBUG_SYMBOL_PATH"
+              echo "Debug: Found debug symbols"
+            else
+              echo "Debug: No debug symbols found"
+            fi
 
-    - name: Register PTB Release
-      shell: msys2 {0}
-      if: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
-      env:
-        VERSION_STRING: ${{env.VERSION_STRING}}
-        BUILD_COMMIT: ${{env.BUILD_COMMIT}}
-      run: $GITHUB_WORKSPACE/CI/register-windows-release.sh
+            echo "Debug: Uploading to Sentry..."
+            sentry-cli debug-files upload --include-sources --wait "$MUDLET_BINARY" $DEBUG_SYMBOLS $LUAROCKS_DLLS
+            echo "Windows debug symbols uploaded to Sentry"
+          else
+            echo "Warning: Mudlet binary not found at $MUDLET_BINARY"
+            echo "Debug: Contents of build directory:"
+            ls -la "${GITHUB_WORKSPACE_UNIX}/build-MINGW64/" || echo "build-MINGW64 directory not found"
+            ls -la "${GITHUB_WORKSPACE_UNIX}/build-MINGW64/release/" || echo "release directory not found"
+          fi
+      - name: (Windows) Login to Azure
+        uses: azure/login@v2
+        if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Azure access token for code signing
+        shell: pwsh
+        if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
+          "::add-mask::$token"
+          "AZURE_ACCESS_TOKEN=$token" | Add-Content -Path $env:GITHUB_ENV
+
+      - name: (Windows) Deploy
+        shell: msys2 {0}
+        env:
+          DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+          DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+          DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+          X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
+          DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
+          DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
+          AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
+          GITHUB_REPO_NAME: ${{ github.repository }}
+          GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+          GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
+          GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
+
+      - name: Create intermediate artifact for debugging
+        uses: actions/upload-artifact@v5
+        if: env.INTERMEDIATE_ARTIFACT_NAME
+        with:
+          name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
+          path: ${{env.INTERMEDIATE_ARTIFACT_WINPATHORFILE}}
+          compression-level: ${{env.INTERMEDIATE_ARTIFACT_COMPRESSION}}
+          if-no-files-found: ignore
+
+      - name: Create artifact for later uploading
+        # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
+        # the given name - the Environmental variables are created by the
+        # deploy-mudlet-for-windows.sh script:
+        uses: actions/upload-artifact@v5
+        if: env.ARTIFACT_NAME
+        with:
+          name: ${{env.ARTIFACT_NAME}}
+          path: ${{env.ARTIFACT_WINPATHORFILE}}
+          compression-level: ${{env.ARTIFACT_COMPRESSION}}
+
+      - name: Upload artifact to make.mudlet.org
+        shell: msys2 {0}
+        if: env.ARTIFACT_NAME
+        run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+
+      - name: Register PTB Release
+        shell: msys2 {0}
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
+        env:
+          VERSION_STRING: ${{env.VERSION_STRING}}
+          BUILD_COMMIT: ${{env.BUILD_COMMIT}}
+        run: $GITHUB_WORKSPACE/CI/register-windows-release.sh
