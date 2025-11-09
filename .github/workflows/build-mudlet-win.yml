@@ -48,6 +48,7 @@ jobs:
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
     - name: Enable sentry.io for Windows releases
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'
       shell: msys2 {0}
       run: echo "WITH_SENTRY=yes" >> $GITHUB_ENV
 
@@ -58,9 +59,6 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
-
-    - name: (Windows) Create build directory
-      run: mkdir build
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -127,7 +125,7 @@ jobs:
         echo "Debug: Looking for Mudlet binary and debug symbols..."
         
         # Convert Windows path to Unix path for debugging
-        GITHUB_WORKSPACE_UNIX=$(echo "$GITHUB_WORKSPACE" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
+        GITHUB_WORKSPACE_UNIX="$(cygpath -au "${GITHUB_WORKSPACE}")"
         echo "Debug: GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
         echo "Debug: GITHUB_WORKSPACE_UNIX: $GITHUB_WORKSPACE_UNIX"
         

@@ -163,7 +163,7 @@ echo "Copying other, known to be needed, libraries in..."
 # libjasper to libwebpdemux-2 are additional image format handlers that Qt can
 # use if they are present.
 # libsqlite3 and libyajl are needed by lua modules (luasql-sqlite3) and at Mudlet run time.
-cp -v -p -t .
+cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libjasper.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libjpeg-8.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libtiff-6.dll" \
