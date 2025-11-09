@@ -60,6 +60,9 @@ jobs:
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
 
+    - name: (Windows) Create build directory
+      run: mkdir build
+
     - name: (Windows) Build
       shell: msys2 {0}
       working-directory: build
