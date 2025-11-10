@@ -5388,8 +5388,20 @@ void dlgTriggerEditor::saveTrigger()
         if (pT->state()) {
             clearEditorNotification();
 
+            qDebug() << "saveTrigger: name=" << name
+                     << "checkIfNew=" << pT->checkIfNew()
+                     << "isActive(before)=" << pT->isActive()
+                     << "shouldBeActive=" << pT->shouldBeActive()
+                     << "isFolder=" << pT->isFolder();
+
             if (pT->checkIfNew()) {
                 pT->unmarkAsNew();
+            }
+
+            // Activate triggers on successful save if they should be active
+            if (pT->shouldBeActive()) {
+                pT->setIsActive(true);
+                qDebug() << "saveTrigger: activated trigger, isActive(after)=" << pT->isActive();
             }
 
             if (pT->isFolder()) {
@@ -5422,11 +5434,6 @@ void dlgTriggerEditor::saveTrigger()
             }
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
-
-            // Activate triggers on successful save if they should be active
-            if (pT->shouldBeActive()) {
-                pT->setIsActive(true);
-            }
         } else {
             QIcon iconError;
             pItem->setText(0, name);
@@ -5665,8 +5672,20 @@ void dlgTriggerEditor::saveAlias()
         if (pT->state()) {
             clearEditorNotification();
 
+            qDebug() << "saveAlias: name=" << name
+                     << "checkIfNew=" << pT->checkIfNew()
+                     << "isActive(before)=" << pT->isActive()
+                     << "shouldBeActive=" << pT->shouldBeActive()
+                     << "isFolder=" << pT->isFolder();
+
             if (pT->checkIfNew()) {
                 pT->unmarkAsNew();
+            }
+
+            // Activate aliases on successful save if they should be active
+            if (pT->shouldBeActive()) {
+                pT->setIsActive(true);
+                qDebug() << "saveAlias: activated alias, isActive(after)=" << pT->isActive();
             }
 
             if (pT->isFolder()) {
@@ -5699,11 +5718,6 @@ void dlgTriggerEditor::saveAlias()
             }
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
-
-            // Activate aliases on successful save if they should be active
-            if (pT->shouldBeActive()) {
-                pT->setIsActive(true);
-            }
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
