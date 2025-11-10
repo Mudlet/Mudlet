@@ -170,7 +170,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                  QString::number(room->z()),
             //: This description is shown when NO room is selected.
                                  tr("Current player location")))
-                    .append(QtChar::LineFeed);
+                    .append(QChar::LineFeed);
             if (areaId != displayAreaId) {
                 isItalic = true;
             } else {
@@ -193,7 +193,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                  QString::number(room->z()),
             //: This description is shown when EXACTLY ONE room is selected.
                                  tr("Selected room")))
-                    .append(QtChar::LineFeed);
+                    .append(QChar::LineFeed);
             isBold = true;
             if (infoColor.lightness() > 127) {
                 color = QColor(255, 223, 191); // Slightly orange white
@@ -217,7 +217,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                  QString::number(room->z()),
             //: This description is shown when MORE THAN ONE room is selected.
                                  tr("Center of %n selected rooms", nullptr, selectionSize)))
-                    .append(QtChar::LineFeed);
+                    .append(QChar::LineFeed);
             isBold = true;
             if (infoColor.lightness() > 127) {
                 color = QColor(255, 223, 191); // Slightly orange white
