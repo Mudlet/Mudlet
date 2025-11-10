@@ -118,21 +118,23 @@ jobs:
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
         echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
 
+        # Detect Homebrew prefix once (differs between x86_64 and ARM64)
+        if [ "$(uname -m)" = "arm64" ]; then
+          HOMEBREW_PREFIX=/opt/homebrew
+        else
+          HOMEBREW_PREFIX=/usr/local
+        fi
+        echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
+
         # Help CMake find Lua installed by gh-actions-lua
         # The action installs to .lua/ and .luarocks/ in the runner home
         echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
 
         # Help CMake find keg-only Homebrew packages (PCRE is keg-only on macOS)
-        echo "PKG_CONFIG_PATH=/usr/local/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        # Detect Homebrew prefix (differs between x86_64 and ARM64)
-        if [ "$(uname -m)" = "arm64" ]; then
-          YAJL_PREFIX=/opt/homebrew/opt/yajl
-        else
-          YAJL_PREFIX=/usr/local/opt/yajl
-        fi
-        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=$YAJL_PREFIX
+        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -253,20 +255,11 @@ jobs:
         luarocks --lua-version 5.1 install --local LuaFileSystem
         luarocks --lua-version 5.1 install --local luautf8
 
-        # Detect paths for dependencies that need DIR hints on macOS
+        # Install luarocks packages with DIR hints on macOS (HOMEBREW_PREFIX is set earlier)
         if [ "$RUNNER_OS" = "macOS" ]; then
-          if [ "$(uname -m)" = "arm64" ]; then
-            ZIP_PREFIX=/opt/homebrew/opt/libzip
-            SQLITE_PREFIX=/opt/homebrew/opt/sqlite
-            PCRE_PREFIX=/opt/homebrew/opt/pcre
-          else
-            ZIP_PREFIX=/usr/local/opt/libzip
-            SQLITE_PREFIX=/usr/local/opt/sqlite
-            PCRE_PREFIX=/usr/local/opt/pcre
-          fi
-          luarocks --lua-version 5.1 install --local lua-zip ZIP_DIR=$ZIP_PREFIX
-          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=$SQLITE_PREFIX
-          luarocks --lua-version 5.1 install --local lrexlib-pcre PCRE_DIR=$PCRE_PREFIX
+          luarocks --lua-version 5.1 install --local lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
+          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
+          luarocks --lua-version 5.1 install --local lrexlib-pcre PCRE_DIR=${HOMEBREW_PREFIX}/opt/pcre
         else
           luarocks --lua-version 5.1 install --local lua-zip
           luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
