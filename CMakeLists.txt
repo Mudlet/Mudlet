@@ -61,6 +61,11 @@ if(POLICY CMP0057)
   cmake_policy(SET CMP0057 NEW)
 endif()
 
+if(POLICY CMP0144)
+  # Allow using <PACKAGENAME>_ROOT variables (for BOOST_ROOT)
+  cmake_policy(SET CMP0144 NEW)
+endif()
+
 if(WIN32)
   set(APP_TARGET mudlet.exe)
 elseif(APPLE)

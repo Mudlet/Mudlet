@@ -252,6 +252,8 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          -DBOOST_ROOT=${{env.BOOST_ROOT}}
+          -DBoost_INCLUDE_DIR=${{env.BOOST_ROOT}}
           -DUSE_SANITIZER=""
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
