@@ -34,6 +34,7 @@
 #include "CustomLineDrawHandler.h"
 #include "CustomLineEditContextMenuHandler.h"
 #include "CustomLineEditHandler.h"
+#include "CustomLineSession.h"
 #include "LabelInteractionHandler.h"
 #include "PanInteractionHandler.h"
 #include "RoomContextMenuHandler.h"
@@ -61,6 +62,9 @@
 #include <QStandardPaths>
 #include <QtEvents>
 #include <QtUiTools>
+#include <QWidget>
+
+#include <cmath>
 
 #include "mapInfoContributorManager.h"
 
@@ -279,31 +283,44 @@ bool T2DMap::InteractionDispatcher::dispatch(MapInteractionContext& context) con
 bool T2DMap::eventFilter(QObject* watched, QEvent* event)
 {
     if (mActiveContextMenu && event && event->type() == QEvent::MouseButtonPress) {
+        if (auto* activeMenu = mActiveContextMenu.data()) {
+            if (watched == activeMenu) {
+                return QObject::eventFilter(watched, event);
+            }
+
+            if (auto* watchedWidget = qobject_cast<QWidget*>(watched); watchedWidget && activeMenu->isAncestorOf(watchedWidget)) {
+                return QObject::eventFilter(watched, event);
+            }
+        }
+
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
-        if (mouseEvent && mouseEvent->button() == Qt::RightButton) {
-            const QPoint globalPos = mouseEvent->globalPosition().toPoint();
-            const QPoint localPos = mapFromGlobal(globalPos);
+        if (mouseEvent) {
+            const auto button = mouseEvent->button();
+            if (button == Qt::LeftButton || button == Qt::RightButton) {
+                const QPoint globalPos = mouseEvent->globalPosition().toPoint();
+                const QPoint localPos = mapFromGlobal(globalPos);
 
-            if (rect().contains(localPos)) {
-                auto menu = mActiveContextMenu;
-                mActiveContextMenu.clear();
+                if (rect().contains(localPos)) {
+                    auto menu = mActiveContextMenu;
+                    mActiveContextMenu.clear();
 
-                if (menu) {
-                    menu->close();
+                    if (menu) {
+                        menu->close();
+                    }
+
+                    const QPointF localPosF(localPos);
+                    const QPointF globalPosF(globalPos);
+
+                    auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF,
+                        button, button, mouseEvent->modifiers());
+                    auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF,
+                        button, Qt::NoButton, mouseEvent->modifiers());
+
+                    QCoreApplication::postEvent(this, pressEvent);
+                    QCoreApplication::postEvent(this, releaseEvent);
+
+                    return true;
                 }
-
-                const QPointF localPosF(localPos);
-                const QPointF globalPosF(globalPos);
-
-                auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF,
-                    Qt::RightButton, Qt::RightButton, mouseEvent->modifiers());
-                auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF,
-                    Qt::RightButton, Qt::NoButton, mouseEvent->modifiers());
-
-                QCoreApplication::postEvent(this, pressEvent);
-                QCoreApplication::postEvent(this, releaseEvent);
-
-                return true;
             }
         }
     }
@@ -318,6 +335,13 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 {
+
+    if (auto* app = qApp) {
+        // This allows to forward clicks to widget even if popup menu is opened, therefore e.g. one click is enough to close popup and select room
+        // No more need to first close popup and then perform click on ob
+        app->installEventFilter(this);
+    }
+
     mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -328,10 +352,11 @@ T2DMap::T2DMap(QWidget* parent)
         //: Room name in the mapper widget
         tr("Name");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
-    mMultiSelectionListWidget.setToolTip(utils::richText(tr("Click on a line to select or deselect that room number (with the given name if the "
-                                                            "rooms are named) to add or remove the room from the selection.  Click on the "
-                                                            "relevant header to sort by that method.  Note that the name column will only "
-                                                            "show if at least one of the rooms has a name.")));
+    //: Tooltip for the room selection list. This text will be formatted with HTML line breaks between sentences.
+    mMultiSelectionListWidget.setToolTip(utils::richText(tr("Click on a line to select or deselect that room number "
+                                                            "(it will have a name if the room is named).<br><br>"
+                                                            "Click on a column header to sort by that column.<br><br>"
+                                                            "The name column only appears if at least one room has a name.")));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
     mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection); // Was ExtendedSelection
@@ -350,6 +375,8 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
+
+    mCustomLineSession = std::make_unique<CustomLineSession>(*this);
 
     mCustomLineDrawContextMenuHandler = std::make_unique<CustomLineDrawContextMenuHandler>(*this);
     registerInteractionHandler(mCustomLineDrawContextMenuHandler.get(), 450);
@@ -380,6 +407,13 @@ T2DMap::T2DMap(QWidget* parent)
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
+}
+
+T2DMap::~T2DMap()
+{
+    if (auto* app = qApp) {
+        app->removeEventFilter(this);
+    }
 }
 
 void T2DMap::init()
@@ -3168,7 +3202,11 @@ void T2DMap::slot_customLineAddPoint()
         segment = QLineF(customLineStartPoint, room->customLines.value(mCustomLineSelectedExit).at(0));
     }
     segment.setLength(segment.length() / 2.0);
-    room->customLines[mCustomLineSelectedExit].insert(mCustomLineSelectedPoint, segment.p2());
+    QPointF newPoint = segment.p2();
+    if (isSnapCustomLinePointsToGridEnabled()) {
+        newPoint = snapPointToGrid(newPoint);
+    }
+    room->customLines[mCustomLineSelectedExit].insert(mCustomLineSelectedPoint, newPoint);
     mCustomLineSelectedPoint++;
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
@@ -3176,6 +3214,15 @@ void T2DMap::slot_customLineAddPoint()
     repaint();
     mpMap->setUnsaved(__func__);
 }
+
+
+void T2DMap::slot_setSnapCustomLinePointsToGrid(bool enabled)
+{
+    if (mCustomLineSession) {
+        mCustomLineSession->setSnapToGridEnabled(enabled);
+    }
+}
+
 
 
 void T2DMap::slot_customLineRemovePoint()
@@ -3202,6 +3249,47 @@ void T2DMap::slot_customLineRemovePoint()
 }
 
 
+bool T2DMap::isSnapCustomLinePointsToGridEnabled() const
+{
+    return mCustomLineSession && mCustomLineSession->isSnapToGridEnabled();
+}
+
+
+
+QPointF T2DMap::snapPointToGrid(const QPointF& point) const
+{
+    if (mCustomLineSession) {
+        return mCustomLineSession->snapPointToGrid(point);
+    }
+
+    return point;
+}
+
+
+
+bool T2DMap::canMoveSelectedCustomLineLastPointToTargetRoom() const
+{
+    return mCustomLineSession && mCustomLineSession->canMoveSelectedCustomLineLastPointToTargetRoom();
+}
+
+
+
+bool T2DMap::canMoveCustomLineLastPointToTargetRoom(const TRoom& room, const QString& exitKey) const
+{
+    return mCustomLineSession && mCustomLineSession->canMoveCustomLineLastPointToTargetRoom(room, exitKey);
+}
+
+
+
+void T2DMap::slot_moveCustomLineLastPointToTargetRoom()
+{
+    if (mCustomLineSession) {
+        mCustomLineSession->moveCustomLineLastPointToTargetRoom();
+    }
+}
+
+
+
 void T2DMap::slot_undoCustomLineLastPoint()
 {
     if (mCustomLinesRoomFrom > 0) {
@@ -3219,6 +3307,10 @@ void T2DMap::slot_undoCustomLineLastPoint()
 
 void T2DMap::slot_doneCustomLine()
 {
+    if (mCustomLineSession) {
+        mCustomLineSession->clearOriginalPoints();
+    }
+
     if (mpCustomLinesDialog) {
         mpCustomLinesDialog->accept();
         mpCustomLinesDialog = nullptr;
@@ -3242,6 +3334,10 @@ void T2DMap::slot_deleteCustomExitLine()
     if (mCustomLineSelectedRoom > 0) {
         TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
         if (room) {
+            if (mCustomLineSession) {
+                mCustomLineSession->clearOriginalPoints();
+            }
+
             room->customLinesArrow.remove(mCustomLineSelectedExit);
             room->customLinesColor.remove(mCustomLineSelectedExit);
             room->customLinesStyle.remove(mCustomLineSelectedExit);
@@ -3673,8 +3769,10 @@ void T2DMap::slot_setRoomProperties(
         if (changeRoomColor) {
             room->environment = newRoomColor;
         }
-        if (changeSymbol || changeSymbolColor) {
+        if (changeSymbol) {
             room->mSymbol = newSymbol;
+        }
+        if (changeSymbolColor) {
             room->mSymbolColor = newSymbolColor;
         }
         if (changeWeight) {
@@ -4510,6 +4608,10 @@ void T2DMap::slot_customLineColor()
 // title bar and by ESC keypress...
 void T2DMap::slot_cancelCustomLineDialog()
 {
+    if (mCustomLineSession) {
+        mCustomLineSession->clearOriginalPoints();
+    }
+
     mpCustomLinesDialog->deleteLater();
     mpCustomLinesDialog = nullptr;
     mCustomLinesRoomFrom = 0;
@@ -4885,9 +4987,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         return {false, qsl("Area %1 has invalid dimensions").arg(areaId)};
     }
 
-    // Use zoom level to determine appropriate scale - similar to paintEvent
-    const float xyzoom = pArea->get2DMapZoom();
-
     // Calculate room size based on area dimensions - auto-sizing approach
     // Aim for reasonable room sizes that fit well regardless of area size
     const int targetImageDimension = 1024; // Target around 1024 pixels for the larger dimension
@@ -4896,11 +4995,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const int minRoomSize = 8;
     const int maxRoomSize = 50; // Prevent rooms from being too large
     const int finalRoomSize = qBound(minRoomSize, roomSize, maxRoomSize);
-
-    // Store room-based dimensions for export
-    const float exportRoomWidth = finalRoomSize;
-    const float exportRoomHeight = finalRoomSize;
-
 
     // Calculate image size based on actual area content
     const int padding = finalRoomSize * 2;
@@ -4974,17 +5068,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     const float exitWidth = 1 / eSize * finalRoomSize * rSize;
     pen.setWidthF(exitWidth);
 
-    // Use the same Z-level filtering and drawing approach as paintEvent
-
-    // Get the current Z level from the area center
-    TRoom* centerRoom = nullptr;
-    for (int roomId : pArea->rooms) {
-        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (pRoom) {
-            centerRoom = pRoom;
-            break;
-        }
-    }
     // Use the same Z-level filtering and drawing approach as paintEvent
     const int exportZLevel = zLevel.has_value() ? zLevel.value() : mMapCenterZ;
 
@@ -5238,8 +5321,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                         if (room->customLinesArrow.value(exitKey, false)) {
                             QLineF arrowLine = QLineF(polyLinePoints.last(), polyLinePoints.at(polyLinePoints.size() - 2));
                             arrowLine.setLength(exitWidth * 5.0);
-                            const QPointF arrowTip = arrowLine.p1();
-                            const QPointF arrowBase = arrowLine.p2();
 
                             QLineF arrowHead1 = arrowLine;
                             arrowHead1.setLength(exitWidth * 3.0);

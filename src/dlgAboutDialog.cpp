@@ -1024,6 +1024,14 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(Utf8_filenamesHeader,                   // 41 - utf8_filename header - translatable
                                        MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
 
+    QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
+                               "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
+                               "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
+                               "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
+
+    license_3rdParty_texts.append(qsl("<hr>%43")
+                                  .arg(swordModelHeader));                      // 43 - sword model attribution - translatable
+
     license_3rdParty_texts.append(qsl("</body></html>"));
 
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));

@@ -460,7 +460,64 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
     const Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->deleteLabel(labelName); !success) {
-        return warnArgumentValue(L, __func__, message);
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteMiniConsole
+int TLuaInterpreter::deleteMiniConsole(lua_State* L)
+{
+    const QString miniConsoleName = getVerifiedString(L, __func__, 1, "miniconsole name");
+    const Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->deleteMiniConsole(miniConsoleName); !success) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteCommandLine
+int TLuaInterpreter::deleteCommandLine(lua_State* L)
+{
+    const QString commandLineName = getVerifiedString(L, __func__, 1, "command line name");
+
+    if (isMain(commandLineName)) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "the main command line cannot be deleted");
+        return 2;
+    }
+
+    const Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->deleteCommandLine(commandLineName); !success) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteScrollBox
+int TLuaInterpreter::deleteScrollBox(lua_State* L)
+{
+    const QString scrollBoxName = getVerifiedString(L, __func__, 1, "scrollbox name");
+    const Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->deleteScrollBox(scrollBoxName); !success) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
     }
 
     lua_pushboolean(L, true);

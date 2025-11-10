@@ -21,7 +21,6 @@
 
 #include <QDebug>
 
-// RenderCubeCommand implementation
 RenderCubeCommand::RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a,
                                    const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
     : mX(x), mY(y), mZ(z), mSize(size), mR(r), mG(g), mB(b), mA(a)
@@ -37,8 +36,12 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
                                QOpenGLBuffer& vertexBuffer,
                                QOpenGLBuffer& colorBuffer,
                                QOpenGLBuffer& normalBuffer,
-                               QOpenGLBuffer& indexBuffer)
+                               QOpenGLBuffer& indexBuffer,
+                               QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+    Q_UNUSED(texCoordBuffer)
+
     GeometryData cubeGeometry = geometryManager->generateCubeGeometry(mX, mY, mZ, mSize, mR, mG, mB, mA);
 
     // Set uniforms
@@ -46,6 +49,8 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
     shader->setUniformValue("uUseInstancing", false);
+    shader->setUniformValue("uUseTexture", false);
+    shader->setUniformValue("uUsePBR", false);
 
     // Normal matrix (inverse transpose of model matrix)
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
@@ -54,7 +59,6 @@ void RenderCubeCommand::execute(QOpenGLFunctions* gl,
     geometryManager->renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
-// RenderLinesCommand implementation
 RenderLinesCommand::RenderLinesCommand(const QVector<float>& vertices, const QVector<float>& colors,
                                      const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
     : mVertices(vertices), mColors(colors)
@@ -70,8 +74,12 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
                                 QOpenGLBuffer& vertexBuffer,
                                 QOpenGLBuffer& colorBuffer,
                                 QOpenGLBuffer& normalBuffer,
-                                QOpenGLBuffer& indexBuffer)
+                                QOpenGLBuffer& indexBuffer,
+                                QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+    Q_UNUSED(texCoordBuffer)
+
     GeometryData lineGeometry = geometryManager->generateLineGeometry(mVertices, mColors);
 
     if (lineGeometry.isEmpty()) {
@@ -83,6 +91,8 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
     shader->setUniformValue("uUseInstancing", false);
+    shader->setUniformValue("uUseTexture", false);
+    shader->setUniformValue("uUsePBR", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
@@ -90,7 +100,6 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
     geometryManager->renderGeometry(lineGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_LINES);
 }
 
-// RenderTrianglesCommand implementation
 RenderTrianglesCommand::RenderTrianglesCommand(const QVector<float>& vertices, const QVector<float>& colors,
                                              const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
     : mVertices(vertices), mColors(colors)
@@ -106,8 +115,12 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
                                     QOpenGLBuffer& vertexBuffer,
                                     QOpenGLBuffer& colorBuffer,
                                     QOpenGLBuffer& normalBuffer,
-                                    QOpenGLBuffer& indexBuffer)
+                                    QOpenGLBuffer& indexBuffer,
+                                    QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+    Q_UNUSED(texCoordBuffer)
+
     GeometryData triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
 
     if (triangleGeometry.isEmpty()) {
@@ -119,6 +132,8 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
     shader->setUniformValue("uUseInstancing", false);
+    shader->setUniformValue("uUseTexture", false);
+    shader->setUniformValue("uUsePBR", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
@@ -126,7 +141,61 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
-// RenderInstancedCubesCommand implementation
+RenderTexturedTrianglesCommand::RenderTexturedTrianglesCommand(const GeometryData& geometry,
+                                                              const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+    : mGeometry(geometry), mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
+{
+}
+
+void RenderTexturedTrianglesCommand::execute(QOpenGLFunctions* gl,
+                                           QOpenGLShaderProgram* shader,
+                                           GeometryManager* geometryManager,
+                                           ResourceManager* resourceManager,
+                                           QOpenGLVertexArrayObject& vao,
+                                           QOpenGLBuffer& vertexBuffer,
+                                           QOpenGLBuffer& colorBuffer,
+                                           QOpenGLBuffer& normalBuffer,
+                                           QOpenGLBuffer& indexBuffer,
+                                           QOpenGLBuffer& texCoordBuffer)
+{
+    Q_UNUSED(gl)
+
+    if (mGeometry.isEmpty()) {
+        return;
+    }
+    
+    // Set uniforms
+    QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
+    shader->setUniformValue("uMVP", mvp);
+    shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
+    
+    // Set texture uniforms based on available textures
+    if (mGeometry.hasPBRTextures()) {
+        shader->setUniformValue("uUsePBR", true);
+        shader->setUniformValue("uUseTexture", false);
+        shader->setUniformValue("uBaseColorTexture", 0);         // Texture unit 0
+        shader->setUniformValue("uMetallicRoughnessTexture", 1); // Texture unit 1  
+        shader->setUniformValue("uNormalTexture", 2);            // Texture unit 2
+        
+        // Set PBR material factors
+        shader->setUniformValue("uBaseColorFactor", QVector4D(mGeometry.baseColorFactor[0], mGeometry.baseColorFactor[1], mGeometry.baseColorFactor[2], mGeometry.baseColorFactor[3]));
+        shader->setUniformValue("uMetallicFactor", mGeometry.metallicFactor);
+        shader->setUniformValue("uRoughnessFactor", mGeometry.roughnessFactor);
+    } else {
+        shader->setUniformValue("uUsePBR", false);
+        shader->setUniformValue("uUseTexture", mGeometry.hasTexture());
+        shader->setUniformValue("uTexture", 0);          // Use texture unit 0
+    }
+
+    // Normal matrix (inverse transpose of model matrix)
+    QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
+    shader->setUniformValue("uNormalMatrix", normalMatrix);
+    
+    // Use the textured rendering method
+    geometryManager->renderGeometry(mGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer, resourceManager, GL_TRIANGLES);
+}
+
 RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
                                                        const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
     : mInstances(instances), mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
@@ -141,8 +210,12 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
                                          QOpenGLBuffer& vertexBuffer,
                                          QOpenGLBuffer& colorBuffer,
                                          QOpenGLBuffer& normalBuffer,
-                                         QOpenGLBuffer& indexBuffer)
+                                         QOpenGLBuffer& indexBuffer,
+                                         QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(gl)
+    Q_UNUSED(texCoordBuffer)
+
     if (mInstances.isEmpty()) {
         return;
     }
@@ -152,6 +225,8 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uMVP", mvp);
     shader->setUniformValue("uModel", mModelMatrix);
     shader->setUniformValue("uUseInstancing", true);
+    shader->setUniformValue("uUseTexture", false);
+    shader->setUniformValue("uUsePBR", false);
 
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
@@ -166,7 +241,6 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     instanceBuffer.destroy();
 }
 
-// GLStateCommand implementation
 GLStateCommand::GLStateCommand(StateType stateType)
     : mStateType(stateType)
 {
@@ -180,8 +254,19 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
                             QOpenGLBuffer& vertexBuffer,
                             QOpenGLBuffer& colorBuffer,
                             QOpenGLBuffer& normalBuffer,
-                            QOpenGLBuffer& indexBuffer)
+                            QOpenGLBuffer& indexBuffer,
+                            QOpenGLBuffer& texCoordBuffer)
 {
+    Q_UNUSED(shader)
+    Q_UNUSED(geometryManager)
+    Q_UNUSED(resourceManager)
+    Q_UNUSED(vao)
+    Q_UNUSED(vertexBuffer)
+    Q_UNUSED(colorBuffer)
+    Q_UNUSED(normalBuffer)
+    Q_UNUSED(indexBuffer)
+    Q_UNUSED(texCoordBuffer)
+
     switch (mStateType) {
         case ENABLE_DEPTH_TEST:
             gl->glEnable(GL_DEPTH_TEST);

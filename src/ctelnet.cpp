@@ -878,23 +878,60 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
     } else {
         // don't process if download was aborted
         if (reply->error() != QNetworkReply::NoError) {
+            // Display error message to user when package download fails
+            QString errorMsg;
+
+            if (reply->error() == QNetworkReply::OperationCanceledError) {
+                errorMsg = tr("[ INFO ]  - Package download cancelled.");
+            } else {
+                //: %1 is the URL, %2 is the error message
+                errorMsg = tr("[ WARN ]  - Package download failed from '%1', reason: %2")
+                    .arg(reply->url().toString(), reply->errorString());
+                
+                // Provide specific guidance for SSL errors
+                if (reply->error() == QNetworkReply::SslHandshakeFailedError) {
+                    errorMsg += tr("\nThe package is hosted on a server with an SSL certificate problem. The URL may be using HTTPS when it should use HTTP, or the server's security certificate is not trusted by your system.");
+                }
+            }
+
+            postMessage(errorMsg);
+            
             reply->deleteLater();
             mpPackageDownloadReply = nullptr;
             return;
         }
 
         QSaveFile file(mServerPackage);
+
         if (!file.open(QFile::WriteOnly)) {
+            //: %1 is the file path, %2 is the error message
+            postMessage(tr("[ WARN ]  - Package download failed: could not open file '%1' for writing, reason: %2")
+                .arg(mServerPackage, file.errorString()));
             qWarning() << "ctelnet: failed to open file for writing:" << file.errorString();
             return;
         }
+
         file.write(reply->readAll());
+
         if (!file.commit()) {
+            //: %1 is the error message
+            postMessage(tr("[ WARN ]  - Package download failed: could not save file, reason: %1")
+                .arg(file.errorString()));
             qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << file.errorString();
+            return;
         }
+
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
-        mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package);
+        
+        // Install the package and handle any installation errors
+        if (auto [success, message] = mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package); !success) {
+            //: %1 is the package file path, %2 is the error message
+            postMessage(tr("[ WARN ]  - Package installation failed for '%1', reason: %2")
+                .arg(mServerPackage, message));
+            return;
+        }
+        
         QString packageName = mServerPackage.section("/", -1);
         packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
         packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);

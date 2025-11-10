@@ -1002,7 +1002,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // FIXME: Check this each time that it is appropriate for THIS build version
     comboBox_mapFileSaveFormatVersion->clear();
     // Add default version:
-    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
+    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
     if (pHost->mpMap) {
@@ -1014,9 +1014,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 comboBox_mapFileSaveFormatVersion->setEnabled(true);
                 label_mapFileSaveFormatVersion->setEnabled(true);
                 if (i > pHost->mpMap->mDefaultVersion) {
-                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Experimental}").arg(i), QVariant(i));
                 } else {
-                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {For older versions}").arg(i), QVariant(i));
                 }
             }
             const int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);

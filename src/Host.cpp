@@ -2019,7 +2019,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     raiseEvent(detailedInstallEvent);
 
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     if (mpModuleManager) {
         mpModuleManager->layoutModules();
@@ -2210,7 +2210,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mpEditorDialog->doCleanReset();
     }
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     return true;
 }
@@ -3059,6 +3059,11 @@ void Host::loadSecuredPassword()
 void Host::updateAnsi16ColorsInTable()
 {
     mLuaInterpreter.updateAnsi16ColorsInTable();
+}
+
+void Host::updateExtendedAnsiColorsInTable()
+{
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
 }
 
 void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter, const quint8 innerDiameter, const QColor& outerColor, const QColor& innerColor)
@@ -4534,6 +4539,7 @@ const QSet<QString> Host::mValidExperiments = {
     qsl("experiment.rendering.more-transparent"),
     qsl("experiment.3dmap.modernmapper"),
     qsl("experiment.render-in-out-exits"),
+    qsl("experiment.3d-player-icon")
 };
 
 bool Host::experimentEnabled(const QString& experimentKey) const
