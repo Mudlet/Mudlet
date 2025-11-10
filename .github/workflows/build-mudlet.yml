@@ -97,9 +97,16 @@ jobs:
         fi
         mkdir -p $BOOST_ROOT
         curl --progress-bar --location --output $BOOST_ROOT/download.7z $BOOST_URL
-        7z -o$BOOST_ROOT x $BOOST_ROOT/download.7z -y -bd
+        7z x $BOOST_ROOT/download.7z -o$BOOST_ROOT -y -bd
+        echo "Contents after extraction:"
+        ls -la $BOOST_ROOT/
         cd $BOOST_ROOT && cp -r boost-*/* .
-        rm -rf boost-*/* download.7z
+        echo "Contents after copy:"
+        ls -la $BOOST_ROOT/
+        rm -rf boost-* download.7z
+        echo "Contents after cleanup:"
+        ls -la $BOOST_ROOT/
+        ls -la $BOOST_ROOT/boost/ || echo "boost/ directory not found!"
       shell: bash
 
     - name: Save Boost cache
