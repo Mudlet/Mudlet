@@ -62,10 +62,6 @@ jobs:
             deploy: 'deploy'
             run_tests: 'true'
 
-    env:
-      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://github.com/boostorg/boost/releases/download/boost-1.83.0/boost-1.83.0.7z
-
     steps:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v5
@@ -81,40 +77,6 @@ jobs:
         dir: ${{runner.workspace}}
         cache: true
         modules: qt5compat qtmultimedia
-
-    - name: Restore Boost cache
-      id: restore-boost
-      uses: actions/cache/restore@v4
-      with:
-        path: ${{env.BOOST_ROOT}}
-        key: boost
-
-    - name: Install Boost
-      if: steps.restore-boost.outputs.cache-hit != 'true'
-      run: |
-        if [ "$OS" == "Windows_NT" ]; then
-          BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
-        fi
-        mkdir -p $BOOST_ROOT
-        curl --progress-bar --location --output $BOOST_ROOT/download.7z $BOOST_URL
-        7z x $BOOST_ROOT/download.7z -o$BOOST_ROOT -y -bd
-
-        # GitHub releases are source snapshots, need to generate headers
-        cd $BOOST_ROOT/boost-1.83.0
-        ./bootstrap.sh --with-libraries=
-        ./b2 headers
-
-        # Now copy to root
-        cd $BOOST_ROOT && cp -r boost-1.83.0/* .
-        rm -rf boost-1.83.0 download.7z
-      shell: bash
-
-    - name: Save Boost cache
-      if: steps.restore-boost.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: ${{env.BOOST_ROOT}}
-        key: ${{ steps.restore-boost.outputs.cache-primary-key }}
 
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v3.30.3
@@ -139,7 +101,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # Install all required dependencies
-        BREWS=("libzzip" "libzip" "ccache" "expect" "assimp" "hunspell" "pcre" "pugixml" "sqlite" "yajl")
+        BREWS=("libzzip" "libzip" "ccache" "expect" "assimp" "hunspell" "pcre" "pugixml" "sqlite" "yajl" "boost")
 
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
@@ -189,7 +151,7 @@ jobs:
         # imagemagick is for the desktop screenshot
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
         sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
-          libxkbcommon-x11-0 imagemagick libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev -y
+          libxkbcommon-x11-0 imagemagick libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -259,8 +221,6 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DBOOST_ROOT=${{env.BOOST_ROOT}}
-          -DBoost_INCLUDE_DIR=${{env.BOOST_ROOT}}
           -DUSE_SANITIZER=""
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
