@@ -18,6 +18,8 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    env:
+      LUA_VERSION: '5.1.5'
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +81,7 @@ jobs:
       if: runner.os == 'macOS'
       uses: leafo/gh-actions-lua@v12
       with:
-        luaVersion: "5.1.5"
+        luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
 
     - name: (macOS) Install Luarocks via GitHub Actions
@@ -140,7 +142,7 @@ jobs:
       uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
       with:
-        luaVersion: "5.1.5"
+        luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
 
     - name: (Linux) Install Luarocks via GitHub Actions
