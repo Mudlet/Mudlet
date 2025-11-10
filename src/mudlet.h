@@ -246,6 +246,7 @@ public:
     void armForceClose();
     Host* getActiveHost();
     QStringList getAvailableFonts();
+    static QFont createFont(const QString& fontName, int pointSize = -1);
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     HostManager& getHostManager() { return mHostManager; }

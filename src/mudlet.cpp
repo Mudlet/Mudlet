@@ -67,6 +67,7 @@
 #include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
+#include <QFontDatabase>
 #include <QJsonDocument>
 #include <QImage>
 #include <QJsonObject>
@@ -79,6 +80,7 @@
 #include <QPoint>
 #include <QScreen>
 #include <QScrollBar>
+#include <QSet>
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleFactory>
@@ -5554,7 +5556,90 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
 
 QStringList mudlet::getAvailableFonts()
 {
-    return QFontDatabase::families(QFontDatabase::Any);
+    QStringList result;
+    QSet<QString> uniqueFonts;
+
+    // Get all font families
+    const QStringList families = QFontDatabase::families(QFontDatabase::Any);
+
+    for (const QString& family : families) {
+        // Add the base family name
+        if (!uniqueFonts.contains(family)) {
+            uniqueFonts.insert(family);
+            result.append(family);
+        }
+
+        // Get all styles for this family
+        const QStringList styles = QFontDatabase::styles(family);
+
+        for (const QString& style : styles) {
+            // Skip "Normal" and "Regular" styles as they're the default
+            // and already covered by the family name itself
+            if (style.compare(qsl("Normal"), Qt::CaseInsensitive) == 0 ||
+                style.compare(qsl("Regular"), Qt::CaseInsensitive) == 0) {
+                continue;
+            }
+
+            // Create a combined name: "Family Style" (e.g., "EB Garamond SemiBold")
+            const QString combinedName = qsl("%1 %2").arg(family, style);
+
+            if (!uniqueFonts.contains(combinedName)) {
+                uniqueFonts.insert(combinedName);
+                result.append(combinedName);
+            }
+        }
+    }
+
+    // Sort the result for consistency
+    result.sort(Qt::CaseInsensitive);
+
+    return result;
+}
+
+QFont mudlet::createFont(const QString& fontName, int pointSize)
+{
+    // First, check if this is a direct family name
+    const QStringList families = QFontDatabase::families(QFontDatabase::Any);
+
+    // Try exact match first (case insensitive)
+    for (const QString& family : families) {
+        if (family.compare(fontName, Qt::CaseInsensitive) == 0) {
+            return QFont(family, pointSize);
+        }
+    }
+
+    // If not found, try to parse as "Family Style"
+    // Split on last space to separate family from style
+    const int lastSpaceIndex = fontName.lastIndexOf(QLatin1Char(' '));
+
+    if (lastSpaceIndex > 0) {
+        const QString potentialFamily = fontName.left(lastSpaceIndex);
+        const QString potentialStyle = fontName.mid(lastSpaceIndex + 1);
+
+        // Check if this family exists
+        for (const QString& family : families) {
+            if (family.compare(potentialFamily, Qt::CaseInsensitive) == 0) {
+                // Check if this style exists for this family
+                const QStringList styles = QFontDatabase::styles(family);
+
+                for (const QString& style : styles) {
+                    if (style.compare(potentialStyle, Qt::CaseInsensitive) == 0) {
+                        // Found a match! Create font with explicit style
+                        QFont font(family, pointSize);
+                        font.setStyleName(style);
+                        return font;
+                    }
+                }
+
+                // Family exists but style doesn't match exactly
+                // Still return the family, let Qt handle style matching
+                return QFont(family, pointSize);
+            }
+        }
+    }
+
+    // Fall back to using the name as-is and let Qt handle it
+    return QFont(fontName, pointSize);
 }
 
 std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)

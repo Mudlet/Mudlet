@@ -2568,13 +2568,13 @@ int TLuaInterpreter::setFont(lua_State* L)
     auto console = CONSOLE(L, windowName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
-        auto result = host.setDisplayFont(QFont(fontName, host.getDisplayFont().pointSize()));
+        auto result = host.setDisplayFont(mudlet::createFont(fontName, host.getDisplayFont().pointSize()));
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);
         }
         console->refreshView();
     } else {
-        auto font = QFont(fontName, console->font().pointSize());
+        auto font = mudlet::createFont(fontName, console->font().pointSize());
         console->setFont(font);
     }
     lua_pushboolean(L, true);
