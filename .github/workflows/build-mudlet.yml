@@ -221,6 +221,7 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DUSE_SANITIZER=""
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
