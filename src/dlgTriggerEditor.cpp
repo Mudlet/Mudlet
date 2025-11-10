@@ -5389,45 +5389,43 @@ void dlgTriggerEditor::saveTrigger()
             clearEditorNotification();
 
             if (pT->checkIfNew()) {
-                if (pT->isFolder()) {
-                    if (pT->shouldBeActive()) {
-                        itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
+                pT->unmarkAsNew();
+            }
+
+            if (pT->isFolder()) {
+                if (pT->shouldBeActive()) {
+                    itemDescription = descActiveFolder;
+                    if (pT->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
-                        itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    }
+                    itemDescription = descInactiveFolder;
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
                 }
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-
-                // Only enable truly new triggers, not existing disabled ones being loaded
-                if (pT->shouldBeActive()) {
-                    pT->setIsActive(true);
-                }
-                pT->unmarkAsNew();
             } else {
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
+                // Set visual appearance based on actual active state
+                if (pT->isActive()) {
+                    itemDescription = descActive;
+                    if (pT->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
+                    }
+                } else {
+                    itemDescription = descInactive;
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+            pItem->setIcon(0, icon);
+            pItem->setText(0, name);
+
+            // Activate triggers on successful save if they should be active
+            if (pT->shouldBeActive()) {
+                pT->setIsActive(true);
             }
         } else {
             QIcon iconError;
@@ -5668,45 +5666,43 @@ void dlgTriggerEditor::saveAlias()
             clearEditorNotification();
 
             if (pT->checkIfNew()) {
-                if (pT->isFolder()) {
-                    if (pT->shouldBeActive()) {
-                        itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
+                pT->unmarkAsNew();
+            }
+
+            if (pT->isFolder()) {
+                if (pT->shouldBeActive()) {
+                    itemDescription = descActiveFolder;
+                    if (pT->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
-                        itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    }
+                    itemDescription = descInactiveFolder;
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
                 }
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-
-                // Only enable truly new aliases, not existing disabled ones being loaded
-                if (pT->shouldBeActive()) {
-                    pT->setIsActive(true);
-                }
-                pT->unmarkAsNew();
             } else {
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
+                // Set visual appearance based on actual active state
+                if (pT->isActive()) {
+                    itemDescription = descActive;
+                    if (pT->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
+                    }
+                } else {
+                    itemDescription = descInactive;
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+            pItem->setIcon(0, icon);
+            pItem->setText(0, name);
+
+            // Activate aliases on successful save if they should be active
+            if (pT->shouldBeActive()) {
+                pT->setIsActive(true);
             }
         } else {
             QIcon iconError;
@@ -5996,40 +5992,38 @@ void dlgTriggerEditor::saveScript()
         }
 
         if (pT->checkIfNew()) {
-            if (pT->isFolder()) {
-                itemDescription = descActiveFolder;
+            pT->unmarkAsNew();
+        }
+
+        if (pT->isFolder()) {
+            itemDescription = descActiveFolder;
+            if (pT->ancestorsActive()) {
+                icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+            } else {
+                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                itemDescription = descInactiveParent.arg(itemDescription);
+            }
+        } else {
+            // Set visual appearance based on actual active state
+            if (pT->isActive()) {
+                itemDescription = descActive;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
-                // Set visual appearance based on actual active state, not "new" status
-                if (pT->isActive()) {
-                    itemDescription = descActive;
-                    if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveParent.arg(itemDescription);
-                    }
-                } else {
-                    itemDescription = descInactive;
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                }
+                itemDescription = descInactive;
+                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
             }
-            pItem->setIcon(0, icon);
-            pItem->setText(0, name);
+        }
+        pItem->setIcon(0, icon);
+        pItem->setText(0, name);
 
-            // Only enable truly new scripts, not existing disabled ones being loaded
-            if (pT->shouldBeActive()) {
-                pT->setIsActive(true);
-            }
-            pT->unmarkAsNew();
-        } else {
-            pItem->setIcon(0, icon);
-            pItem->setText(0, name);
+        // Activate scripts on successful save if they should be active
+        if (pT->shouldBeActive()) {
+            pT->setIsActive(true);
         }
 
     } else {
@@ -6366,45 +6360,41 @@ void dlgTriggerEditor::saveKey()
 
         if (pT->state()) {
             clearEditorNotification();
-            if (old_name == tr("New key")) {
-                if (pT->isFolder()) {
-                    if (pT->shouldBeActive()) {
-                        itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
+
+            if (pT->isFolder()) {
+                if (pT->shouldBeActive()) {
+                    itemDescription = descActiveFolder;
+                    if (pT->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
-                        itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveParent.arg(itemDescription);
-                        }
-                    } else {
-                        itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    }
-                }
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-
-                // Only enable truly new keys, not existing disabled ones being loaded
-                if (pT->shouldBeActive()) {
-                    pT->setIsActive(true);
+                    itemDescription = descInactiveFolder;
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
                 }
             } else {
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
+                // Set visual appearance based on actual active state
+                if (pT->isActive()) {
+                    itemDescription = descActive;
+                    if (pT->ancestorsActive()) {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    } else {
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        itemDescription = descInactiveParent.arg(itemDescription);
+                    }
+                } else {
+                    itemDescription = descInactive;
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+            pItem->setIcon(0, icon);
+            pItem->setText(0, name);
+
+            // Activate keys on successful save if they should be active
+            if (pT->shouldBeActive()) {
+                pT->setIsActive(true);
             }
         } else {
             QIcon iconError;
