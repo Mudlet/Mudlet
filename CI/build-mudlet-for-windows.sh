@@ -86,6 +86,8 @@ if [[ "${GITHUB_REPO_NAME}" == "Mudlet/Mudlet" ]]; then
       if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
         echo "=== No new commits, aborting public test build generation ==="
         echo "ABORT_WORKFLOW='true'" >> ${GITHUB_ENV}
+        # This only terminates this script (sucessfully), the above will be used
+        # to stop the remaining steps in the workflow from happening:
         exit 0
       fi
 

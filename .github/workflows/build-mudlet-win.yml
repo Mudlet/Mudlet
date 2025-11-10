@@ -67,8 +67,8 @@ jobs:
         # This should export the following to the GitHub "environment" for later
         # steps:
         # ABORT_WORKFLOW - Only created by PublicTest builds when it is not
-        #   required; needed because there still isn't a way to abort a workflow
-        #   without it showing up as an error. See:
+        #   required; needed because there still isn't a way to abort the rest
+        #   of a workflow without it showing up as an error. See:
         #   https://github.com/orgs/community/discussions/82744
         # BUILD_ACTION - what this build is doing, one of:
         #   "Release" - a tagged release branch representing that release version of Mudlet
