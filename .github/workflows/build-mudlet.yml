@@ -71,7 +71,7 @@ jobs:
       uses: actions/checkout@v5
       with:
         # CMake and qmake will pull in required submodules automatically
-        submodules: recursive
+        submodules: true
         fetch-depth: 0
 
     - name: Install Qt
