@@ -255,9 +255,26 @@ jobs:
       run: |
         luarocks --lua-version 5.1 install --local LuaFileSystem
         luarocks --lua-version 5.1 install --local luautf8
-        luarocks --lua-version 5.1 install --local lua-zip
-        luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
-        luarocks --lua-version 5.1 install --local lrexlib-pcre
+
+        # Detect paths for dependencies that need DIR hints on macOS
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          if [ "$(uname -m)" = "arm64" ]; then
+            ZIP_PREFIX=/opt/homebrew/opt/libzip
+            SQLITE_PREFIX=/opt/homebrew/opt/sqlite
+            PCRE_PREFIX=/opt/homebrew/opt/pcre
+          else
+            ZIP_PREFIX=/usr/local/opt/libzip
+            SQLITE_PREFIX=/usr/local/opt/sqlite
+            PCRE_PREFIX=/usr/local/opt/pcre
+          fi
+          luarocks --lua-version 5.1 install --local lua-zip ZIP_DIR=$ZIP_PREFIX
+          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=$SQLITE_PREFIX
+          luarocks --lua-version 5.1 install --local lrexlib-pcre PCRE_DIR=$PCRE_PREFIX
+        else
+          luarocks --lua-version 5.1 install --local lua-zip
+          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
+          luarocks --lua-version 5.1 install --local lrexlib-pcre
+        fi
 
         # CI changelog generation dependencies
         luarocks --lua-version 5.1 install --local argparse
