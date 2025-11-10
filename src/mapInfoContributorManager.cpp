@@ -155,20 +155,22 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         // If one or more rooms are selected - make the text slightly orange.
         switch (selectionSize) {
         case 0:
-            infoText.append(qsl("%1\n").arg(
-                /*:
-                This text is shown when NO rooms are selected: %1 is the room ID number,
-                and %2, %3, %4 are the x, y, and z coordinates for the current player's room.
-                This text uses non-breaking spaces (Unicode U+00A0) and a non-breaking hyphen which
-                are used to prevent the line being split at some places it might otherwise be.
-                When translating, please consider at which points the text may be divided to fit onto
-                more than one line. 
-                */
-                               tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) ‑\u00A0current player location")
-                                    .arg(QString::number(roomID),
-                                        QString::number(room->x()),
-                                        QString::number(room->y()),
-                                        QString::number(room->z()))));
+            /*:
+            This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number, 
+            and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
+            near the middle of the selection. %5 is a description like: Current player room.
+            This text uses non-breaking spaces (Unicode \u00A0) and a non-breaking hyphen (\u2011). 
+            They are used to prevent the line being split at unexpected places. When translating, 
+            please consider at which points the text may be divided to fit onto more than one line.
+            */
+            infoText.append(tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) \u2011\u00A0%5")
+                            .arg(QString::number(roomID),
+                                 QString::number(room->x()),
+                                 QString::number(room->y()),
+                                 QString::number(room->z()),
+            //: This description is shown when NO room is selected.
+                                 tr("Current player location")))
+                    .append(QtChar::LineFeed);
             if (areaId != displayAreaId) {
                 isItalic = true;
             } else {
@@ -176,20 +178,22 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
             }
             break;
         case 1:
-            infoText.append(qsl("%1\n").arg(
-                /*:
-                This text is shown when ONE room is selected: %1 is the room ID number,
-                and %2, %3, %4 are the x, y, and z coordinates for the selected room.
-                This text uses non-breaking spaces (Unicode U+00A0) and a non-breaking hyphen which
-                are used to prevent the line being split at some places it might otherwise be.
-                When translating, please consider at which points the text may be divided to fit onto
-                more than one line. 
-                */
-                               tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) ‑\u00A0selected room")
-                                    .arg(QString::number(roomID),
-                                        QString::number(room->x()),
-                                        QString::number(room->y()),
-                                        QString::number(room->z()))));
+            /*:
+            This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number, 
+            and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
+            near the middle of the selection. %5 is a description like: Current player room.
+            This text uses non-breaking spaces (Unicode \u00A0) and a non-breaking hyphen (\u2011). 
+            They are used to prevent the line being split at unexpected places. When translating, 
+            please consider at which points the text may be divided to fit onto more than one line.
+            */
+            infoText.append(tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) \u2011\u00A0%5")
+                            .arg(QString::number(roomID),
+                                 QString::number(room->x()),
+                                 QString::number(room->y()),
+                                 QString::number(room->z()),
+            //: This description is shown when EXACTLY ONE room is selected.
+                                 tr("Selected room")))
+                    .append(QtChar::LineFeed);
             isBold = true;
             if (infoColor.lightness() > 127) {
                 color = QColor(255, 223, 191); // Slightly orange white
@@ -198,24 +202,22 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
             }
             break;
         default:
-            infoText.append(qsl("%1\n").arg(
-                /*:
-                This text is shown when MORE THAN ONE room is selected. %1 is the room
-                ID number for which %2, %3, %4 are the x, y, and z coordinates of the room nearest the
-                middle of the selection. This room has the yellow cross-hairs. %5 is a description like:
-                center of 8 selected rooms.
-                This text uses non-breaking spaces (Unicode U+00A0) and a non-breaking hyphen which
-                are used to prevent the line being split at some places it might otherwise be.
-                When translating, please consider at which points the text may be divided to fit onto
-                more than one line.
-                */
-                               tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) ‑\u00A0%5")
-                                    .arg(QString::number(roomID),
-                                        QString::number(room->x()),
-                                        QString::number(room->y()),
-                                        QString::number(room->z()),
-                /*: This text is shown when MORE THAN ONE room is selected. */
-                                        tr("center of %n selected rooms", nullptr, selectionSize))));
+            /*:
+            This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number, 
+            and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
+            near the middle of the selection. %5 is a description like: Current player room.
+            This text uses non-breaking spaces (Unicode U+00A0) and a non-breaking hyphen (U+2011). 
+            They are used to prevent the line being split at unexpected places. When translating, 
+            please consider at which points the text may be divided to fit onto more than one line.
+            */
+            infoText.append(tr("Room\u00A0ID:\u00A0%1 Position\u00A0on\u00A0Map: (%2,%3,%4) \u2011\u00A0%5")
+                            .arg(QString::number(roomID),
+                                 QString::number(room->x()),
+                                 QString::number(room->y()),
+                                 QString::number(room->z()),
+            //: This description is shown when MORE THAN ONE room is selected.
+                                 tr("Center of %n selected rooms", nullptr, selectionSize)))
+                    .append(QtChar::LineFeed);
             isBold = true;
             if (infoColor.lightness() > 127) {
                 color = QColor(255, 223, 191); // Slightly orange white
