@@ -258,26 +258,28 @@ jobs:
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
-        luarocks --lua-version 5.1 install --local LuaFileSystem
-        luarocks --lua-version 5.1 install --local luautf8
+        LUAROCKS="luarocks --lua-version 5.1 install --local"
+
+        $LUAROCKS LuaFileSystem
+        $LUAROCKS luautf8
 
         # Install luarocks packages with DIR hints on macOS (HOMEBREW_PREFIX is set earlier)
         if [ "$RUNNER_OS" = "macOS" ]; then
-          luarocks --lua-version 5.1 install --local lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
-          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
-          luarocks --lua-version 5.1 install --local lrexlib-pcre PCRE_DIR=${HOMEBREW_PREFIX}/opt/pcre
+          $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
+          $LUAROCKS lrexlib-pcre PCRE_DIR=${HOMEBREW_PREFIX}/opt/pcre
         else
-          luarocks --lua-version 5.1 install --local lua-zip
-          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
-          luarocks --lua-version 5.1 install --local lrexlib-pcre
+          $LUAROCKS lua-zip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1
+          $LUAROCKS lrexlib-pcre
         fi
 
         # CI changelog generation dependencies
-        luarocks --lua-version 5.1 install --local argparse
-        luarocks --lua-version 5.1 install --local lunajson
+        $LUAROCKS argparse
+        $LUAROCKS lunajson
 
         # Lua-based tests
-        luarocks --lua-version 5.1 install --local busted
+        $LUAROCKS busted
 
         # necessary for Qt multimedia and modern Qt
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
