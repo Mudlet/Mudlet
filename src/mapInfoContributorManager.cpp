@@ -155,6 +155,8 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         // If one or more rooms are selected - make the text slightly orange.
         switch (selectionSize) {
         case 0:
+            // The following multi-line comments for translators are deliberately vague to cover all
+            // three same strings in these cases with a same comment, so translators only see them once.
             /*:
             This text is shown when room(s) are (not) selected in mapper. %1 is the room ID number, 
             and %2, %3, %4 are the x, y, and z coordinates of the current/selected room, or a room
