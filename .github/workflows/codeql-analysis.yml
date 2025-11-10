@@ -34,7 +34,7 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
+      BOOST_URL: https://github.com/boostorg/boost/releases/download/boost-1.83.0/boost-1.83.0.7z
 
 
     steps:
@@ -80,11 +80,10 @@ jobs:
           BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
         fi
         mkdir -p $BOOST_ROOT
-        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
-        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
-        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
-        cd $BOOST_ROOT && cp -r boost_*/* .
-        rm -rf boost_*/* download.tar.bz2 download.tar
+        curl --progress-bar --location --output $BOOST_ROOT/download.7z $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.7z -y -bd
+        cd $BOOST_ROOT && cp -r boost-*/* .
+        rm -rf boost-*/* download.7z
       shell: bash
 
     # Initializes the CodeQL tools for scanning.
