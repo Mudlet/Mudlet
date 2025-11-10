@@ -98,15 +98,18 @@ jobs:
         mkdir -p $BOOST_ROOT
         curl --progress-bar --location --output $BOOST_ROOT/download.7z $BOOST_URL
         7z x $BOOST_ROOT/download.7z -o$BOOST_ROOT -y -bd
-        echo "Contents after extraction:"
+        echo "=== Contents of BOOST_ROOT after extraction ==="
         ls -la $BOOST_ROOT/
-        cd $BOOST_ROOT && cp -r boost-*/* .
-        echo "Contents after copy:"
+        echo "=== Contents of boost-1.83.0/ directory ==="
+        ls -la $BOOST_ROOT/boost-1.83.0/
+        echo "=== Checking for boost/ subdirectory ==="
+        ls -la $BOOST_ROOT/boost-1.83.0/boost/ || echo "boost/ subdirectory not found in boost-1.83.0!"
+        cd $BOOST_ROOT && cp -r boost-1.83.0/* .
+        echo "=== Contents after copy ==="
         ls -la $BOOST_ROOT/
-        rm -rf boost-* download.7z
-        echo "Contents after cleanup:"
-        ls -la $BOOST_ROOT/
-        ls -la $BOOST_ROOT/boost/ || echo "boost/ directory not found!"
+        echo "=== Checking for boost/ after copy ==="
+        ls -la $BOOST_ROOT/boost/ || echo "boost/ directory not found after copy!"
+        rm -rf boost-1.83.0 download.7z
       shell: bash
 
     - name: Save Boost cache
