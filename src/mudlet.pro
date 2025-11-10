@@ -303,9 +303,12 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
 # day of the fourth month of the Gregorian calendar year:
 # DEFINES+=DEBUG_EASTER_EGGS
 #
-# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-# commands for suboptions - change the value to 2 to get a bit more detail
-# about the size or nature of the command:
+# * Uncomment this and set to a integer value with the following bits to:
+#   1 - debugging messages about WILL/WONT/DO/DONT and other commands for
+#       suboptions
+#   2 - more detail about the size or nature of the command:
+#   4 - to monitor the use of and choice of both sockets (one each for IPv4
+#       and IPv6 prototcols)
 DEFINES+=DEBUG_TELNET=1
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
