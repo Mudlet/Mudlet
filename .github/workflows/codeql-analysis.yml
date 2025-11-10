@@ -82,8 +82,8 @@ jobs:
         mkdir -p $BOOST_ROOT
         curl --progress-bar --location --output $BOOST_ROOT/download.7z $BOOST_URL
         7z -o$BOOST_ROOT x $BOOST_ROOT/download.7z -y -bd
-        cd $BOOST_ROOT && cp -r boost_*/* .
-        rm -rf boost_*/* download.7z
+        cd $BOOST_ROOT && cp -r boost-*/* .
+        rm -rf boost-*/* download.7z
       shell: bash
 
     # Initializes the CodeQL tools for scanning.
