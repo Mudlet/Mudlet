@@ -42,8 +42,7 @@ extern "C" {
 static jmp_buf buf;
 
 LuaInterface::LuaInterface(lua_State* L)
-: depth()
-, mL(L)
+: mL(L)
 {
     varUnit.reset(new VarUnit());
     //set our panic function
@@ -816,6 +815,7 @@ void LuaInterface::getVars(bool hide)
         const int ref = it.next();
         luaL_unref(mL, LUA_REGISTRYINDEX, ref);
     }
+    lrefs.clear();
     varUnit->clear();
     varUnit->setBase(global);
     varUnit->addVariable(global);

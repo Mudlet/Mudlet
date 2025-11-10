@@ -23,11 +23,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
@@ -43,7 +41,6 @@ class ScriptUnit
 public:
     explicit ScriptUnit(Host* pHost)
     : mpHost(pHost)
-    , mMaxID(0)
     {}
 
     std::list<TScript*> getScriptRootNodeList()
@@ -85,7 +82,7 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TScript*> mScriptMap;
     std::list<TScript*> mScriptRootNodeList;
-    int mMaxID;
+    int mMaxID = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;
     int statsActiveItems = 0;

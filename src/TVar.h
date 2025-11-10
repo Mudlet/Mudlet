@@ -23,11 +23,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QList>
 #include <QString>
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -43,6 +41,7 @@ public:
     TVar();
     explicit TVar(TVar*);
     TVar(TVar*, const QString&, int, const QString&, int);
+    ~TVar();
     void addChild(TVar*);
     void setParent(TVar*);
     void removeChild(TVar*);
@@ -65,20 +64,20 @@ public:
     bool isReference();
 
 public:
-    bool hidden;
-    const void* pKey;
-    const void* pValue;
-    bool saved;
+    bool hidden = false;
+    const void* pKey = nullptr;
+    const void* pValue = nullptr;
+    bool saved = false;
 
 private:
-    bool reference;
+    bool reference = false;
     QList<TVar*> children;
-    TVar* parent;
+    TVar* parent = nullptr;
     QString name;
-    int keyType;
+    int keyType = LUA_TNONE;
     QString value;
-    int valueType;
-    int newKeyType;
+    int valueType = LUA_TNONE;
+    int newKeyType = LUA_TNONE;
     QString nName;
 };
 

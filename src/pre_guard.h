@@ -17,14 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// MSVC's leak detection allowed for the definition of macros for the
-// functions/keywords below. This is fine for Mudlet's code, since it does
-// not use placement new, etc. The macros add file/line information to the
-// debug information shown by MSVC.
-// These pragmas save the value of the macros and then undefine the macros
-// so that when external headers, like Qt's or Boost's are included, they
-// are not broken by the unexpected macro definitions.
-
+// MSVC debug builds redefine allocation functions to track leak locations.
+// These pragmas make sure the macros do not break includes from third parties.
 #if defined(_DEBUG) && defined(_MSC_VER)
 #pragma push_macro("new")
 #undef new
@@ -35,3 +29,4 @@
 #pragma push_macro("free")
 #undef free
 #endif // _DEBUG && _MSC_VER
+

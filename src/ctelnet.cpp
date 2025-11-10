@@ -48,16 +48,14 @@
 #include "glwidget_integration.h"
 #endif
 
-#include "pre_guard.h"
 #include <QTextCodec>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QNetworkProxy>
 #include <QProgressDialog>
-#include <QSslError>
 #include <QSignalBlocker>
-#include "post_guard.h"
+#include <QSslError>
 
 using namespace std::chrono_literals;
 
@@ -555,7 +553,9 @@ void cTelnet::slot_send_login()
 
 void cTelnet::slot_send_pass()
 {
-    if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
+    // Auto-login: Send password if credentials are configured
+    if (mpHost->hasAutoLoginCredentials()) {
+        qDebug() << "Auto-login: Sending password (timer-based, independent of ECHO mode)";
         sendData(mpHost->getPass(), false);
     }
 }
@@ -1458,23 +1458,60 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
     } else {
         // don't process if download was aborted
         if (reply->error() != QNetworkReply::NoError) {
+            // Display error message to user when package download fails
+            QString errorMsg;
+
+            if (reply->error() == QNetworkReply::OperationCanceledError) {
+                errorMsg = tr("[ INFO ]  - Package download cancelled.");
+            } else {
+                //: %1 is the URL, %2 is the error message
+                errorMsg = tr("[ WARN ]  - Package download failed from '%1', reason: %2")
+                    .arg(reply->url().toString(), reply->errorString());
+                
+                // Provide specific guidance for SSL errors
+                if (reply->error() == QNetworkReply::SslHandshakeFailedError) {
+                    errorMsg += tr("\nThe package is hosted on a server with an SSL certificate problem. The URL may be using HTTPS when it should use HTTP, or the server's security certificate is not trusted by your system.");
+                }
+            }
+
+            postMessage(errorMsg);
+            
             reply->deleteLater();
             mpPackageDownloadReply = nullptr;
             return;
         }
 
         QSaveFile file(mServerPackage);
+
         if (!file.open(QFile::WriteOnly)) {
+            //: %1 is the file path, %2 is the error message
+            postMessage(tr("[ WARN ]  - Package download failed: could not open file '%1' for writing, reason: %2")
+                .arg(mServerPackage, file.errorString()));
             qWarning() << "ctelnet: failed to open file for writing:" << file.errorString();
             return;
         }
+
         file.write(reply->readAll());
+
         if (!file.commit()) {
+            //: %1 is the error message
+            postMessage(tr("[ WARN ]  - Package download failed: could not save file, reason: %1")
+                .arg(file.errorString()));
             qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << file.errorString();
+            return;
         }
+
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
-        mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package);
+        
+        // Install the package and handle any installation errors
+        if (auto [success, message] = mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package); !success) {
+            //: %1 is the package file path, %2 is the error message
+            postMessage(tr("[ WARN ]  - Package installation failed for '%1', reason: %2")
+                .arg(mServerPackage, message));
+            return;
+        }
+        
         QString packageName = mServerPackage.section("/", -1);
         packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
         packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
@@ -1498,13 +1535,13 @@ QString cTelnet::formatShortTelnetCommand(const std::string& telnetCommand, cons
     QByteArray cmdBytes(telnetCommand.data(), telnetCommand.size());
     QString hexStr = cmdBytes.toHex(' ');
     QString decoded = QString(" (IAC %1").arg(commandName);
-    
+
     if (telnetCommand.size() == 2 && !commandName.isEmpty()) {
         decoded += " <missing option>)";
     } else {
         decoded += ")";
     }
-    
+
     return QString("hex: %1%2").arg(hexStr, decoded);
 }
 
@@ -1735,7 +1772,7 @@ QString cTelnet::getNewEnvironMTTS()
         terminalStandards |= MTTS_STD_SCREEN_READER;
     }
 
-    if (mpHost->mEnableMNES && !mpHost->mForceNewEnvironNegotiationOff) {
+    if (mpHost->mEnableMNES && mpHost->mEnableNEWENVIRON) {
         terminalStandards |= MTTS_STD_MNES;
     }
 
@@ -1767,6 +1804,41 @@ QString cTelnet::getNewEnvironUTF8()
 }
 
 QString cTelnet::getNewEnvironOSCColorPalette()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinks()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksSend()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksPrompt()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksStyleBasic()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksStyleStates()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksTooltip()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksMenu()
 {
     return qsl("1");
 }
@@ -1829,6 +1901,13 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserVar, getNewEnviron256Colors()));
     newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserVar, getNewEnvironUTF8()));
     newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserVar, getNewEnvironOSCColorPalette()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS"), qMakePair(isUserVar, getNewEnvironOSCHyperlinks()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SEND"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSend()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_PROMPT"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksPrompt()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_STYLE_BASIC"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksStyleBasic()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_STYLE_STATES"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksStyleStates()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_TOOLTIP"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksTooltip()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_MENU"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksMenu()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
@@ -1841,7 +1920,7 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
 // SEND INFO per https://www.rfc-editor.org/rfc/rfc1572
 void cTelnet::sendInfoNewEnvironValue(const QString &var)
 {
-    if (!enableNewEnviron || mpHost->mForceNewEnvironNegotiationOff) {
+    if (!enableNewEnviron || !mpHost->mEnableNEWENVIRON) {
         return;
     }
 
@@ -2252,7 +2331,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         qDebug() << "WARNING: telnetCommand too short (size:" << telnetCommand.size() << "), ignoring -" << debugInfo;
         return;
     }
-    
+
     char ch = telnetCommand[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
     QString commandType;
@@ -2356,19 +2435,19 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_NEW_ENVIRON) {
             // NEW_ENVIRON support per https://www.rfc-editor.org/rfc/rfc1572.txt
-            if (mpHost->mForceNewEnvironNegotiationOff) { // We DONT welcome the WILL
+            if (!mpHost->mEnableNEWENVIRON) { // We DONT welcome the WILL
                 sendTelnetOption(TN_DONT, option);
 
                 if (enableNewEnviron) {
                     raiseProtocolEvent("sysProtocolDisabled", "NEW_ENVIRON");
                 }
 
-                qDebug() << "Rejecting NEW_ENVIRON, because Force NEW_ENVIRON negotiation off is checked.";
+                enableNewEnviron = false;
             } else {
                 sendTelnetOption(TN_DO, OPT_NEW_ENVIRON);
                 enableNewEnviron = true; // We negotiated, the game server is welcome to SEND now
-                raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
                 qDebug() << "NEW_ENVIRON enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
             }
 
             break;
@@ -2376,7 +2455,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_CHARSET) {
             // CHARSET support per https://tools.ietf.org/html/rfc2066
-            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We DONT welcome the WILL
+            if (!mpHost->mEnableCHARSET) { // We DONT welcome the WILL
                 sendTelnetOption(TN_DONT, option);
 
                 if (enableCHARSET) {
@@ -2384,7 +2463,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 enableCHARSET = false;
-                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
             } else {
                 sendTelnetOption(TN_DO, OPT_CHARSET);
                 enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
@@ -2615,7 +2693,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
                     mpHost->setRemoteEchoingActive(true);
-                    qDebug() << "Enabling Server ECHOing of our output - perhaps he want us to type a password?";
+                    qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
                 } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
@@ -2737,7 +2815,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 if (option == OPT_ECHO) {
                     mpHost->setRemoteEchoingActive(false);
-                    qDebug() << "Server is stopping the ECHOing our output - so back to normal after, perhaps, sending a password...";
+                    qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
                 if (option == OPT_COMPRESS) {
@@ -2770,19 +2848,19 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_NEW_ENVIRON) {
             // NEW_ENVIRON support per https://www.rfc-editor.org/rfc/rfc1572.txt
-            if (mpHost->mForceNewEnvironNegotiationOff) { // We WONT welcome the DO
+            if (!mpHost->mEnableNEWENVIRON) { // We WONT welcome the DO
                 sendTelnetOption(TN_WONT, option);
 
                 if (enableNewEnviron) {
                     raiseProtocolEvent("sysProtocolDisabled", "NEW_ENVIRON");
                 }
 
-                qDebug() << "Rejecting NEW_ENVIRON, because Force NEW_ENVIRON negotiation off is checked.";
+                enableNewEnviron = false;
             } else { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_NEW_ENVIRON);
                 enableNewEnviron = true; // We negotiated, the game server is welcome to SEND now
-                raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
                 qDebug() << "NEW_ENVIRON enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
             }
 
             break;
@@ -2790,7 +2868,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_CHARSET) {
             // CHARSET support per https://tools.ietf.org/html/rfc2066
-            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We WONT welcome the DO
+            if (!mpHost->mEnableCHARSET) { // We WONT welcome the DO
                 sendTelnetOption(TN_WONT, option);
 
                 if (enableCHARSET) {
@@ -2798,7 +2876,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 enableCHARSET = false;
-                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
             } else  { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_CHARSET);
                 enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
@@ -3462,7 +3539,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->raiseEvent(event);
         }
-        
+
     }
 }
 

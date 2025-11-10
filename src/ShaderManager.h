@@ -20,13 +20,11 @@
 #ifndef SHADERMANAGER_H
 #define SHADERMANAGER_H
 
-#include "pre_guard.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QFileSystemWatcher>
 #include <QTimer>
 #include <memory>
-#include "post_guard.h"
 
 class ResourceManager;
 
@@ -42,11 +40,11 @@ public:
     QOpenGLShaderProgram* getMainShaderProgram();
     bool reloadShaders();
     void cleanup();
-    
+
     int getUniformMVP() const { return mUniformMVP; }
     int getUniformModel() const { return mUniformModel; }
     int getUniformNormalMatrix() const { return mUniformNormalMatrix; }
-    
+
     bool isDevelopmentMode() const { return mDevelopmentMode; }
 
 signals:
@@ -62,19 +60,19 @@ private:
     bool detectDevelopmentMode();
 
     std::unique_ptr<QOpenGLShaderProgram> mShaderProgram;
-    QFileSystemWatcher* mFileWatcher;
-    QTimer* mReloadTimer;
-    
+    QFileSystemWatcher* mFileWatcher{nullptr};
+    QTimer* mReloadTimer{nullptr};
+
     bool mDevelopmentMode;
     bool mInitialized;
-    
+
     int mUniformMVP;
-    int mUniformModel; 
+    int mUniformModel;
     int mUniformNormalMatrix;
-    
+
     QString mVertexShaderPath;
     QString mFragmentShaderPath;
-    
+
     ResourceManager* mResourceManager;
 };
 

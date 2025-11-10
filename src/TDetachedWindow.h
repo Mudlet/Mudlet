@@ -26,6 +26,7 @@
 #include <QToolBar>
 #include <QAction>
 #include <QToolButton>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMap>
 #include <QStackedWidget>
@@ -35,6 +36,7 @@
 class TMainConsole;
 class Host;
 class TTabBar;
+class dlgTriggerEditor;
 
 class TDetachedWindow : public QMainWindow
 {
@@ -130,7 +132,9 @@ private slots:
     void slot_showVariableDialog();
     void slot_showMapperDialog();
     void slot_showHelpDialog();
+    void slot_showConnectionDialog();
     void slot_showPreferencesDialog();
+    void slot_showEditorDialog();
     void slot_showNotesDialog();
     void slot_showReplayDialog();
     void slot_showPackageManagerDialog();
@@ -140,6 +144,17 @@ private slots:
     void slot_muteAPI();
     void slot_muteGame();
     void slot_showAboutDialog();
+    void slot_reportIssue();
+
+    // Additional slots for new menu actions
+    void slot_toggleMap();
+    void slot_toggleCompactInputLine();
+    void slot_toggleReplay();
+    void slot_toggleLogging();
+    void slot_toggleEmergencyStop();
+    void slot_toggleTimeStamp();
+    void slot_toggleMultiView();
+    void slot_toggleFullScreen();
 
     // Discord and IRC slots for detached window context
     void slot_profileDiscord();
@@ -166,9 +181,14 @@ private:
     void checkForWindowMergeOpportunity();  // Check if this window overlaps with another detached window
     void performWindowMerge(TDetachedWindow* otherWindow);  // Automatically merge with another window
     void logWindowState(const QString& context);  // Debug method to track window state
+    void updateMenuShortcuts();
+    QKeySequence resolveShortcut(const QString& key, const QKeySequence& fallback) const;
 
     // Helper method to temporarily set the active host for actions
     void withCurrentProfileActive(const std::function<void()>& action);
+    
+    // Helper method for script editor dialogs to reduce code duplication
+    void showScriptEditorDialog(std::function<void(dlgTriggerEditor*)> showMethod);
 
     // Multiple profile data
     QMap<QString, QPointer<TMainConsole>> mProfileConsoleMap;
@@ -211,6 +231,25 @@ private:
     QAction* mpActionDiscord{nullptr};
     QAction* mpActionMudletDiscord{nullptr};
     QAction* mpActionIRC{nullptr};
+
+    // Menu actions with shortcuts
+    QAction* mpMenuConnectAction{nullptr};
+    QAction* mpMenuDisconnectAction{nullptr};
+    QAction* mpMenuReconnectAction{nullptr};
+    QAction* mpMenuCloseProfileAction{nullptr};
+    QAction* mpMenuScriptEditorAction{nullptr};
+    QAction* mpMenuShowMapAction{nullptr};
+    QAction* mpMenuCompactInputLineAction{nullptr};
+    QAction* mpMenuNotepadAction{nullptr};
+    QAction* mpMenuPackageManagerAction{nullptr};
+    QAction* mpMenuModuleManagerAction{nullptr};
+    QAction* mpMenuToggleReplayAction{nullptr};
+    QAction* mpMenuToggleLoggingAction{nullptr};
+    QAction* mpMenuToggleEmergencyStopAction{nullptr};
+    QAction* mpMenuPreferencesAction{nullptr};
+    QAction* mpMenuToggleTimeStampAction{nullptr};
+    QAction* mpMenuMuteMediaAction{nullptr};
+    QAction* mpMenuMultiViewAction{nullptr};
 
     // Toolbar buttons
     QToolButton* mpButtonConnect{nullptr};

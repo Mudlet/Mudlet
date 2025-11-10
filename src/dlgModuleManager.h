@@ -25,10 +25,9 @@
 
 #include "Host.h"
 
-#include "pre_guard.h"
 #include "ui_module_manager.h"
 #include <QDialog>
-#include "post_guard.h"
+#include <QCloseEvent>
 
 class dlgModuleManager : public QDialog, public Ui::module_manager
 {
@@ -47,6 +46,12 @@ private slots:
     void slot_helpModule();
     void slot_moduleClicked(QTableWidgetItem*);
     void slot_moduleChanged(QTableWidgetItem*);
+
+signals:
+    void moduleManagerClosing(const QString& profileName);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     Host* mpHost = nullptr;

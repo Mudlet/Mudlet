@@ -31,12 +31,10 @@ class TMediaData;
 class TMxpClient
 {
 protected:
-    TMxpContext* mpContext;
+    TMxpContext* mpContext = nullptr;
 
 public:
-    TMxpClient()
-    : mpContext(nullptr)
-    {}
+    TMxpClient() = default;
 
     virtual void initialize(TMxpContext* context) { mpContext = context; }
 
@@ -79,6 +77,10 @@ public:
 
     virtual int setLink(const QStringList& hrefs, const QStringList& hints) = 0;
     virtual bool getLink(int id, QStringList** hrefs, QStringList** hints) = 0;
+
+    // EXPIRE tag support
+    virtual int setLink(const QStringList& hrefs, const QStringList& hints, const QString& expireName) = 0;
+    virtual void expireLinks(const QString& expireName) = 0;
 
     virtual void playMedia(TMediaData& mediaData) = 0;
     virtual void stopMedia(TMediaData& mediaData) = 0;

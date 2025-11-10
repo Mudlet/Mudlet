@@ -140,6 +140,14 @@ function Geyser.Mapper:new (cons, container)
   return me
 end
 
+--- Deletes the mapper - note that mappers are typically managed differently
+-- This hides the mapper but does not destroy the underlying map data
+function Geyser.Mapper:type_delete()
+  -- Mappers use closeMapWidget to be hidden, but there's no true "delete"
+  -- function for mappers as they're typically singleton per profile
+  closeMapWidget(self.windowname)
+end
+
 --- Overridden constructor to use add2
 function Geyser.Mapper:new2 (cons, container)
   cons = cons or {}

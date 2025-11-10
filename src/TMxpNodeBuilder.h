@@ -29,34 +29,35 @@ class TMxpNodeBuilder
     // current tag attrs
     std::string mCurrentTagName;
     QList<MxpTagAttribute> mCurrentTagAttrs;
-    bool mIsEndTag;
-    bool mIsEmptyTag;
+    bool mIsEndTag = false;
+    bool mIsEmptyTag = false;
     // parsing tag state
-    bool mIsInsideTag;
+    bool mIsInsideTag = false;
 
     // current attr
     std::string mCurrentAttrName;
     std::string mCurrentAttrValue;
     // parsing attr state
-    bool mIsInsideAttr;
-    bool mReadingAttrValue;
+    bool mIsInsideAttr = false;
+    bool mReadingAttrValue = false;
 
     // text sequence state
-    bool mIsInsideSequence;
-    bool mIsQuotedSequence;
-    char mOpeningQuote;
-    bool mSequenceHasSpaces;
-    bool mHasSequence;
+    bool mIsInsideSequence = false;
+    bool mIsQuotedSequence = false;
+    char mOpeningQuote = '\0';
+    bool mSequenceHasSpaces = false;
+    bool mHasSequence = false;
 
     // current text node
     std::string mCurrentText;
+    std::string mRawTagContent;
 
     // text node parsing state
-    bool mIsInsideText;
+    bool mIsInsideText = false;
 
     // overall processing state
-    bool mHasNode; // a node is ready to be consumed
-    bool mIsText;  // the current node is a text node
+    bool mHasNode = false; // a node is ready to be consumed
+    bool mIsText = false;  // the current node is a text node
 
     bool acceptTag(char ch);
     void resetCurrentTag();
@@ -80,6 +81,7 @@ public:
     MxpTag* buildTag();
 
     void reset();
+    void resetForNewTag();
 
     inline bool hasTag() const { return isTag() && hasNode(); }
 
@@ -87,8 +89,15 @@ public:
 
     inline bool isInsideTag() const { return mIsInsideTag; }
 
+    inline bool isInsideComment() const { return mCurrentTagName == "!--"; }
+
+    inline bool isQuotedSequence() const { return mIsQuotedSequence; }
+
     inline bool isTag() const { return !mIsText; }
 
     inline bool isText() const { return mIsText; }
+
+    const std::string& getRawTagContent() const { return mRawTagContent; }
+    void setRawTagContent(const std::string& content) { mRawTagContent = content; }
 };
 #endif //MUDLET_TMXPNODEBUILDER_H

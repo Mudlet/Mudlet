@@ -33,7 +33,6 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-#include "pre_guard.h"
 #include "ui_profile_preferences.h"
 #include <QtCore>
 #include <QDialog>
@@ -41,7 +40,7 @@
 #include <QDoubleSpinBox>
 #include <QFontDialog>
 #include <QMap>
-#include "post_guard.h"
+#include <QCloseEvent>
 
 class Host;
 
@@ -183,6 +182,10 @@ signals:
     void signal_themeUpdateCompleted();
     void signal_preferencesSaved();
     void signal_resetMainWindowShortcutsToDefaults();
+    void preferencesClosing(const QString& profileName);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void setColors();
@@ -211,6 +214,7 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
     bool updateDisplayFont();
+    void cancelShortcutCaptures();
 
 
     QPointer<Host> mpHost;
@@ -229,6 +233,8 @@ private:
     QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableCHARSET;
+    QPointer<QAction> mEnableNEWENVIRON;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

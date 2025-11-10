@@ -33,7 +33,6 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QJsonParseError>
@@ -41,7 +40,6 @@
 #include <QProgressDialog>
 #include <QPainter>
 #include <QBuffer>
-#include "post_guard.h"
 
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -97,6 +95,7 @@ void TMap::mapClear()
     mNewMove = true;
     mVersion = mDefaultVersion;
     mUserData.clear();
+
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
     // whatever version was previously set/deduced
 
@@ -104,6 +103,12 @@ void TMap::mapClear()
     // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
     if (mpMapper) {
         mpMapper->updateAreaComboBox();
+
+        auto map = mpMapper->mp2dMap;
+        if (map) {
+            map->mMultiSelectionListWidget.clear();
+            map->mMultiSelectionListWidget.hide();
+        }
     }
 }
 
