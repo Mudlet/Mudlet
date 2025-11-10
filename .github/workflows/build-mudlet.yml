@@ -276,12 +276,6 @@ jobs:
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
-    - name: (macOS) Uninstall PCRE before packaging
-      if: runner.os == 'macOS' && matrix.deploy == 'deploy'
-      run: |
-        # Remove PCRE as it breaks packaging down the line: https://github.com/Mudlet/Mudlet/issues/6668
-        brew uninstall pcre
-
     - name: package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
