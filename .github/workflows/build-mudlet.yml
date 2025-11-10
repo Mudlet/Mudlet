@@ -97,17 +97,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # Install all required dependencies
-        BREWS=("libzzip" "libzip" "ccache" "expect" "assimp" "hunspell" "pcre" "pugixml" "sqlite" "yajl" "boost")
-
-        # Loop through each brew package
-        for brew in "${BREWS[@]}"; do
-          if ! brew list --formula "${brew}" &>/dev/null; then
-            echo "Installing ${brew}..."
-            brew install "$brew"
-          else
-           echo "${brew} is already installed."
-         fi
-        done
+        brew install libzzip libzip ccache expect assimp hunspell pcre pugixml sqlite yajl boost
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
