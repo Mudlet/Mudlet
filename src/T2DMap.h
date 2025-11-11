@@ -32,12 +32,10 @@
 #include <QColor>
 #include <QFont>
 #include <QFutureWatcher>
-#include <QElapsedTimer>
 #include <QPixmap>
 #include <QPointer>
 #include <QPointF>
 #include <QString>
-#include <QTimer>
 #include <QTreeWidget>
 #include <QWidget>
 #include <QtConcurrent>
@@ -63,6 +61,7 @@ class RoomContextMenuHandler;
 
 class QCheckBox;
 class QComboBox;
+class QElapsedTimer;
 class QListWidgetItem;
 class QPushButton;
 class QTreeWidgetItem;
@@ -389,7 +388,6 @@ private:
         int x;
         int y;
     } mContextMenuClickPosition;
-
 
     // This holds the ID of the room highlighted in yellow when multiple
     // rooms are selected. It is either the first selected room, or the

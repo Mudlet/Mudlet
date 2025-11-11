@@ -69,7 +69,6 @@
 #include <cmath>
 
 #include <algorithm>
-#include <cmath>
 
 #include "mapInfoContributorManager.h"
 
@@ -101,7 +100,6 @@ const QString& key_icon_line_dashDotDot = qsl(":/icons/dash-dot-dot-line.png");
 
 const QString& key_dialog_ok_apply = qsl("dialog-ok-apply");
 const QString& key_dialog_cancel = qsl("dialog-cancel");
-
 
 void T2DMap::registerInteractionHandler(IInteractionHandler* handler, int priority)
 {
@@ -390,7 +388,6 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
-
 
     mCustomLineSession = std::make_unique<CustomLineSession>(*this);
 
@@ -2913,7 +2910,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     if (!mpMap) {
         return;
     }
-
     auto context = buildInteractionContext(event);
 
     mInteractionDispatcher.dispatch(context);
