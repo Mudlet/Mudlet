@@ -62,19 +62,10 @@ jobs:
             deploy: 'deploy'
             run_tests: 'true'
 
-    env:
-      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://github.com/boostorg/boost/releases/download/boost-1.83.0/boost-1.83.0.7z
-      VCPKG_ROOT: ${{github.workspace}}/3rdparty/vcpkg
-
     steps:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v5
       with:
-        # This SHOULD NOT be needed both the CMAke and qmake metabuild systems
-        # contain conditional code to pull in the required submodules themselves
-        # except vcpkg - if that can be handled we could avoid this setting that
-        # fetches everything...
         submodules: true
         fetch-depth: 0
 
@@ -86,80 +77,21 @@ jobs:
         cache: true
         modules: qt5compat qtmultimedia
 
-    - name: Restore Boost cache
-      id: restore-boost
-      uses: actions/cache/restore@v4
-      with:
-        path: ${{env.BOOST_ROOT}}
-        key: boost
-
-    - name: Install Boost
-      if: steps.restore-boost.outputs.cache-hit != 'true'
-      run: |
-        if [ "$OS" == "Windows_NT" ]; then
-          BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
-        fi
-        mkdir -p $BOOST_ROOT
-        curl --progress-bar --location --output $BOOST_ROOT/download.7z $BOOST_URL
-        7z -o$BOOST_ROOT x $BOOST_ROOT/download.7z -y -bd
-        cd $BOOST_ROOT && cp -r boost-*/* .
-        rm -rf boost-*/* download.7z
-      shell: bash
-
-    - name: Save Boost cache
-      if: steps.restore-boost.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: ${{env.BOOST_ROOT}}
-        key: ${{ steps.restore-boost.outputs.cache-primary-key }}
-
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v3.30.3
 
-    - name: (macOS) Install non-vcpkg dependencies (1/2)
+    - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
-      env:
-        HOMEBREW_NO_ANALYTICS: "ON"
-        HOMEBREW_NO_AUTO_UPDATE: "ON"
-        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
-        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
-        QT_VERSION: ${{ matrix.qt }}
-      run: |
-        # dependencies needed for vcpkg specifically.
-        BREWS=("automake" "autoconf" "pkg-config")
-
-        # Loop through each brew package
-        for brew in "${BREWS[@]}"; do
-         if ! brew list --formula "${brew}" &>/dev/null; then
-          echo "Installing ${brew}..."
-          brew install "$brew"
-         else
-          echo "${brew} is already installed."
-         fi
-        done
-
-
-        # Set these here so that vcpkg can use them.
-        # Use latest available XCode
-        echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
-        echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
-
-    - name: (Linux) Install non-vcpkg dependencies (1/2)
-      if: runner.os == 'Linux'
-      run: |
-        # gettext is needed for vcpkg
-        sudo apt-get install gettext -y
-
-    - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v7
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+      uses: leafo/gh-actions-lua@v12
       with:
-        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
-        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-${{matrix.triplet}}-cachekey
+        luaVersion: "5.1.5"
+        buildCache: false
 
-    - name: (macOS) Install non-vcpkg dependencies (2/2)
+    - name: (macOS) Install Luarocks via GitHub Actions
+      if: runner.os == 'macOS'
+      uses: leafo/gh-actions-luarocks@v6
+
+    - name: (macOS) Install dependencies
       if: runner.os == 'macOS'
       env:
         HOMEBREW_NO_ANALYTICS: "ON"
@@ -167,15 +99,12 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # these aren't available or don't work well in vcpkg
-        BREWS=("libzzip" "libzip" "ccache" "luarocks" "expect" "assimp")
-
-        # these are available in vcpkg but not working in our old version
-        BREWS+=("hunspell")
+        # Install all required dependencies
+        BREWS=("libzzip" "libzip" "ccache" "expect" "assimp" "hunspell" "pcre" "pugixml" "sqlite" "yajl" "boost")
 
         # Loop through each brew package
         for brew in "${BREWS[@]}"; do
-          if ! brew list --formula "{brew}" &>/dev/null; then
+          if ! brew list --formula "${brew}" &>/dev/null; then
             echo "Installing ${brew}..."
             brew install "$brew"
           else
@@ -185,46 +114,52 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-        # Install lua-yajl early to generate translation statistics
-        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
-        # workaround https://github.com/lloyd/yajl/issues/209
-        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
-        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
-        # for some reason it gets installed in a place where lua-yajl can't find it after, fix that
-        mkdir -p /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_${{matrix.triplet}}/lib/
-        cp "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.2.dylib" "${{env.VCPKG_ROOT}}/packages/yajl_${{matrix.triplet}}/lib/libyajl.2.dylib"
+        # Use latest available XCode
+        echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
+        echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
 
+        # Help CMake find Lua installed by gh-actions-lua
+        # The action installs to .lua/ and .luarocks/ in the runner home
+        echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
+
+        # Help CMake find keg-only Homebrew packages (PCRE is keg-only on macOS)
+        echo "PKG_CONFIG_PATH=/usr/local/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+        # Install lua-yajl early to generate translation statistics
+        # Detect Homebrew prefix (differs between x86_64 and ARM64)
+        if [ "$(uname -m)" = "arm64" ]; then
+          YAJL_PREFIX=/opt/homebrew/opt/yajl
+        else
+          YAJL_PREFIX=/usr/local/opt/yajl
+        fi
+        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=$YAJL_PREFIX
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-      # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
-      # so install it in a format that works
-    - name: (Linux) Install Lua
+    - name: (Linux) Install Lua via GitHub Actions
       uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
       with:
         luaVersion: "5.1.5"
         buildCache: false
 
-    - name: (Linux) Install latest Luarocks
+    - name: (Linux) Install Luarocks via GitHub Actions
       uses: leafo/gh-actions-luarocks@v6
       if: runner.os == 'Linux'
 
-    - name: (Linux) Install non-vcpkg dependencies (2/2)
+    - name: (Linux) Install dependencies
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
 
-        # Install from vcpkg everything we can for cross-platform consistency
-        # If not available, use other methods
+        # Install all required dependencies
         # imagemagick is for the desktop screenshot
+        # liblua5.1-0-dev is needed for CMake to find Lua headers/library
         sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
-          libxkbcommon-x11-0 imagemagick libassimp-dev -y
+          libxkbcommon-x11-0 imagemagick libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -235,14 +170,7 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
-        # workaround https://github.com/lloyd/yajl/issues/209
-        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
-        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
-        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
-        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
+        luarocks install --local lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -283,8 +211,6 @@ jobs:
         brew install pcre
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
-        # remove it as it breaks packaging down the line: https://github.com/Mudlet/Mudlet/issues/6668
-        brew uninstall pcre
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
         echo "CXX=clang++" >> $GITHUB_ENV
         echo "CC=clang" >> $GITHUB_ENV
@@ -297,12 +223,11 @@ jobs:
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DVCPKG_APPLOCAL_DEPS=OFF
+          ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DUSE_SANITIZER=""
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
@@ -313,13 +238,6 @@ jobs:
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-
-    - name: Upload GitHub Actions artifact of vcpkg build logs
-      if: failure()
-      uses: actions/upload-artifact@v5
-      with:
-        name: vcpkg-logs-${{ runner.os }}
-        path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
     - name: check ccache stats post build
       run: ccache --show-stats
@@ -332,27 +250,35 @@ jobs:
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
-        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
+        luarocks --lua-version 5.1 install --local LuaFileSystem
+        luarocks --lua-version 5.1 install --local luautf8
 
-        shopt -s expand_aliases
-        if [ "${RUNNER_OS}" = "macOS" ]; then
-          alias run-luarocks="luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include""
+        # Detect paths for dependencies that need DIR hints on macOS
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          if [ "$(uname -m)" = "arm64" ]; then
+            ZIP_PREFIX=/opt/homebrew/opt/libzip
+            SQLITE_PREFIX=/opt/homebrew/opt/sqlite
+            PCRE_PREFIX=/opt/homebrew/opt/pcre
+          else
+            ZIP_PREFIX=/usr/local/opt/libzip
+            SQLITE_PREFIX=/usr/local/opt/sqlite
+            PCRE_PREFIX=/usr/local/opt/pcre
+          fi
+          luarocks --lua-version 5.1 install --local lua-zip ZIP_DIR=$ZIP_PREFIX
+          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=$SQLITE_PREFIX
+          luarocks --lua-version 5.1 install --local lrexlib-pcre PCRE_DIR=$PCRE_PREFIX
         else
-          alias run-luarocks="luarocks"
+          luarocks --lua-version 5.1 install --local lua-zip
+          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
+          luarocks --lua-version 5.1 install --local lrexlib-pcre
         fi
 
-        run-luarocks install --local LuaFileSystem
-        run-luarocks install --local luautf8
-        run-luarocks install --local lua-zip
-        run-luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3 2.6.1
-        run-luarocks install PCRE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
-
         # CI changelog generation dependencies
-        run-luarocks install --local argparse
-        run-luarocks install --local lunajson
+        luarocks --lua-version 5.1 install --local argparse
+        luarocks --lua-version 5.1 install --local lunajson
 
         # Lua-based tests
-        run-luarocks install --local busted
+        luarocks --lua-version 5.1 install --local busted
 
         # necessary for Qt multimedia and modern Qt
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
