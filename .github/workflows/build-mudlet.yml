@@ -181,8 +181,7 @@ jobs:
           libhunspell-dev \
           liblua5.1-0-dev \
           libboost-dev \
-          libpipewire-0.3-dev \
-          gdb -y
+          libpipewire-0.3-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -295,11 +294,11 @@ jobs:
           fi
           luarocks --lua-version 5.1 install --local lua-zip ZIP_DIR=$ZIP_PREFIX
           luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=$SQLITE_PREFIX
-          luarocks --lua-version 5.1 install --local lrexlib-pcre PCRE_DIR=$PCRE_PREFIX
+          luarocks --lua-version 5.1 install --local lrexlib-pcre 2.9.1-1 PCRE_DIR=$PCRE_PREFIX
         else
           luarocks --lua-version 5.1 install --local lua-zip
           luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
-          luarocks --lua-version 5.1 install --local lrexlib-pcre
+          luarocks --lua-version 5.1 install --local lrexlib-pcre 2.9.1-1
         fi
 
         # CI changelog generation dependencies
@@ -437,7 +436,7 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
-      run: xvfb-run gdb --batch -ex "run" -ex "bt" --args ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
