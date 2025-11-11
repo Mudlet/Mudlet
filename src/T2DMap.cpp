@@ -102,14 +102,6 @@ const QString& key_icon_line_dashDotDot = qsl(":/icons/dash-dot-dot-line.png");
 const QString& key_dialog_ok_apply = qsl("dialog-ok-apply");
 const QString& key_dialog_cancel = qsl("dialog-cancel");
 
-namespace
-{
-constexpr int csmMiddlePanTimerIntervalMs = 16;
-constexpr int csmMiddlePanHoldThresholdMs = 300;
-constexpr qreal csmMiddlePanDeadZone = 9.0; // Increased by 50% from 6.0
-constexpr qreal csmMiddlePanMaxDistance = 400.0;
-constexpr qreal csmMiddlePanSpeedMultiplier = 4.0;
-}
 
 void T2DMap::registerInteractionHandler(IInteractionHandler* handler, int priority)
 {
@@ -399,9 +391,6 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
 
-    mMiddlePanTimer.setTimerType(Qt::PreciseTimer);
-    mMiddlePanTimer.setInterval(csmMiddlePanTimerIntervalMs);
-    connect(&mMiddlePanTimer, &QTimer::timeout, this, &T2DMap::handleMiddlePanTick);
 
     mCustomLineSession = std::make_unique<CustomLineSession>(*this);
 
@@ -1960,77 +1949,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
-    if (mMiddlePanActive) {
-        painter.save();
-        painter.setRenderHint(QPainter::Antialiasing, true);
-
-        const QPointF anchor = mMiddlePanAnchor;
-        const QPointF current = mMiddlePanCurrentPosition;
-        const QPointF direction = current - anchor;
-        const qreal directionLength = std::hypot(direction.x(), direction.y());
-
-        // Check if we're in the dead zone
-        const bool inDeadZone = directionLength <= csmMiddlePanDeadZone;
-
-        if (inDeadZone) {
-            // In dead zone: show white circle with black stroke at mouse position (follows cursor)
-            constexpr qreal deadZoneRadius = 10.0;
-            QPen deadZonePen(QColor(0, 0, 0, 120)); // More subtle stroke (was 190)
-            deadZonePen.setWidthF(1.5); // Thinner stroke (was 2.0)
-            deadZonePen.setCosmetic(true);
-            painter.setPen(deadZonePen);
-            painter.setBrush(QColor(255, 255, 255, 170));
-            painter.drawEllipse(current, deadZoneRadius, deadZoneRadius);
-        }
-
-        // Always show small black circle with white stroke + triangle at mouse position
-        // Triangle movement is scaled down (slower) relative to mouse movement
-        constexpr qreal movementScale = 0.3; // Scale factor for slower movement
-        const QPointF scaledDirection = direction * movementScale;
-        const qreal scaledLength = std::hypot(scaledDirection.x(), scaledDirection.y());
-        const QPointF indicatorPos = current; // Position under mouse
-
-        // Smaller black circle with white stroke at mouse position
-        // Circle: 2.1875 * 1.5 = 3.28125
-        constexpr qreal circleRadius = 3.28125;
-        QPen circlePen(QColor(255, 255, 255, 180)); // More subtle (was 220)
-        circlePen.setWidthF(1.5); // Thinner stroke (was 2.8125)
-        circlePen.setCosmetic(true);
-        painter.setPen(circlePen);
-        painter.setBrush(QColor(0, 0, 0, 200));
-        painter.drawEllipse(indicatorPos, circleRadius, circleRadius);
-
-        // Triangle always visible, closer to circle, 10% smaller
-        // Default direction pointing up when no movement
-        QPointF unitDirection;
-        if (scaledLength > 0.1) {
-            unitDirection = scaledDirection / scaledLength;
-        } else {
-            unitDirection = QPointF(0, -1); // Default pointing up
-        }
-
-        // Triangle 10% smaller: multiply by 0.9
-        constexpr qreal triangleDistance = 6.075; // 7.5 * 0.9 (10% smaller) - also closer
-        constexpr qreal triangleHeight = 6.328125; // 7.03125 * 0.9
-        constexpr qreal adjustedHalfWidth = 5.5773; // 6.197 * 0.9
-
-        const QPointF triangleBase = indicatorPos + unitDirection * triangleDistance;
-        const QPointF triangleTip = triangleBase + unitDirection * triangleHeight;
-        const QPointF perpendicular(-unitDirection.y(), unitDirection.x());
-
-        QPolygonF triangle;
-        triangle << triangleTip
-                 << triangleBase + perpendicular * adjustedHalfWidth
-                 << triangleBase - perpendicular * adjustedHalfWidth;
-
-        QPen trianglePen(QColor(255, 255, 255, 180)); // More subtle (was 220)
-        trianglePen.setWidthF(1.5); // Thinner stroke (was 3.515625)
-        trianglePen.setCosmetic(true);
-        painter.setPen(trianglePen);
-        painter.setBrush(QColor(0, 0, 0, 200));
-        painter.drawPolygon(triangle);
-
-        painter.restore();
+    if (mMiddleMousePanHandler) {
+        mMiddleMousePanHandler->renderIndicator(painter);
     }
 
     QColor infoColor;
@@ -2958,146 +2878,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     mInteractionDispatcher.dispatch(context);
 }
 
-void T2DMap::beginMiddlePan(const QPointF& widgetPosition, bool fromPress)
-{
-    if (!mpMap) {
-        return;
-    }
-
-    mMiddlePanActive = true;
-    mMiddlePanPressActive = fromPress;
-    mMiddlePanAnchor = widgetPosition;
-    mMiddlePanCurrentPosition = widgetPosition;
-
-    if (fromPress) {
-        mMiddlePanPressTimer.restart();
-    } else {
-        mMiddlePanPressTimer.invalidate();
-    }
-
-    if (!mMiddlePanTimer.isActive()) {
-        mMiddlePanTimer.start(csmMiddlePanTimerIntervalMs);
-    }
-
-    // Hide cursor during middle pan
-    setCursor(Qt::BlankCursor);
-
-    update();
-}
-
-void T2DMap::updateMiddlePanPointer(const QPointF& widgetPosition)
-{
-    if (!mMiddlePanActive) {
-        return;
-    }
-
-    mMiddlePanCurrentPosition = widgetPosition;
-    update();
-}
-
-void T2DMap::finishMiddlePanPress()
-{
-    if (!mMiddlePanActive || !mMiddlePanPressActive) {
-        return;
-    }
-
-    mMiddlePanPressActive = false;
-
-    const bool shouldStop = mMiddlePanPressTimer.isValid()
-        && mMiddlePanPressTimer.elapsed() >= csmMiddlePanHoldThresholdMs;
-    mMiddlePanPressTimer.invalidate();
-
-    if (shouldStop) {
-        cancelMiddlePan();
-        return;
-    }
-
-    update();
-}
-
-void T2DMap::cancelMiddlePan()
-{
-    if (!mMiddlePanActive && !mMiddlePanPressActive) {
-        return;
-    }
-
-    mMiddlePanActive = false;
-    mMiddlePanPressActive = false;
-
-    if (mMiddlePanTimer.isActive()) {
-        mMiddlePanTimer.stop();
-    }
-
-    mMiddlePanPressTimer.invalidate();
-    mMiddlePanAnchor = QPointF();
-    mMiddlePanCurrentPosition = QPointF();
-
-    // Restore cursor after middle pan
-    unsetCursor();
-
-    update();
-}
-
-void T2DMap::handleMiddlePanTick()
-{
-    if (!mMiddlePanActive) {
-        if (mMiddlePanTimer.isActive()) {
-            mMiddlePanTimer.stop();
-        }
-        return;
-    }
-
-    if (!mpMap) {
-        cancelMiddlePan();
-        return;
-    }
-
-    if (!mMiddlePanPressActive) {
-        mMiddlePanCurrentPosition = QPointF(mapFromGlobal(QCursor::pos()));
-    }
-
-    const qreal roomWidth = static_cast<qreal>(mRoomWidth);
-    const qreal roomHeight = static_cast<qreal>(mRoomHeight);
-
-    QPointF delta = mMiddlePanAnchor - mMiddlePanCurrentPosition;
-
-    auto applyDeadZone = [](qreal value) {
-        if (std::abs(value) <= csmMiddlePanDeadZone) {
-            return 0.0;
-        }
-
-        if (value > 0) {
-            return value - csmMiddlePanDeadZone;
-        }
-
-        return value + csmMiddlePanDeadZone;
-    };
-
-    delta.setX(applyDeadZone(delta.x()));
-    delta.setY(applyDeadZone(delta.y()));
-
-    delta.setX(std::clamp(delta.x(), -csmMiddlePanMaxDistance, csmMiddlePanMaxDistance));
-    delta.setY(std::clamp(delta.y(), -csmMiddlePanMaxDistance, csmMiddlePanMaxDistance));
-
-    const bool hasHorizontalMovement = !qFuzzyIsNull(delta.x());
-    const bool hasVerticalMovement = !qFuzzyIsNull(delta.y());
-
-    const qreal intervalSeconds = static_cast<qreal>(csmMiddlePanTimerIntervalMs) / 1000.0;
-    const qreal movementFactor = csmMiddlePanSpeedMultiplier * intervalSeconds;
-
-    if (hasHorizontalMovement && !qFuzzyIsNull(roomWidth)) {
-        mMapCenterX -= (delta.x() / roomWidth) * movementFactor;
-        mShiftMode = true;
-    }
-
-    if (hasVerticalMovement && !qFuzzyIsNull(roomHeight)) {
-        mMapCenterY -= (delta.y() / roomHeight) * movementFactor;
-        mShiftMode = true;
-    }
-
-    update();
-}
-
 bool T2DMap::event(QEvent* event)
 {
     // NOTE: key events aren't being forwarded to T2DMap because the widget
@@ -3132,10 +2912,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 {
     if (!mpMap) {
         return;
-    }
-
-    if (event->button() != Qt::MiddleButton && mMiddlePanActive) {
-        cancelMiddlePan();
     }
 
     auto context = buildInteractionContext(event);

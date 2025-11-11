@@ -365,7 +365,7 @@ private:
     std::unique_ptr<IInteractionHandler> mRoomMoveDragHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
-    std::unique_ptr<IInteractionHandler> mMiddleMousePanHandler;
+    std::unique_ptr<MiddleMousePanHandler> mMiddleMousePanHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
@@ -390,20 +390,6 @@ private:
         int y;
     } mContextMenuClickPosition;
 
-    void beginMiddlePan(const QPointF& widgetPosition, bool fromPress);
-    void updateMiddlePanPointer(const QPointF& widgetPosition);
-    void finishMiddlePanPress();
-    void cancelMiddlePan();
-    void handleMiddlePanTick();
-    bool isMiddlePanActive() const { return mMiddlePanActive; }
-    bool isMiddlePanPressActive() const { return mMiddlePanPressActive; }
-
-    bool mMiddlePanActive = false;
-    bool mMiddlePanPressActive = false;
-    QPointF mMiddlePanAnchor;
-    QPointF mMiddlePanCurrentPosition;
-    QTimer mMiddlePanTimer;
-    QElapsedTimer mMiddlePanPressTimer;
 
     // This holds the ID of the room highlighted in yellow when multiple
     // rooms are selected. It is either the first selected room, or the

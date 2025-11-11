@@ -22,6 +22,12 @@
 
 #include "T2DMap.h"
 
+#include <QElapsedTimer>
+#include <QPointF>
+#include <QTimer>
+
+class QPainter;
+
 class MiddleMousePanHandler : public T2DMap::IInteractionHandler
 {
 public:
@@ -30,12 +36,30 @@ public:
     bool matches(const T2DMap::MapInteractionContext& context) const override;
     bool handle(T2DMap::MapInteractionContext& context) override;
 
+    void renderIndicator(QPainter& painter);
+    void handleTick();
+    void cancel();
+
+    bool isActive() const { return mActive; }
+    bool isPressActive() const { return mPressActive; }
+
 private:
-    bool handleMousePress(T2DMap::MapInteractionContext& context) const;
-    bool handleMouseMove(T2DMap::MapInteractionContext& context) const;
-    bool handleMouseRelease(T2DMap::MapInteractionContext& context) const;
+    void beginPan(const QPointF& widgetPosition, bool fromPress);
+    void updatePointer(const QPointF& widgetPosition);
+    void finishPress();
+
+    bool handleMousePress(T2DMap::MapInteractionContext& context);
+    bool handleMouseMove(T2DMap::MapInteractionContext& context);
+    bool handleMouseRelease(T2DMap::MapInteractionContext& context);
 
     T2DMap& mMapWidget;
+
+    bool mActive = false;
+    bool mPressActive = false;
+    QPointF mAnchor;
+    QPointF mCurrentPosition;
+    QTimer mTimer;
+    QElapsedTimer mPressTimer;
 };
 
 #endif // MUDLET_MIDDLEMOUSEPANHANDLER_H
