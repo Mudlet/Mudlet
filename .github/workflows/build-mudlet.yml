@@ -263,7 +263,6 @@ jobs:
         $LUAROCKS LuaFileSystem
         $LUAROCKS luautf8
 
-        # Install luarocks packages with DIR hints on macOS (HOMEBREW_PREFIX is set earlier)
         if [ "$RUNNER_OS" = "macOS" ]; then
           $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
           $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
