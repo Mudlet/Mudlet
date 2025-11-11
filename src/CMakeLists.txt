@@ -550,10 +550,10 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   first day of the fourth month of the Gregorian calendar year:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_EASTER_EGGS)
 #
-# * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-#   commands for suboptions - change the value to 2 to get a bit more detail
-#   about the size or nature of the command:
-target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_TELNET=1)
+# * Produce debugging messages about WILL/WONT/DO/DONT and other commands for
+#   suboptions - change the value to 2 to get a bit more detail about the size
+#   and nature of the command:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_TELNET=1)
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
 #   the single bytes of pure ASCII text:
