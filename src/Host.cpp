@@ -54,7 +54,6 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include "pre_guard.h"
 #include <chrono>
 #include <QtConcurrent>
 #include <QDialog>
@@ -63,7 +62,6 @@
 #include <QSettings>
 #include <zip.h>
 #include <memory>
-#include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -82,7 +80,7 @@ stopWatch::stopWatch()
 , mEffectiveStartDateTime()
 , mElapsedTime()
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     mEffectiveStartDateTime.setTimeZone(QTimeZone::UTC);
 #else
     mEffectiveStartDateTime.setTimeSpec(Qt::UTC);
@@ -372,6 +370,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    // Mark the host as closing down to prevent keybinding processing during destruction
+    mIsClosingDown = true;
+
+    // This needs to be cleared here while the Host object is still valid,
+    // otherwise it'll be cleared when the Host object is being destroyed,
+    // which can lead to a crash when closing multiple profiles at once.
+    mpLastCommandLineUsed.clear();
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
@@ -435,11 +441,7 @@ void Host::closeChildren()
     mIsClosingDown = true;
     const auto hostToolBarMap = getActionUnit()->getToolBarList();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    if (mSslTsl) {
-        mTelnet.abortConnection();
-    } else {
-        mTelnet.disconnectIt();
-    }
+    mTelnet.terminateConnection();
 
     stopAllTriggers();
 
@@ -556,7 +558,7 @@ void Host::writeModule(const QString &moduleName, const QString &filename)
     if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
         xml_filename = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
     }
-    auto writer = new XMLexport(this);
+    auto writer = std::make_shared<XMLexport>(this);
     writers.insert(xml_filename, writer);
     writer->writeModuleXML(moduleName, xml_filename);
     updateModuleZips(filename, moduleName);
@@ -866,7 +868,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         emit signal_saveCommandLinesHistory();
     }
 
-    auto writer = new XMLexport(this);
+    auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
     writer->exportHost(filename_xml);
     mWritingHostAndModules = true;
@@ -875,7 +877,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // this needs to run after `writers` and `mWritingHostAndModules` have been set
     // so that the currentlySavingProfile() check can run properly
     emit profileSaveStarted();
-    
+
     // Only process events if we're not in the middle of closing down
     // This prevents recursive closure scenarios that can lead to heap-use-after-free
     if (!mIsClosingDown) {
@@ -909,7 +911,7 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
         return {false, QString(), qsl("a save is already in progress")};
     }
 
-    auto writer = new XMLexport(this);
+    auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
     writer->exportProfile(file);
     return {true, file, QString()};
@@ -918,8 +920,7 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 void Host::xmlSaved(const QString& xmlName)
 {
     if (writers.contains(xmlName)) {
-        auto writer = writers.take(xmlName);
-        writer->deleteLater();
+        writers.remove(xmlName);
     }
 
     if (writers.empty()) {
@@ -1821,7 +1822,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             // Check if this is just a stale reference by verifying if module files actually exist
             QString modulePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
             QString moduleFile = mInstalledModules.value(packageName).value(0); // Get the actual file path from stored reference
-            
+
             bool moduleExists = QDir(modulePath).exists() || QFile::exists(moduleFile);
             if (!moduleExists) {
                 // Module files don't exist, clean up stale references
@@ -1888,7 +1889,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
 
         auto unzipSuccessful = mudlet::unzip(actualFileName, _dest, _tmpDir);
-        
+
         if (pUnzipDialog) {
             pUnzipDialog->deleteLater();
             pUnzipDialog = nullptr;
@@ -2014,12 +2015,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     raiseEvent(detailedInstallEvent);
 
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     if (mpModuleManager) {
         mpModuleManager->layoutModules();
     }
-    
+
     // Save profile to ensure modules persist and appear in module manager
     if (thing != enums::PackageModuleType::Package) {
         // Use a timer to save profile after module installation completes
@@ -2205,7 +2206,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mpEditorDialog->doCleanReset();
     }
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     return true;
 }
@@ -2225,13 +2226,13 @@ void Host::setupSandboxedLuaState(lua_State* L)
     luaopen_table(L);
     luaopen_string(L);
     luaopen_math(L);
-    
+
     // Remove dangerous functions
     const char* dangerousFunctions[] = {
         // File operations
-        "dofile", "loadfile", "load", "loadstring", 
+        "dofile", "loadfile", "load", "loadstring",
         // Module system
-        "require", "module", 
+        "require", "module",
         // Library access
         "io", "os", "debug",
         // Environment manipulation
@@ -2239,23 +2240,23 @@ void Host::setupSandboxedLuaState(lua_State* L)
         // Raw memory access
         "collectgarbage"
     };
-    
+
     for (const auto& function : dangerousFunctions) {
         lua_pushnil(L);
         lua_setglobal(L, function);
     }
-    
+
     // Remove package system entirely to prevent require() restoration
     lua_pushnil(L);
     lua_setglobal(L, "package");
-    
+
     // Remove potentially dangerous base functions
     lua_getglobal(L, "_G");
     if (lua_istable(L, -1)) {
         const char* removedBaseFunctions[] = {
             "rawget", "rawset", "rawequal", "rawlen"
         };
-        
+
         for (const auto& function : removedBaseFunctions) {
             lua_pushnil(L);
             lua_setfield(L, -2, function);
@@ -3034,8 +3035,8 @@ void Host::loadSecuredPassword()
 {
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager(this);
-    
-    credManager->retrieveCredential(getName(), "character", 
+
+    credManager->retrieveCredential(getName(), "character",
         [this, credManager](bool success, const QString& password, const QString& errorMessage) {
             if (success && !password.isEmpty()) {
                 setPass(password);
@@ -3044,7 +3045,7 @@ void Host::loadSecuredPassword()
             } else if (!success && !errorMessage.isEmpty()) {
                 qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
             }
-            
+
             // Clean up the credential manager
             credManager->deleteLater();
         });
@@ -3054,6 +3055,11 @@ void Host::loadSecuredPassword()
 void Host::updateAnsi16ColorsInTable()
 {
     mLuaInterpreter.updateAnsi16ColorsInTable();
+}
+
+void Host::updateExtendedAnsiColorsInTable()
+{
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
 }
 
 void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter, const quint8 innerDiameter, const QColor& outerColor, const QColor& innerColor)
@@ -4355,12 +4361,12 @@ void Host::setFocusOnHostActiveCommandLine()
     }
 
     mFocusTimerRunning = true;
-    
+
     // Lambda to set focus on command line
     auto setCommandLineFocus = [this]() {
         auto pCommandLine = activeCommandLine();
         TCommandLine* targetCommandLine = nullptr;
-        
+
         if (pCommandLine) {
             pCommandLine->activateWindow();
             pCommandLine->console()->show();
@@ -4374,10 +4380,10 @@ void Host::setFocusOnHostActiveCommandLine()
             mpConsole->repaint();
             targetCommandLine = mpConsole->mpCommandLine;
         }
-        
+
         if (targetCommandLine) {
             targetCommandLine->setFocus(Qt::OtherFocusReason);
-            
+
             // For Steam Deck and other environments where focus might be unreliable,
             // add additional focus attempts with slight delays
             QTimer::singleShot(10, this, [targetCommandLine]() {
@@ -4385,17 +4391,17 @@ void Host::setFocusOnHostActiveCommandLine()
                     targetCommandLine->setFocus(Qt::OtherFocusReason);
                 }
             });
-            
+
             QTimer::singleShot(50, this, [targetCommandLine]() {
                 if (targetCommandLine && !targetCommandLine->hasFocus()) {
                     targetCommandLine->setFocus(Qt::OtherFocusReason);
                 }
             });
         }
-        
+
         mFocusTimerRunning = false;
     };
-    
+
     QTimer::singleShot(0, this, setCommandLineFocus);
 }
 
@@ -4529,6 +4535,7 @@ const QSet<QString> Host::mValidExperiments = {
     qsl("experiment.rendering.more-transparent"),
     qsl("experiment.3dmap.modernmapper"),
     qsl("experiment.render-in-out-exits"),
+    qsl("experiment.3d-player-icon")
 };
 
 bool Host::experimentEnabled(const QString& experimentKey) const
@@ -4542,13 +4549,13 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
     if (!mValidExperiments.contains(experimentKey)) {
         return {false, qsl("Invalid experiment name: %1").arg(experimentKey)};
     }
-    
+
     if (enabled) {
         // Check if this is a grouped experiment (contains dots beyond "experiment.")
         if (experimentKey.count('.') >= 2) {
             // Extract group (e.g., "experiment.rendering" from "experiment.rendering.originalish")
             QString group = experimentKey.section('.', 0, 1);
-            
+
             // Disable all other experiments in the same group
             for (auto it = mExperiments.begin(); it != mExperiments.end(); ++it) {
                 if (it.key() != experimentKey && it.key().startsWith(group + ".")) {
@@ -4560,7 +4567,7 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
     } else {
         mExperiments[experimentKey] = false;
     }
-    
+
 #if defined(INCLUDE_3DMAPPER)
     // Refresh maps if any experiments changed the 3D map
     if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
@@ -4570,7 +4577,7 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
         mpMap->mpM->update();
     }
 #endif
-    
+
     return {true, QString()};
 }
 

@@ -40,7 +40,7 @@ void TDockWidget::setTConsole(TConsole* pC)
 
 void TDockWidget::closeEvent(QCloseEvent* event)
 {
-    if (!mpHost->isClosingDown()) {
+    if (mpHost && !mpHost->isClosingDown()) {
         mpHost->hideWindow(mWidgetConsoleName);
         event->ignore();
         return;

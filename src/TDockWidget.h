@@ -25,12 +25,10 @@
 #include "Host.h"
 #include "TConsole.h"
 
-#include "pre_guard.h"
 #include <QtEvents>
 #include <QDockWidget>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
 
 // TDockWidget contains helpers for User Windows QDockWidget.
 class TDockWidget : public QDockWidget {

@@ -56,7 +56,6 @@
 
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -67,7 +66,6 @@
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -4918,50 +4916,11 @@ int TLuaInterpreter::check_for_custom_speedwalk()
     return r;
 }
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-// Enable leak detection for MSVC debug builds.
-
-#define LUA_CLIENT_TYPE (_CLIENT_BLOCK | ((('L' << 8) | 'U') << 16))
-
-// No documentation available in wiki - internal function
-static void* l_alloc(void* ud, void* ptr, size_t osize, size_t nsize)
-{
-    (void)ud;
-    (void)osize;
-    if (nsize == 0) {
-        ::_free_dbg(ptr, LUA_CLIENT_TYPE);
-        return NULL;
-    } else {
-        return ::_realloc_dbg(ptr, nsize, LUA_CLIENT_TYPE, __FILE__, __LINE__);
-    }
-}
-
-// No documentation available in wiki - internal function
-static int panic(lua_State* L)
-{
-    fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n", lua_tostring(L, -1));
-    return 0;
-}
-
-// No documentation available in wiki - internal function
-static lua_State* newstate()
-{
-    lua_State* L = lua_newstate(l_alloc, NULL);
-    if (L) {
-        lua_atpanic(L, &panic);
-    }
-    return L;
-}
-
-#else
-
 // No documentation available in wiki - internal function
 static lua_State* newstate()
 {
     return luaL_newstate();
 }
-
-#endif // _MSC_VER && _DEBUG
 
 // No documentation available in wiki - internal function
 static void storeHostInLua(lua_State* L, Host* h);
@@ -5110,6 +5069,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "createScrollBox", TLuaInterpreter::createScrollBox);
     lua_register(pGlobalLua, "createLabel", TLuaInterpreter::createLabel);
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
+    lua_register(pGlobalLua, "deleteMiniConsole", TLuaInterpreter::deleteMiniConsole);
+    lua_register(pGlobalLua, "deleteCommandLine", TLuaInterpreter::deleteCommandLine);
+    lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
     lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
@@ -7330,6 +7292,65 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
             return success();
         }
+        if (key == qsl("mapInfoColor")) {
+            if (!lua_istable(L, 2)) {
+                lua_pushfstring(L, "%s: bad argument #%d type (table expected for mapInfoColor, got %s!)",
+                    __func__, 2, luaL_typename(L, 2));
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor requires a table {r, g, b} or {r, g, b, a}"));
+            }
+
+            // Get red component (index 1)
+            lua_rawgeti(L, 2, 1);
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have red component at index 1"));
+            }
+            const int r = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (r < 0 || r > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+            }
+
+            // Get green component (index 2)
+            lua_rawgeti(L, 2, 2);
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have green component at index 2"));
+            }
+            const int g = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (g < 0 || g > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+            }
+
+            // Get blue component (index 3)
+            lua_rawgeti(L, 2, 3);
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have blue component at index 3"));
+            }
+            const int b = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (b < 0 || b > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+            }
+
+            // Get alpha component (index 4, optional, defaults to 255)
+            int a = 255;
+            lua_rawgeti(L, 2, 4);
+            if (lua_isnumber(L, -1)) {
+                a = lua_tonumber(L, -1);
+                if (a < 0 || a > 255) {
+                    lua_pop(L, 1);
+                    return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
+                }
+            }
+            lua_pop(L, 1);
+
+            host.mMapInfoBg = QColor(r, g, b, a);
+            updateMap(L);
+            return success();
+        }
     }
 
     if (key == qsl("enableGMCP")) {
@@ -7426,11 +7447,23 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("specialForceCharsetNegotiationOff")) {
-        host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        // specialForceCharsetNegotiationOff should not be used anymore, but we support it for compatibility
+        // it will be the inverse of enableCHARSET
+        host.mEnableCHARSET = !getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableCHARSET")) {
+        host.mEnableCHARSET = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("forceNewEnvironNegotiationOff")) {
-        host.mForceNewEnvironNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
+        // forceNewEnvironNegotiationOff should not be used anymore, but we support it for compatibility
+        // it will be the inverse of enableNEWENVIRON
+        host.mEnableNEWENVIRON = !getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableNEWENVIRON")) {
+        host.mEnableNEWENVIRON = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("compactInputLine")) {
@@ -7638,6 +7671,17 @@ int TLuaInterpreter::getConfig(lua_State *L)
         }},
         { qsl("mapperPanelVisible"), [&](){ lua_pushboolean(L, host.mShowPanel); } },
         { qsl("mapShowRoomBorders"), [&](){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
+        { qsl("mapInfoColor"), [&](){
+            lua_newtable(L);
+            lua_pushnumber(L, host.mMapInfoBg.red());
+            lua_rawseti(L, -2, 1);
+            lua_pushnumber(L, host.mMapInfoBg.green());
+            lua_rawseti(L, -2, 2);
+            lua_pushnumber(L, host.mMapInfoBg.blue());
+            lua_rawseti(L, -2, 3);
+            lua_pushnumber(L, host.mMapInfoBg.alpha());
+            lua_rawseti(L, -2, 4);
+        } },
         { qsl("editorAutoComplete"), [&](){ lua_pushboolean(L, host.mEditorAutoComplete); } },
         { qsl("enableGMCP"), [&](){ lua_pushboolean(L, host.mEnableGMCP); } },
         { qsl("enableMSSP"), [&](){ lua_pushboolean(L, host.mEnableMSSP); } },
@@ -7698,8 +7742,18 @@ int TLuaInterpreter::getConfig(lua_State *L)
             // it will be the inverse of enableMXP
             lua_pushboolean(L, !host.mEnableMXP);
         } },
-        { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
+        { qsl("specialForceCharsetNegotiationOff"), [&](){
+            // specialForceCharsetNegotiationOff should not be used anymore, but we support it for compatibility
+            // it will be the inverse of enableCHARSET
+            lua_pushboolean(L, !host.mEnableCHARSET);
+        } },
+        { qsl("enableCHARSET"), [&](){ lua_pushboolean(L, host.mEnableCHARSET); } },
+        { qsl("forceNewEnvironNegotiationOff"), [&](){
+            // forceNewEnvironNegotiationOff should not be used anymore, but we support it for compatibility
+            // it will be the inverse of enableNEWENVIRON
+            lua_pushboolean(L, !host.mEnableNEWENVIRON);
+        } },
+        { qsl("enableNEWENVIRON"), [&](){ lua_pushboolean(L, host.mEnableNEWENVIRON); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
         { qsl("blankLinesBehaviour"), [&](){

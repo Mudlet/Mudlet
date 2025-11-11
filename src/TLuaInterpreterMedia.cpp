@@ -959,7 +959,6 @@ int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L, const char* fu
     mediaData.setMediaType(TMediaData::MediaTypeMusic);
 
     processPlayingMediaTable(L, mediaData);
-    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -1069,15 +1068,13 @@ int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* f
         } else if (key == QLatin1String("priority")) {
             int value = getVerifiedInt(L, func, -1, "value for priority must be integer");
 
-            if (key == QLatin1String("priority")) {
-                if (value > TMediaData::MediaPriorityMax) {
-                    value = TMediaData::MediaPriorityMax;
-                } else if (value < TMediaData::MediaPriorityMin) {
-                    value = TMediaData::MediaPriorityMin;
-                }
-
-                mediaData.setMediaPriority(value);
+            if (value > TMediaData::MediaPriorityMax) {
+                value = TMediaData::MediaPriorityMax;
+            } else if (value < TMediaData::MediaPriorityMin) {
+                value = TMediaData::MediaPriorityMin;
             }
+
+            mediaData.setMediaPriority(value);
         }
 
         // removes value, but keeps key for next iteration

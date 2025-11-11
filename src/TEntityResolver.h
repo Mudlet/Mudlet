@@ -20,10 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QHash>
 #include <QString>
-#include "post_guard.h"
 #include <functional>
 
 enum TEntityType { ENTITY_TYPE_SYSTEM, ENTITY_TYPE_CUSTOM, ENTITY_TYPE_UNKNOWN };

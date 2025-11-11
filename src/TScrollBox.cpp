@@ -21,9 +21,7 @@
 #include "TScrollBox.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QtEvents>
-#include "post_guard.h"
 
 
 TScrollBox::TScrollBox(Host* pH, QWidget* pW)

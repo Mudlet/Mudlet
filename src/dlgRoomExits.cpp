@@ -32,9 +32,7 @@
 #include "utils.h"
 
 
-#include "pre_guard.h"
 #include <QAction>
-#include "post_guard.h"
 
 // A template for tooltip HTML formatting so that we do not have
 // 30 copies of the same QString in the read-only segment of the code:
@@ -464,7 +462,6 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
 
-// >>>>>>> development
     specialExits->addTopLevelItem(pI);
 
     setIconAndToolTipsOnSpecialExit(pI, true);

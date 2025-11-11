@@ -25,10 +25,8 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QFileDialog>
 #include <QMessageBox>
-#include "post_guard.h"
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
