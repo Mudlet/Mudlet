@@ -180,7 +180,8 @@ jobs:
           libyajl-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
-          libboost-dev -y
+          libboost-dev \
+          libpipewire-0.3-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
