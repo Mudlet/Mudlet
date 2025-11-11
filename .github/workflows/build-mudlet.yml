@@ -326,6 +326,17 @@ jobs:
     - name: package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          if [ "$(uname -m)" = "arm64" ]; then
+            YAJL_LIB_PATH=/opt/homebrew/opt/yajl/lib/libyajl.2.dylib
+          else
+            YAJL_LIB_PATH=/usr/local/opt/yajl/lib/libyajl.2.dylib
+          fi
+          FAKE_VCPKG_DIR=${{runner.workspace}}/vcpkg_yajl
+          mkdir -p "$FAKE_VCPKG_DIR/packages/yajl_${{matrix.triplet}}/lib"
+          ln -s "$YAJL_LIB_PATH" "$FAKE_VCPKG_DIR/packages/yajl_${{matrix.triplet}}/lib/libyajl.2.dylib"
+          echo "VCPKG_ROOT=$FAKE_VCPKG_DIR" >> $GITHUB_ENV
+        fi
         export ARCH=$(uname -m)
         echo "ARCH=$ARCH" >> $GITHUB_ENV
         if [ "$RUNNER_OS" = "macOS" ] && [ "$ARCH" = "arm64" ]; then
