@@ -47,7 +47,7 @@ jobs:
             compiler: clang_64
             gcc_compiler_version: 10
             qt: '6.9.0'
-          - os: macos-13
+          - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
