@@ -61,6 +61,7 @@ public slots:
     void slot_toggleRoundRooms(const bool);
     void slot_toggleShowRoomIDs(int toggle);
     void slot_toggleShowRoomNames(int toggle);
+    void slot_toggleShowGrid(int toggle);
     void slot_toggleStrongHighlight(int toggle);
     void slot_toggle3DView(const bool);
     void slot_togglePanel();
@@ -68,11 +69,13 @@ public slots:
     void slot_roomSize(int size);
     void slot_exitSize(int size);
     void slot_setShowRoomIds(bool showRoomIds);
+    void slot_setShowGrid(bool showGrid);
     void slot_updateInfoContributors();
     void slot_switchArea(const int);
     void slot_setupMapperMenu();
     void slot_toggleUpperLowerLevels(bool enabled);
     void slot_toggleShowRoomIDsFromMenu(bool enabled);
+    void slot_toggleShowGridFromMenu(bool enabled);
     void updateInfoMenu();
 
     static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,

@@ -224,6 +224,7 @@ public:
     QRect mMapInfoRect;
     int mFontHeight = 20;
     bool mShowRoomID = false;
+    bool mShowGrid = false;
     QMap<int, QPixmap> mPixMap;
     double rSize = 0.5;
     double eSize = 3.0;

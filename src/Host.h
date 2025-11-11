@@ -728,6 +728,9 @@ public:
     QColor mCommandLineBgColor{Qt::black};
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
+    bool mMapperShowGrid = false;
+    bool mFORCE_CHARSET_NEGOTIATION_OFF = false;
+    bool mForceNewEnvironNegotiationOff = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
