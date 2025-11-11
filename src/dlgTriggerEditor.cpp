@@ -3806,8 +3806,19 @@ void dlgTriggerEditor::delete_alias()
         TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
 
         if (pT) {
-            if (pParentItem && !newSelection) {
-                newSelection = pParentItem;
+            if (!newSelection) {
+                // Try to select sibling above, then parent, then base item
+                int itemIndex = pParentItem ? pParentItem->indexOfChild(pItem) : treeWidget_aliases->indexOfTopLevelItem(pItem);
+                if (itemIndex > 0 && pParentItem) {
+                    // Select sibling above
+                    newSelection = pParentItem->child(itemIndex - 1);
+                } else if (pParentItem) {
+                    // No sibling above, select parent
+                    newSelection = pParentItem;
+                } else {
+                    // Top-level item with no sibling above, select base item
+                    newSelection = mpAliasBaseItem;
+                }
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
@@ -3947,8 +3958,19 @@ void dlgTriggerEditor::delete_action()
             // set this and the parent TActions as changed so the toolbar is updated.
             pT->setDataChanged();
 
-            if (pParentItem && !newSelection) {
-                newSelection = pParentItem;
+            if (!newSelection) {
+                // Try to select sibling above, then parent, then base item
+                int itemIndex = pParentItem ? pParentItem->indexOfChild(pItem) : treeWidget_actions->indexOfTopLevelItem(pItem);
+                if (itemIndex > 0 && pParentItem) {
+                    // Select sibling above
+                    newSelection = pParentItem->child(itemIndex - 1);
+                } else if (pParentItem) {
+                    // No sibling above, select parent
+                    newSelection = pParentItem;
+                } else {
+                    // Top-level item with no sibling above, select base item
+                    newSelection = mpActionBaseItem;
+                }
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
@@ -4161,8 +4183,19 @@ void dlgTriggerEditor::delete_script()
         TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
 
         if (pT) {
-            if (pParentItem && !newSelection) {
-                newSelection = pParentItem;
+            if (!newSelection) {
+                // Try to select sibling above, then parent, then base item
+                int itemIndex = pParentItem ? pParentItem->indexOfChild(pItem) : treeWidget_scripts->indexOfTopLevelItem(pItem);
+                if (itemIndex > 0 && pParentItem) {
+                    // Select sibling above
+                    newSelection = pParentItem->child(itemIndex - 1);
+                } else if (pParentItem) {
+                    // No sibling above, select parent
+                    newSelection = pParentItem;
+                } else {
+                    // Top-level item with no sibling above, select base item
+                    newSelection = mpScriptsBaseItem;
+                }
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
@@ -4295,8 +4328,19 @@ void dlgTriggerEditor::delete_key()
         TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
 
         if (pT) {
-            if (pParentItem && !newSelection) {
-                newSelection = pParentItem;
+            if (!newSelection) {
+                // Try to select sibling above, then parent, then base item
+                int itemIndex = pParentItem ? pParentItem->indexOfChild(pItem) : treeWidget_keys->indexOfTopLevelItem(pItem);
+                if (itemIndex > 0 && pParentItem) {
+                    // Select sibling above
+                    newSelection = pParentItem->child(itemIndex - 1);
+                } else if (pParentItem) {
+                    // No sibling above, select parent
+                    newSelection = pParentItem;
+                } else {
+                    // Top-level item with no sibling above, select base item
+                    newSelection = mpKeyBaseItem;
+                }
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
@@ -4434,8 +4478,19 @@ void dlgTriggerEditor::delete_trigger()
         TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
 
         if (pT) {
-            if (pParentItem && !newSelection) {
-                newSelection = pParentItem;
+            if (!newSelection) {
+                // Try to select sibling above, then parent, then base item
+                int itemIndex = pParentItem ? pParentItem->indexOfChild(pItem) : treeWidget_triggers->indexOfTopLevelItem(pItem);
+                if (itemIndex > 0 && pParentItem) {
+                    // Select sibling above
+                    newSelection = pParentItem->child(itemIndex - 1);
+                } else if (pParentItem) {
+                    // No sibling above, select parent
+                    newSelection = pParentItem;
+                } else {
+                    // Top-level item with no sibling above, select base item
+                    newSelection = mpTriggerBaseItem;
+                }
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
@@ -4568,8 +4623,19 @@ void dlgTriggerEditor::delete_timer()
         TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
 
         if (pT) {
-            if (pParentItem && !newSelection) {
-                newSelection = pParentItem;
+            if (!newSelection) {
+                // Try to select sibling above, then parent, then base item
+                int itemIndex = pParentItem ? pParentItem->indexOfChild(pItem) : treeWidget_timers->indexOfTopLevelItem(pItem);
+                if (itemIndex > 0 && pParentItem) {
+                    // Select sibling above
+                    newSelection = pParentItem->child(itemIndex - 1);
+                } else if (pParentItem) {
+                    // No sibling above, select parent
+                    newSelection = pParentItem;
+                } else {
+                    // Top-level item with no sibling above, select base item
+                    newSelection = mpTimerBaseItem;
+                }
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
