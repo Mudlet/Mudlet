@@ -172,6 +172,8 @@ private slots:
     void slot_changeInvertMapZoom(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
+    void slot_roomSizeChanged(int size);
+    void slot_exitSizeChanged(int size);
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
