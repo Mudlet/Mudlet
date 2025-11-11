@@ -54,7 +54,7 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
-          - os: macos-14-arm64
+          - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
             triplet: arm64-osx
             compiler: clang_64
