@@ -206,11 +206,6 @@ void dlgMapper::slot_toggleShowRoomNames(int toggle)
     mp2dMap->update();
 }
 
-void dlgMapper::slot_toggleShowGrid(int toggle)
-{
-    slot_toggleShowGridFromMenu(toggle == Qt::Checked);
-}
-
 void dlgMapper::slot_toggleStrongHighlight(int toggle)
 {
     mpHost->mMapStrongHighlight = (toggle == Qt::Checked);
@@ -334,7 +329,9 @@ void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
 
 void dlgMapper::slot_setShowGrid(bool showGrid)
 {
-    slot_toggleShowGridFromMenu(showGrid);
+    mp2dMap->mShowGrid = showGrid;
+    mp2dMap->mpHost->mMapperShowGrid = showGrid;
+    mp2dMap->update();
 }
 
 void dlgMapper::slot_toggleRoundRooms(const bool state)
@@ -596,7 +593,7 @@ void dlgMapper::slot_setupMapperMenu()
     showMapGrid->setChecked(mpHost->mMapperShowGrid);
     showMapGrid->setToolTip(tr("When enabled, grid will be shown on mapper."));
 
-    connect(showMapGrid, &QAction::toggled, this, &dlgMapper::slot_toggleShowGridFromMenu);
+    connect(showMapGrid, &QAction::toggled, this, &dlgMapper::slot_setShowGrid);
     menu->addAction(showMapGrid);
 
 #if defined(INCLUDE_3DMAPPER)
@@ -628,13 +625,6 @@ void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
 {
     mp2dMap->mShowRoomID = enabled;
     mp2dMap->mpHost->mShowRoomID = enabled;
-    mp2dMap->update();
-}
-
-void dlgMapper::slot_toggleShowGridFromMenu(bool enabled)
-{
-    mp2dMap->mShowGrid = enabled;
-    mp2dMap->mpHost->mMapperShowGrid = enabled;
     mp2dMap->update();
 }
 
