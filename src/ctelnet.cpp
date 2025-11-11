@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2021-2022 by Stephen Lyons        *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021-2022, 2025 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
@@ -33,6 +33,7 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEvent.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -53,6 +54,7 @@
 #include <QMessageBox>
 #include <QNetworkProxy>
 #include <QProgressDialog>
+#include <QSignalBlocker>
 #include <QSslError>
 
 using namespace std::chrono_literals;
@@ -102,23 +104,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
         mAcceptableEncodings << "ISO 8859-1";
         mAcceptableEncodings << TBuffer::getEncodingNames();
     }
-
-    // initialize the socket after the Host initialisation is complete so we can access mSslTsl
-    QTimer::singleShot(0, this, [this]() {
-#if !defined(QT_NO_SSL)
-        if (mpHost->mSslTsl) {
-            connect(&mpSocket, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
-        } else {
-            connect(&mpSocket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
-        }
-        connect(&mpSocket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
-#else
-        connect(&mpSocket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
-#endif
-        connect(&mpSocket, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
-        connect(&mpSocket, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
-    });
-
 
     // initialize telnet session
     reset();
@@ -174,13 +159,26 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
-    // Aggressively disconnect the socket to prevent signals during destruction
-    if (mpSocket.state() != QAbstractSocket::UnconnectedState) {
+    // Aggressively disconnect the sockets to prevent signals during destruction
+    if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
-        mpSocket.blockSignals(true);
-        mpSocket.disconnectFromHost();
+        mpSocket->blockSignals(true);
+        mpSocket->disconnectFromHost();
         // Force immediate closure without waiting
-        mpSocket.abort();
+        mpSocket->abort();
+        // Also take care of the other socket - only one of this pair could
+        // possibly be true at a time - as mpSocket can't be non-null and point
+        // at both:
+        if (mpSocket == &mSocket_ipV4 && mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
+            mSocket_ipV6.blockSignals(true);
+            mSocket_ipV6.disconnectFromHost();
+            mSocket_ipV6.abort();
+        }
+        if (mpSocket == &mSocket_ipV6 && mSocket_ipV4.state() != QAbstractSocket::UnconnectedState) {
+            mSocket_ipV4.blockSignals(true);
+            mSocket_ipV4.disconnectFromHost();
+            mSocket_ipV4.abort();
+        }
     }
 
     // Disconnect all signal connections to prevent callbacks during destruction
@@ -217,7 +215,11 @@ cTelnet::~cTelnet()
     if (mpComposer) {
         mpComposer->deleteLater();
     }
-    mpSocket.deleteLater();
+
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+    qDebug().noquote() << "cTelnet::~cTelnet() INFO - resetting mpSocket.";
+#endif
+    mpSocket = nullptr;
 }
 
 void cTelnet::cancelLoginTimers()
@@ -297,23 +299,36 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 #if !defined(QT_NO_SSL)
 QSslCertificate cTelnet::getPeerCertificate()
 {
-    return mpSocket.peerCertificate();
+    if (!mpSocket) {
+        return QSslCertificate();
+    }
+    return mpSocket->peerCertificate();
 }
 
 QList<QSslError> cTelnet::getSslErrors()
 {
-    return mpSocket.sslHandshakeErrors();
+    if (!mpSocket) {
+        return QList<QSslError>{};
+    }
+    return mpSocket->sslHandshakeErrors();
 }
 #endif
 
-QAbstractSocket::SocketError cTelnet::error()
+std::optional<QAbstractSocket::SocketError> cTelnet::error() const
 {
-    return mpSocket.error();
+    if (!mpSocket) {
+        return {};
+    }
+
+    return mpSocket->error();
 }
 
 QString cTelnet::errorString()
 {
-    return mpSocket.errorString();
+    if (!mpSocket) {
+        return QString{};
+    }
+    return mpSocket->errorString();
 }
 
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
@@ -412,59 +427,122 @@ void cTelnet::connectIt(const QString& address, int port)
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
             auto& proxy = mpHost->getConnectionProxy();
-            mpSocket.setProxy(*proxy);
+            mSocket_ipV4.setProxy(*proxy);
+            mSocket_ipV6.setProxy(*proxy);
             mConnectViaProxy = true;
         } else {
-            mpSocket.setProxy(QNetworkProxy::DefaultProxy);
+            // Since we do not define a default proxy this is equivalent to
+            // QNetworkProxy::NoProxy
+            mSocket_ipV4.setProxy(QNetworkProxy::DefaultProxy);
+            mSocket_ipV6.setProxy(QNetworkProxy::DefaultProxy);
             mConnectViaProxy = false;
         }
     }
 
-    if (mpSocket.state() != QAbstractSocket::UnconnectedState) {
-        mpSocket.abort();
+    if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
+        // One of the sockets (at least) is not ready - so take care of that:
+        // CHECKME: do we also need to block the sockets from emitting signals here?
+        if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState) {
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+            qDebug().noquote().nospace() << "cTelnet::cTelnet::connectIt(" <<  address << ", " << port << ") INFO - IPv4 socket not disconnected, aborting exisiting connection.";
+#endif
+            mSocket_ipV4.abort();
+        }
+        if (mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+            qDebug().noquote().nospace() << "cTelnet::cTelnet::connectIt(" <<  address << ", " << port << ") INFO - IPv6 socket not disconnected, aborting exisiting connection.";
+#endif
+            mSocket_ipV6.abort();
+        }
+        // Since at least one of them was not ready lets give them a chance to
+        // sort themselves out:
+        qApp->processEvents();
+
+        // This looks less than ideal - recursively calling ourselves?
         connectIt(address, port);
         return;
     }
 
     emit signal_connecting(mpHost);
 
-    mHostName = address;
+    mHostUrl = address;
     mHostPort = port;
-    postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
-    // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
-    QHostInfo::lookupHost(address, this, SLOT(slot_socketHostFound(QHostInfo)));
+    // Detect raw IPv6 addresses - as they need to be wrapped in '['...']'
+
+    /*: For an IPv6 address (which is composed of hex-digits and colons) if we
+     * want to show it with a port number appended (as a colon and then an
+     * integer between 1 and 65535) we need to wrap it with '['...']' to
+     * separate the latter from the former, however some Far-East locales may
+     * expect to use the wide versions of these character here.
+     */
+    const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
+    /*: %1 is the URL or an IP address (suitably wrapped if it is an IPv6 one)
+     * of the Game Server (or Proxy); %2 is the port number.
+     */
+    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Looking up the details of server: %1:%2 ...")
+                                                             .arg(displayAddress, QString::number(port))
+                                                             .append(QChar::LineFeed)
+                                                          >> mpHost;
+    // We can now use a compile-time slot for this as:
+    // https://bugreports.qt.io/browse/QTBUG-67646 was (finally) fixed in
+    // Qt 5.12.5:
+    QHostInfo::lookupHost(address, this, &cTelnet::slot_socketHostFound);
 }
 
 void cTelnet::reconnect()
 {
-    // if we've connected offline and wish to reconnect, the last
+    // if we've opened the profile offline and wish to connect, the last
     // connection parameters aren't yet set
-    if (mHostName.isEmpty() && mHostPort == 0) {
+    if (mHostUrl.isEmpty() || mHostPort == 0) {
         connectIt(mpHost->getUrl(), mpHost->getPort());
     } else {
-        connectIt(mHostName, mHostPort);
+        connectIt(mHostUrl, mHostPort);
     }
 }
 
 void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
-    mpSocket.disconnectFromHost();
-
+    if (mpSocket) {
+        // This will write out any pending data before it disconnects...
+        mpSocket->disconnectFromHost();
+    }
 }
 
+// Only called from terminateConnection() for a "secure" connection:
 void cTelnet::abortConnection()
 {
     mDontReconnect = true;
-    mpSocket.abort();
+    if (mpSocket) {
+        // One socket is probably active - and has signals connected - but will
+        // close immediately, dropping any pending output:
+        mpSocket->abort();
+    } else {
+        // Anything to do here?
+    }
+}
+
+//The Host class wants us to end the connection (Profile is closing)
+void cTelnet::terminateConnection()
+{
+#if !defined(QT_NO_SSL)
+    if (mCurrent_sslTsl) {
+        abortConnection();
+    } else {
+#endif
+        disconnectIt();
+#if !defined(QT_NO_SSL)
+    }
+#endif
 }
 
 // Not used:
-//void cTelnet::slot_socketError()
-//{
-//    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % mpSocket.errorString();
-//    postMessage(err);
-//}
+// void cTelnet::slot_socketError()
+// {
+//    auto pSocket = sender();
+//    postMessage(tr("[ ERROR ] - TCP/IP socket ERROR: %1.")
+//                        .arg(pSocket->errorString());
+// }
 
 void cTelnet::slot_send_login()
 {
@@ -484,28 +562,86 @@ void cTelnet::slot_send_pass()
 
 void cTelnet::slot_socketConnected()
 {
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+    qDebug().noquote() << "cTelnet::slot_socketConnected() INFO - called.";
+#endif
     // Check if Host is closing down or null/invalid
     if (!mpHost || mpHost->isClosingDown()) {
         qDebug() << "cTelnet::slot_socketConnected() - Aborting due to Host shutdown in progress or null Host";
         return;
     }
 
-    QString msg;
+    // Which socket is this? Once we know, set mpSocket to point at it and
+    // disable the other one from doing anything more
+    if (sender() == &mSocket_ipV6) {
+        mpSocket = &mSocket_ipV6;
+        // Block signals from the other socket until we can disconnect them:
+        const QSignalBlocker blocker(&mSocket_ipV4);
+        disconnect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
+        disconnect(&mSocket_ipV4, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
+#if !defined(QT_NO_SSL)
+        if (mCurrent_sslTsl) {
+            disconnect(&mSocket_ipV4, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
+            disconnect(&mSocket_ipV4, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
+        } else {
+#endif
+            disconnect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
+#if !defined(QT_NO_SSL)
+        }
+#endif
+        mSocket_ipV4.abort();
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+        qDebug().noquote() << "cTelnet::~cTelnet() INFO - mpSocket pointed at IPv6 socket.";
+#endif
+
+    } else {
+        if (sender() == &mSocket_ipV4) {
+            mpSocket = &mSocket_ipV4;
+            const QSignalBlocker blocker(&mSocket_ipV6);
+            disconnect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
+            disconnect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
+#if !defined(QT_NO_SSL)
+            if (mCurrent_sslTsl) {
+                disconnect(&mSocket_ipV6, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
+                disconnect(&mSocket_ipV6, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
+            } else {
+#endif
+                disconnect(&mSocket_ipV6, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
+#if !defined(QT_NO_SSL)
+            }
+#endif
+            mSocket_ipV6.abort();
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+            qDebug().noquote() << "cTelnet::~cTelnet() INFO - mpSocket pointed at IPv6 socket.";
+#endif
+        }
+    }
 
     reset();
-    setKeepAlive(mpSocket.socketDescriptor());
+    setKeepAlive(mpSocket->socketDescriptor());
 
-    if (mpHost->mSslTsl)
-    {
-        msg = tr("[ INFO ]  - A secure connection has been established successfully.");
+#if !defined(QT_NO_SSL)
+    if (mCurrent_sslTsl) {
+        if (&mSocket_ipV6 == mpSocket) {
+            postMessage(tr("[  OK  ]  - Secure connection made (IPv6)."));
+        } else {
+            postMessage(tr("[  OK  ]  - Secure connection made (IPv4)."));
+        }
     } else {
-        msg = tr("[ INFO ]  - A connection has been established successfully.");
+        if (&mSocket_ipV6 == mpSocket) {
+            postMessage(tr("[  OK  ]  - Open connection made (IPv6)."));
+        } else {
+            postMessage(tr("[  OK  ]  - Open connection made (IPv4)."));
+        }
     }
-    msg.append(qsl("\n    \n    "));
-    postMessage(msg);
-    QString func = "onConnect";
-    QString nothing = "";
-    mpHost->mLuaInterpreter.call(func, nothing);
+#else
+    if (&mSocket_ipV6 == mpSocket) {
+        postMessage(tr("[  OK  ]  - Connection made (IPv6)."));
+    } else {
+        postMessage(tr("[  OK  ]  - Connection made (IPv4)."));
+    }
+#endif
+    mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
     mConnectionTimer.start();
     mTimerLogin->start(2s);
     mTimerPass->start(3s);
@@ -520,11 +656,13 @@ void cTelnet::slot_socketConnected()
 
 void cTelnet::slot_socketDisconnected()
 {
-    QString msg;
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+    qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
+#endif
     TEvent event {};
-    QString reason;
-    QString spacer = "    ";
+#if !defined(QT_NO_SSL)
     bool sslerr = false;
+#endif
 
     // Check if Host is closing down or null/invalid
     if (!mpHost || mpHost->isClosingDown()) {
@@ -544,82 +682,182 @@ void cTelnet::slot_socketDisconnected()
     }
 
     QTime timeDiff(0, 0, 0, 0);
-    msg = tr("[ INFO ]  - Connection time: %1\n    ")
-                  .arg(timeDiff.addMSecs(mConnectionTimer.elapsed())
-                                /*:
-                                This is the format to be used to show the profile connection time, it follows
-                                the rules of the "QDateTime::toString(...)" function and may need
-                                modification for some locales, e.g. France, Spain.
-                                */
-                               .toString(tr("hh:mm:ss.zzz")));
+    // If mConnectionTimer has never been started then its ::elapsed() is NOT usable:
+    const auto timeOffset = mConnectionTimer.isValid() ? mConnectionTimer.elapsed() : 0;
+    const QString msg = tr("[ INFO ]  - Connection time: %1.")
+                                .arg(timeDiff.addMSecs(timeOffset)
+                                /*: This is the format to be used to show the profile connection time, it follows
+                                 * the rules of the "QDateTime::toString(...)" function and may need
+                                 * modification for some locales, e.g. France, Spain.
+                                 */
+                                             .toString(tr("hh:mm:ss.zzz")));
     mNeedDecompression = false;
     reset();
 
-    if (!mpHost->isClosingDown()) {
-        postMessage(spacer);
-
+    if (!mpHost->isClosingDown() && mpSocket) {
+        // Don't do this if we are closing down - or we do not know which
+        // socket is the "active" one
 #if !defined(QT_NO_SSL)
-        QList<QSslError> sslErrors = getSslErrors();
-        QSslCertificate cert = mpSocket.peerCertificate();
-
-        if (mpHost->mSslIgnoreExpired) {
-            sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
-        }
-
-        if (mpHost->mSslIgnoreSelfSigned) {
-            sslErrors.removeAll(QSslError(QSslError::SelfSignedCertificate, cert));
-        }
-
-        sslerr = (sslErrors.count() > 0 && !mpHost->mSslIgnoreAll && mpHost->mSslTsl);
-
-        if (sslerr) {
-            mDontReconnect = true;
-
-            for (const auto& error : sslErrors) {
-                reason.append(qsl("        %1\n").arg(QString(error.errorString())));
+        if (mCurrent_sslTsl) {
+            // We were connecting/ed securely:
+            QList<QSslError> sslErrors = getSslErrors();
+            QSslCertificate cert = mpSocket->peerCertificate();
+            if (mpHost->mSslIgnoreExpired) {
+                sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
             }
-            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
-            postMessage(err);
+
+            if (mpHost->mSslIgnoreSelfSigned) {
+                sslErrors.removeAll(QSslError(QSslError::SelfSignedCertificate, cert));
+            }
+
+            QStringList reasons;
+            if (mDontReconnect) {
+                /*: A reason why a connection to a game server ended, could be
+                 * one of several to be listed. This text used in two places,
+                 * ensure the same text is used in both.
+                 */
+                reasons.append(tr("User Disconnected"));
+            } else if (timeOffset >= 0 && timeOffset < 5000) {
+                /*: A reason why a connection to a game server ended, could be
+                 * one of several to be listed. This text used in two places,
+                 * ensure the same text is used in both.
+                 */
+                reasons.append(tr("Connection/login attempt rejected by server"));
+            }
+
+            sslerr = (sslErrors.count() > 0 && !mpHost->mSslIgnoreAll);
+            if (sslerr) {
+                // We also have SSL/TLS errors that are not ones we are ignoring
+                // so do not auto-reconnect:
+                mDontReconnect = true;
+
+                for (const auto& error : sslErrors) {
+                    reasons.append(error.errorString());
+                }
+            }
+
+            if (reasons.count()) {
+                /*: This message is used when we have been trying to connect or
+                 * we were connected securely, but the connection has been lost.
+                 * It is possible with a secure connection that there is MORE
+                 * than one error message to show, but for English or other
+                 * locales where the singular case (%n==1) is distinct it would
+                 * be perfectly feasible to replace "for %n reason(s)" with
+                 * "because" for that number (1) of errors - however the text
+                 * should then be repeated in the corresponding situation for
+                 * an "open" connection which is different in that it only ever
+                 * has one "reason" to report.
+                 */
+                postMessage(tr("[ ALERT ] - Socket got disconnected, for %n reason(s):\n"
+                               "%1",
+                               // Intentional comment to separate arguments
+                               "",
+                               reasons.count())
+                                    .arg(reasons.join(QChar::LineFeed)));
+            } else {
+                /*: This message is used when we have been trying to connect or
+                 * we were connected securely or in an open manner, but the
+                 * connection has been lost and we do not have any explaination
+                 * to give to the user as to why. Anyhow, in this case we do not
+                 * have anything more to say about it. This text used in two
+                 * places, ensure the same translation is used in both of them.
+                 */
+                postMessage(tr("[ ALERT ] - Socket got disconnected."));
+            }
+
         } else {
 #endif
+            // We were not connecting securely
+            QString reason;
             if (mDontReconnect) {
+                /*: A reason why a connection to a game server ended, could be
+                 * one of several to be listed. This text used in two places,
+                 * ensure the same text is used in both.
+                 */
                 reason = tr("User Disconnected");
-            // successful connection duration under 5s == rejected by server
-            } else if (mConnectionTimer.elapsed() > 0 && mConnectionTimer.elapsed() < 5000) {
+            } else if (QAbstractSocket::SslHandshakeFailedError == mpSocket->error()) {
+                //: A reason why a connection to a game server ended.
+                reason = tr("Secure connections not supported by this game on this port; try turning the option off");
+            } else if (timeOffset >= 0 && timeOffset < 5000) {
+                /*: A reason why a connection to a game server ended, could be
+                 * one of several to be listed. This text used in two places,
+                 * ensure the same text is used in both.
+                 */
                 reason = tr("Connection/login attempt rejected by server");
-            // SocketError(13) == SslHandshakeFailedError (https://doc.qt.io/qt-6/qabstractsocket.html#SocketError-enum)
-            } else if (mpSocket.error() == QAbstractSocket::SocketError(13)) {
-                reason = tr("Secure connections aren't supported by this game on this port - try turning the option off");
-            } else {
-                reason = mpSocket.errorString();
+            } else if (!mpSocket->errorString().isEmpty()){
+                reason = mpSocket->errorString();
             }
-            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: %1.").arg(reason);
-            postMessage(err);
-        }
-        postMessage(msg);
+
+            if (reason.isEmpty()) {
+                /*: This message is used when we have been trying to connect or
+                 * we were connected securely or in an open manner, but the
+                 * connection has been lost and we do not have any explaination
+                 * to give to the user as to why. Anyhow, in this case we do not
+                 * have anything more to say about it. This text used in two
+                 * places, ensure the same translation is used in both of them.
+                 */
+                postMessage(tr("[ ALERT ] - Socket got disconnected."));
+            } else {
+                /*: This message is used when we have been trying to connect or
+                 * we were connected in an open, insecure manner, but the
+                 * connection has been lost. Unlike the secure connection case
+                 * there is only one error message to show; it would be
+                 * desirable to use the same text for this message as the "one
+                 * reason" (%n==1) situation for locales such as English (with
+                 * a distinct form for the singular) use for the secure type
+                 * of connection.
+                 */
+                postMessage(tr("[ ALERT ] - Socket got disconnected, for reason:\n"
+                                           "%1").arg(reason));
+            }
 #if !defined(QT_NO_SSL)
+        }
+#endif
     }
 
+    // Always display the connection time:
+    postMessage(msg);
+
+#if !defined(QT_NO_SSL)
     if (sslerr) {
+        // Got a secure connection error that should be shown in the preferences
         mudlet::self()->showOptionsDialog(qsl("tab_connection"));
     }
 #endif
 
-    if (mAutoReconnect && !mDontReconnect && mConnectionTimer.elapsed() >= 5000) {
-        connectIt(mHostName, mHostPort);
+    // Reset the pointer to the "active" socket, ready for the next connection
+    // attempt:
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+    qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - resetting mpSocket.";
+#endif
+    mpSocket = nullptr;
+
+    // And if the conditions are right start the reconnection attempt straight
+    // away:
+    if (mAutoReconnect && !mDontReconnect && timeOffset >= 5000) {
+        connectIt(mHostUrl, mHostPort);
     }
     mDontReconnect = false;
 }
 
 #if !defined(QT_NO_SSL)
+// This can/is raised on a socket that we have not received a prior
+// QSslSocket::encrypted() signal from (which is wired to our
+// "slot_socketconnect()" slot).
 void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
 {
-    // Check if Host is closing down or null/invalid
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+    qDebug().noquote() << "cTelnet::slot_socketSslError(const QList<QSslError>&) INFO - called.";
+#endif
+    // Check if Host is closing down or null/invalid:
     if (!mpHost || mpHost->isClosingDown()) {
         return;
     }
 
-    QSslCertificate cert = mpSocket.peerCertificate();
+    // We can't use mpSocket as it likely has not got set to one of the
+    // actual sockets yet!
+    const auto pSocket = qobject_cast<QSslSocket*>(sender());
+    QSslCertificate cert = pSocket->peerCertificate();
     QList<QSslError> ignoreErrorList;
 
     if (mpHost->mSslIgnoreExpired) {
@@ -630,38 +868,380 @@ void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
     }
 
     if (mpHost->mSslIgnoreAll) {
-        mpSocket.ignoreSslErrors(errors);
+        pSocket->ignoreSslErrors(errors);
     } else {
-        mpSocket.ignoreSslErrors(ignoreErrorList);
+        pSocket->ignoreSslErrors(ignoreErrorList);
     }
 }
 #endif
 
+// We now need to examing hostInfo to see whether it has IPv4 or IPv6 or both
+// types of address - so we know which socket (or both) to try to connect.
 void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 {
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+    qDebug().noquote() << "cTelnet::slot_socketHostFound(QHostInfo) INFO - called.";
+#endif
+    QStringList addressList_ipV4;
+    QStringList addressList_ipV6;
+    for (const QHostAddress& address : hostInfo.addresses()) {
+        // Handle (or not) some special cases:
+        if (QHostAddress::Null == address
+            || QHostAddress::Broadcast == address
+            || QHostAddress::Any == address
+            || QHostAddress::AnyIPv4 == address
+            || QHostAddress::AnyIPv6 == address) {
+
+            continue;
+        }
+
+        if (QHostAddress::LocalHostIPv6 == address) {
+            addressList_ipV6.append(qsl("::1"));
+            continue;
+        }
+
+        if (QHostAddress::LocalHost == address) {
+            addressList_ipV4.append(qsl("127.0.0.1"));
+            continue;
+        }
+
+        switch (address.protocol()) {
+        case QAbstractSocket::IPv4Protocol:
+            addressList_ipV4.append(address.toString());
+            break;
+        case QAbstractSocket::IPv6Protocol:
+            addressList_ipV6.append(address.toString());
+            break;
+        case QAbstractSocket::AnyIPProtocol:
+            [[fallthrough]];
+        case QAbstractSocket::UnknownNetworkLayerProtocol:
+            {} // No-op
+        }
+    }
+
+    const bool hasIPv4_address = (addressList_ipV4.count());
+    const bool hasIPv6_address = (addressList_ipV6.count());
+    if (!(hasIPv4_address || hasIPv6_address)) {
+        /*: This text is used in the (expected) case when the user has provided
+         * a URL for the Game Server rather than (unusually) an IP address.
+         * After a DNS lookup however, we have NOT found any IP addresses which
+         * means that we cannot proceed further to connect to the Game server.
+         */
+        TDebug(QColorConstants::Red, QColorConstants::White) << tr("Host name lookup Failure! A connection cannot be established.\n"
+                                                                   "The server name is not correct, or your nameservers are not\n"
+                                                                   "working properly.\n")
+                                                             >> mpHost;
+        //: %1 is the URL of the Game Server
+        postMessage(tr("[ ERROR ] - Unable to connect to \"%1\".\n"
+                       "Check your internet connection and the details entered for the game server.")
+                    .arg(mHostUrl));
+        return;
+    }
+
+    // Report found IP addresses:
+    QStringList addressesToReport;
+    for (const auto& address : addressList_ipV6) {
+        /*: Used to add an IPv6 address line to the list displayed during
+         * connecting to a Host. Some, e.g. Far Eastern locales may require a
+         * different text here if they do not use spaces, or need "wide" '(' ')'s
+         */
+        addressesToReport << tr("%1 (IPv6)").arg(address);
+    }
+    for (const auto& address : addressList_ipV4) {
+        /*: Used to add an IPv4 address line to the list displayed during
+         * connecting to a Host. Some, e.g. Far Eastern locales may require a
+         * different text here if they do not use spaces, or "wide" '('...')'
+         */
+        addressesToReport << tr("%1 (IPv4)").arg(address);
+    }
+    if (addressesToReport.count() > 1) {
+        std::sort(addressesToReport.begin(), addressesToReport.end());
+    }
+    if (isRawIPv4Address(mHostUrl) || isRawIPv6Address(mHostUrl)) {
+        // We've been given a raw IP address - so instead of repeating it show
+        // what the reverse lookup gave us - but if it is the same thing then
+        // there isn't much we can say
+        if (!mHostUrl.compare(hostInfo.hostName())) {
+            /*: This text is used when the user has provided a raw IP address
+             * for the Game Server rather than a URL. In this case we try to
+             * perform a "reverse-lookup" to see if we can identify the URL that
+             * matches it - but nothing useful was found.
+             */
+            TDebug(QColorConstants::Svg::orange, QColorConstants::White) << tr("A host name could not be found for the given IP address.")
+                                                                            .append(QChar::LineFeed)
+                                                                         >> mpHost;
+        } else {
+            /*: This text is used when the user has provided a raw IP address
+             * for the Game Server rather than a URL. In this case we try to
+             * perform a "reverse-lookup" to see if we can identify the URL that
+             * matches it - and this is used when we have something (%1) to
+             * show.
+             */
+            TDebug(QColorConstants::Blue, QColorConstants::White) << tr("A host name for the IP address has been found.\n"
+                                                                        "It is: \"%1\"\n")
+                                                                     .arg(hostInfo.hostName())
+                                                                  >> mpHost;
+        }
+    } else {
+        /*: This text is used in the (expected) case when the user has provided
+         * a URL (%1) for the Game Server rather than (unusually) an IP address.
+         * After a DNS lookup we have found at least one but possibly more (%n)
+         * IP addresses, which will be listed (one per line) immediately
+         * afterwards.
+         */
+        TDebug(QColorConstants::Blue, QColorConstants::White) << tr("The %n IP address(es) of %1 has/have been found. It/They are:",
+                                                                    // Intentional comment to separate arguments
+                                                                    "",
+                                                                    addressesToReport.count())
+                                                                 .arg(hostInfo.hostName())
+                                                                 .append(QChar::LineFeed)
+                                                              >> mpHost;
+        TDebug(QColorConstants::Green, QColorConstants::White) << addressesToReport.join(QChar::LineFeed)
+                                                                  .prepend(TDebug::csmContinue)
+                                                                  .append(QChar::LineFeed)
+                                                               >> mpHost;
+    }
+
 #if !defined(QT_NO_SSL)
-    if (mpHost->mSslTsl) {
-        postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying secure connection to %1: %2 ...").arg(hostInfo.hostName(), QString::number(mHostPort))));
-        mpSocket.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite);
+    /* This is the only point where we sample the state of the "use secure
+     * connection" setting - so that if it gets changed whilst connected
+     * (currently it can be done in the "Profile preferences") it doesn't modify
+     * the execution of code in this class until it is safe to do so:
+     */
+    mCurrent_sslTsl = mpHost->mSslTsl;
+    if (mCurrent_sslTsl) {
+        if (hasIPv4_address && hasIPv6_address) {
+            /* Got both types of IP address so do the happy eyeballs stuff.
+             * Use Qt::UniqueConnection so that duplicate ones are not made
+             * if/when this code is re-run:
+             */
+            connect(&mSocket_ipV6, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
+            connect(&mSocket_ipV4, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
+            connect(&mSocket_ipV6, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError, Qt::UniqueConnection);
+            connect(&mSocket_ipV4, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError, Qt::UniqueConnection);
+            connect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
+            connect(&mSocket_ipV4, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
+            connect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
+            connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
+
+            if (mConnectViaProxy) {
+                /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
+                 * case. %1 is the URL for the server and %2 is the port number
+                 * (on BOTH addresses) for the connection.
+                 */
+                TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4 and IPv6) connections to proxy %1:%2 ...")
+                                                                         .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                         .append(QChar::LineFeed)
+                                                                      >> mpHost;
+                /* We don't need to worry about %1 being a raw IPv6 address here
+                 * as we prohibit IP addresses for secure connections so it is
+                 * a URL; %2 is the port number.
+                 */
+                postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...")
+                            .arg(hostInfo.hostName(), QString::number(mHostPort)));
+            } else {
+                /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
+                 * case. %1 is the URL for the Server and %2 is the port number
+                 * (on BOTH addresses) for the connection.
+                 */
+                TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4 and IPv6) connections to %1:%2 ...")
+                                                                         .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                         .append(QChar::LineFeed)
+                                                                      >> mpHost;
+                /* We don't need to worry about %1 being a raw IPv6 address here
+                 * as we prohibit IP addresses for secure connections so it is
+                 * a URL; %2 is the port number.
+                 */
+                postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...")
+                            .arg(hostInfo.hostName(), QString::number(mHostPort)));
+            }
+
+            mSocket_ipV6.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+            mSocket_ipV4.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+        } else {
+            // One, but, only one, of these will be true:
+            if (hasIPv6_address) {
+                connect(&mSocket_ipV6, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
+                connect(&mSocket_ipV6, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError, Qt::UniqueConnection);
+                connect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
+                connect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
+
+                if (mConnectViaProxy) {
+                    /*: %1 is the URL for the Server and %2 is the port number
+                     * for the connection.
+                     */
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv6) connection to %1:%2 via proxy...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    /* We don't need to worry about %1 being a raw IPv6 address here
+                     * as we prohibit IP addresses for secure connections so it is
+                     * a URL; %2 is the port number.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                } else {
+                    /*: %1 is the URL for the Server and %2 is the port number
+                     * for the connection.
+                     */
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4 and IPv6) connections to %1:%2 ...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    /* We don't need to worry about %1 being a raw IPv6 address here
+                     * as we prohibit IP addresses for secure connections so it is
+                     * a URL; %2 is the port number.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                }
+                mSocket_ipV6.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+            }
+            if (hasIPv4_address) {
+                connect(&mSocket_ipV4, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
+                connect(&mSocket_ipV4, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError, Qt::UniqueConnection);
+                connect(&mSocket_ipV4, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
+                connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
+
+                if (mConnectViaProxy) {
+                    /*: %1 is the URL for the Server and %2 is the port number
+                     * for the connection.
+                     */
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4) connection to %1:%2 via proxy...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    //: %1 is a URL for the Game Server; %2 is the port number.
+                    postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 via proxy...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                } else {
+                    /*: %1 is the URL for the Server and %2 is the port number
+                     * for the connection.
+                     */
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying secure (IPv4) connection to %1:%2 ...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    //: %1 is a URL for the Game Server; %2 is the port number.
+                    postMessage(tr("[ INFO ]  - Attempting a secure connection to %1:%2 ...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                }
+                mSocket_ipV4.connectToHostEncrypted(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+            }
+        }
 
     } else {
 #endif
-        if (!hostInfo.addresses().isEmpty()) {
-            mHostAddress = hostInfo.addresses().constFirst();
-            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(mHostName, mHostAddress.toString())));
-            if (!mConnectViaProxy) {
-                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(mHostPort))));
+        if (hasIPv4_address && hasIPv6_address) {
+            connect(&mSocket_ipV6, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
+            connect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
+            connect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
+            connect(&mSocket_ipV4, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
+            connect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
+            connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
+
+            if (mConnectViaProxy) {
+                /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
+                 * case. %1 is the URL for the proxy and %2 is the port number
+                 * (on BOTH addresses) for the connection.
+                 */
+                TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...")
+                                                                         .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                         .append(QChar::LineFeed)
+                                                                      >> mpHost;
+                //: %1 is a URL for the Game Server; %2 is the port number.
+                postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...")
+                            .arg(hostInfo.hostName(), QString::number(mHostPort)));
             } else {
-                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...").arg(mHostAddress.toString(), QString::number(mHostPort))));
+                /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
+                 * case. %1 is the URL for the Server and %2 is the port number
+                 * (on BOTH addresses) for the connection.
+                 */
+                TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4 and IPv6) connections to %1:%2 ...")
+                                                                         .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                         .append(QChar::LineFeed)
+                                                                      >> mpHost;
+                //: %1 is a URL for the Game Server; %2 is the port number.
+                postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...")
+                            .arg(hostInfo.hostName(), QString::number(mHostPort)));
             }
-            mpSocket.connectToHost(mHostAddress, mHostPort);
+
+            mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+            mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+
         } else {
-            mpSocket.connectToHost(hostInfo.hostName(), mHostPort);
-            postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
-                           "Connection cannot be established.\n"
-                           "The server name is not correct, not working properly,\n"
-                           "or your nameservers are not working properly."));
-            return;
+            if (hasIPv6_address) {
+                connect(&mSocket_ipV6, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
+                connect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
+                connect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
+
+                const QString displayAddress = isRawIPv6Address(hostInfo.hostName()) ? tr("[%1]").arg(hostInfo.hostName()) : hostInfo.hostName();
+                if (mConnectViaProxy) {
+                    /*: %1 is the URL or IPv6 address (suitably wrapped) for the
+                     * Game Server and %2 is the port number for the connection.
+                     */
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv6) connection to %1:%2 via proxy...")
+                                                                             .arg(displayAddress, QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    /*: %1 is the URL or IPv6 address (suitably wrapped) for the
+                     * Game Server and %2 is the port number.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...")
+                                .arg(displayAddress, QString::number(mHostPort)));
+                } else {
+                    /*: %1 is the URL or IPv6 address (suitably wrapped) for the
+                     * Game Server and %2 is the port number for the connection.
+                     */
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv6) connection to %1:%2 ...")
+                                                                             .arg(displayAddress, QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    /*: %1 is the URL or IPv6 address (suitably wrapped) for the
+                     * Game Server and %2 is the port number for the connection.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...")
+                                .arg(displayAddress, QString::number(mHostPort)));
+                }
+
+                mSocket_ipV6.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv6Protocol);
+            }
+            if (hasIPv4_address) {
+                connect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected, Qt::UniqueConnection);
+                connect(&mSocket_ipV4, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected, Qt::UniqueConnection);
+                connect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead, Qt::UniqueConnection);
+
+                if (mConnectViaProxy) {
+                    /*: %1 is the URL or IPv4 address for the Game Server and %2
+                     * is the port number for the connection.
+                     */
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 via proxy...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    /*: %1 is the URL or IPv4 address for the Game Server and %2
+                     * is the port number for the connection.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 via proxy...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
+
+                } else {
+                    /*: %1 is the URL or IPv4 address for the Game Server and %2
+                     * is the port number for the connection.
+                     */
+                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 ...")
+                                                                             .arg(hostInfo.hostName(), QString::number(mHostPort))
+                                                                             .append(QChar::LineFeed)
+                                                                          >> mpHost;
+                    /*: %1 is the URL or IPv4 address for the Game Server and %2
+                     * is the port number for the connection.
+                     */
+                    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...")
+                                .arg(hostInfo.hostName(), QString::number(mHostPort)));
+                }
+
+                mSocket_ipV4.connectToHost(hostInfo.hostName(), mHostPort, QIODevice::ReadWrite, QAbstractSocket::IPv4Protocol);
+            }
         }
 #if !defined(QT_NO_SSL)
     }
@@ -748,10 +1328,10 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 // as we do NOT handle the weirdly different EBDIC!!!
 bool cTelnet::socketOutRaw(std::string& data)
 {
-    // We were using mpSocket.iswritable() but it was not clear that that was a
+    // We were using mpSocket->iswritable() but it was not clear that that was a
     // suitable way to check for an open, usable connection - whereas isvalid()
     // is true if the socket is valid and ready for use:
-    if (!mpSocket.isValid()) {
+    if (!mpSocket || !mpSocket->isValid()) {
         return false;
     }
     std::size_t dataLength = data.length();
@@ -762,7 +1342,7 @@ bool cTelnet::socketOutRaw(std::string& data)
         // may be ASCII NUL characters in data and the first of those will
         // terminate the writing of the bytes following it in the single
         // argument method call:
-        qint64 chunkWritten = mpSocket.write(data.substr(written).data(), (dataLength - written));
+        qint64 chunkWritten = mpSocket->write(data.substr(written).data(), (dataLength - written));
 
         if (chunkWritten < 0) {
             // -1 is the sentinel (error) value but any other negative value
@@ -838,7 +1418,7 @@ void cTelnet::sendNAWS(int width, int height)
 
 void cTelnet::sendTelnetOption(char type, unsigned char option)
 {
-#ifdef DEBUG_TELNET
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
     QString _type;
     switch ((quint8)type) {
     case 251:
@@ -1056,13 +1636,13 @@ QString cTelnet::decodeOption(const unsigned char ch) const
 std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
 {
     // intentionally simplify connection state to a boolean
-    const bool connected = mpSocket.state() == QAbstractSocket::ConnectedState;
+    const bool connected = (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState);
 
-    if (mHostName.isEmpty() && mHostPort == 0) {
+    if (mHostUrl.isEmpty() || mHostPort == 0) {
         return {mpHost->getUrl(), mpHost->getPort(), connected};
-    } else {
-        return {mHostName, mHostPort, connected};
     }
+
+    return {mHostUrl, mHostPort, connected};
 }
 
 // escapes data to be send over NEW ENVIRON and MNES
@@ -1702,7 +2282,7 @@ void cTelnet::trackKaVirNegotiation(unsigned char option)
 
     // Check for match
     if (mNegotiationOrder == expectedOrderForKaVirHandler) {
-#ifdef DEBUG_TELNET
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
     QStringList optList;
 
     for (unsigned char opt : mNegotiationOrder) {
@@ -1723,7 +2303,10 @@ void cTelnet::autoEnableTTYPEVersion()
     // Automatically enable TTYPE version compatibility
     disconnectIt();
     mpHost->mVersionInTTYPE = true;
-    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting..."));
+    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best\n"
+                    "when Mudlet reports its version number during connection. Version\n"
+                    "reporting in terminal type has been automatically enabled for\n"
+                    "improved color support. Reconnecting..."));
     reconnect();
 }
 
@@ -1734,7 +2317,10 @@ void cTelnet::autoEnableMXPProcessor()
 
     // Automatically enable MXP processing
     mpHost->setForceMXPProcessorOn(true);
-    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but hasn't turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings > Special Options."));
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but\n"
+                    "has not turned it on properly. MXP processing has been automatically\n"
+                    "enabled for clickable links, room info, and richer interactions.\n"
+                    "You can disable this setting in Settings > Special Options."));
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
@@ -1747,7 +2333,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     }
 
     char ch = telnetCommand[1];
-#if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
     QString commandType;
     switch (ch) {
     case TN_EOR:
@@ -1836,7 +2422,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         option = telnetCommand[2];
         trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
-#ifdef DEBUG_TELNET
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
 #endif
 
@@ -1933,7 +2519,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += TN_IAC;
                 output += TN_SE;
                 socketOutRaw(output);
-#ifdef DEBUG_TELNET
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                 qDebug() << "WE send telnet IAC DO MSDP";
 #endif
                 raiseProtocolEvent("sysProtocolEnabled", "MSDP");
@@ -2155,7 +2741,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
         option = telnetCommand[2];
         const auto idxOption = static_cast<size_t>(option);
-#ifdef DEBUG_TELNET
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC WONT " << decodeOption(option);
 #endif
         if (triedToEnable[idxOption]) {
@@ -2256,7 +2842,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         option = telnetCommand[2];
         trackKaVirNegotiation(option); // Track for KaVir protocol
         const auto idxOption = static_cast<size_t>(option);
-#ifdef DEBUG_TELNET
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
 #endif
 
@@ -2463,7 +3049,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
         option = telnetCommand[2];
         const auto idxOption = static_cast<size_t>(option);
-#ifdef DEBUG_TELNET
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option);
 #endif
 
@@ -2736,7 +3322,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     downloadAndInstallGUIPackage(packageName, fileName, url);
                 } else if (mpHost->mServerGUI_Package_version != version) {
                     // Check if the version is different and handle the upgrade
-                    postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
+                    postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2'\n"
+                                   "(url='%3').")
                                 .arg(version, mpHost->mServerGUI_Package_version, url));
 
                     // Uninstall the old version
@@ -3062,7 +3649,8 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json)
 // Helper function to download and install the GUI package
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url)
 {
-    postMessage(tr("[ INFO ]  - Downloading and installing package '%1' (url='%2').").arg(packageName, url));
+    postMessage(tr("[ INFO ]  - Downloading and installing package '%1'\n"
+                   "(url='%2').").arg(packageName, url));
 
     mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
@@ -3114,7 +3702,8 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
         downloadAndInstallGUIPackage(packageName, fileName, url);
     } else if (mpHost->mServerGUI_Package_version != version) {
         // Check if the version is different and handle the upgrade
-        postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2' (url='%3').")
+        postMessage(tr("[ INFO ]  - Upgrading the GUI to new version '%1' from version '%2'\n"
+                       "(url='%3').")
                     .arg(version, mpHost->mServerGUI_Package_version, url));
 
         // Uninstall the old version
@@ -3352,58 +3941,71 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     mpHost->mpMedia->playMedia(mediaData);
 }
 
-bool cTelnet::isIPAddress(QString& arg)
+// Does the arg look like a (numeric) IP address?
+bool cTelnet::isIPAddress(const QString& arg)
 {
-    bool isIPAddress = false;
-
     QHostAddress address(arg);
-
     if (QAbstractSocket::IPv4Protocol == address.protocol()) {
-        isIPAddress = true;
-    } else if (QAbstractSocket::IPv6Protocol == address.protocol()) {
-        isIPAddress = true;
+        return true;
     }
-
-    return isIPAddress;
+    if (QAbstractSocket::IPv6Protocol == address.protocol()) {
+        return true;
+    }
+    return false;
 }
 
 #if !defined(QT_NO_SSL)
 void cTelnet::promptTlsConnectionAvailable()
 {
-    // If an SSL port is detected by MSSP and we're not using it, prompt to use on future connections
-    if (mpHost->mMSSPTlsPort && mpSocket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !isIPAddress(mHostName)
-        && (mpHost->mMSSPHostName.isEmpty() || QString::compare(mHostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
-        postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
+    if (!mpSocket) {
+        return;
+    }
 
-        auto msgBox = new QMessageBox();
+    // If an SSL port is detected by MSSP and we're not using it, prompt to use
+    // on future connections; note that it is unlikely that a literal IP address
+    // will be included in a TLS/SSL cert so we can include that in the tests:
+    if (mpHost->mMSSPTlsPort
+        && QSslSocket::UnencryptedMode == mpSocket->mode()
+        && mpHost->mAskTlsAvailable
+        && !isIPAddress(mHostUrl)
+        && (mpHost->mMSSPHostName.isEmpty()
+            || mpHost->mMSSPHostName.compare(mHostUrl, Qt::CaseInsensitive) == 0)) {
 
-        msgBox->setIcon(QMessageBox::Question);
-        msgBox->setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));
-        msgBox->setInformativeText(tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
-        msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        msgBox->setDefaultButton(QMessageBox::Yes);
+        postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.")
+                    .arg(QString::number(mpHost->mMSSPTlsPort)));
 
-        int ret = msgBox->exec();
-        delete msgBox;
+        // This QMessageBox is application modal and because we use ::exec() it
+        // spins up it's own event loop - this is not recommended by the Qt
+        // documentation and can cause some dangerous bugs!
+        auto pMsgBox = new QMessageBox();
+        pMsgBox->setIcon(QMessageBox::Question);
+        pMsgBox->setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));
+        pMsgBox->setInformativeText(tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
+        pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        pMsgBox->setDefaultButton(QMessageBox::Yes);
+        // Make using Escape mean no change:
+        pMsgBox->setEscapeButton(QMessageBox::No);
+
+        int ret = pMsgBox->exec();
+        delete pMsgBox;
 
         switch (ret) {
         case QMessageBox::Yes:
-            cTelnet::disconnectIt();
+            disconnectIt();
             mHostPort = mpHost->mMSSPTlsPort;
             mpHost->setPort(mHostPort);
             mpHost->mSslTsl = true;
             mpHost->writeProfileData(QLatin1String("port"), QString::number(mHostPort));
             mpHost->writeProfileData(QLatin1String("ssl_tsl"), QString::number(Qt::Checked));
-            cTelnet::connectIt(mpHost->getUrl(), mHostPort);
+            connectIt(mpHost->getUrl(), mHostPort);
             break;
         case QMessageBox::No:
-            cTelnet::disconnectIt();
+            disconnectIt();
             mpHost->mAskTlsAvailable = false; // Don't ask next time
-            cTelnet::reconnect();             // A no-op (;) is desired, but read buffer does not flush
+            reconnect();             // A no-op (;) is desired, but read buffer does not flush
             break;
         default:
-            // should never be reached
-            break;
+            Q_UNREACHABLE(); // should never be reached
         }
     }
 }
@@ -4032,8 +4634,11 @@ void cTelnet::slot_processReplayChunk()
 
 void cTelnet::slot_socketReadyToBeRead()
 {
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+    qDebug().noquote() << "cTelnet::slot_socketReadyToBeRead() INFO - called.";
+#endif
     // Check if Host is closing down or null/invalid
-    if (!mpHost || mpHost->isClosingDown()) {
+    if (!mpHost || mpHost->isClosingDown() || !mpSocket) {
         return;
     }
 
@@ -4045,7 +4650,7 @@ void cTelnet::slot_socketReadyToBeRead()
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char in_buffer[BUFFER_SIZE + 10];
 
-    int amount = mpSocket.read(in_buffer, BUFFER_SIZE);
+    int amount = mpSocket->read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
 }
 
@@ -4477,4 +5082,52 @@ void cTelnet::setPostingTimeout(const int timeout)
     }
 
     return {false, false};
+}
+
+QAbstractSocket::SocketState cTelnet::getConnectionState() const
+{
+    if (mpSocket) {
+        return mpSocket->state();
+    }
+
+    // Fall back to considering the "best" state of the underlying sockets:
+    if (mSocket_ipV4.state() == QAbstractSocket::ConnectedState || mSocket_ipV6.state() == QAbstractSocket::ConnectedState) {
+        return QAbstractSocket::ConnectedState;
+    }
+    if (mSocket_ipV4.state() == QAbstractSocket::ConnectingState || mSocket_ipV6.state() == QAbstractSocket::ConnectingState) {
+        return QAbstractSocket::ConnectingState;
+    }
+    if (mSocket_ipV4.state() == QAbstractSocket::HostLookupState || mSocket_ipV6.state() == QAbstractSocket::HostLookupState) {
+        return QAbstractSocket::HostLookupState;
+    }
+    if (mSocket_ipV4.state() == QAbstractSocket::HostLookupState || mSocket_ipV6.state() == QAbstractSocket::HostLookupState) {
+        return QAbstractSocket::HostLookupState;
+    }
+    if (mSocket_ipV4.state() == QAbstractSocket::ClosingState || mSocket_ipV6.state() == QAbstractSocket::ClosingState) {
+        return QAbstractSocket::ClosingState;
+    }
+
+    // These two other states should not be possible!
+    Q_ASSERT_X(mSocket_ipV4.state() != QAbstractSocket::ListeningState && mSocket_ipV4.state() != QAbstractSocket::BoundState, "cTelnet::getConnectionState()", "The IPv4 socket is not in an expected state.");
+    Q_ASSERT_X(mSocket_ipV6.state() != QAbstractSocket::ListeningState && mSocket_ipV6.state() != QAbstractSocket::BoundState, "cTelnet::getConnectionState()", "The IPv6 socket is not in an expected state.");
+
+    return QAbstractSocket::UnconnectedState;
+}
+
+/*static*/ bool cTelnet::isRawIPv4Address(const QString& text)
+{
+    // From: https://stackoverflow.com/a/36760050/4805858
+    // Is the "address" entirely composed of 4 dot separated groups of digits
+    // and colons with each number being in range 0 - 255 with no leading zeros:
+    static const QRegularExpression isRawIPv4AddressRegExp(qsl("^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"));
+
+    return isRawIPv4AddressRegExp.match(text).hasMatch();
+}
+
+/*static*/ bool cTelnet::isRawIPv6Address(const QString& text)
+{
+    // Is the "address" entirely composed of (lower-case) hex-digits and colons:
+    static const QRegularExpression isRawIPv6AddressRegExp(qsl("^[0-9a-f:]+$"));
+
+    return isRawIPv6AddressRegExp.match(text).hasMatch();
 }
