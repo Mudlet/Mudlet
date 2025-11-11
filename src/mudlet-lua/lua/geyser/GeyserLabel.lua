@@ -43,9 +43,6 @@ function Geyser.Label:echo(message, color, format)
   if ft.strikethrough then
     message = "<s>" .. message .. "</s>"
   end
-  if self.font and self.font ~= "" then
-    message = string.format('<font face ="%s">%s</font>', self.font, message)
-  end
   if not fs then
     fs = tostring(self.fontSize)
   end
@@ -55,6 +52,13 @@ function Geyser.Label:echo(message, color, format)
     color = [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. [[; ]]
   end
   fs = "font-size: " .. fs .. "pt; "
+  -- Add font family and style if set
+  if self.font and self.font ~= "" then
+    fs = fs .. "font-family: '" .. (self.fontFamily or self.font) .. "'; "
+    if self.fontCssStyle and self.fontCssStyle ~= "" then
+      fs = fs .. self.fontCssStyle
+    end
+  end
   message = [[<div ]] .. alignment .. color .. fs ..
   [[">]] .. message .. [[</div>]]
   echo(self.name, message)
@@ -103,13 +107,17 @@ function Geyser.Label:decho(message)
   if ft.strikethrough then
     htmlContent = "<s>" .. htmlContent .. "</s>"
   end
-  if self.font and self.font ~= "" then
-    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
-  end
   if not fs then
     fs = tostring(self.fontSize)
   end
   fs = "font-size: " .. fs .. "pt; "
+  -- Add font family and style if set
+  if self.font and self.font ~= "" then
+    fs = fs .. "font-family: '" .. (self.fontFamily or self.font) .. "'; "
+    if self.fontCssStyle and self.fontCssStyle ~= "" then
+      fs = fs .. self.fontCssStyle
+    end
+  end
   htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
@@ -151,13 +159,17 @@ function Geyser.Label:hecho(message)
   if ft.strikethrough then
     htmlContent = "<s>" .. htmlContent .. "</s>"
   end
-  if self.font and self.font ~= "" then
-    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
-  end
   if not fs then
     fs = tostring(self.fontSize)
   end
   fs = "font-size: " .. fs .. "pt; "
+  -- Add font family and style if set
+  if self.font and self.font ~= "" then
+    fs = fs .. "font-family: '" .. (self.fontFamily or self.font) .. "'; "
+    if self.fontCssStyle and self.fontCssStyle ~= "" then
+      fs = fs .. self.fontCssStyle
+    end
+  end
   htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
@@ -199,13 +211,17 @@ function Geyser.Label:cecho(message)
   if ft.strikethrough then
     htmlContent = "<s>" .. htmlContent .. "</s>"
   end
-  if self.font and self.font ~= "" then
-    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
-  end
   if not fs then
     fs = tostring(self.fontSize)
   end
   fs = "font-size: " .. fs .. "pt; "
+  -- Add font family and style if set
+  if self.font and self.font ~= "" then
+    fs = fs .. "font-family: '" .. (self.fontFamily or self.font) .. "'; "
+    if self.fontCssStyle and self.fontCssStyle ~= "" then
+      fs = fs .. self.fontCssStyle
+    end
+  end
   htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
@@ -253,6 +269,86 @@ function Geyser.Label:processFormatString(format)
   end
 end
 
+--- Internal helper to parse font name and extract family/style information
+-- @param fontName The font name which may include style (e.g., "EB Garamond SemiBold")
+-- @return table with family, cssStyle, and htmlFontFace fields
+local function parseFontName(fontName)
+  if not fontName or fontName == "" then
+    return {family = "", cssStyle = "", htmlFontFace = ""}
+  end
+
+  -- Get available fonts to check against
+  local af = getAvailableFonts()
+
+  -- If this exact font exists as a base family, use it directly
+  if af[fontName] then
+    -- Check if there are any font variants with this as a prefix
+    -- If yes, it's a base family; if no, it might be a "Family Style" combo
+    local hasVariants = false
+    for availFont, _ in pairs(af) do
+      if availFont ~= fontName and availFont:find("^" .. fontName:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1") .. " ") then
+        hasVariants = true
+        break
+      end
+    end
+
+    if hasVariants then
+      -- This is a base family name
+      return {family = fontName, cssStyle = "", htmlFontFace = fontName}
+    end
+  end
+
+  -- Try to parse as "Family Style" format by splitting on last space
+  local lastSpace = fontName:match("^.*()")
+  for i = #fontName, 1, -1 do
+    if fontName:sub(i, i) == " " then
+      lastSpace = i
+      break
+    end
+  end
+
+  if lastSpace and lastSpace > 1 then
+    local potentialFamily = fontName:sub(1, lastSpace - 1)
+    local potentialStyle = fontName:sub(lastSpace + 1)
+
+    -- Check if this family exists in available fonts
+    if af[potentialFamily] then
+      -- Map common style names to CSS properties
+      local cssStyle = ""
+      local styleNameLower = potentialStyle:lower()
+
+      -- Font weight mapping
+      if styleNameLower:find("thin") then
+        cssStyle = cssStyle .. "font-weight: 100; "
+      elseif styleNameLower:find("extralight") or styleNameLower:find("ultra[ -]?light") then
+        cssStyle = cssStyle .. "font-weight: 200; "
+      elseif styleNameLower:find("light") and not styleNameLower:find("semi") then
+        cssStyle = cssStyle .. "font-weight: 300; "
+      elseif styleNameLower:find("medium") then
+        cssStyle = cssStyle .. "font-weight: 500; "
+      elseif styleNameLower:find("semibold") or styleNameLower:find("demi[ -]?bold") then
+        cssStyle = cssStyle .. "font-weight: 600; "
+      elseif styleNameLower:find("bold") and not styleNameLower:find("semi") and not styleNameLower:find("extra") and not styleNameLower:find("ultra") then
+        cssStyle = cssStyle .. "font-weight: 700; "
+      elseif styleNameLower:find("extrabold") or styleNameLower:find("ultra[ -]?bold") then
+        cssStyle = cssStyle .. "font-weight: 800; "
+      elseif styleNameLower:find("black") or styleNameLower:find("heavy") then
+        cssStyle = cssStyle .. "font-weight: 900; "
+      end
+
+      -- Font style mapping
+      if styleNameLower:find("italic") or styleNameLower:find("oblique") then
+        cssStyle = cssStyle .. "font-style: italic; "
+      end
+
+      return {family = potentialFamily, cssStyle = cssStyle, htmlFontFace = potentialFamily}
+    end
+  end
+
+  -- Fall back to using the name as-is
+  return {family = fontName, cssStyle = "", htmlFontFace = fontName}
+end
+
 --- Sets the font face for the label, use empty string to clear the font and use css/default. Returns true if the font changed, nil+error if not.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
@@ -262,7 +358,14 @@ function Geyser.Label:setFont(font)
     err = err .. "In the meantime, we will use a similar font which isn't the one you asked for but we hope is close enough"
     debugc(err)
   end
+
+  -- Parse the font to extract family and style information
+  local fontInfo = parseFontName(font)
   self.font = font
+  self.fontFamily = fontInfo.family
+  self.fontCssStyle = fontInfo.cssStyle
+  self.fontHtmlFace = fontInfo.htmlFontFace
+
   self:echo()
 end
 
