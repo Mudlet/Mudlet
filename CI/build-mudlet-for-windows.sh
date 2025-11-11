@@ -126,6 +126,7 @@ echo ""
 
 # Configure CMake with ccache and Release build type
 CMAKE_ARGS=(
+  -G Ninja
   -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_PREFIX_PATH="${MINGW_INTERNAL_BASE_DIR}"
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
