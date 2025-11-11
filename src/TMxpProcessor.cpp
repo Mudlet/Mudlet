@@ -22,6 +22,7 @@
 
 #include "TMxpProcessor.h"
 #include <QDebug>
+#include <QTextCodec>
 
 bool TMxpProcessor::setMode(const QString& code)
 {
@@ -165,7 +166,31 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     
     if (mMxpTagBuilder.hasTag()) {
         // Save raw tag content before it gets cleared by buildTag()
-        const QString rawTagContent = QStringLiteral("<") + QString::fromStdString(mMxpTagBuilder.getRawTagContent()) + QStringLiteral(">");
+        std::string rawTagBytes = mMxpTagBuilder.getRawTagContent();
+        QString rawTagContent = QStringLiteral("<");
+        
+        // Get the encoding being used by the connection
+        const QByteArray encoding = mpMxpClient->getEncoding();
+        
+        // Decode the raw bytes using the proper encoding
+        if (encoding == "UTF-8") {
+            // For UTF-8, use fromStdString which handles UTF-8
+            rawTagContent += QString::fromStdString(rawTagBytes);
+        } else if (encoding == "ISO 8859-1") {
+            // For Latin-1, use fromLatin1
+            rawTagContent += QString::fromLatin1(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
+        } else {
+            // For other encodings (GBK, BIG5, EUC-KR, etc.), use QTextCodec
+            QTextCodec* codec = QTextCodec::codecForName(encoding);
+            if (codec) {
+                rawTagContent += codec->toUnicode(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
+            } else {
+                // Fallback: try UTF-8
+                rawTagContent += QString::fromStdString(rawTagBytes);
+            }
+        }
+        
+        rawTagContent += QStringLiteral(">");
         
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 

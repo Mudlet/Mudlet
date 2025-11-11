@@ -264,3 +264,8 @@ bool TMxpMudlet::isTagAllowedInMode(const QString& tagName, TMXPMode mode) const
     
     return openModeTags.contains(tagName);
 }
+
+QByteArray TMxpMudlet::getEncoding() const
+{
+    return mpHost->mTelnet.getEncoding();
+}

@@ -138,6 +138,9 @@ public:
     void setCaptionForSendEvent(const QString& caption) override;
 
     QStack<TMxpEvent> mPendingSendEvents;
+    
+    // Get the encoding used by the connection
+    QByteArray getEncoding() const override;
 
 private:
     bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const;
