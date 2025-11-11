@@ -335,7 +335,7 @@ jobs:
           FAKE_VCPKG_DIR=${{runner.workspace}}/vcpkg_yajl
           mkdir -p "$FAKE_VCPKG_DIR/packages/yajl_${{matrix.triplet}}/lib"
           ln -s "$YAJL_LIB_PATH" "$FAKE_VCPKG_DIR/packages/yajl_${{matrix.triplet}}/lib/libyajl.2.dylib"
-          echo "VCPKG_ROOT=$FAKE_VCPKG_DIR" >> $GITHUB_ENV
+          export VCPKG_ROOT=$FAKE_VCPKG_DIR
         fi
         export ARCH=$(uname -m)
         echo "ARCH=$ARCH" >> $GITHUB_ENV
