@@ -14032,6 +14032,26 @@ void dlgTriggerEditor::slot_restoreEditorItemsToolbar()
 
 void dlgTriggerEditor::clearTriggerForm()
 {
+    // Clear pattern fields
+    for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
+        mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
+        if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
+            mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
+        }
+        mTriggerPatternEdit[i]->pushButton_fgColor->hide();
+        mTriggerPatternEdit[i]->pushButton_bgColor->hide();
+        mTriggerPatternEdit[i]->label_prompt->hide();
+        mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
+        // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
+        mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
+        mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
+    }
+
+    mpTriggersMainArea->lineEdit_trigger_name->clear();
+    mpTriggersMainArea->label_idNumber->clear();
+    clearDocument(mpSourceEditorEdbee);
+    mpTriggersMainArea->lineEdit_trigger_command->clear();
+
     mpTriggersMainArea->hide();
     mpSourceEditorArea->hide();
     if (mCurrentView != EditorViewType::cmUnknownView) {
