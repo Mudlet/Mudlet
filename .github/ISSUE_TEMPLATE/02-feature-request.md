@@ -4,6 +4,7 @@ about: Submit an idea to improve Mudlet
 title: ''
 labels: ''
 assignees: ''
+type: 'feature'
 
 ---
 

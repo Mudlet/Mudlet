@@ -27,7 +27,6 @@
 
 #include "dlgTriggerEditor.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QFile>
 #include <QMap>
@@ -35,7 +34,6 @@
 #include <QPointer>
 #include <QXmlStreamReader>
 #include <QClipboard>
-#include "post_guard.h"
 
 class Host;
 class TAction;

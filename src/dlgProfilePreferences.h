@@ -33,7 +33,6 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-#include "pre_guard.h"
 #include "ui_profile_preferences.h"
 #include <QtCore>
 #include <QDialog>
@@ -42,7 +41,6 @@
 #include <QFontDialog>
 #include <QMap>
 #include <QCloseEvent>
-#include "post_guard.h"
 
 class Host;
 
@@ -218,6 +216,7 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
     bool updateDisplayFont();
+    void cancelShortcutCaptures();
 
 
     QPointer<Host> mpHost;
@@ -236,6 +235,8 @@ private:
     QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableCHARSET;
+    QPointer<QAction> mEnableNEWENVIRON;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

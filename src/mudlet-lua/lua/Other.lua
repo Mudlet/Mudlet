@@ -1267,6 +1267,7 @@ function getConfig(...)
       "logDirectory",                    -- read-only in getConfig
       "logInHTML",
       "mapExitSize",
+      "mapInfoColor",
       "mapperPanelVisible", 
       "mapRoomSize",
       "mapRoundRooms",

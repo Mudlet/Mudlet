@@ -30,14 +30,12 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
 #include <QProgressDialog>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -50,7 +48,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 #if defined(INCLUDE_3DMAPPER)
     QSurfaceFormat fmt;
-#ifndef NDEBUG    
+#ifndef NDEBUG
     fmt.setOption(QSurfaceFormat::DebugContext);
 #endif
     fmt.setSamples(10);
@@ -78,7 +76,12 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     slot_toggleRoundRooms(mpHost->mBubbleMode);
     widget_3DControls->setVisible(false);
-    
+    widget_2DControls->setVisible(true);
+    widget_playerIconControls->setVisible(false);
+    spinBox_roomSize->setValue(mpHost->mRoomSize * 10);
+    spinBox_exitSize->setValue(mpHost->mLineSize);
+
+    checkBox_showRoomIds->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
 
@@ -95,7 +98,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 #if defined(INCLUDE_3DMAPPER)
     mIs3DMode = mpHost->mShow3DView;
     if (mpHost->mShow3DView) {
-        slot_toggle3DView(true);
+        // Defer 3D view initialization until widget is fully constructed and added to parent
+        QTimer::singleShot(0ms, this, [this]() {
+            slot_toggle3DView(true);
+        });
     }
 #endif
 
@@ -110,7 +116,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     // font:
     setFont(qApp->font());
     mpMap->restore16ColorSet();
-    
+    auto menu = new QMenu(this);
+    pushButton_info->setMenu(menu);
+
+    connect(pushButton_exportArea, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_exportAreaToImage);
 
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
@@ -260,6 +269,25 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
         connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
         connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
+        
+        // Player icon adjustment controls
+        connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
+        connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
+        connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
+        connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
+        connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
+        connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
+        
+        // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
+        if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+            connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
+                slider_playerIconHeight->setValue(height);
+                slider_playerIconRotX->setValue(rotX);
+                slider_playerIconRotY->setValue(rotY);
+                slider_playerIconRotZ->setValue(rotZ);
+                slider_playerIconScale->setValue(scale);
+            });
+        }
     }
 
 
@@ -267,18 +295,30 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     glWidget->setVisible(is3DMode);
     if (glWidget->isVisible()) {
         widget_3DControls->setVisible(true);
+        widget_2DControls->setVisible(false);
+        widget_playerIconControls->setVisible(mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+                                               && true
+#else
+                                               && false
+#endif
+                                               );
     } else {
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
             widget_3DControls->setVisible(false);
-                    });
+            widget_2DControls->setVisible(true);
+            widget_playerIconControls->setVisible(false);
+        });
     }
     mpHost->mShow3DView = is3DMode;
 #else
     Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);
     widget_3DControls->setVisible(false);
-    #endif
+    widget_2DControls->setVisible(true);
+    widget_playerIconControls->setVisible(false);
+#endif
 }
 
 void dlgMapper::slot_roomSize(int size)
@@ -372,21 +412,21 @@ void dlgMapper::recreate3DWidget()
     if (!glWidget) {
         return;
     }
-    
+
     if (GLWidgetFactory::isCorrectWidgetType(glWidget, mpHost.data())) {
         return;
     }
-    
+
     bool was3DMode = glWidget->isVisible();
-    
+
     glWidget->setParent(nullptr);
     glWidget->deleteLater();
     glWidget = nullptr;
     mpMap->mpM = nullptr;
-    
+
     glWidget = GLWidgetFactory::createGLWidget(mpMap, mpHost.data(), this);
     glWidget->setObjectName("glWidget");
-    
+
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     sizePolicy.setHorizontalStretch(0);
     sizePolicy.setVerticalStretch(0);
@@ -394,7 +434,7 @@ void dlgMapper::recreate3DWidget()
     glWidget->setSizePolicy(sizePolicy);
     verticalLayout_mapper->insertWidget(0, glWidget);
     mpMap->mpM = glWidget;
-    
+
     connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
     connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
     connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
@@ -414,7 +454,26 @@ void dlgMapper::recreate3DWidget()
     connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
     connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
     connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
-    
+
+    // Player icon adjustment controls
+    connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
+    connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
+    connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
+    connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
+    connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
+    connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
+
+    // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
+    if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+        connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
+            slider_playerIconHeight->setValue(height);
+            slider_playerIconRotX->setValue(rotX);
+            slider_playerIconRotY->setValue(rotY);
+            slider_playerIconRotZ->setValue(rotZ);
+            slider_playerIconScale->setValue(scale);
+        });
+    }
+
     glWidget->setVisible(was3DMode);
 #endif
 }

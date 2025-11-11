@@ -139,7 +139,6 @@ This software wouldnt've been possible without these open source packages:
 - [luautf8](https://github.com/starwing/luautf8)
 - [pugixml](https://pugixml.org/)
 - [SQLite](https://sqlite.org/index.html)
-- [vcpkg](https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=msvc-160)
 - [yajl](http://lloyd.github.io/yajl/)
 
 Credit to [Markdownify](https://github.com/amitmerchant1990/electron-markdownify) for the README inspiration.

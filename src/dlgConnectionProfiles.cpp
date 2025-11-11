@@ -34,7 +34,6 @@
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QtUiTools>
 #include <QColorDialog>
@@ -43,7 +42,6 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QTime>
-#include "post_guard.h"
 #include <chrono>
 #include <sstream>
 
@@ -302,6 +300,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mSearchTextTimer.setSingleShot(true);
     QCoreApplication::instance()->installEventFilter(this);
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
+
+    profile_history->view()->setTextElideMode(Qt::ElideNone);
 }
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
@@ -446,7 +446,7 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
 
-    credManager->storeCredential(profile, "character", pass,
+    credManager->storePassword(profile, "character", pass,
         [credManager, profile](bool success, const QString& errorMessage) {
             if (success) {
                 qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
@@ -464,7 +464,7 @@ void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
 
-    credManager->removeCredential(profile, "character",
+    credManager->removePassword(profile, "character",
         [credManager, profile](bool success, const QString& errorMessage) {
             if (success) {
                 qDebug() << "dlgConnectionProfiles: Successfully removed password for profile" << profile;
@@ -966,11 +966,11 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     // Prevent rapid duplicate clicks on the same profile
     static QString lastProfileClicked;
     static QTime lastClickTime;
-    
+
     if (profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
         return;
     }
-    
+
     lastProfileClicked = profile_name;
     lastClickTime = QTime::currentTime();
 
@@ -1241,8 +1241,8 @@ void dlgConnectionProfiles::fillout_form()
         }
 #endif
     } else {
-        pItem = new QListWidgetItem();
         for (const QString& onlyShownPredefinedProfile : onlyShownPredefinedProfiles) {
+            pItem = new QListWidgetItem();
             auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
             setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
         }
@@ -1547,7 +1547,7 @@ void dlgConnectionProfiles::slot_copyProfile()
             const QSignalBlocker blocker(character_password_entry);
             character_password_entry->setText(oldPassword);
         }
-        
+
         if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
             writeSecurePassword(profile_name, oldPassword);
         }
@@ -1892,26 +1892,26 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(
-                        qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
-        }
-
-        if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(
-                        qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server."), check.errorString()));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
+        // Need to reject raw IP addresses (of either version 4 or 6 type) as
+        // it is very unlikely that the Security Certificates include them as
+        // a Host Name.
+        if (port_ssl_tsl->isChecked() && (cTelnet::isRawIPv4Address(url) || cTelnet::isRawIPv6Address(url))) {
+            notificationAreaIconLabelError->show();
+            // As the only tags are not on the first line the default
+            // Qt::AutoFormat won't detect that rich-text is present in this text!
+            notificationAreaMessageBox->setTextFormat(Qt::RichText);
+            /*: Please use two line-feeds after the first line so the second
+             *  line can be italicised and spaced out - if appropriate for
+             *  the locale.
+             */
+            notificationAreaMessageBox->setText(qsl("%1%2\n\n%3").arg(!notificationAreaMessageBox->text().isEmpty() ? notificationAreaMessageBox->text().append(QChar::LineFeed) : QString(),
+                                                                      tr("Please enter the URL of the Game server.\n\n"
+                                                                         "<i>SSL/TLS connections require a URL, as an IP address is not a suitable "
+                                                                         "identifier for the certification of the Game Server.</i>"),
+                                                                      check.errorString()));
+            host_name_entry->setPalette(mErrorPalette);
+            validUrl = false;
+            valid = false;
         }
 
         if (valid) {
@@ -2043,7 +2043,6 @@ void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name
 
 void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QString& mudServer, const QString& serverDescription, const QString& iconFileName)
 {
-    pItem = new QListWidgetItem();
     setItemName(pItem, mudServer);
 
     listWidget_profiles->addItem(pItem);
@@ -2296,7 +2295,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                             const QSignalBlocker blocker(character_password_entry);
                             character_password_entry->setText(retrievedPassword);
                         }
-                        
+
                         if (retrievedPassword.isEmpty()) {
                             qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
                         } else {
@@ -2358,7 +2357,7 @@ void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name
     // Temporarily block textChanged signal to avoid triggering save on programmatic setText
     {
         const QSignalBlocker blocker(character_password_entry);
-        
+
         if (!password.isEmpty()) {
             character_password_entry->setText(password);
         } else if (!oldPassword.isEmpty()) {

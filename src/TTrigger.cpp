@@ -31,9 +31,7 @@
 #include "TMatchState.h"
 #include "TMedia.h"
 #include "mudlet.h"
-#include "pre_guard.h"
 #include <QRegularExpression>
-#include "post_guard.h"
 
 #include <cassert>
 #include <sstream>
@@ -1085,7 +1083,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
         if (!mFilterTrigger) {
             if (conditionMet || (mPatterns.empty())) {
                 for (auto trigger : *mpMyChildrenList) {
-                    ret = trigger->match(haystackC, haystack, line);
+                    ret = trigger->match(haystackC, haystack, line, posOffset);
                     if (ret) {
                         conditionMet = true;
                     }
@@ -1099,7 +1097,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 execute();
             }
             for (auto trigger : *mpMyChildrenList) {
-                ret = trigger->match(haystackC, haystack, line);
+                ret = trigger->match(haystackC, haystack, line, posOffset);
                 if (ret) {
                     conditionMet = true;
                 }

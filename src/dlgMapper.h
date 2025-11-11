@@ -24,12 +24,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_mapper.h"
 #include <QDir>
 #include <QMainWindow>
 #include <QPointer>
-#include "post_guard.h"
 
 class Host;
 class TMap;
@@ -76,7 +74,7 @@ public slots:
     void slot_toggleUpperLowerLevels(bool enabled);
     void slot_toggleShowRoomIDsFromMenu(bool enabled);
     void updateInfoMenu();
-    
+
     static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
                             int roomID, int displayAreaId, int selectionSize, QColor& infoColor,
                             int xOffset, int yOffset, int widgetWidth, int fontHeight);

@@ -26,11 +26,9 @@
 
 #include "TTextEdit.h"
 
-#include "pre_guard.h"
 #include <QAccessibleInterface>
 #include <QAccessibleTextInterface>
 #include <QAccessibleWidget>
-#include "post_guard.h"
 
 class TAccessibleTextEdit : public QAccessibleWidget, public QAccessibleTextInterface
 {

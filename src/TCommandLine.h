@@ -27,7 +27,6 @@
 
 #include "TConsole.h"
 
-#include "pre_guard.h"
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>
@@ -35,7 +34,6 @@
 #include <QTextDecoder>
 #include <QToolButton>
 #include <QResizeEvent>
-#include "post_guard.h"
 
 
 class KeyUnit;
@@ -157,6 +155,8 @@ private:
     QString mTextToRestoreAfterEchoSuppression;
     // Track whether the preserved text was originally selected (for auto-clear OFF)
     bool mRestoredTextShouldBeSelected = false;
+    // Track whether user typed anything during echo suppression mode
+    bool mUserTypedDuringEchoSuppression = false;
 
 private slots:
     void slot_togglePasswordVisibility();
