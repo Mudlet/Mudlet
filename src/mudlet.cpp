@@ -5610,7 +5610,7 @@ QFont mudlet::createFont(const QString& fontName, int pointSize)
 
     // If not found, try to parse as "Family Style"
     // Split on last space to separate family from style
-    const int lastSpaceIndex = fontName.lastIndexOf(QLatin1Char(' '));
+    const int lastSpaceIndex = fontName.lastIndexOf(QChar::Space);
 
     if (lastSpaceIndex > 0) {
         const QString potentialFamily = fontName.left(lastSpaceIndex);
