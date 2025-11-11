@@ -911,7 +911,7 @@
             <string>Player Icon Adjustments:</string>
            </property>
            <property name="styleSheet">
-            <string>QLabel { font-weight: bold; }</string>
+            <string notr="true">QLabel { font-weight: bold; }</string>
            </property>
           </widget>
          </item>
