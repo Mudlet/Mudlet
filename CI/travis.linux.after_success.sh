@@ -43,6 +43,8 @@ then
   YESTERDAY_DATE=$(date -d "yesterday" '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git -b add-sentry "${BUILD_DIR}/../installers"
+  sed -i 's|-executable=build/lib/zip.so|-executable=build/lib/brimworks/zip.so|' "${BUILD_DIR}/../installers/generic-linux/make-installer.sh"
+  sed -i 's|-executable=build/lib/libssl.so.1.0.0||' "${BUILD_DIR}/../installers/generic-linux/make-installer.sh"
 
   cd "${BUILD_DIR}/../installers/generic-linux"
 
