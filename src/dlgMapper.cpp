@@ -76,6 +76,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     slot_toggleRoundRooms(mpHost->mBubbleMode);
     widget_3DControls->setVisible(false);
+    widget_playerIconControls->setVisible(false);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
 
@@ -285,10 +286,18 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     glWidget->setVisible(is3DMode);
     if (glWidget->isVisible()) {
         widget_3DControls->setVisible(true);
+        widget_playerIconControls->setVisible(mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+                                               && true
+#else
+                                               && false
+#endif
+                                               );
     } else {
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
             widget_3DControls->setVisible(false);
+            widget_playerIconControls->setVisible(false);
         });
     }
     mpHost->mShow3DView = is3DMode;
@@ -296,6 +305,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);
     widget_3DControls->setVisible(false);
+    widget_playerIconControls->setVisible(false);
 #endif
 }
 
