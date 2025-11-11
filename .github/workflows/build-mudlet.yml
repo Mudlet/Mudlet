@@ -181,7 +181,8 @@ jobs:
           libhunspell-dev \
           liblua5.1-0-dev \
           libboost-dev \
-          libpipewire-0.3-dev -y
+          libpipewire-0.3-dev \
+          gdb -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -436,7 +437,7 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: gdb -ex run -ex "thread apply all bt" -ex "quit" --args xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
