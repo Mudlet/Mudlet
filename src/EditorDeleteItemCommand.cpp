@@ -880,3 +880,13 @@ void EditorDeleteItemCommand::remapItemID(int oldID, int newID)
         }
     }
 }
+
+const EditorDeleteItemCommand::DeletedItemInfo* EditorDeleteItemCommand::getDeletedItemInfo(int itemID) const
+{
+    for (const auto& item : mDeletedItems) {
+        if (item.itemID == itemID) {
+            return &item;
+        }
+    }
+    return nullptr;
+}

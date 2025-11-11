@@ -14159,6 +14159,33 @@ QTreeWidgetItem* findItemByID(QTreeWidgetItem* parent, int itemID)
     return nullptr;
 }
 
+// Helper function to find a nearby item when a deleted item is not found
+// Tries to select: 1) sibling above (at position-1), or 2) parent
+QTreeWidgetItem* findNearbyItem(QTreeWidgetItem* rootItem, int parentID, int positionInParent)
+{
+    if (!rootItem) {
+        return nullptr;
+    }
+
+    // Find the parent item
+    QTreeWidgetItem* parentItem = findItemByID(rootItem, parentID);
+    if (!parentItem) {
+        return nullptr;
+    }
+
+    // Try to select sibling above (at position - 1)
+    if (positionInParent > 0 && parentItem->childCount() >= positionInParent) {
+        // Position is 0-indexed, so position-1 is the item that was above the deleted one
+        QTreeWidgetItem* siblingAbove = parentItem->child(positionInParent - 1);
+        if (siblingAbove) {
+            return siblingAbove;
+        }
+    }
+
+    // No sibling above, return the parent
+    return parentItem;
+}
+
 // Helper function to collect IDs of all expanded items in a tree
 QSet<int> collectExpandedItemIDs(QTreeWidgetItem* parent)
 {
@@ -14268,26 +14295,33 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 treeWidget_triggers->scrollToItem(itemToSelect);
                 slot_triggerSelected(itemToSelect);
             } else {
-                // Item not found (was deleted) - clear the trigger pattern UI
-                // to avoid showing stale patterns from previously selected trigger
-                for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
-                    mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
-                    if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
-                        mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
+                // Item not found (was deleted) - try to select a nearby item
+                QTreeWidgetItem* nearbyItem = nullptr;
+
+                // Query the undo stack for deleted item info
+                if (mpUndoStack) {
+                    const QUndoCommand* lastCmd = mpUndoStack->getLastExecutedCommand();
+                    if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(lastCmd)) {
+                        const auto* deletedInfo = deleteCmd->getDeletedItemInfo(affectedItemIDs.first());
+                        if (deletedInfo) {
+                            nearbyItem = findNearbyItem(mpTriggerBaseItem, deletedInfo->parentID, deletedInfo->positionInParent);
+                        }
                     }
-                    mTriggerPatternEdit[i]->pushButton_fgColor->hide();
-                    mTriggerPatternEdit[i]->pushButton_bgColor->hide();
-                    mTriggerPatternEdit[i]->label_prompt->hide();
-                    mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
-                    // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
-                    mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
-                    mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
                 }
 
-                mpTriggersMainArea->lineEdit_trigger_name->clear();
-                mpTriggersMainArea->label_idNumber->clear();
-                clearDocument(mpSourceEditorEdbee);
-                mpTriggersMainArea->lineEdit_trigger_command->clear();
+                // If no nearby item found, select the top-level "Triggers" item
+                if (!nearbyItem) {
+                    nearbyItem = mpTriggerBaseItem;
+                }
+
+                if (nearbyItem) {
+                    QItemSelectionModel* selModel = treeWidget_triggers->selectionModel();
+                    selModel->blockSignals(true);
+                    treeWidget_triggers->setCurrentItem(nearbyItem);
+                    selModel->blockSignals(false);
+                    treeWidget_triggers->scrollToItem(nearbyItem);
+                    slot_triggerSelected(nearbyItem);
+                }
             }
         } else {
             for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
@@ -14346,6 +14380,34 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 selModel->blockSignals(false);
                 treeWidget_timers->scrollToItem(itemToSelect);
                 slot_timerSelected(itemToSelect);
+            } else {
+                // Item not found (was deleted) - try to select a nearby item
+                QTreeWidgetItem* nearbyItem = nullptr;
+
+                // Query the undo stack for deleted item info
+                if (mpUndoStack) {
+                    const QUndoCommand* lastCmd = mpUndoStack->getLastExecutedCommand();
+                    if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(lastCmd)) {
+                        const auto* deletedInfo = deleteCmd->getDeletedItemInfo(affectedItemIDs.first());
+                        if (deletedInfo) {
+                            nearbyItem = findNearbyItem(mpTimerBaseItem, deletedInfo->parentID, deletedInfo->positionInParent);
+                        }
+                    }
+                }
+
+                // If no nearby item found, select the top-level "Timers" item
+                if (!nearbyItem) {
+                    nearbyItem = mpTimerBaseItem;
+                }
+
+                if (nearbyItem) {
+                    QItemSelectionModel* selModel = treeWidget_timers->selectionModel();
+                    selModel->blockSignals(true);
+                    treeWidget_timers->setCurrentItem(nearbyItem);
+                    selModel->blockSignals(false);
+                    treeWidget_timers->scrollToItem(nearbyItem);
+                    slot_timerSelected(nearbyItem);
+                }
             }
         }
 
@@ -14386,6 +14448,34 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 selModel->blockSignals(false);
                 treeWidget_aliases->scrollToItem(itemToSelect);
                 slot_aliasSelected(itemToSelect);
+            } else {
+                // Item not found (was deleted) - try to select a nearby item
+                QTreeWidgetItem* nearbyItem = nullptr;
+
+                // Query the undo stack for deleted item info
+                if (mpUndoStack) {
+                    const QUndoCommand* lastCmd = mpUndoStack->getLastExecutedCommand();
+                    if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(lastCmd)) {
+                        const auto* deletedInfo = deleteCmd->getDeletedItemInfo(affectedItemIDs.first());
+                        if (deletedInfo) {
+                            nearbyItem = findNearbyItem(mpAliasBaseItem, deletedInfo->parentID, deletedInfo->positionInParent);
+                        }
+                    }
+                }
+
+                // If no nearby item found, select the top-level "Aliases" item
+                if (!nearbyItem) {
+                    nearbyItem = mpAliasBaseItem;
+                }
+
+                if (nearbyItem) {
+                    QItemSelectionModel* selModel = treeWidget_aliases->selectionModel();
+                    selModel->blockSignals(true);
+                    treeWidget_aliases->setCurrentItem(nearbyItem);
+                    selModel->blockSignals(false);
+                    treeWidget_aliases->scrollToItem(nearbyItem);
+                    slot_aliasSelected(nearbyItem);
+                }
             }
         }
 
@@ -14426,6 +14516,34 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 selModel->blockSignals(false);
                 treeWidget_scripts->scrollToItem(itemToSelect);
                 slot_scriptsSelected(itemToSelect);
+            } else {
+                // Item not found (was deleted) - try to select a nearby item
+                QTreeWidgetItem* nearbyItem = nullptr;
+
+                // Query the undo stack for deleted item info
+                if (mpUndoStack) {
+                    const QUndoCommand* lastCmd = mpUndoStack->getLastExecutedCommand();
+                    if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(lastCmd)) {
+                        const auto* deletedInfo = deleteCmd->getDeletedItemInfo(affectedItemIDs.first());
+                        if (deletedInfo) {
+                            nearbyItem = findNearbyItem(mpScriptsBaseItem, deletedInfo->parentID, deletedInfo->positionInParent);
+                        }
+                    }
+                }
+
+                // If no nearby item found, select the top-level "Scripts" item
+                if (!nearbyItem) {
+                    nearbyItem = mpScriptsBaseItem;
+                }
+
+                if (nearbyItem) {
+                    QItemSelectionModel* selModel = treeWidget_scripts->selectionModel();
+                    selModel->blockSignals(true);
+                    treeWidget_scripts->setCurrentItem(nearbyItem);
+                    selModel->blockSignals(false);
+                    treeWidget_scripts->scrollToItem(nearbyItem);
+                    slot_scriptsSelected(nearbyItem);
+                }
             }
         }
 
@@ -14466,6 +14584,34 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 selModel->blockSignals(false);
                 treeWidget_actions->scrollToItem(itemToSelect);
                 slot_actionSelected(itemToSelect);
+            } else {
+                // Item not found (was deleted) - try to select a nearby item
+                QTreeWidgetItem* nearbyItem = nullptr;
+
+                // Query the undo stack for deleted item info
+                if (mpUndoStack) {
+                    const QUndoCommand* lastCmd = mpUndoStack->getLastExecutedCommand();
+                    if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(lastCmd)) {
+                        const auto* deletedInfo = deleteCmd->getDeletedItemInfo(affectedItemIDs.first());
+                        if (deletedInfo) {
+                            nearbyItem = findNearbyItem(mpActionBaseItem, deletedInfo->parentID, deletedInfo->positionInParent);
+                        }
+                    }
+                }
+
+                // If no nearby item found, select the top-level "Actions" item
+                if (!nearbyItem) {
+                    nearbyItem = mpActionBaseItem;
+                }
+
+                if (nearbyItem) {
+                    QItemSelectionModel* selModel = treeWidget_actions->selectionModel();
+                    selModel->blockSignals(true);
+                    treeWidget_actions->setCurrentItem(nearbyItem);
+                    selModel->blockSignals(false);
+                    treeWidget_actions->scrollToItem(nearbyItem);
+                    slot_actionSelected(nearbyItem);
+                }
             }
         }
 
@@ -14506,6 +14652,34 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 selModel->blockSignals(false);
                 treeWidget_keys->scrollToItem(itemToSelect);
                 slot_keySelected(itemToSelect);
+            } else {
+                // Item not found (was deleted) - try to select a nearby item
+                QTreeWidgetItem* nearbyItem = nullptr;
+
+                // Query the undo stack for deleted item info
+                if (mpUndoStack) {
+                    const QUndoCommand* lastCmd = mpUndoStack->getLastExecutedCommand();
+                    if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(lastCmd)) {
+                        const auto* deletedInfo = deleteCmd->getDeletedItemInfo(affectedItemIDs.first());
+                        if (deletedInfo) {
+                            nearbyItem = findNearbyItem(mpKeyBaseItem, deletedInfo->parentID, deletedInfo->positionInParent);
+                        }
+                    }
+                }
+
+                // If no nearby item found, select the top-level "Keys" item
+                if (!nearbyItem) {
+                    nearbyItem = mpKeyBaseItem;
+                }
+
+                if (nearbyItem) {
+                    QItemSelectionModel* selModel = treeWidget_keys->selectionModel();
+                    selModel->blockSignals(true);
+                    treeWidget_keys->setCurrentItem(nearbyItem);
+                    selModel->blockSignals(false);
+                    treeWidget_keys->scrollToItem(nearbyItem);
+                    slot_keySelected(nearbyItem);
+                }
             }
         }
 

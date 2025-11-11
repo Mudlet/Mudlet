@@ -321,3 +321,19 @@ bool EditorUndoStack::wasLastCommandValid() const
     // Other command types are always valid (no Lua conflict detection yet)
     return true;
 }
+
+const QUndoCommand* EditorUndoStack::getLastExecutedCommand() const
+{
+    if (mLastOperationType == LastOperationType::Undo) {
+        // After undo: index() points to the next command to redo
+        if (index() >= 0 && index() < count()) {
+            return command(index());
+        }
+    } else if (mLastOperationType == LastOperationType::Redo) {
+        // After redo: index() points to the command after the one that was just redone
+        if (index() > 0 && index() <= count()) {
+            return command(index() - 1);
+        }
+    }
+    return nullptr;
+}

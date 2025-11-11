@@ -56,6 +56,10 @@ public:
     // Returns false if all items were skipped due to Lua API conflicts
     bool wasValid() const { return mLastOperationWasValid; }
 
+    // Get deleted item info for a specific item ID
+    // Returns nullptr if item ID not found in deleted items list
+    const DeletedItemInfo* getDeletedItemInfo(int itemID) const;
+
 private:
     static QString generateText(EditorViewType viewType, int itemCount, const QString& firstName);
 

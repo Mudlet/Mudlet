@@ -56,6 +56,10 @@ public:
     // Returns false if last command was skipped due to Lua API conflicts
     bool wasLastCommandValid() const;
 
+    // Get the most recently executed command (either undo or redo)
+    // Returns nullptr if no commands have been executed yet
+    const QUndoCommand* getLastExecutedCommand() const;
+
 signals:
     // Emitted when items are modified by undo/redo (allows targeted UI updates instead of full refresh)
     void itemsChanged(EditorViewType viewType, QList<int> affectedItemIDs);
