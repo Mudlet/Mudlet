@@ -254,7 +254,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           -DVCPKG_APPLOCAL_DEPS=OFF
-          -D WITH_SENTRY=OFF
+          -D WITH_SENTRY=${{ matrix.deploy == 'deploy' && 'ON' || 'OFF' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DUSE_SANITIZER=""
       env:
@@ -414,7 +414,9 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os =='Linux'
       run: |
         cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
-        cp -f ${{runner.workspace}}/b/ninja/src/crashpad_handler ${{github.workspace}}/src
+        if [ "${{matrix.deploy}}" == "deploy" ]; then
+          cp -f ${{runner.workspace}}/b/ninja/src/crashpad_handler ${{github.workspace}}/src
+        fi
       shell: bash
 
     - name: (macOS) Prep binary for running tests
