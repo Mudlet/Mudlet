@@ -25,7 +25,105 @@
 #include <chrono>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
+#if defined(Q_OS_WINDOWS)
+#include <windows.h>
+#endif
+
 using namespace std::chrono_literals;
+
+#if defined(Q_OS_WINDOWS)
+// Helper function to check if a file is accessible (not locked by another process)
+static bool isFileAccessible(const QString& filePath)
+{
+    // Try opening file with exclusive write access
+    HANDLE hFile = CreateFileW(
+        reinterpret_cast<const wchar_t*>(filePath.utf16()),
+        GENERIC_WRITE,
+        0, // No sharing - exclusive access
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr);
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        DWORD error = GetLastError();
+        if (error == ERROR_SHARING_VIOLATION || error == ERROR_LOCK_VIOLATION) {
+            qWarning() << "File is locked:" << filePath << "- error code:" << error;
+            return false; // File is locked
+        }
+        // File doesn't exist or other error - consider it accessible
+        return true;
+    }
+
+    CloseHandle(hFile);
+    return true;
+}
+
+// Helper function to try a file operation with retry logic
+// Returns true if operation succeeded, false if all retries failed
+static bool tryFileOperationWithRetry(const std::function<bool()>& operation, const QString& operationName, int maxAttempts = 3)
+{
+    const std::chrono::milliseconds retryDelays[] = {5000ms, 15000ms, 30000ms};
+
+    for (int attempt = 0; attempt < maxAttempts; ++attempt) {
+        if (attempt > 0) {
+            qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts
+                      << "after" << retryDelays[attempt - 1].count() << "ms delay";
+            QThread::msleep(retryDelays[attempt - 1].count());
+        }
+
+        if (operation()) {
+            if (attempt > 0) {
+                qWarning() << operationName << "- Succeeded on attempt" << (attempt + 1);
+            }
+            return true;
+        }
+
+        qWarning() << operationName << "- Failed on attempt" << (attempt + 1);
+    }
+
+    qWarning() << operationName << "- All" << maxAttempts << "attempts failed";
+    return false;
+}
+
+// Helper function to clean up .nupkg files from SquirrelTemp directory
+// This prevents cross-contamination with other Squirrel-based apps
+static void cleanupSquirrelTempFiles()
+{
+    QString squirrelTempPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + qsl("/SquirrelTemp");
+    QDir squirrelTempDir(squirrelTempPath);
+
+    if (!squirrelTempDir.exists()) {
+        return;
+    }
+
+    qDebug() << "Cleaning up Mudlet files from SquirrelTemp:" << squirrelTempPath;
+
+    // Find all Mudlet-related .nupkg files
+    QStringList filters;
+    filters << qsl("Mudlet*.nupkg") << qsl("mudlet*.nupkg");
+    QFileInfoList nupkgFiles = squirrelTempDir.entryInfoList(filters, QDir::Files);
+
+    int removedCount = 0;
+    qint64 freedSpace = 0;
+
+    for (const QFileInfo& fileInfo : nupkgFiles) {
+        qint64 fileSize = fileInfo.size();
+        if (QFile::remove(fileInfo.absoluteFilePath())) {
+            removedCount++;
+            freedSpace += fileSize;
+            qDebug() << "Removed:" << fileInfo.fileName() << "(" << (fileSize / 1024 / 1024) << "MB)";
+        } else {
+            qWarning() << "Failed to remove:" << fileInfo.absoluteFilePath();
+        }
+    }
+
+    if (removedCount > 0) {
+        qWarning() << "Cleaned up" << removedCount << "Mudlet .nupkg files from SquirrelTemp, freed"
+                  << (freedSpace / 1024 / 1024) << "MB of disk space";
+    }
+}
+#endif // Q_OS_WINDOWS
 
 // update flows:
 // linux: new AppImage is downloaded, unzipped, and put in place of the old one
@@ -161,6 +259,8 @@ void Updater::finishSetup()
     qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).constFirst().getVersion();
 #elif defined(Q_OS_WINDOWS)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).first().getVersion() << "on restart";
+    // Clean up .nupkg files from SquirrelTemp to prevent cross-app contamination
+    cleanupSquirrelTempFiles();
 #endif
     recordUpdateTime();
     recordUpdatedVersion();
@@ -179,6 +279,9 @@ void Updater::setupOnMacOS()
 #if defined(Q_OS_WINDOWS)
 void Updater::setupOnWindows()
 {
+    // Clean up old .nupkg files on startup
+    cleanupSquirrelTempFiles();
+
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, feed, [=, this]() {
         if (mudlet::self()->developmentVersion) {
@@ -227,13 +330,36 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
     QDir dir;
     auto newPath = qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
     QFileInfo newPathFileInfo(newPath);
-    if (newPathFileInfo.exists() && !dir.remove(newPathFileInfo.absoluteFilePath())) {
+
+    // Check if file is accessible before attempting operations
+    if (newPathFileInfo.exists() && !isFileAccessible(newPath)) {
+        qWarning() << "Old installer exists but is locked:" << newPath;
+        // Try to delete with retry logic
+        bool removed = tryFileOperationWithRetry([&]() {
+            return isFileAccessible(newPath) && dir.remove(newPathFileInfo.absoluteFilePath());
+        }, qsl("Delete old installer"));
+
+        if (!removed) {
+            qWarning() << "Couldn't delete the old installer after retries:" << newPath;
+            // Continue anyway - the rename might still work
+        }
+    } else if (newPathFileInfo.exists() && !dir.remove(newPathFileInfo.absoluteFilePath())) {
         qDebug() << "Couldn't delete the old installer";
     }
 
-    // dir.rename actually moves a file
-    if (!dir.rename(downloadedSetupName, newPath)) {
-        qWarning() << "Moving new installer into " << newPath << "failed";
+    // Verify source file is accessible before attempting to move
+    if (!isFileAccessible(downloadedSetupName)) {
+        qWarning() << "Downloaded installer is locked and cannot be moved:" << downloadedSetupName;
+    }
+
+    // dir.rename actually moves a file - try with retry logic
+    bool moved = tryFileOperationWithRetry([&]() {
+        return isFileAccessible(downloadedSetupName) && dir.rename(downloadedSetupName, newPath);
+    }, qsl("Move installer to temp location"));
+
+    if (!moved) {
+        qWarning() << "Moving new installer into" << newPath << "failed after all retries";
+        qWarning() << "Please try downloading the update manually from https://www.mudlet.org/download/";
         return;
     }
 }

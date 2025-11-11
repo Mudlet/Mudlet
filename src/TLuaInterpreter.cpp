@@ -5069,6 +5069,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "createScrollBox", TLuaInterpreter::createScrollBox);
     lua_register(pGlobalLua, "createLabel", TLuaInterpreter::createLabel);
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
+    lua_register(pGlobalLua, "deleteMiniConsole", TLuaInterpreter::deleteMiniConsole);
+    lua_register(pGlobalLua, "deleteCommandLine", TLuaInterpreter::deleteCommandLine);
+    lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
     lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
@@ -7289,6 +7292,65 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
             return success();
         }
+        if (key == qsl("mapInfoColor")) {
+            if (!lua_istable(L, 2)) {
+                lua_pushfstring(L, "%s: bad argument #%d type (table expected for mapInfoColor, got %s!)",
+                    __func__, 2, luaL_typename(L, 2));
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor requires a table {r, g, b} or {r, g, b, a}"));
+            }
+
+            // Get red component (index 1)
+            lua_rawgeti(L, 2, 1);
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have red component at index 1"));
+            }
+            const int r = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (r < 0 || r > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+            }
+
+            // Get green component (index 2)
+            lua_rawgeti(L, 2, 2);
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have green component at index 2"));
+            }
+            const int g = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (g < 0 || g > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+            }
+
+            // Get blue component (index 3)
+            lua_rawgeti(L, 2, 3);
+            if (!lua_isnumber(L, -1)) {
+                lua_pop(L, 1);
+                return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have blue component at index 3"));
+            }
+            const int b = lua_tonumber(L, -1);
+            lua_pop(L, 1);
+            if (b < 0 || b > 255) {
+                return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+            }
+
+            // Get alpha component (index 4, optional, defaults to 255)
+            int a = 255;
+            lua_rawgeti(L, 2, 4);
+            if (lua_isnumber(L, -1)) {
+                a = lua_tonumber(L, -1);
+                if (a < 0 || a > 255) {
+                    lua_pop(L, 1);
+                    return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
+                }
+            }
+            lua_pop(L, 1);
+
+            host.mMapInfoBg = QColor(r, g, b, a);
+            updateMap(L);
+            return success();
+        }
     }
 
     if (key == qsl("enableGMCP")) {
@@ -7609,6 +7671,17 @@ int TLuaInterpreter::getConfig(lua_State *L)
         }},
         { qsl("mapperPanelVisible"), [&](){ lua_pushboolean(L, host.mShowPanel); } },
         { qsl("mapShowRoomBorders"), [&](){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
+        { qsl("mapInfoColor"), [&](){
+            lua_newtable(L);
+            lua_pushnumber(L, host.mMapInfoBg.red());
+            lua_rawseti(L, -2, 1);
+            lua_pushnumber(L, host.mMapInfoBg.green());
+            lua_rawseti(L, -2, 2);
+            lua_pushnumber(L, host.mMapInfoBg.blue());
+            lua_rawseti(L, -2, 3);
+            lua_pushnumber(L, host.mMapInfoBg.alpha());
+            lua_rawseti(L, -2, 4);
+        } },
         { qsl("editorAutoComplete"), [&](){ lua_pushboolean(L, host.mEditorAutoComplete); } },
         { qsl("enableGMCP"), [&](){ lua_pushboolean(L, host.mEnableGMCP); } },
         { qsl("enableMSSP"), [&](){ lua_pushboolean(L, host.mEnableMSSP); } },

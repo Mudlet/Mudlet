@@ -55,6 +55,7 @@ class CustomLineDrawContextMenuHandler;
 class CustomLineDrawHandler;
 class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
+class CustomLineSession;
 class MiddleMousePanHandler;
 class RoomMoveActivationHandler;
 class RoomMoveDragHandler;
@@ -76,6 +77,7 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
+    ~T2DMap() override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     void paintEvent(QPaintEvent*) override;
@@ -90,6 +92,7 @@ public:
     friend class CustomLineDrawHandler;
     friend class CustomLineEditContextMenuHandler;
     friend class CustomLineEditHandler;
+    friend class CustomLineSession;
     friend class LabelInteractionHandler;
     friend class RoomMoveActivationHandler;
     friend class RoomContextMenuHandler;
@@ -326,6 +329,10 @@ public slots:
     void slot_customLineProperties();
     void slot_customLineAddPoint();
     void slot_customLineRemovePoint();
+    void slot_setSnapCustomLinePointsToGrid(bool enabled);
+    void slot_moveCustomLineLastPointToTargetRoom();
+    bool canMoveSelectedCustomLineLastPointToTargetRoom() const;
+    bool canMoveCustomLineLastPointToTargetRoom(const TRoom& room, const QString& exitKey) const;
     void slot_cancelCustomLineDialog();
     void slot_loadMap();
     void slot_newMap();
@@ -347,6 +354,7 @@ private:
         QList<HandlerEntry> mHandlers;
     };
 
+    std::unique_ptr<CustomLineSession> mCustomLineSession;
     InteractionDispatcher mInteractionDispatcher;
     std::unique_ptr<IInteractionHandler> mCustomLineDrawContextMenuHandler;
     std::unique_ptr<IInteractionHandler> mCustomLineDrawInteractionHandler;
@@ -366,6 +374,8 @@ private:
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
+    bool isSnapCustomLinePointsToGridEnabled() const;
+    QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
     inline void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&, const bool showRoomCollision);

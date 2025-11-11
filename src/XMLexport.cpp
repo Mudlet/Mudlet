@@ -813,18 +813,18 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     return false;
 }
 
-bool XMLexport::exportPackage(const QString& exportFileName, bool ignoreModuleMember)
+bool XMLexport::exportPackage(const QString& exportFileName, bool ignoreModuleMember, bool ignoreVariables)
 {
     auto mudletPackage = writeXmlHeader();
 
-    if (writeGenericPackage(mpHost, mudletPackage, ignoreModuleMember)) {
+    if (writeGenericPackage(mpHost, mudletPackage, ignoreModuleMember, ignoreVariables)) {
         return saveXml(exportFileName);
     }
 
     return false;
 }
 
-bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMember)
+bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMember, bool ignoreVariables)
 {
     writeTriggerPackage(pHost, mudletPackage, ignoreModuleMember);
     writeTimerPackage(pHost, mudletPackage, ignoreModuleMember);
@@ -833,7 +833,9 @@ bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, 
     writeScriptPackage(pHost, mudletPackage, ignoreModuleMember);
     writeKeyPackage(pHost, mudletPackage, ignoreModuleMember);
     // variables weren't previously exported as a generic package
-    writeVariablePackage(pHost, mudletPackage);
+    if (!ignoreVariables) {
+        writeVariablePackage(pHost, mudletPackage);
+    }
 
     return true;
 }

@@ -476,6 +476,10 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     layoutLayer2->addWidget(mpButtonMainLayer);
+    layoutLayer2->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(layer);
+    layerCommandLine->setAutoFillBackground(true);
+
     if (mType == MainConsole) {
         // All console control buttons should only be on MainConsole
         layoutButtonLayer->addWidget(mpBufferSearchBox);
@@ -486,24 +490,23 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         layoutButtonLayer->addWidget(logButton);
         layoutButtonLayer->addWidget(emergencyStop);
         layoutButtonLayer->addWidget(mpLineEdit_networkLatency);
+
+        commandSplitter = new QSplitter(Qt::Horizontal, this);
+        commandSplitter->setFocusPolicy(Qt::NoFocus);
+        connect(commandSplitter, &QSplitter::splitterMoved, this, &TConsole::slot_saveCommandSearchSettings);
+        commandSplitter->addWidget(layerCommandLine);
+        commandSplitter->addWidget(mpButtonMainLayer);
+        commandSplitter->setStretchFactor(0, 3); // command line
+        commandSplitter->setStretchFactor(1, 1); // search layer
+
+        commandSplitter->setCollapsible(0, false); // command line cannot collapse
+        commandSplitter->setCollapsible(1, false); // search layer cannot collapse
+
+        centralLayout->addWidget(commandSplitter);
+        restoreCommandSearchSettings();
+    } else {
+        centralLayout->addWidget(layerCommandLine);
     }
-    layoutLayer2->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(layer);
-    layerCommandLine->setAutoFillBackground(true);
-
-    commandSplitter = new QSplitter(Qt::Horizontal, this);
-    commandSplitter->setFocusPolicy(Qt::NoFocus);
-    connect(commandSplitter, &QSplitter::splitterMoved, this, &TConsole::slot_saveCommandSearchSettings);
-    commandSplitter->addWidget(layerCommandLine);
-    commandSplitter->addWidget(mpButtonMainLayer);
-    commandSplitter->setStretchFactor(0, 3); // command line
-    commandSplitter->setStretchFactor(1, 1); // search layer
-
-    commandSplitter->setCollapsible(0, false); // command line cannot collapse
-    commandSplitter->setCollapsible(1, false); // search layer cannot collapse
-
-    centralLayout->addWidget(commandSplitter);
-    restoreCommandSearchSettings();
 
     QList<int> sizeList;
     sizeList << 6 << 2;
@@ -638,6 +641,12 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // or event handling system point of view - so abort doing anything
         // with the event:
         return;
+    }
+
+    // prevents the command line from being hidden
+    if (layoutLayer2) {
+        layoutLayer2->invalidate();
+        layoutLayer2->activate();
     }
 
     if (mType & (MainConsole|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
@@ -1055,7 +1064,7 @@ void TConsole::scrollUp(int lines)
     mLowerPane->forceUpdate();
 
     if (lowerAppears) {
-        QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
+        QTimer::singleShot(0, this, [this, lines]() {  mUpperPane->scrollUp(mLowerPane->getRowCount() + lines); });
         if (mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
@@ -1065,8 +1074,9 @@ void TConsole::scrollUp(int lines)
             mpHost->postMessage(infoMsg);
             mudlet::self()->showedSplitscreenTutorial();
         }
+    } else {
+        mUpperPane->scrollUp(lines);
     }
-    mUpperPane->scrollUp(lines);
     slot_adjustAccessibleNames();
 }
 

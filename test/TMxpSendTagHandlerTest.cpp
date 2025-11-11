@@ -265,6 +265,51 @@ private slots:
         QCOMPARE(stub.mHints[1], "BUY SUSPENDERS30901");
     }
 
+    void testSendExpireHref() {
+        // Test case for issue #8383
+        // When EXPIRE comes before HREF, the tooltip should show the HREF value, not the literal string "HREF"
+        // <SEND EXPIRE="Exits" HREF="east">East</SEND>
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+
+        auto startTag = parseNode(R"(<SEND EXPIRE="Exits" HREF="east">)");
+        auto endTag = parseNode("</SEND>");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+        tagHandler.handleContent("East");
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[east]])");
+
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "east");  // Should be "east", not "HREF"
+    }
+
+    void testSendExpireHrefWithoutHint() {
+        // Test case for standard order: HREF then EXPIRE
+        // <SEND HREF="west" EXPIRE="Exits">West</SEND>
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+
+        auto startTag = parseNode(R"(<SEND HREF="west" EXPIRE="Exits">)");
+        auto endTag = parseNode("</SEND>");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+        tagHandler.handleContent("West");
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[west]])");
+
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "west");  // Should be "west"
+    }
+
 };
 
 #include "TMxpSendTagHandlerTest.moc"
