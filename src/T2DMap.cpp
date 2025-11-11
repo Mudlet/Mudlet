@@ -992,31 +992,42 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     }
 
     const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
-    QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
-    selectionBg.setColorAt(0.25, roomColor);
-    selectionBg.setColorAt(1, Qt::blue);
 
     QPen roomPen(Qt::transparent);
-    roomPen.setWidth(borderWidth);
     painter.setBrush(roomColor);
+
+    // Determine if we're actually drawing a border and calculate the inset
+    bool isDrawingBorder = false;
+    qreal borderInset = 0.0;
 
     if (showRoomCollision) {
         roomPen.setColor(mpHost->mRoomCollisionBorderColor);
+        roomPen.setWidth(borderWidth);
+        borderInset = borderWidth / 2.0;
+        isDrawingBorder = true;
     } else if (shouldDrawBorder) {
+        roomPen.setWidth(borderWidth);
+        borderInset = borderWidth / 2.0;
+        isDrawingBorder = true;
         if (mRoomWidth >= 12) {
             roomPen.setColor(mpHost->mRoomBorderColor);
-        } else if (shouldDrawBorder) {
+        } else {
             auto fadingColor = QColor(mpHost->mRoomBorderColor);
             fadingColor.setAlpha(255 * (mRoomWidth / 12));
             roomPen.setColor(fadingColor);
         }
     }
 
+    // Inset the room drawing rectangle by half the border width so the border
+    // is drawn completely inside the room bounds, making it clickable and not
+    // adding to the room's visual size
+    const QRectF roomDrawRectangle = roomRectangle.adjusted(borderInset, borderInset, -borderInset, -borderInset);
+
     if (isRoomSelected) {
-        QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
+        QLinearGradient selectionBg(roomDrawRectangle.topLeft(), roomDrawRectangle.bottomRight());
         selectionBg.setColorAt(0.2, roomColor);
         selectionBg.setColorAt(1, Qt::blue);
-        if (!showRoomCollision) {
+        if (!showRoomCollision && isDrawingBorder) {
             roomPen.setColor(QColor(255, 50, 50));
         }
         painter.setBrush(selectionBg);
@@ -1025,7 +1036,8 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     painter.setPen(roomPen);
 
     if (mBubbleMode) {
-        const float roomRadius = 0.5 * rSize * mRoomWidth;
+        // Calculate the room radius accounting for the border inset
+        const float roomRadius = (0.5 * rSize * mRoomWidth) - borderInset;
         const QPointF roomCenter = QPointF(rx, ry);
         if (!isRoomSelected) {
             // CHECK: The use of a gradient fill to a white center on round
@@ -1039,7 +1051,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
         painter.drawPath(diameterPath);
     } else {
-        painter.drawRect(roomRectangle);
+        painter.drawRect(roomDrawRectangle);
     }
 
     if (isRoomSelected) {
