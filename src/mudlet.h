@@ -63,6 +63,7 @@
 #include <qt6keychain/keychain.h>
 #endif
 #include <optional>
+#include "dlgConnectionProfiles.h"
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
@@ -106,6 +107,7 @@ class QTableWidgetItem;
 class QTextEdit;
 class QToolButton;
 class QTimer;
+class QUrl;
 
 class dlgAboutDialog;
 class dlgConnectionProfiles;
@@ -300,6 +302,8 @@ public:
 #if defined(Q_OS_WINDOWS)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
+    void generateUniqueProfileName(QString& profile_name);
+    void setupPackagesToInstall(Host *pHost);
     // This will save and replace the .dic file with just the words in the
     // supplied second argument and update the .aff file as appropriate. It is
     // to be used at the end of a session to store away the user's changes:
@@ -380,6 +384,7 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    QPointer<QDialog> mpDefaultClientDlg;
     QToolBar* mpMainToolBar = nullptr;
     QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
@@ -419,6 +424,8 @@ public:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
+    // perform check on startup if Mudlet is the default application for handling telnet:// links
+    bool mAlwaysCheckDefault;
 
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
@@ -520,6 +527,12 @@ public slots:
     void synchronizeToolBarVisibility(bool visible);
     void slot_showTriggerDialog();
     void slot_showVariableDialog();
+    void handleTelnetLink(const QUrl& url);
+    QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
+    bool mudletIsDefault();
+    void openDefaultCheck();
+    void setMudletAsDefault();
+    void installDefaultPackages(Host *pHost);
 
 protected:
     void closeEvent(QCloseEvent*) override;

@@ -25,6 +25,7 @@
 #include "HostManager.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
+#include "mudletapplication.h"
 #include <chrono>
 #include <QCommandLineParser>
 #include <QDir>
@@ -39,6 +40,7 @@
 #include <QSplashScreen>
 #include <QStringList>
 #include <QTranslator>
+#include <QUrl>
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
@@ -155,6 +157,72 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 }
 #endif
 
+QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& action, QString &telnetUri)
+{
+    action = 0;
+
+#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MACOS) || defined(Q_OS_FREEBSD))
+    // Handle other currently unconsidered OSs - what are they - by returning the
+    // normal GUI type application handle.
+    return new MudletApplication(argc, argv);
+#endif
+
+    for (int i = 1; i < argc; ++i) {
+        if (qstrcmp(argv[i], "--") == 0) {
+            break; // Bail out on end of option type arguments
+        }
+
+        const char* argument = argv[i];
+        bool isOption = (argument[0] == '-');
+        if (isOption && argument[1] == '-') {
+            argument++; // Skip first hyphen
+        }
+        if (isOption) {
+            argument++; // Skip first/second hyphen
+        }
+
+        if (isOption) {
+            // --version
+            if (tolower(argument[0]) == 'v') {
+                action = 2; // Make this the only action to do and do it directly
+                break;
+            }
+
+            // --help
+            if (tolower(argument[0]) == 'h' || argument[0] == '?') {
+                action = 1; // Make this the only action to do and do it directly
+                break;
+            }
+
+            if (tolower(argument[0]) == 'q') {
+                action |= 4;
+            }
+            // uri-handler
+            if (tolower(argument[0]) == 'u') {
+                action |= 8;
+                telnetUri = QString(argv[i+1]);
+            }
+        }
+    }
+
+    // if launched on Windows as a result of a telnet:// link, it will be appended to the CLI arguments
+    if (telnetUri.isEmpty() && argv[argc - 1]) {
+        telnetUri = argv[argc - 1];
+    }
+    if ((action) & (1 | 2)) {
+        return new QCoreApplication(argc, argv);
+    } else {
+#if defined(Q_OS_WIN32)
+        // On Windows we need to use the ANGLE OpenGL libraries rather than the
+        // system's own ones - this is because the latter are often provided by
+        // the graphics card's drivers and can be incomplete or buggy.
+        // Qt's OpenGL layer on Windows (QOpenGLFunctions)
+        QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
+#endif
+        return new MudletApplication(argc, argv); // Normal course of events - (GUI), so: game on!
+    }
+}
+
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
@@ -186,7 +254,12 @@ int main(int argc, char* argv[])
 #endif // INCLUDE_3DMAPPER
 #endif
 
-    auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+    unsigned int startupAction = 0;
+    QString telnetUri;
+
+    QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction, telnetUri));
+    auto app = qobject_cast<MudletApplication*>(initApp.data());
+
 
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
@@ -391,8 +464,14 @@ int main(int argc, char* argv[])
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
-        const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        instanceCoordinator->queuePackage(absPath);
+        const QString firstArg = positionalArguments.first();
+        if (firstArg.startsWith("telnet://")) {
+            instanceCoordinator->queueTelnetUrl(firstArg);
+        } else {
+            const QString absPath = QDir(firstArg).absolutePath();
+            instanceCoordinator->queuePackage(absPath);
+        }
+
         if (!firstInstanceOfMudlet) {
             const bool successful = instanceCoordinator->installPackagesRemotely();
             if (successful) {
@@ -680,6 +759,24 @@ int main(int argc, char* argv[])
         // ensure Mudlet singleton is initialised before calling profile loading
         mudlet::self()->startAutoLogin(cliProfiles);
     });
+
+    if (firstInstanceOfMudlet) {
+        mudlet::self()->getInstanceCoordinator()->connectFromTelnetUrls();
+    }
+
+#if defined(Q_OS_MACOS)
+    // handle the telnet uri was used for launching Mudlet, and if no,
+    // see if we passed the telnet uri as a CLI argument
+    if (!app->deferredTelnetUri.isEmpty()) {
+        mudlet::self()->handleTelnetLink(app->deferredTelnetUri);
+    } else if (!telnetUri.isEmpty()) {
+        mudlet::self()->handleTelnetLink(QUrl(telnetUri));
+    }
+#else
+    if (!telnetUri.isEmpty()) {
+        mudlet::self()->handleTelnetLink(QUrl(telnetUri));
+    }
+#endif
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

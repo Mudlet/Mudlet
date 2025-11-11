@@ -1,5 +1,7 @@
+#ifndef MUDLETAPPLICATION_H
+#define MUDLETAPPLICATION_H
 /***************************************************************************
- *   Copyright (C) 2023-2024 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2019-2013 by Vadim Peretokin - vperetokin @gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,46 +18,15 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
-#ifndef MUDLETINSTANCECOORDINATOR_H
-#define MUDLETINSTANCECOORDINATOR_H
-
-#include "Host.h"
-#include <QLocalServer>
-#include <QStringList>
-
-class QUrl;
-
-class MudletInstanceCoordinator : public QLocalServer
+#include <QApplication>
+#include <QUrl>
+class MudletApplication : public QApplication
 {
     Q_OBJECT
-
 public:
-    explicit MudletInstanceCoordinator(const QString& serverName, QObject* parent = nullptr);
-    bool tryToStart();
-    void queuePackage(const QString& packageName);
-    void queueTelnetUrl(const QString& url);
-    void installPackagesToHost(Host* activeProfile);
-    void installPackagesLocally();
-    bool installPackagesRemotely();
-    QStringList readPackageQueue();
-    void connectFromTelnetUrls();
-
-signals:
-    void telnetLinkActivated(const QUrl& url);
-
+    MudletApplication(int &argc, char **argv);
+    QUrl deferredTelnetUri;
 protected:
-    void incomingConnection(quintptr socketDescriptor) override;
-
-private slots:
-    void handleReadyRead();
-    void handleDisconnected();
-
-private:
-    QMutex mMutex;
-    QString mServerName;
-    QStringList mQueuedPackagePaths;
-    QStringList mQueuedTelnetUrls;
+    bool event(QEvent *) override;
 };
-
-#endif // MUDLETINSTANCECOORDINATOR_H
+#endif // MUDLETAPPLICATION_H

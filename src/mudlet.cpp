@@ -770,9 +770,12 @@ void mudlet::init()
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(menuWindow, &QMenu::aboutToShow, this, &mudlet::updateWindowMenu);
 
+    // Connect the telnet link signal
+    connect(mInstanceCoordinator.get(), &MudletInstanceCoordinator::telnetLinkActivated, this, &mudlet::handleTelnetLink);
+
     // PLACEMARKER: sample benchmarking code
     // looking to benchmark old/new code? Use this example
-    // full docs at https://nanobench.ankerl.com
+    // full docs at https://nanobench.ankerl.com/
 //    ankerl::nanobench::Bench benchmark;
 //    benchmark.title("Example benchmark")
 //            .minEpochIterations(2000)
@@ -788,6 +791,70 @@ void mudlet::init()
 //            loadMaps();
 //        }
 //    });
+}
+
+void mudlet::handleTelnetLink(const QUrl& url)
+{
+    if (!url.isValid() || url.scheme() != qsl("telnet")) {
+        return;
+    }
+
+    QString host = url.host();
+    int port = url.port(23); // Default telnet port is 23
+
+    // Find matching profiles
+    QStringList matchingProfiles;
+    for (auto it = mHostManager.begin(); it != mHostManager.end(); ++it) {
+        QSharedPointer<Host> pHost = *it;
+        if (pHost->getUrl() == host && pHost->getPort() == port) {
+            matchingProfiles << pHost->getName();
+        }
+    }
+
+    if (matchingProfiles.size() == 1) {
+        // One profile found, connect to it
+        doAutoLogin(matchingProfiles.first());
+    } else if (matchingProfiles.size() > 1) {
+        // Multiple profiles found, find the most recently used one
+        QDateTime lastModified;
+        QString lastUsedProfile;
+
+        for (const QString& profileName : matchingProfiles) {
+            QDir dir(getMudletPath(enums::profileXmlFilesPath, profileName));
+            dir.setSorting(QDir::Time);
+            const QFileInfoList entries = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+            if (!entries.isEmpty()) {
+                if (lastModified.isNull() || entries.first().lastModified() > lastModified) {
+                    lastModified = entries.first().lastModified();
+                    lastUsedProfile = profileName;
+                }
+            }
+        }
+
+        if (!lastUsedProfile.isEmpty()) {
+            doAutoLogin(lastUsedProfile);
+        } else {
+            // If no profile has been used, just connect to the first one
+            doAutoLogin(matchingProfiles.first());
+        }
+    } else {
+        // No profile found, create a new one
+        QString newProfileName = host;
+        // Check if a profile with this name already exists
+        int i = 1;
+        while (mHostManager.getHost(newProfileName)) {
+            newProfileName = QString("%1 (%2)").arg(host).arg(i++);
+        }
+
+        if (mHostManager.addHost(newProfileName, QString::number(port), "", "")) {
+            Host* pHost = mHostManager.getHost(newProfileName);
+            if (pHost) {
+                pHost->setUrl(host);
+                pHost->setPort(port);
+                doAutoLogin(newProfileName);
+            }
+        }
+    }
 }
 
 static QString findExecutableDir()

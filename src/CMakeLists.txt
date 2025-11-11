@@ -102,8 +102,8 @@ set(mudlet_SRCS
     LlamaFileManager.cpp
     LuaInterface.cpp
     main.cpp
-    mapInfoContributorManager.cpp
     mudlet.cpp
+    mudletapplication.cpp
     MudletInstanceCoordinator.cpp
     MxpTag.cpp
     CredentialManager.cpp
@@ -227,6 +227,7 @@ set(mudlet_UIS
     ui/about_dialog.ui
     ui/actions_main_area.ui
     ui/aliases_main_area.ui
+    ui/check_default_client.ui
     ui/color_trigger.ui
     ui/composer.ui
     ui/connection_profiles.ui
@@ -299,6 +300,7 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    mudletapplication.h
     MudletInstanceCoordinator.h
     MxpTag.h
     ScriptUnit.h

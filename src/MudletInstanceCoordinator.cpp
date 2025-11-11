@@ -21,6 +21,7 @@
 #include "Host.h"
 #include "mudlet.h"
 #include <QLocalSocket>
+#include <QUrl>
 
 const int WAIT_FOR_RESPONSE_MS = 500;
 
@@ -34,6 +35,11 @@ void MudletInstanceCoordinator::queuePackage(const QString& packageName)
     mQueuedPackagePaths << packageName;
 }
 
+void MudletInstanceCoordinator::queueTelnetUrl(const QString& url)
+{
+    mQueuedTelnetUrls << url;
+}
+
 // Install the package queue on another instance of Mudlet.
 // Returns true on success
 bool MudletInstanceCoordinator::installPackagesRemotely()
@@ -44,9 +50,16 @@ bool MudletInstanceCoordinator::installPackagesRemotely()
     socket.connectToServer(mServerName);
 
     if (socket.waitForConnected(WAIT_FOR_RESPONSE_MS)) {
-        const QString packagePathsData = mQueuedPackagePaths.join(QChar::LineFeed);
-        socket.write(packagePathsData.toUtf8());
-        socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
+        if (!mQueuedPackagePaths.isEmpty()) {
+            const QString packagePathsData = mQueuedPackagePaths.join(QChar::LineFeed);
+            socket.write(QString("package:%1").arg(packagePathsData).toUtf8());
+            socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
+        }
+        if (!mQueuedTelnetUrls.isEmpty()) {
+            const QString telnetUrlsData = mQueuedTelnetUrls.join(QChar::LineFeed);
+            socket.write(QString("telnet:%1").arg(telnetUrlsData).toUtf8());
+            socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
+        }
         socket.disconnectFromServer();
         return true;
     }
@@ -102,11 +115,31 @@ void MudletInstanceCoordinator::handleReadyRead()
     mMutex.lock();
     // Receive package paths and add them the install queue.
     QByteArray data = socket->readAll();
-    const QStringList packagePaths = QString::fromUtf8(data).split(QChar::LineFeed, Qt::SkipEmptyParts);
-    mQueuedPackagePaths << packagePaths;
-    mMutex.unlock();
+    QString dataString = QString::fromUtf8(data);
 
-    installPackagesLocally();
+    if (dataString.startsWith("package:")) {
+        dataString.remove(0, 8); // remove "package:"
+        const QStringList packagePaths = dataString.split(QChar::LineFeed, Qt::SkipEmptyParts);
+        mQueuedPackagePaths << packagePaths;
+        installPackagesLocally();
+    } else if (dataString.startsWith("telnet:")) {
+        dataString.remove(0, 7); // remove "telnet:"
+        const QStringList telnetUrls = dataString.split(QChar::LineFeed, Qt::SkipEmptyParts);
+        mQueuedTelnetUrls << telnetUrls;
+        connectFromTelnetUrls();
+    }
+
+    mMutex.unlock();
+}
+
+void MudletInstanceCoordinator::connectFromTelnetUrls()
+{
+    QTimer::singleShot(0, this, [this]() {
+        for (const QString& urlString : mQueuedTelnetUrls) {
+            emit telnetLinkActivated(QUrl(urlString));
+        }
+        mQueuedTelnetUrls.clear();
+    });
 }
 
 // Find the active host and install queued packages to it

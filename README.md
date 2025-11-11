@@ -97,6 +97,16 @@ Download for free from [mudlet.org](https://www.mudlet.org/download/).
     1. Pick a `Profile name`
     1. Hit `Connect`
 
+## Telnet URI Handling
+
+Mudlet now supports `telnet://` URI links. Clicking on a link like `telnet://mygame.com:2003` will automatically launch Mudlet and connect to the specified game.
+
+If a profile for the game already exists, Mudlet will use it. If multiple profiles match, the most recently used one will be chosen. If no profile exists, a new one will be created for you.
+
+### Windows Registration
+
+To enable this feature on Windows, you need to register the `telnet://` protocol handler. To do this, double-click on the `CI/register_telnet_handler.reg` file in the Mudlet directory. This will add the necessary entries to your Windows Registry. You may need to adjust the path to your `Mudlet.exe` in the `.reg` file if you have installed Mudlet in a non-default location.
+
 ## Compiling
 
 If you'd like to compile Mudlet yourself instead of [downloading](https://www.mudlet.org/download/), you can find instructions to do so [here](https://wiki.mudlet.org/w/Compiling_Mudlet).

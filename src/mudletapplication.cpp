@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2023-2024 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2019-2013 by Vadim Peretokin - vperetokin @gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,46 +16,25 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
-#ifndef MUDLETINSTANCECOORDINATOR_H
-#define MUDLETINSTANCECOORDINATOR_H
-
-#include "Host.h"
-#include <QLocalServer>
-#include <QStringList>
-
-class QUrl;
-
-class MudletInstanceCoordinator : public QLocalServer
+#include "mudletapplication.h"
+#include "mudlet.h"
+#include <QFileOpenEvent>
+MudletApplication::MudletApplication(int &argc, char **argv) :
+        QApplication(argc, argv)
 {
-    Q_OBJECT
-
-public:
-    explicit MudletInstanceCoordinator(const QString& serverName, QObject* parent = nullptr);
-    bool tryToStart();
-    void queuePackage(const QString& packageName);
-    void queueTelnetUrl(const QString& url);
-    void installPackagesToHost(Host* activeProfile);
-    void installPackagesLocally();
-    bool installPackagesRemotely();
-    QStringList readPackageQueue();
-    void connectFromTelnetUrls();
-
-signals:
-    void telnetLinkActivated(const QUrl& url);
-
-protected:
-    void incomingConnection(quintptr socketDescriptor) override;
-
-private slots:
-    void handleReadyRead();
-    void handleDisconnected();
-
-private:
-    QMutex mMutex;
-    QString mServerName;
-    QStringList mQueuedPackagePaths;
-    QStringList mQueuedTelnetUrls;
-};
-
-#endif // MUDLETINSTANCECOORDINATOR_H
+}
+bool MudletApplication::event(QEvent *event)
+{
+    if (event->type() == QEvent::FileOpen) {
+        auto openEvent = static_cast<QFileOpenEvent*>(event);
+        // if Mudlet is launched as a result of a telnet link, this event will fire
+        // too early, the Mudlet class is initialised
+        if (mudlet::self()) {
+            mudlet::self()->handleTelnetLink(openEvent->url());
+        } else {
+            deferredTelnetUri = openEvent->url();
+        }
+        return true;
+    }
+    return QApplication::event(event);
+}
