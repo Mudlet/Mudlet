@@ -162,22 +162,23 @@ void EditorUndoStack::endMacro()
 
 void EditorUndoStack::undo()
 {
-    // Track that we're performing an undo operation
     mLastOperationType = LastOperationType::Undo;
 
-    // Get the command that will be undone (if any)
     if (index() > 0) {
         const QUndoCommand* cmd = command(index() - 1);
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "EditorUndoStack::undo() - Undoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << (index() - 1);
 #endif
 
-        // Call the base class undo
+        // Extract ID changes before undo to avoid pointer issues
+        QList<QPair<int, int>> idChanges;
+        if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(cmd)) {
+            idChanges = deleteCmd->getIDChanges();
+        }
+
         QUndoStack::undo();
 
-        // Check if this is a DeleteItemCommand that restored items with new IDs
-        if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(cmd)) {
-            QList<QPair<int, int>> idChanges = deleteCmd->getIDChanges();
+        if (!idChanges.isEmpty()) {
 #if defined(DEBUG_UNDO_REDO)
             qDebug() << "EditorUndoStack::undo() - DeleteItemCommand restored items with ID changes:" << idChanges.size();
 #endif
@@ -194,28 +195,23 @@ void EditorUndoStack::undo()
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "EditorUndoStack::undo() - No command to undo (index is 0)";
 #endif
-        // No command to undo
         QUndoStack::undo();
     }
 }
 
 void EditorUndoStack::redo()
 {
-    // Track that we're performing a redo operation
     mLastOperationType = LastOperationType::Redo;
 
-    // Get the command that will be redone (if any)
     if (index() < count()) {
         const QUndoCommand* cmd = command(index());
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "EditorUndoStack::redo() - Redoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << index();
 #endif
 
-        // Check if this is an AddItemCommand (need to check before redo since ID may change)
-        // Note: AddItemCommands might be wrapped in a macro with ModifyPropertyCommand
+        // AddItemCommands might be wrapped in a macro with ModifyPropertyCommand
         const EditorAddItemCommand* addCmd = dynamic_cast<const EditorAddItemCommand*>(cmd);
 
-        // If not a direct AddItemCommand, check if it's a macro containing one
         if (!addCmd && cmd->childCount() > 0) {
             const QUndoCommand* firstChild = cmd->child(0);
             if (firstChild) {
@@ -223,36 +219,31 @@ void EditorUndoStack::redo()
             }
         }
 
-        int oldItemID = -1;
+        // Extract ID changes before redo to avoid pointer issues
+        QList<QPair<int, int>> idChanges;
         if (addCmd) {
-            oldItemID = addCmd->getNewItemID();
+            idChanges = addCmd->getIDChanges();
         }
 
-        // Call the base class redo
         QUndoStack::redo();
 
-        // Check if this is an AddItemCommand that restored items with new IDs
-        if (addCmd) {
-            QList<QPair<int, int>> idChanges = addCmd->getIDChanges();
-            if (!idChanges.isEmpty()) {
+        if (!idChanges.isEmpty()) {
 #if defined(DEBUG_UNDO_REDO)
-                qDebug() << "EditorUndoStack::redo() - AddItemCommand restored items with ID changes:" << idChanges.size();
+            qDebug() << "EditorUndoStack::redo() - AddItemCommand restored items with ID changes:" << idChanges.size();
 #endif
-                for (const auto& change : idChanges) {
-                    int oldID = change.first;
-                    int newID = change.second;
+            for (const auto& change : idChanges) {
+                int oldID = change.first;
+                int newID = change.second;
 #if defined(DEBUG_UNDO_REDO)
-                    qDebug() << "EditorUndoStack::redo() - Remapping ID" << oldID << "->" << newID;
+                qDebug() << "EditorUndoStack::redo() - Remapping ID" << oldID << "->" << newID;
 #endif
-                    remapItemIDs(oldID, newID);
-                }
+                remapItemIDs(oldID, newID);
             }
         }
     } else {
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "EditorUndoStack::redo() - No command to redo (index >= count)";
 #endif
-        // No command to redo
         QUndoStack::redo();
     }
 }
