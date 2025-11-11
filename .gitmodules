@@ -7,9 +7,6 @@
 [submodule "3rdparty/dblsqd"]
 	path = 3rdparty/dblsqd
 	url = https://github.com/Mudlet/dblsqd-sdk-qt.git
-[submodule "3rdparty/vcpkg"]
-	path = 3rdparty/vcpkg
-	url = https://github.com/microsoft/vcpkg
 [submodule "3rdparty/qt-ordered-map"]
 	path = 3rdparty/qt-ordered-map
 	url = https://github.com/Mudlet/qt-ordered-map
