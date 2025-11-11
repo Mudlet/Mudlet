@@ -1508,7 +1508,7 @@ void dlgTriggerEditor::setupPatternNavigationShortcuts()
         return;
     }
 
-    mFirstPatternShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), mpTriggersMainArea);
+    mFirstPatternShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Up), mpTriggersMainArea);
     mFirstPatternShortcut->setContext(Qt::WidgetWithChildrenShortcut);
     connect(mFirstPatternShortcut, &QShortcut::activated, this, [this]() {
         if (mVisiblePatternCount < 1) {
@@ -1518,7 +1518,7 @@ void dlgTriggerEditor::setupPatternNavigationShortcuts()
     });
 
 
-    mLastPatternShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), mpTriggersMainArea);
+    mLastPatternShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Down), mpTriggersMainArea);
     mLastPatternShortcut->setContext(Qt::WidgetWithChildrenShortcut);
     connect(mLastPatternShortcut, &QShortcut::activated, this, [this]() {
         if (mVisiblePatternCount < 1) {
@@ -1583,8 +1583,8 @@ void dlgTriggerEditor::updatePatternNavigationHint()
     mPatternNavigationHintLabel->setText(tr(
         "<p><strong>Navigation shortcuts</strong></p>"
         "<ul>"
-        "<li>Press <strong>Ctrl+K</strong> to focus the first pattern field.</li>"
-        "<li>Press <strong>Ctrl+L</strong> to jump to the last visible pattern field.</li>"
+        "<li>Press <strong>Ctrl+Shift+Up</strong> to focus the first pattern field.</li>"
+        "<li>Press <strong>Ctrl+Shift+Down</strong> to jump to the last visible pattern field.</li>"
         "<li>Press <strong>Ctrl+Up</strong> or <strong>Ctrl+Down</strong> to move between pattern fields.</li>"
         "<li>Press <strong>Ctrl+Tab</strong> to toggle the Lua code editor.</li>"
         "</ul>"
