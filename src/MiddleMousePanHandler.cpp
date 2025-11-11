@@ -27,12 +27,12 @@
 
 namespace
 {
-    constexpr int csmTimerIntervalMs = 16;
-    constexpr int csmHoldThresholdMs = 300;
-    constexpr qreal csmDeadZone = 9.0;
-    constexpr qreal csmMaxDistance = 400.0;
-    constexpr qreal csmSpeedMultiplier = 4.0;
-    constexpr qreal csmMovementScale = 0.3;
+constexpr int csmTimerIntervalMs = 16;
+constexpr int csmHoldThresholdMs = 300;
+constexpr qreal csmDeadZone = 9.0;
+constexpr qreal csmMaxDistance = 400.0;
+constexpr qreal csmSpeedMultiplier = 4.0;
+constexpr qreal csmMovementScale = 0.3;
 }
 
 MiddleMousePanHandler::MiddleMousePanHandler(T2DMap& mapWidget)
