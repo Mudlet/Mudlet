@@ -106,7 +106,7 @@ namespace
 {
 constexpr int csmMiddlePanTimerIntervalMs = 16;
 constexpr int csmMiddlePanHoldThresholdMs = 300;
-constexpr qreal csmMiddlePanDeadZone = 6.0;
+constexpr qreal csmMiddlePanDeadZone = 9.0; // Increased by 50% from 6.0
 constexpr qreal csmMiddlePanMaxDistance = 400.0;
 constexpr qreal csmMiddlePanSpeedMultiplier = 4.0;
 }
@@ -1966,45 +1966,69 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
         const QPointF anchor = mMiddlePanAnchor;
         const QPointF current = mMiddlePanCurrentPosition;
-        constexpr qreal anchorRadius = 10.0;
-
-        QPen ringPen(QColor(0, 0, 0, 190));
-        ringPen.setWidthF(2.0);
-        ringPen.setCosmetic(true);
-        painter.setPen(ringPen);
-        painter.setBrush(QColor(255, 255, 255, 170));
-        painter.drawEllipse(anchor, anchorRadius, anchorRadius);
-
-        QPen crossPen(QColor(0, 0, 0, 150));
-        crossPen.setWidthF(1.5);
-        crossPen.setCosmetic(true);
-        painter.setPen(crossPen);
-        painter.drawLine(anchor + QPointF(-anchorRadius * 0.7, 0.0), anchor + QPointF(anchorRadius * 0.7, 0.0));
-        painter.drawLine(anchor + QPointF(0.0, -anchorRadius * 0.7), anchor + QPointF(0.0, anchorRadius * 0.7));
-
         const QPointF direction = current - anchor;
         const qreal directionLength = std::hypot(direction.x(), direction.y());
-        if (directionLength > 1.0) {
-            const qreal displayLength = std::min(directionLength, 120.0);
-            const QPointF unitDirection = direction / directionLength;
-            const QPointF arrowEnd = anchor + unitDirection * displayLength;
 
-            QPen arrowPen(QColor(30, 136, 229, 220));
-            arrowPen.setWidthF(2.5);
-            arrowPen.setCosmetic(true);
-            arrowPen.setCapStyle(Qt::RoundCap);
-            painter.setPen(arrowPen);
-            painter.drawLine(anchor, arrowEnd);
+        // Check if we're in the dead zone
+        const bool inDeadZone = directionLength <= csmMiddlePanDeadZone;
 
-            painter.setBrush(QColor(30, 136, 229, 170));
-            const QPointF perpendicular(-unitDirection.y(), unitDirection.x());
-            const qreal headLength = 10.0;
-            const qreal headWidth = 6.0;
-            const QPointF headBase = arrowEnd - unitDirection * headLength;
-            QPolygonF headPolygon;
-            headPolygon << arrowEnd << headBase + perpendicular * headWidth << headBase - perpendicular * headWidth;
-            painter.drawPolygon(headPolygon);
+        if (inDeadZone) {
+            // In dead zone: show white circle with black stroke at mouse position (follows cursor)
+            constexpr qreal deadZoneRadius = 10.0;
+            QPen deadZonePen(QColor(0, 0, 0, 120)); // More subtle stroke (was 190)
+            deadZonePen.setWidthF(1.5); // Thinner stroke (was 2.0)
+            deadZonePen.setCosmetic(true);
+            painter.setPen(deadZonePen);
+            painter.setBrush(QColor(255, 255, 255, 170));
+            painter.drawEllipse(current, deadZoneRadius, deadZoneRadius);
         }
+
+        // Always show small black circle with white stroke + triangle at mouse position
+        // Triangle movement is scaled down (slower) relative to mouse movement
+        constexpr qreal movementScale = 0.3; // Scale factor for slower movement
+        const QPointF scaledDirection = direction * movementScale;
+        const qreal scaledLength = std::hypot(scaledDirection.x(), scaledDirection.y());
+        const QPointF indicatorPos = current; // Position under mouse
+
+        // Smaller black circle with white stroke at mouse position
+        // Circle: 2.1875 * 1.5 = 3.28125
+        constexpr qreal circleRadius = 3.28125;
+        QPen circlePen(QColor(255, 255, 255, 180)); // More subtle (was 220)
+        circlePen.setWidthF(1.5); // Thinner stroke (was 2.8125)
+        circlePen.setCosmetic(true);
+        painter.setPen(circlePen);
+        painter.setBrush(QColor(0, 0, 0, 200));
+        painter.drawEllipse(indicatorPos, circleRadius, circleRadius);
+
+        // Triangle always visible, closer to circle, 10% smaller
+        // Default direction pointing up when no movement
+        QPointF unitDirection;
+        if (scaledLength > 0.1) {
+            unitDirection = scaledDirection / scaledLength;
+        } else {
+            unitDirection = QPointF(0, -1); // Default pointing up
+        }
+
+        // Triangle 10% smaller: multiply by 0.9
+        constexpr qreal triangleDistance = 6.075; // 7.5 * 0.9 (10% smaller) - also closer
+        constexpr qreal triangleHeight = 6.328125; // 7.03125 * 0.9
+        constexpr qreal adjustedHalfWidth = 5.5773; // 6.197 * 0.9
+
+        const QPointF triangleBase = indicatorPos + unitDirection * triangleDistance;
+        const QPointF triangleTip = triangleBase + unitDirection * triangleHeight;
+        const QPointF perpendicular(-unitDirection.y(), unitDirection.x());
+
+        QPolygonF triangle;
+        triangle << triangleTip
+                 << triangleBase + perpendicular * adjustedHalfWidth
+                 << triangleBase - perpendicular * adjustedHalfWidth;
+
+        QPen trianglePen(QColor(255, 255, 255, 180)); // More subtle (was 220)
+        trianglePen.setWidthF(1.5); // Thinner stroke (was 3.515625)
+        trianglePen.setCosmetic(true);
+        painter.setPen(trianglePen);
+        painter.setBrush(QColor(0, 0, 0, 200));
+        painter.drawPolygon(triangle);
 
         painter.restore();
     }
@@ -2955,6 +2979,9 @@ void T2DMap::beginMiddlePan(const QPointF& widgetPosition, bool fromPress)
         mMiddlePanTimer.start(csmMiddlePanTimerIntervalMs);
     }
 
+    // Hide cursor during middle pan
+    setCursor(Qt::BlankCursor);
+
     update();
 }
 
@@ -3004,6 +3031,9 @@ void T2DMap::cancelMiddlePan()
     mMiddlePanPressTimer.invalidate();
     mMiddlePanAnchor = QPointF();
     mMiddlePanCurrentPosition = QPointF();
+
+    // Restore cursor after middle pan
+    unsetCursor();
 
     update();
 }
