@@ -30,8 +30,6 @@ jobs:
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v3.30.3
 
-      # run-vcpkg action does not run on arm64 (https://github.com/lukka/run-vcpkg/issues/152)
-      # so install dependencies manually
     - name: Install dependencies
       run: |
         sudo apt-get update
