@@ -1672,12 +1672,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
     if (mShowGrid && mRoomWidth > 0.0f && mRoomHeight > 0.0f) {
         painter.save();
 
-        QColor gridColor = mpHost->mFgColor_2;
-        gridColor.setAlpha(50);
-        gridColor = gridColor.lighter(120);
+        QColor gridColor = mpHost->mMapGridColor;
 
         QPen gridPen(gridColor);
-        const qreal gridWidth = qMax<qreal>(static_cast<qreal>(exitWidth) * 0.5, 0.5);
+        const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize);
         gridPen.setWidthF(gridWidth);
         painter.setPen(gridPen);
 

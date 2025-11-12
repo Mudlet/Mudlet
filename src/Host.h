@@ -688,6 +688,7 @@ public:
     QColor mUpperLevelColor{QColorConstants::White};
     QColor mRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
+    QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight = false;
@@ -714,6 +715,7 @@ public:
 
     double mLineSize = 10.0;
     double mRoomSize = 0.5;
+    double mMapGridLineSize = 0.5;
     QSet<QString> mMapInfoContributors{qsl("Short")};
     bool mBubbleMode = false;
     bool mMapViewOnly = true;
