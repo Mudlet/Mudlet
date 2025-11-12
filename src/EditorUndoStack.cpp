@@ -23,6 +23,7 @@
 #include "EditorCommand.h"
 
 #include <QDebug>
+#include <typeinfo>
 
 EditorUndoStack::EditorUndoStack(QObject* parent) : QUndoStack(parent)
 {
@@ -98,8 +99,17 @@ void EditorUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
 void EditorUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorViewType, QList<int>>& affectedItemsByView)
 {
     if (!cmd) {
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "EditorUndoStack::collectAffectedItems() - Null command pointer";
+#endif
         return;
     }
+
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "EditorUndoStack::collectAffectedItems() - Examining command:" << cmd->text()
+             << "pointer:" << static_cast<const void*>(cmd)
+             << "type:" << typeid(*cmd).name();
+#endif
 
     // If this is a EditorCommand, collect its affected items
     if (auto* mudletCmd = dynamic_cast<const EditorCommand*>(cmd)) {
@@ -170,13 +180,28 @@ void EditorUndoStack::undo()
         const QUndoCommand* cmd = command(index() - 1);
 #if defined(DEBUG_UNDO_REDO)
         qDebug() << "EditorUndoStack::undo() - Undoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << (index() - 1);
+        qDebug() << "EditorUndoStack::undo() - Command pointer:" << static_cast<const void*>(cmd) << "Type info:" << (cmd ? typeid(*cmd).name() : "null");
+        qDebug() << "EditorUndoStack::undo() - Command has" << (cmd ? cmd->childCount() : 0) << "children";
+#endif
+
+        // Check if this is a DeleteItemCommand BEFORE calling undo (matching redo pattern)
+        // This prevents accessing potentially invalidated memory after the undo operation
+        const EditorDeleteItemCommand* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(cmd);
+#if defined(DEBUG_UNDO_REDO)
+        if (deleteCmd) {
+            qDebug() << "EditorUndoStack::undo() - Command is a DeleteItemCommand, will need ID remapping";
+        }
 #endif
 
         // Call the base class undo
         QUndoStack::undo();
 
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "EditorUndoStack::undo() - Base undo completed, new index:" << index();
+#endif
+
         // Check if this is a DeleteItemCommand that restored items with new IDs
-        if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(cmd)) {
+        if (deleteCmd) {
             QList<QPair<int, int>> idChanges = deleteCmd->getIDChanges();
 #if defined(DEBUG_UNDO_REDO)
             qDebug() << "EditorUndoStack::undo() - DeleteItemCommand restored items with ID changes:" << idChanges.size();
@@ -266,12 +291,23 @@ void EditorUndoStack::remapItemIDs(int oldID, int newID)
     // Helper lambda to recursively remap IDs in a command and all its children
     std::function<void(const QUndoCommand*)> remapRecursive = [&](const QUndoCommand* cmd) {
         if (!cmd) {
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "EditorUndoStack::remapItemIDs() - Null command in recursive remap";
+#endif
             return;
         }
+
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "EditorUndoStack::remapItemIDs() - Remapping in command:" << cmd->text()
+                 << "pointer:" << static_cast<const void*>(cmd);
+#endif
 
         // Remap this command
         if (auto* mudletCmd = dynamic_cast<EditorCommand*>(const_cast<QUndoCommand*>(cmd))) {
             mudletCmd->remapItemID(oldID, newID);
+#if defined(DEBUG_UNDO_REDO)
+            qDebug() << "EditorUndoStack::remapItemIDs() - Successfully remapped in EditorCommand";
+#endif
         }
 
         // Recursively remap all child commands (for macros)
