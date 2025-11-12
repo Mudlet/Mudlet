@@ -449,6 +449,11 @@ void T2DMap::constrainMapCenterToAreaBounds()
         return;
     }
 
+    // Only apply constraints in view mode
+    if (!mMapViewOnly) {
+        return;
+    }
+
     TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
     if (!pArea) {
         return;
@@ -480,7 +485,7 @@ void T2DMap::constrainMapCenterToAreaBounds()
 
     // Strategy: Ensure each map edge can reach a safe zone near the opposite viewport edge
     // For small areas, ensure they can't go completely off-screen
-    const qreal edgeSafeZoneFraction = 0.1; // Map edge can reach 10% from opposite viewport edge
+    const qreal edgeSafeZoneFraction = 0.05; // Map edge can reach 10% from opposite viewport edge
 
     // Calculate the safe zone in room coordinates
     const qreal safeZoneX = (viewportWidthPixels * edgeSafeZoneFraction) / mRoomWidth;
@@ -490,8 +495,8 @@ void T2DMap::constrainMapCenterToAreaBounds()
     const qreal areaWidthPixels = areaWidth * mRoomWidth;
     const qreal areaHeightPixels = areaHeight * mRoomHeight;
 
-    // Threshold: if area is smaller than 80% of viewport, add extra constraints
-    const qreal smallAreaThreshold = 0.8;
+    // Threshold: if area is smaller than 90% of viewport, add extra constraints
+    const qreal smallAreaThreshold = 0.9;
     const bool isSmallX = areaWidthPixels < viewportWidthPixels * smallAreaThreshold;
     const bool isSmallY = areaHeightPixels < viewportHeightPixels * smallAreaThreshold;
 
@@ -2130,7 +2135,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.save();
 
         // Draw 10% safe zone lines (viewport-based)
-        const qreal safeZoneFraction = 0.1;
+        const qreal safeZoneFraction = 0.05;
         const qreal leftSafeZoneX = widgetWidth * safeZoneFraction;
         const qreal rightSafeZoneX = widgetWidth * (1.0 - safeZoneFraction);
         const qreal topSafeZoneY = widgetHeight * safeZoneFraction;
@@ -2152,10 +2157,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
         // Draw labels for safe zones
         painter.setFont(QFont("Arial", 10, QFont::Bold));
         painter.setPen(QColor(0, 255, 0));
-        painter.drawText(QPointF(leftSafeZoneX + 5, 15), qsl("Left 10%"));
-        painter.drawText(QPointF(rightSafeZoneX - 70, 15), qsl("Right 90%"));
-        painter.drawText(QPointF(5, topSafeZoneY - 5), qsl("Top 10%"));
-        painter.drawText(QPointF(5, bottomSafeZoneY + 15), qsl("Bottom 90%"));
+        painter.drawText(QPointF(leftSafeZoneX + 5, 15), qsl("Left 5%"));
+        painter.drawText(QPointF(rightSafeZoneX - 70, 15), qsl("Right 95%"));
+        painter.drawText(QPointF(5, topSafeZoneY - 5), qsl("Top 5%"));
+        painter.drawText(QPointF(5, bottomSafeZoneY + 15), qsl("Bottom 95%"));
 
         // Draw area boundaries (map edges converted to screen coordinates)
         const qreal areaMinX = (pDrawnArea->min_x - 2.0); // include margin
@@ -3636,6 +3641,11 @@ void T2DMap::slot_toggleMapViewOnly()
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapModeEvent);
 
+        // Apply panning constraints when switching to view mode
+        if (mMapViewOnly) {
+            constrainMapCenterToAreaBounds();
+        }
+
         update();
     }
 }
@@ -4472,6 +4482,9 @@ void T2DMap::wheelEvent(QWheelEvent* e)
             mMapCenterX += dx * (oldZoom - xyzoom) / 2.0 * xs;
             mMapCenterY += dy * (oldZoom - xyzoom) / 2.0 * ys;
 
+            // Apply panning constraints after zoom in view mode
+            constrainMapCenterToAreaBounds();
+
             flushSymbolPixmapCache();
             update();
         }
@@ -4525,6 +4538,10 @@ std::pair<bool, QString> T2DMap::setMapZoom(const qreal zoom, const int areaId)
 
     // We are adjusting the zoom for the currently viewed area so redraw it
     flushSymbolPixmapCache();
+
+    // Apply panning constraints after zoom change in view mode
+    constrainMapCenterToAreaBounds();
+
     update();
     return {true, QString()};
 }
