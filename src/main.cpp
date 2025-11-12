@@ -254,39 +254,50 @@ int main(int argc, char* argv[])
     const bool publicTestVersion = appBuild.startsWith("-ptb");
     const bool testingVersion = appBuild.startsWith("-testing");
 #if defined(INCLUDE_SENTRY)
-    sentry_options_t* options = sentry_options_new();
-    sentry_options_set_dsn(options, "https://362a6ffaa959436292d8d5eb35ff0aea@o1070874.ingest.us.sentry.io/6067272");
-    QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
-    QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
-    qDebug() << "crashpad_handler path is: " << sentryCrashHandler;
-    sentry_options_set_database_path(options, sentryPath.toLocal8Bit().constData());
-    sentry_options_set_handler_path(options, sentryCrashHandler.toLocal8Bit().constData());
-    
-        sentry_options_set_release(options, "mudlet @" APP_VERSION);
+    bool disableSentry = false;
+    // Only disable Sentry on Linux when running auto-run Lua tests in CI
+    // (AUTORUN_BUSTED_TESTS is set by the workflow for the Linux run)
+    #if defined(Q_OS_LINUX)
+        disableSentry = qEnvironmentVariableIsSet("AUTORUN_BUSTED_TESTS");
+    #endif
 
-        sentry_options_set_debug(options, false);
+    if (!disableSentry) {
+        sentry_options_t* options = sentry_options_new();
+        sentry_options_set_dsn(options, "https://362a6ffaa959436292d8d5eb35ff0aea@o1070874.ingest.us.sentry.io/6067272");
+        QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
+        QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
+        qDebug() << "crashpad_handler path is: " << sentryCrashHandler;
+        sentry_options_set_database_path(options, sentryPath.toLocal8Bit().constData());
+        sentry_options_set_handler_path(options, sentryCrashHandler.toLocal8Bit().constData());
+        
+            sentry_options_set_release(options, "mudlet @" APP_VERSION);
 
-    
-        // Initialize global version info used by before_send callback
-        g_sentryVersionInfo.isRelease = releaseVersion;
-        g_sentryVersionInfo.isPublicTest = publicTestVersion;
-        g_sentryVersionInfo.isTesting = testingVersion;
-    
-        // Use the global/static VersionInfo to avoid lifetime issues
-        sentry_options_set_before_send(options, before_send, nullptr);
+            sentry_options_set_debug(options, false);
 
-    if (releaseVersion) {
-        sentry_options_set_environment(options, "release");
-    } else if (publicTestVersion) {
-        sentry_options_set_environment(options, "public-test-build");
-    } else if (testingVersion) {
-        sentry_options_set_environment(options, "testing");
+        
+            // Initialize global version info used by before_send callback
+            g_sentryVersionInfo.isRelease = releaseVersion;
+            g_sentryVersionInfo.isPublicTest = publicTestVersion;
+            g_sentryVersionInfo.isTesting = testingVersion;
+        
+            // Use the global/static VersionInfo to avoid lifetime issues
+            sentry_options_set_before_send(options, before_send, nullptr);
+
+        if (releaseVersion) {
+            sentry_options_set_environment(options, "release");
+        } else if (publicTestVersion) {
+            sentry_options_set_environment(options, "public-test-build");
+        } else if (testingVersion) {
+            sentry_options_set_environment(options, "testing");
+        } else {
+            sentry_options_set_environment(options, "development");
+        }
+        sentry_init(options);
+        // Make sure everything flushes
+        auto sentryClose = qScopeGuard([] { sentry_close(); });
     } else {
-        sentry_options_set_environment(options, "development");
+        qInfo() << "Sentry disabled for Linux CI Lua tests.";
     }
-    sentry_init(options);
-    // Make sure everything flushes
-    auto sentryClose = qScopeGuard([] { sentry_close(); });
 #endif
 
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
