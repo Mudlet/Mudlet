@@ -3433,8 +3433,6 @@ void TMap::update()
             }
 #endif
             if (mpMapper) {
-                mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
-                mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
 
                 if (mpMapper->mp2dMap) {
                     mpMapper->mp2dMap->mNewMoveAction = true;

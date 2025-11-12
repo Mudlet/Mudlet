@@ -7244,11 +7244,11 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
-            host.mpMap->mpMapper->slot_setRoomSize(getVerifiedInt(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_roomSize(getVerifiedInt(L, __func__, 2, "value"));
             return success();
         }
         if (key == qsl("mapExitSize")) {
-            host.mpMap->mpMapper->slot_setExitSize(getVerifiedInt(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_exitSize(getVerifiedInt(L, __func__, 2, "value"));
             return success();
         }
         if (key == qsl("mapRoundRooms")) {
