@@ -52,6 +52,7 @@ public:
     const QList<int> getAreaExitRoomIds() const { return mAreaExits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
     void calcSpan();
+    void calcSpanIncludingLabelsAndSpecialExits();
     void fast_calcSpan(int);
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);

@@ -130,6 +130,9 @@ bool PanInteractionHandler::handleMouseMove(T2DMap::MapInteractionContext& conte
         mMapWidget.mMapCenterY += movement.y() / roomHeight;
     }
 
+    // Constrain panning to area bounds
+    mMapWidget.constrainMapCenterToAreaBounds();
+
     map->m2DPanStart = panNewPosition;
     mMapWidget.mShiftMode = true;
     mMapWidget.update();

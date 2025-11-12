@@ -467,6 +467,164 @@ void TArea::calcSpan()
     }
 }
 
+void TArea::calcSpanIncludingLabelsAndSpecialExits()
+{
+    // Start with regular room span calculation
+    calcSpan();
+
+    // Track if we have any rooms to begin with
+    bool hasRooms = !rooms.isEmpty();
+    if (!hasRooms) {
+        return;
+    }
+
+    // Now extend the span to include labels
+    QMapIterator<int, TMapLabel> itLabel(mMapLabels);
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        const TMapLabel& label = itLabel.value();
+
+        // Skip temporary labels
+        if (label.temporary) {
+            continue;
+        }
+
+        const int labelX = static_cast<int>(label.pos.x());
+        const int labelY = static_cast<int>(label.pos.y());
+        const int labelZ = static_cast<int>(label.pos.z());
+
+        // Update global extremes
+        if (labelX < min_x) {
+            min_x = labelX;
+        }
+        if (labelX > max_x) {
+            max_x = labelX;
+        }
+        if ((-1 * labelY) < min_y) {
+            min_y = (-1 * labelY);
+        }
+        if ((-1 * labelY) > max_y) {
+            max_y = (-1 * labelY);
+        }
+        if (labelZ < min_z) {
+            min_z = labelZ;
+        }
+        if (labelZ > max_z) {
+            max_z = labelZ;
+        }
+
+        // Update per-z-level extremes
+        if (!zLevels.contains(labelZ)) {
+            zLevels.push_back(labelZ);
+        }
+
+        if (!xminForZ.contains(labelZ)) {
+            xminForZ.insert(labelZ, labelX);
+        } else if (labelX < xminForZ.value(labelZ)) {
+            xminForZ.insert(labelZ, labelX);
+        }
+
+        if (!xmaxForZ.contains(labelZ)) {
+            xmaxForZ.insert(labelZ, labelX);
+        } else if (labelX > xmaxForZ.value(labelZ)) {
+            xmaxForZ.insert(labelZ, labelX);
+        }
+
+        if (!yminForZ.contains(labelZ)) {
+            yminForZ.insert(labelZ, (-1 * labelY));
+        } else if ((-1 * labelY) < yminForZ.value(labelZ)) {
+            yminForZ.insert(labelZ, (-1 * labelY));
+        }
+
+        if (!ymaxForZ.contains(labelZ)) {
+            ymaxForZ.insert(labelZ, (-1 * labelY));
+        } else if ((-1 * labelY) > ymaxForZ.value(labelZ)) {
+            ymaxForZ.insert(labelZ, (-1 * labelY));
+        }
+    }
+
+    // Now extend the span to include rooms connected via special exits
+    QSetIterator<int> itRoom(rooms);
+    while (itRoom.hasNext()) {
+        const int roomId = itRoom.next();
+        TRoom* pR = mpRoomDB->getRoom(roomId);
+        if (!pR) {
+            continue;
+        }
+
+        // Check all special exits from this room
+        QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
+        while (itSpecialExit.hasNext()) {
+            itSpecialExit.next();
+            const int targetRoomId = itSpecialExit.value();
+            TRoom* pTargetRoom = mpRoomDB->getRoom(targetRoomId);
+
+            if (!pTargetRoom) {
+                continue;
+            }
+
+            // Include this room's coordinates in the span calculation
+            const int targetX = pTargetRoom->x();
+            const int targetY = pTargetRoom->y();
+            const int targetZ = pTargetRoom->z();
+
+            // Update global extremes
+            if (targetX < min_x) {
+                min_x = targetX;
+            }
+            if (targetX > max_x) {
+                max_x = targetX;
+            }
+            if ((-1 * targetY) < min_y) {
+                min_y = (-1 * targetY);
+            }
+            if ((-1 * targetY) > max_y) {
+                max_y = (-1 * targetY);
+            }
+            if (targetZ < min_z) {
+                min_z = targetZ;
+            }
+            if (targetZ > max_z) {
+                max_z = targetZ;
+            }
+
+            // Update per-z-level extremes
+            if (!zLevels.contains(targetZ)) {
+                zLevels.push_back(targetZ);
+            }
+
+            if (!xminForZ.contains(targetZ)) {
+                xminForZ.insert(targetZ, targetX);
+            } else if (targetX < xminForZ.value(targetZ)) {
+                xminForZ.insert(targetZ, targetX);
+            }
+
+            if (!xmaxForZ.contains(targetZ)) {
+                xmaxForZ.insert(targetZ, targetX);
+            } else if (targetX > xmaxForZ.value(targetZ)) {
+                xmaxForZ.insert(targetZ, targetX);
+            }
+
+            if (!yminForZ.contains(targetZ)) {
+                yminForZ.insert(targetZ, (-1 * targetY));
+            } else if ((-1 * targetY) < yminForZ.value(targetZ)) {
+                yminForZ.insert(targetZ, (-1 * targetY));
+            }
+
+            if (!ymaxForZ.contains(targetZ)) {
+                ymaxForZ.insert(targetZ, (-1 * targetY));
+            } else if ((-1 * targetY) > ymaxForZ.value(targetZ)) {
+                ymaxForZ.insert(targetZ, (-1 * targetY));
+            }
+        }
+    }
+
+    // Sort z-levels if needed
+    if (zLevels.size() > 1) {
+        std::sort(zLevels.begin(), zLevels.end());
+    }
+}
+
 // Added a second argument to cut-out extremes recalculation if not required
 // Currently called from:
 // bool TRoom::setArea( int, bool )  -- the second arg there can be used for this

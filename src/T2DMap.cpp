@@ -443,10 +443,128 @@ void T2DMap::init()
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
 }
 
+void T2DMap::constrainMapCenterToAreaBounds()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pArea) {
+        return;
+    }
+
+    // Calculate span including labels and special exits
+    pArea->calcSpanIncludingLabelsAndSpecialExits();
+
+    // Add a margin (in room coordinates) around the bounds to avoid hard edge limits
+    const qreal margin = 2.0;
+
+    // Get the bounds from the area
+    const qreal minX = pArea->min_x - margin;
+    const qreal maxX = pArea->max_x + margin;
+    const qreal minY = pArea->min_y - margin;
+    const qreal maxY = pArea->max_y + margin;
+
+    // Area dimensions in room coordinates
+    const qreal areaWidth = maxX - minX;
+    const qreal areaHeight = maxY - minY;
+
+    // Calculate the visible span in room coordinates based on widget size and zoom
+    const qreal visibleWidth = width() / mRoomWidth;
+    const qreal visibleHeight = height() / mRoomHeight;
+
+    // Calculate how much of the viewport the area actually occupies (in pixels)
+    const qreal viewportWidthPixels = static_cast<qreal>(width());
+    const qreal viewportHeightPixels = static_cast<qreal>(height());
+
+    // Strategy: Ensure each map edge can reach a safe zone near the opposite viewport edge
+    // For small areas, ensure they can't go completely off-screen
+    const qreal edgeSafeZoneFraction = 0.1; // Map edge can reach 10% from opposite viewport edge
+
+    // Calculate the safe zone in room coordinates
+    const qreal safeZoneX = (viewportWidthPixels * edgeSafeZoneFraction) / mRoomWidth;
+    const qreal safeZoneY = (viewportHeightPixels * edgeSafeZoneFraction) / mRoomHeight;
+
+    // Calculate area size in pixels to determine if special handling is needed
+    const qreal areaWidthPixels = areaWidth * mRoomWidth;
+    const qreal areaHeightPixels = areaHeight * mRoomHeight;
+
+    // Threshold: if area is smaller than 80% of viewport, add extra constraints
+    const qreal smallAreaThreshold = 0.8;
+    const bool isSmallX = areaWidthPixels < viewportWidthPixels * smallAreaThreshold;
+    const bool isSmallY = areaHeightPixels < viewportHeightPixels * smallAreaThreshold;
+
+    qreal centerMinX, centerMaxX, centerMinY, centerMaxY;
+
+    // Handle X axis constraints
+    if (isSmallX) {
+        // Small area: when panning, the corresponding edge should reach the safe zone
+        // When panning LEFT: RIGHT edge (maxX) should reach right safe zone (90% mark)
+        // viewport_right_safe = centerX + visibleWidth/2 - safeZoneX
+        // So: maxX <= centerX + visibleWidth/2 - safeZoneX
+        // Therefore: centerX >= maxX - visibleWidth/2 + safeZoneX
+        centerMinX = maxX - visibleWidth / 2.0 + safeZoneX;
+
+        // When panning RIGHT: LEFT edge (minX) should reach left safe zone (10% mark)
+        // viewport_left_safe = centerX - visibleWidth/2 + safeZoneX
+        // So: minX >= centerX - visibleWidth/2 + safeZoneX
+        // Therefore: centerX <= minX + visibleWidth/2 - safeZoneX
+        centerMaxX = minX + visibleWidth / 2.0 - safeZoneX;
+
+        // Ensure valid range - if area is very small, center it
+        if (centerMinX > centerMaxX) {
+            const qreal center = (minX + maxX) / 2.0;
+            centerMinX = center;
+            centerMaxX = center;
+        }
+    } else {
+        // Large area: use edge-based safe zones
+        centerMinX = minX + visibleWidth / 2.0 - safeZoneX;
+        centerMaxX = maxX - visibleWidth / 2.0 + safeZoneX;
+    }
+
+    // Handle Y axis constraints
+    if (isSmallY) {
+        // Small area: when panning, the corresponding edge should reach the safe zone
+        // When panning DOWN: TOP edge (minY) should reach bottom safe zone (90% mark)
+        centerMinY = maxY - visibleHeight / 2.0 + safeZoneY;
+
+        // When panning UP: BOTTOM edge (maxY) should reach top safe zone (10% mark)
+        centerMaxY = minY + visibleHeight / 2.0 - safeZoneY;
+
+        // Ensure valid range - if area is very small, center it
+        if (centerMinY > centerMaxY) {
+            const qreal center = (minY + maxY) / 2.0;
+            centerMinY = center;
+            centerMaxY = center;
+        }
+    } else {
+        // Large area: use edge-based safe zones
+        centerMinY = minY + visibleHeight / 2.0 - safeZoneY;
+        centerMaxY = maxY - visibleHeight / 2.0 + safeZoneY;
+    }
+
+    // Constrain X axis
+    if (mMapCenterX < centerMinX) {
+        mMapCenterX = centerMinX;
+    } else if (mMapCenterX > centerMaxX) {
+        mMapCenterX = centerMaxX;
+    }
+
+    // Constrain Y axis
+    if (mMapCenterY < centerMinY) {
+        mMapCenterY = centerMinY;
+    } else if (mMapCenterY > centerMaxY) {
+        mMapCenterY = centerMaxY;
+    }
+}
+
 void T2DMap::slot_shiftDown()
 {
     mShiftMode = true;
     mMapCenterY--;
+    constrainMapCenterToAreaBounds();
     update();
 }
 
@@ -461,6 +579,7 @@ void T2DMap::slot_shiftUp()
 {
     mShiftMode = true;
     mMapCenterY++;
+    constrainMapCenterToAreaBounds();
     update();
 }
 
@@ -468,6 +587,7 @@ void T2DMap::slot_shiftLeft()
 {
     mShiftMode = true;
     mMapCenterX--;
+    constrainMapCenterToAreaBounds();
     update();
 }
 
@@ -475,6 +595,7 @@ void T2DMap::slot_shiftRight()
 {
     mShiftMode = true;
     mMapCenterX++;
+    constrainMapCenterToAreaBounds();
     update();
 }
 void T2DMap::slot_shiftZup()
@@ -2003,6 +2124,74 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
     // Save the current map zoom for this area
     pDrawnArea->set2DMapZoom(xyzoom);
+
+    // Debug visualization for panning bounds
+    {
+        painter.save();
+
+        // Draw 10% safe zone lines (viewport-based)
+        const qreal safeZoneFraction = 0.1;
+        const qreal leftSafeZoneX = widgetWidth * safeZoneFraction;
+        const qreal rightSafeZoneX = widgetWidth * (1.0 - safeZoneFraction);
+        const qreal topSafeZoneY = widgetHeight * safeZoneFraction;
+        const qreal bottomSafeZoneY = widgetHeight * (1.0 - safeZoneFraction);
+
+        QPen safeZonePen(QColor(0, 255, 0, 128)); // Semi-transparent green
+        safeZonePen.setWidth(2);
+        safeZonePen.setStyle(Qt::DashLine);
+        painter.setPen(safeZonePen);
+
+        // Vertical safe zone lines
+        painter.drawLine(QPointF(leftSafeZoneX, 0), QPointF(leftSafeZoneX, widgetHeight));
+        painter.drawLine(QPointF(rightSafeZoneX, 0), QPointF(rightSafeZoneX, widgetHeight));
+
+        // Horizontal safe zone lines
+        painter.drawLine(QPointF(0, topSafeZoneY), QPointF(widgetWidth, topSafeZoneY));
+        painter.drawLine(QPointF(0, bottomSafeZoneY), QPointF(widgetWidth, bottomSafeZoneY));
+
+        // Draw labels for safe zones
+        painter.setFont(QFont("Arial", 10, QFont::Bold));
+        painter.setPen(QColor(0, 255, 0));
+        painter.drawText(QPointF(leftSafeZoneX + 5, 15), qsl("Left 10%"));
+        painter.drawText(QPointF(rightSafeZoneX - 70, 15), qsl("Right 90%"));
+        painter.drawText(QPointF(5, topSafeZoneY - 5), qsl("Top 10%"));
+        painter.drawText(QPointF(5, bottomSafeZoneY + 15), qsl("Bottom 90%"));
+
+        // Draw area boundaries (map edges converted to screen coordinates)
+        const qreal areaMinX = (pDrawnArea->min_x - 2.0); // include margin
+        const qreal areaMaxX = (pDrawnArea->max_x + 2.0);
+        const qreal areaMinY = (pDrawnArea->min_y - 2.0);
+        const qreal areaMaxY = (pDrawnArea->max_y + 2.0);
+
+        // Convert map coordinates to screen coordinates
+        const float fx = ((xspan / 2.0f) - mMapCenterX) * mRoomWidth;
+        const float fy = ((yspan / 2.0f) - mMapCenterY) * mRoomHeight;
+
+        const float screenLeftEdge = areaMinX * mRoomWidth + fx;
+        const float screenRightEdge = areaMaxX * mRoomWidth + fx;
+        const float screenTopEdge = areaMinY * mRoomHeight + fy; // Top = minY (not inverted here, already inverted in min_y)
+        const float screenBottomEdge = areaMaxY * mRoomHeight + fy;
+
+        QPen areaBoundsPen(QColor(255, 0, 0, 200)); // Red for area boundaries
+        areaBoundsPen.setWidth(3);
+        painter.setPen(areaBoundsPen);
+
+        // Draw area boundary lines
+        painter.drawLine(QPointF(screenLeftEdge, 0), QPointF(screenLeftEdge, widgetHeight));
+        painter.drawLine(QPointF(screenRightEdge, 0), QPointF(screenRightEdge, widgetHeight));
+        painter.drawLine(QPointF(0, screenTopEdge), QPointF(widgetWidth, screenTopEdge));
+        painter.drawLine(QPointF(0, screenBottomEdge), QPointF(widgetWidth, screenBottomEdge));
+
+        // Draw labels for area boundaries
+        painter.setFont(QFont("Arial", 10, QFont::Bold));
+        painter.setPen(QColor(255, 0, 0));
+        painter.drawText(QPointF(screenLeftEdge + 5, 35), qsl("Area Left"));
+        painter.drawText(QPointF(screenRightEdge - 80, 35), qsl("Area Right"));
+        painter.drawText(QPointF(widgetWidth - 100, screenTopEdge - 5), qsl("Area Top"));
+        painter.drawText(QPointF(widgetWidth - 100, screenBottomEdge + 15), qsl("Area Bottom"));
+
+        painter.restore();
+    }
 
     // Check and send view change event if necessary
     if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
