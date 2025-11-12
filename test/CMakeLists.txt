@@ -54,7 +54,6 @@ if(USE_OWN_QTKEYCHAIN)
     set(KEYCHAIN_LIBRARY qt6keychain)
 else()
     find_package(Qt6Keychain REQUIRED)
-    # Use the same target name as src/CMakeLists.txt
     set(KEYCHAIN_LIBRARY qt6keychain)
 endif()
 
