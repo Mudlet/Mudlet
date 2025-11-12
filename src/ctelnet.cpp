@@ -2303,10 +2303,7 @@ void cTelnet::autoEnableTTYPEVersion()
     // Automatically enable TTYPE version compatibility
     disconnectIt();
     mpHost->mVersionInTTYPE = true;
-    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best\n"
-                    "when Mudlet reports its version number during connection. Version\n"
-                    "reporting in terminal type has been automatically enabled for\n"
-                    "improved color support. Reconnecting..."));
+    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting..."));
     reconnect();
 }
 
@@ -2317,10 +2314,7 @@ void cTelnet::autoEnableMXPProcessor()
 
     // Automatically enable MXP processing
     mpHost->setForceMXPProcessorOn(true);
-    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but\n"
-                    "has not turned it on properly. MXP processing has been automatically\n"
-                    "enabled for clickable links, room info, and richer interactions.\n"
-                    "You can disable this setting in Settings > Special Options."));
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but hasn't turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings > Special Options."));
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)

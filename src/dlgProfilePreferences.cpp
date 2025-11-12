@@ -4735,7 +4735,7 @@ void dlgProfilePreferences::slot_roomSizeChanged(int size)
     if (mpHost) {
         mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(size);
+            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
             mpHost->mpMap->mpMapper->mp2dMap->update();
         }
     }
