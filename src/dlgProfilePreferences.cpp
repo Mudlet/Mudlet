@@ -1073,6 +1073,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
         connect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomOuterDiameter);
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter);
+
+        // Initialize room and exit size controls
+        spinBox_roomSize->setValue(pHost->mRoomSize * 10);
+        spinBox_exitSize->setValue(pHost->mLineSize);
+        connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_roomSizeChanged);
+        connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_exitSizeChanged);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -1121,7 +1127,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     notificationAreaMessageBox->hide();
 
 #if !defined(QT_NO_SSL)
-    if (QSslSocket::supportsSsl() && pHost->mSslTsl) {
+    if (QSslSocket::supportsSsl() && pHost->mTelnet.currentlySecure()) {
         const QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
         if (cert.isNull()) {
             groupBox_ssl_certificate->hide();
@@ -1135,47 +1141,57 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             ssl_issuer_label->setStyleSheet(QString());
             ssl_expires_label->setStyleSheet(QString());
 
-            if (!pHost->mTelnet.getSslErrors().empty()) {
+            const QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
+            if (sslErrors.count()) {
                 // handle ssl errors
                 notificationAreaIconLabelWarning->show();
                 frame_notificationArea->show();
                 notificationAreaMessageBox->show();
-                //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
 
-                for (const QSslError& error : pHost->mTelnet.getSslErrors()) {
-                    const QString thisError = qsl("<li>%1</li>").arg(error.errorString());
-                    notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
-
-                    if (error.error() == QSslError::SelfSignedCertificate) {
+                QStringList errorTexts;
+                for (const auto& sslError : sslErrors) {
+                    errorTexts.append(qsl("<li>%1</li>").arg(sslError.errorString()));
+                    if (QSslError::SelfSignedCertificate == sslError.error()) {
                         checkBox_self_signed->setStyleSheet(qsl("font-weight: bold; background: yellow"));
                         ssl_issuer_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
                     }
-                    if (error.error() == QSslError::CertificateExpired) {
+                    if (QSslError::CertificateExpired == sslError.error()) {
                         checkBox_expired->setStyleSheet(qsl("font-weight: bold; background: yellow"));
                         ssl_expires_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
                     }
                 }
+                notificationAreaMessageBox->setText(qsl("<ul>%1</ul>").arg(errorTexts.join(QChar::LineFeed)));
 
-            } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
-                // handle failed handshake, likely not ssl socket
-                notificationAreaIconLabelError->show();
-                frame_notificationArea->show();
-                notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
-            }
-            if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
-                // handle ssl library error
-                notificationAreaIconLabelError->show();
-                frame_notificationArea->show();
-                notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
-            }
-            if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
-                // handle invalid data (certificate, key, cypher, etc.)
-                notificationAreaIconLabelError->show();
-                frame_notificationArea->show();
-                notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+            } else {
+                // Check for other errors
+                if (pHost->mTelnet.error().has_value()) {
+                    switch (pHost->mTelnet.error().value()) {
+                    case QAbstractSocket::SslHandshakeFailedError:
+                        // handle failed handshake, likely not ssl socket
+                        notificationAreaIconLabelError->show();
+                        frame_notificationArea->show();
+                        notificationAreaMessageBox->show();
+                        notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+                        break;
+                    case QAbstractSocket::SslInternalError:
+                        // handle ssl library error
+                        notificationAreaIconLabelError->show();
+                        frame_notificationArea->show();
+                        notificationAreaMessageBox->show();
+                        notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+                        break;
+                    case QAbstractSocket::SslInvalidUserDataError:
+                        // handle invalid data (certificate, key, cypher, etc.)
+                        notificationAreaIconLabelError->show();
+                        frame_notificationArea->show();
+                        notificationAreaMessageBox->show();
+                        notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+                        break;
+                    default:
+                        {} // There are a significant number of other errors
+                           // that are not handled here!
+                    }
+                }
             }
         }
     }
@@ -1425,6 +1441,8 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
 
@@ -4709,6 +4727,28 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 {
     if (checkBox_showTabConnectionIndicators->isChecked() != state) {
         checkBox_showTabConnectionIndicators->setChecked(state);
+    }
+}
+
+void dlgProfilePreferences::slot_roomSizeChanged(int size)
+{
+    if (mpHost) {
+        mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
+            mpHost->mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_exitSizeChanged(int size)
+{
+    if (mpHost) {
+        mpHost->mLineSize = size;
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->setExitSize(size);
+            mpHost->mpMap->mpMapper->mp2dMap->update();
+        }
     }
 }
 
