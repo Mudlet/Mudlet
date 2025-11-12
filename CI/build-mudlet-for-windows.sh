@@ -124,22 +124,26 @@ echo ""
 echo "Running CMake to configure project ..."
 echo ""
 
+# Since we have this already installed as a package there is no need to build
+# it from a submodule - set as environment variable for CMake
+export WITH_OWN_QTKEYCHAIN=NO
+
+# Set updater flag based on build type
+if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
+  # The updater is not helpful in this environment (PR testing build)
+  export WITH_UPDATER=NO
+else
+  # Tagged build, this is a release or a PTB build, include the updater
+  export WITH_UPDATER=YES
+fi
+
 # Configure CMake with ccache and Release build type
 CMAKE_ARGS=(
   -G Ninja
   -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_PREFIX_PATH="${MINGW_INTERNAL_BASE_DIR}"
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=release
-  -DWITH_OWN_QTKEYCHAIN=NO
 )
-
-if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
-  # The updater is not helpful in this environment (PR testing build)
-  CMAKE_ARGS+=(-DWITH_UPDATER=NO)
-else
-  # Tagged build, this is a release or a PTB build, include the updater
-  CMAKE_ARGS+=(-DWITH_UPDATER=YES)
-fi
 
 # Enable ccache for CMake
 export WITH_CCACHE="YES"
