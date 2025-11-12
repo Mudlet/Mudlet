@@ -994,6 +994,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
 
     QPen roomPen(Qt::transparent);
+    roomPen.setJoinStyle(Qt::MiterJoin);
     painter.setBrush(roomColor);
 
     // Determine if we're actually drawing a border and calculate the inset
