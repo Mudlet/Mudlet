@@ -443,11 +443,7 @@ void Host::closeChildren()
     mIsClosingDown = true;
     const auto hostToolBarMap = getActionUnit()->getToolBarList();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    if (mSslTsl) {
-        mTelnet.abortConnection();
-    } else {
-        mTelnet.disconnectIt();
-    }
+    mTelnet.terminateConnection();
 
     stopAllTriggers();
 
@@ -2021,7 +2017,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     raiseEvent(detailedInstallEvent);
 
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     if (mpModuleManager) {
         mpModuleManager->layoutModules();
@@ -2212,7 +2208,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mpEditorDialog->doCleanReset();
     }
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     return true;
 }

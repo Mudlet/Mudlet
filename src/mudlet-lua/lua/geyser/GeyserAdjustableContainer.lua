@@ -336,6 +336,10 @@ end
 --- adds elements to connect containers to borders into the right click menu
 function Adjustable.Container:addConnectMenu()
     local label = self.adjLabel
+    -- Check if menu already exists to prevent duplicates when called multiple times
+    if label:findMenuElement("Connect To: ") then
+        return
+    end
     local menuTxt = self.Locale.connectTo.message
     label:addMenuLabel("Connect To: ")
     label:findMenuElement("Connect To: "):echo(menuTxt, "nocolor", "c")

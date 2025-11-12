@@ -18,7 +18,11 @@
 #include "Host.h"
 #include "SingleLineTextEdit.h"
 
+#include "pre_guard.h"
+#include <QColor>
 #include <QKeyEvent>
+#include <QPalette>
+#include "post_guard.h"
 
 SingleLineTextEdit::SingleLineTextEdit(QWidget *parent)
     : QPlainTextEdit(parent)
@@ -80,7 +84,13 @@ void SingleLineTextEdit::setTheme(const QString& themeName)
     QPalette p = palette();
     p.setColor(QPalette::Base, theme->backgroundColor()); // background
     p.setColor(QPalette::Text, theme->foregroundColor());
+
+    QColor placeholderColor = theme->foregroundColor();
+    placeholderColor.setAlphaF(0.6);
+    p.setColor(QPalette::PlaceholderText, placeholderColor);
     setPalette(p);
+    viewport()->setPalette(p);
+    viewport()->setAutoFillBackground(true);
 
     // the highlighter will perform the syntax colouring using scopes if possible
     highlighter->setTheme(themeName);

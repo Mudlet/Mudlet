@@ -307,9 +307,12 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
 # day of the fourth month of the Gregorian calendar year:
 # DEFINES+=DEBUG_EASTER_EGGS
 #
-# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-# commands for suboptions - change the value to 2 to get a bit more detail
-# about the size or nature of the command:
+# * Uncomment this and set to a integer value with the following bits to:
+#   1 - debugging messages about WILL/WONT/DO/DONT and other commands for
+#       suboptions
+#   2 - more detail about the size or nature of the command:
+#   4 - to monitor the use of and choice of both sockets (one each for IPv4
+#       and IPv6 prototcols)
 DEFINES+=DEBUG_TELNET=1
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
@@ -410,7 +413,9 @@ unix:!macx {
         -lpugixml
 
     isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       LIBS += -lGLU
+       LIBS += \
+         -lGLU \
+         -lassimp
     }
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
@@ -621,6 +626,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
+    WideComboBox.cpp \
     ctelnet.cpp \
     DarkTheme.cpp \
     discord.cpp \
@@ -638,6 +644,7 @@ SOURCES += \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
     dlgPackageManager.cpp \
+    PackageItemDelegate.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
@@ -770,6 +777,7 @@ HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    WideComboBox.h \
     ctelnet.h \
     DarkTheme.h \
     discord.h \
@@ -787,6 +795,7 @@ HEADERS += \
     dlgNotepad.h \
     dlgPackageExporter.h \
     dlgPackageManager.h \
+    PackageItemDelegate.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \
