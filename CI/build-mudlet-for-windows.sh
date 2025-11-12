@@ -151,7 +151,7 @@ if [ "${WITH_CCACHE}" = "YES" ]; then
   )
 fi
 
-cmake ../src "${CMAKE_ARGS[@]}"
+cmake .. "${CMAKE_ARGS[@]}"
 
 echo " ... CMake configuration done."
 echo ""
