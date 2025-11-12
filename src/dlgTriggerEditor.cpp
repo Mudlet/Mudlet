@@ -73,7 +73,6 @@
 #include <QToolBar>
 #include <QVBoxLayout>
 
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
