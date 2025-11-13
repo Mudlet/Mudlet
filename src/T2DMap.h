@@ -54,6 +54,7 @@ class CustomLineDrawHandler;
 class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
 class CustomLineSession;
+class MiddleMousePanHandler;
 class RoomMoveActivationHandler;
 class RoomMoveDragHandler;
 class RoomContextMenuHandler;
@@ -96,6 +97,8 @@ public:
     friend class RoomContextMenuHandler;
     friend class RoomMoveDragHandler;
     friend class SelectionRectangleHandler;
+    friend class PanInteractionHandler;
+    friend class MiddleMousePanHandler;
 
     struct MapInteractionContext {
         QMouseEvent* event = nullptr;
@@ -361,6 +364,7 @@ private:
     std::unique_ptr<IInteractionHandler> mRoomMoveDragHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
+    std::unique_ptr<MiddleMousePanHandler> mMiddleMousePanHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);

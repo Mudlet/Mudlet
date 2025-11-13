@@ -120,6 +120,7 @@ set(mudlet_SRCS
     LabelInteractionHandler.cpp
     mapInfoContributorManager.cpp
     mudlet_default_client.cpp
+    MiddleMousePanHandler.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -594,7 +595,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   transfers, profile switching, and detached window management:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_WINDOW_HANDLING)
 #
-# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
