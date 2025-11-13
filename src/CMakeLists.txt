@@ -118,6 +118,8 @@ set(mudlet_SRCS
     CustomLineEditHandler.cpp
     CustomLineSession.cpp
     LabelInteractionHandler.cpp
+    mapInfoContributorManager.cpp
+    mudlet_default_client.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
