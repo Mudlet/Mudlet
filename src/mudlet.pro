@@ -679,6 +679,7 @@ SOURCES += \
     CustomLineEditHandler.cpp \
     CustomLineSession.cpp \
     LabelInteractionHandler.cpp \
+    MiddleMousePanHandler.cpp \
     PanInteractionHandler.cpp \
     RoomContextMenuHandler.cpp \
     RoomMoveActivationHandler.cpp \
@@ -826,6 +827,7 @@ HEADERS += \
     CustomLineEditHandler.h \
     CustomLineSession.h \
     LabelInteractionHandler.h \
+    MiddleMousePanHandler.h \
     PanInteractionHandler.h \
     RoomContextMenuHandler.h \
     RoomMoveActivationHandler.h \
