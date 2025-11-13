@@ -1535,8 +1535,55 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
     bool canRedoText = mpTextUndoStack->canRedo();
     bool canRedoItems = mpUndoStack && mpUndoStack->canRedo();
 
-    mpUndoAction->setEnabled(canUndoText || canUndoItems);
-    mpRedoAction->setEnabled(canRedoText || canRedoItems);
+    // Disable undo/redo in variables view since variables can be modified via Lua API
+    bool inVariablesView = (mCurrentView == EditorViewType::cmVarsView);
+
+    if (inVariablesView) {
+        // In variables view, disable buttons and clear tooltips
+        mpUndoAction->setEnabled(false);
+        mpRedoAction->setEnabled(false);
+        mpUndoAction->setToolTip(QString());
+        mpUndoAction->setStatusTip(QString());
+        mpRedoAction->setToolTip(QString());
+        mpRedoAction->setStatusTip(QString());
+    } else {
+        // In other views, enable/disable based on undo/redo availability
+        mpUndoAction->setEnabled(canUndoText || canUndoItems);
+        mpRedoAction->setEnabled(canRedoText || canRedoItems);
+
+        // Restore normal tooltips with keyboard shortcuts
+        QString undoShortcut = mpUndoAction->shortcut().toString(QKeySequence::NativeText);
+        QString redoShortcut = mpRedoAction->shortcut().toString(QKeySequence::NativeText);
+
+        // Get undo/redo text from stack if available
+        QString undoText;
+        QString redoText;
+
+        if (mpUndoStack) {
+            QString stackUndoText = mpUndoStack->undoText();
+            if (!stackUndoText.isEmpty()) {
+                undoText = tr("Undo: %1 (%2)").arg(stackUndoText, undoShortcut);
+            }
+
+            QString stackRedoText = mpUndoStack->redoText();
+            if (!stackRedoText.isEmpty()) {
+                redoText = tr("Redo: %1 (%2)").arg(stackRedoText, redoShortcut);
+            }
+        }
+
+        // Fall back to generic tooltips if no specific action text
+        if (undoText.isEmpty()) {
+            undoText = tr("Undo (%1)").arg(undoShortcut);
+        }
+        if (redoText.isEmpty()) {
+            redoText = tr("Redo (%1)").arg(redoShortcut);
+        }
+
+        mpUndoAction->setToolTip(utils::richText(undoText));
+        mpUndoAction->setStatusTip(undoText);
+        mpRedoAction->setToolTip(utils::richText(redoText));
+        mpRedoAction->setStatusTip(redoText);
+    }
 }
 
 void dlgTriggerEditor::slot_runUndoRedoTests()
@@ -10729,6 +10776,9 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     default:
         qDebug() << "ERROR: dlgTriggerEditor::changeView() undefined view";
     }
+
+    // Update undo/redo button states when changing views
+    slot_updateUndoRedoButtonStates();
 }
 
 void dlgTriggerEditor::slot_showTimers()
