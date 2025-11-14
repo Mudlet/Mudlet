@@ -665,6 +665,7 @@ SOURCES += \
     main.cpp \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
+    mudletapplication.cpp \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
@@ -814,6 +815,7 @@ HEADERS += \
     LuaInterface.h \
     mapInfoContributorManager.h \
     mudlet.h \
+    mudletapplication.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \
     ScriptUnit.h \
@@ -926,6 +928,7 @@ FORMS += \
     ui/color_trigger.ui \
     ui/composer.ui \
     ui/connection_profiles.ui \
+    ui/check_default_client.ui \
     ui/dlgPackageExporter.ui \
     ui/glyph_usage.ui \
     ui/irc.ui \

@@ -372,7 +372,7 @@ void dlgConnectionProfiles::slot_updateDescription()
 
     if (pItem) {
         const QString description = mud_description_textedit->toPlainText();
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("description"), description);
+        mudlet::self()->writeProfileData(pItem->data(csmNameRole).toString(), qsl("description"), description);
 
         // don't display custom profile descriptions as a tooltip, as passwords could be stored in there
     }
@@ -506,7 +506,7 @@ void dlgConnectionProfiles::slot_updateUrl(const QString& url)
         if (!pItem) {
             return;
         }
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("url"), host_name_entry->text());
+        mudlet::self()->writeProfileData(pItem->data(csmNameRole).toString(), qsl("url"), host_name_entry->text());
     }
 }
 
@@ -516,7 +516,7 @@ void dlgConnectionProfiles::slot_updateAutoConnect(int state)
     if (!pItem) {
         return;
     }
-    writeProfileData(pItem->data(csmNameRole).toString(), qsl("autologin"), QString::number(state));
+    mudlet::self()->writeProfileData(pItem->data(csmNameRole).toString(), qsl("autologin"), QString::number(state));
 }
 
 void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
@@ -525,7 +525,7 @@ void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
     if (!pItem) {
         return;
     }
-    writeProfileData(pItem->data(csmNameRole).toString(), qsl("autoreconnect"), QString::number(state));
+    mudlet::self()->writeProfileData(pItem->data(csmNameRole).toString(), qsl("autoreconnect"), QString::number(state));
 }
 
 // This gets called when the QCheckBox that it is connect-ed to gets its
@@ -536,7 +536,7 @@ void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
     if (!pItem) {
         return;
     }
-    writeProfileData(pItem->data(csmNameRole).toString(), qsl("discordserveroptin"), QString::number(state));
+    mudlet::self()->writeProfileData(pItem->data(csmNameRole).toString(), qsl("discordserveroptin"), QString::number(state));
 
     // in case the user is already connected, pull up stored GMCP data
     auto& hostManager = mudlet::self()->getHostManager();
@@ -576,7 +576,7 @@ void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
         if (!pItem) {
             return;
         }
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("port"), port);
+        mudlet::self()->writeProfileData(pItem->data(csmNameRole).toString(), qsl("port"), port);
     }
 }
 
@@ -587,7 +587,7 @@ void dlgConnectionProfiles::slot_updateSslTslPort(int state)
         if (!pItem) {
             return;
         }
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("ssl_tsl"), QString::number(state));
+        mudlet::self()->writeProfileData(pItem->data(csmNameRole).toString(), qsl("ssl_tsl"), QString::number(state));
     }
 }
 
@@ -689,20 +689,10 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
         // CHECKME: previous code specified a path ending in a '/'
         QDir parentpath(mudlet::getMudletPath(enums::profilesPath));
         if (!parentpath.rename(currentProfileEditName, newProfileName)) {
-            notificationArea->show();
-            notificationAreaIconLabelWarning->show();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
+            showWarningMessage(tr("Could not rename your profile data on the computer."));
         }
     } else if (!dir.mkpath(mudlet::getMudletPath(enums::profileHomePath, newProfileName))) {
-        notificationArea->show();
-        notificationAreaIconLabelWarning->show();
-        notificationAreaIconLabelError->hide();
-        notificationAreaIconLabelInformation->hide();
-        notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
+        showWarningMessage(tr("Could not create the new profile folder on your computer."));
     }
 
     if (!newProfileHost.isEmpty()) {
@@ -1601,19 +1591,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
     }
 
     // prepend n+1 to end of the profile name
-    if (profile_name.at(profile_name.size() - 1).isDigit()) {
-        int i = 1;
-        do {
-            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name));
-    } else {
-        int i = 1;
-        QString profile_name2;
-        do {
-            profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2));
-        profile_name = profile_name2;
-    }
+    mudlet::self()->generateUniqueProfileName(profile_name);
 
     pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
@@ -1775,7 +1753,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         // This settings also need to be configured, note that the only time not to
         // save the setting is on profile loading:
-        pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
+        pHost->mTelnet.setEncoding(mudlet::self()->readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());

@@ -166,6 +166,7 @@ void mudlet::init()
 
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     readEarlySettings(*mpSettings);
+    mAlwaysCheckDefault = mpSettings->value(qsl("alwaysCheckDefault"), true).toBool();
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
         // If the setting is not the "tri-state" one then force the setting,
@@ -770,6 +771,8 @@ void mudlet::init()
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(menuWindow, &QMenu::aboutToShow, this, &mudlet::updateWindowMenu);
 
+    openDefaultCheck();
+
     // PLACEMARKER: sample benchmarking code
     // looking to benchmark old/new code? Use this example
     // full docs at https://nanobench.ankerl.com
@@ -1328,6 +1331,213 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 
     smpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
     smpDebugArea->close();
+}
+
+QString mudlet::addProfile(const QString& host, const int port, const QString& login, const QString& password)
+{
+    // Check if a profile with the same host and port already exists
+    for (const auto& profileName : mHostManager.getProfileNames()) {
+        Host* existingHost = mHostManager.getHost(profileName);
+        if (existingHost && existingHost->getUrl() == host && existingHost->getPort() == port) {
+            return profileName; // Return existing profile name
+        }
+    }
+
+    // Create a new profile
+    QString newProfileName = tr("New Profile");
+    generateUniqueProfileName(newProfileName);
+
+    // Save profile data
+    writeProfileData(newProfileName, qsl("url"), host);
+    writeProfileData(newProfileName, qsl("port"), QString::number(port));
+    writeProfileData(newProfileName, qsl("login"), login);
+    writeProfileData(newProfileName, qsl("password"), password);
+
+    // Add to profile list and refresh UI
+    mHostManager.addProfileName(newProfileName);
+    if (mpConnectionDialog) {
+        mpConnectionDialog->fillout_form();
+    }
+
+    return newProfileName;
+}
+
+bool mudlet::mudletIsDefault()
+{
+#if defined(Q_OS_WINDOWS)
+    QSettings settings(qsl("HKEY_CURRENT_USER\\Software\\Classes\\telnet"), QSettings::NativeFormat);
+    return settings.value(qsl("."), QString()).contains(qApp->applicationFilePath(), Qt::CaseInsensitive);
+#elif defined(Q_OS_MACOS)
+    // On macOS, check if Mudlet is the default handler for telnet:// URLs
+    // This is a simplified check and might not cover all edge cases
+    CFURLRef telnetURL = CFURLCreateWithString(kCFAllocatorDefault, CFSTR("telnet://"), NULL);
+    if (!telnetURL) {
+        return false;
+    }
+    LSBindingReference binding;
+    OSStatus status = LSCopyBindingForURL(telnetURL, &binding);
+    CFRelease(telnetURL);
+
+    if (status == noErr) {
+        CFStringRef bundleID = binding.bundleID;
+        if (bundleID && CFStringCompare(bundleID, CFSTR("org.mudlet.mudlet"), 0) == kCFCompareEqualTo) {
+            return true;
+        }
+    }
+    return false;
+#else
+    // For Linux and other platforms, a simple check might involve looking at
+    // xdg-mime or similar desktop environment specific settings.
+    // This is a placeholder and might need more robust implementation.
+    return false;
+#endif
+}
+
+void mudlet::openDefaultCheck()
+{
+    if (mAlwaysCheckDefault && !mudletIsDefault()) {
+        if (!mpDefaultClientDlg) {
+            QUiLoader loader;
+            QFile file(qsl(":/ui/check_default_client.ui"));
+            if (!file.open(QFile::ReadOnly)) {
+                qWarning() << "mudlet: failed to open UI file for reading:" << file.errorString();
+                return;
+            }
+            mpDefaultClientDlg = dynamic_cast<QDialog*>(loader.load(&file, this));
+            file.close();
+
+            if (!mpDefaultClientDlg) {
+                return;
+            }
+
+            QCheckBox* checkBox_alwaysPerformCheck = mpDefaultClientDlg->findChild<QCheckBox*>(qsl("checkBox_alwaysPerformCheck"));
+            if (checkBox_alwaysPerformCheck) {
+                checkBox_alwaysPerformCheck->setChecked(mAlwaysCheckDefault);
+                connect(checkBox_alwaysPerformCheck, &QCheckBox::toggled, this, [this](bool checked) {
+                    mAlwaysCheckDefault = checked;
+                    mpSettings->setValue(qsl("alwaysCheckDefault"), checked);
+                });
+            }
+
+            QDialogButtonBox* buttonBox = mpDefaultClientDlg->findChild<QDialogButtonBox*>(qsl("buttonBox"));
+            if (buttonBox) {
+                connect(buttonBox, &QDialogButtonBox::accepted, this, &mudlet::setMudletAsDefault);
+                connect(buttonBox, &QDialogButtonBox::rejected, mpDefaultClientDlg, &QDialog::reject);
+            }
+
+            mpDefaultClientDlg->setAttribute(Qt::WA_DeleteOnClose);
+        }
+        mpDefaultClientDlg->show();
+    }
+}
+
+void mudlet::setMudletAsDefault()
+{
+#if defined(Q_OS_WINDOWS)
+    QSettings settings(qsl("HKEY_CURRENT_USER\\Software\\Classes\\telnet"), QSettings::NativeFormat);
+    settings.setValue(qsl("."), qApp->applicationFilePath());
+    settings.setValue(qsl("shell\\open\\command\\."), qApp->applicationFilePath() + qsl(" \"%1\""));
+    QMessageBox::information(this, tr("Default Client"), tr("Mudlet has been set as your default Telnet client."));
+#elif defined(Q_OS_MACOS)
+    // On macOS, register Mudlet as the default handler for telnet:// URLs
+    // This requires modifying the Info.plist and using LSSetDefaultHandlerForURLScheme
+    // For simplicity, this example assumes Info.plist is already configured.
+    // A more robust solution would involve creating a temporary Info.plist or
+    // using a helper application.
+    CFStringRef telnetScheme = CFSTR("telnet");
+    CFStringRef mudletBundleID = CFSTR("org.mudlet.mudlet"); // Replace with your actual bundle ID
+
+    OSStatus status = LSSetDefaultHandlerForURLScheme(telnetScheme, mudletBundleID);
+    if (status == noErr) {
+        QMessageBox::information(this, tr("Default Client"), tr("Mudlet has been set as your default Telnet client."));
+    } else {
+        QMessageBox::warning(this, tr("Default Client"), tr("Failed to set Mudlet as default Telnet client. Error: %1").arg(status));
+    }
+#else
+    // For Linux and other platforms, this would involve xdg-mime or similar.
+    QMessageBox::information(this, tr("Default Client"), tr("Setting Mudlet as default Telnet client is not yet supported on this platform."));
+#endif
+}
+
+void mudlet::handleTelnetUri(const QUrl& url)
+{
+    if (!url.isValid() || url.scheme() != qsl("telnet")) {
+        return;
+    }
+
+    QString host = url.host();
+    int port = url.port(23);
+    QString login = url.userName();
+    QString password = url.password();
+
+    // Check if a profile with this host and port already exists
+    QString profileName;
+    for (const auto& pName : mHostManager.getProfileNames()) {
+        Host* existingHost = mHostManager.getHost(pName);
+        if (existingHost && existingHost->getUrl() == host && existingHost->getPort() == port) {
+            profileName = pName;
+            break;
+        }
+    }
+
+    if (profileName.isEmpty()) {
+        // No existing profile, create a new one
+        profileName = addProfile(host, port, login, password);
+    }
+
+    // Now, load and connect to the profile
+    if (!profileName.isEmpty()) {
+        loadProfile(profileName, true);
+    }
+}
+
+void mudlet::openConnectionsWindow(const QString& profileNameToSelect)
+{
+    if (mpConnectionDialog) {
+        mpConnectionDialog->raise();
+        mpConnectionDialog->activateWindow();
+        if (!profileNameToSelect.isEmpty()) {
+            mpConnectionDialog->selectProfile(profileNameToSelect);
+        }
+        return;
+    }
+
+    mpConnectionDialog = new dlgConnectionProfiles(this);
+    connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
+    mpConnectionDialog->fillout_form();
+
+    if (!profileNameToSelect.isEmpty()) {
+        mpConnectionDialog->selectProfile(profileNameToSelect);
+    }
+
+    mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mpConnectionDialog->show();
+}
+
+void mudlet::installDefaultPackages(Host *pHost)
+{
+    if (!pHost) {
+        return;
+    }
+
+    // Install appropriate mapper script for the game
+    if (pHost->getUrl().contains(qsl("aetolia.com"), Qt::CaseInsensitive) || pHost->getUrl().contains(qsl("achaea.com"), Qt::CaseInsensitive)
+        || pHost->getUrl().contains(qsl("lusternia.com"), Qt::CaseInsensitive)
+        || pHost->getUrl().contains(qsl("imperian.com"), Qt::CaseInsensitive)) {
+        packagesToInstallList.append(qsl(":/mudlet-mapper.xml"));
+    } else if (pHost->getUrl().contains(qsl("3scapes.org"), Qt::CaseInsensitive) || pHost->getUrl().contains(qsl("3k.org"), Qt::CaseInsensitive)) {
+        packagesToInstallList.append(qsl(":/3k-mapper.xml"));
+    } else if ( not pHost->getUrl().contains(qsl("mudlet.org"), Qt::CaseInsensitive) ) {
+        packagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+    }
+    if (pHost->getUrl().contains(qsl("mudlet.org"), Qt::CaseInsensitive)) {
+        packagesToInstallList.append(qsl(":/run-tests.xml"));
+    } else {
+        packagesToInstallList.append(qsl(":/send-text-to-all-games.xml"));
+        packagesToInstallList.append(qsl(":/deleteOldProfiles.xml"));
+        packagesToInstallList.append(qsl(":/echo.xml"));
+    }
+    packagesToInstallList.append(qsl(":/run-lua-code-v4.xml"));
 }
 
 // As we are currently only using files from a resource file we only need to
@@ -4102,6 +4312,55 @@ void mudlet::slot_replay()
 
     // No third argument causes error messages to be sent to pHost's main console:
     loadReplay(pHost, fileName);
+}
+
+QString mudlet::readProfileData(const QString& profile, const QString& item)
+{
+    QFile file(getMudletPath(enums::profileDataItemPath, profile, item));
+    if (!file.exists()) {
+        return QString();
+    }
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
+        return QString();
+    }
+
+    QDataStream ifs(&file);
+    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(scmQDataStreamFormat_5_12);
+    }
+    QString ret;
+
+    ifs >> ret;
+    file.close();
+    return ret;
+}
+
+QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
+{
+    // Ensure the profile directory exists before attempting to write profile data
+    const QDir profileDir;
+    const QString profileHomePath = getMudletPath(enums::profileHomePath, profile);
+    if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
+        qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
+        return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
+    }
+
+    QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
+    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QDataStream ofs(&file);
+        ofs << what;
+        if (!file.commit()) {
+            qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+        }
+    }
+
+    if (file.error() == QFile::NoError) {
+        return qMakePair(true, QString());
+    }
+
+    return qMakePair(false, file.errorString());
 }
 
 QString mudlet::readProfileData(const QString& profile, const QString& item)

@@ -270,6 +270,8 @@ public:
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
     bool isVersionAtLeast(const QString& minVersion);
+    void handleTelnetUri(const QUrl& url);
+    void openConnectionsWindow(const QString& profileNameToSelect = QString());
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
 
@@ -643,6 +645,8 @@ private:
     QKeySequence mKeySequenceToggleLogging;
     QKeySequence mKeySequenceToggleEmergencyStop;
     bool mIsGoingDown = false;
+    bool mAlwaysCheckDefault;
+    QPointer<QDialog> mpDefaultClientDlg;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each

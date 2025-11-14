@@ -207,7 +207,8 @@ set(mudlet_SRCS
     VarUnit.cpp
     WideComboBox.cpp
     XMLexport.cpp
-    XMLimport.cpp)
+    XMLimport.cpp
+    mudletapplication.cpp)
 
 if(APPLE)
   # Sparkle updater for macOS

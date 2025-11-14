@@ -24,6 +24,7 @@
 
 #include "HostManager.h"
 #include "mudlet.h"
+#include "mudletapplication.h"
 #include "MudletInstanceCoordinator.h"
 #include <chrono>
 #include <QCommandLineParser>
@@ -186,7 +187,7 @@ int main(int argc, char* argv[])
 #endif // INCLUDE_3DMAPPER
 #endif
 
-    auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+    auto app = new MudletApplication(argc, argv);
 
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
@@ -226,6 +227,8 @@ int main(int argc, char* argv[])
     mudlet::start();
     // Detect config path before any files are read
     mudlet::self()->setupConfig();
+
+    QObject::connect(app, &MudletApplication::urlReceived, mudlet::self(), &mudlet::handleTelnetUri);
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;

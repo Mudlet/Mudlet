@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1055</width>
-    <height>876</height>
+    <height>768</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -296,6 +296,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_checkMudletDefault">
+            <property name="toolTip">
+             <string>&lt;p&gt;Open &lt;code&gt;telnet://&lt;/code&gt; links with Mudlet&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Always check if Mudlet is your default client</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -304,58 +314,41 @@
          <property name="title">
           <string>Game protocols</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_protocols">
+         <layout class="QGridLayout" name="gridLayout_2">
           <item row="0" column="0">
-           <widget class="QPushButton" name="pushButton_chooseProtocols">
+           <widget class="QCheckBox" name="mEnableGMCP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables GMCP - provides Mud Client Protocol information upon connection for supported games&lt;/p&gt;</string>
+            </property>
             <property name="text">
-             <string>Choose protocols</string>
+             <string>Enable GMCP</string>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QLabel" name="need_reconnect_for_data_protocol">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="mouseTracking">
-             <bool>false</bool>
+           <widget class="QCheckBox" name="mEnableMSSP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Please reconnect to your game for the change to take effect</string>
-            </property>
-            <property name="textFormat">
-             <enum>Qt::TextFormat::AutoText</enum>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
+             <string>Enable MSSP</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QCheckBox" name="acceptServerGUI">
-            <property name="text">
-             <string>Allow server to install script packages</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="acceptServerMedia">
+           <widget class="QCheckBox" name="mEnableMSDP">
             <property name="toolTip">
-             <string>&lt;p&gt;This also needs GMCP to be enabled in the protocols.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Allow server to download and play media</string>
+             <string>Enable MSDP</string>
             </property>
            </widget>
           </item>
-         </layout>
-        </widget>
-       </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QLabel" name="need_reconnect_for_data_protocol">
+            <property name="enabled">
+             <bool>true</bool>
        <item>
         <widget class="QGroupBox" name="groupBox_logOptions">
          <property name="title">

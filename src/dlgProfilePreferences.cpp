@@ -96,6 +96,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
     checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
+    checkBox_checkMudletDefault->setChecked(pMudlet->mAlwaysCheckDefault);
     checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
@@ -3256,6 +3257,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    pMudlet->mAlwaysCheckDefault = checkBox_checkMudletDefault->isChecked();
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
     pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
 
