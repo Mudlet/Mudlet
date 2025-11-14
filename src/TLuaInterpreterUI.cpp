@@ -3124,6 +3124,13 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, windowName);
     console->setWrapAt(luaFrom);
+
+    // Sync Host value for main console so Preferences UI reflects the change
+    if (windowName.isEmpty() || windowName == qsl("main")) {
+        Host& host = getHostFromLua(L);
+        host.mWrapAt = luaFrom;
+    }
+
     return 0;
 }
 
@@ -3134,6 +3141,13 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setIndentCount(luaFrom);
+
+    // Sync Host value for main console so Preferences UI reflects the change
+    if (windowName.isEmpty() || windowName == qsl("main")) {
+        Host& host = getHostFromLua(L);
+        host.mWrapIndentCount = luaFrom;
+    }
+
     return 0;
 }
 
@@ -3144,6 +3158,13 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setHangingIndentCount(luaFrom);
+
+    // Sync Host value for main console so Preferences UI reflects the change
+    if (windowName.isEmpty() || windowName == qsl("main")) {
+        Host& host = getHostFromLua(L);
+        host.mWrapHangingIndentCount = luaFrom;
+    }
+
     return 0;
 }
 
