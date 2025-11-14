@@ -3126,7 +3126,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     console->setWrapAt(luaFrom);
 
     // Sync Host value for main console so Preferences UI reflects the change
-    if (windowName.isEmpty() || windowName == qsl("main")) {
+    if (console->getType() & TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapAt = luaFrom;
     }
@@ -3143,7 +3143,7 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     console->setIndentCount(luaFrom);
 
     // Sync Host value for main console so Preferences UI reflects the change
-    if (windowName.isEmpty() || windowName == qsl("main")) {
+    if (console->getType() & TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapIndentCount = luaFrom;
     }
@@ -3160,7 +3160,7 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     console->setHangingIndentCount(luaFrom);
 
     // Sync Host value for main console so Preferences UI reflects the change
-    if (windowName.isEmpty() || windowName == qsl("main")) {
+    if (console->getType() & TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapHangingIndentCount = luaFrom;
     }
