@@ -761,6 +761,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
+    setBoolAttribute(qsl("mMapperShowGrid"), pHost->mMapperShowGrid);
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
     setBoolAttribute(qsl("mVersionInTTYPE"), pHost->mVersionInTTYPE);
     setBoolAttribute(qsl("mPromptedForVersionInTTYPE"), pHost->mPromptedForVersionInTTYPE);
@@ -965,6 +966,12 @@ void XMLimport::readHost(Host* pHost)
 
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
         pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
+    }
+
+    pHost->mMapGridLineSize = attributes().value(qsl("mMapGridLineSize")).toString().toDouble();
+
+    if (qFuzzyCompare(1.0 + pHost->mMapGridLineSize, 1.0)) {
+        pHost->mMapGridLineSize = 0.5; // Same value as is in Host class initializer list
     }
 
     const QStringView ignore(attributes().value(qsl("mDoubleClickIgnore")));
@@ -1292,6 +1299,10 @@ void XMLimport::readHost(Host* pHost)
                 pHost->mRoomBorderColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mRoomCollisionBorderColor")) {
                 pHost->mRoomCollisionBorderColor = QColor::fromString(readElementText());
+            } else if (name() == qsl("mMapGridColor")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
+                pHost->mMapGridColor = QColor::fromString(readElementText());
+                pHost->mMapGridColor.setAlpha(alpha);
             } else if (name() == qsl("mMapInfoBg")) {
                 auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg = QColor::fromString(readElementText());

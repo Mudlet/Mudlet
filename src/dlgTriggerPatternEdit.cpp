@@ -22,7 +22,6 @@
 
 #include "dlgTriggerPatternEdit.h"
 
-#include "pre_guard.h"
 #include <QAbstractButton>
 #include <QAbstractItemView>
 #include <QAbstractScrollArea>
@@ -33,7 +32,6 @@
 #include <QLineEdit>
 #include <QPalette>
 #include <QWidget>
-#include "post_guard.h"
 #include <QAction>
 #include <QDebug>
 

@@ -54,6 +54,15 @@ QString displayText = tr("Connection failed: %1").arg(errorMessage);
 QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 ```
 
+```xml
+// In .ui files, set "notr" attribute to true for string literals which require no translation
+<widget>
+  <property name="text">
+    <string notr="true">-</string>
+  </property>
+</widget>
+```
+
 ### Memory management
 
 - Use Qt's parent-child system for automatic cleanup for Qt classes
