@@ -56,7 +56,6 @@
 #include <QSet>
 #include <QStringList>
 #include <QVector>
-#include "post_guard.h"
 
 // Edbee editor includes
 #include "edbee/edbee.h"
