@@ -279,6 +279,8 @@ void TMxpMudlet::insertText(const QString& text)
         std::string textToInsert = text.toStdString();
         mpHost->mpConsole->buffer.translateToPlainText(textToInsert, false);
     }
+}
+
 bool TMxpMudlet::shouldLockModeToSecure() const
 {
     return mpHost && mpHost->getForceMXPProcessorOn();
