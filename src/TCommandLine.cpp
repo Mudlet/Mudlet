@@ -633,6 +633,11 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 
 void TCommandLine::hideEvent(QHideEvent* event)
 {
+    // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
+    if (mType == SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
+        mpHost->mpConsole->mpCommandLine->setFocus();
+    }
+
     QPlainTextEdit::hideEvent(event);
 }
 

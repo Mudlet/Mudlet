@@ -70,6 +70,7 @@ bool TMxpProcessor::setMode(int modeCode)
     // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20TagsmMXP = true; // some servers don't negotiate, they assume!
 
     mMXP = true;
+    
     switch (modeCode) {
     case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
         mMXP_MODE = MXP_MODE_OPEN;
@@ -97,6 +98,10 @@ bool TMxpProcessor::setMode(int modeCode)
         mMXP_MODE = MXP_MODE_TEMP_SECURE;
         break;
     case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
+        // When force MXP is enabled with secure mode locked, prevent server from changing default back to OPEN
+        if (mMXP_DEFAULT == MXP_MODE_SECURE && mpMxpClient && mpMxpClient->shouldLockModeToSecure()) {
+            return true; // Acknowledge but don't change mode
+        }
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
         break;
     case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
@@ -107,6 +112,10 @@ bool TMxpProcessor::setMode(int modeCode)
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
         break;
     case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
+        // When force MXP is enabled with secure mode locked, prevent server from changing default to LOCKED
+        if (mMXP_DEFAULT == MXP_MODE_SECURE && mpMxpClient && mpMxpClient->shouldLockModeToSecure()) {
+            return true; // Acknowledge but don't change mode
+        }
         // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
         if (mMXP_MODE == MXP_MODE_OPEN) {
             mpMxpClient->resetTextProperties();

@@ -76,32 +76,18 @@ jobs:
         rm -rf boost-*/* download.7z
       shell: bash
 
-    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
-    - name: Use CMake 3.20.1
-      uses: lukka/get-cmake@v3.20.1
+    - name: Use CMake 3.30.3
+      uses: lukka/get-cmake@v3.30.3
 
-    - name: (Linux) Install non-vcpkg dependencies (1/2)
+    - name: (Linux) Install dependencies
       if: runner.os == 'Linux'
       run: |
-        # gettext is needed for vcpkg
-        sudo apt-get install gettext -y
+        sudo apt-get update
 
-    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
-    - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v7
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
-      with:
-        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
-        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
-
-    - name: (Linux) Install non-vcpkg dependencies (2/2)
-      if: runner.os == 'Linux'
-      run: |
-        # Install from vcpkg everything we can for cross-platform consistency
-        # If not available, use other methods
-        sudo apt-get install libsecret-1-dev pkg-config libzip-dev libglu1-mesa-dev libpulse-dev -y
+        # Install all required dependencies
+        # liblua5.1-0-dev is needed for CMake to find Lua headers/library
+        sudo apt-get install libsecret-1-dev ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev \
+          libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
 
         echo "Skipping generation of translation stats, so not installing lua-yajl."
 
@@ -110,14 +96,12 @@ jobs:
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        useVcpkgToolchainFile: true
         # has to be the github workspace, not the runner workspace, for the docker-based clang-tidy-review
         buildDirectory: '${{github.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DVCPKG_APPLOCAL_DEPS=OFF
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         buildWithCMakeArgs: >-
           --target autogen
