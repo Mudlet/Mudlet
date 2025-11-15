@@ -65,6 +65,7 @@
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QJsonDocument>
@@ -1384,9 +1385,9 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
 bool mudlet::mudletIsDefault()
 {
 #if defined(Q_OS_WINDOWS)
-    QSettings settings(qsl("HKEY_CURRENT_USER\\Software\\Classes\\telnet"), QSettings::NativeFormat);
-    QString defaultCommand = settings.value(qsl("."), QString()).toString();
-    return defaultCommand.contains(qApp->applicationFilePath(), Qt::CaseInsensitive);
+    QSettings settings(qsl("HKEY_CURRENT_USER\\Software\\Classes\\telnet\\shell\\open\\command"), QSettings::NativeFormat);
+    QString command = settings.value(qsl("."), QString()).toString();
+    return command.contains(qApp->applicationFilePath(), Qt::CaseInsensitive);
 #elif defined(Q_OS_MACOS)
     // On macOS, check if Mudlet is the default handler for telnet:// URLs
     CFStringRef telnetScheme = CFSTR("telnet");
@@ -1396,7 +1397,7 @@ bool mudlet::mudletIsDefault()
         return false;
     }
     
-    bool isDefault = (coreMacOS::CFStringCompare(defaultHandler, CFSTR("org.mudlet.Mudlet"), 0) == coreMacOS::kCFCompareEqualTo);
+    bool isDefault = (coreMacOS::CFStringCompare(defaultHandler, CFSTR("org.mudlet.mudlet"), 0) == coreMacOS::kCFCompareEqualTo);
     coreMacOS::CFRelease(defaultHandler);
     
     return isDefault;
@@ -1451,8 +1452,10 @@ void mudlet::setMudletAsDefault()
 {
 #if defined(Q_OS_WINDOWS)
     QSettings settings(qsl("HKEY_CURRENT_USER\\Software\\Classes\\telnet"), QSettings::NativeFormat);
-    settings.setValue(qsl("."), qApp->applicationFilePath());
-    settings.setValue(qsl("shell\\open\\command\\."), qApp->applicationFilePath() + qsl(" \"%1\""));
+    settings.setValue(qsl("."), qsl("URL:Telnet Protocol"));
+    settings.setValue(qsl("URL Protocol"), qsl(""));
+    QString command = qsl("\"%1\" \"%2\"").arg(QDir::toNativeSeparators(qApp->applicationFilePath()), qsl("%1"));
+    settings.setValue(qsl("shell\\open\\command\\."), command);
     QMessageBox::information(this, tr("Default Client"), tr("Mudlet has been set as your default Telnet client."));
 #elif defined(Q_OS_MACOS)
     // On macOS, register Mudlet as the default handler for telnet:// URLs
