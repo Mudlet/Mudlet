@@ -1,5 +1,5 @@
-#ifndef MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H
-#define MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H
+#ifndef MUDLET_EDITORMODIFYPROPERTYCOMMAND_H
+#define MUDLET_EDITORMODIFYPROPERTYCOMMAND_H
 
 /***************************************************************************
  *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
