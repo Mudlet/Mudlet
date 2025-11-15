@@ -339,7 +339,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
     replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
-    replayButton->setToolTip(utils::richText(tr("Toggle recording of replays")));
+    //: Button tooltip for the replay recording toggle button
+    replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
@@ -885,13 +886,21 @@ void TConsole::slot_toggleReplayRecording()
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
         printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
+        replayButton->setIcon(QIcon(qsl(":/icons/media-tape-red-cross.png")));
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
     } else {
         if (!mReplayFile.commit()) {
             qDebug() << "TConsole::slot_toggleReplayRecording: error saving replay: " << mReplayFile.errorString();
+            //: Informational message displayed when replay recording is stopped but could not be saved
             printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved.") % QChar::LineFeed);
         } else {
+            //: Informational message displayed when replay recording is stopped
             printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
         }
+        replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     }
 }
 
