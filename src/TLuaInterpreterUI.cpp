@@ -782,6 +782,7 @@ int TLuaInterpreter::resetLinkStyle(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearVisitedLinks
 int TLuaInterpreter::clearVisitedLinks(lua_State* L)
 {
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
