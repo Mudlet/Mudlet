@@ -106,6 +106,8 @@ class QTableWidgetItem;
 class QTextEdit;
 class QToolButton;
 class QTimer;
+class QDialog;
+class QUrl;
 
 class dlgAboutDialog;
 class dlgConnectionProfiles;
