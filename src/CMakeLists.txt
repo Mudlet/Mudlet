@@ -696,9 +696,12 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 
 if (USE_SENTRY)
   add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "Copying crashpad_handler..."
+    COMMAND test -f ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler || (echo "Error: crashpad_handler not found at expected location" && exit 1)
     COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
     $<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/crashpad_handler
+    VERBATIM
   )
 endif()
 
