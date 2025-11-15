@@ -1377,17 +1377,17 @@ bool mudlet::mudletIsDefault()
 #elif defined(Q_OS_MACOS)
     // On macOS, check if Mudlet is the default handler for telnet:// URLs
     // This is a simplified check and might not cover all edge cases
-    CFURLRef telnetURL = CFURLCreateWithString(kCFAllocatorDefault, CFSTR("telnet://"), NULL);
+    CFURLRef telnetURL = coreMacOS::CFURLCreateWithString(coreMacOS::kCFAllocatorDefault, CFSTR("telnet://"), NULL);
     if (!telnetURL) {
         return false;
     }
-    LSBindingReference binding;
-    OSStatus status = LSCopyBindingForURL(telnetURL, &binding);
-    CFRelease(telnetURL);
+    coreMacOS::LSBindingReference binding;
+    coreMacOS::OSStatus status = coreMacOS::LSCopyBindingForURL(telnetURL, &binding);
+    coreMacOS::CFRelease(telnetURL);
 
-    if (status == noErr) {
+    if (status == coreMacOS::noErr) {
         CFStringRef bundleID = binding.bundleID;
-        if (bundleID && CFStringCompare(bundleID, CFSTR("org.mudlet.mudlet"), 0) == kCFCompareEqualTo) {
+        if (bundleID && coreMacOS::CFStringCompare(bundleID, CFSTR("org.mudlet.mudlet"), 0) == coreMacOS::kCFCompareEqualTo) {
             return true;
         }
     }
@@ -1454,8 +1454,8 @@ void mudlet::setMudletAsDefault()
     CFStringRef telnetScheme = CFSTR("telnet");
     CFStringRef mudletBundleID = CFSTR("org.mudlet.mudlet"); // Replace with your actual bundle ID
 
-    OSStatus status = LSSetDefaultHandlerForURLScheme(telnetScheme, mudletBundleID);
-    if (status == noErr) {
+    coreMacOS::OSStatus status = coreMacOS::LSSetDefaultHandlerForURLScheme(telnetScheme, mudletBundleID);
+    if (status == coreMacOS::noErr) {
         QMessageBox::information(this, tr("Default Client"), tr("Mudlet has been set as your default Telnet client."));
     } else {
         QMessageBox::warning(this, tr("Default Client"), tr("Failed to set Mudlet as default Telnet client. Error: %1").arg(status));
