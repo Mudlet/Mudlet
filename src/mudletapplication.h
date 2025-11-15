@@ -22,6 +22,8 @@
 #define MUDLET_MUDLETAPPLICATION_H
 
 #include <QApplication>
+#include <QEvent>
+#include <QUrl>
 
 class MudletApplication : public QApplication
 {
