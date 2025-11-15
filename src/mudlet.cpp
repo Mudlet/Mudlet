@@ -1376,22 +1376,17 @@ bool mudlet::mudletIsDefault()
     return settings.value(qsl("."), QString()).contains(qApp->applicationFilePath(), Qt::CaseInsensitive);
 #elif defined(Q_OS_MACOS)
     // On macOS, check if Mudlet is the default handler for telnet:// URLs
-    // This is a simplified check and might not cover all edge cases
-    CFURLRef telnetURL = coreMacOS::CFURLCreateWithString(coreMacOS::kCFAllocatorDefault, CFSTR("telnet://"), NULL);
-    if (!telnetURL) {
+    CFStringRef telnetScheme = CFSTR("telnet");
+    CFStringRef defaultHandler = coreMacOS::LSCopyDefaultHandlerForURLScheme(telnetScheme);
+    
+    if (!defaultHandler) {
         return false;
     }
-    coreMacOS::LSBindingReference binding;
-    coreMacOS::OSStatus status = coreMacOS::LSCopyBindingForURL(telnetURL, &binding);
-    coreMacOS::CFRelease(telnetURL);
-
-    if (status == coreMacOS::noErr) {
-        CFStringRef bundleID = binding.bundleID;
-        if (bundleID && coreMacOS::CFStringCompare(bundleID, CFSTR("org.mudlet.mudlet"), 0) == coreMacOS::kCFCompareEqualTo) {
-            return true;
-        }
-    }
-    return false;
+    
+    bool isDefault = (coreMacOS::CFStringCompare(defaultHandler, CFSTR("org.mudlet.Mudlet"), 0) == coreMacOS::kCFCompareEqualTo);
+    coreMacOS::CFRelease(defaultHandler);
+    
+    return isDefault;
 #else
     // For Linux and other platforms, a simple check might involve looking at
     // xdg-mime or similar desktop environment specific settings.
