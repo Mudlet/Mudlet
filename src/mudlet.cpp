@@ -1429,6 +1429,7 @@ void mudlet::openDefaultCheck()
             }
 
             mpDefaultClientDlg->setAttribute(Qt::WA_DeleteOnClose);
+            connect(mpDefaultClientDlg, &QObject::destroyed, this, &mudlet::onDefaultClientDlgDestroyed);
         }
         mpDefaultClientDlg->show();
     }
@@ -1460,6 +1461,11 @@ void mudlet::setMudletAsDefault()
     // For Linux and other platforms, this would involve xdg-mime or similar.
     QMessageBox::information(this, tr("Default Client"), tr("Setting Mudlet as default Telnet client is not yet supported on this platform."));
 #endif
+}
+
+void mudlet::onDefaultClientDlgDestroyed()
+{
+    mpDefaultClientDlg = nullptr;
 }
 
 void mudlet::handleTelnetUri(const QUrl& url)

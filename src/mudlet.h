@@ -528,6 +528,7 @@ public slots:
     void synchronizeToolBarVisibility(bool visible);
     void slot_showTriggerDialog();
     void slot_showVariableDialog();
+    void onDefaultClientDlgDestroyed();
 
 protected:
     void closeEvent(QCloseEvent*) override;
