@@ -137,7 +137,13 @@ public:
 
     void setCaptionForSendEvent(const QString& caption) override;
 
+    int getWrapWidth() const override;
+
+    void insertText(const QString& text) override;
+
     QStack<TMxpEvent> mPendingSendEvents;
+    
+    bool shouldLockModeToSecure() const override;
 
 private:
     bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const;
