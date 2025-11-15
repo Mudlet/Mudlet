@@ -1358,7 +1358,7 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
     writeProfileData(newProfileName, qsl("port"), QString::number(port));
     writeProfileData(newProfileName, qsl("login"), login);
     if (!password.isEmpty()) {
-        CredentialManager::instance().storePassword(newProfileName, login, password);
+        CredentialManager::storeCredential(newProfileName, login, password);
     }
 
     // Refresh UI if connection dialog is open
@@ -1551,7 +1551,7 @@ void mudlet::installDefaultPackages(Host *pHost)
     
     // Install the packages
     for (const auto& package : packagesToInstallList) {
-        pHost->installPackage(package, 0);
+        pHost->installPackage(package, enums::PackageModuleType::Package);
     }
 }
 
