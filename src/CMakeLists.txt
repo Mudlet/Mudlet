@@ -698,13 +698,16 @@ set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_N
 target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 
 if (USE_SENTRY)
-  add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Copying crashpad_handler..."
-    COMMAND ${CMAKE_COMMAND} -E fail_if_not_exists ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
-    COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
-      $<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/crashpad_handler
-  )
+  if(EXISTS "${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler")
+    add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E echo "Copying crashpad_handler..."
+      COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
+        $<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/crashpad_handler
+    )
+  else()
+    message(FATAL_ERROR "crashpad_handler not found at ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler")
+  endif()
 endif()
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
