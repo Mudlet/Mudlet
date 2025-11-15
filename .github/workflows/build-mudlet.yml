@@ -162,7 +162,8 @@ jobs:
           libhunspell-dev \
           liblua5.1-0-dev \
           libboost-dev \
-          libpipewire-0.3-dev -y
+          libpipewire-0.3-dev \
+          gdb -y
 
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
