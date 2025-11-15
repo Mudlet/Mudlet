@@ -421,6 +421,7 @@ public:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
+    bool mAlwaysCheckDefault = true;
 
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
@@ -645,7 +646,6 @@ private:
     QKeySequence mKeySequenceToggleLogging;
     QKeySequence mKeySequenceToggleEmergencyStop;
     bool mIsGoingDown = false;
-    bool mAlwaysCheckDefault;
     QPointer<QDialog> mpDefaultClientDlg;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;

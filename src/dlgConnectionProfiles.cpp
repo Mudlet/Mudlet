@@ -892,7 +892,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
 {
-    QString profileDesc = readProfileData(profile_name, qsl("description"));
+    QString profileDesc = mudlet::self()->readProfileData(profile_name, qsl("description"));
 
     if (profileDesc.isEmpty()) {
         auto itDetails = TGameDetails::findGame(profile_name);
@@ -930,7 +930,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     profile_name_entry->setText(profile_name);
 
-    QString host_url = readProfileData(profile_name, qsl("url"));
+    QString host_url = mudlet::self()->readProfileData(profile_name, qsl("url"));
     if (host_url.isEmpty()) {
         // Host to connect to, see below for port
         auto it = TGameDetails::findGame(profile_name);
@@ -940,8 +940,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     }
     host_name_entry->setText(host_url);
 
-    QString host_port = readProfileData(profile_name, qsl("port"));
-    QString val = readProfileData(profile_name, qsl("ssl_tsl"));
+    QString host_port = mudlet::self()->readProfileData(profile_name, qsl("port"));
+    QString val = mudlet::self()->readProfileData(profile_name, qsl("ssl_tsl"));
     if (val.toInt() == Qt::Checked) {
         port_ssl_tsl->setChecked(true);
     } else {
@@ -971,31 +971,31 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         timer->start(0);
     }
 
-    val = readProfileData(profile_name, qsl("login"));
+    val = mudlet::self()->readProfileData(profile_name, qsl("login"));
     login_entry->setText(val);
 
-    val = readProfileData(profile_name, qsl("autologin"));
+    val = mudlet::self()->readProfileData(profile_name, qsl("autologin"));
     if (val.toInt() == Qt::Checked) {
         autologin_checkBox->setChecked(true);
     } else {
         autologin_checkBox->setChecked(false);
     }
 
-    val = readProfileData(profile_name, qsl("autoreconnect"));
+    val = mudlet::self()->readProfileData(profile_name, qsl("autoreconnect"));
     if (!val.isEmpty() && val.toInt() == Qt::Checked) {
         auto_reconnect->setChecked(true);
     } else {
         auto_reconnect->setChecked(false);
     }
 
-    mDiscordApplicationId = readProfileData(profile_name, qsl("discordApplicationId"));
-    mDiscordInviteURL = readProfileData(profile_name, qsl("discordInviteURL"));
+    mDiscordApplicationId = mudlet::self()->readProfileData(profile_name, qsl("discordApplicationId"));
+    mDiscordInviteURL = mudlet::self()->readProfileData(profile_name, qsl("discordInviteURL"));
 
     // val will be null if this is the first time the profile has been read
     // since an update to a Mudlet version supporting Discord - so a toint()
     // will return 0 - which just happens to be Qt::Unchecked() but let's not
     // rely on that...
-    val = readProfileData(profile_name, qsl("discordserveroptin"));
+    val = mudlet::self()->readProfileData(profile_name, qsl("discordserveroptin"));
     if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
         discord_optin_checkBox->setChecked(true);
     } else {
@@ -1006,7 +1006,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     mud_description_textedit->setPlainText(getDescription(profile_name));
 
-    val = readProfileData(profile_name, qsl("website"));
+    val = mudlet::self()->readProfileData(profile_name, qsl("website"));
     if (val.isEmpty()) {
         auto it = TGameDetails::findGame(profile_name);
         if (it != TGameDetails::scmDefaultGames.end()) {
@@ -1552,8 +1552,13 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         return false;
     }
 
-    // prepend n+1 to end of the profile name
-    mudlet::self()->generateUniqueProfileName(profile_name);
+    // Generate a unique profile name by appending a number if needed
+    QString originalName = profile_name;
+    int counter = 1;
+    while (mudlet::self()->profileExists(profile_name)) {
+        profile_name = originalName + QString(" (%1)").arg(counter);
+        counter++;
+    }
 
     pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
