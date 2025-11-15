@@ -906,6 +906,19 @@ QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
     return profileDesc;
 }
 
+void dlgConnectionProfiles::selectProfile(const QString& profileName)
+{
+    // Find the profile in the list and select it
+    for (int i = 0; i < listWidget_profiles->count(); ++i) {
+        QListWidgetItem* item = listWidget_profiles->item(i);
+        if (item && item->data(csmNameRole).toString() == profileName) {
+            listWidget_profiles->setCurrentItem(item);
+            slot_itemClicked(item);
+            return;
+        }
+    }
+}
+
 void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 {
     if (!pItem) {

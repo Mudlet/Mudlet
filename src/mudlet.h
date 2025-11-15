@@ -274,6 +274,11 @@ public:
     void openConnectionsWindow(const QString& profileNameToSelect = QString());
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
+    QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
+    bool mudletIsDefault();
+    void openDefaultCheck();
+    void setMudletAsDefault();
+    void installDefaultPackages(Host* pHost);
 
     // Profile validation and orphan detection
     bool hasOrphanedProfiles();

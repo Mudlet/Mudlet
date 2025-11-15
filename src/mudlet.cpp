@@ -1472,7 +1472,7 @@ void mudlet::handleTelnetUri(const QUrl& url)
 
     // Check if a profile with this host and port already exists
     QString profileName;
-    for (const auto& pName : mHostManager.getProfileNames()) {
+    for (const auto& pName : mHostManager.getHostList().keys()) {
         Host* existingHost = mHostManager.getHost(pName);
         if (existingHost && existingHost->getUrl() == host && existingHost->getPort() == port) {
             profileName = pName;
@@ -4363,54 +4363,6 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
     return qMakePair(false, file.errorString());
 }
 
-QString mudlet::readProfileData(const QString& profile, const QString& item)
-{
-    QFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    if (!file.exists()) {
-        return QString();
-    }
-
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
-        return QString();
-    }
-
-    QDataStream ifs(&file);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
-    }
-    QString ret;
-
-    ifs >> ret;
-    file.close();
-    return ret;
-}
-
-QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
-{
-    // Ensure the profile directory exists before attempting to write profile data
-    const QDir profileDir;
-    const QString profileHomePath = getMudletPath(enums::profileHomePath, profile);
-    if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
-        qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
-        return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
-    }
-
-    QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs << what;
-        if (!file.commit()) {
-            qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
-        }
-    }
-
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
-    }
-
-    return qMakePair(false, file.errorString());
-}
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
 {
