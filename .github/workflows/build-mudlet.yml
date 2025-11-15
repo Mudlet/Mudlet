@@ -276,7 +276,7 @@ jobs:
         else
           $LUAROCKS lua-zip
           $LUAROCKS LuaSQL-SQLite3 2.6.1
-          $LUAROCKS lrexlib-pcre
+          $LUAROCKS lrexlib-pcre 2.9.1-1
         fi
 
         $LUAROCKS argparse
