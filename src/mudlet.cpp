@@ -773,8 +773,9 @@ void mudlet::init()
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(menuWindow, &QMenu::aboutToShow, this, &mudlet::updateWindowMenu);
 
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
     openDefaultCheck();
-
+#endif
     // PLACEMARKER: sample benchmarking code
     // looking to benchmark old/new code? Use this example
     // full docs at https://nanobench.ankerl.com
