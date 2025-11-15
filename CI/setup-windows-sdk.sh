@@ -146,7 +146,7 @@ echo "Building harfbuzz without graphite2"
 git clone https://github.com/harfbuzz/harfbuzz.git
 cd harfbuzz || exit 1
 meson setup build --prefix=/mingw${BUILD_BITNESS} --buildtype=release -Dgraphite=disabled -Dtests=disabled
-meson compile -C build -j $(nproc)
+meson compile -C build -j "$(nproc)"
 meson install -C build
 
 echo ""
