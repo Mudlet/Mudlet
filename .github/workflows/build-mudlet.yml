@@ -18,45 +18,41 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    env:
+      LUA_VERSION: '5.1.5'
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Note: using / in the "buildname" has significance - replacing the
-          # ',' in some of the following with a '/' seemed to cause extra
-          # spurious steps in the build and broke things! - SlySven
-          # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests'
-            triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 11
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
+
           - os: ubuntu-22.04
-            # Another try to use GCC12
             buildname: 'ubuntu (x86_64)'
-            triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 12
             qt: '6.9.0'
+
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
-            triplet: x64-linux
             compiler: clang_64
             gcc_compiler_version: 11
             qt: '6.9.0'
+
           - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
-            triplet: x64-osx
             compiler: clang_64
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
+
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
-            triplet: arm64-osx
             compiler: clang_64
             qt: '6.9.0'
             deploy: 'deploy'
@@ -84,7 +80,7 @@ jobs:
       if: runner.os == 'macOS'
       uses: leafo/gh-actions-lua@v12
       with:
-        luaVersion: "5.1.5"
+        luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
 
     - name: (macOS) Install Luarocks via GitHub Actions
@@ -99,10 +95,7 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # Install all required dependencies
         BREWS=("libzzip" "libzip" "ccache" "expect" "assimp" "hunspell" "pcre" "pugixml" "sqlite" "yajl" "boost")
-
-        # Loop through each brew package
         for brew in "${BREWS[@]}"; do
           if ! brew list --formula "${brew}" &>/dev/null; then
             echo "Installing ${brew}..."
@@ -113,28 +106,20 @@ jobs:
         done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-
-        # Use latest available XCode
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
         echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
 
-        # Help CMake find Lua installed by gh-actions-lua
-        # The action installs to .lua/ and .luarocks/ in the runner home
-        echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
-
-        # Help CMake find keg-only Homebrew packages (PCRE is keg-only on macOS)
-        echo "PKG_CONFIG_PATH=/usr/local/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-
-        # Install lua-yajl early to generate translation statistics
-        # Detect Homebrew prefix (differs between x86_64 and ARM64)
         if [ "$(uname -m)" = "arm64" ]; then
-          YAJL_PREFIX=/opt/homebrew/opt/yajl
+          HOMEBREW_PREFIX=/opt/homebrew
         else
-          YAJL_PREFIX=/usr/local/opt/yajl
+          HOMEBREW_PREFIX=/usr/local
         fi
-        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=$YAJL_PREFIX
+        echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
 
-        # Allow stats generation script to see location of lua-yajl
+        echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
@@ -143,7 +128,7 @@ jobs:
       uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
       with:
-        luaVersion: "5.1.5"
+        luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
 
     - name: (Linux) Install Luarocks via GitHub Actions
@@ -153,13 +138,9 @@ jobs:
     - name: (Linux) Install dependencies
       if: runner.os == 'Linux'
       run: |
-        # Add the PPA for necessary GCC version
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get update
 
-        # Install all required dependencies
-        # imagemagick is for the desktop screenshot
-        # liblua5.1-0-dev is needed for CMake to find Lua headers/library
         sudo apt-get install \
           libcurl4-openssl-dev \
           libsecret-1-dev \
@@ -183,7 +164,6 @@ jobs:
           libboost-dev \
           libpipewire-0.3-dev -y
 
-        # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
@@ -191,10 +171,7 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-        # Install lua-yajl early to generate translation statistics
-        luarocks install --local lua-yajl
-
-        # Allow stats generation script to see location of lua-yajl
+        luarocks --lua-version 5.1 install --local lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
@@ -237,7 +214,6 @@ jobs:
         brew install pcre
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
-        # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
         echo "CXX=clang++" >> $GITHUB_ENV
         echo "CC=clang" >> $GITHUB_ENV
 
@@ -278,10 +254,11 @@ jobs:
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
-        luarocks --lua-version 5.1 install --local LuaFileSystem
-        luarocks --lua-version 5.1 install --local luautf8
+        LUAROCKS="luarocks --lua-version 5.1 install --local"
 
-        # Detect paths for dependencies that need DIR hints on macOS
+        $LUAROCKS LuaFileSystem
+        $LUAROCKS luautf8
+
         if [ "$RUNNER_OS" = "macOS" ]; then
           if [ "$(uname -m)" = "arm64" ]; then
             ZIP_PREFIX=/opt/homebrew/opt/libzip
@@ -296,20 +273,15 @@ jobs:
           luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=$SQLITE_PREFIX
           luarocks --lua-version 5.1 install --local lrexlib-pcre 2.9.1-1 PCRE_DIR=$PCRE_PREFIX
         else
-          luarocks --lua-version 5.1 install --local lua-zip
-          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
-          luarocks --lua-version 5.1 install --local lrexlib-pcre 2.9.1-1
+          $LUAROCKS lua-zip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1
+          $LUAROCKS lrexlib-pcre
         fi
 
-        # CI changelog generation dependencies
-        luarocks --lua-version 5.1 install --local argparse
-        luarocks --lua-version 5.1 install --local lunajson
+        $LUAROCKS argparse
+        $LUAROCKS lunajson
+        $LUAROCKS busted
 
-        # Lua-based tests
-        luarocks --lua-version 5.1 install --local busted
-
-        # necessary for Qt multimedia and modern Qt
-        # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
         fi
@@ -338,16 +310,18 @@ jobs:
           ln -s "$YAJL_LIB_PATH" "$FAKE_VCPKG_DIR/packages/yajl_${{matrix.triplet}}/lib/libyajl.2.dylib"
           export VCPKG_ROOT=$FAKE_VCPKG_DIR
         fi
+
         export ARCH=$(uname -m)
         echo "ARCH=$ARCH" >> $GITHUB_ENV
+
         if [ "$RUNNER_OS" = "macOS" ] && [ "$ARCH" = "arm64" ]; then
-          # dblsqd only supports 'arm' as an architecture and not 'arm64'
           export ARCH_DBLSQD=arm
           echo "ARCH_DBLSQD=arm" >> $GITHUB_ENV
         else
           export ARCH_DBLSQD=$ARCH
           echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
         fi
+
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
@@ -362,7 +336,6 @@ jobs:
         APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
         APPLE_PASSWORD: ${{secrets.APPLE_PASSWORD}}
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
-        TRIPLET: ${{matrix.triplet}}
 
     - name: Upload debug symbols and source to sentry.io
       if: env.WITH_SENTRY == 'yes'
@@ -373,17 +346,17 @@ jobs:
           echo "No SENTRY_AUTH_TOKEN available, skipping debug symbol upload"
           exit 0
         fi
+
         sudo pip install --upgrade sentry-cli
         export SENTRY_ORG=mudlet
         export SENTRY_PROJECT=mudlet
         export SENTRY_VERSION=${{env.VERSION}}${{env.MUDLET_VERSION_BUILD}}
-        # setup version within sentry
+
         sentry-cli releases new $SENTRY_VERSION
         sentry-cli releases set-commits $SENTRY_VERSION --auto
         sentry-cli releases finalize $SENTRY_VERSION
-        # upload debug symbols and source code to sentry
+
         if [ "$RUNNER_OS" = "macOS" ]; then
-          # On macOS, upload the app bundle and find .dylib files for Luarocks
           if [ -d "${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
             MUDLET_BINARY="${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app"
           elif [ -d "${{runner.workspace}}/b/ninja/Mudlet PTB.app" ]; then
@@ -393,7 +366,6 @@ jobs:
           fi
           sentry-cli debug-files upload --include-sources --wait "$MUDLET_BINARY" $(find ~/.luarocks -name "*.dylib" -o -name "*.so")
         else
-          # On Linux, upload the binary and find .so files for Luarocks
           sentry-cli debug-files upload --include-sources --wait ${{runner.workspace}}/b/ninja/src/mudlet $(find ~/.luarocks -name "*.so")
         fi
 
@@ -407,9 +379,7 @@ jobs:
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
-      shell: bash
 
-    # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
       run: |
@@ -417,7 +387,6 @@ jobs:
         if [ "${{matrix.deploy}}" == "deploy" ]; then
           cp -f ${{runner.workspace}}/b/ninja/src/crashpad_handler ${{github.workspace}}/src
         fi
-      shell: bash
 
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -431,7 +400,6 @@ jobs:
         fi
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
-      shell: bash
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
@@ -445,7 +413,6 @@ jobs:
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
-      shell: bash
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
