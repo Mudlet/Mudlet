@@ -91,6 +91,7 @@
 #include <QToolTip>
 #include <QVariantHash>
 #include <QRandomGenerator>
+#include <QRegularExpression>
 #include <memory>
 #include <zip.h>
 #include <QStyle>
@@ -1335,21 +1336,28 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 
 QString mudlet::addProfile(const QString& host, const int port, const QString& login, const QString& password)
 {
-    // Check if a profile with the same host and port already exists
+    // Check if a profile with the same host and port already exists on disk
     QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const auto& profileName : profileNames) {
-        Host* existingHost = mHostManager.getHost(profileName);
-        if (existingHost && existingHost->getUrl() == host && existingHost->getPort() == port) {
+        if (readProfileData(profileName, qsl("url")) == host && readProfileData(profileName, qsl("port")).toInt() == port) {
             return profileName; // Return existing profile name
         }
     }
 
-    // Create a new profile with unique name
-    QString newProfileName = tr("New Profile");
-    QString originalName = newProfileName;
+    // Create a new profile with unique name derived from host
+    QString baseName = host;
+    if (baseName.isEmpty()) {
+        baseName = tr("New Profile");
+    }
+    baseName.remove(QRegularExpression(qsl("[/\\\\:*?\"<>|]"))); // remove invalid characters for directory names
+    if (baseName.isEmpty()) {
+        baseName = tr("New Profile");
+    }
+
+    QString newProfileName = baseName;
     int counter = 1;
     while (profileExists(newProfileName)) {
-        newProfileName = originalName + QString(" (%1)").arg(counter);
+        newProfileName = baseName + QString(" (%1)").arg(counter);
         counter++;
     }
 
@@ -1358,7 +1366,11 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
     writeProfileData(newProfileName, qsl("port"), QString::number(port));
     writeProfileData(newProfileName, qsl("login"), login);
     if (!password.isEmpty()) {
-        CredentialManager::storeCredential(newProfileName, login, password);
+        if (mStorePasswordsSecurely) {
+            CredentialManager::storeCredential(newProfileName, login, password);
+        } else {
+            writeProfileData(newProfileName, qsl("password"), password);
+        }
     }
 
     // Refresh UI if connection dialog is open
@@ -1483,8 +1495,7 @@ void mudlet::handleTelnetUri(const QUrl& url)
     QString profileName;
     QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const auto& pName : profileNames) {
-        Host* existingHost = mHostManager.getHost(pName);
-        if (existingHost && existingHost->getUrl() == host && existingHost->getPort() == port) {
+        if (readProfileData(pName, qsl("url")) == host && readProfileData(pName, qsl("port")).toInt() == port) {
             profileName = pName;
             break;
         }
@@ -1498,6 +1509,7 @@ void mudlet::handleTelnetUri(const QUrl& url)
     // Now, load and connect to the profile
     if (!profileName.isEmpty()) {
         loadProfile(profileName, true);
+        slot_connectionDialogueFinished(profileName, true);
     }
 }
 
