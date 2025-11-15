@@ -2050,12 +2050,15 @@ function hecho2string(text)
   return x2string(text, "Hex")
 end
 
-local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
+-- Lua pattern for ANSI escape sequences (converted from PCRE regex)
+-- Matches: \e\[([0-9:;]*?)m
+-- Note: Using string.gsub instead of rex.gsub to avoid memory corruption issues in lrexlib-pcre
+local ansiPattern = "\27%[([0-9:;]-)m"
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
   assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
-  local result = rex.gsub(text, ansiPattern, "")
+  local result = string.gsub(text, ansiPattern, "")
   return result
 end
 
@@ -2067,9 +2070,9 @@ function ansi2decho(text, ansi_default_color)
   local lastColour = ansi_default_color
   local coloursToUse = nil
 
-  -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
+  -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
-  local result = rex.gsub(text, ansiPattern, function(s)
+  local result = string.gsub(text, ansiPattern, function(s)
     local output = {} -- assemble the output into this table
 
     local delim = ";"

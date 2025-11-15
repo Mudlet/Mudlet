@@ -64,7 +64,8 @@ end
 -- then compiling them.
 function datetime:_get_pattern(format)
   if not datetime._pattern_cache[format] then
-    local fmt = rex.gsub(format, "(%[A-Za-z])",
+    -- Using string.gsub instead of rex.gsub to avoid memory corruption issues in lrexlib-pcre
+    local fmt = string.gsub(format, "(%%[A-Za-z])",
     function(m)
       return datetime._directives[m] or m
     end
