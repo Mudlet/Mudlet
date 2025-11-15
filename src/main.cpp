@@ -258,7 +258,7 @@ int main(int argc, char* argv[])
     // Only disable Sentry on Linux when running auto-run Lua tests in CI
     // (AUTORUN_BUSTED_TESTS is set by the workflow for the Linux run)
     #if defined(Q_OS_LINUX)
-        disableSentry = qEnvironmentVariableIsSet("AUTORUN_BUSTED_TESTS");
+        disableSentry = !qEnvironmentVariable("AUTORUN_BUSTED_TESTS").isNull();
     #endif
 
     if (!disableSentry) {

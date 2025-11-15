@@ -415,7 +415,7 @@ bool SecureStringUtils::isTestEnvironment()
     QString appName = QCoreApplication::applicationName();
     QStringList args = QCoreApplication::arguments();
 
-    return qEnvironmentVariableIsSet("MUDLET_TEST_MODE") ||
+    return !qEnvironmentVariable("MUDLET_TEST_MODE").isNull() ||
            appName.contains("Test", Qt::CaseInsensitive) ||
            args.first().contains("Test", Qt::CaseInsensitive);
 }

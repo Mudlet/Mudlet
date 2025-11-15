@@ -159,7 +159,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
+    if (mudlet::self()->developmentVersion && qEnvironmentVariable("DEV_UPDATER").isNull()) {
         // tick the box and make it be "un-untickable" as automatic updates are
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
@@ -3238,7 +3238,7 @@ void dlgProfilePreferences::slot_saveAndClose()
     mudlet::self()->smSendCrashesForReleases = checkBox_crashreportsOfficial->isChecked();
     mudlet::self()->smSendCrashesForTesting = checkBox_crashreportsTesting->isChecked();
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER")) {
+    if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion || !qEnvironmentVariable("DEV_UPDATER").isNull()) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif
