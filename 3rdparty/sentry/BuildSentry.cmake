@@ -16,5 +16,5 @@ endif()
 # we need EXCLUDE_FROM_ALL to suppress the installation of sentry into the macOS bundle
 # and Linux packages
 # TODO - resolve this
-add_subdirectory(${sentry_SOURCE_DIR} ${sentry_BINARY_DIR})
+add_subdirectory(${sentry_SOURCE_DIR} ${sentry_BINARY_DIR} EXCLUDE_FROM_ALL)
 set(CMAKE_MESSAGE_LOG_LEVEL ${mll})
