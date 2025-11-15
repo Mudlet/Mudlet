@@ -1336,25 +1336,32 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 QString mudlet::addProfile(const QString& host, const int port, const QString& login, const QString& password)
 {
     // Check if a profile with the same host and port already exists
-    for (const auto& profileName : mHostManager.getProfileNames()) {
+    QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const auto& profileName : profileNames) {
         Host* existingHost = mHostManager.getHost(profileName);
         if (existingHost && existingHost->getUrl() == host && existingHost->getPort() == port) {
             return profileName; // Return existing profile name
         }
     }
 
-    // Create a new profile
+    // Create a new profile with unique name
     QString newProfileName = tr("New Profile");
-    generateUniqueProfileName(newProfileName);
+    QString originalName = newProfileName;
+    int counter = 1;
+    while (profileExists(newProfileName)) {
+        newProfileName = originalName + QString(" (%1)").arg(counter);
+        counter++;
+    }
 
     // Save profile data
     writeProfileData(newProfileName, qsl("url"), host);
     writeProfileData(newProfileName, qsl("port"), QString::number(port));
     writeProfileData(newProfileName, qsl("login"), login);
-    writeProfileData(newProfileName, qsl("password"), password);
+    if (!password.isEmpty()) {
+        CredentialManager::instance().storePassword(newProfileName, login, password);
+    }
 
-    // Add to profile list and refresh UI
-    mHostManager.addProfileName(newProfileName);
+    // Refresh UI if connection dialog is open
     if (mpConnectionDialog) {
         mpConnectionDialog->fillout_form();
     }
@@ -1472,7 +1479,8 @@ void mudlet::handleTelnetUri(const QUrl& url)
 
     // Check if a profile with this host and port already exists
     QString profileName;
-    for (const auto& pName : mHostManager.getHostList().keys()) {
+    QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const auto& pName : profileNames) {
         Host* existingHost = mHostManager.getHost(pName);
         if (existingHost && existingHost->getUrl() == host && existingHost->getPort() == port) {
             profileName = pName;
@@ -1520,6 +1528,8 @@ void mudlet::installDefaultPackages(Host *pHost)
         return;
     }
 
+    QStringList packagesToInstallList;
+
     // Install appropriate mapper script for the game
     if (pHost->getUrl().contains(qsl("aetolia.com"), Qt::CaseInsensitive) || pHost->getUrl().contains(qsl("achaea.com"), Qt::CaseInsensitive)
         || pHost->getUrl().contains(qsl("lusternia.com"), Qt::CaseInsensitive)
@@ -1538,6 +1548,11 @@ void mudlet::installDefaultPackages(Host *pHost)
         packagesToInstallList.append(qsl(":/echo.xml"));
     }
     packagesToInstallList.append(qsl(":/run-lua-code-v4.xml"));
+    
+    // Install the packages
+    for (const auto& package : packagesToInstallList) {
+        pHost->installPackage(package, 0);
+    }
 }
 
 // As we are currently only using files from a resource file we only need to
