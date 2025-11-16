@@ -143,6 +143,8 @@ public:
 
     QStack<TMxpEvent> mPendingSendEvents;
     
+    // Get the encoding used by the connection
+    QByteArray getEncoding() const override;
     bool shouldLockModeToSecure() const override;
 
 private:
