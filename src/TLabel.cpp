@@ -386,7 +386,7 @@ void TLabel::slot_linkActivated(const QString& link)
     const int colonPos = link.indexOf(':');
     
     if (colonPos > 0) {
-        const QString scheme = link.left(colonPos);
+        const QString scheme = link.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
         const QString payload = link.mid(colonPos + 1); // Everything after the colon
         
         // Handle custom Mudlet URL schemes for Lua commands
