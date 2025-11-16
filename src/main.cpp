@@ -263,7 +263,10 @@ int main(int argc, char* argv[])
 
     if (!disableSentry) {
         sentry_options_t* options = sentry_options_new();
-        sentry_options_set_dsn(options, "https://362a6ffaa959436292d8d5eb35ff0aea@o1070874.ingest.us.sentry.io/6067272");
+                // Allow override via environment variable for testing
+        QByteArray dsn = qEnvironmentVariable("MUDLET_SENTRY_DSN",
+             "https://362a6ffaa959436292d8d5eb35ff0aea@o1070874.ingest.us.sentry.io/6067272").toUtf8();
+        sentry_options_set_dsn(options, dsn.constData());
         QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
         QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
         qDebug() << "crashpad_handler path is: " << sentryCrashHandler;

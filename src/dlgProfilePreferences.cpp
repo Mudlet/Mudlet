@@ -281,13 +281,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     checkBox_crashreportsOfficial->setChecked(mudlet::self()->smSendCrashesForReleases);
         checkBox_crashreportsTesting->setChecked(mudlet::self()->smSendCrashesForTesting);
-    // only show the "Crash reports" section for testing/PTB releases if we're on one,
-    // otherwise don't add visual clutter
-    if (!mudlet::self()->releaseVersion) {
+#if defined(INCLUDE_SENTRY)
+    // show the option to send crash reports for testing builds if it's a testing build
+    if (mudlet::self()->isTestVersion() || !mudlet::self()->releaseVersion) {
         checkBox_crashreportsTesting->show();
     } else {
         checkBox_crashreportsTesting->hide();
     }
+#else
+    // Hide crash reporting UI if Sentry wasn't compiled in
+    checkBox_crashreportsOfficial->setVisible(false);
+    checkBox_crashreportsTesting->setVisible(false);
+#endif
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
@@ -3235,8 +3240,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
     }
 
+#if defined(INCLUDE_SENTRY)
     mudlet::self()->smSendCrashesForReleases = checkBox_crashreportsOfficial->isChecked();
     mudlet::self()->smSendCrashesForTesting = checkBox_crashreportsTesting->isChecked();
+#endif
 #if defined(INCLUDE_UPDATER)
     if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion || !qEnvironmentVariable("DEV_UPDATER").isNull()) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
