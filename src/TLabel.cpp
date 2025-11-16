@@ -119,7 +119,8 @@ void TLabel::setText(const QString& text)
                     // Already has a style attribute - merge our styles
                     // This is complex, so for now just prepend our styles
                     replacement = qsl("<a href=%1 style=\"%2\"").arg(hrefPart, linkStyle);
-                    // Keep other attributes after style
+                    // Intentionally overwrites any existing style attribute rather than merging
+                    // to keep implementation simple for the common case (labels without pre-existing inline styles)
                     otherAttrs.remove(QRegularExpression(qsl("style=([\"'][^\"']*[\"'])")));
                     replacement += otherAttrs + qsl(">");
                 } else {
