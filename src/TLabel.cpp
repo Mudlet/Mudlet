@@ -73,7 +73,10 @@ void TLabel::setText(const QString& text)
         QString styledText = text;
         
         // Replace all <a href="..."> tags with <a href="..." style="...">
-        // We need to handle both cases: with and without existing style attributes
+        // Note: This regex is intentionally strict (lowercase, href first, no spacing around =)
+        // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
+        // uses this format. User-provided HTML outside this pattern will still render as
+        // clickable links (Qt handles that), but won't receive custom styling.
         QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
         QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
         
