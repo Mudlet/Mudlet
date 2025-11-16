@@ -420,6 +420,10 @@ void TLabel::slot_linkActivated(const QString& link)
             QDesktopServices::openUrl(QUrl(link));
             return;
         }
+        
+        // Unknown scheme - ignore safely to prevent unintended Lua execution
+        // Only links without a scheme should be treated as Lua code
+        return;
     }
     
     // No scheme - treat as Lua code to execute

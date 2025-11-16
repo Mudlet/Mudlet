@@ -5471,7 +5471,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
     lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
     lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
-    lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
     lua_register(pGlobalLua, "setLinkStyle", TLuaInterpreter::setLinkStyle);
     lua_register(pGlobalLua, "resetLinkStyle", TLuaInterpreter::resetLinkStyle);
     lua_register(pGlobalLua, "clearVisitedLinks", TLuaInterpreter::clearVisitedLinks);
