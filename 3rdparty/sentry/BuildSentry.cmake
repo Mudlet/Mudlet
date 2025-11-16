@@ -10,8 +10,8 @@ endif()
 
 FetchContent_Declare(
   sentry
-  URL "https://github.com/getsentry/sentry-native/releases/download/0.7.19/sentry-native.zip"
-  URL_HASH SHA256=d96b8d7c3f6930d5320fc9ed3b006da23ce8dc4b8d31b63cf98a378f9482ca53
+  URL "https://github.com/getsentry/sentry-native/releases/download/0.7.17/sentry-native.zip"
+  URL_HASH SHA256=c1341a0ac02440db65f41b968a46979ceab8de765c2407efb61a99511346e098
   SOURCE_SUBDIR "."
 )
 
