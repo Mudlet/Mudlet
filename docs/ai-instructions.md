@@ -99,7 +99,7 @@ int TLuaInterpreter::functionName(lua_State* L)
 
 ### Comments
 
-Don't add comments for obvious code as that increases cognitive load on the reader. Ony add comments in unintuitive situations to explain why was something done.
+Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
 
 ### Error handling
 
