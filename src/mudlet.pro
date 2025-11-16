@@ -679,6 +679,7 @@ SOURCES += \
     CustomLineEditHandler.cpp \
     CustomLineSession.cpp \
     LabelInteractionHandler.cpp \
+    MiddleMousePanHandler.cpp \
     PanInteractionHandler.cpp \
     RoomContextMenuHandler.cpp \
     RoomMoveActivationHandler.cpp \
@@ -718,6 +719,7 @@ SOURCES += \
     TMedia.cpp \
     TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
+    TMxpHRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
@@ -826,6 +828,7 @@ HEADERS += \
     CustomLineEditHandler.h \
     CustomLineSession.h \
     LabelInteractionHandler.h \
+    MiddleMousePanHandler.h \
     PanInteractionHandler.h \
     RoomContextMenuHandler.h \
     RoomMoveActivationHandler.h \
@@ -863,6 +866,7 @@ HEADERS += \
     TMediaData.h \
     TMediaPlaylist.h \
     TMxpBRTagHandler.h \
+    TMxpHRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
     TMxpCustomElementTagHandler.h \

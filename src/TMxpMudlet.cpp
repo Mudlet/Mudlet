@@ -264,3 +264,24 @@ bool TMxpMudlet::isTagAllowedInMode(const QString& tagName, TMXPMode mode) const
     
     return openModeTags.contains(tagName);
 }
+
+int TMxpMudlet::getWrapWidth() const
+{
+    // Return the host's configured wrap width, with a sensible minimum
+    return qMax(mpHost->mWrapAt, 40);
+}
+
+void TMxpMudlet::insertText(const QString& text)
+{
+    // Insert text by feeding it back through the MXP processing pipeline
+    // This ensures it respects the current line buffer state
+    if (mpHost && mpHost->mpConsole) {
+        std::string textToInsert = text.toStdString();
+        mpHost->mpConsole->buffer.translateToPlainText(textToInsert, false);
+    }
+}
+
+bool TMxpMudlet::shouldLockModeToSecure() const
+{
+    return mpHost && mpHost->getForceMXPProcessorOn();
+}

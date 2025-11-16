@@ -30,6 +30,7 @@
 #include "TMxpExpireTagHandler.h"
 #include "TMxpFontTagHandler.h"
 #include "TMxpFormattingTagsHandler.h"
+#include "TMxpHRTagHandler.h"
 #include "TMxpLinkTagHandler.h"
 #include "TMxpMusicTagHandler.h"
 #include "TMxpSendTagHandler.h"
@@ -86,19 +87,32 @@ void TMxpTagProcessor::handleContent(char ch)
 
 TMxpTagProcessor::TMxpTagProcessor()
 {
-    registerHandler(new TMxpVersionTagHandler());
-    registerHandler(new TMxpSupportTagHandler());
+    // Version control tags
+    registerHandler(TMxpFeatureOptions({"version", {}}), new TMxpVersionTagHandler());
+    registerHandler(TMxpFeatureOptions({"support", {}}), new TMxpSupportTagHandler());
 
+    // Variable and entity tags
     registerHandler(TMxpFeatureOptions({"var", {"publish"}}), new TMxpVarTagHandler());
+    registerHandler(TMxpFeatureOptions({"entity", {"name", "value", "desc", "private", "publish", "delete", "add", "remove"}}), new TMxpEntityTagHandler());
+    
+    // Line spacing tags
     registerHandler(TMxpFeatureOptions({"br", {}}), new TMxpBRTagHandler());
+    registerHandler(TMxpFeatureOptions({"hr", {}}), new TMxpHRTagHandler());
+    
+    // Link tags
     registerHandler(TMxpFeatureOptions({"send", {"href", "hint", "prompt", "expire"}}), new TMxpSendTagHandler());
     registerHandler(TMxpFeatureOptions({"a", {"href", "hint", "expire"}}), new TMxpLinkTagHandler());
-    registerHandler(new TMxpExpireTagHandler());
+    registerHandler(TMxpFeatureOptions({"expire", {"name"}}), new TMxpExpireTagHandler());
+    
+    // Color and font tags
     registerHandler(TMxpFeatureOptions({"color", {"fore", "back"}}), new TMxpColorTagHandler());
     registerHandler(TMxpFeatureOptions({"font", {"color", "back"}}), new TMxpFontTagHandler());
+    
+    // Media tags (MSP compatibility)
     registerHandler(TMxpFeatureOptions({"sound", {"fname", "v", "l", "p", "t", "u"}}), new TMxpSoundTagHandler());
     registerHandler(TMxpFeatureOptions({"music", {"fname", "v", "l", "p", "c", "t", "u"}}), new TMxpMusicTagHandler());
 
+    // Formatting tags (text style)
     mSupportedMxpElements["b"] = QVector<QString>();
     mSupportedMxpElements["bold"] = QVector<QString>();
     mSupportedMxpElements["strong"] = QVector<QString>();
@@ -115,10 +129,20 @@ TMxpTagProcessor::TMxpTagProcessor()
     mSupportedMxpElements["s"] = QVector<QString>();
     mSupportedMxpElements["strikeout"] = QVector<QString>();
 
+    // Additional HTML tags - recognized but not styled differently
+    mSupportedMxpElements["h1"] = QVector<QString>();
+    mSupportedMxpElements["h2"] = QVector<QString>();
+    mSupportedMxpElements["h3"] = QVector<QString>();
+    mSupportedMxpElements["h4"] = QVector<QString>();
+    mSupportedMxpElements["h5"] = QVector<QString>();
+    mSupportedMxpElements["h6"] = QVector<QString>();
+    mSupportedMxpElements["small"] = QVector<QString>();
+    mSupportedMxpElements["tt"] = QVector<QString>();
+
     mRegisteredHandlers.append(QSharedPointer<TMxpTagHandler>(new TMxpFormattingTagsHandler()));
 
-    registerHandler(new TMxpEntityTagHandler());
-    registerHandler(new TMxpElementDefinitionHandler());
+    // Custom element support
+    registerHandler(TMxpFeatureOptions({"element", {"name", "definition", "att", "tag", "flag", "open", "delete", "empty"}}), new TMxpElementDefinitionHandler());
     registerHandler(new TMxpCustomElementTagHandler());
 }
 
