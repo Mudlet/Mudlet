@@ -710,7 +710,7 @@ if (USE_SENTRY)
   add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
-    ${CMAKE_BINARY_DIR}/release/crashpad_handler
+    $<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/crashpad_handler
   )
 endif()
 
