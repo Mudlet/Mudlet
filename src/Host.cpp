@@ -4067,7 +4067,6 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
             QRegularExpression re("background-color:[^;]*;");
             styleSheet.replace(re, newColor);
         } else {
-            // Add newline before appending if stylesheet is not empty and doesn't end with newline
             if (!styleSheet.isEmpty() && !styleSheet.endsWith('\n')) {
                 styleSheet.append('\n');
             }

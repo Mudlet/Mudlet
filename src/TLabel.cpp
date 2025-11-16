@@ -42,18 +42,12 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 {
     setMouseTracking(true);
     setObjectName(qsl("label_%1_%2").arg(pH->getName(), mName));
-    
-    // Enable HTML/rich text formatting so hyperlinks are rendered
+
     setTextFormat(Qt::RichText);
-    
-    // Enable clickable hyperlinks in HTML content
     setTextInteractionFlags(Qt::TextBrowserInteraction);
-    setOpenExternalLinks(false); // We'll handle links ourselves via slot_linkActivated
-    
-    // Connect the linkActivated signal to our custom handler
+    setOpenExternalLinks(false);
+
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
-    
-    // Note: Default link colors will be set via QPalette when setLinkStyle() is called
 }
 
 TLabel::~TLabel()
@@ -71,7 +65,7 @@ void TLabel::setText(const QString& text)
     // widget stylesheets or QPalette for link colors when a stylesheet exists
     if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && text.contains(qsl("<a "))) {
         QString styledText = text;
-        
+
         // Replace all <a href="..."> tags with <a href="..." style="...">
         // Note: This regex is intentionally strict (lowercase, href first, no spacing around =)
         // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
@@ -79,44 +73,39 @@ void TLabel::setText(const QString& text)
         // clickable links (Qt handles that), but won't receive custom styling.
         QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
         QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
-        
+
         // Process matches in reverse order to avoid offset issues
         QList<QRegularExpressionMatch> matches;
         while (it.hasNext()) {
             matches.prepend(it.next());
         }
-        
+
         for (const auto& match : matches) {
             QString fullMatch = match.captured(0);
             QString hrefPart = match.captured(1);  // The href="..." part
             QString otherAttrs = match.captured(2); // Other attributes
-            
+
             // Extract the actual URL from hrefPart (remove quotes)
             QString url = hrefPart;
             url.remove(0, 1); // Remove opening quote
             url.chop(1);      // Remove closing quote
-            
-            // Check if this link has been visited
+
             bool isVisited = mVisitedLinks.contains(url);
-            
-            // Build the inline style for this specific link
+
             QString linkStyle;
             if (isVisited && !mLinkVisitedColor.isEmpty()) {
-                // Use visited color
                 linkStyle += qsl("color: %1; ").arg(mLinkVisitedColor);
             } else if (!mLinkColor.isEmpty()) {
-                // Use normal link color
                 linkStyle += qsl("color: %1; ").arg(mLinkColor);
             }
-            
+
             if (!mLinkUnderline) {
                 linkStyle += qsl("text-decoration: none; ");
             }
-            
+
             if (!linkStyle.isEmpty()) {
-                // Remove trailing space
                 linkStyle = linkStyle.trimmed();
-                
+
                 QString replacement;
                 if (otherAttrs.contains(qsl("style="))) {
                     // Already has a style attribute - merge our styles
@@ -127,14 +116,13 @@ void TLabel::setText(const QString& text)
                     otherAttrs.remove(QRegularExpression(qsl("style=([\"'][^\"']*[\"'])")));
                     replacement += otherAttrs + qsl(">");
                 } else {
-                    // No style attribute - add ours
                     replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, otherAttrs);
                 }
-                
+
                 styledText.replace(match.capturedStart(), match.capturedLength(), replacement);
             }
         }
-        
+
         QLabel::setText(styledText);
     } else {
         QLabel::setText(text);
@@ -301,7 +289,7 @@ void TLabel::releaseFunc(const int existingFunction, const int newFunction)
 void TLabel::setClickThrough(bool clickthrough)
 {
     setAttribute(Qt::WA_TransparentForMouseEvents, clickthrough);
-    
+
     // If clickthrough is enabled, text interaction (including hyperlinks) won't work
     // So we need to disable text interaction when clickthrough is on
     if (clickthrough) {
@@ -318,27 +306,27 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
     mLinkColor = linkColor;
     mLinkVisitedColor = linkVisitedColor;
     mLinkUnderline = underline;
-    
+
     // Set QPalette as a fallback (works if no stylesheet is set on the widget)
     QPalette palette = this->palette();
-    
+
     if (!linkColor.isEmpty()) {
         QColor color(linkColor);
         palette.setColor(QPalette::Active, QPalette::Link, color);
         palette.setColor(QPalette::Inactive, QPalette::Link, color);
     }
-    
+
     if (!linkVisitedColor.isEmpty()) {
         QColor color(linkVisitedColor);
         palette.setColor(QPalette::Active, QPalette::LinkVisited, color);
         palette.setColor(QPalette::Inactive, QPalette::LinkVisited, color);
     }
-    
+
     setPalette(palette);
-    
+
     // Note: Widget stylesheets don't affect QTextDocument rendering
     // Link colors are applied via inline styles in setText()
-    
+
     // Force update to re-render with new styles
     update();
 }
@@ -347,11 +335,11 @@ void TLabel::resetLinkStyle()
 {
     // Reset to default palette colors
     setPalette(QPalette());
-    
+
     mLinkColor.clear();
     mLinkVisitedColor.clear();
     mLinkUnderline = true;
-    
+
     // Force update to re-render
     update();
 }
@@ -359,7 +347,7 @@ void TLabel::resetLinkStyle()
 void TLabel::clearVisitedLinks()
 {
     mVisitedLinks.clear();
-    
+
     // Refresh the label to update link colors back to unvisited state
     QString currentText = text();
     if (!currentText.isEmpty() && currentText.contains(qsl("<a "))) {
@@ -376,7 +364,7 @@ void TLabel::slot_linkActivated(const QString& link)
     // Mark this link as visited for styling purposes
     if (!mLinkVisitedColor.isEmpty()) {
         mVisitedLinks.insert(link);
-        
+
         // Refresh the label to update link colors
         // We need to re-apply the current text to trigger the styling update
         QString currentText = text();
@@ -387,18 +375,18 @@ void TLabel::slot_linkActivated(const QString& link)
 
     // Check for custom schemes by looking for the colon separator
     const int colonPos = link.indexOf(':');
-    
+
     if (colonPos > 0) {
         const QString scheme = link.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
         const QString payload = link.mid(colonPos + 1); // Everything after the colon
-        
+
         // Handle custom Mudlet URL schemes for Lua commands
         if (scheme == qsl("send")) {
             // send: scheme - send the command to the MUD immediately
             mpHost->send(payload);
             return;
         }
-        
+
         if (scheme == qsl("prompt")) {
             // prompt: scheme - put text in command line and wait for user to press enter
             if (mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
@@ -418,18 +406,18 @@ void TLabel::slot_linkActivated(const QString& link)
             }
             return;
         }
-        
+
         // Handle external URL schemes using QUrl for proper parsing
         if (scheme == qsl("http") || scheme == qsl("https")) {
             QDesktopServices::openUrl(QUrl(link));
             return;
         }
-        
+
         // Unknown scheme - ignore safely to prevent unintended Lua execution
         // Only links without a scheme should be treated as Lua code
         return;
     }
-    
+
     // No scheme - treat as Lua code to execute
     mpHost->mLuaInterpreter.compileAndExecuteScript(link);
 }
