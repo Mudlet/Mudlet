@@ -164,9 +164,6 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     && mMxpTagBuilder.isInsideTag()
     && !mMxpTagBuilder.isQuotedSequence()
     && !mMxpTagBuilder.isInsideComment()) {
-        qDebug() << "=== NESTED TAG PATH ===";
-        qDebug() << "Raw tag content (fromStdString):" << QString::fromStdString(mMxpTagBuilder.getRawTagContent());
-        qDebug() << "=======================";
         lastEntityValue = qsl("<") + QString::fromStdString(mMxpTagBuilder.getRawTagContent());
         mMxpTagBuilder.resetForNewTag();
         return HANDLER_INSERT_ENTITY_LIT;
@@ -179,29 +176,16 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     if (mMxpTagBuilder.hasTag()) {
         // Save raw tag content before it gets cleared by buildTag()
         // Note: getRawTagContent() returns content INCLUDING the closing '>'
-        std::string rawTagBytes = mMxpTagBuilder.getRawTagContent();
-        QString rawTagContent = qsl("<");
-        
-        // Get the encoding being used by the connection
+        const std::string rawTagBytes = mMxpTagBuilder.getRawTagContent();
         const QByteArray encoding = mpMxpClient->getEncoding();
         
-        // Debug logging for unhandled tags
-        qDebug() << "=== MXP Tag Debug ===";
-        qDebug() << "Encoding:" << encoding;
-        qDebug() << "Raw bytes length:" << rawTagBytes.length();
-        qDebug() << "Raw bytes (hex):";
-        for (size_t i = 0; i < rawTagBytes.length(); ++i) {
-            printf("  [%zu] 0x%02x (%c)\n", i, static_cast<unsigned char>(rawTagBytes[i]), 
-                   isprint(static_cast<unsigned char>(rawTagBytes[i])) ? rawTagBytes[i] : '.');
-        }
-        fflush(stdout);
+        // Build the tag content string with proper encoding
+        QString rawTagContent = qsl("<");
         
         // Decode the raw bytes using the proper encoding
         if (encoding == qsl("UTF-8")) {
-            // For UTF-8, use fromStdString which handles UTF-8
             rawTagContent += QString::fromStdString(rawTagBytes);
         } else if (encoding == qsl("ISO 8859-1")) {
-            // For Latin-1, use fromLatin1
             rawTagContent += QString::fromLatin1(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
         } else {
             // For other encodings (GBK, BIG5, EUC-KR, etc.), use QTextCodec
@@ -209,15 +193,10 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             if (codec) {
                 rawTagContent += codec->toUnicode(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
             } else {
-                // Fallback: try UTF-8
+                // Fallback to UTF-8
                 rawTagContent += QString::fromStdString(rawTagBytes);
             }
         }
-        
-        // Don't add another '>' - it's already in rawTagBytes
-        
-        qDebug() << "Decoded tag content:" << rawTagContent;
-        qDebug() << "===================";
         
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
