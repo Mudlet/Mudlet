@@ -4947,6 +4947,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     pNewTrigger->setScript(script);
     pNewTrigger->setIsFolder(isFolder);
     pNewTrigger->setIsActive(false);
+    pNewTrigger->setShouldBeActive(true);
     pNewTrigger->setIsMultiline(false);
     pNewTrigger->mStayOpen = 0;
     pNewTrigger->setConditionLineDelta(0);
@@ -5173,6 +5174,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     pNewKey->setScript(script);
     pNewKey->setIsFolder(isFolder);
     pNewKey->setIsActive(false);
+    pNewKey->setShouldBeActive(true);
     pNewKey->registerKey();
 
     // Initialize tree item properties
@@ -5250,6 +5252,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     pNewAlias->setScript(script);
     pNewAlias->setIsFolder(isFolder);
     pNewAlias->setIsActive(false);
+    pNewAlias->setShouldBeActive(true);
     pNewAlias->registerAlias();
 
     // Initialize tree item properties
@@ -5408,6 +5411,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     pNewScript->setScript(script);
     pNewScript->setIsFolder(isFolder);
     pNewScript->setIsActive(false);
+    pNewScript->setShouldBeActive(true);
     pNewScript->registerScript();
 
     // Initialize tree item properties
@@ -5825,8 +5829,7 @@ void dlgTriggerEditor::saveTrigger()
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
+                    if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -5842,7 +5845,6 @@ void dlgTriggerEditor::saveTrigger()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                // Only enable truly new triggers, not existing disabled ones being loaded
                 if (pT->shouldBeActive()) {
                     pT->setIsActive(true);
                 }
@@ -6104,8 +6106,7 @@ void dlgTriggerEditor::saveAlias()
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
+                    if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -6121,7 +6122,6 @@ void dlgTriggerEditor::saveAlias()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                // Only enable truly new aliases, not existing disabled ones being loaded
                 if (pT->shouldBeActive()) {
                     pT->setIsActive(true);
                 }
@@ -6427,8 +6427,7 @@ void dlgTriggerEditor::saveScript()
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
-                // Set visual appearance based on actual active state, not "new" status
-                if (pT->isActive()) {
+                if (pT->shouldBeActive()) {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -6444,7 +6443,6 @@ void dlgTriggerEditor::saveScript()
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
 
-            // Only enable truly new scripts, not existing disabled ones being loaded
             if (pT->shouldBeActive()) {
                 pT->setIsActive(true);
             }
@@ -6818,8 +6816,7 @@ void dlgTriggerEditor::saveKey()
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
+                    if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -6835,7 +6832,6 @@ void dlgTriggerEditor::saveKey()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                // Only enable truly new keys, not existing disabled ones being loaded
                 if (pT->shouldBeActive()) {
                     pT->setIsActive(true);
                 }
