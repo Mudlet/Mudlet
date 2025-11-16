@@ -403,7 +403,6 @@ void TLabel::slot_linkActivated(const QString& link)
             return;
         }
 
-        // Handle external URL schemes using QUrl for proper parsing
         if (scheme == qsl("http") || scheme == qsl("https")) {
             QDesktopServices::openUrl(QUrl(link));
             return;
