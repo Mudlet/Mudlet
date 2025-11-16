@@ -30,7 +30,8 @@
 #include <QPointer>
 #include <QSharedPointer>
 
-#include <pcre.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 class Host;
 
@@ -76,7 +77,7 @@ public:
     QString mName;
     QString mCommand;
     QString mRegexCode;
-    QSharedPointer<pcre> mpRegex;
+    QSharedPointer<pcre2_code> mpRegex;
     QString mScript;
     QPointer<Host> mpHost;
     bool mModuleMember = false;
