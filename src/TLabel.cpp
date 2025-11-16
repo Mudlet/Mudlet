@@ -358,7 +358,6 @@ void TLabel::slot_linkActivated(const QString& link)
         return;
     }
 
-    // Mark this link as visited for styling purposes
     if (!mLinkVisitedColor.isEmpty()) {
         mVisitedLinks.insert(link);
 
