@@ -225,6 +225,7 @@ else
   # Tagged build, this is a release or a PTB build, include the updater
   export WITH_UPDATER=YES
 fi
+fi
 
 # Configure CMake with ccache and Release build type
 CMAKE_ARGS=(
