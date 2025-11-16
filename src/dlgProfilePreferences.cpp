@@ -283,7 +283,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         checkBox_crashreportsTesting->setChecked(mudlet::self()->smSendCrashesForTesting);
 #if defined(INCLUDE_SENTRY)
     // show the option to send crash reports for testing builds if it's a testing build
-    if (!mudlet::self()->releaseVersion) {
+    if (mudlet::self()->isTestVersion() || !mudlet::self()->releaseVersion) {
         checkBox_crashreportsTesting->show();
     } else {
         checkBox_crashreportsTesting->hide();

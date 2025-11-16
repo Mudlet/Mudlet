@@ -697,11 +697,20 @@ add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
 target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 
+# On Windows, output to release/ subdirectory to match CI expectations
+if(WIN32 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+  set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/release"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/release"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/debug"
+  )
+endif()
+
 if (USE_SENTRY)
   add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
-    $<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/crashpad_handler
+    ${CMAKE_BINARY_DIR}/release/crashpad_handler
   )
 endif()
 

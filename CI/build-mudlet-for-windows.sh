@@ -210,13 +210,8 @@ else
   echo "  Building without Sentry support"
 fi
 
-echo "Running qmake to make MAKEFILE ..."
-echo ""
 
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-    qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" ${QMAKE_EXTRA_ARGS}
-else
-    qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" ${QMAKE_EXTRA_ARGS}
+
 # Set updater flag based on build type
 if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
   # The updater is not helpful in this environment (PR testing build)
@@ -224,7 +219,6 @@ if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
 else
   # Tagged build, this is a release or a PTB build, include the updater
   export WITH_UPDATER=YES
-fi
 fi
 
 # Configure CMake with ccache and Release build type
