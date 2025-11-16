@@ -346,7 +346,6 @@ void TLabel::clearVisitedLinks()
 {
     mVisitedLinks.clear();
 
-    // Refresh the label to update link colors back to unvisited state
     QString currentText = text();
     if (!currentText.isEmpty() && currentText.contains(qsl("<a "))) {
         setText(currentText);
