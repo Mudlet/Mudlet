@@ -750,6 +750,8 @@ void mudlet::init()
     mFontManager.addFonts();
     // Configure emoji font support
     mFontManager.addEmojiFont();
+    // Configure CJK (Chinese/Japanese/Korean) font substitutions
+    mFontManager.addCJKFontSubstitutions();
 
     // Initialise a couple of QMaps and some other elements that must be
     // translated into the current GUI Language

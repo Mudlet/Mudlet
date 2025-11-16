@@ -1063,6 +1063,9 @@ void TBuffer::processMxpWatchdogCallback()
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
         if (isMxpParserFrozen) {
+            qDebug() << "=== WATCHDOG TIMEOUT PATH ===";
+            qDebug() << "Current tag content (fromStdString):" << QString::fromStdString('<' + currentTagContent);
+            qDebug() << "=============================";
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
             QTimer::singleShot(0, [this] () {
                 const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());

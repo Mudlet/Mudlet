@@ -35,6 +35,7 @@ public:
     bool fontAlreadyLoaded(const QString& filePath);
     void unloadFonts(const QString& belongsTo);
     void addEmojiFont();
+    void addCJKFontSubstitutions();
 
 private:
     void loadFonts(const QString& folder);

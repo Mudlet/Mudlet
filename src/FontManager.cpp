@@ -121,3 +121,30 @@ void FontManager::addEmojiFont()
 #endif
 #endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 }
+
+void FontManager::addCJKFontSubstitutions()
+{
+    // Set up font substitutions for CJK (Chinese/Japanese/Korean) characters
+    // so they display correctly even when the main font doesn't have glyphs for them.
+    // This is similar to the emoji font substitution.
+    // NOTE: These are GLOBAL settings that apply to all fonts in the application.
+    
+    const QString defaultFont = qsl("Bitstream Vera Sans Mono");
+    
+#if defined(Q_OS_MACOS)
+    QFont::insertSubstitution(defaultFont, qsl("PingFang SC")); // Simplified Chinese
+    QFont::insertSubstitution(defaultFont, qsl("PingFang TC")); // Traditional Chinese
+    QFont::insertSubstitution(defaultFont, qsl("Hiragino Sans")); // Japanese
+    QFont::insertSubstitution(defaultFont, qsl("Apple SD Gothic Neo")); // Korean
+#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    QFont::insertSubstitution(defaultFont, qsl("Noto Sans CJK SC")); // Simplified Chinese
+    QFont::insertSubstitution(defaultFont, qsl("Noto Sans CJK TC")); // Traditional Chinese
+    QFont::insertSubstitution(defaultFont, qsl("Noto Sans CJK JP")); // Japanese
+    QFont::insertSubstitution(defaultFont, qsl("Noto Sans CJK KR")); // Korean
+#elif defined(Q_OS_WIN)
+    QFont::insertSubstitution(defaultFont, qsl("Microsoft YaHei")); // Simplified Chinese
+    QFont::insertSubstitution(defaultFont, qsl("Microsoft JhengHei")); // Traditional Chinese
+    QFont::insertSubstitution(defaultFont, qsl("Yu Gothic")); // Japanese
+    QFont::insertSubstitution(defaultFont, qsl("Malgun Gothic")); // Korean
+#endif
+}
