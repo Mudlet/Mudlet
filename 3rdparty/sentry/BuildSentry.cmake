@@ -5,7 +5,7 @@ include(FetchContent)
 FetchContent_Declare(
   sentry
   URL "https://github.com/getsentry/sentry-native/releases/download/0.7.15/sentry-native.zip"
-  URL_HASH SHA256=c4d62bcd72a67444edafc3d5bd2b53c9c63dc7f7e16a1a93e0b0aa2edd7e7b8b
+  URL_HASH SHA256=9880614984c75fc6ed1967b7aa29aebbea2f0c88f2d7c707b18391b5632091c0
   SOURCE_SUBDIR "."
 )
 FetchContent_MakeAvailable(sentry)
