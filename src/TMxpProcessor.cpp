@@ -164,9 +164,24 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     && mMxpTagBuilder.isInsideTag()
     && !mMxpTagBuilder.isQuotedSequence()
     && !mMxpTagBuilder.isInsideComment()) {
-        lastEntityValue = qsl("<") + QString::fromStdString(mMxpTagBuilder.getRawTagContent());
+        // Error recovery: nested '<' inside a tag
+        // Decode using connection encoding for consistency
+        const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
+        const QByteArray encoding = mpMxpClient->getEncoding();
+        QString decoded;
+        
+        if (encoding == qsl("UTF-8")) {
+            decoded = QString::fromStdString(rawBytes);
+        } else if (encoding == qsl("ISO 8859-1")) {
+            decoded = QString::fromLatin1(rawBytes.c_str(), static_cast<int>(rawBytes.length()));
+        } else {
+            QTextCodec* codec = QTextCodec::codecForName(encoding);
+            decoded = codec ? codec->toUnicode(rawBytes.c_str(), static_cast<int>(rawBytes.length())) : QString::fromStdString(rawBytes);
+        }
+        
+        lastEntityValue = qsl("<") + decoded;
         mMxpTagBuilder.resetForNewTag();
-        return HANDLER_INSERT_ENTITY_LIT;
+        return HANDLER_INSERT_ENTITY_SYS;
     }
 
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
