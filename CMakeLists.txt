@@ -227,7 +227,7 @@ add_subdirectory(3rdparty/qt-tags-widget)
 add_subdirectory(translations/translated)
 
 if (USE_SENTRY)
-  set(SENTRY_VERSION 0.7.15)
+  set(SENTRY_VERSION 0.7.19)
   set(SENTRY_BACKEND "crashpad" CACHE STRING "Use crashpad backend" FORCE)
   set(SENTRY_INTEGRATION_QT "ON" CACHE STRING "Enable Qt integration" FORCE)
   set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/sentry ${CMAKE_MODULE_PATH})
