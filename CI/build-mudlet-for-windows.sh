@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
+# Version: 3.0.0    Switch from qmake to CMake with Release builds
+#          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
 #                   CI/CB system using same variable
@@ -107,11 +108,8 @@ mkdir -p "build-${MSYSTEM}"
 
 cd "${GITHUB_WORKSPACE}"/build-"${MSYSTEM}" || exit 1
 
-#### Qt Creator note ####
-# If one is planning to use qtcreator these will probably be wanted in a
-# shell startup script so as to prepare it to use Lua 5.1 when running
-# qmake (needed to process translation files to get the translations
-# statistics):
+#### Lua environment setup ####
+# Set up Lua 5.1 paths for translation processing and runtime
 LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
 export LUA_PATH
 LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
@@ -123,50 +121,58 @@ echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo ""
 
-if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
-    # The updater is not helpful in this environment (PR testing build)
-    export WITH_UPDATER="NO"
-else
-    # Tagged build, this is a release or a PTB build, include the updater
-    export WITH_UPDATER="YES"
-fi
+echo "Running CMake to configure project ..."
+echo ""
 
 # Since we have this already installed as a package there is no need to build
-# it from a submodule:
+# it from a submodule - set as environment variable for CMake
 export WITH_OWN_QTKEYCHAIN=NO
 
-echo "Running qmake to make MAKEFILE ..."
-echo ""
-
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-    qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+# Set updater flag based on build type
+if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
+  # The updater is not helpful in this environment (PR testing build)
+  export WITH_UPDATER=NO
 else
-    qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+  # Tagged build, this is a release or a PTB build, include the updater
+  export WITH_UPDATER=YES
 fi
 
-echo " ... qmake done."
-echo ""
+# Configure CMake with ccache and Release build type
+CMAKE_ARGS=(
+  -G Ninja
+  -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_PREFIX_PATH="${MINGW_INTERNAL_BASE_DIR}"
+  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
+)
 
+# Enable ccache for CMake
 export WITH_CCACHE="YES"
-
 if [ "${WITH_CCACHE}" = "YES" ]; then
-  echo "  Tweaking Makefile.Release to use ccache..."
-  sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Release
-  sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Release
-  echo ""
+  echo "  Configuring CMake to use ccache..."
+  CMAKE_ARGS+=(
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache
+  )
 fi
 
-echo "Running make to build project ..."
+cmake .. "${CMAKE_ARGS[@]}"
+
+echo " ... CMake configuration done."
 echo ""
 
-# Despite the mingw32 prefix mingw32-make.exe IS the make we want.
+echo "Running CMake build ..."
+echo ""
+
+# Build using CMake with parallel jobs
+# Note: --config is only relevant for multi-config generators (e.g., Visual Studio)
+# but is harmless for single-config generators like Unix Makefiles
 if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
-  mingw32-make -j "${NUMBER_OF_PROCESSORS}"
+  cmake --build . --parallel "${NUMBER_OF_PROCESSORS}"
 else
-  mingw32-make
+  cmake --build .
 fi
 
-echo " ... make finished"
+echo " ... CMake build finished"
 echo ""
 
 cd ~ || exit 1

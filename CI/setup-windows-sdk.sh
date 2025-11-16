@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
+# Version: 2.2.0    Add CMake package for CMake-based builds
+#          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    No change
 #          1.4.0    No change
@@ -120,6 +121,7 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-cmake" \
     "mingw-w64-${BUILDCOMPONENT}-meson" \
     "mingw-w64-${BUILDCOMPONENT}-ninja" \
     "mingw-w64-${BUILDCOMPONENT}-assimp" \

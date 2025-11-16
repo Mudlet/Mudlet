@@ -5471,6 +5471,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
     lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
     lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
+    lua_register(pGlobalLua, "setLinkStyle", TLuaInterpreter::setLinkStyle);
+    lua_register(pGlobalLua, "resetLinkStyle", TLuaInterpreter::resetLinkStyle);
+    lua_register(pGlobalLua, "clearVisitedLinks", TLuaInterpreter::clearVisitedLinks);
     lua_register(pGlobalLua, "addWordToDictionary", TLuaInterpreter::addWordToDictionary);
     lua_register(pGlobalLua, "removeWordFromDictionary", TLuaInterpreter::removeWordFromDictionary);
     lua_register(pGlobalLua, "spellCheckWord", TLuaInterpreter::spellCheckWord);

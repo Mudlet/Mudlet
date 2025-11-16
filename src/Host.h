@@ -379,6 +379,10 @@ public:
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool setClickthrough(const QString& name, bool clickthrough);
+    bool setLabelStyleSheet(const QString& name, const QString& styleSheet);
+    bool setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
+    bool resetLinkStyle(const QString& name);
+    bool clearVisitedLinks(const QString& name);
     void hideMudletsVariables();
     bool createBuffer(const QString& name);
     QSize calcFontSize(const QString& windowName);

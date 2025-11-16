@@ -56,7 +56,7 @@ if(USE_OWN_QTKEYCHAIN)
     set(KEYCHAIN_LIBRARY qt6keychain)
 else()
     find_package(Qt6Keychain REQUIRED)
-    set(KEYCHAIN_LIBRARY Qt6::Keychain)
+    set(KEYCHAIN_LIBRARY qt6keychain)
 endif()
 
 
