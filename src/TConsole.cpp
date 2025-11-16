@@ -338,8 +338,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     replayButton->setMaximumSize(QSize(30, 30));
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
-    replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
-    replayButton->setToolTip(utils::richText(tr("Toggle recording of replays")));
+
+    QIcon replayIcon;
+    replayIcon.addPixmap(QPixmap(qsl(":/icons/media-tape.png")), QIcon::Normal, QIcon::Off);
+    replayIcon.addPixmap(QPixmap(qsl(":/icons/media-tape-red-cross.png")), QIcon::Normal, QIcon::On);
+    replayButton->setIcon(replayIcon);
+    //: Button tooltip for the replay recording toggle button
+    replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
@@ -348,7 +353,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     logButton->setCheckable(true);
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
-    logButton->setToolTip(utils::richText(tr("Toggle logging")));
+    //: Button tooltip for the logging button
+    logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
 
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
@@ -399,7 +405,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     emergencyStop->setMinimumSize(QSize(30, 30));
     emergencyStop->setMaximumSize(QSize(30, 30));
-    emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
+
+    QIcon emergencyIcon;
+    emergencyIcon.addPixmap(QPixmap(qsl(":/icons/edit-bomb.png")), QIcon::Normal, QIcon::Off);
+    emergencyIcon.addPixmap(QPixmap(qsl(":/icons/red-bomb.png")), QIcon::Normal, QIcon::On);
+    emergencyStop->setIcon(emergencyIcon);
+
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
@@ -878,6 +889,10 @@ void TConsole::slot_toggleReplayRecording()
         mReplayFile.setFileName(mLogFileName);
         if (!mReplayFile.open(QIODevice::WriteOnly)) {
             qWarning() << "TConsole: failed to open replay file for writing:" << mReplayFile.errorString();
+            mRecordReplay = false;
+            //: Informational message displayed when replay recording file could not be opened
+            printSystemMessage(tr("Failed to open replay recording file for writing.") % QChar::LineFeed);
+            return;
         }
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             mReplayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
@@ -885,13 +900,19 @@ void TConsole::slot_toggleReplayRecording()
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
         printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
     } else {
         if (!mReplayFile.commit()) {
             qDebug() << "TConsole::slot_toggleReplayRecording: error saving replay: " << mReplayFile.errorString();
+            //: Informational message displayed when replay recording is stopped but could not be saved
             printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved.") % QChar::LineFeed);
         } else {
+            //: Informational message displayed when replay recording is stopped
             printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
         }
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     }
 }
 
@@ -1904,10 +1925,8 @@ void TConsole::slot_stopAllItems(bool b)
 {
     if (b) {
         mpHost->stopAllTriggers();
-        emergencyStop->setIcon(QIcon(qsl(":/icons/red-bomb.png")));
     } else {
         mpHost->reenableAllTriggers();
-        emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
     }
 }
 
