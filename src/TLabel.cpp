@@ -388,7 +388,6 @@ void TLabel::slot_linkActivated(const QString& link)
             if (mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
                 QPointer<TCommandLine> commandLine = mpHost->mpConsole->mpCommandLine;
                 commandLine->setPlainText(payload);
-                // Move cursor to end of text
                 QTextCursor cursor = commandLine->textCursor();
                 cursor.movePosition(QTextCursor::End);
                 commandLine->setTextCursor(cursor);
