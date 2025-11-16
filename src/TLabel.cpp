@@ -302,7 +302,6 @@ void TLabel::setClickThrough(bool clickthrough)
 
 void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline)
 {
-    // Store the link style parameters for use when setText() is called
     mLinkColor = linkColor;
     mLinkVisitedColor = linkVisitedColor;
     mLinkUnderline = underline;
