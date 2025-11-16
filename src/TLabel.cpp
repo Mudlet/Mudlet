@@ -332,7 +332,6 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
 
 void TLabel::resetLinkStyle()
 {
-    // Reset to default palette colors
     setPalette(QPalette());
 
     mLinkColor.clear();
