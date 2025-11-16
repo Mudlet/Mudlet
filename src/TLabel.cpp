@@ -338,7 +338,7 @@ void TLabel::resetLinkStyle()
     mLinkVisitedColor.clear();
     mLinkUnderline = true;
 
-    // Force update to re-render
+    // Force update to re-render with new styles
     update();
 }
 
