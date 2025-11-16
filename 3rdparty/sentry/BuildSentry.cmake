@@ -15,18 +15,31 @@ FetchContent_Declare(
   SOURCE_SUBDIR "."
 )
 
-# Force C++17 for Sentry to avoid crashpad C++20 compatibility issues
-# Crashpad's filesystem.h uses uint64_t without including <cstdint>
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard for Sentry" FORCE)
-set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require C++ standard" FORCE)
+# Download and extract, but don't configure yet
+FetchContent_Populate(sentry)
+
+# Patch crashpad's filesystem.h to include <cstdint> for C++20 compatibility
+set(FILESYSTEM_H "${sentry_SOURCE_DIR}/external/crashpad/util/file/filesystem.h")
+if(EXISTS "${FILESYSTEM_H}")
+  file(READ "${FILESYSTEM_H}" FILESYSTEM_CONTENT)
+  # Check if already patched
+  string(FIND "${FILESYSTEM_CONTENT}" "#include <cstdint>" ALREADY_PATCHED)
+  if(ALREADY_PATCHED EQUAL -1)
+    # Add #include <cstdint> after the existing includes
+    string(REPLACE
+      "#include \"util/file/file_io.h\""
+      "#include \"util/file/file_io.h\"\n#include <cstdint>"
+      FILESYSTEM_CONTENT "${FILESYSTEM_CONTENT}")
+    file(WRITE "${FILESYSTEM_H}" "${FILESYSTEM_CONTENT}")
+    message(STATUS "Patched crashpad filesystem.h for C++20 compatibility")
+  endif()
+endif()
 
 # Prevent Sentry from being installed into macOS bundles and Linux packages
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "SentryExcluded")
 set(SENTRY_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(sentry)
-
-# Restore original C++ standard for main project
-set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard" FORCE)
+# Now configure and build
+add_subdirectory(${sentry_SOURCE_DIR} ${sentry_BINARY_DIR} EXCLUDE_FROM_ALL)
 
 set(CMAKE_MESSAGE_LOG_LEVEL ${mll})
