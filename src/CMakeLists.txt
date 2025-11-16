@@ -706,13 +706,6 @@ if(WIN32 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
   )
 endif()
 
-if (USE_SENTRY)
-  add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-    ${CMAKE_BINARY_DIR}/_deps/sentry-build/crashpad_build/handler/crashpad_handler
-    $<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/crashpad_handler
-  )
-endif()
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
