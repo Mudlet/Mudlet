@@ -3601,13 +3601,13 @@ TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(i
     } else if (lua_isnil(L, -1)) {
         // nothing to do
     } else if (lua_isnumber(L, -1)) {
-        qint64 weight = qRound(lua_tonumber(L, -1));
-        if (weight < 0) {
-            weight = 0;
-        } else if (weight > std::numeric_limits<int>::max()) {
-            weight = std::numeric_limits<int>::max();
+        double rawWeight = lua_tonumber(L, -1);
+        if (rawWeight < 1.0) {
+            rawWeight = 1.0;
+        } else if (rawWeight > std::numeric_limits<int>::max()) {
+            rawWeight = std::numeric_limits<int>::max();
         }
-        result.weightOverride = static_cast<int>(weight);
+        result.weightOverride = qRound(rawWeight);
     } else if (lua_isstring(L, -1)) {
         size_t length = 0;
         const char* rawValue = lua_tolstring(L, -1, &length);
