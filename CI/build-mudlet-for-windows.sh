@@ -152,7 +152,7 @@ if [ "${WITH_SENTRY}" = "yes" ]; then
     CMAKE_ARGS+=("-DWITH_SENTRY=ON")
 fi
 
-if [ "$SENTRY_SEND_DEBUG" = "1" ]; then
+if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
     CMAKE_ARGS+=("-DSENTRY_SEND_DEBUG=1")
 fi
 

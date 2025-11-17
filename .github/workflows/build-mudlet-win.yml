@@ -44,7 +44,15 @@ jobs:
 
     - name: Enable sentry.io for Windows releases
       shell: msys2 {0}
-      run: echo "WITH_SENTRY=yes" >> $GITHUB_ENV
+      run: |
+        echo "WITH_SENTRY=yes" >> $GITHUB_ENV
+        if [ -n "$SENTRY_SEND_DEBUG_SECRET" ]; then
+          echo "SENTRY_SEND_DEBUG=1" >> $GITHUB_ENV
+        else
+          echo "SENTRY_SEND_DEBUG=0" >> $GITHUB_ENV
+        fi
+      env:
+        SENTRY_SEND_DEBUG_SECRET: ${{ secrets.SENTRY_SEND_DEBUG }}
 
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
