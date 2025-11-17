@@ -182,7 +182,7 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lua-utf8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre2.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll"
 
 mkdir ./luasql
