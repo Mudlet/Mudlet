@@ -39,7 +39,7 @@
 # have been run.
 
 # Exit codes:
-# 0 - Everything is fine. 8-) 
+# 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
 # 2 - Unsupported MSYS2/MINGGW shell type
 # 3 - Unsupported build type
@@ -107,20 +107,7 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
   cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
-# Copy crashpad_handler.exe if Sentry is enabled
-if [ "${WITH_SENTRY}" = "yes" ]; then
-  CRASHPAD_HANDLER_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_handler.exe"
-  if [ -f "${CRASHPAD_HANDLER_PATH}" ]; then
-    cp "${CRASHPAD_HANDLER_PATH}" "${PACKAGE_DIR}/"
-    echo "  crashpad_handler.exe copied for Sentry crash reporting"
-  else
-    echo "Warning: Sentry is enabled but crashpad_handler.exe was not found"
-    echo "         Expected location: ${CRASHPAD_HANDLER_PATH}"
-    echo "         Crash reporting may not work properly"
-    echo "         Check the Sentry build process in build-mudlet-for-windows.sh"
-    exit 7
-  fi
-fi
+
 # The location that windeployqt6 puts the Qt translation files by default is "./translations"
 # unfortunately this is not what
 # "QLibraryInfo::path(QLibraryInfo::TranslationsPath)" in the calls to
@@ -134,14 +121,14 @@ fi
 # continually trying to run the executable on the target type system
 # and adding in the libraries to the same directory and repeating that
 # until the executable actually starts to run. Alternatively running
-# ntldd ./mudlet.exe | grep "/mingw64" inside an Mingw63 shell as appropriate 
+# ntldd ./mudlet.exe | grep "/mingw64" inside an Mingw63 shell as appropriate
 # will produce the libraries that are likely to be needed below. Unfortunately
 # this process is a little recursive in that you may have to repeat the
 # process for individual librarys. For ones used by lua modules this
 # can manifest as being unable to "require" the library within lua
 # and doing the above "ntldd" check revealed that, for instance,
 # "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
-# 
+#
 echo ""
 echo "Examining Mudlet application to identify other needed libraries..."
 NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \

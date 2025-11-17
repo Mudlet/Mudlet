@@ -259,38 +259,6 @@ fi
 echo " ... CMake build finished"
 echo ""
 
-# Copy crashpad_handler if Sentry is enabled
-if [ "${WITH_SENTRY}" = "yes" ]; then
-  echo "Copying crashpad_handler.exe for Windows..."
-  echo "  Debug: Looking for crashpad_handler.exe in Sentry install directory"
-  find "${SENTRY_INSTALL_DIR}" -name "crashpad_handler*" -type f || echo "  No crashpad_handler files found"
-
-  # Try different possible locations for crashpad_handler
-  CRASHPAD_LOCATIONS=(
-    "${SENTRY_INSTALL_DIR}/bin/crashpad_handler.exe"
-    "${SENTRY_INSTALL_DIR}/lib/crashpad_handler.exe"
-    "${SENTRY_INSTALL_DIR}/crashpad_handler.exe"
-    "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/_deps/sentry-build/crashpad_build/handler/crashpad_handler.exe"
-  )
-
-  CRASHPAD_FOUND=false
-  for CRASHPAD_PATH in "${CRASHPAD_LOCATIONS[@]}"; do
-    if [ -f "$CRASHPAD_PATH" ]; then
-      cp "$CRASHPAD_PATH" .
-      echo "  crashpad_handler.exe copied from: $CRASHPAD_PATH"
-      CRASHPAD_FOUND=true
-      break
-    fi
-  done
-
-  if [ "$CRASHPAD_FOUND" = false ]; then
-    echo "  Warning: crashpad_handler.exe not found in any expected locations"
-    echo "  Debug: Searched locations:"
-    for CRASHPAD_PATH in "${CRASHPAD_LOCATIONS[@]}"; do
-      echo "    - $CRASHPAD_PATH"
-    done
-  fi
-  echo ""
-fi
+# Clean up build directory
 cd ~ || exit 1
 exit 0
