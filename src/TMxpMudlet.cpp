@@ -265,6 +265,11 @@ bool TMxpMudlet::isTagAllowedInMode(const QString& tagName, TMXPMode mode) const
     return openModeTags.contains(tagName);
 }
 
+QByteArray TMxpMudlet::getEncoding() const
+{
+    return mpHost->mTelnet.getEncoding();
+}
+
 int TMxpMudlet::getWrapWidth() const
 {
     // Return the host's configured wrap width, with a sensible minimum
