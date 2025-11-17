@@ -3258,6 +3258,7 @@ void dlgProfilePreferences::slot_saveAndClose()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->mAlwaysCheckDefault = checkBox_checkMudletDefault->isChecked();
+    mudlet::self()->mpSettings->setValue(qsl("alwaysCheckDefault"), checkBox_checkMudletDefault->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
     pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
 

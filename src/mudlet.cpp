@@ -64,10 +64,12 @@
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
+#include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QImage>
 #include <QJsonObject>
@@ -93,6 +95,7 @@
 #include <QVariantHash>
 #include <QRandomGenerator>
 #include <QRegularExpression>
+#include <algorithm>
 #include <memory>
 #include <zip.h>
 #include <QStyle>
@@ -1486,34 +1489,76 @@ void mudlet::onDefaultClientDlgDestroyed()
 
 void mudlet::handleTelnetUri(const QUrl& url)
 {
+    // Validate URI
     if (!url.isValid() || url.scheme() != qsl("telnet")) {
+        QMessageBox::warning(nullptr, tr("Invalid URI"), 
+                           tr("The provided URI is not a valid telnet:// link."));
         return;
     }
 
     QString host = url.host();
+    if (host.isEmpty()) {
+        QMessageBox::warning(nullptr, tr("Invalid URI"), 
+                           tr("The telnet URI must specify a hostname."));
+        return;
+    }
+
     int port = url.port(23);
+    if (port < 1 || port > 65535) {
+        QMessageBox::warning(nullptr, tr("Invalid Port"), 
+                           tr("The port number must be between 1 and 65535."));
+        return;
+    }
+
     QString login = url.userName();
     QString password = url.password();
 
     // Check if a profile with this host and port already exists
     QString profileName;
     QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    
+    // Collect all matching profiles with timestamps
+    QList<QPair<QString, QDateTime>> matchingProfiles;
     for (const auto& pName : profileNames) {
-        if (readProfileData(pName, qsl("url")) == host && readProfileData(pName, qsl("port")).toInt() == port) {
-            profileName = pName;
-            break;
+        if (readProfileData(pName, qsl("url")) == host && 
+            readProfileData(pName, qsl("port")).toInt() == port) {
+            
+            // Get last modified time as proxy for last-used
+            QString profilePath = mudlet::getMudletPath(mudlet::profileHomePath, pName);
+            QFileInfo profileInfo(profilePath);
+            matchingProfiles.append(qMakePair(pName, profileInfo.lastModified()));
         }
+    }
+
+    // Select most recently used profile
+    if (!matchingProfiles.isEmpty()) {
+        std::sort(matchingProfiles.begin(), matchingProfiles.end(),
+                  [](const QPair<QString, QDateTime>& a, const QPair<QString, QDateTime>& b) {
+                      return a.second > b.second; // Most recent first
+                  });
+        profileName = matchingProfiles.first().first;
     }
 
     if (profileName.isEmpty()) {
         // No existing profile, create a new one
         profileName = addProfile(host, port, login, password);
+        
+        // Install default packages for new profile
+        if (!profileName.isEmpty()) {
+            Host* pHost = mHostManager.getHost(profileName);
+            if (!pHost) {
+                loadProfile(profileName, false);
+                pHost = mHostManager.getHost(profileName);
+            }
+            if (pHost) {
+                installDefaultPackages(pHost);
+            }
+        }
     }
 
     // Now, load and connect to the profile
     if (!profileName.isEmpty()) {
         loadProfile(profileName, true);
-        slot_connectionDialogueFinished(profileName, true);
     }
 }
 
