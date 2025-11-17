@@ -1344,7 +1344,8 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
     // Check if a profile with the same host and port already exists on disk
     QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const auto& profileName : profileNames) {
-        if (readProfileData(profileName, qsl("url")) == host && readProfileData(profileName, qsl("port")).toInt() == port) {
+        if (readProfileData(profileName, qsl("url")).compare(host, Qt::CaseInsensitive) == 0 
+            && readProfileData(profileName, qsl("port")).toInt() == port) {
             return profileName; // Return existing profile name
         }
     }
@@ -1372,10 +1373,10 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
     writeProfileData(newProfileName, qsl("login"), login);
     if (!password.isEmpty()) {
         if (mStorePasswordsSecurely) {
-            CredentialManager::storeCredential(newProfileName, login, password);
-        } else {
-            writeProfileData(newProfileName, qsl("password"), password);
+            // Store with key "character" to match retrieval in Host.cpp
+            CredentialManager::storeCredential(newProfileName, qsl("character"), password);
         }
+        // Note: Do not persist URL-provided passwords in plaintext for security
     }
 
     // Refresh UI if connection dialog is open
@@ -1389,7 +1390,7 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
 bool mudlet::mudletIsDefault()
 {
 #if defined(Q_OS_WINDOWS)
-    QSettings settings(qsl("HKEY_CURRENT_USER\\Software\\Classes\\telnet\\shell\\open\\command"), QSettings::NativeFormat);
+    QSettings settings(qsl("HKEY_CURRENT_USER/Software/Classes/telnet/shell/open/command"), QSettings::NativeFormat);
     QString command = settings.value(qsl("."), QString()).toString();
     return command.contains(qApp->applicationFilePath(), Qt::CaseInsensitive);
 #elif defined(Q_OS_MACOS)
@@ -1455,11 +1456,11 @@ void mudlet::openDefaultCheck()
 void mudlet::setMudletAsDefault()
 {
 #if defined(Q_OS_WINDOWS)
-    QSettings settings(qsl("HKEY_CURRENT_USER\\Software\\Classes\\telnet"), QSettings::NativeFormat);
+    QSettings settings(qsl("HKEY_CURRENT_USER/Software/Classes/telnet"), QSettings::NativeFormat);
     settings.setValue(qsl("."), qsl("URL:Telnet Protocol"));
     settings.setValue(qsl("URL Protocol"), qsl(""));
     QString command = qsl("\"%1\" \"%2\"").arg(QDir::toNativeSeparators(qApp->applicationFilePath()), qsl("%1"));
-    settings.setValue(qsl("shell\\open\\command\\."), command);
+    settings.setValue(qsl("shell/open/command/."), command);
     QMessageBox::information(this, tr("Default Client"), tr("Mudlet has been set as your default Telnet client."));
 #elif defined(Q_OS_MACOS)
     // On macOS, register Mudlet as the default handler for telnet:// URLs
@@ -1520,8 +1521,8 @@ void mudlet::handleTelnetUri(const QUrl& url)
     // Collect all matching profiles with timestamps
     QList<QPair<QString, QDateTime>> matchingProfiles;
     for (const auto& pName : profileNames) {
-        if (readProfileData(pName, qsl("url")) == host && 
-            readProfileData(pName, qsl("port")).toInt() == port) {
+        if (readProfileData(pName, qsl("url")).compare(host, Qt::CaseInsensitive) == 0 
+            && readProfileData(pName, qsl("port")).toInt() == port) {
             
             // Get last modified time as proxy for last-used
             QString profilePath = mudlet::getMudletPath(enums::profileHomePath, pName);
