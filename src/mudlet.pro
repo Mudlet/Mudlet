@@ -57,23 +57,18 @@ include(../3rdparty/communi/communi.pri)
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
 # alternatives during compilations.
-!msvc {
-    QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
-    QMAKE_CFLAGS_RELEASE ~= s/-O[0123s]//g
+QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+QMAKE_CFLAGS_RELEASE ~= s/-O[0123s]//g
 # NOW we can put ours in:
-    QMAKE_CXXFLAGS_RELEASE += -O3
-    QMAKE_CFLAGS_RELEASE += -O3
+QMAKE_CXXFLAGS_RELEASE += -O3
+QMAKE_CFLAGS_RELEASE += -O3
 # There is NO need to put in the -g option as it is done already for debug bugs
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
-    QMAKE_CXXFLAGS_DEBUG += -O0
-    QMAKE_CFLAGS_DEBUG += -O0
-}
+QMAKE_CXXFLAGS_DEBUG += -O0
+QMAKE_CFLAGS_DEBUG += -O0
 
 # c++20 for Qt 6
 CONFIG += c++20
-
-# MSVC specific flags. Enable multiprocessor MSVC builds.
-msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.0
@@ -308,9 +303,12 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
 # day of the fourth month of the Gregorian calendar year:
 # DEFINES+=DEBUG_EASTER_EGGS
 #
-# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-# commands for suboptions - change the value to 2 to get a bit more detail
-# about the size or nature of the command:
+# * Uncomment this and set to a integer value with the following bits to:
+#   1 - debugging messages about WILL/WONT/DO/DONT and other commands for
+#       suboptions
+#   2 - more detail about the size or nature of the command:
+#   4 - to monitor the use of and choice of both sockets (one each for IPv4
+#       and IPv6 prototcols)
 DEFINES+=DEBUG_TELNET=1
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
@@ -347,6 +345,10 @@ DEFINES+=DEBUG_TELNET=1
 # * Produce qDebug() messages about window handling operations like dock widget
 # transfers, profile switching, and detached window management:
 # DEFINES+=DEBUG_WINDOW_HANDLING
+#
+# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# alignment purposes - these are normally hidden in production builds:
+# DEFINES+=DEBUG_PLAYER_ICON_CONTROLS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -403,7 +405,9 @@ unix:!macx {
         -lpugixml
 
     isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       LIBS += -lGLU
+       LIBS += \
+         -lGLU \
+         -lassimp
     }
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
@@ -435,6 +439,9 @@ unix:!macx {
         -lpugixml \
         -lws2_32 \
         -loleaut32
+    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+        LIBS += -lassimp
+    }
 
     INCLUDEPATH += \
         $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
@@ -611,6 +618,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
+    WideComboBox.cpp \
     ctelnet.cpp \
     DarkTheme.cpp \
     discord.cpp \
@@ -628,6 +636,7 @@ SOURCES += \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
     dlgPackageManager.cpp \
+    PackageItemDelegate.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
@@ -664,6 +673,18 @@ SOURCES += \
     ShortcutsManager.cpp \
     SingleLineTextEdit.cpp \
     T2DMap.cpp \
+    CustomLineDrawContextMenuHandler.cpp \
+    CustomLineDrawHandler.cpp \
+    CustomLineEditContextMenuHandler.cpp \
+    CustomLineEditHandler.cpp \
+    CustomLineSession.cpp \
+    LabelInteractionHandler.cpp \
+    MiddleMousePanHandler.cpp \
+    PanInteractionHandler.cpp \
+    RoomContextMenuHandler.cpp \
+    RoomMoveActivationHandler.cpp \
+    RoomMoveDragHandler.cpp \
+    SelectionRectangleHandler.cpp \
     TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \
@@ -698,9 +719,11 @@ SOURCES += \
     TMedia.cpp \
     TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
+    TMxpHRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
+    TMxpExpireTagHandler.cpp \
     TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpColorTagHandler.cpp \
@@ -746,6 +769,7 @@ HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    WideComboBox.h \
     ctelnet.h \
     DarkTheme.h \
     discord.h \
@@ -763,6 +787,7 @@ HEADERS += \
     dlgNotepad.h \
     dlgPackageExporter.h \
     dlgPackageManager.h \
+    PackageItemDelegate.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \
@@ -791,14 +816,24 @@ HEADERS += \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \
-    pre_guard.h \
-    post_guard.h \
     ScriptUnit.h \
     SecureStringUtils.h \
     CredentialManager.h \
     ShortcutsManager.h \
     SingleLineTextEdit.h \
     T2DMap.h \
+    CustomLineDrawContextMenuHandler.h \
+    CustomLineDrawHandler.h \
+    CustomLineEditContextMenuHandler.h \
+    CustomLineEditHandler.h \
+    CustomLineSession.h \
+    LabelInteractionHandler.h \
+    MiddleMousePanHandler.h \
+    PanInteractionHandler.h \
+    RoomContextMenuHandler.h \
+    RoomMoveActivationHandler.h \
+    RoomMoveDragHandler.h \
+    SelectionRectangleHandler.h \
     TAccessibleConsole.h \
     TAccessibleTextEdit.h \
     TAction.h \
@@ -814,7 +849,6 @@ HEADERS += \
     TEncodingTable.h \
     TEntityHandler.h \
     TEntityResolver.h \
-    testdbg.h \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
@@ -832,6 +866,7 @@ HEADERS += \
     TMediaData.h \
     TMediaPlaylist.h \
     TMxpBRTagHandler.h \
+    TMxpHRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
     TMxpCustomElementTagHandler.h \
@@ -842,6 +877,7 @@ HEADERS += \
     TMxpElementDefinitionHandler.h \
     TMxpElementRegistry.h \
     TMxpEntityTagHandler.h \
+    TMxpExpireTagHandler.h \
     TMxpContext.h \
     TMxpFormattingTagsHandler.h \
     TMxpMudlet.h \
@@ -981,21 +1017,22 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
                RenderCommandQueue.cpp \
                ResourceManager.cpp \
                ShaderManager.cpp
-    
+
     # Enable shader hot-reloading when USE_SHADER_HOT_RELOAD is defined
     contains( DEFINES, USE_SHADER_HOT_RELOAD ) {
         DEFINES += MUDLET_SHADER_HOT_RELOAD=1
     }
-    
+
     !build_pass{
         message("The 3D mapper code with both OpenGL implementations is included in this configuration for runtime selection")
     }
-    
+
     QT += opengl
 
     win32 {
         LIBS += -lopengl32 \
-                -lglu32
+                -lglu32 \
+                -lassimp
     }
 } else {
     !build_pass{
@@ -1614,7 +1651,7 @@ macx {
         QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
         OBJECTIVE_SOURCES += sparkleupdater.mm
-        HEADERS += sparkleupdater.h        
+        HEADERS += sparkleupdater.h
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
         sparkle.files = $$SPARKLE_PATH/Sparkle.framework
@@ -1737,6 +1774,7 @@ OTHER_FILES += \
     ../test/TMxpStubClient.h \
     ../test/TMxpTagParserTest.cpp \
     ../test/TMxpVersionTagTest.cpp \
+    ../test/TMxpElementDefinitionHandlerTest.cpp \
     mac-deploy.sh \
     mudlet-lua/genDoc.sh \
     mudlet-lua/lua/ldoc.css

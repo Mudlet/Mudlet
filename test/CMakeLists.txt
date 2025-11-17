@@ -13,6 +13,7 @@ ENABLE_TESTING()
 
 find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
+    Core5Compat
     Multimedia
     MultimediaWidgets
     Network
@@ -26,6 +27,7 @@ link_libraries(
     Qt6::Test
     Qt6::Concurrent
     Qt6::Core
+    Qt6::Core5Compat
     Qt6::Network
     Qt6::Multimedia
     Qt6::MultimediaWidgets
@@ -54,7 +56,7 @@ if(USE_OWN_QTKEYCHAIN)
     set(KEYCHAIN_LIBRARY qt6keychain)
 else()
     find_package(Qt6Keychain REQUIRED)
-    set(KEYCHAIN_LIBRARY Qt6::Keychain)
+    set(KEYCHAIN_LIBRARY qt6keychain)
 endif()
 
 
@@ -91,6 +93,11 @@ add_test(NAME TMxpFormattingTagsTest COMMAND TMxpFormattingTagsTest)
 
 add_executable(TMxpCustomElementTagHandlerTest TMxpCustomElementTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
 add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandlerTest)
+
+add_executable(TMxpModeSecurityTest TMxpModeSecurityTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpModeSecurityTest COMMAND TMxpModeSecurityTest)
+add_executable(TMxpElementDefinitionHandlerTest TMxpElementDefinitionHandlerTest.cpp ${MXP_SOURCE})
+add_test(NAME TMxpElementDefinitionHandlerTest COMMAND TMxpElementDefinitionHandlerTest)
 
 add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp ../src/TVar.cpp ../src/VarUnit.cpp)
 add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)

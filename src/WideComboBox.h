@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,9 +18,19 @@
  ***************************************************************************/
 
 
-#if defined(_DEBUG) && defined(_MSC_VER)
-#pragma pop_macro("new")
-#pragma pop_macro("malloc")
-#pragma pop_macro("realloc")
-#pragma pop_macro("free")
-#endif // _DEBUG && _MSC_VER
+#ifndef WIDECOMBOBOX_H
+#define WIDECOMBOBOX_H
+
+#include <QComboBox>
+#include <QObject>
+
+class WideComboBox : public QComboBox {
+    Q_OBJECT
+public:
+    using QComboBox::QComboBox; // inherit constructors
+
+protected:
+    void showPopup() override;
+};
+
+#endif // WIDECOMBOBOX_H

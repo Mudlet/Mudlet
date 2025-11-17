@@ -72,6 +72,8 @@ public:
 
     QStringList mHrefs, mHints;
 
+    QString mExpireName;
+
     QString mPublishedEntityName, mPublishedEntityValue;
 
     QString style;
@@ -192,6 +194,22 @@ public:
 
         return 1;
     }
+
+    int setLink(const QStringList& hrefs, const QStringList& hints, const QString& expireName) override
+    {
+        qDebug().noquote() << qsl("setLink([%1], [%2], [%3])").arg(hrefs.join(", "), hints.join(", "), expireName);
+        mHrefs = hrefs;
+        mHints = hints;
+        mExpireName = expireName;
+
+        return 1;
+    }
+
+    void expireLinks(const QString& expireName) override
+    {
+        qDebug().noquote() << qsl("expireLinks([%1])").arg(expireName);
+    }
+
     bool getLink(int id, QStringList** href, QStringList** hint) override
     {
         *href = &mHrefs;

@@ -673,6 +673,11 @@ function Geyser.MiniConsole:new (cons, container)
   return me
 end
 
+--- Deletes the miniconsole using the C++ deleteMiniConsole function
+function Geyser.MiniConsole:type_delete()
+  deleteMiniConsole(self.name)
+end
+
 --- Overridden constructor to use add2
 function Geyser.MiniConsole:new2 (cons, container)
   cons = cons or {}

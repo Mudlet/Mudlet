@@ -27,11 +27,9 @@
 #include "mudlet.h"
 #include "TEvent.h"
 
-#include "pre_guard.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include "post_guard.h"
 
 // No documentation available in wiki - internal function
 std::pair<bool, QString> TLuaInterpreter::aiEnabled(lua_State* L)

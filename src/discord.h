@@ -22,7 +22,6 @@
 
 #include "Host.h"
 
-#include "pre_guard.h"
 #include <functional>
 #include <utility>
 #include <QDebug>
@@ -31,7 +30,6 @@
 #include <QLibrary>
 #include "../3rdparty/discord/rpc/include/discord_register.h"
 #include "../3rdparty/discord/rpc/include/discord_rpc.h"
-#include "post_guard.h"
 
 /*
  * From the discord headers and on-line documentation:

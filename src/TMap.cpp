@@ -33,7 +33,6 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QJsonParseError>
@@ -41,7 +40,6 @@
 #include <QProgressDialog>
 #include <QPainter>
 #include <QBuffer>
-#include "post_guard.h"
 
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -3435,8 +3433,6 @@ void TMap::update()
             }
 #endif
             if (mpMapper) {
-                mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
-                mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
 
                 if (mpMapper->mp2dMap) {
                     mpMapper->mp2dMap->mNewMoveAction = true;

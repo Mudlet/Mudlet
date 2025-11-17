@@ -22,11 +22,9 @@
 #include "discord.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QtDebug>
 #include <QHash>
 #include <string.h>
-#include "post_guard.h"
 
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
