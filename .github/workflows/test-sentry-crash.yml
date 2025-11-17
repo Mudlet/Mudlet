@@ -1,0 +1,42 @@
+name: Test Sentry Crash Reporting
+
+on:
+  workflow_dispatch:
+    inputs:
+      sentry_dsn:
+        description: 'Custom Sentry DSN for testing (optional)'
+        required: false
+        type: string
+
+jobs:
+  test-crash:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          
+      - name: Build with Sentry
+        shell: msys2 {0}
+        run: |
+          export GITHUB_WORKSPACE="$(pwd)"
+          export WITH_SENTRY=yes
+          if [ -n "${{ inputs.sentry_dsn }}" ]; then
+            export MUDLET_SENTRY_DSN="${{ inputs.sentry_dsn }}"
+          fi
+          ./CI/build-mudlet-for-windows.sh
+      
+      - name: Trigger test crash
+        shell: msys2 {0}
+        continue-on-error: true
+        run: |
+          export MUDLET_TEST_CRASH=1
+          cd build-MINGW64/release
+          ./mudlet.exe --version || echo "Crash occurred as expected"
+      
+      - name: Summary
+        run: |
+          echo "✅ Test crash triggered"
+          echo "Check your Sentry dashboard for the crash report"
