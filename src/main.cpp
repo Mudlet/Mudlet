@@ -298,6 +298,14 @@ int main(int argc, char* argv[])
         sentry_init(options);
         // Make sure everything flushes
         auto sentryClose = qScopeGuard([] { sentry_close(); });
+
+        // Test crash trigger for Sentry validation
+        if (!qEnvironmentVariable("MUDLET_TEST_CRASH").isNull()) {
+            qDebug() << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing";
+            // Trigger a crash by dereferencing a null pointer
+            int* nullPtr = nullptr;
+            *nullPtr = 42;  // This will crash
+        }
     } else {
         qInfo() << "Sentry disabled for Linux CI Lua tests.";
     }
