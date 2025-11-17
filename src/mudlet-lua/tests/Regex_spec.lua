@@ -100,7 +100,7 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             snapshot = matches
         end, 1)
 
-        feedTriggers("\Name: Tester\n")
+        feedTriggers("\nName: Tester\n")
 
         assert.spy(send).was.called(1)
         assert.are.equal("Name: Tester", snapshot[1])
@@ -113,7 +113,7 @@ describe("PCRE regex cases with tempRegexTrigger", function()
     it("uses \\b to ensure whole-word match", function()
         local send = spy.on(_G, "send")
         local snapshot = {}
-        local pattern = "^.*\\bbad\\b.*$"  -- 'cat' as a whole word
+        local pattern = "^.*\\bbad\\b.*$"
 
         local id = tempRegexTrigger(pattern, function()
             send("match")
@@ -238,7 +238,7 @@ describe("PCRE regex cases with tempRegexTrigger", function()
     it("uses non-greedy capture to stop at first delimiter", function()
         local send = spy.on(_G, "send")
         local snapshot = {}
-        local pattern = "^\\[(.+?)\\]\\s+(.*)$" -- non-greedy inside brackets
+        local pattern = "^\\[(.+?)\\]\\s+(.*)$"
 
         local id = tempRegexTrigger(pattern, function()
             send("match")
