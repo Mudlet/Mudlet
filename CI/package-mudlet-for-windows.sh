@@ -163,10 +163,9 @@ echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness - but we
 # only do 64-bits now:
-cp -v -p -t .
+cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
-
 
 echo ""
 echo "Copying discord-rpc library in..."
