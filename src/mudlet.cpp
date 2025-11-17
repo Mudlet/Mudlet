@@ -1391,8 +1391,9 @@ bool mudlet::mudletIsDefault()
 {
 #if defined(Q_OS_WINDOWS)
     QSettings settings(qsl("HKEY_CURRENT_USER/Software/Classes/telnet/shell/open/command"), QSettings::NativeFormat);
-    QString command = settings.value(qsl("."), QString()).toString();
-    return command.contains(qApp->applicationFilePath(), Qt::CaseInsensitive);
+    const QString command = settings.value(qsl("."), QString()).toString();
+    const QString appPath = QDir::toNativeSeparators(qApp->applicationFilePath());
+    return command.contains(appPath, Qt::CaseInsensitive);
 #elif defined(Q_OS_MACOS)
     // On macOS, check if Mudlet is the default handler for telnet:// URLs
     CFStringRef telnetScheme = CFSTR("telnet");
