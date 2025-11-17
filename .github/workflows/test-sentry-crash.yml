@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       sentry_dsn:
-        description: 'Custom Sentry DSN for testing (optional)'
+        description: "Custom Sentry DSN for testing (optional)"
         required: false
         type: string
 
@@ -13,11 +13,17 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: msys2/setup-msys2@v2
         with:
           update: true
-          
+
+      - name: Setup Windows SDK
+        shell: msys2 {0}
+        run: |
+          export GITHUB_WORKSPACE="$(pwd)"
+          ./CI/setup-windows-sdk.sh
+
       - name: Build with Sentry
         shell: msys2 {0}
         run: |
@@ -27,7 +33,7 @@ jobs:
             export MUDLET_SENTRY_DSN="${{ inputs.sentry_dsn }}"
           fi
           ./CI/build-mudlet-for-windows.sh
-      
+
       - name: Trigger test crash
         shell: msys2 {0}
         continue-on-error: true
@@ -35,7 +41,7 @@ jobs:
           export MUDLET_TEST_CRASH=1
           cd build-MINGW64/release
           ./mudlet.exe --version || echo "Crash occurred as expected"
-      
+
       - name: Summary
         run: |
           echo "✅ Test crash triggered"
