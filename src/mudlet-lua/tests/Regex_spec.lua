@@ -80,7 +80,7 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             snapshot = matches
         end, 1)
 
-        feedTriggers("\Name: Tester Class: druid\n")
+        feedTriggers("\nName: Tester Class: druid\n")
 
         assert.spy(send).was.called(1)
         assert.are.equal("Name: Tester Class: druid", snapshot[1])
