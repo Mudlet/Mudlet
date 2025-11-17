@@ -13,6 +13,7 @@ ENABLE_TESTING()
 
 find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
+    Core5Compat
     Multimedia
     MultimediaWidgets
     Network
@@ -26,6 +27,7 @@ link_libraries(
     Qt6::Test
     Qt6::Concurrent
     Qt6::Core
+    Qt6::Core5Compat
     Qt6::Network
     Qt6::Multimedia
     Qt6::MultimediaWidgets
