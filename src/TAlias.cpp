@@ -131,18 +131,8 @@ bool TAlias::match(const QString& haystack)
 
     ovector = pcre2_get_ovector_pointer(match_data);
 
-    if (rc == 0) {
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(
-                qsl("%1\n").arg(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
-                QColor(255, 128, 0),
-                QColor(Qt::black));
-        }
-        qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre2 got wrong number of capture groups";
-    } else {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::cyan, Qt::black) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
-        }
+    if (mudlet::smDebugMode) {
+        TDebug(Qt::cyan, Qt::black) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
     }
 
     matchCondition = true; // alias has matched
@@ -204,14 +194,6 @@ bool TAlias::match(const QString& haystack)
             continue;
         } else if (rc < 0) {
             goto END;
-        } else if (rc == 0) {
-            if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->mpErrorConsole->print(
-                    qsl("%1\n").arg(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
-                    QColor(255, 128, 0),
-                    QColor(Qt::black));
-            }
-            qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre2 got wrong number of capture groups";
         }
 
         for (i = 0; i < rc; i++) {

@@ -51,7 +51,6 @@ class TMatchState;
 #define REGEX_LINE_SPACER 5
 #define REGEX_COLOR_PATTERN 6
 #define REGEX_PROMPT 7
-#define MAX_CAPTURE_GROUPS 33
 
 using NameGroupMatches = QVector<QPair<QString, QString>>;
 
@@ -180,7 +179,7 @@ private:
     void filter(std::string&, int&);
     void processExactMatch(const QString& line, int patternNumber, int posOffset);
     void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                           const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data);
+                           const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data, int rc);
     void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);

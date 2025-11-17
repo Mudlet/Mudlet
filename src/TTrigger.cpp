@@ -277,27 +277,16 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
         return false;
     }
 
-    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, match_data);
+    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, match_data, rc);
 
     pcre2_match_data_free(match_data);
     return true;
 }
 
 void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                                 const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data)
+                                 const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data, int rc)
 {
-    int rc = pcre2_get_ovector_count(match_data);
     PCRE2_SIZE* ovector = pcre2_get_ovector_pointer(match_data);
-
-    if (rc == 0) {
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(
-                qsl("%1\n").arg(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
-                QColor(255, 128, 0),
-                QColor(Qt::black));
-        }
-        qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre2 got wrong number of capture groups";
-    }
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::blue, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
@@ -375,11 +364,6 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             continue;
         } else if (rc < 0) {
             goto END;
-        } else if (rc == 0) {
-            if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
-            }
-            qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre2 got wrong number of capture groups";
         }
 
         for (i = 0; i < rc; i++) {

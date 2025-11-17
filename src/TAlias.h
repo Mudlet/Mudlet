@@ -35,8 +35,6 @@
 
 class Host;
 
-#define MAX_CAPTURE_GROUPS 33
-
 using NameGroupMatches = QVector<QPair<QString, QString>>;
 
 class TAlias : public Tree<TAlias>
