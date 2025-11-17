@@ -156,10 +156,18 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
                 
                 lua_gettable(L, index);
             } else {
+                // Find the closest table on the stack
+                bool foundTable = false;
                 for (int j = 1; j <= lua_gettop(L); j++) {
                     if (lua_type(L, j * -1) == LUA_TTABLE) {
                         lua_gettable(L, j * -1);
+                        foundTable = true;
+                        break;
                     }
+                }
+                if (!foundTable) {
+                    qWarning() << "LuaInterface::loadValue() - No table found on stack when index=0";
+                    return false;
                 }
             }
         } else {
