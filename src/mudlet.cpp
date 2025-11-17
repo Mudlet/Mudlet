@@ -1524,7 +1524,7 @@ void mudlet::handleTelnetUri(const QUrl& url)
             readProfileData(pName, qsl("port")).toInt() == port) {
             
             // Get last modified time as proxy for last-used
-            QString profilePath = mudlet::getMudletPath(mudlet::profileHomePath, pName);
+            QString profilePath = mudlet::getMudletPath(enums::profileHomePath, pName);
             QFileInfo profileInfo(profilePath);
             matchingProfiles.append(qMakePair(pName, profileInfo.lastModified()));
         }
