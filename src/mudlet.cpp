@@ -1558,7 +1558,8 @@ void mudlet::handleTelnetUri(const QUrl& url)
 
     // Now, load and connect to the profile
     if (!profileName.isEmpty()) {
-        loadProfile(profileName, true);
+        loadProfile(profileName, false);
+        slot_connectionDialogueFinished(profileName, true);
     }
 }
 

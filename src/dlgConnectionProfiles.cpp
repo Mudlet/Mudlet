@@ -929,6 +929,16 @@ void dlgConnectionProfiles::showWarningMessage(const QString& message)
     notificationAreaMessageBox->setText(message);
 }
 
+void dlgConnectionProfiles::showInformationMessage(const QString& message)
+{
+    notificationArea->show();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->show();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(message);
+}
+
 void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 {
     if (!pItem) {

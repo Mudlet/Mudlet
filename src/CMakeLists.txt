@@ -302,6 +302,7 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    mudletapplication.h
     MudletInstanceCoordinator.h
     MxpTag.h
     ScriptUnit.h
