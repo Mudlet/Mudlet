@@ -87,7 +87,7 @@ jobs:
         # Install all required dependencies
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
         sudo apt-get install libsecret-1-dev ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev \
-          libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
+          libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
 
         echo "Skipping generation of translation stats, so not installing lua-yajl."
 

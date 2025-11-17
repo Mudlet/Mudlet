@@ -9,14 +9,16 @@
 #  PCRE2_INCLUDE_DIR, where to find pcre2.h
 
 # First try to find PCRE2 via its own CMake config (vcpkg, newer system packages)
-find_package(pcre2 CONFIG QUIET)
+# Request the 8-bit component explicitly as some configs require it
+find_package(PCRE2 CONFIG QUIET COMPONENTS 8BIT)
 
-if(pcre2_FOUND)
-  # PCRE2's config file typically creates targets like PCRE2::PCRE2-8
-  if(TARGET PCRE2::PCRE2-8 AND NOT TARGET PCRE2::PCRE2)
+if(PCRE2_FOUND)
+  # PCRE2's config file typically creates targets like PCRE2::8BIT or PCRE2::PCRE2-8
+  if(TARGET PCRE2::8BIT AND NOT TARGET PCRE2::PCRE2)
+    add_library(PCRE2::PCRE2 ALIAS PCRE2::8BIT)
+  elseif(TARGET PCRE2::PCRE2-8 AND NOT TARGET PCRE2::PCRE2)
     add_library(PCRE2::PCRE2 ALIAS PCRE2::PCRE2-8)
   endif()
-  set(PCRE2_FOUND TRUE)
   message(STATUS "Found PCRE2 via CMake config")
   return()
 endif()

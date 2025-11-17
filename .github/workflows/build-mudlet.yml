@@ -97,7 +97,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # Install all required dependencies
-        brew install libzzip libzip ccache expect assimp hunspell pcre pugixml sqlite yajl boost
+        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -117,8 +117,8 @@ jobs:
         # The action installs to .lua/ and .luarocks/ in the runner home
         echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
 
-        # Help CMake find keg-only Homebrew packages (PCRE is keg-only on macOS)
-        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        # Help CMake find keg-only Homebrew packages (PCRE2 is keg-only on macOS)
+        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
@@ -157,7 +157,7 @@ jobs:
           libglu1-mesa-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
-          libpcre3-dev \
+          libpcre2-dev \
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
@@ -165,7 +165,7 @@ jobs:
           libxkbcommon-x11-0 \
           libyajl-dev \
           libzip-dev \
-          pcregrep \
+          pcre2-utils \
           pkg-config \
           -y
 
@@ -207,7 +207,7 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        sudo apt-get -y install pcregrep
+        sudo apt-get -y install pcre2-utils
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
 
@@ -216,7 +216,7 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        brew install pcre
+        brew install pcre2
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
@@ -266,11 +266,11 @@ jobs:
         if [ "$RUNNER_OS" = "macOS" ]; then
           $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
           $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
-          $LUAROCKS lrexlib-pcre PCRE_DIR=${HOMEBREW_PREFIX}/opt/pcre
+          $LUAROCKS lrexlib-pcre2 PCRE2_DIR=${HOMEBREW_PREFIX}/opt/pcre2
         else
           $LUAROCKS lua-zip
           $LUAROCKS LuaSQL-SQLite3 2.6.1
-          $LUAROCKS lrexlib-pcre
+          $LUAROCKS lrexlib-pcre2
         fi
 
         # CI changelog generation dependencies

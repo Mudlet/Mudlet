@@ -118,8 +118,8 @@ jobs:
 
         # Install all required dependencies
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
-        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
-          libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
+        sudo apt-get install libsecret-1-dev ccache pkg-config pcre2-utils expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+          libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
