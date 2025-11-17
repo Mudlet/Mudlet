@@ -86,14 +86,14 @@ sentry_value_t before_send(sentry_value_t event, void* hint, void* closure) {
     Q_UNUSED(closure);
     auto* versions = &g_sentryVersionInfo;
 
-    
+
     // Check if mudlet::self() is initialized to avoid crashes during early startup
     auto* mudletInstance = mudlet::self();
     if (!mudletInstance) {
         // If mudlet is not initialized yet, don't send crashes
         return sentry_value_new_null();
     }
-    
+
     if (versions->isRelease) {
         if (!mudletInstance->smSendCrashesForReleases) {
             return sentry_value_new_null();
@@ -265,24 +265,24 @@ int main(int argc, char* argv[])
         sentry_options_t* options = sentry_options_new();
                 // Allow override via environment variable for testing
         QByteArray dsn = qEnvironmentVariable("MUDLET_SENTRY_DSN",
-             "https://362a6ffaa959436292d8d5eb35ff0aea@o1070874.ingest.us.sentry.io/6067272").toUtf8();
+             "https://ce03a184e7c8502ac000f012df27a707@o4510377657106432.ingest.us.sentry.io/4510377750298624").toUtf8();
         sentry_options_set_dsn(options, dsn.constData());
         QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
         QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
         qDebug() << "crashpad_handler path is: " << sentryCrashHandler;
         sentry_options_set_database_path(options, sentryPath.toLocal8Bit().constData());
         sentry_options_set_handler_path(options, sentryCrashHandler.toLocal8Bit().constData());
-        
+
             sentry_options_set_release(options, "mudlet @" APP_VERSION);
 
             sentry_options_set_debug(options, false);
 
-        
+
             // Initialize global version info used by before_send callback
             g_sentryVersionInfo.isRelease = releaseVersion;
             g_sentryVersionInfo.isPublicTest = publicTestVersion;
             g_sentryVersionInfo.isTesting = testingVersion;
-        
+
             // Use the global/static VersionInfo to avoid lifetime issues
             sentry_options_set_before_send(options, before_send, nullptr);
 
