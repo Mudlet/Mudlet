@@ -5474,6 +5474,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
     lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
     lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
+    lua_register(pGlobalLua, "setLinkStyle", TLuaInterpreter::setLinkStyle);
+    lua_register(pGlobalLua, "resetLinkStyle", TLuaInterpreter::resetLinkStyle);
+    lua_register(pGlobalLua, "clearVisitedLinks", TLuaInterpreter::clearVisitedLinks);
     lua_register(pGlobalLua, "addWordToDictionary", TLuaInterpreter::addWordToDictionary);
     lua_register(pGlobalLua, "removeWordFromDictionary", TLuaInterpreter::removeWordFromDictionary);
     lua_register(pGlobalLua, "spellCheckWord", TLuaInterpreter::spellCheckWord);
@@ -7286,6 +7289,12 @@ int TLuaInterpreter::setConfig(lua_State * L)
             host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
             return success();
         }
+        if (key == qsl("mapShowGrid")) {
+            const bool showGrid = getVerifiedBool(L, __func__, 2, "value");
+            host.mMapperShowGrid = showGrid;
+            host.mpMap->mpMapper->slot_setShowGrid(showGrid);
+            return success();
+        }
         if (key == qsl("showUpperLowerLevels")) {
             mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
 
@@ -7685,6 +7694,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
             lua_pushnumber(L, host.mMapInfoBg.alpha());
             lua_rawseti(L, -2, 4);
         } },
+        { qsl("mapShowGrid"), [&](){ lua_pushboolean(L, host.mMapperShowGrid); } },
         { qsl("editorAutoComplete"), [&](){ lua_pushboolean(L, host.mEditorAutoComplete); } },
         { qsl("enableGMCP"), [&](){ lua_pushboolean(L, host.mEnableGMCP); } },
         { qsl("enableMSSP"), [&](){ lua_pushboolean(L, host.mEnableMSSP); } },

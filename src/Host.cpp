@@ -338,6 +338,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
         if (getForceMXPProcessorOn()) {
             mMxpProcessor.enable();
+            // When force-enabling MXP (typically for games like IRE MUDs that don't
+            // negotiate properly), lock to secure mode for compatibility
+            mMxpProcessor.setMode(6); // Lock secure mode
             qDebug() << "MXP enabled (forced)";
         }
     });
@@ -346,6 +349,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         if (enabled) {
             if (!mMxpProcessor.isEnabled()) {
                 mMxpProcessor.enable();
+                // When force-enabling MXP (typically for games like IRE MUDs that don't
+                // negotiate properly), lock to secure mode for compatibility with games
+                // that use secure tags without sending mode switches
+                mMxpProcessor.setMode(6); // Lock secure mode
                 qDebug() << "MXP enabled (forced)";
             }
         } else if (mMxpProcessor.isEnabled() && !mTelnet.isMXPEnabled()) {
@@ -3340,6 +3347,66 @@ bool Host::setClickthrough(const QString& name, bool clickthrough)
     return false;
 }
 
+bool Host::setLabelStyleSheet(const QString& name, const QString& styleSheet)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setStyleSheet(styleSheet);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setLinkStyle(linkColor, linkVisitedColor, underline);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::resetLinkStyle(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->resetLinkStyle();
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::clearVisitedLinks(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->clearVisitedLinks();
+        return true;
+    }
+
+    return false;
+}
+
 void Host::hideMudletsVariables()
 {
     auto varUnit = getLuaInterface()->getVarUnit();
@@ -3997,9 +4064,12 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
         QString styleSheet = pL->styleSheet();
         QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
         if (styleSheet.contains(qsl("background-color"))) {
-            QRegularExpression re("background-color: .*;");
+            QRegularExpression re("background-color:[^;]*;");
             styleSheet.replace(re, newColor);
         } else {
+            if (!styleSheet.isEmpty() && !styleSheet.endsWith('\n')) {
+                styleSheet.append('\n');
+            }
             styleSheet.append(newColor);
         }
 
@@ -4407,6 +4477,9 @@ void Host::setFocusOnHostActiveCommandLine()
 
 void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
 {
+    if (!pCommandLine) {
+        return;
+    }
     mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
     mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
 }

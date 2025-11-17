@@ -568,6 +568,28 @@ function Geyser.Label:setStyleSheet(css)
   self.stylesheet = css
   self:autoAdjustSize()
 end
+
+--- Sets the hyperlink styling for the label
+-- @param linkColor Color for normal links (e.g., "cyan", "#00ffff")
+-- @param visitedColor Color for visited links (e.g., "purple", "#ff00ff")
+-- @param underline Whether links should be underlined (default: true)
+function Geyser.Label:setLinkStyle(linkColor, visitedColor, underline)
+  if underline == nil then
+    underline = true
+  end
+  setLinkStyle(self.name, linkColor, visitedColor, underline)
+end
+
+--- Resets the hyperlink styling to Qt defaults
+function Geyser.Label:resetLinkStyle()
+  resetLinkStyle(self.name)
+end
+
+--- Clears the visited links history for this label
+function Geyser.Label:clearVisitedLinks()
+  clearVisitedLinks(self.name)
+end
+
 --- Sets the tooltip of the label
 -- @param txt the tooltip txt
 -- @param duration the duration of the tooltip
