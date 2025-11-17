@@ -32,12 +32,19 @@ jobs:
         submodules: true
         fetch-depth: 0
 
+    - name: Init all submodules recursively
+      run: git submodule update --init --recursive
+
     - name: (Windows) Setup MSYS2
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
         update: true
+
+    - name: Enable sentry.io for Windows releases
+      shell: msys2 {0}
+      run: echo "WITH_SENTRY=yes" >> $GITHUB_ENV
 
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
@@ -62,6 +69,7 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     - name: (Windows) Run QTest

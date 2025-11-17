@@ -46,6 +46,32 @@ datetime = {
   }
 }
 
+-- rex.gsub was crashing so here is a homemade
+local function rex_gsub_custom(str, pattern, repl)
+    local out = {}
+    local last_end = 1
+
+    while true do
+        local start_pos, end_pos, cap = rex.find(str, pattern, last_end)
+        if not start_pos then
+            table.insert(out, str:sub(last_end))
+            break
+        end
+
+        table.insert(out, str:sub(last_end, start_pos - 1))
+
+        if type(repl) == "function" then
+            table.insert(out, repl(cap))
+        else
+            table.insert(out, repl)
+        end
+
+        last_end = end_pos + 1
+    end
+
+    return table.concat(out)
+end
+
 -- the timestamp is stored in UTC time, so work out the difference in seconds
 -- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
 function datetime:calculate_UTCdiff(ts)
@@ -64,7 +90,7 @@ end
 -- then compiling them.
 function datetime:_get_pattern(format)
   if not datetime._pattern_cache[format] then
-    local fmt = rex.gsub(format, "(%[A-Za-z])",
+    local fmt = rex_gsub_custom(format, "(%[A-Za-z])",
     function(m)
       return datetime._directives[m] or m
     end

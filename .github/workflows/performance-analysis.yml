@@ -27,6 +27,9 @@ jobs:
         fetch-depth: 0
         submodules: true
 
+    - name: Init all submodules recursively
+      run: git submodule update --init --recursive        
+
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v3.30.3
 

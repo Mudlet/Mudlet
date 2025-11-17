@@ -66,6 +66,9 @@ jobs:
         submodules: true
         fetch-depth: 0
 
+    - name: Init all submodules recursively
+      run: git submodule update --init --recursive
+
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
@@ -154,6 +157,7 @@ jobs:
           imagemagick \
           libassimp-dev \
           libboost-dev \
+          libcurl4-openssl-dev \
           libglu1-mesa-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
@@ -167,6 +171,9 @@ jobs:
           libzip-dev \
           pcre2-utils \
           pkg-config \
+          libssl-dev \
+          openssl \
+          ca-certificates \
           -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
@@ -193,6 +200,15 @@ jobs:
          echo "WITH_UPDATER=no" >> $GITHUB_ENV
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
+
+    - name: Set Sentry environment variables
+      run: |
+        echo "WITH_SENTRY=yes" >> $GITHUB_ENV
+        if [[ "${{ matrix.deploy }}" == "deploy" ]]; then
+          echo "SENTRY_SEND_DEBUG=0" >> $GITHUB_ENV
+        else
+          echo "SENTRY_SEND_DEBUG=0" >> $GITHUB_ENV
+        fi
 
     - name: Restore ccache
       id: restore-ccache
@@ -237,8 +253,11 @@ jobs:
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DUSE_SANITIZER=""
+          -DWITH_SENTRY=${{ env.WITH_SENTRY }}
+          -DSENTRY_SEND_DEBUG=${{ env.SENTRY_SEND_DEBUG }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+        SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'

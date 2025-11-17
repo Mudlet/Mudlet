@@ -57,6 +57,7 @@ extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void        initializeQRCResources();
+void        initSentry();
 
 #if defined(Q_OS_WINDOWS)
 bool runUpdate();
@@ -160,6 +161,11 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
+
+    #ifdef WITH_SENTRY
+        initSentry();
+    #endif
+
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {

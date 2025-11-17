@@ -2052,10 +2052,36 @@ end
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
 
+-- rex.gsub was crashing so here is a homemade
+local function rex_gsub_custom(str, pattern, repl)
+    local out = {}
+    local last_end = 1
+
+    while true do
+        local start_pos, end_pos, cap = rex.find(str, pattern, last_end)
+        if not start_pos then
+            table.insert(out, str:sub(last_end))
+            break
+        end
+
+        table.insert(out, str:sub(last_end, start_pos - 1))
+
+        if type(repl) == "function" then
+            table.insert(out, repl(cap))
+        else
+            table.insert(out, repl)
+        end
+
+        last_end = end_pos + 1
+    end
+
+    return table.concat(out)
+end
+
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
   assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
-  local result = rex.gsub(text, ansiPattern, "")
+  local result = rex_gsub_custom(text, ansiPattern, "")
   return result
 end
 
@@ -2069,7 +2095,7 @@ function ansi2decho(text, ansi_default_color)
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
-  local result = rex.gsub(text, ansiPattern, function(s)
+  local result = rex_gsub_custom(text, ansiPattern, function(s)
     local output = {} -- assemble the output into this table
 
     local delim = ";"

@@ -104,6 +104,9 @@ jobs:
           submodules: true
           fetch-depth: 0
 
+      - name: Init all submodules recursively
+        run: git submodule update --init --recursive
+
       - name: update submodule to latest
         run: git submodule update --remote 3rdparty/dblsqd/
 
@@ -144,6 +147,9 @@ jobs:
           ref: development
           submodules: true
           fetch-depth: 0
+
+      - name: Init all submodules recursively
+        run: git submodule update --init --recursive
 
       - name: update submodule to latest in branch
         run: |
