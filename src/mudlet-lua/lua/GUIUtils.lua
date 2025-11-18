@@ -2052,9 +2052,6 @@ end
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
 
--- rex.gsub was crashing so here is a homemade
--- Use shared rex_gsub_custom from StringUtils.lua
-
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
   assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
