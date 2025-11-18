@@ -89,6 +89,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(toolButton_mapperMenu, &QToolButton::clicked, this, &dlgMapper::slot_setupMapperMenu);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
+    // Explicitly set the palette to ensure proper selection colors in both light and dark themes
+    comboBox_showArea->setPalette(qApp->palette());
 #if defined(INCLUDE_3DMAPPER)
     mIs3DMode = mpHost->mShow3DView;
     if (mpHost->mShow3DView) {
