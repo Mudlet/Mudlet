@@ -97,6 +97,10 @@ int TLuaInterpreter::functionName(lua_State* L)
 
 ## Common patterns
 
+### Comments
+
+Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
+
 ### Error handling
 
 ```cpp
@@ -133,6 +137,10 @@ Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defin
 
 **Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines (CMake) or `DEFINES+=DEBUG_XXX` lines (QMake) when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
 
+### Git
+
+Do not force-push to remote branches.
+
 ### Building on macOS
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_macOS
@@ -162,7 +170,7 @@ cd /path/to/Mudlet/build
 # configure (only needed the first time)
 cmake ../ -G Ninja
 
-# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default:
+# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default, no need to specify number of jobs:
 cmake --build .
 
 # Run Mudlet - it's a visual, desktop application

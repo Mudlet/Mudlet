@@ -128,6 +128,9 @@ echo ""
 # it from a submodule - set as environment variable for CMake
 export WITH_OWN_QTKEYCHAIN=NO
 
+# Set Ninja status format for consistent build output
+export NINJA_STATUS='[%f/%t %o/sec] '
+
 # Set updater flag based on build type
 if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
   # The updater is not helpful in this environment (PR testing build)
