@@ -19,7 +19,6 @@
 
 #ifdef WITH_SENTRY
     #include <QStandardPaths>
-    #include <QCoreApplication>
     #include "sentry.h"
 #endif
 #if defined(_WIN32) || defined(_WIN64)
@@ -35,6 +34,7 @@
 #include <string>
 #include <algorithm>
 #include <mutex>
+
 #include "SentryWrapper.h"
 
 /**
@@ -90,8 +90,9 @@ std::string getExeDir()
 
         return dir;
     #elif defined(__APPLE__)
-        char path[PATH_MAX];
-        uint32_t size = sizeof(path);
+        char        path[PATH_MAX];
+        uint32_t    size = sizeof(path);
+
         if (_NSGetExecutablePath(path, &size) != 0) {
             return ".";
         }
@@ -102,8 +103,9 @@ std::string getExeDir()
         }
         return exePath.substr(0, pos);
     #else
-        char result[PATH_MAX];
-        ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+        char        result[PATH_MAX];
+        ssize_t     count = readlink("/proc/self/exe", result, PATH_MAX);
+
         if (count <= 0) {
             return std::string(".");
         }

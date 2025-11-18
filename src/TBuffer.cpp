@@ -644,6 +644,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             continue;
         }
 
+        int* p = nullptr;
+*p = 42; // crash immédiat
+
         if (mGotCSI) {
             // Lookahead and try and see what we are processing
             // At the start of a CSI sequence the only valid character is one of:
