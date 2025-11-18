@@ -231,6 +231,8 @@ else
 fi
 
 
+# Set Ninja status format for consistent build output
+export NINJA_STATUS='[%f/%t %o/sec] '
 
 # Set updater flag based on build type
 if [[ "${MUDLET_VERSION_BUILD,,}" == *"-testing"* ]]; then
