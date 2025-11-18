@@ -678,6 +678,15 @@ endif(USE_UPDATER)
 if (USE_SENTRY)
   target_link_libraries(${LIB_MUDLET_TARGET} sentry::sentry)
   target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE INCLUDE_SENTRY)
+  
+  # Copy Sentry crashpad binaries next to the mudlet executable after build
+  # This ensures they're in the build output directory for packaging
+  add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${sentry_BINARY_DIR}/crashpad_build/handler"
+        "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
+    COMMENT "Copying Sentry crashpad binaries next to the mudlet executable"
+  )
 endif()
 
 if(USE_3DMAPPER)

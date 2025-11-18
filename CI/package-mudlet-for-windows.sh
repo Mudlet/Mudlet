@@ -102,79 +102,17 @@ if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet
   exit 6
 fi
 
-cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
+FILES_TO_COPY=("mudlet.exe")
 if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+    FILES_TO_COPY+=("mudlet.exe.debug")
+fi
+if [ "${WITH_SENTRY}" = "yes" ]; then
+    FILES_TO_COPY+=("crashpad_handler.exe" "crashpad_wer.dll")
 fi
 
-# Copy Sentry crashpad files if WITH_SENTRY is enabled
-if [ "${WITH_SENTRY}" = "yes" ]; then
-  echo ""
-  echo "Copying Sentry crashpad files..."
-  
-  # Try multiple possible locations for crashpad_handler.exe
-  CRASHPAD_FOUND=false
-  
-  # Location 1: Main build output directory (if CMake copied it)
-  if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_handler.exe" ]; then
-    echo "Found crashpad_handler.exe in main build output"
-    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_handler.exe" "${PACKAGE_DIR}/"
-    CRASHPAD_FOUND=true
-  # Location 2: Sentry build directory
-  elif [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/crashpad_handler.exe" ]; then
-    echo "Found crashpad_handler.exe in sentry build directory"
-    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/crashpad_handler.exe" "${PACKAGE_DIR}/"
-    CRASHPAD_FOUND=true
-  # Location 3: Sentry install directory bin
-  elif [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/install/bin/crashpad_handler.exe" ]; then
-    echo "Found crashpad_handler.exe in sentry install bin directory"
-    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/install/bin/crashpad_handler.exe" "${PACKAGE_DIR}/"
-    CRASHPAD_FOUND=true
-  # Location 4: Deep in sentry build tree
-  else
-    CRASHPAD_SEARCH=$(find "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry" -name "crashpad_handler.exe" 2>/dev/null | head -1)
-    if [ -n "${CRASHPAD_SEARCH}" ] && [ -f "${CRASHPAD_SEARCH}" ]; then
-      echo "Found crashpad_handler.exe at: ${CRASHPAD_SEARCH}"
-      cp -v -p "${CRASHPAD_SEARCH}" "${PACKAGE_DIR}/"
-      CRASHPAD_FOUND=true
-    fi
-  fi
-  
-  if [ "${CRASHPAD_FOUND}" = "false" ]; then
-    echo "ERROR: Sentry is enabled but crashpad_handler.exe cannot be found"
-    echo "Searched locations:"
-    echo "  - ${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/"
-    echo "  - ${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/"
-    echo "  - ${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/install/bin/"
-    exit 7
-  fi
-  
-  # Copy crashpad_wer.dll if it exists (try same locations)
-  WER_FOUND=false
-  if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_wer.dll" ]; then
-    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_wer.dll" "${PACKAGE_DIR}/"
-    WER_FOUND=true
-  elif [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/crashpad_wer.dll" ]; then
-    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/crashpad_wer.dll" "${PACKAGE_DIR}/"
-    WER_FOUND=true
-  elif [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/install/bin/crashpad_wer.dll" ]; then
-    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry/install/bin/crashpad_wer.dll" "${PACKAGE_DIR}/"
-    WER_FOUND=true
-  else
-    WER_SEARCH=$(find "${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry" -name "crashpad_wer.dll" 2>/dev/null | head -1)
-    if [ -n "${WER_SEARCH}" ] && [ -f "${WER_SEARCH}" ]; then
-      cp -v -p "${WER_SEARCH}" "${PACKAGE_DIR}/"
-      WER_FOUND=true
-    fi
-  fi
-  
-  if [ "${WER_FOUND}" = "false" ]; then
-    echo "Warning: crashpad_wer.dll not found (this may be normal for some configurations)"
-  fi
-  
-  echo "Sentry crashpad files copied successfully"
-  echo ""
-fi
+for f in "${FILES_TO_COPY[@]}"; do
+    cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/$f" "${PACKAGE_DIR}/"
+done
 
 
 # The location that windeployqt6 puts the Qt translation files by default is "./translations"
