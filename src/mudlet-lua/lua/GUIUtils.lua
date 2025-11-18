@@ -2053,30 +2053,7 @@ end
 local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
 
 -- rex.gsub was crashing so here is a homemade
-local function rex_gsub_custom(str, pattern, repl)
-    local out = {}
-    local last_end = 1
-
-    while true do
-        local start_pos, end_pos, cap = rex.find(str, pattern, last_end)
-        if not start_pos then
-            table.insert(out, str:sub(last_end))
-            break
-        end
-
-        table.insert(out, str:sub(last_end, start_pos - 1))
-
-        if type(repl) == "function" then
-            table.insert(out, repl(cap))
-        else
-            table.insert(out, repl)
-        end
-
-        last_end = end_pos + 1
-    end
-
-    return table.concat(out)
-end
+-- Use shared rex_gsub_custom from StringUtils.lua
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)

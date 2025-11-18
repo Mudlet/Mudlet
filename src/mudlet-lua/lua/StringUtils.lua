@@ -215,3 +215,24 @@ function f(supersecretstringvariablenocollision)
     end
   end))
 end
+
+-- Homemade rex.gsub(), original was crashing.
+function rex_gsub_custom(str, pattern, repl)
+  local out = {}
+  local last_end = 1
+  while true do
+    local start_pos, end_pos, cap = rex.find(str, pattern, last_end)
+    if not start_pos then
+      table.insert(out, str:sub(last_end))
+      break
+    end
+    table.insert(out, str:sub(last_end, start_pos - 1))
+    if type(repl) == "function" then
+      table.insert(out, repl(cap))
+    else
+      table.insert(out, repl)
+    end
+    last_end = end_pos + 1
+  end
+  return table.concat(out)
+end

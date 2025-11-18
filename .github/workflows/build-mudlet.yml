@@ -63,11 +63,9 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
 
-    - name: Init all submodules recursively
-      run: git submodule update --init --recursive
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
@@ -204,7 +202,7 @@ jobs:
     - name: Set Sentry environment variables
       run: |
         echo "WITH_SENTRY=yes" >> $GITHUB_ENV
-        if [ -n "$SENTRY_SEND_DEBUG_SECRET" ]; then
+        if [ -n "${SENTRY_SEND_DEBUG_SECRET}" ]; then
           echo "SENTRY_SEND_DEBUG=1" >> $GITHUB_ENV
         else
           echo "SENTRY_SEND_DEBUG=0" >> $GITHUB_ENV

@@ -29,11 +29,8 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
-
-    - name: Init all submodules recursively
-      run: git submodule update --init --recursive
 
     - name: (Windows) Setup MSYS2
       if: matrix.buildname == 'windows64'

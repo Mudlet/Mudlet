@@ -43,6 +43,7 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
+#include "SentryWrapper.h"
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -57,7 +58,6 @@ extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void        initializeQRCResources();
-void        initSentry();
 
 #if defined(Q_OS_WINDOWS)
 bool runUpdate();
@@ -164,6 +164,7 @@ int main(int argc, char* argv[])
 
     #ifdef WITH_SENTRY
         initSentry();
+        auto sentryClose = qScopeGuard([] { sentry_close(); });
     #endif
 
 #ifdef Q_OS_WINDOWS

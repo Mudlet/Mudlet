@@ -44,10 +44,7 @@ jobs:
         # We must fetch at least the immediate parents so that if this is
         # a pull request then we can checkout the head.
         fetch-depth: 2
-        submodules: true
-
-    - name: Init all submodules recursively
-      run: git submodule update --init --recursive
+        submodules: recursive
 
     - name: (Windows) Install Qt
       uses: jurplel/install-qt-action@v4

@@ -25,9 +25,7 @@
 #endif
 
 #include <string>
-
-std::string makeExecutablePath(const std::string& dir, const std::string& name);
-
+#include "SentryWrapper.h"
 
 /**
  * Initializes Sentry options for crash/error reporting,
@@ -54,7 +52,6 @@ void initSentry()
         sentry_options_set_external_crash_reporter_path(options, makeExecutablePath(APP_DIR_PATH, "MudletCrashReporter").c_str());
 
         sentry_init(options);
-        auto sentryClose = qScopeGuard([] { sentry_close(); });
     #endif
 }
 

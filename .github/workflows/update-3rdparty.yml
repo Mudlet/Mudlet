@@ -101,11 +101,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: development
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
-
-      - name: Init all submodules recursively
-        run: git submodule update --init --recursive
 
       - name: update submodule to latest
         run: git submodule update --remote 3rdparty/dblsqd/
@@ -145,11 +142,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: development
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
-
-      - name: Init all submodules recursively
-        run: git submodule update --init --recursive
 
       - name: update submodule to latest in branch
         run: |

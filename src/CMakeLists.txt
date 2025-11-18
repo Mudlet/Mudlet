@@ -320,6 +320,7 @@ set(mudlet_HDRS
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
     SelectionRectangleHandler.h
+    SentryWrapper.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h
