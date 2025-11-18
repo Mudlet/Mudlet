@@ -705,8 +705,21 @@ if(WIN32 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
   )
 endif()
 
-# Copy Sentry crashpad binaries next to the mudlet executable after build
+# Configure Sentry for the executable target
 if (WITH_SENTRY)
+  # Add compile definitions to the executable
+  target_compile_definitions(${EXE_MUDLET_TARGET} PUBLIC
+    WITH_SENTRY
+    APP_DIR_PATH="${CMAKE_BINARY_DIR}/src"
+    SENTRY_BUILD_STATIC
+  )
+  
+  # On Windows, add debug symbols to the executable
+  if(WIN32)
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE -g -gcodeview)
+  endif()
+  
+  # Copy Sentry crashpad binaries next to the mudlet executable after build
   add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native/install/bin"
