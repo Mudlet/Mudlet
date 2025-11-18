@@ -708,10 +708,12 @@ endif()
 
 # Copy Sentry crashpad binaries next to the mudlet executable after build
 if (USE_SENTRY)
+  # Use a CMake script to find and copy crashpad files at build time
   add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${sentry_BINARY_DIR}/crashpad_build/handler"
-        "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
+    COMMAND ${CMAKE_COMMAND}
+        -DSENTRY_BUILD_DIR="${sentry_BINARY_DIR}"
+        -DTARGET_DIR="$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CopySentryCrashpad.cmake"
     COMMENT "Copying Sentry crashpad binaries next to the mudlet executable"
   )
 endif()
