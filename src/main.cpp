@@ -271,6 +271,9 @@ int main(int argc, char* argv[])
         sentry_options_set_dsn(options, dsn.constData());
         QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
         QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
+#ifdef Q_OS_WIN
+        sentryCrashHandler += qsl(".exe");
+#endif
         qDebug() << "crashpad_handler path is: " << sentryCrashHandler;
         sentry_options_set_database_path(options, sentryPath.toLocal8Bit().constData());
         sentry_options_set_handler_path(options, sentryCrashHandler.toLocal8Bit().constData());

@@ -107,6 +107,32 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
   cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
+# Copy Sentry crashpad files if WITH_SENTRY is enabled
+if [ "${WITH_SENTRY}" = "yes" ]; then
+  echo ""
+  echo "Copying Sentry crashpad files..."
+  
+  # Check if crashpad_handler.exe exists
+  if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_handler.exe" ]; then
+    echo "ERROR: Sentry is enabled but crashpad_handler.exe is missing from build output"
+    echo "Expected location: ${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_handler.exe"
+    exit 7
+  fi
+  
+  # Copy crashpad_handler.exe
+  cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_handler.exe" "${PACKAGE_DIR}/"
+  
+  # Copy crashpad_wer.dll if it exists
+  if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_wer.dll" ]; then
+    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_wer.dll" "${PACKAGE_DIR}/"
+  else
+    echo "Warning: crashpad_wer.dll not found in build output (this may be normal for some configurations)"
+  fi
+  
+  echo "Sentry crashpad files copied successfully"
+  echo ""
+fi
+
 
 # The location that windeployqt6 puts the Qt translation files by default is "./translations"
 # unfortunately this is not what
