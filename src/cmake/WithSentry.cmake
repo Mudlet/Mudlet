@@ -109,3 +109,59 @@ elseif(WIN32)
 else()
     target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat)
 endif()
+
+add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${SENTRY_PATH}/install/bin"
+        "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
+    COMMENT "Copying Sentry binaries next to the mudlet executable"
+)
+
+# if(APPLE)
+#     add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+#         COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
+#         COMMAND strip -x $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+#         COMMENT "Creating .dSYM bundle and stripping executable"
+#     )
+# elseif(UNIX)
+#     add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+#         COMMAND objcopy --only-keep-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}> $<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug
+#         COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+#         COMMAND objcopy --add-gnu-debuglink=$<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+#         COMMENT "Creating separate debug file and stripping executable"
+#     )
+# endif()
+
+if(SENTRY_SEND_DEBUG)
+    if(NOT DEFINED ENV{SENTRY_AUTH_TOKEN} OR "$ENV{SENTRY_AUTH_TOKEN}" STREQUAL "")
+        message(FATAL_ERROR
+            "[Option SENTRY_SEND_DEBUG enabled] The environment variable SENTRY_AUTH_TOKEN is missing.\n"
+            "SENTRY_AUTH_TOKEN is required to authenticate with Sentry before uploading debug files.\n"
+            "Fix: try exporting SENTRY_AUTH_TOKEN=\"...\""
+        )
+    else()
+        add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+        COMMAND bash "${CMAKE_SOURCE_DIR}/CI/send_debug_files_to_sentry.sh" "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+        VERBATIM
+    )
+    endif()
+endif()
+
+if(APPLE)
+    add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+        COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
+        COMMAND strip -x $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+        COMMENT "Creating .dSYM bundle and stripping executable"
+    )
+elseif(UNIX)
+    add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+        COMMAND objcopy --only-keep-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}> $<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug
+        COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+        COMMAND objcopy --add-gnu-debuglink=$<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+        COMMENT "Creating separate debug file and stripping executable"
+    )
+else()
+    add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+        COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+    )
+endif()
