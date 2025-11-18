@@ -717,10 +717,6 @@ if (WITH_SENTRY)
         "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
     COMMENT "Copying Sentry binaries next to the mudlet executable"
   )
-  
-  # Add crash_reporter subdirectory
-  add_subdirectory(crash_reporter)
-  add_dependencies(MudletCrashReporter sentry_native)
 endif()
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
