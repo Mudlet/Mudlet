@@ -110,8 +110,7 @@ private:
     void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
     bool saveXmlFile(QSaveFile& file);
     bool saveXml(const QString&);
-    bool saveXmlFromString(const QString& fileName, const std::string& xmlContent);
-    std::string serializeXmlDoc();
+    static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);
     pugi::xml_node writeXmlHeader();
     void sanitizeForQxml(std::string& output);
     QString saveXml();
