@@ -675,9 +675,8 @@ if(USE_UPDATER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_UPDATER)
 endif(USE_UPDATER)
 
-if (USE_SENTRY)
-  target_link_libraries(${LIB_MUDLET_TARGET} sentry::sentry)
-  target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE INCLUDE_SENTRY)
+if (WITH_SENTRY)
+  include(cmake/WithSentry.cmake)
 endif()
 
 if(USE_3DMAPPER)
@@ -707,14 +706,12 @@ if(WIN32 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
 endif()
 
 # Copy Sentry crashpad binaries next to the mudlet executable after build
-if (USE_SENTRY)
-  # Use a CMake script to find and copy crashpad files at build time
+if (WITH_SENTRY)
   add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-    COMMAND ${CMAKE_COMMAND}
-        -DSENTRY_BUILD_DIR="${sentry_BINARY_DIR}"
-        -DTARGET_DIR="$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CopySentryCrashpad.cmake"
-    COMMENT "Copying Sentry crashpad binaries next to the mudlet executable"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native/install/bin"
+        "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
+    COMMENT "Copying Sentry binaries next to the mudlet executable"
   )
 endif()
 
