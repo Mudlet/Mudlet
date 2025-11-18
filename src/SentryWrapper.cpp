@@ -24,12 +24,17 @@
 #endif
 #if defined(_WIN32) || defined(_WIN64)
     #include <windows.h>
+#elif defined(__APPLE__)
+    #include <mach-o/dyld.h>
+    #include <limits.h>
 #else
     #include <unistd.h>
     #include <limits.h>
 #endif
 
 #include <string>
+#include <algorithm>
+#include <mutex>
 #include "SentryWrapper.h"
 
 /**
@@ -72,6 +77,9 @@ std::string makeExecutablePath(const std::string& dir, const std::string& name)
 
 std::string getExeDir()
 {
+    static std::mutex mtx;
+    std::lock_guard<std::mutex> lock(mtx);
+
     #if defined(_WIN32) || defined(_WIN64)
         char path[MAX_PATH];
         GetModuleFileNameA(NULL, path, MAX_PATH);
@@ -81,10 +89,25 @@ std::string getExeDir()
         std::replace(dir.begin(), dir.end(), '\\', '/');
 
         return dir;
+    #elif defined(__APPLE__)
+        char path[PATH_MAX];
+        uint32_t size = sizeof(path);
+        if (_NSGetExecutablePath(path, &size) != 0) {
+            return ".";
+        }
+        std::string exePath(path);
+        size_t pos = exePath.find_last_of("/");
+        if (pos == std::string::npos) {
+            return exePath;
+        }
+        return exePath.substr(0, pos);
     #else
         char result[PATH_MAX];
         ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
-        std::string exePath = std::string(result, (count > 0) ? count : 0);
+        if (count <= 0) {
+            return std::string(".");
+        }
+        std::string exePath(result, count);
         size_t pos = exePath.find_last_of("/");
         return exePath.substr(0, pos);
     #endif
