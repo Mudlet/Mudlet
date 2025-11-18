@@ -395,15 +395,25 @@ int main(int argc, char* argv[])
     const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
 
     const QStringList positionalArguments = parser.positionalArguments();
+    QUrl telnetUrl;
     if (!positionalArguments.isEmpty()) {
-        const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        instanceCoordinator->queuePackage(absPath);
-        if (!firstInstanceOfMudlet) {
-            const bool successful = instanceCoordinator->installPackagesRemotely();
-            if (successful) {
-                return 0;
-            } else {
-                return 1;
+        const QString arg = positionalArguments.first();
+        
+        // Check if the argument is a telnet:// URL
+        if (arg.startsWith(qsl("telnet://"), Qt::CaseInsensitive)) {
+            telnetUrl = QUrl(arg);
+            // Telnet URLs will be handled after mudlet is initialized
+        } else {
+            // Treat as package file
+            const QString absPath = QDir(arg).absolutePath();
+            instanceCoordinator->queuePackage(absPath);
+            if (!firstInstanceOfMudlet) {
+                const bool successful = instanceCoordinator->installPackagesRemotely();
+                if (successful) {
+                    return 0;
+                } else {
+                    return 1;
+                }
             }
         }
     }
@@ -681,9 +691,14 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles]() {
+    QTimer::singleShot(0, qApp, [cliProfiles, telnetUrl]() {
         // ensure Mudlet singleton is initialised before calling profile loading
         mudlet::self()->startAutoLogin(cliProfiles);
+        
+        // Handle telnet:// URL if provided via command line
+        if (telnetUrl.isValid()) {
+            mudlet::self()->handleTelnetUri(telnetUrl);
+        }
     });
 
 #if defined(INCLUDE_UPDATER)
