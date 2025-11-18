@@ -145,55 +145,54 @@ if [ "${WITH_SENTRY}" = "yes" ]; then
   echo "  Debug: Looking for 3rdparty directory:"
   ls -la "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/" || echo "  3rdparty directory not found"
 
-  # Build Sentry Native SDK first
-  echo "  Building Sentry Native SDK..."
-  cd "${GITHUB_WORKSPACE_UNIX_PATH}" || exit 1
-
-  # Create build directory for Sentry
-  mkdir -p build-sentry
-  cd build-sentry || exit 1
-  echo "  Debug: Created and entered build-sentry directory: $(pwd)"
-
-  # Create a minimal CMakeLists.txt to build Sentry
-  cat > CMakeLists.txt << 'EOF'
-cmake_minimum_required(VERSION 3.10)
-project(SentryBuild)
-# Set Sentry version
-set(SENTRY_VERSION "0.10.0")
-# Build configuration
-set(CMAKE_BUILD_TYPE Release)
-set(SENTRY_BACKEND "crashpad" CACHE STRING "Use crashpad backend" FORCE)
-set(SENTRY_INTEGRATION_QT "ON" CACHE STRING "Enable Qt integration" FORCE)
-# Include the BuildSentry.cmake from the parent project
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/sentry ${CMAKE_MODULE_PATH})
-include(BuildSentry)
-EOF
-
-  echo "  Debug: Created CMakeLists.txt for Sentry build"
-  echo "  Debug: Contents of CMakeLists.txt:"
-  cat CMakeLists.txt
-
-  # Build Sentry using CMake with Crashpad backend
-  echo "  Debug: Running cmake configure..."
-  if ! cmake . -DCMAKE_INSTALL_PREFIX="$(pwd)/install"; then
-    echo "  Error: CMake configure failed"
+  # Build Sentry Native SDK from submodule
+  echo "  Building Sentry Native SDK from submodule..."
+  
+  SENTRY_SOURCE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/sentry-native"
+  SENTRY_BUILD_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry"
+  SENTRY_INSTALL_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/sentry-native/install"
+  
+  echo "  Debug: Sentry source directory: ${SENTRY_SOURCE_DIR}"
+  echo "  Debug: Sentry build directory: ${SENTRY_BUILD_DIR}"
+  echo "  Debug: Sentry install directory: ${SENTRY_INSTALL_DIR}"
+  
+  # Check if sentry-native submodule exists
+  if [ ! -f "${SENTRY_SOURCE_DIR}/CMakeLists.txt" ]; then
+    echo "  Error: sentry-native submodule not found at ${SENTRY_SOURCE_DIR}"
+    echo "  Please run: git submodule update --init --recursive"
     exit 1
   fi
+  
+  # Create build directory for Sentry
+  mkdir -p "${SENTRY_BUILD_DIR}"
+  cd "${SENTRY_BUILD_DIR}" || exit 1
+  echo "  Debug: Created and entered build-sentry directory: $(pwd)"
+
+  # Configure Sentry with CMake
+  echo "  Debug: Running cmake configure for Sentry..."
+  if ! cmake "${SENTRY_SOURCE_DIR}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX="${SENTRY_INSTALL_DIR}" \
+    -DSENTRY_BACKEND=crashpad \
+    -DSENTRY_INTEGRATION_QT=ON \
+    -DSENTRY_BUILD_SHARED_LIBS=OFF; then
+    echo "  Error: Sentry CMake configure failed"
+    exit 1
+  fi
+  
   echo "  Debug: Running build with cmake..."
-  if ! cmake --build . --parallel "${NUMBER_OF_PROCESSORS:-1}"; then
+  if ! cmake --build . --config Release --parallel "${NUMBER_OF_PROCESSORS:-1}"; then
     echo "  Error: Sentry build failed"
     exit 1
   fi
+  
   echo "  Debug: Running install..."
-  if ! cmake --install .; then
+  if ! cmake --install . --config Release; then
     echo "  Error: Sentry install failed"
     exit 1
   fi
 
-  # Set environment variables for qmake to find Sentry
-  SENTRY_INSTALL_DIR="$(pwd)/install"
   export SENTRY_INSTALL_DIR
-
   echo "  Debug: Sentry install directory contents:"
   find "${SENTRY_INSTALL_DIR}" -type f | head -20
 
