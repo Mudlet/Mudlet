@@ -130,105 +130,8 @@ echo ""
 # it from a submodule - set as environment variable for CMake
 export WITH_OWN_QTKEYCHAIN=NO
 
-QMAKE_EXTRA_ARGS=""
-if [ "${WITH_SENTRY}" = "yes" ]; then
-  echo "  Building with Sentry support enabled"
-
-  # Debug current environment
-  echo "  Debug: Current directory: $(pwd)"
-  echo "  Debug: GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
-  echo "  Debug: GITHUB_WORKSPACE_UNIX_PATH: ${GITHUB_WORKSPACE_UNIX_PATH}"
-  echo "  Debug: MSYSTEM: ${MSYSTEM}"
-  echo "  Debug: BUILD_CONFIG: ${BUILD_CONFIG}"
-  echo "  Debug: Contents of GITHUB_WORKSPACE:"
-  ls -la "${GITHUB_WORKSPACE_UNIX_PATH}/" || echo "  Failed to list GITHUB_WORKSPACE"
-  echo "  Debug: Looking for 3rdparty directory:"
-  ls -la "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/" || echo "  3rdparty directory not found"
-
-  # Build Sentry Native SDK from submodule
-  echo "  Building Sentry Native SDK from submodule..."
-  
-  SENTRY_SOURCE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/sentry-native"
-  SENTRY_BUILD_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/build-sentry"
-  SENTRY_INSTALL_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/sentry-native/install"
-  
-  echo "  Debug: Sentry source directory: ${SENTRY_SOURCE_DIR}"
-  echo "  Debug: Sentry build directory: ${SENTRY_BUILD_DIR}"
-  echo "  Debug: Sentry install directory: ${SENTRY_INSTALL_DIR}"
-  
-  # Check if sentry-native submodule exists
-  if [ ! -f "${SENTRY_SOURCE_DIR}/CMakeLists.txt" ]; then
-    echo "  Error: sentry-native submodule not found at ${SENTRY_SOURCE_DIR}"
-    echo "  Please run: git submodule update --init --recursive"
-    exit 1
-  fi
-  
-  # Create build directory for Sentry
-  mkdir -p "${SENTRY_BUILD_DIR}"
-  cd "${SENTRY_BUILD_DIR}" || exit 1
-  echo "  Debug: Created and entered build-sentry directory: $(pwd)"
-
-  # Configure Sentry with CMake
-  # Note: Using clang/clang++ to build Sentry (crashpad requires it for MinGW)
-  echo "  Debug: Running cmake configure for Sentry with clang..."
-  
-  # Find clang in the MinGW path
-  CLANG_PATH="/mingw64/bin/clang"
-  CLANGXX_PATH="/mingw64/bin/clang++"
-  
-  if [ ! -f "${CLANG_PATH}" ]; then
-    echo "  Error: clang not found at ${CLANG_PATH}"
-    echo "  Trying to locate clang..."
-    which clang || echo "  clang not in PATH"
-    exit 1
-  fi
-  
-  echo "  Debug: Using clang at: ${CLANG_PATH}"
-  echo "  Debug: Using clang++ at: ${CLANGXX_PATH}"
-  
-  if ! cmake "${SENTRY_SOURCE_DIR}" \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX="${SENTRY_INSTALL_DIR}" \
-    -DCMAKE_C_COMPILER="${CLANG_PATH}" \
-    -DCMAKE_CXX_COMPILER="${CLANGXX_PATH}" \
-    -DSENTRY_BACKEND=crashpad \
-    -DSENTRY_INTEGRATION_QT=ON \
-    -DSENTRY_BUILD_SHARED_LIBS=OFF \
-    -DSENTRY_BUILD_TESTS=OFF \
-    -DSENTRY_BUILD_EXAMPLES=OFF \
-    -G Ninja; then
-    echo "  Error: Sentry CMake configure failed"
-    exit 1
-  fi
-  
-  echo "  Debug: Running build with cmake..."
-  if ! cmake --build . --config Release --parallel "${NUMBER_OF_PROCESSORS:-1}"; then
-    echo "  Error: Sentry build failed"
-    exit 1
-  fi
-  
-  echo "  Debug: Running install..."
-  if ! cmake --install . --config Release; then
-    echo "  Error: Sentry install failed"
-    exit 1
-  fi
-
-  export SENTRY_INSTALL_DIR
-  echo "  Debug: Sentry install directory contents:"
-  find "${SENTRY_INSTALL_DIR}" -type f | head -20
-
-  QMAKE_EXTRA_ARGS="INCLUDEPATH+=${SENTRY_INSTALL_DIR}/include LIBS+=-L${SENTRY_INSTALL_DIR}/lib LIBS+=-lsentry DEFINES+=INCLUDE_SENTRY"
-  echo "  Sentry Native SDK built and installed to: ${SENTRY_INSTALL_DIR}"
-  echo "  Debug: QMAKE_EXTRA_ARGS: ${QMAKE_EXTRA_ARGS}"
-
-  # Return to the build directory
-  BUILD_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}"
-  echo "  Debug: Changing to build directory: ${BUILD_DIR}"
-  cd "${BUILD_DIR}" || exit 1
-  echo "  Debug: Successfully changed to: $(pwd)"
-else
-  echo "  Building without Sentry support"
-fi
+# Note: Sentry will be built by CMake via WithSentry.cmake using ExternalProject
+# No manual Sentry build needed in this script
 
 
 
@@ -248,6 +151,13 @@ CMAKE_ARGS=(
   -DCMAKE_PREFIX_PATH="${MINGW_INTERNAL_BASE_DIR}"
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
 )
+
+if [ "${WITH_SENTRY}" = "yes" ]; then
+    CMAKE_ARGS+=("-DWITH_SENTRY=ON")
+fi
+if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
+    CMAKE_ARGS+=("-DSENTRY_SEND_DEBUG=1")
+fi
 
 # Enable ccache for CMake
 export WITH_CCACHE="YES"
