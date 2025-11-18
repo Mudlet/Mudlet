@@ -18,10 +18,15 @@
  ***************************************************************************/
 
 #ifdef WITH_SENTRY
-    #include <QtCore/qscopeguard.h>
     #include <QStandardPaths>
     #include <QCoreApplication>
     #include "sentry.h"
+#endif
+#if defined(_WIN32) || defined(_WIN64)
+    #include <windows.h>
+#else
+    #include <unistd.h>
+    #include <limits.h>
 #endif
 
 #include <string>
@@ -39,26 +44,48 @@
 void initSentry()
 {
     #ifdef WITH_SENTRY
-        sentry_options_t* options = sentry_options_new();
+        sentry_options_t*   options = sentry_options_new();
+        std::string         runtimeAppDir = getExeDir();
+        QString             path = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/mudlet/sentry";
 
         if (!options) {
             return;
         }
         sentry_options_set_dsn(options, SENTRY_DSN);
-        QString path = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/mudlet/sentry";
         sentry_options_set_database_path(options, path.toUtf8().constData());
         sentry_options_set_release(options, "mudlet@" APP_VERSION);
-        sentry_options_set_handler_path(options, makeExecutablePath(APP_DIR_PATH, "crashpad_handler").c_str());
-        sentry_options_set_external_crash_reporter_path(options, makeExecutablePath(APP_DIR_PATH, "MudletCrashReporter").c_str());
+        sentry_options_set_handler_path(options, makeExecutablePath(runtimeAppDir, "crashpad_handler").c_str());
+        sentry_options_set_external_crash_reporter_path(options, makeExecutablePath(runtimeAppDir, "MudletCrashReporter").c_str());
 
         sentry_init(options);
     #endif
 }
 
-std::string makeExecutablePath(const std::string& dir, const std::string& name) {
+std::string makeExecutablePath(const std::string& dir, const std::string& name)
+{
     #ifdef _WIN32
         return dir + "/" + name + ".exe";
     #else
         return dir + "/" + name;
+    #endif
+}
+
+std::string getExeDir()
+{
+    #if defined(_WIN32) || defined(_WIN64)
+        char path[MAX_PATH];
+        GetModuleFileNameA(NULL, path, MAX_PATH);
+        std::string exePath(path);
+        size_t pos = exePath.find_last_of("\\/");
+        std::string dir = exePath.substr(0, pos);
+        std::replace(dir.begin(), dir.end(), '\\', '/');
+
+        return dir;
+    #else
+        char result[PATH_MAX];
+        ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+        std::string exePath = std::string(result, (count > 0) ? count : 0);
+        size_t pos = exePath.find_last_of("/");
+        return exePath.substr(0, pos);
     #endif
 }
