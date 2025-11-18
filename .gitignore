@@ -50,5 +50,3 @@ CMakeSettings.json
 CI/.flatpak-builder
 CI/build-dir
 
-# Sentry
-/3rdparty/sentry-native/
