@@ -175,7 +175,9 @@ if [ "${WITH_SENTRY}" = "yes" ]; then
     -DCMAKE_INSTALL_PREFIX="${SENTRY_INSTALL_DIR}" \
     -DSENTRY_BACKEND=crashpad \
     -DSENTRY_INTEGRATION_QT=ON \
-    -DSENTRY_BUILD_SHARED_LIBS=OFF; then
+    -DSENTRY_BUILD_SHARED_LIBS=OFF \
+    -DSENTRY_BUILD_TESTS=OFF \
+    -DSENTRY_BUILD_EXAMPLES=OFF; then
     echo "  Error: Sentry CMake configure failed"
     exit 1
   fi
