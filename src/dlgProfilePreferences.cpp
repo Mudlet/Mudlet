@@ -47,6 +47,7 @@
 #include <QString>
 #include <QTableWidget>
 #include <QToolBar>
+#include <QToolButton>
 #include <QUiLoader>
 #include <QKeySequenceEdit>
 #include <QHBoxLayout>
@@ -390,13 +391,10 @@ void dlgProfilePreferences::disableHostDetails()
 
     // ----- groupBox_miscellaneous -----
     mAlertOnNewData->setEnabled(false);
-    // acceptServerGUI->setEnabled(false);  // UI element does not exist
     mFORCE_SAVE_ON_EXIT->setEnabled(false);
-    // acceptServerMedia->setEnabled(false);  // UI element does not exist
 
     // ----- groupBox_protocols -----
     groupBox_protocols->setEnabled(false);
-    // pushButton_chooseProtocols->setEnabled(false);  // UI element does not exist
     need_reconnect_for_data_protocol->hide();
 
     // ----- groupBox_logOptions -----
@@ -525,12 +523,9 @@ void dlgProfilePreferences::enableHostDetails()
 
     // ----- groupBox_miscellaneous -----
     mAlertOnNewData->setEnabled(true);
-    // acceptServerGUI->setEnabled(true);  // UI element does not exist
     mFORCE_SAVE_ON_EXIT->setEnabled(true);
-    // acceptServerMedia->setEnabled(true);  // UI element does not exist
 
     groupBox_protocols->setEnabled(true);
-    // pushButton_chooseProtocols->setEnabled(true);  // UI element does not exist
 
     groupBox_logOptions->setEnabled(true);
 
@@ -652,8 +647,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
-    // acceptServerGUI->setChecked(pHost->mAcceptServerGUI);  // UI element does not exist
-    // acceptServerMedia->setChecked(pHost->mAcceptServerMedia);  // UI element does not exist
 
     ircHostName->setText(dlgIRC::readIrcHostName(pHost));
     ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
@@ -951,7 +944,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
     protocolMenu->addAction(mEnableNEWENVIRON);
 
-    // pushButton_chooseProtocols->setMenu(protocolMenu);  // UI element does not exist
+    // Create a tool button to expose protocol toggles that aren't in the main UI
+    auto protocolsLayout = groupBox_protocols->layout();
+    if (protocolsLayout) {
+        auto toolBtn = new QToolButton(groupBox_protocols);
+        toolBtn->setText(tr("Additional protocols…"));
+        toolBtn->setPopupMode(QToolButton::InstantPopup);
+        toolBtn->setMenu(protocolMenu);
+        toolBtn->setToolTip(tr("<p>Configure additional game protocols (MSP, MXP, MTTS, MNES, NEW-ENVIRON, CHARSET)</p>"));
+        // Place it at the end of the layout
+        if (auto grid = qobject_cast<QGridLayout*>(protocolsLayout)) {
+            grid->addWidget(toolBtn, grid->rowCount(), 0, 1, grid->columnCount());
+        } else {
+            protocolsLayout->addWidget(toolBtn);
+        }
+    }
 
     groupBox_purgeMediaCache->setVisible(true);
     connect(buttonPurgeMediaCache, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_purgeMediaCache);
@@ -1466,8 +1473,6 @@ void dlgProfilePreferences::clearHostDetails()
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
     checkBox_drawUpperLowerLevels->setChecked(false);
-    // acceptServerGUI->setChecked(false);  // UI element does not exist
-    // acceptServerMedia->setChecked(false);  // UI element does not exist
 
     // Given that the IRC sub-system can handle there NOT being an active host
     // this may need revising
@@ -2951,8 +2956,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mDisablePasswordMasking = disable_password_masking_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
-        // pHost->mAcceptServerGUI = acceptServerGUI->isChecked();  // UI element does not exist
-        // pHost->mAcceptServerMedia = acceptServerMedia->isChecked();  // UI element does not exist
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();

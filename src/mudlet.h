@@ -272,14 +272,24 @@ public:
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
     bool isVersionAtLeast(const QString& minVersion);
+    // Handle telnet:// URI: open or create a profile and optionally connect.
+    // Expects a valid, normalized QUrl with scheme "telnet".
     void handleTelnetUri(const QUrl& url);
+    // Show connection profiles dialog, optionally pre-selecting a specific profile.
     void openConnectionsWindow(const QString& profileNameToSelect = QString());
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
+    // Create a new profile with the given parameters. Returns the profile name on success,
+    // or an empty string on failure.
+    // Security: password is a plain QString; callers must not log or store it in plaintext.
     QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
+    // Check if Mudlet is registered as the system default telnet client.
     bool mudletIsDefault();
+    // Prompt user to set Mudlet as the default telnet client.
     void openDefaultCheck();
+    // Register Mudlet as the system default telnet client.
     void setMudletAsDefault();
+    // Install default packages for the given host. pHost must not be nullptr.
     void installDefaultPackages(Host* pHost);
 
     // Profile validation and orphan detection

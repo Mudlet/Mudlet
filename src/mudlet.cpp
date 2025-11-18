@@ -1544,18 +1544,9 @@ void mudlet::handleTelnetUri(const QUrl& url)
     if (profileName.isEmpty()) {
         // No existing profile, create a new one
         profileName = addProfile(host, port, login, password);
-        
-        // Install default packages for new profile
-        if (!profileName.isEmpty()) {
-            Host* pHost = mHostManager.getHost(profileName);
-            if (!pHost) {
-                loadProfile(profileName, false);
-                pHost = mHostManager.getHost(profileName);
-            }
-            if (pHost) {
-                installDefaultPackages(pHost);
-            }
-        }
+        // Note: loadProfile() below will call setupPreInstallPackages() which schedules
+        // the appropriate default packages for installation. No need to call
+        // installDefaultPackages() here as it would duplicate the work.
     }
 
     // Now, load and connect to the profile
