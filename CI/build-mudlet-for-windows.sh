@@ -171,11 +171,26 @@ if [ "${WITH_SENTRY}" = "yes" ]; then
   # Configure Sentry with CMake
   # Note: Using clang/clang++ to build Sentry (crashpad requires it for MinGW)
   echo "  Debug: Running cmake configure for Sentry with clang..."
+  
+  # Find clang in the MinGW path
+  CLANG_PATH="/mingw64/bin/clang"
+  CLANGXX_PATH="/mingw64/bin/clang++"
+  
+  if [ ! -f "${CLANG_PATH}" ]; then
+    echo "  Error: clang not found at ${CLANG_PATH}"
+    echo "  Trying to locate clang..."
+    which clang || echo "  clang not in PATH"
+    exit 1
+  fi
+  
+  echo "  Debug: Using clang at: ${CLANG_PATH}"
+  echo "  Debug: Using clang++ at: ${CLANGXX_PATH}"
+  
   if ! cmake "${SENTRY_SOURCE_DIR}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="${SENTRY_INSTALL_DIR}" \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_C_COMPILER="${CLANG_PATH}" \
+    -DCMAKE_CXX_COMPILER="${CLANGXX_PATH}" \
     -DSENTRY_BACKEND=crashpad \
     -DSENTRY_INTEGRATION_QT=ON \
     -DSENTRY_BUILD_SHARED_LIBS=OFF \
