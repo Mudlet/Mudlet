@@ -387,8 +387,6 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.resize(120, 100);
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
-    // Explicitly set the palette to ensure proper selection colors in both light and dark themes
-    mMultiSelectionListWidget.setPalette(qApp->palette());
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
 
     mCustomLineSession = std::make_unique<CustomLineSession>(*this);
@@ -439,6 +437,9 @@ void T2DMap::init()
     if (!mpHost || !mpMap) {
         return;
     }
+
+    // Set palette after parent (dlgMapper) has set its palette to ensure proper selection colors
+    mMultiSelectionListWidget.setPalette(qApp->palette());
 
     eSize = mpHost->mLineSize;
     rSize = mpHost->mRoomSize;
