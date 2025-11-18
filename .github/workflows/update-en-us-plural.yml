@@ -18,6 +18,9 @@ jobs:
         ref: development
         submodules: true
 
+    - name: Init all submodules recursively
+      run: git submodule update --init --recursive
+
     - name: update plural american english file
       uses: Mudlet/lupdate-action@master
       with:

@@ -21,6 +21,9 @@ jobs:
         fetch-depth: 0
         persist-credentials: false
 
+    - name: Init all submodules recursively
+      run: git submodule update --init --recursive
+
     - name: update text for translation
       uses: Mudlet/lupdate-action@master
       with:

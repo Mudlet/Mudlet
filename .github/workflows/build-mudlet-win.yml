@@ -32,6 +32,9 @@ jobs:
           submodules: true
           fetch-depth: 0
 
+      - name: Init all submodules recursively
+        run: git submodule update --init --recursive
+
       - name: (Windows) Setup MSYS2
         if: matrix.buildname == 'windows64'
         uses: msys2/setup-msys2@v2

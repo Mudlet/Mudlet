@@ -36,6 +36,9 @@ jobs:
         # https://github.community/t/github-actions-are-severely-limited-on-prs/18179/17?u=vadi2
         repository: ${{github.event.pull_request.head.repo.full_name}}
 
+    - name: Init all submodules recursively
+      run: git submodule update --init --recursive
+
     - name: (Windows) Install Qt
       uses: jurplel/install-qt-action@v4
       if: runner.os == 'Windows'

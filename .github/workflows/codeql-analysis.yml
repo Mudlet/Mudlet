@@ -46,6 +46,9 @@ jobs:
         fetch-depth: 2
         submodules: true
 
+    - name: Init all submodules recursively
+      run: git submodule update --init --recursive
+
     - name: (Windows) Install Qt
       uses: jurplel/install-qt-action@v4
       if: runner.os == 'Windows'
