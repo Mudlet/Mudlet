@@ -643,9 +643,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             ++localBufferPosition;
             continue;
         }
-
-        int* p = nullptr;
-*p = 42; // crash immédiat
+        
 
         if (mGotCSI) {
             // Lookahead and try and see what we are processing
