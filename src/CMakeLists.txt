@@ -676,10 +676,6 @@ if(USE_UPDATER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_UPDATER)
 endif(USE_UPDATER)
 
-if (WITH_SENTRY)
-  include(cmake/WithSentry.cmake)
-endif()
-
 if(USE_3DMAPPER)
   target_link_libraries(${LIB_MUDLET_TARGET} OpenGL::GLU)
   target_link_libraries(${LIB_MUDLET_TARGET} assimp::assimp)
@@ -697,20 +693,14 @@ add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
 target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 
-# On Windows, output to release/ subdirectory to match CI expectations
-if(WIN32 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
-  set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/release"
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/release"
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/debug"
-  )
-endif()
-
-# Configure Sentry for the executable target
+# Configure Sentry - include AFTER executable is created to avoid target ordering issues
 if (WITH_SENTRY)
+  include(cmake/WithSentry.cmake)
+  
   # Add compile definitions to the executable
   target_compile_definitions(${EXE_MUDLET_TARGET} PUBLIC
     WITH_SENTRY
+    SENTRY_DSN="${SENTRY_DSN}"
     APP_DIR_PATH="${CMAKE_BINARY_DIR}/src"
     SENTRY_BUILD_STATIC
   )
@@ -727,6 +717,10 @@ if (WITH_SENTRY)
         "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
     COMMENT "Copying Sentry binaries next to the mudlet executable"
   )
+  
+  # Add crash_reporter subdirectory
+  add_subdirectory(crash_reporter)
+  add_dependencies(MudletCrashReporter sentry_native)
 endif()
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules

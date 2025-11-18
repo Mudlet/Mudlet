@@ -123,13 +123,12 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
     "mingw-w64-${BUILDCOMPONENT}-cmake" \
     "mingw-w64-${BUILDCOMPONENT}-meson" \
-    "mingw-w64-${BUILDCOMPONENT}-cmake" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
     "mingw-w64-${BUILDCOMPONENT}-uasm" \
     "mingw-w64-${BUILDCOMPONENT}-assimp" \
     "mingw-w64-${BUILDCOMPONENT}-jq" \
     "mingw-w64-${BUILDCOMPONENT}-clang" \
-    "mingw-w64-${BUILDCOMPONENT}-lld" \
-    "mingw-w64-${BUILDCOMPONENT}-ninja"; then
+    "mingw-w64-${BUILDCOMPONENT}-lld"; then
       break
   fi
 
@@ -231,7 +230,7 @@ echo "Copy the following lines into the build environment for a project in Qt Cr
 echo "See https://doc.qt.io/qtcreator/creator-how-set-project-environment.html#change-the-environment-for-a-project"
 echo ""
 MSYS_ROOT=$(cygpath -aw /)
-echo "MINGW_BASE_DIR=${MSYS_ROOT}$(echo "${MSYSTEM_PREFIX}" | sed 's/\\\//\\\\/g')"
+echo "MINGW_BASE_DIR=${MSYS_ROOT}$(echo "${MSYSTEM_PREFIX}" | sed 's/\\//\\\\/g')"
 echo "LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)"
 echo "LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)"
 

@@ -275,10 +275,14 @@ int main(int argc, char* argv[])
         sentryCrashHandler += qsl(".exe");
 #endif
         qDebug() << "crashpad_handler path is: " << sentryCrashHandler;
-        sentry_options_set_database_path(options, sentryPath.toLocal8Bit().constData());
-        sentry_options_set_handler_path(options, sentryCrashHandler.toLocal8Bit().constData());
+        
+        // Store QByteArrays to ensure lifetime for Sentry C API
+        QByteArray sentryPathBytes = sentryPath.toLocal8Bit();
+        QByteArray sentryCrashHandlerBytes = sentryCrashHandler.toLocal8Bit();
+        sentry_options_set_database_path(options, sentryPathBytes.constData());
+        sentry_options_set_handler_path(options, sentryCrashHandlerBytes.constData());
 
-            sentry_options_set_release(options, "mudlet @" APP_VERSION);
+            sentry_options_set_release(options, "mudlet@" APP_VERSION);
 
             sentry_options_set_debug(options, false);
 

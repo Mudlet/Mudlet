@@ -45,7 +45,6 @@
 # 3 - Unsupported build type
 # 4 - Directory to be used to assemble the package is NOT empty
 # 6 - No Mudlet.exe file found to work with
-# 7 - Sentry enabled but crashpad_handler.exe is missing
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
@@ -185,7 +184,7 @@ echo ""
 # the rock for those will also have to be installed and their C(.dll)/Lua (.lua)
 # files included here:
 echo "Copying lua C libraries in..."
-cp -v -p -t .
+cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lfs.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
@@ -223,8 +222,9 @@ cp -v -p -t ./translations/lua "${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/m
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
-cp -v -p -t . "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff
-cp -v -p -t . "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
+cp -v -p -t . \
+    "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff \
+    "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
 
 echo ""
 
