@@ -1338,15 +1338,6 @@ void dlgTriggerEditor::createPatternItem(int index)
     pItem->singleLineTextEdit_pattern->installEventFilter(this);
     applyPatternWidgetStyle(pItem);
     pItem->spinBox_lineSpacer->installEventFilter(this);
-
-    //: Accessible description for pattern input fields in the trigger editor. Explains keyboard shortcuts for navigation.
-    const QString firstKey = QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Up).toString(QKeySequence::NativeText);
-    const QString lastKey  = QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Down).toString(QKeySequence::NativeText);
-    const QString upKey    = QKeySequence(Qt::CTRL | Qt::Key_Up).toString(QKeySequence::NativeText);
-    const QString downKey  = QKeySequence(Qt::CTRL | Qt::Key_Down).toString(QKeySequence::NativeText);
-    pItem->singleLineTextEdit_pattern->setAccessibleDescription(
-        tr("Use %1 to jump to first pattern, %2 to jump to last pattern, %3/%4 to move between patterns")
-            .arg(firstKey, lastKey, upKey, downKey));
 }
 
 void dlgTriggerEditor::showPatternItems(int count)
