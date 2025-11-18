@@ -65,6 +65,9 @@ jobs:
           submodules: true
           fetch-depth: 0
 
+      - name: Init all submodules recursively
+        run: git submodule update --init --recursive
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
