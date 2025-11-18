@@ -151,29 +151,7 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
         helpPackage.append_child("helpURL").text().set("");
     }
     if (async) {
-        // Clone XML document on main thread, then serialize and save on background thread.
-        // Cloning is fast and safe; each document owns its own tree, so the clone can be
-        // serialized on a background thread without thread-safety issues.
-        // Capture shared_ptr to keep XMLexport alive during async operation
-        auto self = shared_from_this();
-        pugi::xml_document docClone;
-        // Deep copy the entire document tree
-        for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
-            docClone.append_copy(child);
-        }
-        auto future = QtConcurrent::run([self, fileName, docClone = std::move(docClone)]() mutable { 
-            return XMLexport::saveXmlDocToFile(fileName, docClone); 
-        });
-        auto watcher = new QFutureWatcher<bool>;
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this, fileName]() {
-            if (!mpHost) {
-                return;
-            }
-            mpHost->xmlSaved(fileName);
-        });
-        connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
-        watcher->setFuture(future);
-        saveFutures.append(future);
+        runAsyncSave(fileName, fileName);
     } else {
         saveXml(fileName);
         mpHost->xmlSaved(fileName);
@@ -185,6 +163,13 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
 
+    runAsyncSave(filename_pugi_xml, qsl("profile"));
+}
+
+// Helper to encapsulate async save pattern: clone document, save in background thread,
+// notify host when complete
+void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
+{
     // Clone XML document on main thread, then serialize and save on background thread.
     // Cloning is fast and safe; each document owns its own tree, so the clone can be
     // serialized on a background thread without thread-safety issues.
@@ -195,16 +180,15 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
         docClone.append_copy(child);
     }
-    auto future = QtConcurrent::run([self, filename_pugi_xml, docClone = std::move(docClone)]() mutable { 
-        return XMLexport::saveXmlDocToFile(filename_pugi_xml, docClone); 
+    auto future = QtConcurrent::run([self, fileName, docClone = std::move(docClone)]() mutable { 
+        return XMLexport::saveXmlDocToFile(fileName, docClone); 
     });
-
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this, xmlSavedKey]() {
         if (!mpHost) {
             return;
         }
-        mpHost->xmlSaved(qsl("profile"));
+        mpHost->xmlSaved(xmlSavedKey);
     });
     connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
     watcher->setFuture(future);
@@ -326,8 +310,8 @@ bool XMLexport::saveXml(const QString& fileName)
 // Save an XML document to a file. This is thread-safe and can be called from a background thread
 // as long as the document is not being modified concurrently (which we ensure by passing a clone).
 // Static method so it can be called without keeping XMLexport alive.
-// Note: This method is intentionally NOT a member function to make it clear that it doesn't
-// access any instance state and is safe to call from background threads.
+// Note: This is a static member method that doesn't access any instance state,
+// making it safe to call from background threads.
 bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc)
 {
     QSaveFile file(fileName);
@@ -347,79 +331,7 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
     std::string output(saveStringStream.str());
     
     // Apply sanitization for control characters
-    // We need to duplicate the sanitization logic here since this is a static method
-    // and sanitizeForQxml is a member function. This is acceptable since the logic
-    // is simple and well-encapsulated.
-    QMap<std::string, std::string> replacements{
-            {"&#1;", "\uFFFC\u2401"},   // SOH
-            {"&#01;", "\uFFFC\u2401"},  // SOH
-            {"&#2;", "\uFFFC\u2402"},   // STX
-            {"&#02;", "\uFFFC\u2402"},  // STX
-            {"&#3;", "\uFFFC\u2403"},   // ETX
-            {"&#03;", "\uFFFC\u2403"},  // ETX
-            {"&#4;", "\uFFFC\u2404"},   // EOT
-            {"&#04;", "\uFFFC\u2404"},  // EOT
-            {"&#5;", "\uFFFC\u2405"},   // ENQ
-            {"&#05;", "\uFFFC\u2405"},  // ENQ
-            {"&#6;", "\uFFFC\u2406"},   // ACK
-            {"&#06;", "\uFFFC\u2406"},  // ACK
-            {"&#7;", "\uFFFC\u2407"},   // BEL
-            {"&#07;", "\uFFFC\u2407"},  // BEL
-            {"&#8;", "\uFFFC\u2408"},   // BS
-            {"&#08;", "\uFFFC\u2408"},  // BS
-            {"&#11;", "\uFFFC\u240B"},  // VT
-            {"&#12;", "\uFFFC\u240C"},  // FF
-            {"&#14;", "\uFFFC\u240E"},  // SO
-            {"&#15;", "\uFFFC\u240F"},  // SI
-            {"&#10;", "\uFFFC\u2410"},  // DLE
-            {"&#16;", "\uFFFC\u2411"},  // DC1
-            {"&#18;", "\uFFFC\u2412"},  // DC2
-            {"&#19;", "\uFFFC\u2413"},  // DC3
-            {"&#20;", "\uFFFC\u2414"},  // DC4
-            {"&#21;", "\uFFFC\u2415"},  // NAK
-            {"&#22;", "\uFFFC\u2416"},  // SYN
-            {"&#17;", "\uFFFC\u2417"},  // ETB
-            {"&#23;", "\uFFFC\u2418"},  // CAN
-            {"&#25;", "\uFFFC\u2419"},  // EM
-            {"&#26;", "\uFFFC\u241A"},  // SUB
-            {"&#27;", "\uFFFC\u241B"},  // ESC
-            {"&#28;", "\uFFFC\u241C"},  // FS
-            {"&#29;", "\uFFFC\u241D"},  // GS
-            {"&#30;", "\uFFFC\u241E"},  // RS
-            {"&#31;", "\uFFFC\u241F"},  // US
-            {"&#127;", "\uFFFC\u2421"}, // DEL
-    };
-
-    // Look for each replacement in data and if not present remove it from the list
-    QMutableMapIterator<std::string, std::string> itReplacement(replacements);
-    while (itReplacement.hasNext()) {
-        itReplacement.next();
-        if (output.find(itReplacement.key()) == std::string::npos) {
-            itReplacement.remove();
-        }
-    }
-
-    if (!replacements.isEmpty()) {
-        itReplacement.toFront();
-        while (itReplacement.hasNext()) {
-            itReplacement.next();
-            // Inline version of replaceAll
-            std::string newString;
-            newString.reserve(output.length());
-            std::string::size_type lastPos = 0;
-            std::string::size_type findPos;
-            const std::string& from = itReplacement.key();
-            const std::string& to = itReplacement.value();
-
-            while (std::string::npos != (findPos = output.find(from, lastPos))) {
-                newString.append(output, lastPos, findPos - lastPos);
-                newString += to;
-                lastPos = findPos + from.length();
-            }
-            newString += output.substr(lastPos);
-            output.swap(newString);
-        }
-    }
+    sanitizeForQxml(output);
 
     file.write(output.data(), output.size());
     bool success = file.error() == QFileDevice::NoError;
@@ -929,30 +841,7 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     auto mudletPackage = writeXmlHeader();
 
     if (writeGenericPackage(mpHost, mudletPackage)) {
-        // Clone XML document on main thread, then serialize and save on background thread.
-        // Cloning is fast and safe; each document owns its own tree, so the clone can be
-        // serialized on a background thread without thread-safety issues.
-        // Capture shared_ptr to keep XMLexport alive during async operation
-        auto self = shared_from_this();
-        pugi::xml_document docClone;
-        // Deep copy the entire document tree
-        for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
-            docClone.append_copy(child);
-        }
-        auto future = QtConcurrent::run([self, exportFileName, docClone = std::move(docClone)]() mutable { 
-            return XMLexport::saveXmlDocToFile(exportFileName, docClone); 
-        });
-        auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this]() {
-            if (!mpHost) {
-                return;
-            }
-            mpHost->xmlSaved(qsl("profile"));
-        });
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
-        watcher->setFuture(future);
-        saveFutures.append(future);
-
+        runAsyncSave(exportFileName, qsl("profile"));
         return true;
     }
 
