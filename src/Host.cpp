@@ -1774,10 +1774,16 @@ bool Host::killTrigger(const QString& name)
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing)
 {
-    // Block packages/modules from being installed while a profile save is in progress
+    // Wait for profile save to complete before installing package
     // to prevent Lua state corruption during concurrent operations
     if (currentlySavingProfile()) {
-        return {false, qsl("cannot install package while profile save is in progress")};
+        // Auto-retry installation after save completes
+        QObject* obj = new QObject(this);
+        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
+            installPackage(fileName, thing);
+            obj->deleteLater();
+        });
+        return {true, QString()};
     }
 
     // As the pointer to dialog is only used now WITHIN this method and this
@@ -1999,6 +2005,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption
     QTimer::singleShot(0, this, [this, thing, packageName, fileName]() {
+        // Don't raise events if Host is shutting down to avoid handlers executing during teardown
+        if (isClosingDown()) {
+            return;
+        }
+
         // raise 2 events - a generic one and a more detailed one to serve both
         // a simple need ("I just want the install event") and a more specific need
         // ("I specifically need to know when the module was synced")
