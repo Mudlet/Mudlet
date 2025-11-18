@@ -43,7 +43,7 @@ jobs:
       shell: msys2 {0}
       run: |
         echo "WITH_SENTRY=yes" >> $GITHUB_ENV
-        if [ -n "$SENTRY_SEND_DEBUG_SECRET" ]; then
+        if [ -n "${SENTRY_SEND_DEBUG_SECRET}" ]; then
           echo "SENTRY_SEND_DEBUG=1" >> $GITHUB_ENV
         else
           echo "SENTRY_SEND_DEBUG=0" >> $GITHUB_ENV
