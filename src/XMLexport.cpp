@@ -153,11 +153,10 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     if (async) {
         // Serialize XML on main thread to avoid thread-safety issues with pugi::xml_document
         // which is not thread-safe and should not be accessed from multiple threads
-        std::string xmlContent = serializeXmlDoc();
-        
         // Capture shared_ptr to keep XMLexport alive during async operation
         auto self = shared_from_this();
-        auto future = QtConcurrent::run([self, fileName, xmlContent]() { 
+        std::string xmlContent = serializeXmlDoc();
+        auto future = QtConcurrent::run([self, fileName, xmlContent = std::move(xmlContent)]() { 
             return self->saveXmlFromString(fileName, xmlContent); 
         });
         auto watcher = new QFutureWatcher<bool>;
@@ -183,11 +182,10 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
 
     // Serialize XML on main thread to avoid thread-safety issues with pugi::xml_document
     // which is not thread-safe and should not be accessed from multiple threads
-    std::string xmlContent = serializeXmlDoc();
-
     // Capture shared_ptr to keep XMLexport alive during async operation
     auto self = shared_from_this();
-    auto future = QtConcurrent::run([self, filename_pugi_xml, xmlContent]() { 
+    std::string xmlContent = serializeXmlDoc();
+    auto future = QtConcurrent::run([self, filename_pugi_xml, xmlContent = std::move(xmlContent)]() { 
         return self->saveXmlFromString(filename_pugi_xml, xmlContent); 
     });
 
@@ -342,7 +340,7 @@ bool XMLexport::saveXmlFromString(const QString& fileName, const std::string& xm
         return false;
     }
 
-    file.write(xmlContent.data());
+    file.write(xmlContent.data(), xmlContent.size());
     bool success = file.error() == QFileDevice::NoError;
     
     if (!success) {
@@ -852,11 +850,10 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         // Serialize XML on main thread to avoid thread-safety issues with pugi::xml_document
         // which is not thread-safe and should not be accessed from multiple threads
-        std::string xmlContent = serializeXmlDoc();
-        
         // Capture shared_ptr to keep XMLexport alive during async operation
         auto self = shared_from_this();
-        auto future = QtConcurrent::run([self, exportFileName, xmlContent]() { 
+        std::string xmlContent = serializeXmlDoc();
+        auto future = QtConcurrent::run([self, exportFileName, xmlContent = std::move(xmlContent)]() { 
             return self->saveXmlFromString(exportFileName, xmlContent); 
         });
         auto watcher = new QFutureWatcher<bool>;
