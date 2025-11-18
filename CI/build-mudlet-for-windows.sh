@@ -169,15 +169,19 @@ if [ "${WITH_SENTRY}" = "yes" ]; then
   echo "  Debug: Created and entered build-sentry directory: $(pwd)"
 
   # Configure Sentry with CMake
-  echo "  Debug: Running cmake configure for Sentry..."
+  # Note: Using clang/clang++ to build Sentry (crashpad requires it for MinGW)
+  echo "  Debug: Running cmake configure for Sentry with clang..."
   if ! cmake "${SENTRY_SOURCE_DIR}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="${SENTRY_INSTALL_DIR}" \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
     -DSENTRY_BACKEND=crashpad \
     -DSENTRY_INTEGRATION_QT=ON \
     -DSENTRY_BUILD_SHARED_LIBS=OFF \
     -DSENTRY_BUILD_TESTS=OFF \
-    -DSENTRY_BUILD_EXAMPLES=OFF; then
+    -DSENTRY_BUILD_EXAMPLES=OFF \
+    -G Ninja; then
     echo "  Error: Sentry CMake configure failed"
     exit 1
   fi
