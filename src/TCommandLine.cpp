@@ -182,8 +182,8 @@ bool TCommandLine::event(QEvent* event)
         if (ke->matches(QKeySequence::Copy)){ // Copy is Ctrl+C and possibly Ctrl+Ins, F16
             // Check for console selections in both upper and lower panes
             // Prioritize console selection over command line text
-            const bool hasUpperPaneSelection = mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0);
-            const bool hasLowerPaneSelection = mpConsole->mLowerPane->mSelectedRegion != QRegion(0, 0, 0, 0);
+            const bool hasUpperPaneSelection = !mpConsole->mUpperPane->mSelectedRegion.isEmpty();
+            const bool hasLowerPaneSelection = !mpConsole->mLowerPane->mSelectedRegion.isEmpty();
             
             if (hasUpperPaneSelection) {
                 // Copy from upper pane if it has a selection
