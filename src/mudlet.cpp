@@ -1341,11 +1341,14 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 
 QString mudlet::addProfile(const QString& host, const int port, const QString& login, const QString& password)
 {
+    qDebug() << "mudlet::addProfile() - Creating profile for host:" << host << "port:" << port;
+    
     // Check if a profile with the same host and port already exists on disk
     QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const auto& profileName : profileNames) {
         if (readProfileData(profileName, qsl("url")).compare(host, Qt::CaseInsensitive) == 0 
             && readProfileData(profileName, qsl("port")).toInt() == port) {
+            qDebug() << "mudlet::addProfile() - Found existing profile:" << profileName;
             return profileName; // Return existing profile name
         }
     }
@@ -1367,10 +1370,20 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
         counter++;
     }
 
+    qDebug() << "mudlet::addProfile() - Creating new profile:" << newProfileName;
+    
+    // Create the profile directory
+    QDir dir;
+    if (!dir.mkpath(getMudletPath(enums::profileHomePath, newProfileName))) {
+        qWarning() << "mudlet::addProfile() - Failed to create profile directory for:" << newProfileName;
+        return QString();
+    }
+
     // Save profile data
     writeProfileData(newProfileName, qsl("url"), host);
     writeProfileData(newProfileName, qsl("port"), QString::number(port));
     writeProfileData(newProfileName, qsl("login"), login);
+    
     if (!password.isEmpty()) {
         if (mStorePasswordsSecurely) {
             // Store with key "character" to match retrieval in Host.cpp
@@ -1384,6 +1397,7 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
         mpConnectionDialog->fillout_form();
     }
 
+    qDebug() << "mudlet::addProfile() - Successfully created profile:" << newProfileName;
     return newProfileName;
 }
 
@@ -1491,8 +1505,11 @@ void mudlet::onDefaultClientDlgDestroyed()
 
 void mudlet::handleTelnetUri(const QUrl& url)
 {
+    qDebug() << "mudlet::handleTelnetUri() - Processing telnet URI:" << url.toString();
+    
     // Validate URI
     if (!url.isValid() || url.scheme() != qsl("telnet")) {
+        qWarning() << "mudlet::handleTelnetUri() - Invalid URI or scheme:" << url.toString();
         QMessageBox::warning(nullptr, tr("Invalid URI"), 
                            tr("The provided URI is not a valid telnet:// link."));
         return;
@@ -1500,6 +1517,7 @@ void mudlet::handleTelnetUri(const QUrl& url)
 
     QString host = url.host();
     if (host.isEmpty()) {
+        qWarning() << "mudlet::handleTelnetUri() - Empty hostname in URI";
         QMessageBox::warning(nullptr, tr("Invalid URI"), 
                            tr("The telnet URI must specify a hostname."));
         return;
@@ -1507,10 +1525,13 @@ void mudlet::handleTelnetUri(const QUrl& url)
 
     int port = url.port(23);
     if (port < 1 || port > 65535) {
+        qWarning() << "mudlet::handleTelnetUri() - Invalid port:" << port;
         QMessageBox::warning(nullptr, tr("Invalid Port"), 
                            tr("The port number must be between 1 and 65535."));
         return;
     }
+
+    qDebug() << "mudlet::handleTelnetUri() - Parsed: host=" << host << "port=" << port;
 
     QString login = url.userName();
     QString password = url.password();
@@ -1518,6 +1539,8 @@ void mudlet::handleTelnetUri(const QUrl& url)
     // Check if a profile with this host and port already exists
     QString profileName;
     QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    
+    qDebug() << "mudlet::handleTelnetUri() - Searching through" << profileNames.size() << "existing profiles";
     
     // Collect all matching profiles with timestamps
     QList<QPair<QString, QDateTime>> matchingProfiles;
@@ -1529,6 +1552,7 @@ void mudlet::handleTelnetUri(const QUrl& url)
             QString profilePath = mudlet::getMudletPath(enums::profileHomePath, pName);
             QFileInfo profileInfo(profilePath);
             matchingProfiles.append(qMakePair(pName, profileInfo.lastModified()));
+            qDebug() << "mudlet::handleTelnetUri() - Found matching profile:" << pName;
         }
     }
 
@@ -1539,21 +1563,35 @@ void mudlet::handleTelnetUri(const QUrl& url)
                       return a.second > b.second; // Most recent first
                   });
         profileName = matchingProfiles.first().first;
+        qDebug() << "mudlet::handleTelnetUri() - Using most recent matching profile:" << profileName;
     }
 
     if (profileName.isEmpty()) {
         // No existing profile, create a new one
+        qDebug() << "mudlet::handleTelnetUri() - No matching profile found, creating new one";
         profileName = addProfile(host, port, login, password);
-        // Note: loadProfile() below will call setupPreInstallPackages() which schedules
-        // the appropriate default packages for installation. No need to call
-        // installDefaultPackages() here as it would duplicate the work.
+        
+        if (profileName.isEmpty()) {
+            qWarning() << "mudlet::handleTelnetUri() - Failed to create profile";
+            QMessageBox::warning(nullptr, tr("Profile Creation Failed"), 
+                               tr("Failed to create a profile for %1:%2").arg(host).arg(port));
+            return;
+        }
     }
 
     // Now, load and connect to the profile
-    if (!profileName.isEmpty()) {
-        loadProfile(profileName, false);
-        slot_connectionDialogueFinished(profileName, true);
+    qDebug() << "mudlet::handleTelnetUri() - Loading profile:" << profileName;
+    Host* pHost = loadProfile(profileName, false, QString());
+    
+    if (!pHost) {
+        qWarning() << "mudlet::handleTelnetUri() - Failed to load profile:" << profileName;
+        QMessageBox::warning(nullptr, tr("Profile Load Failed"), 
+                           tr("Failed to load profile %1").arg(profileName));
+        return;
     }
+    
+    qDebug() << "mudlet::handleTelnetUri() - Connecting to profile:" << profileName;
+    slot_connectionDialogueFinished(profileName, true);
 }
 
 void mudlet::openConnectionsWindow(const QString& profileNameToSelect)
