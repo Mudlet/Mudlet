@@ -173,22 +173,21 @@ void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey
     // Clone XML document on main thread, then serialize and save on background thread.
     // Cloning is fast and safe; each document owns its own tree, so the clone can be
     // serialized on a background thread without thread-safety issues.
-    // Capture shared_ptr to keep XMLexport alive during async operation
-    auto self = shared_from_this();
+    QPointer<Host> host = mpHost;
     pugi::xml_document docClone;
     // Deep copy the entire document tree
     for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
         docClone.append_copy(child);
     }
-    auto future = QtConcurrent::run([self, fileName, docClone = std::move(docClone)]() mutable { 
+    auto future = QtConcurrent::run([fileName, docClone = std::move(docClone)]() mutable { 
         return XMLexport::saveXmlDocToFile(fileName, docClone); 
     });
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [self, this, xmlSavedKey]() {
-        if (!mpHost) {
+    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey]() {
+        if (!host) {
             return;
         }
-        mpHost->xmlSaved(xmlSavedKey);
+        host->xmlSaved(xmlSavedKey);
     });
     connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
     watcher->setFuture(future);
