@@ -180,12 +180,23 @@ bool TCommandLine::event(QEvent* event)
         }
 
         if (ke->matches(QKeySequence::Copy)){ // Copy is Ctrl+C and possibly Ctrl+Ins, F16
-            if (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0)) {
-                // Only process if there is a selection active in the TConsole
+            // Check for console selections in both upper and lower panes
+            // Prioritize console selection over command line text
+            const bool hasUpperPaneSelection = mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0);
+            const bool hasLowerPaneSelection = mpConsole->mLowerPane->mSelectedRegion != QRegion(0, 0, 0, 0);
+            
+            if (hasUpperPaneSelection) {
+                // Copy from upper pane if it has a selection
                 mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
+            } else if (hasLowerPaneSelection) {
+                // Copy from lower pane if it has a selection
+                mpConsole->mLowerPane->slot_copySelectionToClipboard();
+                ke->accept();
+                return true;
             }
+            // If no console selection, fall through to default command line copy behavior
         }
 
         if (ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
