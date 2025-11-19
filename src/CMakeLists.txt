@@ -496,7 +496,8 @@ find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
-find_package(Boost 1.44)
+find_package(Boost 1.44 CONFIG REQUIRED)
+message(STATUS "Found Boost: ${Boost_DIR} (found version \"${Boost_VERSION}\")")
 
 
 # FreeBSD's sysinfo() call is done in a package, libsysinfo.

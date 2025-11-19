@@ -498,7 +498,6 @@ private:
 
     bool focusPatternItem(const int row, const Qt::FocusReason reason = Qt::TabFocusReason);
     void setupPatternNavigationShortcuts();
-    void updatePatternNavigationHint();
 
 
     // PLACEMARKER 3/3 save button texts need to be kept in sync
@@ -550,14 +549,6 @@ private:
 
     QScrollArea* mpScrollArea = nullptr;
     QWidget* mpWidget_triggerItems = nullptr;
-    QFrame* mPatternNavigationHintBanner = nullptr;
-    QLabel* mPatternNavigationHintLabel = nullptr;
-    QToolButton* mPatternNavigationHintCloseButton = nullptr;
-    bool mPatternNavigationHintHidden = false;
-    void handlePatternNavigationHintDismiss();
-    void showPatternNavigationHintUndoToast();
-    void undoPatternNavigationHintDismiss();
-    void handlePatternNavigationHintPermanentDismiss();
     // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
     // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
     QWidget *mpNonCodeWidgets = nullptr;
@@ -670,7 +661,6 @@ private:
     [[nodiscard]] QString bannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
     [[nodiscard]] QString legacyBannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
     [[nodiscard]] QString profileSettingsPrefix() const;
-    [[nodiscard]] QString patternNavigationHintSettingsKey() const;
 
     // Banner state tracking
     QTimer* mpBannerUndoTimer = nullptr;
