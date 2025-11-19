@@ -568,7 +568,7 @@ private:
     QString lastTextToLog;
 
     QByteArray mEncoding;
-    QTextCodec* mMainIncomingCodec = nullptr;
+    // No longer storing QTextCodec pointer - using TEncodingHelper instead
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;

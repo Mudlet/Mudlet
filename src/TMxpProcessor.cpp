@@ -21,8 +21,8 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
+#include "TEncodingHelper.h"
 #include <QDebug>
-#include <QTextCodec>
 
 bool TMxpProcessor::setMode(const QString& code)
 {
@@ -175,8 +175,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         } else if (encoding == qsl("ISO 8859-1")) {
             decoded = QString::fromLatin1(rawBytes.c_str(), static_cast<int>(rawBytes.length()));
         } else {
-            QTextCodec* codec = QTextCodec::codecForName(encoding);
-            decoded = codec ? codec->toUnicode(rawBytes.c_str(), static_cast<int>(rawBytes.length())) : QString::fromStdString(rawBytes);
+            decoded = TEncodingHelper::decode(QByteArray::fromRawData(rawBytes.c_str(), rawBytes.length()), encoding);
         }
         
         lastEntityValue = qsl("<") + decoded;
@@ -203,14 +202,8 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         } else if (encoding == qsl("ISO 8859-1")) {
             rawTagContent += QString::fromLatin1(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
         } else {
-            // For other encodings (GBK, BIG5, EUC-KR, etc.), use QTextCodec
-            QTextCodec* codec = QTextCodec::codecForName(encoding);
-            if (codec) {
-                rawTagContent += codec->toUnicode(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
-            } else {
-                // Fallback to UTF-8
-                rawTagContent += QString::fromStdString(rawTagBytes);
-            }
+            // For other encodings (GBK, BIG5, EUC-KR, etc.), use TEncodingHelper
+            rawTagContent += TEncodingHelper::decode(QByteArray::fromRawData(rawTagBytes.c_str(), rawTagBytes.length()), encoding);
         }
         
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());

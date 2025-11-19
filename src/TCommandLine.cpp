@@ -24,6 +24,7 @@
 
 #include "TCommandLine.h"
 
+#include "TEncodingHelper.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
@@ -737,7 +738,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         return;
     }
 
-    auto codec = mpHost->mpConsole->getHunspellCodec_system();
+    auto codecName = mpHost->mpConsole->getHunspellCodecName_system();
     auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
     auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
     bool haveAddOption = false;
@@ -787,13 +788,12 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     // need to have a codec prepared for it and can use QString::toUtf8()
     // directly:
     const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
-    if (!(handle_system && codec)) {
+    if (!(handle_system && !codecName.isEmpty())) {
         mSystemDictionarySuggestionsCount = 0;
     } else {
         // The dictionary used from "the system" may not be UTF-8 encoded so we
-        // will need to transform the UTF-16BE "QString" to the appropriate encoding
-        // using "codec" declared previously in this method:
-        const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+        // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+        const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
         if (!Hunspell_spell(handle_system, encodedText.constData())) {
             // The word is NOT in the main system dictionary:
             if (handle_profile) {
@@ -828,14 +828,14 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
     if (mSystemDictionarySuggestionsCount) {
         for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
-            auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
+            auto pA = new QAction(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
 #if defined(Q_OS_FREEBSD)
             // Adding the text afterwards as user data as well as in the
             // constructor is to fix a bug(?) in FreeBSD that
             // automagically adds a '&' somewhere in the text to be a
             // shortcut - but doesn't show it and forgets to remove
             // it when asked for the text later:
-            pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
+            pA->setData(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
 #endif
             connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
             spellings_system << pA;
@@ -854,14 +854,14 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     if (handle_profile) {
         if (mUserDictionarySuggestionsCount) {
             for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
+                auto pA = new QAction(TEncodingHelper::decode(mpUserSuggestionsList[i], codecName));
 #if defined(Q_OS_FREEBSD)
                 // Adding the text afterwards as user data as well as in the
                 // constructor is to fix a bug(?) in FreeBSD that
                 // automagically adds a '&' somewhere in the text to be a
                 // shortcut - but doesn't show it and forgets to remove
                 // it when asked for the text later:
-                pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
+                pA->setData(TEncodingHelper::decode(mpUserSuggestionsList[i], codecName));
 #endif
                 connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                 spellings_profile << pA;
@@ -1254,9 +1254,9 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     }
 
     // The dictionary used from "the system" may not be UTF-8 encoded so we
-    // will need to transform the UTF-16BE "QString" to the appropriate encoding
-    // using the correct "codec":
-    const QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
+    // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+    const QByteArray codecName = mpHost->mpConsole->getHunspellCodecName_system();
+    const QByteArray encodedText = TEncodingHelper::encode(spellCheckedWord, codecName);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();

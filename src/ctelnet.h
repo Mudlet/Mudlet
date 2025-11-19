@@ -70,9 +70,6 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
-class QTextCodec;
-class QTextDecoder;
-class QTextEncoder;
 class QTimer;
 
 class Host;
@@ -367,11 +364,7 @@ private:
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):
     QString mHostUrl;
-//    QTextCodec* incomingDataCodec;
-    QTextCodec* mpOutOfBandDataIncomingCodec = nullptr;
-    QTextCodec* outgoingDataCodec = nullptr;
-//    QTextDecoder* incomingDataDecoder;
-    QTextEncoder* outgoingDataEncoder = nullptr;
+    // Encoding names (no longer using QTextCodec/QTextEncoder/QTextDecoder)
     int mHostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;

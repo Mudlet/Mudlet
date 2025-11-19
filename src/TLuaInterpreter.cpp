@@ -43,6 +43,7 @@
 #include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
+#include "TEncodingHelper.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
 #include "dlgIRC.h"
@@ -1139,16 +1140,14 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             // We need to transcode it from UTF-8 into the current Game Server
             // encoding - this can fail if it includes any characters (as UTF-8)
             // that the game encoding cannot convey:
-        auto* pDataCodec = QTextCodec::codecForName(currentEncoding);
-        auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
-            if (!pDataCodec->canEncode(dataQString)) {
+            if (!TEncodingHelper::canEncode(dataQString, currentEncoding)) {
                 return warnArgumentValue(L, __func__, qsl(
                     "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'")
                     .arg(data.constData(), currentEncoding.constData()));
             }
 
-            std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
+            std::string encodedText{TEncodingHelper::encode(dataQString, currentEncoding).toStdString()};
             host.mpConsole->printOnDisplay(encodedText);
             lua_pushboolean(L, true);
             return 1;
@@ -6626,7 +6625,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
                 "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
-        encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
+        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
     }
     // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     lua_pushboolean(L, Hunspell_spell(handle, text.toUtf8().constData()));
@@ -6665,7 +6664,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
                 "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
-        encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
+        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
     }
     // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     wordCount = Hunspell_suggest(handle, &wordList, encodedText.constData());
