@@ -59,33 +59,25 @@ using namespace std::chrono_literals;
 #include <pcre.h>
 #include <Windows.h>
 #endif // _MSC_VER && _DEBUG
-#if defined(INCLUDE_SENTRY)
+#if defined(WITH_SENTRY)
 #include "sentry.h"
-#endif
-#if defined(INCLUDE_SENTRY)
 
 struct VersionInfo {
-
     bool isRelease;
-
     bool isPublicTest;
-
     bool isTesting;
-
 };
 
-
 // Global/static storage to ensure the data referenced by before_send remains
-
 // valid for the lifetime of the process.
 static VersionInfo g_sentryVersionInfo{false, false, false};
 
+// Flag to track if Sentry was initialized
+static bool g_sentryInitialized = false;
 sentry_value_t before_send(sentry_value_t event, void* hint, void* closure) {
-
     Q_UNUSED(hint);
     Q_UNUSED(closure);
     auto* versions = &g_sentryVersionInfo;
-
 
     // Check if mudlet::self() is initialized to avoid crashes during early startup
     auto* mudletInstance = mudlet::self();
@@ -255,7 +247,7 @@ int main(int argc, char* argv[])
     const bool releaseVersion = appBuild.isEmpty();
     const bool publicTestVersion = appBuild.startsWith("-ptb");
     const bool testingVersion = appBuild.startsWith("-testing");
-#if defined(INCLUDE_SENTRY)
+#if defined(WITH_SENTRY)
     bool disableSentry = false;
     // Only disable Sentry on Linux when running auto-run Lua tests in CI
     // (AUTORUN_BUSTED_TESTS is set by the workflow for the Linux run)
@@ -265,10 +257,9 @@ int main(int argc, char* argv[])
 
     if (!disableSentry) {
         sentry_options_t* options = sentry_options_new();
-                // Allow override via environment variable for testing
-        QByteArray dsn = qEnvironmentVariable("MUDLET_SENTRY_DSN",
-             "https://ce03a184e7c8502ac000f012df27a707@o4510377657106432.ingest.us.sentry.io/4510377750298624").toUtf8();
-        sentry_options_set_dsn(options, dsn.constData());
+        // Use the SENTRY_DSN macro configured through CMake's multi-tier configuration system
+        // (reads from src/sentry_dsn.txt, falls back to MUDLET_SENTRY_DSN env var, then placeholder)
+        sentry_options_set_dsn(options, SENTRY_DSN);
         QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
         QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
 #ifdef Q_OS_WIN
@@ -282,18 +273,16 @@ int main(int argc, char* argv[])
         sentry_options_set_database_path(options, sentryPathBytes.constData());
         sentry_options_set_handler_path(options, sentryCrashHandlerBytes.constData());
 
-            sentry_options_set_release(options, "mudlet@" APP_VERSION);
+        sentry_options_set_release(options, "mudlet@" APP_VERSION);
+        sentry_options_set_debug(options, false);
 
-            sentry_options_set_debug(options, false);
+        // Initialize global version info used by before_send callback
+        g_sentryVersionInfo.isRelease = releaseVersion;
+        g_sentryVersionInfo.isPublicTest = publicTestVersion;
+        g_sentryVersionInfo.isTesting = testingVersion;
 
-
-            // Initialize global version info used by before_send callback
-            g_sentryVersionInfo.isRelease = releaseVersion;
-            g_sentryVersionInfo.isPublicTest = publicTestVersion;
-            g_sentryVersionInfo.isTesting = testingVersion;
-
-            // Use the global/static VersionInfo to avoid lifetime issues
-            sentry_options_set_before_send(options, before_send, nullptr);
+        // Use the global/static VersionInfo to avoid lifetime issues
+        sentry_options_set_before_send(options, before_send, nullptr);
 
         if (releaseVersion) {
             sentry_options_set_environment(options, "release");
@@ -305,8 +294,8 @@ int main(int argc, char* argv[])
             sentry_options_set_environment(options, "development");
         }
         sentry_init(options);
-        // Make sure everything flushes
-        auto sentryClose = qScopeGuard([] { sentry_close(); });
+        g_sentryInitialized = true;
+        qInfo() << "Sentry initialized successfully";
     } else {
         qInfo() << "Sentry disabled for Linux CI Lua tests.";
     }
@@ -744,7 +733,7 @@ int main(int argc, char* argv[])
     mudlet::self()->init();
 
     // Test crash trigger for Sentry validation
-#if defined(INCLUDE_SENTRY)
+#if defined(WITH_SENTRY)
     if (!qEnvironmentVariable("MUDLET_TEST_CRASH").isNull()) {
         qDebug() << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing";
         // Trigger a crash by dereferencing a null pointer
@@ -827,7 +816,17 @@ int main(int argc, char* argv[])
     // click something in a parent process to the application when you are stuck
     // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
-    return app->exec();
+    int exitCode = app->exec();
+
+#if defined(WITH_SENTRY)
+    // Close Sentry SDK to ensure all events are flushed before the application exits
+    if (g_sentryInitialized) {
+        qInfo() << "Shutting down Sentry...";
+        sentry_close();
+    }
+#endif
+
+    return exitCode;
 }
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)

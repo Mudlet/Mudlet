@@ -697,19 +697,6 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 if (WITH_SENTRY)
   include(cmake/WithSentry.cmake)
   
-  # Add compile definitions to the executable
-  target_compile_definitions(${EXE_MUDLET_TARGET} PUBLIC
-    WITH_SENTRY
-    SENTRY_DSN="${SENTRY_DSN}"
-    APP_DIR_PATH="${CMAKE_BINARY_DIR}/src"
-    SENTRY_BUILD_STATIC
-  )
-  
-  # On Windows, add debug symbols to the executable
-  if(WIN32)
-    target_link_options(${EXE_MUDLET_TARGET} PRIVATE -g -gcodeview)
-  endif()
-  
   # Copy Sentry crashpad binaries next to the mudlet executable after build
   add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
