@@ -61,47 +61,6 @@ using namespace std::chrono_literals;
 #endif // _MSC_VER && _DEBUG
 #if defined(WITH_SENTRY)
 #include "sentry.h"
-
-struct VersionInfo {
-    bool isRelease;
-    bool isPublicTest;
-    bool isTesting;
-};
-
-// Global/static storage to ensure the data referenced by before_send remains
-// valid for the lifetime of the process.
-static VersionInfo g_sentryVersionInfo{false, false, false};
-
-// Flag to track if Sentry was initialized
-static bool g_sentryInitialized = false;
-sentry_value_t before_send(sentry_value_t event, void* hint, void* closure) {
-    Q_UNUSED(hint);
-    Q_UNUSED(closure);
-    auto* versions = &g_sentryVersionInfo;
-
-    // Check if mudlet::self() is initialized to avoid crashes during early startup
-    auto* mudletInstance = mudlet::self();
-    if (!mudletInstance) {
-        // If mudlet is not initialized yet, don't send crashes
-        return sentry_value_new_null();
-    }
-
-    if (versions->isRelease) {
-        if (!mudletInstance->smSendCrashesForReleases) {
-            return sentry_value_new_null();
-        }
-    } else if (versions->isPublicTest || versions->isTesting) {
-        if (!mudletInstance->smSendCrashesForTesting) {
-            return sentry_value_new_null();
-        }
-    } else {
-        // Development builds
-        if (!mudletInstance->smSendCrashesForDevelopment) {
-            return sentry_value_new_null();
-        }
-    }
-    return event;
-}
 #endif
 
 extern void qInitResources_mudlet();
@@ -213,6 +172,29 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
+
+#if defined(WITH_SENTRY)
+    // Initialize Sentry crash reporting as early as possible
+    sentry_options_t* options = sentry_options_new();
+    sentry_options_set_dsn(options, SENTRY_DSN);
+    
+    QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
+    QByteArray sentryPathBytes = sentryPath.toLocal8Bit();
+    sentry_options_set_database_path(options, sentryPathBytes.constData());
+    
+    QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
+#ifdef Q_OS_WIN
+    sentryCrashHandler += qsl(".exe");
+#endif
+    QByteArray sentryCrashHandlerBytes = sentryCrashHandler.toLocal8Bit();
+    sentry_options_set_handler_path(options, sentryCrashHandlerBytes.constData());
+    
+    sentry_options_set_release(options, "mudlet@" APP_VERSION);
+    sentry_init(options);
+    
+    // Ensure Sentry is closed at the end
+    auto sentryClose = qScopeGuard([] { sentry_close(); });
+#endif
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {
@@ -243,77 +225,12 @@ int main(int argc, char* argv[])
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
 
-    // Test crash trigger for Sentry validation - check early before any initialization
-    // This works even without WITH_SENTRY defined, allowing crash testing in all builds
-    if (!qEnvironmentVariable("MUDLET_TEST_CRASH").isNull()) {
-        qDebug() << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing";
-        // Force a flush of debug output to ensure the message is visible
-        std::cout << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing" << std::endl;
-        std::cerr << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing" << std::endl;
-        // Trigger a crash by dereferencing a null pointer
-        int* nullPtr = nullptr;
-        *nullPtr = 42;  // This will crash
-    }
-
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
     const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
     const bool releaseVersion = appBuild.isEmpty();
     const bool publicTestVersion = appBuild.startsWith("-ptb");
     const bool testingVersion = appBuild.startsWith("-testing");
-#if defined(WITH_SENTRY)
-    bool disableSentry = false;
-    // Only disable Sentry on Linux when running auto-run Lua tests in CI
-    // (AUTORUN_BUSTED_TESTS is set by the workflow for the Linux run)
-    #if defined(Q_OS_LINUX)
-        disableSentry = !qEnvironmentVariable("AUTORUN_BUSTED_TESTS").isNull();
-    #endif
-
-    if (!disableSentry) {
-        sentry_options_t* options = sentry_options_new();
-        // Use the SENTRY_DSN macro configured through CMake's multi-tier configuration system
-        // (reads from src/sentry_dsn.txt, falls back to MUDLET_SENTRY_DSN env var, then placeholder)
-        sentry_options_set_dsn(options, SENTRY_DSN);
-        QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
-        QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
-#ifdef Q_OS_WIN
-        sentryCrashHandler += qsl(".exe");
-#endif
-        qDebug() << "crashpad_handler path is: " << sentryCrashHandler;
-        
-        // Store QByteArrays to ensure lifetime for Sentry C API
-        QByteArray sentryPathBytes = sentryPath.toLocal8Bit();
-        QByteArray sentryCrashHandlerBytes = sentryCrashHandler.toLocal8Bit();
-        sentry_options_set_database_path(options, sentryPathBytes.constData());
-        sentry_options_set_handler_path(options, sentryCrashHandlerBytes.constData());
-
-        sentry_options_set_release(options, "mudlet@" APP_VERSION);
-        sentry_options_set_debug(options, false);
-
-        // Initialize global version info used by before_send callback
-        g_sentryVersionInfo.isRelease = releaseVersion;
-        g_sentryVersionInfo.isPublicTest = publicTestVersion;
-        g_sentryVersionInfo.isTesting = testingVersion;
-
-        // Use the global/static VersionInfo to avoid lifetime issues
-        sentry_options_set_before_send(options, before_send, nullptr);
-
-        if (releaseVersion) {
-            sentry_options_set_environment(options, "release");
-        } else if (publicTestVersion) {
-            sentry_options_set_environment(options, "public-test-build");
-        } else if (testingVersion) {
-            sentry_options_set_environment(options, "testing");
-        } else {
-            sentry_options_set_environment(options, "development");
-        }
-        sentry_init(options);
-        g_sentryInitialized = true;
-        qInfo() << "Sentry initialized successfully";
-    } else {
-        qInfo() << "Sentry disabled for Linux CI Lua tests.";
-    }
-#endif
 
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
@@ -820,17 +737,7 @@ int main(int argc, char* argv[])
     // click something in a parent process to the application when you are stuck
     // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
-    int exitCode = app->exec();
-
-#if defined(WITH_SENTRY)
-    // Close Sentry SDK to ensure all events are flushed before the application exits
-    if (g_sentryInitialized) {
-        qInfo() << "Shutting down Sentry...";
-        sentry_close();
-    }
-#endif
-
-    return exitCode;
+    return app->exec();
 }
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)

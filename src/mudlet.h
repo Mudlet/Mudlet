@@ -219,9 +219,6 @@ public:
     inline static QString smBlankTimeStamp = qsl("------------ ");
 
 
-    inline static bool smSendCrashesForReleases = false;  
-    inline static bool smSendCrashesForTesting = true;
-    inline static bool smSendCrashesForDevelopment = true;
     void showEvent(QShowEvent*) override;
     void hideEvent(QHideEvent*) override;
 

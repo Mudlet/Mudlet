@@ -106,6 +106,15 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
     FILES_TO_COPY+=("mudlet.exe.debug")
 fi
 if [ "${WITH_SENTRY}" = "yes" ]; then
+    # Validate that required Sentry crashpad binaries exist
+    if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_handler.exe" ]; then
+        echo "ERROR: crashpad_handler.exe not found - Sentry build failed or incomplete"
+        exit 6
+    fi
+    if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/crashpad_wer.dll" ]; then
+        echo "ERROR: crashpad_wer.dll not found - Sentry build failed or incomplete"
+        exit 6
+    fi
     FILES_TO_COPY+=("crashpad_handler.exe" "crashpad_wer.dll")
 fi
 

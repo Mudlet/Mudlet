@@ -6,6 +6,11 @@ message(STATUS "Building with Sentry enabled")
 
 set(SENTRY_PATH "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native")
 
+# Validate that the Sentry submodule exists before attempting to build
+if(NOT EXISTS "${SENTRY_PATH}/CMakeLists.txt")
+    message(FATAL_ERROR "Sentry submodule not found at ${SENTRY_PATH}. Please run: git submodule update --init --recursive")
+endif()
+
 set(SENTRY_CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install/
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -54,18 +59,13 @@ ExternalProject_Add(
 
 add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
 
-# Read Sentry DSN from file or environment variable
-if(EXISTS "${CMAKE_SOURCE_DIR}/src/sentry_dsn.txt")
-    file(READ "${CMAKE_SOURCE_DIR}/src/sentry_dsn.txt" SENTRY_DSN_RAW)
-    string(STRIP "${SENTRY_DSN_RAW}" SENTRY_DSN)
-    message(STATUS "Using Sentry DSN from src/sentry_dsn.txt")
-elseif(DEFINED ENV{MUDLET_SENTRY_DSN})
-    set(SENTRY_DSN "$ENV{MUDLET_SENTRY_DSN}")
-    message(STATUS "Using Sentry DSN from MUDLET_SENTRY_DSN environment variable")
-else()
-    set(SENTRY_DSN "https://placeholder@sentry.io/0")
-    message(WARNING "No Sentry DSN found. Create src/sentry_dsn.txt or set MUDLET_SENTRY_DSN environment variable. Using placeholder DSN.")
+# Read Sentry DSN from file (required)
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/sentry_dsn.txt")
+    message(FATAL_ERROR "Sentry DSN file not found at src/sentry_dsn.txt. Please create this file with your Sentry DSN.")
 endif()
+file(READ "${CMAKE_SOURCE_DIR}/src/sentry_dsn.txt" SENTRY_DSN_RAW)
+string(STRIP "${SENTRY_DSN_RAW}" SENTRY_DSN)
+message(STATUS "Using Sentry DSN from src/sentry_dsn.txt")
 
 target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -g)
 
@@ -114,5 +114,10 @@ else()
     target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat)
 endif()
 
-# Note: Custom commands for EXE_MUDLET_TARGET are handled in src/CMakeLists.txt
-# after the executable target is created, to avoid dependency ordering issues.
+# Copy Sentry crashpad binaries next to the mudlet executable after build
+add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${SENTRY_PATH}/install/bin"
+        "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
+    COMMENT "Copying Sentry binaries next to the mudlet executable"
+)

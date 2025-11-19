@@ -146,10 +146,7 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
                         OPTION_VARIABLE USE_QT6
                         READABLE_NAME "build with Qt6 (if installed)")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_SENTRY
-                        OPTION_VARIABLE USE_SENTRY
-                        READABLE_NAME "build with sentry.io"
-                        DEFAULT_VALUE OFF)
+option(WITH_SENTRY "Enable crash reporting via Sentry" OFF)
 
 
 find_package(Qt6 6.8.2 REQUIRED)
@@ -197,7 +194,7 @@ if(USE_UPDATER)
                      "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")
 endif()
 
-if(USE_SENTRY)
+if(WITH_SENTRY)
   git_submodule_init(CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
                      "3rdparty/sentry-native" READABLE_NAME "Sentry crash reporting")
 endif()

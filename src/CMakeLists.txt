@@ -696,14 +696,6 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 # Configure Sentry - include AFTER executable is created to avoid target ordering issues
 if (WITH_SENTRY)
   include(cmake/WithSentry.cmake)
-  
-  # Copy Sentry crashpad binaries next to the mudlet executable after build
-  add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native/install/bin"
-        "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
-    COMMENT "Copying Sentry binaries next to the mudlet executable"
-  )
 endif()
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
