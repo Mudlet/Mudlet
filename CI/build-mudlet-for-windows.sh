@@ -148,7 +148,7 @@ CMAKE_ARGS=(
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
 )
 
-if [ "${WITH_SENTRY}" = "yes" ]; then
+if [ "${WITH_SENTRY}" = "ON" ]; then
     CMAKE_ARGS+=("-DWITH_SENTRY=ON")
 fi
 

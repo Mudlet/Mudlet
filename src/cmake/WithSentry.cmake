@@ -7,7 +7,7 @@ message(STATUS "Building with Sentry enabled")
 set(SENTRY_PATH "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native")
 set(SENTRY_CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install/
-    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo
     -DCMAKE_C_COMPILER=clang
     -DCMAKE_CXX_COMPILER=clang++
     -DSENTRY_BACKEND=crashpad
@@ -49,9 +49,6 @@ ExternalProject_Add(
 
 add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
 
-file(READ "${CMAKE_SOURCE_DIR}/src/sentry_dsn.txt" SENTRY_DSN_RAW)
-string(STRIP "${SENTRY_DSN_RAW}" SENTRY_DSN)
-
 target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -g)
 
 if(WIN32)
@@ -62,14 +59,6 @@ endif()
 
 target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC
     WITH_SENTRY
-    SENTRY_DSN="${SENTRY_DSN}"
-    APP_DIR_PATH="${CMAKE_BINARY_DIR}/src"
-    SENTRY_BUILD_STATIC
-)
-target_compile_definitions(${EXE_MUDLET_TARGET} PUBLIC
-    WITH_SENTRY
-    SENTRY_DSN="${SENTRY_DSN}"
-    APP_DIR_PATH="${CMAKE_BINARY_DIR}/src"
     SENTRY_BUILD_STATIC
 )
 
@@ -104,12 +93,18 @@ else()
     target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat)
 endif()
 
-add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${SENTRY_PATH}/install/bin"
-        "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
+set(SENTRY_BINARIES "${SENTRY_PATH}/install/bin")
+set(STAMP_FILE "${CMAKE_CURRENT_BINARY_DIR}/sentry_binaries.stamp")
+
+add_custom_command(OUTPUT ${STAMP_FILE}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SENTRY_BINARIES} "$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>"
+    COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_FILE}
     COMMENT "Copying Sentry binaries next to the mudlet executable"
 )
+
+add_custom_target(copy_sentry ALL DEPENDS ${STAMP_FILE})
+add_dependencies(copy_sentry sentry_native)
+add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
     add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
@@ -123,6 +118,10 @@ elseif(UNIX)
         COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
         COMMAND objcopy --add-gnu-debuglink=$<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
         COMMENT "Creating separate debug file and stripping executable"
+    )
+else()
+    add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/mudlet.pdb"
     )
 endif()
 

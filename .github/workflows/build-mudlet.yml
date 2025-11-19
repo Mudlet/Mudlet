@@ -199,17 +199,6 @@ jobs:
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
-    - name: Set Sentry environment variables
-      run: |
-        echo "WITH_SENTRY=yes" >> $GITHUB_ENV
-        if [ -n "${SENTRY_SEND_DEBUG_SECRET}" ]; then
-          echo "SENTRY_SEND_DEBUG=1" >> $GITHUB_ENV
-        else
-          echo "SENTRY_SEND_DEBUG=0" >> $GITHUB_ENV
-        fi
-      env:
-        SENTRY_SEND_DEBUG_SECRET: ${{ secrets.SENTRY_SEND_DEBUG }}
-
     - name: Restore ccache
       id: restore-ccache
       uses: actions/cache/restore@v4
@@ -253,8 +242,9 @@ jobs:
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DUSE_SANITIZER=""
-          -DWITH_SENTRY=${{ env.WITH_SENTRY }}
-          -DSENTRY_SEND_DEBUG=${{ env.SENTRY_SEND_DEBUG }}
+          -DWITH_SENTRY=ON
+          -DSENTRY_SEND_DEBUG=${{ startsWith(github.ref, 'refs/tags/') && '1' || '0' }}
+          -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}

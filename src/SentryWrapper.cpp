@@ -32,6 +32,7 @@
 #endif
 
 #include <string>
+#include <cstdlib>
 #include <algorithm>
 #include <mutex>
 
@@ -56,7 +57,6 @@ void initSentry()
         if (!options) {
             return;
         }
-        sentry_options_set_dsn(options, SENTRY_DSN);
         sentry_options_set_database_path(options, path.toUtf8().constData());
         sentry_options_set_release(options, "mudlet@" APP_VERSION);
         sentry_options_set_handler_path(options, makeExecutablePath(runtimeAppDir, "crashpad_handler").c_str());
@@ -75,6 +75,7 @@ std::string makeExecutablePath(const std::string& dir, const std::string& name)
     #endif
 }
 
+// Returns the directory containing the current executable
 std::string getExeDir()
 {
     static std::mutex mtx;
@@ -113,4 +114,14 @@ std::string getExeDir()
         size_t pos = exePath.find_last_of("/");
         return exePath.substr(0, pos);
     #endif
+}
+
+void crashIfRequested()
+{
+    const char* environmentVariable = std::getenv("MUDLET_CRASH_TEST");
+
+     if (environmentVariable && *environmentVariable == '1') {
+        int* p = nullptr;
+        *p = 42;
+    }
 }

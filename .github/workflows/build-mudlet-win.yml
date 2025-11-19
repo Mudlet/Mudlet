@@ -39,18 +39,6 @@ jobs:
         msystem: MINGW64
         update: true
 
-    - name: Enable sentry.io for Windows releases
-      shell: msys2 {0}
-      run: |
-        echo "WITH_SENTRY=yes" >> $GITHUB_ENV
-        if [ -n "${SENTRY_SEND_DEBUG_SECRET}" ]; then
-          echo "SENTRY_SEND_DEBUG=1" >> $GITHUB_ENV
-        else
-          echo "SENTRY_SEND_DEBUG=0" >> $GITHUB_ENV
-        fi
-      env:
-        SENTRY_SEND_DEBUG_SECRET: ${{ secrets.SENTRY_SEND_DEBUG }}
-
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
       env:
@@ -74,7 +62,10 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_SEND_DEBUG: ${{ startsWith(github.ref, 'refs/tags/') && '1' || '0' }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        WITH_SENTRY: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     - name: (Windows) Run QTest
