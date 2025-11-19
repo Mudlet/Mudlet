@@ -854,14 +854,14 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     if (handle_profile) {
         if (mUserDictionarySuggestionsCount) {
             for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                auto pA = new QAction(TEncodingHelper::decode(mpUserSuggestionsList[i], codecName));
+                auto pA = new QAction(QString::fromUtf8(mpUserSuggestionsList[i]));
 #if defined(Q_OS_FREEBSD)
                 // Adding the text afterwards as user data as well as in the
                 // constructor is to fix a bug(?) in FreeBSD that
                 // automagically adds a '&' somewhere in the text to be a
                 // shortcut - but doesn't show it and forgets to remove
                 // it when asked for the text later:
-                pA->setData(TEncodingHelper::decode(mpUserSuggestionsList[i], codecName));
+                pA->setData(QString::fromUtf8(mpUserSuggestionsList[i]));
 #endif
                 connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                 spellings_profile << pA;
