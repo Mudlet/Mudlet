@@ -1774,6 +1774,18 @@ bool Host::killTrigger(const QString& name)
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing)
 {
+    // Wait for profile save to complete before installing package
+    // to prevent Lua state corruption during concurrent operations
+    if (currentlySavingProfile()) {
+        // Auto-retry installation after save completes
+        QObject* obj = new QObject(this);
+        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
+            installPackage(fileName, thing);
+            obj->deleteLater();
+        });
+        return {true, QString()};
+    }
+
     // As the pointer to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidentally re-enter this method in the future.
@@ -1989,37 +2001,47 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         installPackageFonts(packageName);
     }
 
-    // raise 2 events - a generic one and a more detailed one to serve both
-    // a simple need ("I just want the install event") and a more specific need
-    // ("I specifically need to know when the module was synced")
-    TEvent genericInstallEvent {};
-    genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
-    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    genericInstallEvent.mArgumentList.append(packageName);
-    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent(genericInstallEvent);
+    // Defer raising install events until the next event loop iteration
+    // This ensures all package installation is complete (including variable loading)
+    // before event handlers execute, preventing Lua state corruption
+    QTimer::singleShot(0, this, [this, thing, packageName, fileName]() {
+        // Don't raise events if Host is shutting down to avoid handlers executing during teardown
+        if (isClosingDown()) {
+            return;
+        }
 
-    TEvent detailedInstallEvent {};
-    switch (thing) {
-    case enums::PackageModuleType::Package:
-        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
-        break;
-    case enums::PackageModuleType::ModuleFromUI:
-        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
-        break;
-    case enums::PackageModuleType::ModuleSync:
-        detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
-        break;
-    case enums::PackageModuleType::ModuleFromScript:
-        detailedInstallEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
-        break;
-    }
-    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    detailedInstallEvent.mArgumentList.append(packageName);
-    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    detailedInstallEvent.mArgumentList.append(fileName);
-    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent(detailedInstallEvent);
+        // raise 2 events - a generic one and a more detailed one to serve both
+        // a simple need ("I just want the install event") and a more specific need
+        // ("I specifically need to know when the module was synced")
+        TEvent genericInstallEvent {};
+        genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
+        genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        genericInstallEvent.mArgumentList.append(packageName);
+        genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        raiseEvent(genericInstallEvent);
+
+        TEvent detailedInstallEvent {};
+        switch (thing) {
+        case enums::PackageModuleType::Package:
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
+            break;
+        case enums::PackageModuleType::ModuleFromUI:
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
+            break;
+        case enums::PackageModuleType::ModuleSync:
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
+            break;
+        case enums::PackageModuleType::ModuleFromScript:
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
+            break;
+        }
+        detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        detailedInstallEvent.mArgumentList.append(packageName);
+        detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        detailedInstallEvent.mArgumentList.append(fileName);
+        detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        raiseEvent(detailedInstallEvent);
+    });
 
     if (mpPackageManager) {
         mpPackageManager->resetPackageList();
@@ -3347,6 +3369,66 @@ bool Host::setClickthrough(const QString& name, bool clickthrough)
     return false;
 }
 
+bool Host::setLabelStyleSheet(const QString& name, const QString& styleSheet)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setStyleSheet(styleSheet);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setLinkStyle(linkColor, linkVisitedColor, underline);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::resetLinkStyle(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->resetLinkStyle();
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::clearVisitedLinks(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->clearVisitedLinks();
+        return true;
+    }
+
+    return false;
+}
+
 void Host::hideMudletsVariables()
 {
     auto varUnit = getLuaInterface()->getVarUnit();
@@ -4004,9 +4086,12 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
         QString styleSheet = pL->styleSheet();
         QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
         if (styleSheet.contains(qsl("background-color"))) {
-            QRegularExpression re("background-color: .*;");
+            QRegularExpression re("background-color:[^;]*;");
             styleSheet.replace(re, newColor);
         } else {
+            if (!styleSheet.isEmpty() && !styleSheet.endsWith('\n')) {
+                styleSheet.append('\n');
+            }
             styleSheet.append(newColor);
         }
 
@@ -4414,6 +4499,9 @@ void Host::setFocusOnHostActiveCommandLine()
 
 void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
 {
+    if (!pCommandLine) {
+        return;
+    }
     mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
     mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
 }

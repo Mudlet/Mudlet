@@ -76,8 +76,6 @@
 
 using namespace std::chrono_literals;
 
-static const auto patternNavigationBannerKey = qsl("pattern-navigation");
-
 // Used as a QObject::property so that we can keep track of the color for the
 // trigger colorizer buttons loaded from a trigger even if the user disables
 // and then reenables the colorizer function (and we "grey out" the color while
@@ -1184,53 +1182,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     lay1->addStretch();
 
-    mPatternNavigationHintBanner = new QFrame(mpWidget_triggerItems);
-    mPatternNavigationHintBanner->setObjectName(qsl("patternNavigationHintBanner"));
-    mPatternNavigationHintBanner->setFrameShape(QFrame::StyledPanel);
-    mPatternNavigationHintBanner->setFrameShadow(QFrame::Raised);
-    mPatternNavigationHintBanner->setFocusPolicy(Qt::StrongFocus);
-
-    auto* patternNavigationHintLayout = new QHBoxLayout(mPatternNavigationHintBanner);
-    patternNavigationHintLayout->setContentsMargins(12, 12, 12, 12);
-    patternNavigationHintLayout->setSpacing(8);
-
-    auto* patternNavigationHintIcon = new QLabel(mPatternNavigationHintBanner);
-    patternNavigationHintIcon->setObjectName(qsl("patternNavigationHintIcon"));
-    patternNavigationHintIcon->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-    const int patternNavigationHintIconSize = qMax(24, style()->pixelMetric(QStyle::PM_SmallIconSize, nullptr, mPatternNavigationHintBanner));
-    patternNavigationHintIcon->setPixmap(QIcon(qsl(":/icons/dialog-information.png")).pixmap(patternNavigationHintIconSize, patternNavigationHintIconSize));
-    patternNavigationHintLayout->addWidget(patternNavigationHintIcon);
-
-    mPatternNavigationHintLabel = new QLabel(mPatternNavigationHintBanner);
-    mPatternNavigationHintLabel->setObjectName(qsl("patternNavigationHintLabel"));
-    mPatternNavigationHintLabel->setWordWrap(true);
-    mPatternNavigationHintLabel->setTextFormat(Qt::RichText);
-    mPatternNavigationHintLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-    mPatternNavigationHintLabel->setTextInteractionFlags(Qt::TextSelectableByKeyboard | Qt::TextSelectableByMouse);
-    QFont hintFont = mPatternNavigationHintLabel->font();
-    hintFont.setPointSizeF(qMax(7.0, hintFont.pointSizeF() - 1.0));
-    mPatternNavigationHintLabel->setFont(hintFont);
-    patternNavigationHintLayout->addWidget(mPatternNavigationHintLabel, 1);
-
-    mPatternNavigationHintCloseButton = new QToolButton(mPatternNavigationHintBanner);
-    mPatternNavigationHintCloseButton->setObjectName(qsl("patternNavigationHintCloseButton"));
-    mPatternNavigationHintCloseButton->setAutoRaise(true);
-    mPatternNavigationHintCloseButton->setFixedSize(16, 16);
-    mPatternNavigationHintCloseButton->setIcon(QIcon::fromTheme(qsl("dialog-close"), QIcon(qsl(":/icons/dialog-close.png"))));
-    //: Tooltip for the button that hides the pattern navigation hint banner.
-    mPatternNavigationHintCloseButton->setToolTip(tr("Hide this hint"));
-    patternNavigationHintLayout->addWidget(mPatternNavigationHintCloseButton);
-    patternNavigationHintLayout->setAlignment(mPatternNavigationHintCloseButton, Qt::AlignTop);
-
-    connect(mPatternNavigationHintCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::handlePatternNavigationHintDismiss);
-
-    updatePatternNavigationHint();
-    lay1->insertWidget(lay1->count() - 1, mPatternNavigationHintBanner);
-
-    if (mPatternNavigationHintHidden && mPatternNavigationHintBanner) {
-        mPatternNavigationHintBanner->hide();
-    }
-
     QPixmap pixMap_subString(256, 256);
     pixMap_subString.fill(Qt::black);
     const QIcon icon_subString(pixMap_subString);
@@ -1371,12 +1322,6 @@ void dlgTriggerEditor::createPatternItem(int index)
 
     auto* pLayout = static_cast<QVBoxLayout*>(mpWidget_triggerItems->layout());
     int insertIndex = pLayout->count() - 1;
-    if (mPatternNavigationHintBanner) {
-        const int hintIndex = pLayout->indexOf(mPatternNavigationHintBanner);
-        if (hintIndex >= 0) {
-            insertIndex = hintIndex;
-        }
-    }
     pLayout->insertWidget(insertIndex, pItem);
 
     mTriggerPatternEdit.push_back(pItem);
@@ -1440,7 +1385,6 @@ void dlgTriggerEditor::showPatternItems(int count)
     mVisiblePatternCount = count;
     updatePatternPlaceholders();
     updatePatternTabOrder();
-    updatePatternNavigationHint();
 }
 
 void dlgTriggerEditor::updatePatternPlaceholders()
@@ -1535,158 +1479,6 @@ void dlgTriggerEditor::setupPatternNavigationShortcuts()
         mLastPatternShortcut->setEnabled(enableShortcuts);
     }
 }
-
-void dlgTriggerEditor::updatePatternNavigationHint()
-{
-    if (!mPatternNavigationHintBanner || !mPatternNavigationHintLabel) {
-        return;
-    }
-
-    const bool permanentlyHidden = bannerPermanentlyHidden(EditorViewType::cmTriggerView, patternNavigationBannerKey, false);
-    mPatternNavigationHintBanner->setVisible(!mPatternNavigationHintHidden && !permanentlyHidden);
-
-    constexpr int baseHorizontalPadding = 12;
-    constexpr int baseVerticalPadding = 12;
-
-    int leftMargin = 0;
-    if (mpWidget_triggerItems && mPatternNavigationHintBanner->isVisible()) {
-        const QPoint hintPos = mPatternNavigationHintBanner->mapTo(mpWidget_triggerItems, QPoint());
-        const int itemCount = qMin(mVisiblePatternCount, mTriggerPatternEdit.size());
-        for (int i = 0; i < itemCount; ++i) {
-            auto* patternItem = mTriggerPatternEdit.value(i, nullptr);
-            if (!patternItem || !patternItem->isVisible()) {
-                continue;
-            }
-        }
-    }
-
-    const QString settingsKey = bannerSettingsKey(EditorViewType::cmTriggerView, patternNavigationBannerKey);
-    const QString baseKey = bannerSettingsKey(EditorViewType::cmTriggerView, QString());
-    if (settingsKey.isEmpty()) {
-        return;
-    }
-
-    const int topMargin = qMax(baseVerticalPadding, mPatternNavigationHintLabel->fontMetrics().lineSpacing());
-    if (auto* bannerLayout = qobject_cast<QHBoxLayout*>(mPatternNavigationHintBanner->layout())) {
-        const QMargins currentMargins = bannerLayout->contentsMargins();
-        const int desiredLeft = baseHorizontalPadding + leftMargin;
-        if (currentMargins.left() != desiredLeft || currentMargins.top() != topMargin
-            || currentMargins.right() != baseHorizontalPadding || currentMargins.bottom() != baseVerticalPadding) {
-            bannerLayout->setContentsMargins(desiredLeft, topMargin, baseHorizontalPadding, baseVerticalPadding);
-        }
-    }
-
-    mPatternNavigationHintLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-
-    //: Hint shown below trigger patterns explaining navigation shortcuts. Contains HTML markup.
-    mPatternNavigationHintLabel->setText(tr(
-        "<p><strong>Navigation shortcuts</strong></p>"
-        "<ul>"
-        "<li>Press <strong>Ctrl+Shift+Up</strong> to focus the first pattern field.</li>"
-        "<li>Press <strong>Ctrl+Shift+Down</strong> to jump to the last visible pattern field.</li>"
-        "<li>Press <strong>Ctrl+Up</strong> or <strong>Ctrl+Down</strong> to move between pattern fields.</li>"
-        "<li>Press <strong>Ctrl+Tab</strong> to toggle the Lua code editor.</li>"
-        "</ul>"
-    ));
-    
-}
-
-
-void dlgTriggerEditor::handlePatternNavigationHintDismiss()
-{
-    mPatternNavigationHintHidden = true;
-    if (mPatternNavigationHintBanner) {
-        mPatternNavigationHintBanner->hide();
-    }
-
-    if (auto* settings = mudlet::getQSettings()) {
-        const QString patternHintKey = patternNavigationHintSettingsKey();
-        settings->setValue(patternHintKey, true);
-    }
-
-    showPatternNavigationHintUndoToast();
-}
-
-void dlgTriggerEditor::showPatternNavigationHintUndoToast()
-{
-    if (!mpSystemMessageArea) {
-        return;
-    }
-
-    if (mpBannerUndoTimer) {
-        mpBannerUndoTimer->stop();
-        mpBannerUndoTimer->deleteLater();
-    }
-
-    mCurrentBannerKey.clear();
-
-    mpBannerUndoTimer = new QTimer(this);
-    mpBannerUndoTimer->setSingleShot(true);
-    mpBannerUndoTimer->setInterval(std::chrono::seconds(5));
-
-    //: Toast notification shown when user dismisses the trigger pattern navigation hint. Allows them to undo or permanently hide the hint.
-    const QString toastMessage = tr("Hint hidden. <a href='undo' style='color: inherit; text-decoration: underline;'>Undo</a> | <a href='hide-permanently' style='color: inherit; text-decoration: underline;'>Hide permanently</a>");
-
-    mpSystemMessageArea->notificationAreaIconLabelError->hide();
-    mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-    mpSystemMessageArea->notificationAreaIconLabelInformation->show();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(toastMessage);
-    mpSystemMessageArea->show();
-
-    connect(mpBannerUndoTimer, &QTimer::timeout, this, &dlgTriggerEditor::hideSystemMessageArea);
-    mpBannerUndoTimer->start();
-
-    disconnect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, nullptr, nullptr);
-    connect(mpSystemMessageArea->notificationAreaMessageBox, &QLabel::linkActivated, this, [this](const QString& link) {
-        if (link == QLatin1String("undo")) {
-            undoPatternNavigationHintDismiss();
-        } else if (link == QLatin1String("hide-permanently")) {
-            handlePatternNavigationHintPermanentDismiss();
-        } else {
-            slot_clickedMessageBox(link);
-        }
-    });
-}
-
-void dlgTriggerEditor::undoPatternNavigationHintDismiss()
-{
-    if (mpBannerUndoTimer) {
-        mpBannerUndoTimer->stop();
-        mpBannerUndoTimer->deleteLater();
-        mpBannerUndoTimer = nullptr;
-    }
-
-    mPatternNavigationHintHidden = false;
-    if (auto* settings = mudlet::getQSettings()) {
-        const QString patternHintKey = patternNavigationHintSettingsKey();
-        settings->setValue(patternHintKey, false);
-    }
-
-    setBannerPermanentlyHidden(EditorViewType::cmTriggerView, patternNavigationBannerKey, false);
-
-    updatePatternNavigationHint();
-    hideSystemMessageArea();
-}
-
-void dlgTriggerEditor::handlePatternNavigationHintPermanentDismiss()
-{
-    if (mpBannerUndoTimer) {
-        mpBannerUndoTimer->stop();
-        mpBannerUndoTimer->deleteLater();
-        mpBannerUndoTimer = nullptr;
-    }
-
-    mPatternNavigationHintHidden = true;
-    if (auto* settings = mudlet::getQSettings()) {
-        const QString patternHintKey = patternNavigationHintSettingsKey();
-        settings->setValue(patternHintKey, true);
-    }
-
-    setBannerPermanentlyHidden(EditorViewType::cmTriggerView, patternNavigationBannerKey, true);
-
-    hideSystemMessageArea();
-}
-
 
 void dlgTriggerEditor::slot_addPattern()
 {
@@ -1792,21 +1584,6 @@ void dlgTriggerEditor::readSettings()
     mTimerEditorSplitterState = settings.value("mTimerEditorSplitterState", QByteArray()).toByteArray();
     mVarEditorSplitterState = settings.value("mVarEditorSplitterState", QByteArray()).toByteArray();
     mSearchSplitterState = settings.value("mSearchSplitterState", QByteArray()).toByteArray();
-
-    const QString patternHintKey = patternNavigationHintSettingsKey();
-    const QString legacyPatternHintKey = qsl("patternNavigationHintHidden");
-    if (!patternHintKey.isEmpty() && patternHintKey != legacyPatternHintKey && settings.contains(legacyPatternHintKey)) {
-        settings.remove(legacyPatternHintKey);
-    }
-
-    mPatternNavigationHintHidden = settings.value(patternHintKey, false).toBool();
-
-    const bool permanentlyHidden = bannerPermanentlyHidden(EditorViewType::cmTriggerView, patternNavigationBannerKey, false);
-    if (mPatternNavigationHintHidden && !permanentlyHidden) {
-        mPatternNavigationHintHidden = false;
-        settings.setValue(patternHintKey, false);
-        updatePatternNavigationHint();
-    }
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -1824,9 +1601,6 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("mTimerEditorSplitterState", mTimerEditorSplitterState);
     settings.setValue("mVarEditorSplitterState", mVarEditorSplitterState);
     settings.setValue("mSearchSplitterState", mSearchSplitterState);
-
-    const QString patternHintKey = patternNavigationHintSettingsKey();
-    settings.setValue(patternHintKey, mPatternNavigationHintHidden);
 }
 
 void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
@@ -4947,6 +4721,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     pNewTrigger->setScript(script);
     pNewTrigger->setIsFolder(isFolder);
     pNewTrigger->setIsActive(false);
+    pNewTrigger->setShouldBeActive(true);
     pNewTrigger->setIsMultiline(false);
     pNewTrigger->mStayOpen = 0;
     pNewTrigger->setConditionLineDelta(0);
@@ -5173,6 +4948,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     pNewKey->setScript(script);
     pNewKey->setIsFolder(isFolder);
     pNewKey->setIsActive(false);
+    pNewKey->setShouldBeActive(true);
     pNewKey->registerKey();
 
     // Initialize tree item properties
@@ -5250,6 +5026,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     pNewAlias->setScript(script);
     pNewAlias->setIsFolder(isFolder);
     pNewAlias->setIsActive(false);
+    pNewAlias->setShouldBeActive(true);
     pNewAlias->registerAlias();
 
     // Initialize tree item properties
@@ -5408,6 +5185,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     pNewScript->setScript(script);
     pNewScript->setIsFolder(isFolder);
     pNewScript->setIsActive(false);
+    pNewScript->setShouldBeActive(true);
     pNewScript->registerScript();
 
     // Initialize tree item properties
@@ -5825,8 +5603,7 @@ void dlgTriggerEditor::saveTrigger()
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
+                    if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -5842,7 +5619,6 @@ void dlgTriggerEditor::saveTrigger()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                // Only enable truly new triggers, not existing disabled ones being loaded
                 if (pT->shouldBeActive()) {
                     pT->setIsActive(true);
                 }
@@ -6104,8 +5880,7 @@ void dlgTriggerEditor::saveAlias()
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
+                    if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -6121,7 +5896,6 @@ void dlgTriggerEditor::saveAlias()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                // Only enable truly new aliases, not existing disabled ones being loaded
                 if (pT->shouldBeActive()) {
                     pT->setIsActive(true);
                 }
@@ -6427,8 +6201,7 @@ void dlgTriggerEditor::saveScript()
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
-                // Set visual appearance based on actual active state, not "new" status
-                if (pT->isActive()) {
+                if (pT->shouldBeActive()) {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -6444,7 +6217,6 @@ void dlgTriggerEditor::saveScript()
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
 
-            // Only enable truly new scripts, not existing disabled ones being loaded
             if (pT->shouldBeActive()) {
                 pT->setIsActive(true);
             }
@@ -6818,8 +6590,7 @@ void dlgTriggerEditor::saveKey()
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 } else {
-                    // Set visual appearance based on actual active state, not "new" status
-                    if (pT->isActive()) {
+                    if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -6835,7 +6606,6 @@ void dlgTriggerEditor::saveKey()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                // Only enable truly new keys, not existing disabled ones being loaded
                 if (pT->shouldBeActive()) {
                     pT->setIsActive(true);
                 }
@@ -6919,7 +6689,6 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
     checkForMoreThanOneTriggerItem();
     updatePatternTabOrder();
     updatePatternPlaceholders();
-    updatePatternNavigationHint();
 }
 
 void dlgTriggerEditor::handlePatternChange(dlgTriggerPatternEdit* patternItem, bool hasContentHint)
@@ -7122,7 +6891,6 @@ void dlgTriggerEditor::updatePatternTabOrder()
     addToChain(mpTriggersMainArea->groupBox_triggerColorizer);
     addToChain(mpTriggersMainArea->pushButtonFgColor);
     addToChain(mpTriggersMainArea->pushButtonBgColor);
-    addToChain(mPatternNavigationHintBanner);
     addToChain(mpSourceEditorEdbee);
 
 }
@@ -9791,16 +9559,6 @@ QString dlgTriggerEditor::profileSettingsPrefix() const
     }
 
     return qsl("profiles/%1").arg(sanitized);
-}
-
-QString dlgTriggerEditor::patternNavigationHintSettingsKey() const
-{
-    const QString prefix = profileSettingsPrefix();
-    if (prefix.isEmpty()) {
-        return qsl("patternNavigationHintHidden");
-    }
-
-    return qsl("%1/patternNavigationHintHidden").arg(prefix);
 }
 
 void dlgTriggerEditor::slot_showActions()
@@ -12581,10 +12339,6 @@ void dlgTriggerEditor::hideSystemMessageArea()
 void dlgTriggerEditor::changeEvent(QEvent* e)
 {
     QMainWindow::changeEvent(e);
-
-    if (e->type() == QEvent::LanguageChange) {
-        updatePatternNavigationHint();
-    }
 
     if (e->type() == QEvent::ActivationChange && this->isActiveWindow()) {
         if (mCurrentView == EditorViewType::cmScriptView) {

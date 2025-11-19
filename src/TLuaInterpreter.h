@@ -62,6 +62,7 @@ extern "C" {
 #include <list>
 #include <string>
 #include <memory>
+#include <optional>
 
 class Host;
 class TAction;
@@ -119,6 +120,13 @@ public:
     QString formatLuaCode(const QString&);
     void loadGlobal();
     QString getLuaString(const QString& stringName);
+    struct ExitWeightFilterResult {
+        bool blocked = false;
+        std::optional<int> weightOverride;
+    };
+
+    ExitWeightFilterResult applyExitWeightFilter(int roomId, const QString& exitCommand);
+    bool hasExitWeightFilter() const;
     int check_for_mappingscript();
     int check_for_custom_speedwalk();
     void set_lua_integer(const QString& varName, int varValue);
@@ -175,6 +183,7 @@ public:
     static int setDoor(lua_State*);
     static int getDoors(lua_State*);
     static int setExitWeight(lua_State*);
+    static int setExitWeightFilter(lua_State*);
     static int getExitWeights(lua_State*);
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State*);
@@ -505,6 +514,10 @@ public:
     static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
+    static int setLabelStyleSheet(lua_State*);
+    static int setLinkStyle(lua_State*);
+    static int resetLinkStyle(lua_State*);
+    static int clearVisitedLinks(lua_State*);
     static int startLogging(lua_State*);
     static int appendLog(lua_State*);
     static int calcFontWidth(int size);
@@ -528,7 +541,6 @@ public:
     static int disableAlias(lua_State*);
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
-    static int setLabelStyleSheet(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
@@ -860,6 +872,9 @@ private:
     QStringList mPossiblePaths;
 
     static std::pair<bool, QString> aiEnabled(lua_State*);
+    void storeExitWeightFilter(lua_State* L, int index);
+    void clearExitWeightFilter(lua_State* L);
+    int mExitWeightFilterRef = LUA_NOREF;
 };
 
 Host& getHostFromLua(lua_State*);

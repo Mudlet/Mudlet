@@ -2314,13 +2314,13 @@ void cTelnet::autoEnableMXPProcessor()
 
     // Automatically enable MXP processing
     mpHost->setForceMXPProcessorOn(true);
-    
+
     // Games that auto-enable MXP (without telnet negotiation) typically use
     // IRE-style implementation that doesn't send mode switches but uses
     // secure tags. Lock to secure mode for compatibility.
     // Properly-negotiated MXP games will use mode switches as needed.
     mpHost->mMxpProcessor.setMode(6); // Lock secure mode
-    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but hasn't turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings > Special Options."));
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings > Special Options."));
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)

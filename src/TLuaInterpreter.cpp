@@ -66,6 +66,7 @@
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
+#include <limits>
 
 using namespace std::chrono_literals;
 
@@ -4568,16 +4569,33 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     lua_State* L = pGlobalLua;
+    
+    // Validate Lua state before attempting to call event handler
+    if (!L) {
+        qWarning() << "TLuaInterpreter::callEventHandler() - Lua state is null for function:" << function;
+        return false;
+    }
+    
+    // Check if we're in emergency stop mode
+    if (mpHost && mpHost->mEmergencyStop) {
+        return false;
+    }
+    
+    // Record initial stack size for cleanup
+    const int initialStackSize = lua_gettop(L);
 
     int error = luaL_dostring(L, qsl("return %1").arg(function).toUtf8().constData());
     if (error) {
         std::string err;
-        if (lua_isstring(L, 1)) {
+        if (lua_isstring(L, -1)) {
             err = "Lua error: ";
-            err += lua_tostring(L, 1);
+            err += lua_tostring(L, -1);
         }
         const QString name = "event handler function";
         logError(err, name, function);
+        
+        // Clean up stack after error
+        lua_settop(L, initialStackSize);
         return false;
     }
 
@@ -4631,6 +4649,12 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
+    // Ensure stack is properly cleaned up and validate before cleanup
+    const int finalStackSize = lua_gettop(L);
+    if (finalStackSize > initialStackSize) {
+        qWarning() << "TLuaInterpreter::callEventHandler() - Stack grew during execution. Initial:" << initialStackSize << "Final:" << finalStackSize;
+    }
+    
     lua_pop(L, lua_gettop(L));
     return !error;
 }
@@ -5373,6 +5397,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "getMapZoom", TLuaInterpreter::getMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
+    lua_register(pGlobalLua, "setExitWeightFilter", TLuaInterpreter::setExitWeightFilter);
     lua_register(pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight);
     lua_register(pGlobalLua, "setDoor", TLuaInterpreter::setDoor);
     lua_register(pGlobalLua, "getDoors", TLuaInterpreter::getDoors);
@@ -5471,6 +5496,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
     lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
     lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
+    lua_register(pGlobalLua, "setLinkStyle", TLuaInterpreter::setLinkStyle);
+    lua_register(pGlobalLua, "resetLinkStyle", TLuaInterpreter::resetLinkStyle);
+    lua_register(pGlobalLua, "clearVisitedLinks", TLuaInterpreter::clearVisitedLinks);
     lua_register(pGlobalLua, "addWordToDictionary", TLuaInterpreter::addWordToDictionary);
     lua_register(pGlobalLua, "removeWordFromDictionary", TLuaInterpreter::removeWordFromDictionary);
     lua_register(pGlobalLua, "spellCheckWord", TLuaInterpreter::spellCheckWord);

@@ -749,6 +749,54 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLinkStyle
+int TLuaInterpreter::setLinkStyle(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    const QString linkColor = getVerifiedString(L, __func__, 2, "link color", true);
+    const QString linkVisitedColor = getVerifiedString(L, __func__, 3, "link visited color", true);
+    const bool underline = (lua_gettop(L) >= 4) ? getVerifiedBool(L, __func__, 4, "underline", true) : true;
+
+    Host& host = getHostFromLua(L);
+
+    if (!host.setLinkStyle(labelName, linkColor, linkVisitedColor, underline)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetLinkStyle
+int TLuaInterpreter::resetLinkStyle(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetLinkStyle(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearVisitedLinks
+int TLuaInterpreter::clearVisitedLinks(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+
+    Host& host = getHostFromLua(L);
+
+    if (!host.clearVisitedLinks(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // commandlines inserted by the createCommandLine(...) function:
 int TLuaInterpreter::enableCommandLine(lua_State* L)
 {

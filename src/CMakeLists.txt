@@ -163,6 +163,7 @@ set(mudlet_SRCS
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
+    TMxpHRTagHandler.cpp
     TMxpColorTagHandler.cpp
     TMxpCustomElementTagHandler.cpp
     TMxpElementDefinitionHandler.cpp
@@ -348,6 +349,7 @@ set(mudlet_HDRS
     TMedia.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h
+    TMxpHRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
     TMxpContext.h
@@ -494,7 +496,8 @@ find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
-find_package(Boost 1.44)
+find_package(Boost 1.44 CONFIG REQUIRED)
+message(STATUS "Found Boost: ${Boost_DIR} (found version \"${Boost_VERSION}\")")
 
 
 # FreeBSD's sysinfo() call is done in a package, libsysinfo.

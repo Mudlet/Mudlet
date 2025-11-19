@@ -719,6 +719,7 @@ SOURCES += \
     TMedia.cpp \
     TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
+    TMxpHRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
@@ -865,6 +866,7 @@ HEADERS += \
     TMediaData.h \
     TMediaPlaylist.h \
     TMxpBRTagHandler.h \
+    TMxpHRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
     TMxpCustomElementTagHandler.h \
