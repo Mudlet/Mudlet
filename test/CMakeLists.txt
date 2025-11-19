@@ -120,3 +120,9 @@ if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
+
+add_executable(TelnetUriTest TelnetUriTest.cpp)
+add_test(NAME TelnetUriTest COMMAND TelnetUriTest)
+
+add_executable(MudletTelnetUriIntegrationTest MudletTelnetUriIntegrationTest.cpp)
+add_test(NAME MudletTelnetUriIntegrationTest COMMAND MudletTelnetUriIntegrationTest)
