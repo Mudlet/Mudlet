@@ -118,6 +118,7 @@ set(mudlet_SRCS
     CustomLineEditHandler.cpp
     CustomLineSession.cpp
     LabelInteractionHandler.cpp
+    MiddleMousePanHandler.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -162,6 +163,7 @@ set(mudlet_SRCS
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
+    TMxpHRTagHandler.cpp
     TMxpColorTagHandler.cpp
     TMxpCustomElementTagHandler.cpp
     TMxpElementDefinitionHandler.cpp
@@ -347,6 +349,7 @@ set(mudlet_HDRS
     TMedia.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h
+    TMxpHRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
     TMxpContext.h
@@ -493,7 +496,8 @@ find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
-find_package(Boost 1.44)
+find_package(Boost 1.44 CONFIG REQUIRED)
+message(STATUS "Found Boost: ${Boost_DIR} (found version \"${Boost_VERSION}\")")
 
 
 # FreeBSD's sysinfo() call is done in a package, libsysinfo.
@@ -590,7 +594,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   transfers, profile switching, and detached window management:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_WINDOW_HANDLING)
 #
-# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
@@ -782,10 +786,6 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
-   install(
-    FILES "../mudlet.desktop"
-    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-      WORLD_READ)
 
   install(
     FILES "../mudlet.desktop"
@@ -797,7 +797,7 @@ if(UNIX AND NOT APPLE)
     WORLD_READ)
   install(
     FILES "../mudlet.png"
-    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    DESTINATION "share/icons/hicolor/512x512/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
     WORLD_READ)
 
   install(

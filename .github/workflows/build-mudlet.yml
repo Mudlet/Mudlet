@@ -18,6 +18,8 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    env:
+      LUA_VERSION: '5.1.5'
     strategy:
       fail-fast: false
       matrix:
@@ -28,7 +30,6 @@ jobs:
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests'
-            triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
             qt: '6.9.0'
@@ -37,26 +38,22 @@ jobs:
           - os: ubuntu-22.04
             # Another try to use GCC12
             buildname: 'ubuntu (x86_64)'
-            triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 12
             qt: '6.9.0'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
-            triplet: x64-linux
             compiler: clang_64
             gcc_compiler_version: 10
             qt: '6.9.0'
           - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
-            triplet: x64-osx
             compiler: clang_64
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
-            triplet: arm64-osx
             compiler: clang_64
             qt: '6.9.0'
             deploy: 'deploy'
@@ -84,7 +81,7 @@ jobs:
       if: runner.os == 'macOS'
       uses: leafo/gh-actions-lua@v12
       with:
-        luaVersion: "5.1.5"
+        luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
 
     - name: (macOS) Install Luarocks via GitHub Actions
@@ -100,17 +97,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # Install all required dependencies
-        BREWS=("libzzip" "libzip" "ccache" "expect" "assimp" "hunspell" "pcre" "pugixml" "sqlite" "yajl" "boost")
-
-        # Loop through each brew package
-        for brew in "${BREWS[@]}"; do
-          if ! brew list --formula "${brew}" &>/dev/null; then
-            echo "Installing ${brew}..."
-            brew install "$brew"
-          else
-           echo "${brew} is already installed."
-         fi
-        done
+        brew install libzzip libzip ccache expect assimp hunspell pcre pugixml sqlite yajl boost
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -118,21 +105,23 @@ jobs:
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
         echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
 
+        # Detect Homebrew prefix once (differs between x86_64 and ARM64)
+        if [ "$(uname -m)" = "arm64" ]; then
+          HOMEBREW_PREFIX=/opt/homebrew
+        else
+          HOMEBREW_PREFIX=/usr/local
+        fi
+        echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
+
         # Help CMake find Lua installed by gh-actions-lua
         # The action installs to .lua/ and .luarocks/ in the runner home
         echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
 
         # Help CMake find keg-only Homebrew packages (PCRE is keg-only on macOS)
-        echo "PKG_CONFIG_PATH=/usr/local/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        # Detect Homebrew prefix (differs between x86_64 and ARM64)
-        if [ "$(uname -m)" = "arm64" ]; then
-          YAJL_PREFIX=/opt/homebrew/opt/yajl
-        else
-          YAJL_PREFIX=/usr/local/opt/yajl
-        fi
-        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=$YAJL_PREFIX
+        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -143,7 +132,7 @@ jobs:
       uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
       with:
-        luaVersion: "5.1.5"
+        luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
 
     - name: (Linux) Install Luarocks via GitHub Actions
@@ -158,8 +147,27 @@ jobs:
         # Install all required dependencies
         # imagemagick is for the desktop screenshot
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
-        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
-          libxkbcommon-x11-0 imagemagick libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
+        sudo apt-get install \
+          ccache \
+          expect \
+          g++-${{matrix.gcc_compiler_version}} \
+          imagemagick \
+          libassimp-dev \
+          libboost-dev \
+          libglu1-mesa-dev \
+          libhunspell-dev \
+          liblua5.1-0-dev \
+          libpcre3-dev \
+          libpulse-dev \
+          libpugixml-dev \
+          libsecret-1-dev \
+          libsqlite3-dev \
+          libxkbcommon-x11-0 \
+          libyajl-dev \
+          libzip-dev \
+          pcregrep \
+          pkg-config \
+          -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -170,7 +178,7 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        luarocks install --local lua-yajl
+        luarocks --lua-version 5.1 install --local lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -250,35 +258,27 @@ jobs:
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
-        luarocks --lua-version 5.1 install --local LuaFileSystem
-        luarocks --lua-version 5.1 install --local luautf8
+        LUAROCKS="luarocks --lua-version 5.1 install --local"
 
-        # Detect paths for dependencies that need DIR hints on macOS
+        $LUAROCKS LuaFileSystem
+        $LUAROCKS luautf8
+
         if [ "$RUNNER_OS" = "macOS" ]; then
-          if [ "$(uname -m)" = "arm64" ]; then
-            ZIP_PREFIX=/opt/homebrew/opt/libzip
-            SQLITE_PREFIX=/opt/homebrew/opt/sqlite
-            PCRE_PREFIX=/opt/homebrew/opt/pcre
-          else
-            ZIP_PREFIX=/usr/local/opt/libzip
-            SQLITE_PREFIX=/usr/local/opt/sqlite
-            PCRE_PREFIX=/usr/local/opt/pcre
-          fi
-          luarocks --lua-version 5.1 install --local lua-zip ZIP_DIR=$ZIP_PREFIX
-          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=$SQLITE_PREFIX
-          luarocks --lua-version 5.1 install --local lrexlib-pcre PCRE_DIR=$PCRE_PREFIX
+          $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
+          $LUAROCKS lrexlib-pcre PCRE_DIR=${HOMEBREW_PREFIX}/opt/pcre
         else
-          luarocks --lua-version 5.1 install --local lua-zip
-          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
-          luarocks --lua-version 5.1 install --local lrexlib-pcre
+          $LUAROCKS lua-zip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1
+          $LUAROCKS lrexlib-pcre
         fi
 
         # CI changelog generation dependencies
-        luarocks --lua-version 5.1 install --local argparse
-        luarocks --lua-version 5.1 install --local lunajson
+        $LUAROCKS argparse
+        $LUAROCKS lunajson
 
         # Lua-based tests
-        luarocks --lua-version 5.1 install --local busted
+        $LUAROCKS busted
 
         # necessary for Qt multimedia and modern Qt
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
@@ -323,7 +323,6 @@ jobs:
         APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
         APPLE_PASSWORD: ${{secrets.APPLE_PASSWORD}}
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
-        TRIPLET: ${{matrix.triplet}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v5

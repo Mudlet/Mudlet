@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,11 +17,24 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// Restore the macros disabled in pre_guard.h so Mudlet keeps MSVC leak checks.
-#if defined(_DEBUG) && defined(_MSC_VER)
-#pragma pop_macro("new")
-#pragma pop_macro("malloc")
-#pragma pop_macro("realloc")
-#pragma pop_macro("free")
-#endif // _DEBUG && _MSC_VER
+#include "TMxpHRTagHandler.h"
+#include "TMxpClient.h"
 
+TMxpTagHandlerResult TMxpHRTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
+{
+    Q_UNUSED(ctx)
+    Q_UNUSED(tag)
+    
+    // Get the console wrap width to determine HR length
+    const int width = client.getWrapWidth();
+    
+    // Build HR with newlines: the first \n commits the current buffered line,
+    // then the dashes form the HR line, and the final \n starts a new line.
+    // We inject this through insertText() which feeds it back through the MXP
+    // processing pipeline (via translateToPlainText), ensuring it respects
+    // the current line buffer state.
+    const QString horizontalRule = qsl("\n") + QString(width, '-') + qsl("\n");
+    client.insertText(horizontalRule);
+    
+    return MXP_TAG_HANDLED;
+}
