@@ -95,8 +95,10 @@ sentry_value_t before_send(sentry_value_t event, void* hint, void* closure) {
             return sentry_value_new_null();
         }
     } else {
-        // Development builds - don't send crashes
-        return sentry_value_new_null();
+        // Development builds
+        if (!mudletInstance->smSendCrashesForDevelopment) {
+            return sentry_value_new_null();
+        }
     }
     return event;
 }
@@ -240,6 +242,18 @@ int main(int argc, char* argv[])
 #endif
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+
+    // Test crash trigger for Sentry validation - check early before any initialization
+    // This works even without WITH_SENTRY defined, allowing crash testing in all builds
+    if (!qEnvironmentVariable("MUDLET_TEST_CRASH").isNull()) {
+        qDebug() << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing";
+        // Force a flush of debug output to ensure the message is visible
+        std::cout << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing" << std::endl;
+        std::cerr << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing" << std::endl;
+        // Trigger a crash by dereferencing a null pointer
+        int* nullPtr = nullptr;
+        *nullPtr = 42;  // This will crash
+    }
 
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
@@ -731,16 +745,6 @@ int main(int argc, char* argv[])
 #endif
 
     mudlet::self()->init();
-
-    // Test crash trigger for Sentry validation
-#if defined(WITH_SENTRY)
-    if (!qEnvironmentVariable("MUDLET_TEST_CRASH").isNull()) {
-        qDebug() << "MUDLET_TEST_CRASH detected - triggering intentional crash for Sentry testing";
-        // Trigger a crash by dereferencing a null pointer
-        int* nullPtr = nullptr;
-        *nullPtr = 42;  // This will crash
-    }
-#endif
 
 #if defined(Q_OS_WIN)
     // Associate mudlet with .mpackage files
