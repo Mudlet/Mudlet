@@ -438,7 +438,7 @@ void T2DMap::init()
         return;
     }
 
-    // Set palette after parent (dlgMapper) has set its palette to ensure proper selection colors
+    // Apply application palette to ensure proper selection colors in both light and dark themes
     mMultiSelectionListWidget.setPalette(qApp->palette());
 
     eSize = mpHost->mLineSize;

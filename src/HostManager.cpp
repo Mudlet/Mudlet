@@ -138,6 +138,17 @@ void HostManager::changeAllHostColour(const Host* pHost)
         auto mapper = host->mpMap->mpMapper;
         if (mapper) {
             mapper->setPalette(QApplication::palette());
+            // Update area dropdown and its view
+            if (mapper->comboBox_showArea) {
+                mapper->comboBox_showArea->setPalette(QApplication::palette());
+                if (auto* view = mapper->comboBox_showArea->view()) {
+                    view->setPalette(QApplication::palette());
+                }
+            }
+            // Update room selection list widget
+            if (mapper->mp2dMap) {
+                mapper->mp2dMap->mMultiSelectionListWidget.setPalette(QApplication::palette());
+            }
         }
         QMutableMapIterator<QString, TConsole*> itSubConsole(host->mpConsole->mSubConsoleMap);
         while (itSubConsole.hasNext()) {
