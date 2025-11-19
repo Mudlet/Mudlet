@@ -173,28 +173,6 @@ int main(int argc, char* argv[])
 {
     initializeQRCResources();
 
-#if defined(WITH_SENTRY)
-    // Initialize Sentry crash reporting as early as possible
-    sentry_options_t* options = sentry_options_new();
-    sentry_options_set_dsn(options, SENTRY_DSN);
-    
-    QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
-    QByteArray sentryPathBytes = sentryPath.toLocal8Bit();
-    sentry_options_set_database_path(options, sentryPathBytes.constData());
-    
-    QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
-#ifdef Q_OS_WIN
-    sentryCrashHandler += qsl(".exe");
-#endif
-    QByteArray sentryCrashHandlerBytes = sentryCrashHandler.toLocal8Bit();
-    sentry_options_set_handler_path(options, sentryCrashHandlerBytes.constData());
-    
-    sentry_options_set_release(options, "mudlet@" APP_VERSION);
-    sentry_init(options);
-    
-    // Ensure Sentry is closed at the end
-    auto sentryClose = qScopeGuard([] { sentry_close(); });
-#endif
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {
@@ -224,6 +202,30 @@ int main(int argc, char* argv[])
 #endif
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+
+#if defined(WITH_SENTRY)
+    // Initialize Sentry crash reporting after QApplication is created
+    // (needed for QCoreApplication::applicationDirPath() to work correctly)
+    sentry_options_t* options = sentry_options_new();
+    sentry_options_set_dsn(options, SENTRY_DSN);
+    
+    QString sentryPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + qsl("/sentry");
+    QByteArray sentryPathBytes = sentryPath.toLocal8Bit();
+    sentry_options_set_database_path(options, sentryPathBytes.constData());
+    
+    QString sentryCrashHandler = QCoreApplication::applicationDirPath() + qsl("/crashpad_handler");
+#ifdef Q_OS_WIN
+    sentryCrashHandler += qsl(".exe");
+#endif
+    QByteArray sentryCrashHandlerBytes = sentryCrashHandler.toLocal8Bit();
+    sentry_options_set_handler_path(options, sentryCrashHandlerBytes.constData());
+    
+    sentry_options_set_release(options, "mudlet@" APP_VERSION);
+    sentry_init(options);
+    
+    // Ensure Sentry is closed at the end
+    auto sentryClose = qScopeGuard([] { sentry_close(); });
+#endif
 
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
