@@ -66,6 +66,7 @@
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
+#include <limits>
 
 using namespace std::chrono_literals;
 
@@ -5396,6 +5397,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "getMapZoom", TLuaInterpreter::getMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
+    lua_register(pGlobalLua, "setExitWeightFilter", TLuaInterpreter::setExitWeightFilter);
     lua_register(pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight);
     lua_register(pGlobalLua, "setDoor", TLuaInterpreter::setDoor);
     lua_register(pGlobalLua, "getDoors", TLuaInterpreter::getDoors);
