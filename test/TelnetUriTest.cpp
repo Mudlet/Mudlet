@@ -272,4 +272,3 @@ private slots:
 };
 
 QTEST_MAIN(TelnetUriTest)
-#include "TelnetUriTest.moc"
