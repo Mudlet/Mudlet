@@ -621,7 +621,6 @@ WITH_SENTRY {
         BUILD_SUBDIR = release
     }
 
-    SENTRY_DSN = $$system(cat $$PWD/sentry_dsn.txt)
     DEFINES += SENTRY_DSN=\\\"$$SENTRY_DSN\\\"
 
     APP_DIR_PATH = $$OUT_PWD/$$BUILD_SUBDIR
