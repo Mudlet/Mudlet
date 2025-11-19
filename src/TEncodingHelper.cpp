@@ -41,13 +41,17 @@ QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encod
 {
     if (encoding == "M_CP437" || encoding == "CP437") {
         return TTextCodec_437::toUnicode(bytes);
-    } else if (encoding == "M_CP667" || encoding == "CP667") {
+    }
+    if (encoding == "M_CP667" || encoding == "CP667") {
         return TTextCodec_667::toUnicode(bytes);
-    } else if (encoding == "M_CP737" || encoding == "CP737") {
+    }
+    if (encoding == "M_CP737" || encoding == "CP737") {
         return TTextCodec_737::toUnicode(bytes);
-    } else if (encoding == "M_CP869" || encoding == "CP869") {
+    }
+    if (encoding == "M_CP869" || encoding == "CP869") {
         return TTextCodec_869::toUnicode(bytes);
-    } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
+    }
+    if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
         return TTextCodec_medievia::toUnicode(bytes);
     }
     
@@ -64,13 +68,17 @@ QByteArray TEncodingHelper::encode(const QString& str, const QByteArray& encodin
 {
     if (encoding == "M_CP437" || encoding == "CP437") {
         return TTextCodec_437::fromUnicode(str);
-    } else if (encoding == "M_CP667" || encoding == "CP667") {
+    }
+    if (encoding == "M_CP667" || encoding == "CP667") {
         return TTextCodec_667::fromUnicode(str);
-    } else if (encoding == "M_CP737" || encoding == "CP737") {
+    }
+    if (encoding == "M_CP737" || encoding == "CP737") {
         return TTextCodec_737::fromUnicode(str);
-    } else if (encoding == "M_CP869" || encoding == "CP869") {
+    }
+    if (encoding == "M_CP869" || encoding == "CP869") {
         return TTextCodec_869::fromUnicode(str);
-    } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
+    }
+    if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
         return TTextCodec_medievia::fromUnicode(str);
     }
     

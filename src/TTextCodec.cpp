@@ -34,17 +34,28 @@
 // clang-format off
 const QVector<QChar> TTextCodec_437::CptoUnicode{
     //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-    QChar(0x00C7), QChar(0x00FC), QChar(0x00E9), QChar(0x00E2), QChar(0x00E4), QChar(0x00E0), QChar(0x00E5), QChar(0x00E7),  // 80-87
-    QChar(0x00EA), QChar(0x00EB), QChar(0x00E8), QChar(0x00EF), QChar(0x00EE), QChar(0x00EC), QChar(0x00C4), QChar(0x00C5),  // 88-8F
-    QChar(0x00C9), QChar(0x00E6), QChar(0x00C6), QChar(0x00F4), QChar(0x00F6), QChar(0x00F2), QChar(0x00FB), QChar(0x00F9),  // 90-97
-    QChar(0x00FF), QChar(0x00D6), QChar(0x00DC), QChar(0x00A2), QChar(0x00A3), QChar(0x00A5), QChar(0x20A7), QChar(0x0192),  // 98-9F
-    QChar(0x00E1), QChar(0x00ED), QChar(0x00F3), QChar(0x00FA), QChar(0x00F1), QChar(0x00D1), QChar(0x00AA), QChar(0x00BA),  // A0-A7
-    QChar(0x00BF), QChar(0x2310), QChar(0x00AC), QChar(0x00BD), QChar(0x00BC), QChar(0x00A1), QChar(0x00AB), QChar(0x00BB),  // A8-AF
+    QChar(0x256E), QChar(0x256D), QChar(0x256F), QChar(0x2570), QChar(0xE100), QChar(0xE101), QChar(0xE102), QChar(0xE103),  // 80-87
+    //   H Bridge          Swamp          Ocean          Pines          Moors        Volcano      Graveyard      Lava pool
+    QChar(0xE104), QChar(0xE105), QChar(0xE106), QChar(0xE107), QChar(0xE108), QChar(0xE109), QChar(0x26FC), QChar(0xE10A),  // 88-8F
+    //Undergrowth       {unused}          Cliff      Waterfall    S Waterfall          River           Wall     Embankment
+    QChar(0xE10B), QChar(0XFFFD), QChar(0xE10C), QChar(0xE10D), QChar(0xE10E), QChar(0xE10F), QChar(0xE110), QChar(0xE111),  // 90-97
+    //      Ruins       Plateaux    Battlefield         Shrubs          Field      Tradeshop           Lake         Garden
+    QChar(0xE112), QChar(0xE113), QChar(0x2694), QChar(0xE115), QChar(0xE116), QChar(0xE117), QChar(0xE118), QChar(0x2698),  // 98-9F
+    //      Marsh           Reef           Sign         Dragon        Serpent        Holiday          Rocks  {unused but should be Moat}
+    QChar(0xE11A), QChar(0xE11B), QChar(0xE11C), QChar(0xE11D), QChar(0xE11E), QChar(0xE11F), QChar(0xE120), QChar(0x2E1F),  // A0-A7
+    // Silvershrine     Farmland           Gate          House          Altar        Archway         Jungle      Sandstone
+    QChar(0xE121), QChar(0xE122), QChar(0xE123), QChar(0x2302), QChar(0x2625), QChar(0xE126), QChar(0xE127), QChar(0xE128),  // A8-AF
+    // Light Box      Medium Box      Heavy Box        Line_V1   Line_T_L1_V1   Line_T_L2_V1   Line_T_L1_V2   Line_C_L1_D2
     QChar(0x2591), QChar(0x2592), QChar(0x2593), QChar(0x2502), QChar(0x2524), QChar(0x2561), QChar(0x2562), QChar(0x2556),  // B0-B7
+    // Line_C_L2_D1 Line_T_L2_V2        Line_V2   Line_C_L2_D2   Line_C_L2_U2   Line_C_L1_U2   Line_C_L2_U1   Line_C_L1_D1
     QChar(0x2555), QChar(0x2563), QChar(0x2551), QChar(0x2557), QChar(0x255D), QChar(0x255C), QChar(0x255B), QChar(0x2510),  // B8-BF
+    // Line_C_R1_U1 Line T_H1_U1   Line_T_H1_D1   Line_C_R1_V1        Line_H1   Line_X_H1_V1   Linw_T_R2_V1   Line_T_R1_V2
     QChar(0x2514), QChar(0x2534), QChar(0x252C), QChar(0x251C), QChar(0x2500), QChar(0x253C), QChar(0x255E), QChar(0x255F),  // C0-C7
+    // Line_C_R2_V2 Line_C_R2_D2   Line_T_H2_U2   Line_T_H2_D2   Line_T_R2_V2        Line_H2   Line_X_H2_V2   Line_T_H2_U1
     QChar(0x255A), QChar(0x2554), QChar(0x2569), QChar(0x2566), QChar(0x2560), QChar(0x2550), QChar(0x256C), QChar(0x2567),  // C8-CF
+    // Line_T_H1_U2 Line_T_H2_D1   Line_T_H1_D2   Line_C_R1_U2   Line_C_R2_U1   Line_C_R1_D2   Line_C_R2_D1   Line_X_H1_V2
     QChar(0x2568), QChar(0x2564), QChar(0x2565), QChar(0x2559), QChar(0x2558), QChar(0x2552), QChar(0x2553), QChar(0x256B),  // D0-D7
+    // Line_X_H2_V1 Line_C_L1_U1   Line_C_R1_D1       Full Box     Bottom Box       Left Box      Right Box        Top Box
     QChar(0x256A), QChar(0x2518), QChar(0x250C), QChar(0x2588), QChar(0x2584), QChar(0x258C), QChar(0x2590), QChar(0x2580),  // D8-DF
     QChar(0x03B1), QChar(0x00DF), QChar(0x0393), QChar(0x03C0), QChar(0x03A3), QChar(0x03C3), QChar(0x00B5), QChar(0x03C4),  // E0-E7
     QChar(0x03A6), QChar(0x0398), QChar(0x03A9), QChar(0x03B4), QChar(0x221E), QChar(0x03C6), QChar(0x03B5), QChar(0x2229),  // E8-EF
@@ -108,23 +119,45 @@ const QVector<QChar> TTextCodec_869::CptoUnicode{
     QChar(0x00AD), QChar(0x00B1), QChar(0x03C5), QChar(0x03C6), QChar(0x03C7), QChar(0x00A7), QChar(0x03C8), QChar(0x0385),  // F0=F7
     QChar(0x00B0), QChar(0x00A8), QChar(0x03C9), QChar(0x03CB), QChar(0x03B0), QChar(0x03CE), QChar(0x25A0), QChar(0x00A0)}; // F8-FF
 
+// This was based on WINDOWS-1252 but has some additonal codepoints that are
+// not defined in the original. They wil map to glyphs in the Medievia specific
+// font at: https://www.github.com/SlySven/Medievia_fonts which has some
+// weird glpyhs at odd/non-standard locations (many of them duplicated to the
+// PUA starting at U+E100) but others are now in the "expected" place for their
+// codepoints.
 const QVector<QChar> TTextCodec_medievia::CptoUnicode{
     //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-    QChar(0x00C7), QChar(0x00FC), QChar(0x00E9), QChar(0x00E2), QChar(0x00E4), QChar(0x00E0), QChar(0x00E5), QChar(0x00E7),  // 80-87
-    QChar(0x00EA), QChar(0x00EB), QChar(0x00E8), QChar(0x00EF), QChar(0x00EE), QChar(0x00EC), QChar(0x00C4), QChar(0x00C5),  // 88-8F
-    QChar(0x00C9), QChar(0x00E6), QChar(0x00C6), QChar(0x00F4), QChar(0x00F6), QChar(0x00F2), QChar(0x00FB), QChar(0x00F9),  // 90-97
-    QChar(0x00FF), QChar(0x00D6), QChar(0x00DC), QChar(0x00A2), QChar(0x00A3), QChar(0x00A5), QChar(0x20A7), QChar(0x0192),  // 98-9F
-    QChar(0x00E1), QChar(0x00ED), QChar(0x00F3), QChar(0x00FA), QChar(0x00F1), QChar(0x00D1), QChar(0x00AA), QChar(0x00BA),  // A0-A7
-    QChar(0x00BF), QChar(0x2310), QChar(0x00AC), QChar(0x00BD), QChar(0x00BC), QChar(0x00A1), QChar(0x00AB), QChar(0x00BB),  // A8-AF
+    //    Arc_L_D        Arc_R_D        Arc_L_U        Arc_R_U          Trees          Hills      Mountains       V Bridge
+    QChar(0x256E), QChar(0x256D), QChar(0x256F), QChar(0x2570), QChar(0xE100), QChar(0xE101), QChar(0xE102), QChar(0xE103),  // 80-87
+    //   H Bridge          Swamp          Ocean          Pines          Moors        Volcano      Graveyard      Lava pool
+    QChar(0xE104), QChar(0xE105), QChar(0xE106), QChar(0xE107), QChar(0xE108), QChar(0xE109), QChar(0x26FC), QChar(0xE10A),  // 88-8F
+    //Undergrowth       {unused}          Cliff      Waterfall    S Waterfall          River           Wall     Embankment
+    QChar(0xE10B), QChar(0XFFFD), QChar(0xE10C), QChar(0xE10D), QChar(0xE10E), QChar(0xE10F), QChar(0xE110), QChar(0xE111),  // 90-97
+    //      Ruins       Plateaux    Battlefield         Shrubs          Field      Tradeshop           Lake         Garden
+    QChar(0xE112), QChar(0xE113), QChar(0x2694), QChar(0xE115), QChar(0xE116), QChar(0xE117), QChar(0xE118), QChar(0x2698),  // 98-9F
+    //      Marsh           Reef           Sign         Dragon        Serpent        Holiday          Rocks  {unused but should be Moat}
+    QChar(0xE11A), QChar(0xE11B), QChar(0xE11C), QChar(0xE11D), QChar(0xE11E), QChar(0xE11F), QChar(0xE120), QChar(0x2E1F),  // A0-A7
+    // Silvershrine     Farmland           Gate          House          Altar        Archway         Jungle      Sandstone
+    QChar(0xE121), QChar(0xE122), QChar(0xE123), QChar(0x2302), QChar(0x2625), QChar(0xE126), QChar(0xE127), QChar(0xE128),  // A8-AF
+    // Light Box      Medium Box      Heavy Box        Line_V1   Line_T_L1_V1   Line_T_L2_V1   Line_T_L1_V2   Line_C_L1_D2
     QChar(0x2591), QChar(0x2592), QChar(0x2593), QChar(0x2502), QChar(0x2524), QChar(0x2561), QChar(0x2562), QChar(0x2556),  // B0-B7
+    // Line_C_L2_D1 Line_T_L2_V2        Line_V2   Line_C_L2_D2   Line_C_L2_U2   Line_C_L1_U2   Line_C_L2_U1   Line_C_L1_D1
     QChar(0x2555), QChar(0x2563), QChar(0x2551), QChar(0x2557), QChar(0x255D), QChar(0x255C), QChar(0x255B), QChar(0x2510),  // B8-BF
+    // Line_C_R1_U1 Line T_H1_U1   Line_T_H1_D1   Line_C_R1_V1        Line_H1   Line_X_H1_V1   Linw_T_R2_V1   Line_T_R1_V2
     QChar(0x2514), QChar(0x2534), QChar(0x252C), QChar(0x251C), QChar(0x2500), QChar(0x253C), QChar(0x255E), QChar(0x255F),  // C0-C7
+    // Line_C_R2_V2 Line_C_R2_D2   Line_T_H2_U2   Line_T_H2_D2   Line_T_R2_V2        Line_H2   Line_X_H2_V2   Line_T_H2_U1
     QChar(0x255A), QChar(0x2554), QChar(0x2569), QChar(0x2566), QChar(0x2560), QChar(0x2550), QChar(0x256C), QChar(0x2567),  // C8-CF
+    // Line_T_H1_U2 Line_T_H2_D1   Line_T_H1_D2   Line_C_R1_U2   Line_C_R2_U1   Line_C_R1_D2   Line_C_R2_D1   Line_X_H1_V2
     QChar(0x2568), QChar(0x2564), QChar(0x2565), QChar(0x2559), QChar(0x2558), QChar(0x2552), QChar(0x2553), QChar(0x256B),  // D0-D7
+    // Line_X_H2_V1 Line_C_L1_U1   Line_C_R1_D1       Full Box     Bottom Box       Left Box      Right Box        Top Box
     QChar(0x256A), QChar(0x2518), QChar(0x250C), QChar(0x2588), QChar(0x2584), QChar(0x258C), QChar(0x2590), QChar(0x2580),  // D8-DF
+    //      Brick     Flagstones        Cobbles          Skull           Book         Marble           Flag          Crown
     QChar(0xE129), QChar(0xE12A), QChar(0xE12B), QChar(0x2620), QChar(0xE12C), QChar(0xE12D), QChar(0x2690), QChar(0xE12E),  // E0-E7
+    //       Shop         Planks         Player     Hollow Box        Ship_up      Ship_down     Ship_right      Ship_left
     QChar(0xE12F), QChar(0xE130), QChar(0xE131), QChar(0xE132), QChar(0x21E7), QChar(0x21E9), QChar(0x21E8), QChar(0x21E6),  // E8-EF
+    //      TT_16          TT_21          TT_22          TT_23       Fountain          TT_25          TT_28          TT_29
     QChar(0x25BA), QChar(0xE114), QChar(0x25AC), QChar(0x21A8), QChar(0xE119), QChar(0x2193), QChar(0x221F), QChar(0xE139),  // F0-F7
+    //      TT_30      Heavy Dot      Light Dot  Zone_entrance   Internal use          TT_31           TT_6       {unused}
     QChar(0x25B2), QChar(0xE124), QChar(0xE125), QChar(0xE137), QChar(0xE138), QChar(0x25BC), QChar(0x2660), QChar(0xFFFD)}; // F8-FF
 // clang-format on
 
