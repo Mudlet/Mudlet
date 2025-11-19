@@ -4950,7 +4950,7 @@ QByteArray cTelnet::decodeBytes(const char* bytes)
 {
     if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Convert from given encoding to QString UTF-16BE Unicode form, then to UTF-8:
-        return TEncodingHelper::decode(QByteArray(bytes), mEncoding).toUtf8().constData();
+        return TEncodingHelper::decode(QByteArray(bytes), mEncoding).toUtf8();
     } else {
         return QByteArray(bytes);
     }
