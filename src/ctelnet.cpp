@@ -1243,7 +1243,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
                     mEncodingWarningIssued = true;
                 }
                 // Even if there are bad characters - try to send it anyway...
-                outData = TEncodingHelper::encode(data, mEncoding).constData();
+                outData = TEncodingHelper::encode(data, mEncoding).toStdString();
             } else {
                 if (!mEncoderFailureNoticeIssued) {
                     postMessage(tr("[ ERROR ] - Internal error, no codec found for current setting of {\"%1\"}\n"

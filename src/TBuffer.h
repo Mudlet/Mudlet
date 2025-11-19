@@ -48,7 +48,6 @@
 #include <string>
 
 class Host;
-class QTextCodec;
 class TConsole;
 
 // Enhanced OSC 8 hyperlink styling support with CSS link states

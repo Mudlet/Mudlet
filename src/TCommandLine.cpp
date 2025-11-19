@@ -1256,6 +1256,15 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     // The dictionary used from "the system" may not be UTF-8 encoded so we
     // will need to transform the UTF-16BE "QString" to the appropriate encoding:
     const QByteArray codecName = mpHost->mpConsole->getHunspellCodecName_system();
+    if (codecName.isEmpty()) {
+        // If we don't know the encoding, we can't safely spell-check
+        f.setFontUnderline(false);
+        c.setCharFormat(f);
+        setTextCursor(c);
+        mSpellChecking = false;
+        return;
+    }
+
     const QByteArray encodedText = TEncodingHelper::encode(spellCheckedWord, codecName);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary

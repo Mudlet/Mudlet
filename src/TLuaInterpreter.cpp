@@ -6630,7 +6630,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
         encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
     }
     // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
-    lua_pushboolean(L, Hunspell_spell(handle, text.toUtf8().constData()));
+    lua_pushboolean(L, Hunspell_spell(handle, encodedText.constData()));
     return 1;
 }
 
@@ -6673,7 +6673,13 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     lua_newtable(L);
     for (size_t i = 0; i < wordCount; ++i) {
         lua_pushnumber(L, i+1);
-        lua_pushstring(L, wordList[i]);
+        QString suggestion;
+        if (hasUserDictionary) {
+            suggestion = QString::fromUtf8(wordList[i]);
+        } else {
+            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.mpConsole->getHunspellCodecName_system());
+        }
+        lua_pushstring(L, suggestion.toUtf8().constData());
         lua_settable(L, -3);
     }
     Hunspell_free_list(handle, &wordList, wordCount);

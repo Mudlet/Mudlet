@@ -26,6 +26,7 @@
  ***************************************************************************/
 
 #include <QByteArray>
+#include <QList>
 #include <QString>
 #include <QStringConverter>
 #include <optional>

@@ -104,7 +104,8 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
         return encoder.hasError() == false;
     }
     
-    return true;
+    // Unknown encoding - cannot encode
+    return false;
 }
 
 bool TEncodingHelper::isEncodingAvailable(const QByteArray& encoding)

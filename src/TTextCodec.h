@@ -27,6 +27,7 @@
  ***************************************************************************/
 
 #include <QByteArray>
+#include <QList>
 #include <QString>
 #include <QVector>
 
