@@ -466,23 +466,23 @@ void dlgMapper::recreate3DWidget()
 #endif
 }
 
-void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
+int dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
                             int roomID, int displayAreaId, int selectionSize, QColor& infoColor,
                             int xOffset, int yOffset, int widgetWidth, int fontHeight)
 {
     if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
-        return;
+        return 0;
     }
 
     QList<QString> contributorList = pMap->mMapInfoContributorManager->getContributorKeys();
     QSet<QString> const contributorKeys{contributorList.begin(), contributorList.end()};
     if (!contributorKeys.intersects(pHost->mMapInfoContributors)) {
-        return;
+        return 0;
     }
 
     TRoom* pRoom = pMap->mpRoomDB->getRoom(roomID);
     if (!pRoom) {
-        return;
+        return 0;
     }
 
     const int initialYOffset = yOffset;
@@ -521,6 +521,8 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter
     if (yOffset > initialYOffset) {
         painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, pHost->mMapInfoBg);
     }
+
+    return yOffset - initialYOffset;
 }
 
 int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,

@@ -223,6 +223,7 @@ public:
     QSet<int> mMultiSelectionAnchorSet;
     bool mNewMoveAction = false;
     QRect mMapInfoRect;
+    int mMapInfoHeight = 0;
     int mFontHeight = 20;
     bool mShowRoomID = false;
     QMap<int, QPixmap> mPixMap;

@@ -532,10 +532,10 @@ void T2DMap::constrainMapCenterToAreaBounds()
     // Handle Y axis constraints
     if (isSmallY) {
         // Small area: when panning, the corresponding edge should reach the safe zone
-        // When panning DOWN: TOP edge (minY) should reach bottom safe zone (90% mark)
+        // When panning DOWN (decreasing mMapCenterY): TOP edge (minY) should reach bottom safe zone (95% mark)
         centerMinY = maxY - visibleHeight / 2.0 + safeZoneY;
 
-        // When panning UP: BOTTOM edge (maxY) should reach top safe zone (10% mark)
+        // When panning UP (increasing mMapCenterY): BOTTOM edge (maxY) should reach top safe zone (5% mark)
         centerMaxY = minY + visibleHeight / 2.0 - safeZoneY;
 
         // Ensure valid range - if area is very small, center it
@@ -545,8 +545,17 @@ void T2DMap::constrainMapCenterToAreaBounds()
             centerMaxY = center;
         }
     } else {
-        // Large area: use edge-based safe zones
-        centerMinY = minY + visibleHeight / 2.0 - safeZoneY;
+        // Large area: use edge-based safe zones with mapInfo consideration
+        // Calculate top safe zone based on mapInfo background position
+        // mapInfo is drawn at yOffset=20 pixels from top, with height mMapInfoHeight
+        const qreal mapInfoBottomPixels = 20.0 + static_cast<qreal>(mMapInfoHeight);
+        const qreal halfViewportPixels = viewportHeightPixels / 2.0;
+
+        // Use mapInfo bottom as the safe zone, but cap at 50% of viewport if mapInfo is too large
+        const qreal topSafeZonePixels = qMin(mapInfoBottomPixels, halfViewportPixels);
+        const qreal topSafeZoneRoomCoords = topSafeZonePixels / mRoomHeight;
+
+        centerMinY = minY + visibleHeight / 2.0 - topSafeZoneRoomCoords;
         centerMaxY = maxY - visibleHeight / 2.0 + safeZoneY;
     }
 
@@ -2084,7 +2093,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
     }
 
-    dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap,
+    mMapInfoHeight = dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap,
                             roomID, mAreaID, mMultiSelectionSet.size(), infoColor,
                             xOffset, 20, width(), mFontHeight);
 

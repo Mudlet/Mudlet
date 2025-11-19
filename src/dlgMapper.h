@@ -75,7 +75,7 @@ public slots:
     void slot_toggleShowRoomIDsFromMenu(bool enabled);
     void updateInfoMenu();
 
-    static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
+    static int paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
                             int roomID, int displayAreaId, int selectionSize, QColor& infoColor,
                             int xOffset, int yOffset, int widgetWidth, int fontHeight);
     static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
