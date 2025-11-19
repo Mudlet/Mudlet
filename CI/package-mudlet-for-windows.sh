@@ -209,7 +209,9 @@ mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive \
 
 echo ""
 echo "Copying identified libraries from Mudlet executable and plugins..."
-for LIB in "${NEEDED_LIBS[@]}"; do
+# Note: DON'T double quote the array here - somehow extra leading or trailing
+# spaces get into the call of `cygpath -au ${LIB}` which breaks things.
+for LIB in ${NEEDED_LIBS[@]}; do
   # The ntldd above returns "Windows style pathFileNames"
   cp -p -v -t . "$(/usr/bin/cygpath -au "${LIB}")"
 done
