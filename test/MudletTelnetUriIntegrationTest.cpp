@@ -365,5 +365,5 @@ private slots:
     }
 };
 
-#include "MudletTelnetUriIntegrationTest.moc"
 QTEST_MAIN(MudletTelnetUriIntegrationTest)
+#include "MudletTelnetUriIntegrationTest.moc"
