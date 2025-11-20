@@ -3658,10 +3658,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QStringList timeList;
     QList<bool> promptList;
     
-    const int estimatedLines = (static_cast<int>(buffer.size()) - startLine) * 2;
-    tempList.reserve(estimatedLines);
-    timeList.reserve(estimatedLines);
-    promptList.reserve(estimatedLines);
+    const qsizetype estimatedLines = (static_cast<qsizetype>(buffer.size()) - startLine) * 2;
+    tempList.reserve(static_cast<int>(estimatedLines));
+    timeList.reserve(static_cast<int>(estimatedLines));
+    promptList.reserve(static_cast<int>(estimatedLines));
     
     int lineCount = 0;
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
