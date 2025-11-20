@@ -4259,7 +4259,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             }
             // clang-format on
         }
-        if (lineBuffer.at(row).at(pos) == QChar('<')) {
+        if (lineBuffer.at(row).at(pos) == QChar('&')) {
+            s.append(QLatin1String("&amp;"));
+        } else if (lineBuffer.at(row).at(pos) == QChar('<')) {
             s.append(QLatin1String("&lt;"));
         } else if (lineBuffer.at(row).at(pos) == QChar('>')) {
             s.append("&gt;");
