@@ -1419,6 +1419,86 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 
 }
 
+// SGR code lookup tables for fast processing of common ANSI codes
+namespace {
+    // Structure for basic SGR code actions (codes 0-29, 39, 49, 53, 55)
+    struct SGRAction {
+        enum class Type : quint8 {
+            None,
+            ResetAll,
+            SetBold,
+            ClearBold,
+            SetItalic,
+            ClearItalic,
+            SetUnderline,
+            ClearUnderline,
+            SetBlink,
+            SetFastBlink,
+            ClearBlink,
+            SetReverse,
+            ClearReverse,
+            SetConcealed,
+            ClearConcealed,
+            SetStrikeOut,
+            ClearStrikeOut,
+            SetOverline,
+            ClearOverline,
+            SetAltFont,
+            DefaultForeground,
+            DefaultBackground
+        };
+        
+        Type type = Type::None;
+        quint8 value = 0;  // For alternate font numbers (10-19)
+    };
+
+    // Lookup table for SGR codes 0-107
+    constexpr size_t SGR_LOOKUP_SIZE = 108;
+    static SGRAction sgrLookup[SGR_LOOKUP_SIZE];
+    static bool sgrLookupInitialized = false;
+
+    void initializeSGRLookup() {
+        if (sgrLookupInitialized) {
+            return;
+        }
+        
+        sgrLookup[0] = {SGRAction::Type::ResetAll, 0};
+        sgrLookup[1] = {SGRAction::Type::SetBold, 0};
+        sgrLookup[2] = {SGRAction::Type::ClearBold, 0};
+        sgrLookup[3] = {SGRAction::Type::SetItalic, 0};
+        sgrLookup[4] = {SGRAction::Type::SetUnderline, 0};
+        sgrLookup[5] = {SGRAction::Type::SetBlink, 0};
+        sgrLookup[6] = {SGRAction::Type::SetFastBlink, 0};
+        sgrLookup[7] = {SGRAction::Type::SetReverse, 0};
+        sgrLookup[8] = {SGRAction::Type::SetConcealed, 0};
+        sgrLookup[9] = {SGRAction::Type::SetStrikeOut, 0};
+        sgrLookup[10] = {SGRAction::Type::SetAltFont, 0};
+        sgrLookup[11] = {SGRAction::Type::SetAltFont, 1};
+        sgrLookup[12] = {SGRAction::Type::SetAltFont, 2};
+        sgrLookup[13] = {SGRAction::Type::SetAltFont, 3};
+        sgrLookup[14] = {SGRAction::Type::SetAltFont, 4};
+        sgrLookup[15] = {SGRAction::Type::SetAltFont, 5};
+        sgrLookup[16] = {SGRAction::Type::SetAltFont, 6};
+        sgrLookup[17] = {SGRAction::Type::SetAltFont, 7};
+        sgrLookup[18] = {SGRAction::Type::SetAltFont, 8};
+        sgrLookup[19] = {SGRAction::Type::SetAltFont, 9};
+        // sgrLookup[21] would be double underline according to specs (not implemented)
+        sgrLookup[22] = {SGRAction::Type::ClearBold, 0};
+        sgrLookup[23] = {SGRAction::Type::ClearItalic, 0};
+        sgrLookup[24] = {SGRAction::Type::ClearUnderline, 0};
+        sgrLookup[25] = {SGRAction::Type::ClearBlink, 0};
+        sgrLookup[27] = {SGRAction::Type::ClearReverse, 0};
+        sgrLookup[28] = {SGRAction::Type::ClearConcealed, 0};
+        sgrLookup[29] = {SGRAction::Type::ClearStrikeOut, 0};
+        sgrLookup[39] = {SGRAction::Type::DefaultForeground, 0};
+        sgrLookup[49] = {SGRAction::Type::DefaultBackground, 0};
+        sgrLookup[53] = {SGRAction::Type::SetOverline, 0};
+        sgrLookup[55] = {SGRAction::Type::ClearOverline, 0};
+        
+        sgrLookupInitialized = true;
+    }
+}
+
 void TBuffer::decodeSGR(const QString& sequence)
 {
     Host* pHost = mpHost;
@@ -1427,6 +1507,7 @@ void TBuffer::decodeSGR(const QString& sequence)
         return;
     }
 
+    initializeSGRLookup();
     const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
 
     const QStringList parameterStrings = sequence.split(QChar(';'));
@@ -1721,128 +1802,127 @@ void TBuffer::decodeSGR(const QString& sequence)
                 isOk = true;
             }
             if (isOk) {
+                // Fast path: check lookup table for simple formatting codes
+                if (tag < SGR_LOOKUP_SIZE && sgrLookup[tag].type != SGRAction::Type::None) {
+                    const SGRAction& action = sgrLookup[tag];
+
+                    switch (action.type) {
+                    case SGRAction::Type::ResetAll:
+                        mIsDefaultColor = true;
+                        mForeGroundColor = pHost->mFgColor;
+                        mBackGroundColor = pHost->mBgColor;
+                        mBold = false;
+                        mItalics = false;
+                        mOverline = false;
+                        mReverse = false;
+                        mStrikeOut = false;
+                        mUnderline = false;
+                        mUnderlineWavy = false;
+                        mUnderlineDotted = false;
+                        mUnderlineDashed = false;
+                        mBlink = false;
+                        mFastBlink = false;
+                        mConcealed = false;
+                        mAltFont = 0;
+                        break;
+                    case SGRAction::Type::SetBold:
+                        mBold = true;
+                        break;
+                    case SGRAction::Type::ClearBold:
+                        // Technically this should be faint (i.e. decreased
+                        // intensity compared to normal and 22 should be
+                        // the reset to "normal" intensity)
+                        mBold = false;
+                        break;
+                    case SGRAction::Type::SetItalic:
+                        // There is a proposal by the "VTE" terminal
+                        // emulator to use a (sub)parameter entry to
+                        // distinguish between italics and slanted text by
+                        // using ESC[...;3:1;...m and ESC[...;3:2;...m
+                        // respectively - that is handled above in the colon
+                        // sub-string separated part
+                        mItalics = true;
+                        break;
+                    case SGRAction::Type::ClearItalic:
+                        mItalics = false;
+                        break;
+                    case SGRAction::Type::SetUnderline:
+                        // There is a implementation by some terminal
+                        // emulators ("Kitty" and "VTE") to use a
+                        // (sub)parameter entry of 3 for a wavy underline
+                        // {presumably 2 would be a double underline and 1
+                        // the normal single underline) by sending e.g.:
+                        // ESC[...;4:3;...m - that is handled above in the colon
+                        // sub-string separated part
+                        mUnderline = true;
+                        break;
+                    case SGRAction::Type::ClearUnderline:
+                        mUnderline = false;
+                        mUnderlineWavy = false;
+                        mUnderlineDotted = false;
+                        mUnderlineDashed = false;
+                        break;
+                    case SGRAction::Type::SetBlink:
+                        // Slow-blinking, display as italics instead for the moment
+                        mBlink = true;
+                        mFastBlink = false;
+                        break;
+                    case SGRAction::Type::SetFastBlink:
+                        // Fast blinking, display as italics instead for the moment
+                        mBlink = false;
+                        mFastBlink = true;
+                        break;
+                    case SGRAction::Type::ClearBlink:
+                        // Blink off
+                        mBlink = false;
+                        mFastBlink = false;
+                        break;
+                    case SGRAction::Type::SetReverse:
+                        mReverse = true;
+                        break;
+                    case SGRAction::Type::ClearReverse:
+                        mReverse = false;
+                        break;
+                    case SGRAction::Type::SetConcealed:
+                        // Concealed characters (set foreground to be the same as background?)
+                        mConcealed = true;
+                        break;
+                    case SGRAction::Type::ClearConcealed:
+                        // Revealed characters (undoes the effect of "8")
+                        mConcealed = false;
+                        break;
+                    case SGRAction::Type::SetStrikeOut:
+                        mStrikeOut = true;
+                        break;
+                    case SGRAction::Type::ClearStrikeOut:
+                        mStrikeOut = false;
+                        break;
+                    case SGRAction::Type::SetOverline:
+                        mOverline = true;
+                        break;
+                    case SGRAction::Type::ClearOverline:
+                        mOverline = false;
+                        break;
+                    case SGRAction::Type::SetAltFont:
+                        // Alternate fonts 10-19: what and where those are set is not so well specified
+                        mAltFont = action.value;
+                        break;
+                    case SGRAction::Type::DefaultForeground:
+                        // Default foreground color
+                        mForeGroundColor = pHost->mFgColor;
+                        break;
+                    case SGRAction::Type::DefaultBackground:
+                        // Default background color
+                        mBackGroundColor = pHost->mBgColor;
+                        break;
+                    case SGRAction::Type::None:
+                        break;
+                    }
+                    continue;
+                }
+                
+                // Slow path: handle color codes and complex cases
                 switch (tag) {
-                case 0:
-                    mIsDefaultColor = true;
-                    mForeGroundColor = pHost->mFgColor;
-                    mBackGroundColor = pHost->mBgColor;
-                    mBold = false;
-                    mItalics = false;
-                    mOverline = false;
-                    mReverse = false;
-                    mStrikeOut = false;
-                    mUnderline = false;
-                    mUnderlineWavy = false;
-                    mUnderlineDotted = false;
-                    mUnderlineDashed = false;
-                    mBlink = false;
-                    mFastBlink = false;
-                    mConcealed = false;
-                    mAltFont = 0;
-                    break;
-                case 1:
-                    mBold = true;
-                    break;
-                case 2:
-                    // Technically this should be faint (i.e. decreased
-                    // intensity compared to normal and 22 should be
-                    // the reset to "normal" intensity):
-                    mBold = false;
-                    break;
-                case 3:
-                    // There is a proposal by the "VTE" terminal
-                    // emulator to use a (sub)parameter entry to
-                    // distinguish between italics and slanted text by
-                    // using ESC[...;3:1;...m and ESC[...;3:2;...m
-                    // respectively - that is handled above in the colon
-                    // sub-string separated part:
-                    mItalics = true;
-                    break;
-                case 4:
-                    // There is a implementation by some terminal
-                    // emulators ("Kitty" and "VTE") to use a
-                    // (sub)parameter entry of 3 for a wavy underline
-                    // {presumably 2 would be a double underline and 1
-                    // the normal single underline) by sending e.g.:
-                    // ESC[...;4:3;...m - that is handled above in the colon
-                    // sub-string separated part:
-                    mUnderline = true;
-                    break;
-                case 5:
-                    mBlink = true;
-                    mFastBlink = false;
-                    break; //slow-blinking, display as italics instead for the moment
-                case 6:
-                    mBlink = false;
-                    mFastBlink = true;
-                    break; //fast blinking, display as italics instead for the moment
-                case 7:
-                    mReverse = true;
-                    break;
-                case 8: // Concealed characters (set foreground to be the same as background?)
-                    mConcealed = true;
-                    break;
-                case 9:
-                    mStrikeOut = true;
-                    break;
-                case 10: //default font
-                    mAltFont = 0;
-                    break;
-                case 11: // 11 to 19 are alternate fonts, what and where those
-                         // are set is not so well specified
-                    mAltFont = 1;
-                    break;
-                case 12:
-                    mAltFont = 2;
-                    break;
-                case 13:
-                    mAltFont = 3;
-                    break;
-                case 14:
-                    mAltFont = 4;
-                    break;
-                case 15:
-                    mAltFont = 5;
-                    break;
-                case 16:
-                    mAltFont = 6;
-                    break;
-                case 17:
-                    mAltFont = 7;
-                    break;
-                case 18:
-                    mAltFont = 8;
-                    break;
-                case 19:
-                    mAltFont = 9;
-                    break;
-                // case 21: // Double underline according to specs
-                //    break;
-                case 22:
-                    mBold = false;
-                    break;
-                case 23:
-                    mItalics = false;
-                    break;
-                case 24:
-                    mUnderline = false;
-                    mUnderlineWavy = false;
-                    mUnderlineDotted = false;
-                    mUnderlineDashed = false;
-                    break;
-                case 25:
-                    mBlink = false;
-                    mFastBlink = false;
-                    break; // blink off
-                case 27:
-                    mReverse = false;
-                    break;
-                case 28: // Revealed characters (undoes the effect of "8")
-                    mConcealed = false;
-                    break;
-                case 29:
-                    mStrikeOut = false;
-                    break;
                 case 30:
                     mForeGroundColor = mBlack;
                     mForeGroundColorLight = mLightBlack;
@@ -1975,9 +2055,6 @@ void TBuffer::decodeSGR(const QString& sequence)
                     }
                 }
                     break;
-                case 39: //default foreground color
-                    mForeGroundColor = pHost->mFgColor;
-                    break;
                 case 40:
                     mBackGroundColor = mBlack;
                     break;
@@ -2092,21 +2169,12 @@ void TBuffer::decodeSGR(const QString& sequence)
                     }
                 }
                     break;
-                case 49: // default background color
-                    mBackGroundColor = pHost->mBgColor;
-                    break;
                 // case 51: // Framed
                 //    break;
                 // case 52: // Encircled
                 //    break;
-                case 53:
-                    mOverline = true;
-                    break;
                 // case 54: // Not framed, not encircled
                 //    break;
-                case 55:
-                    mOverline = false;
-                    break;
                 // 56 to 59 reserved for future standardization
                 // case 60: // ideogram underline or right side line
                 //    break;
