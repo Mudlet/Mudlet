@@ -2795,7 +2795,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
         // First, extract and parse any base properties (properties not in pseudo-classes)
         // These are properties that come before any pseudo-class or between pseudo-classes
         QString baseProperties;
-        QRegularExpression pseudoClassRegex(R"(:([\w-]+)\s*\{([^}]*)\})");
+        static const QRegularExpression pseudoClassRegex(R"(:([\w-]+)\s*\{([^}]*)\})");
 
         // Extract base properties by removing all pseudo-class blocks
         QString remainingStyle = styleString;
