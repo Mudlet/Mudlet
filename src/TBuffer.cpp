@@ -3657,6 +3657,12 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QStringList tempList;
     QStringList timeList;
     QList<bool> promptList;
+    
+    const int estimatedLines = (static_cast<int>(buffer.size()) - startLine) * 2;
+    tempList.reserve(estimatedLines);
+    timeList.reserve(estimatedLines);
+    promptList.reserve(estimatedLines);
+    
     int lineCount = 0;
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
     const int indent = (indentSize < maxWidth) ? indentSize : 0;
@@ -4145,12 +4151,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     int pos = startColumn;
     QString s;
     if (row < 0 || row >= static_cast<int>(buffer.size())) {
-        // Empty string
         return s;
     }
 
-    // std:deque uses std::deque:size_type as index type which is an unsigned
-    // long int, but row (and pos) are signed ints...!
     auto cookedRow = static_cast<unsigned long>(row);
 
     if ((pos < 0) || (pos >= static_cast<int>(buffer.at(cookedRow).size()))) {
@@ -4159,10 +4162,12 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
 
     int lastPos = endColumn;
     if (lastPos < 0 || lastPos > static_cast<int>(buffer.at(cookedRow).size())) {
-        // lastPos is now at ONE PAST the last valid one to use to index into
-        // row - this can have been triggered by a -1 argument
         lastPos = static_cast<int>(buffer.at(cookedRow).size());
     }
+    
+    // Reserve capacity for HTML generation (rough estimate: 50 chars of HTML per character)
+    const int estimatedSize = (lastPos - pos) * 50 + spacePadding * 10;
+    s.reserve(estimatedSize);
 
     TChar::AttributeFlags currentFlags = TChar::None;
     QColor currentFgColor(Qt::black);
