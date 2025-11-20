@@ -1612,111 +1612,104 @@ void TBuffer::decodeSGR(const QString& sequence)
             return;
         }
         
-        // Inline the switch statement for single-parameter sequences
-        // This avoids both the split() allocation and the loop overhead
+        // Use the same logic as the slow path, but without the split() allocation overhead
+        // Check lookup table first for common formatting codes (0-29, 39, 49, 53, 55)
+        if (tag < SGR_LOOKUP_SIZE && sgrLookup[tag].type != SGRAction::Type::None) {
+            const SGRAction& action = sgrLookup[tag];
+
+            switch (action.type) {
+            case SGRAction::Type::ResetAll:
+                mIsDefaultColor = true;
+                mForeGroundColor = pHost->mFgColor;
+                mBackGroundColor = pHost->mBgColor;
+                mBold = false;
+                mItalics = false;
+                mOverline = false;
+                mReverse = false;
+                mStrikeOut = false;
+                mUnderline = false;
+                mUnderlineWavy = false;
+                mUnderlineDotted = false;
+                mUnderlineDashed = false;
+                mBlink = false;
+                mFastBlink = false;
+                mConcealed = false;
+                mAltFont = 0;
+                break;
+            case SGRAction::Type::SetBold:
+                mBold = true;
+                break;
+            case SGRAction::Type::ClearBold:
+                mBold = false;
+                break;
+            case SGRAction::Type::SetItalic:
+                mItalics = true;
+                break;
+            case SGRAction::Type::ClearItalic:
+                mItalics = false;
+                break;
+            case SGRAction::Type::SetUnderline:
+                mUnderline = true;
+                break;
+            case SGRAction::Type::ClearUnderline:
+                mUnderline = false;
+                mUnderlineWavy = false;
+                mUnderlineDotted = false;
+                mUnderlineDashed = false;
+                break;
+            case SGRAction::Type::SetBlink:
+                mBlink = true;
+                mFastBlink = false;
+                break;
+            case SGRAction::Type::SetFastBlink:
+                mBlink = false;
+                mFastBlink = true;
+                break;
+            case SGRAction::Type::ClearBlink:
+                mBlink = false;
+                mFastBlink = false;
+                break;
+            case SGRAction::Type::SetReverse:
+                mReverse = true;
+                break;
+            case SGRAction::Type::ClearReverse:
+                mReverse = false;
+                break;
+            case SGRAction::Type::SetConcealed:
+                mConcealed = true;
+                break;
+            case SGRAction::Type::ClearConcealed:
+                mConcealed = false;
+                break;
+            case SGRAction::Type::SetStrikeOut:
+                mStrikeOut = true;
+                break;
+            case SGRAction::Type::ClearStrikeOut:
+                mStrikeOut = false;
+                break;
+            case SGRAction::Type::SetOverline:
+                mOverline = true;
+                break;
+            case SGRAction::Type::ClearOverline:
+                mOverline = false;
+                break;
+            case SGRAction::Type::SetAltFont:
+                mAltFont = action.value;
+                break;
+            case SGRAction::Type::DefaultForeground:
+                mForeGroundColor = pHost->mFgColor;
+                break;
+            case SGRAction::Type::DefaultBackground:
+                mBackGroundColor = pHost->mBgColor;
+                break;
+            case SGRAction::Type::None:
+                break;
+            }
+            return;
+        }
+        
+        // Handle color codes not in lookup table (30-38, 40-48, 90-107)
         switch (tag) {
-        case 0:
-            mIsDefaultColor = true;
-            mForeGroundColor = pHost->mFgColor;
-            mBackGroundColor = pHost->mBgColor;
-            mBold = false;
-            mItalics = false;
-            mOverline = false;
-            mReverse = false;
-            mStrikeOut = false;
-            mUnderline = false;
-            mUnderlineWavy = false;
-            mUnderlineDotted = false;
-            mUnderlineDashed = false;
-            mBlink = false;
-            mFastBlink = false;
-            mConcealed = false;
-            mAltFont = 0;
-            break;
-        case 1:
-            mBold = true;
-            break;
-        case 2:
-            mBold = false;
-            break;
-        case 3:
-            mItalics = true;
-            break;
-        case 4:
-            mUnderline = true;
-            break;
-        case 5:
-            mBlink = true;
-            mFastBlink = false;
-            break;
-        case 6:
-            mBlink = false;
-            mFastBlink = true;
-            break;
-        case 7:
-            mReverse = true;
-            break;
-        case 8:
-            mConcealed = true;
-            break;
-        case 9:
-            mStrikeOut = true;
-            break;
-        case 10:
-            mAltFont = 0;
-            break;
-        case 11:
-            mAltFont = 1;
-            break;
-        case 12:
-            mAltFont = 2;
-            break;
-        case 13:
-            mAltFont = 3;
-            break;
-        case 14:
-            mAltFont = 4;
-            break;
-        case 15:
-            mAltFont = 5;
-            break;
-        case 16:
-            mAltFont = 6;
-            break;
-        case 17:
-            mAltFont = 7;
-            break;
-        case 18:
-            mAltFont = 8;
-            break;
-        case 19:
-            mAltFont = 9;
-            break;
-        case 22:
-            mBold = false;
-            break;
-        case 23:
-            mItalics = false;
-            break;
-        case 24:
-            mUnderline = false;
-            mUnderlineWavy = false;
-            mUnderlineDotted = false;
-            mUnderlineDashed = false;
-            break;
-        case 25:
-            mBlink = false;
-            mFastBlink = false;
-            break;
-        case 27:
-            mReverse = false;
-            break;
-        case 28:
-            mConcealed = false;
-            break;
-        case 29:
-            mStrikeOut = false;
-            break;
         case 30:
             mForeGroundColor = mBlack;
             mForeGroundColorLight = mLightBlack;
@@ -1757,9 +1750,6 @@ void TBuffer::decodeSGR(const QString& sequence)
             mForeGroundColorLight = mLightWhite;
             mIsDefaultColor = false;
             break;
-        case 39:
-            mForeGroundColor = pHost->mFgColor;
-            break;
         case 40:
             mBackGroundColor = mBlack;
             break;
@@ -1783,15 +1773,6 @@ void TBuffer::decodeSGR(const QString& sequence)
             break;
         case 47:
             mBackGroundColor = mWhite;
-            break;
-        case 49:
-            mBackGroundColor = pHost->mBgColor;
-            break;
-        case 53:
-            mOverline = true;
-            break;
-        case 55:
-            mOverline = false;
             break;
         case 90:
             mForeGroundColor = mLightBlack;
