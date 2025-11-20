@@ -1194,27 +1194,20 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
         }
 
     } else if (parameters.at(1) == QLatin1String("2")) {
-        if (parameters.count() >= 6) {
-            // Have enough for all three colour
-            // components
-            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255));
-        } else if (parameters.count() >= 5) {
-            // Have enough for two colour
-            // components, but blue component is
-            // zero
-            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0);
-        } else if (parameters.count() >= 4) {
-            // Have enough for one colour component,
-            // but green and blue components are
-            // zero
-            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
-        } else  {
-            // No codes left for any colour
-            // components so colour must be black,
-            // as all of red, green and blue
-            // components are zero
-            mForeGroundColor = Qt::black;
+        // Parse RGB color components (missing components default to zero)
+        int r = 0, g = 0, b = 0;
+        
+        if (parameters.count() >= 4) {
+            r = qBound(0, parameters.at(3).toInt(), 255);
         }
+        if (parameters.count() >= 5) {
+            g = qBound(0, parameters.at(4).toInt(), 255);
+        }
+        if (parameters.count() >= 6) {
+            b = qBound(0, parameters.at(5).toInt(), 255);
+        }
+        
+        mForeGroundColor = QColor(r, g, b);
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
             if (!isColonSeparated) {
@@ -1356,30 +1349,20 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
         }
 
     } else if (parameters.at(1) == QLatin1String("2")) {
-        if (parameters.count() >= 6) {
-            // Have enough for all three colour
-            // components
-            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255));
-
-        } else if (parameters.count() >= 5) {
-            // Have enough for two colour
-            // components, but blue component is
-            // zero
-            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0);
-
-        } else if (parameters.count() >= 4) {
-            // Have enough for one colour component,
-            // but green and blue components are
-            // zero
-            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
-
-        } else  {
-            // No codes left for any colour
-            // components so colour must be black,
-            // as all of red, green and blue
-            // components are zero
-            mBackGroundColor = Qt::black;
+        // Parse RGB color components (missing components default to zero)
+        int r = 0, g = 0, b = 0;
+        
+        if (parameters.count() >= 4) {
+            r = qBound(0, parameters.at(3).toInt(), 255);
         }
+        if (parameters.count() >= 5) {
+            g = qBound(0, parameters.at(4).toInt(), 255);
+        }
+        if (parameters.count() >= 6) {
+            b = qBound(0, parameters.at(5).toInt(), 255);
+        }
+        
+        mBackGroundColor = QColor(r, g, b);
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
             if (!isColonSeparated) {
