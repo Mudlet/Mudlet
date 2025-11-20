@@ -408,6 +408,13 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
         QVector<QRect> textRects;
         QVector<int> charWidths;
         QVector<QString> graphemes;
+        
+        const int tsSize = timestamp.size();
+        fgColors.reserve(tsSize);
+        textRects.reserve(tsSize);
+        charWidths.reserve(tsSize);
+        graphemes.reserve(tsSize);
+        
         for (const QChar c : timestamp) {
             // The column argument is not incremented here (is fixed at 0) so
             // the timestamp does not take up any places when it is clicked on
@@ -432,6 +439,13 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     QVector<QRect> textRects;
     QVector<int> charWidths;
     QVector<QString> graphemes;
+    
+    const int estimatedSize = lineText.size() + 10;
+    fgColors.reserve(estimatedSize);
+    textRects.reserve(estimatedSize);
+    charWidths.reserve(estimatedSize);
+    graphemes.reserve(estimatedSize);
+    
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
         int nextBoundary = boundaryFinder.toNextBoundary();
 
