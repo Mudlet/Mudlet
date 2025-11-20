@@ -419,11 +419,13 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_WINDOWS)
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         // This variable is not set - and later versions of Qt 6.x need it for
-        // sound to work:
-        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
-            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        // sound to work - the alternative to "ffmpeg" is "windows" but that
+        // is a less capable backend (it doesn't support ".ogg" or ".opus"
+        // audio files):
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("ffmpeg"))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\".";
         } else {
-            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\", sound may not work.";
         }
     } else {
         qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
