@@ -1421,83 +1421,83 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 
 // SGR code lookup tables for fast processing of common ANSI codes
 namespace {
-    // Structure for basic SGR code actions (codes 0-29, 39, 49, 53, 55)
-    struct SGRAction {
-        enum class Type : quint8 {
-            None,
-            ResetAll,
-            SetBold,
-            ClearBold,
-            SetItalic,
-            ClearItalic,
-            SetUnderline,
-            ClearUnderline,
-            SetBlink,
-            SetFastBlink,
-            ClearBlink,
-            SetReverse,
-            ClearReverse,
-            SetConcealed,
-            ClearConcealed,
-            SetStrikeOut,
-            ClearStrikeOut,
-            SetOverline,
-            ClearOverline,
-            SetAltFont,
-            DefaultForeground,
-            DefaultBackground
-        };
-        
-        Type type = Type::None;
-        quint8 value = 0;  // For alternate font numbers (10-19)
+// Structure for basic SGR code actions (codes 0-29, 39, 49, 53, 55)
+struct SGRAction {
+    enum class Type : quint8 {
+        None,
+        ResetAll,
+        SetBold,
+        ClearBold,
+        SetItalic,
+        ClearItalic,
+        SetUnderline,
+        ClearUnderline,
+        SetBlink,
+        SetFastBlink,
+        ClearBlink,
+        SetReverse,
+        ClearReverse,
+        SetConcealed,
+        ClearConcealed,
+        SetStrikeOut,
+        ClearStrikeOut,
+        SetOverline,
+        ClearOverline,
+        SetAltFont,
+        DefaultForeground,
+        DefaultBackground
     };
 
-    // Lookup table for SGR codes 0-107
-    constexpr size_t SGR_LOOKUP_SIZE = 108;
-    static SGRAction sgrLookup[SGR_LOOKUP_SIZE];
-    static bool sgrLookupInitialized = false;
+    Type type = Type::None;
+    quint8 value = 0;  // For alternate font numbers (10-19)
+};
 
-    void initializeSGRLookup() {
-        if (sgrLookupInitialized) {
-            return;
-        }
-        
-        sgrLookup[0] = {SGRAction::Type::ResetAll, 0};
-        sgrLookup[1] = {SGRAction::Type::SetBold, 0};
-        sgrLookup[2] = {SGRAction::Type::ClearBold, 0};
-        sgrLookup[3] = {SGRAction::Type::SetItalic, 0};
-        sgrLookup[4] = {SGRAction::Type::SetUnderline, 0};
-        sgrLookup[5] = {SGRAction::Type::SetBlink, 0};
-        sgrLookup[6] = {SGRAction::Type::SetFastBlink, 0};
-        sgrLookup[7] = {SGRAction::Type::SetReverse, 0};
-        sgrLookup[8] = {SGRAction::Type::SetConcealed, 0};
-        sgrLookup[9] = {SGRAction::Type::SetStrikeOut, 0};
-        sgrLookup[10] = {SGRAction::Type::SetAltFont, 0};
-        sgrLookup[11] = {SGRAction::Type::SetAltFont, 1};
-        sgrLookup[12] = {SGRAction::Type::SetAltFont, 2};
-        sgrLookup[13] = {SGRAction::Type::SetAltFont, 3};
-        sgrLookup[14] = {SGRAction::Type::SetAltFont, 4};
-        sgrLookup[15] = {SGRAction::Type::SetAltFont, 5};
-        sgrLookup[16] = {SGRAction::Type::SetAltFont, 6};
-        sgrLookup[17] = {SGRAction::Type::SetAltFont, 7};
-        sgrLookup[18] = {SGRAction::Type::SetAltFont, 8};
-        sgrLookup[19] = {SGRAction::Type::SetAltFont, 9};
-        // sgrLookup[21] would be double underline according to specs (not implemented)
-        sgrLookup[22] = {SGRAction::Type::ClearBold, 0};
-        sgrLookup[23] = {SGRAction::Type::ClearItalic, 0};
-        sgrLookup[24] = {SGRAction::Type::ClearUnderline, 0};
-        sgrLookup[25] = {SGRAction::Type::ClearBlink, 0};
-        sgrLookup[27] = {SGRAction::Type::ClearReverse, 0};
-        sgrLookup[28] = {SGRAction::Type::ClearConcealed, 0};
-        sgrLookup[29] = {SGRAction::Type::ClearStrikeOut, 0};
-        sgrLookup[39] = {SGRAction::Type::DefaultForeground, 0};
-        sgrLookup[49] = {SGRAction::Type::DefaultBackground, 0};
-        sgrLookup[53] = {SGRAction::Type::SetOverline, 0};
-        sgrLookup[55] = {SGRAction::Type::ClearOverline, 0};
-        
-        sgrLookupInitialized = true;
+// Lookup table for SGR codes 0-107
+constexpr size_t SGR_LOOKUP_SIZE = 108;
+static SGRAction sgrLookup[SGR_LOOKUP_SIZE];
+static bool sgrLookupInitialized = false;
+
+void initializeSGRLookup() {
+    if (sgrLookupInitialized) {
+        return;
     }
+
+    sgrLookup[0] = {SGRAction::Type::ResetAll, 0};
+    sgrLookup[1] = {SGRAction::Type::SetBold, 0};
+    sgrLookup[2] = {SGRAction::Type::ClearBold, 0};
+    sgrLookup[3] = {SGRAction::Type::SetItalic, 0};
+    sgrLookup[4] = {SGRAction::Type::SetUnderline, 0};
+    sgrLookup[5] = {SGRAction::Type::SetBlink, 0};
+    sgrLookup[6] = {SGRAction::Type::SetFastBlink, 0};
+    sgrLookup[7] = {SGRAction::Type::SetReverse, 0};
+    sgrLookup[8] = {SGRAction::Type::SetConcealed, 0};
+    sgrLookup[9] = {SGRAction::Type::SetStrikeOut, 0};
+    sgrLookup[10] = {SGRAction::Type::SetAltFont, 0};
+    sgrLookup[11] = {SGRAction::Type::SetAltFont, 1};
+    sgrLookup[12] = {SGRAction::Type::SetAltFont, 2};
+    sgrLookup[13] = {SGRAction::Type::SetAltFont, 3};
+    sgrLookup[14] = {SGRAction::Type::SetAltFont, 4};
+    sgrLookup[15] = {SGRAction::Type::SetAltFont, 5};
+    sgrLookup[16] = {SGRAction::Type::SetAltFont, 6};
+    sgrLookup[17] = {SGRAction::Type::SetAltFont, 7};
+    sgrLookup[18] = {SGRAction::Type::SetAltFont, 8};
+    sgrLookup[19] = {SGRAction::Type::SetAltFont, 9};
+    // sgrLookup[21] would be double underline according to specs (not implemented)
+    sgrLookup[22] = {SGRAction::Type::ClearBold, 0};
+    sgrLookup[23] = {SGRAction::Type::ClearItalic, 0};
+    sgrLookup[24] = {SGRAction::Type::ClearUnderline, 0};
+    sgrLookup[25] = {SGRAction::Type::ClearBlink, 0};
+    sgrLookup[27] = {SGRAction::Type::ClearReverse, 0};
+    sgrLookup[28] = {SGRAction::Type::ClearConcealed, 0};
+    sgrLookup[29] = {SGRAction::Type::ClearStrikeOut, 0};
+    sgrLookup[39] = {SGRAction::Type::DefaultForeground, 0};
+    sgrLookup[49] = {SGRAction::Type::DefaultBackground, 0};
+    sgrLookup[53] = {SGRAction::Type::SetOverline, 0};
+    sgrLookup[55] = {SGRAction::Type::ClearOverline, 0};
+
+    sgrLookupInitialized = true;
 }
+}  // namespace
 
 void TBuffer::decodeSGR(const QString& sequence)
 {
