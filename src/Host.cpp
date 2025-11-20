@@ -817,16 +817,24 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.updateAnsi16ColorsInTable();
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
-    TEvent event {};
-    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // Defer raising sysLoadEvent to the next event loop cycle so synchronous reset work completes first
+    QTimer::singleShot(0, this, [this]() {
+        // Don't raise events if Host is shutting down to avoid handlers executing during teardown
+        if (isClosingDown()) {
+            return;
+        }
 
-    // A zero value is how we send a "false" value - which indicates that
-    // this is for a reset profile and NOT a freshly loaded one:
-    event.mArgumentList.append(QString::number(0));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+        TEvent event {};
+        event.mArgumentList.append(QLatin1String("sysLoadEvent"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-    raiseEvent(event);
+        // A zero value is how we send a "false" value - which indicates that
+        // this is for a reset profile and NOT a freshly loaded one:
+        event.mArgumentList.append(QString::number(0));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+
+        raiseEvent(event);
+    });
     qDebug() << "resetProfile() DONE";
 }
 
