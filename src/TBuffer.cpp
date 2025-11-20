@@ -1430,7 +1430,8 @@ void TBuffer::decodeSGR(const QString& sequence)
     const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
 
     const QStringList parameterStrings = sequence.split(QChar(';'));
-    for (int paraIndex = 0, total = parameterStrings.count(); paraIndex < total; ++paraIndex) {
+    const int total = parameterStrings.count();
+    for (int paraIndex = 0; paraIndex < total; ++paraIndex) {
         const QString allParameterElements = parameterStrings.at(paraIndex);
         if (allParameterElements.contains(QLatin1String(":"))) {
             /******************************************************************
@@ -3494,6 +3495,10 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     if (lineText.isEmpty()) {
         return output;
     }
+    
+    // Reserve capacity based on estimated line breaks
+    const int estimatedWraps = (lineText.size() / std::max(1, maxWidth)) + 2;
+    output.reserve(estimatedWraps);
 
     // Safety check: during destruction, mpHost might be null
     if (!mpHost) {
