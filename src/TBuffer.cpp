@@ -1510,6 +1510,360 @@ void TBuffer::decodeSGR(const QString& sequence)
     initializeSGRLookup();
     const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
 
+    // Fast path: if no semicolons, we have a single parameter (common case: ESC[0m, ESC[1m, ESC[31m, etc.)
+    // Avoid QStringList allocation for these frequent sequences
+    if (!sequence.contains(QLatin1Char(';'))) {
+        const QString& singleParam = sequence;
+        
+        // Handle colon-separated parameters (less common)
+        if (singleParam.contains(QLatin1Char(':'))) {
+            const QStringList parameterElements(singleParam.split(QChar(':')));
+            if (parameterElements.at(0) == QLatin1String("38") && parameterElements.count() >= 2) {
+                decodeSGR38(parameterElements, true);
+                return;
+            } else if (parameterElements.at(0) == QLatin1String("48") && parameterElements.count() >= 2) {
+                decodeSGR48(parameterElements, true);
+                return;
+            } else if (parameterElements.at(0) == QLatin1String("4") && parameterElements.count() >= 2) {
+                // Underline style
+                bool isOk = false;
+                const int value = parameterElements.at(1).toInt(&isOk);
+                if (!isOk) {
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - failed to detect underline parameter element in SGR 4:? sequence assuming zero!";
+                }
+                switch (value) {
+                case 0:
+                    mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    break;
+                case 1:
+                    mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    break;
+                case 2:
+                    mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = true;
+                    break;
+                case 3:
+                    mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = true;
+                    mUnderlineDashed = false;
+                    break;
+                case 4:
+                    mUnderline = true;
+                    mUnderlineWavy = true;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    break;
+                default:
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected underline parameter in SGR 4:" << parameterElements.at(1) << " sequence, treating as zero!";
+                    mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    break;
+                }
+                return;
+            } else if (parameterElements.at(0) == QLatin1String("3") && parameterElements.count() >= 2) {
+                // Italic style
+                bool isOk = false;
+                const int value = parameterElements.at(1).toInt(&isOk);
+                if (!isOk) {
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - failed to detect italic parameter element in SGR 3:? sequence assuming zero!";
+                }
+                switch (value) {
+                case 0:
+                    mItalics = false;
+                    break;
+                case 1:
+                    mItalics = true;
+                    break;
+                case 2:
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unsupported italic parameter in SGR 3:" << parameterElements.at(1) << " sequence, treating as one!";
+                    mItalics = true;
+                    break;
+                default:
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter in SGR 3:" << parameterElements.at(1) << " sequence, treating as zero!";
+                    mItalics = false;
+                    break;
+                }
+                return;
+            }
+        }
+        
+        // Simple numeric parameter (most common case)
+        bool isOk = false;
+        int tag = 0;
+        if (!singleParam.isEmpty()) {
+            tag = singleParam.toInt(&isOk);
+        } else {
+            // Empty parameter treated as 0
+            isOk = true;
+        }
+        
+        if (!isOk) {
+            return;
+        }
+        
+        // Inline the switch statement for single-parameter sequences
+        // This avoids both the split() allocation and the loop overhead
+        switch (tag) {
+        case 0:
+            mIsDefaultColor = true;
+            mForeGroundColor = pHost->mFgColor;
+            mBackGroundColor = pHost->mBgColor;
+            mBold = false;
+            mItalics = false;
+            mOverline = false;
+            mReverse = false;
+            mStrikeOut = false;
+            mUnderline = false;
+            mUnderlineWavy = false;
+            mUnderlineDotted = false;
+            mUnderlineDashed = false;
+            mBlink = false;
+            mFastBlink = false;
+            mConcealed = false;
+            mAltFont = 0;
+            break;
+        case 1:
+            mBold = true;
+            break;
+        case 2:
+            mBold = false;
+            break;
+        case 3:
+            mItalics = true;
+            break;
+        case 4:
+            mUnderline = true;
+            break;
+        case 5:
+            mBlink = true;
+            mFastBlink = false;
+            break;
+        case 6:
+            mBlink = false;
+            mFastBlink = true;
+            break;
+        case 7:
+            mReverse = true;
+            break;
+        case 8:
+            mConcealed = true;
+            break;
+        case 9:
+            mStrikeOut = true;
+            break;
+        case 10:
+            mAltFont = 0;
+            break;
+        case 11:
+            mAltFont = 1;
+            break;
+        case 12:
+            mAltFont = 2;
+            break;
+        case 13:
+            mAltFont = 3;
+            break;
+        case 14:
+            mAltFont = 4;
+            break;
+        case 15:
+            mAltFont = 5;
+            break;
+        case 16:
+            mAltFont = 6;
+            break;
+        case 17:
+            mAltFont = 7;
+            break;
+        case 18:
+            mAltFont = 8;
+            break;
+        case 19:
+            mAltFont = 9;
+            break;
+        case 22:
+            mBold = false;
+            break;
+        case 23:
+            mItalics = false;
+            break;
+        case 24:
+            mUnderline = false;
+            mUnderlineWavy = false;
+            mUnderlineDotted = false;
+            mUnderlineDashed = false;
+            break;
+        case 25:
+            mBlink = false;
+            mFastBlink = false;
+            break;
+        case 27:
+            mReverse = false;
+            break;
+        case 28:
+            mConcealed = false;
+            break;
+        case 29:
+            mStrikeOut = false;
+            break;
+        case 30:
+            mForeGroundColor = mBlack;
+            mForeGroundColorLight = mLightBlack;
+            mIsDefaultColor = false;
+            break;
+        case 31:
+            mForeGroundColor = mRed;
+            mForeGroundColorLight = mLightRed;
+            mIsDefaultColor = false;
+            break;
+        case 32:
+            mForeGroundColor = mGreen;
+            mForeGroundColorLight = mLightGreen;
+            mIsDefaultColor = false;
+            break;
+        case 33:
+            mForeGroundColor = mYellow;
+            mForeGroundColorLight = mLightYellow;
+            mIsDefaultColor = false;
+            break;
+        case 34:
+            mForeGroundColor = mBlue;
+            mForeGroundColorLight = mLightBlue;
+            mIsDefaultColor = false;
+            break;
+        case 35:
+            mForeGroundColor = mMagenta;
+            mForeGroundColorLight = mLightMagenta;
+            mIsDefaultColor = false;
+            break;
+        case 36:
+            mForeGroundColor = mCyan;
+            mForeGroundColorLight = mLightCyan;
+            mIsDefaultColor = false;
+            break;
+        case 37:
+            mForeGroundColor = mWhite;
+            mForeGroundColorLight = mLightWhite;
+            mIsDefaultColor = false;
+            break;
+        case 39:
+            mForeGroundColor = pHost->mFgColor;
+            break;
+        case 40:
+            mBackGroundColor = mBlack;
+            break;
+        case 41:
+            mBackGroundColor = mRed;
+            break;
+        case 42:
+            mBackGroundColor = mGreen;
+            break;
+        case 43:
+            mBackGroundColor = mYellow;
+            break;
+        case 44:
+            mBackGroundColor = mBlue;
+            break;
+        case 45:
+            mBackGroundColor = mMagenta;
+            break;
+        case 46:
+            mBackGroundColor = mCyan;
+            break;
+        case 47:
+            mBackGroundColor = mWhite;
+            break;
+        case 49:
+            mBackGroundColor = pHost->mBgColor;
+            break;
+        case 53:
+            mOverline = true;
+            break;
+        case 55:
+            mOverline = false;
+            break;
+        case 90:
+            mForeGroundColor = mLightBlack;
+            mForeGroundColorLight = mLightBlack;
+            mIsDefaultColor = false;
+            break;
+        case 91:
+            mForeGroundColor = mLightRed;
+            mForeGroundColorLight = mLightRed;
+            mIsDefaultColor = false;
+            break;
+        case 92:
+            mForeGroundColor = mLightGreen;
+            mForeGroundColorLight = mLightGreen;
+            mIsDefaultColor = false;
+            break;
+        case 93:
+            mForeGroundColor = mLightYellow;
+            mForeGroundColorLight = mLightYellow;
+            mIsDefaultColor = false;
+            break;
+        case 94:
+            mForeGroundColor = mLightBlue;
+            mForeGroundColorLight = mLightBlue;
+            mIsDefaultColor = false;
+            break;
+        case 95:
+            mForeGroundColor = mLightMagenta;
+            mForeGroundColorLight = mLightMagenta;
+            mIsDefaultColor = false;
+            break;
+        case 96:
+            mForeGroundColor = mLightCyan;
+            mForeGroundColorLight = mLightCyan;
+            mIsDefaultColor = false;
+            break;
+        case 97:
+            mForeGroundColor = mLightWhite;
+            mForeGroundColorLight = mLightWhite;
+            mIsDefaultColor = false;
+            break;
+        case 100:
+            mBackGroundColor = mLightBlack;
+            break;
+        case 101:
+            mBackGroundColor = mLightRed;
+            break;
+        case 102:
+            mBackGroundColor = mLightGreen;
+            break;
+        case 103:
+            mBackGroundColor = mLightYellow;
+            break;
+        case 104:
+            mBackGroundColor = mLightBlue;
+            break;
+        case 105:
+            mBackGroundColor = mLightMagenta;
+            break;
+        case 106:
+            mBackGroundColor = mLightCyan;
+            break;
+        case 107:
+            mBackGroundColor = mLightWhite;
+            break;
+        default:
+            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled single SGR code sequence CSI " << tag << " m received, Mudlet will ignore it.";
+        }
+        return;
+    }
+
+    // Slow path: multiple parameters separated by semicolons
     const QStringList parameterStrings = sequence.split(QChar(';'));
     for (int paraIndex = 0, total = parameterStrings.count(); paraIndex < total; ++paraIndex) {
         const QString allParameterElements = parameterStrings.at(paraIndex);
