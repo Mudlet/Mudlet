@@ -315,6 +315,9 @@ void TTextEdit::showNewLines()
         // content has been deleted
         if (previousOldScrollPos > mOldScrollPos) {
             QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
+            if (!ti) {
+                return;
+            }
             auto totalCharacterCount = ti->characterCount();
             ti->setCursorPosition(totalCharacterCount);
             QAccessibleTextRemoveEvent event(this, totalCharacterCount, QString());
