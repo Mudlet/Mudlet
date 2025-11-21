@@ -123,5 +123,4 @@ add_executable(TelnetUriTest TelnetUriTest.cpp)
 add_test(NAME TelnetUriTest COMMAND TelnetUriTest)
 
 add_executable(MudletTelnetUriIntegrationTest MudletTelnetUriIntegrationTest.cpp)
-set_property(SOURCE MudletTelnetUriIntegrationTest.cpp PROPERTY SKIP_AUTOMOC ON)
 add_test(NAME MudletTelnetUriIntegrationTest COMMAND MudletTelnetUriIntegrationTest)
