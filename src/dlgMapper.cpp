@@ -93,15 +93,15 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     // Using QSS for reliable cross-platform behavior, especially on Windows
     // Apply only to the dropdown view to avoid affecting the combobox button itself
     if (auto* view = comboBox_showArea->view()) {
-        view->setStyleSheet(qsl(
-            "QAbstractItemView::item:selected:active {"
-            "    background-color: palette(highlight);"
-            "    color: palette(highlighted-text);"
-            "}"
-            "QAbstractItemView::item:selected:!active {"
-            "    background-color: palette(highlight);"
-            "    color: palette(highlighted-text);"
-            "}));
+        view->setStyleSheet(
+            qsl("QAbstractItemView::item:selected:active {"
+                "    background-color: palette(highlight);"
+                "    color: palette(highlighted-text);"
+                "}"
+                "QAbstractItemView::item:selected:!active {"
+                "    background-color: palette(highlight);"
+                "    color: palette(highlighted-text);"
+                "}"));
     }
 #if defined(INCLUDE_3DMAPPER)
     mIs3DMode = mpHost->mShow3DView;
