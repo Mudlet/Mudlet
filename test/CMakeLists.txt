@@ -13,7 +13,6 @@ ENABLE_TESTING()
 
 find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
-    Core5Compat
     Multimedia
     MultimediaWidgets
     Network
@@ -27,7 +26,6 @@ link_libraries(
     Qt6::Test
     Qt6::Concurrent
     Qt6::Core
-    Qt6::Core5Compat
     Qt6::Network
     Qt6::Multimedia
     Qt6::MultimediaWidgets
@@ -73,7 +71,7 @@ add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 
 target_compile_definitions(TLinkStoreTest PRIVATE LinkStore_Test)
 
-file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp)
+file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp ../src/TEncodingHelper.cpp ../src/TTextCodec.cpp ../src/TEncodingTable.cpp)
 list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
 
 add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp)

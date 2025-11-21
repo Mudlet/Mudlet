@@ -48,7 +48,6 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
-#include <QTextCodec>
 #include <QPainter>
 
 const QString TConsole::cmLuaLineVariable("line");

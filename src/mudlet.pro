@@ -87,10 +87,6 @@ qtHaveModule(texttospeech) {
     !build_pass : message("Using TextToSpeech module")
 }
 
-greaterThan(QT_MAJOR_VERSION, 5) {
-    QT += core5compat
-}
-
 TEMPLATE = app
 
 # Define a variable for the Git executable
@@ -753,6 +749,7 @@ SOURCES += \
     TTabBar.cpp \
     TDetachedWindow.cpp \
     TTextCodec.cpp \
+    TEncodingHelper.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -903,6 +900,7 @@ HEADERS += \
     TTabBar.h \
     TDetachedWindow.h \
     TTextCodec.h \
+    TEncodingHelper.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \

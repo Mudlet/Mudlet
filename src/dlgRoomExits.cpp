@@ -101,6 +101,8 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
     mpEditor = new QLineEdit(parent);
     mpEditor->setFrame(false);
     mpEditor->setPlaceholderText(mpDlgRoomExits->mSpecialExitRoomIdPlaceholder);
+    // Hide anything in the original QLineEdit that this sits on top of:
+    mpEditor->setAutoFillBackground(true);
     if (mpDlgRoomExits) {
         if (!mpHost) {
             mpHost = mpDlgRoomExits->getHost();
