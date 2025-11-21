@@ -438,8 +438,18 @@ void T2DMap::init()
         return;
     }
 
-    // Apply application palette to ensure proper selection colors in both light and dark themes
-    mMultiSelectionListWidget.setPalette(qApp->palette());
+    // Apply stylesheet to ensure proper selection colors in both light and dark themes
+    // Using QSS instead of palette for reliable cross-platform behavior
+    mMultiSelectionListWidget.setStyleSheet(qsl(
+        "QTreeWidget::item:selected:active {"
+        "    background-color: palette(highlight);"
+        "    color: palette(highlighted-text);"
+        "}"
+        "QTreeWidget::item:selected:!active {"
+        "    background-color: palette(highlight);"
+        "    color: palette(highlighted-text);"
+        "}"
+    ));
 
     eSize = mpHost->mLineSize;
     rSize = mpHost->mRoomSize;
