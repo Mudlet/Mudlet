@@ -39,8 +39,8 @@ class MudletTelnetUriIntegrationTest : public QObject {
     Q_OBJECT
 
 public:
-    MudletTelnetUriIntegrationTest() {}
-    ~MudletTelnetUriIntegrationTest() override {}
+    MudletTelnetUriIntegrationTest() = default;
+    ~MudletTelnetUriIntegrationTest() override;
 
 private:
     QTemporaryDir* tempDir = nullptr;
@@ -306,6 +306,8 @@ private slots:
         QCOMPARE(profile1, profile2);
     }
 };
+
+MudletTelnetUriIntegrationTest::~MudletTelnetUriIntegrationTest() = default;
 
 #include "MudletTelnetUriIntegrationTest.moc"
 QTEST_MAIN(MudletTelnetUriIntegrationTest)
