@@ -27,7 +27,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         submodules: true
         fetch-depth: 0
