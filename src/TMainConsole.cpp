@@ -1122,7 +1122,6 @@ void TMainConsole::setSystemSpellDictionary(const QString& newDict)
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
         qDebug().noquote().nospace() << "TMainConsole::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
-        mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
     }
 }
 

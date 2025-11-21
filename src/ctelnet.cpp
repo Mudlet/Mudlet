@@ -40,6 +40,7 @@
 #include "TMedia.h"
 #include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
+#include "TEncodingHelper.h"
 #include "TTextEdit.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
@@ -48,7 +49,6 @@
 #include "glwidget_integration.h"
 #endif
 
-#include <QTextCodec>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
@@ -233,19 +233,11 @@ void cTelnet::cancelLoginTimers()
     }
 }
 
-// This configures two out of three of the QTextCodec used by this profile:
-// 1) A single or multi-byte encoder for all outgoing data
-// 2) A single or multi-byte encoder for incoming OutOfBand data
-// There is one more:
-// 3) A multi-byte ONLY decoder for incoming InBand data, set in:
+// This configures the encoding for all outgoing data and incoming OutOfBand data
+// There is one more encoding for incoming InBand data, set in:
 // the (void) TBuffer::encodingChanged(...) method and used in
 // the (bool) TBuffer::processXXXSequence(...) methods {where XXX is "UTF8",
 // "Big5" or "GB").
-// We have a few substute TTextCodecs that are derived from the QTextCodec
-// class and they all have a name the same as the ones we hoped that Qt would
-// provide except they have a "M_" prefix. We, however hide that detail from the
-// user so the value supplied as an argument MAY need to be matched against
-// the prefixed name or not:
 void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 {
     // unicode carries information in form of single byte characters
@@ -260,39 +252,14 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
         mEncoding = encoding;
         mEncodingWarningIssued = false;
         mEncoderFailureNoticeIssued = false;
-        // Not currently used as we do it by hand as we have to extract the data
-        // from the telnet protocol and all the out-of-band stuff.  It might be
-        // possible to use this in the future for non-UTF-8 traffic though.
-//    incomingDataCodec = QTextCodec::codecForName(encoding);
-//    incomingDataDecoder = incomingDataCodec->makeDecoder();
-
-        outgoingDataCodec = QTextCodec::codecForName(encoding);
-        // Do NOT create BOM on out-going text data stream!
-        if (outgoingDataCodec) {
-            outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
-        } else {
-            outgoingDataEncoder = nullptr;
-        }
 
         if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
-            mpOutOfBandDataIncomingCodec = QTextCodec::codecForName(encoding);
-            if (mpOutOfBandDataIncomingCodec) {
-                qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing a codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases();
+            if (TEncodingHelper::isEncodingAvailable(encoding)) {
+                qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing encoding for OOB protocols.";
             } else {
-                qWarning().nospace() << "cTelnet::encodingChanged(" << encoding << ") WARNING - Unable to locate a codec for OOB protocols that can handle: " << mEncoding;
+                qWarning().nospace() << "cTelnet::encodingChanged(" << encoding << ") WARNING - Unable to locate an encoding that can handle: " << mEncoding;
             }
-
-        } else if (mpOutOfBandDataIncomingCodec) {
-            // Will get here if the encoding is ASCII (or empty which is treated
-            // the same) and there is still an an encoder set:
-            qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Uninstalling the codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases() << " as the new encoding setting of: "
-                               << encoding << " does not need a dedicated one explicitly set...";
-            mpOutOfBandDataIncomingCodec = nullptr;
         }
-
-        // No need to tell the TBuffer instance of the main TConsole for this
-        // profile to change its QTextCodec to match as it now checks for
-        // changes here on each incoming packet
     }
 }
 
@@ -1268,15 +1235,15 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
         std::string outData;
         auto errorMsgTemplate = "[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.";
         if (!mEncoding.isEmpty()) {
-            if (outgoingDataEncoder) {
-                if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
+            if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+                if ((!mEncodingWarningIssued) && (!TEncodingHelper::canEncode(data, mEncoding))) {
                     QString errorMsg = tr(errorMsgTemplate,
                                           "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                 }
                 // Even if there are bad characters - try to send it anyway...
-                outData = outgoingDataEncoder->fromUnicode(data).constData();
+                outData = TEncodingHelper::encode(data, mEncoding).toStdString();
             } else {
                 if (!mEncoderFailureNoticeIssued) {
                     postMessage(tr("[ ERROR ] - Internal error, no codec found for current setting of {\"%1\"}\n"
@@ -3547,9 +3514,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 void cTelnet::setATCPVariables(const QByteArray& msg)
 {
     QString transcodedMsg;
-    if (mpOutOfBandDataIncomingCodec) {
+    if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
+        transcodedMsg = TEncodingHelper::decode(msg, mEncoding);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
         transcodedMsg = msg;
@@ -3811,9 +3778,9 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
 {
     QString transcodedMsg;
 
-    if (mpOutOfBandDataIncomingCodec) {
+    if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
+        transcodedMsg = TEncodingHelper::decode(msg, mEncoding);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
         transcodedMsg = msg;
@@ -3837,9 +3804,9 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 {
     QString transcodedMsg;
 
-    if (mpOutOfBandDataIncomingCodec) {
+    if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
+        transcodedMsg = TEncodingHelper::decode(msg, mEncoding);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
         transcodedMsg = msg;
@@ -4981,10 +4948,9 @@ void cTelnet::setKeepAlive(int socketHandle)
 // instances of this method for each OOB protocol that uses this DECODER:
 QByteArray cTelnet::decodeBytes(const char* bytes)
 {
-    if (mpOutOfBandDataIncomingCodec) {
-        // (QString) QTextCodec::toUnicode(const char *chars) const converts
-        // from given encoding to the QString UTF-16BE Unicode form:
-        return mpOutOfBandDataIncomingCodec->toUnicode(bytes).toUtf8().constData();
+    if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
+        // Convert from given encoding to QString UTF-16BE Unicode form, then to UTF-8:
+        return TEncodingHelper::decode(QByteArray(bytes), mEncoding).toUtf8();
     } else {
         return QByteArray(bytes);
     }
@@ -5002,15 +4968,10 @@ QByteArray cTelnet::decodeBytes(const char* bytes)
 // '<nbsp>' {U+00A0 Non-breaking space}            ==> CP-850
 std::string cTelnet::encodeAndCookBytes(const std::string& data)
 {
-    if (mpOutOfBandDataIncomingCodec) {
-        // QTextCodec::fromUnicode(...) converts from QString in UTF16BE
-        // encoding to the required Mud Server encoding as a QByteArray,
-        // QString::fromStdString(...) converts from a UTF8 encoded std::string
-        // to a UTF16BE encoded QString:
-        return mudlet::replaceString(mpOutOfBandDataIncomingCodec->fromUnicode(QString::fromStdString(data)).toStdString(), "\xff", "\xff\xff");
+    if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
+        // Convert from UTF8 std::string to QString, then encode to Mud Server encoding
+        return mudlet::replaceString(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString(), "\xff", "\xff\xff");
     } else {
-        // std::string::c_str() converts the std::string into a char array WITH
-        // a garenteed terminating null byte.
         return mudlet::replaceString(data, "\xff", "\xff\xff");
     }
 }

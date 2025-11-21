@@ -87,7 +87,7 @@ public:
     void setProfileSpellDictionary();
     void showStatistics();
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
-    QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
+    const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
     // Either returns the handle of the per profile or the shared Mudlet one or
     // nullptr depending on the state of the flags mEnableUserDictionary and
@@ -156,7 +156,6 @@ private:
     // The user dictionary will always use the UTF-8 codec, but the one
     // selected from the system's ones may not:
     QByteArray mHunspellCodecName_system;
-    QTextCodec* mpHunspellCodec_system = nullptr;
     // To update the profile dictionary we actually have to track all the words
     // in it so we loaded the contents into this on startup and adjust it as we
     // go. Then, at the end of a session we will put the revised contents
