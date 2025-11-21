@@ -1109,9 +1109,23 @@ void Host::setDisplayFontSize(int size)
 QFont Host::createFontWithSettings(const QString& fontName, int pointSize) const
 {
     QFont font(fontName, pointSize);
-    font.setStyleStrategy(fontsAntiAlias()
-                          ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
-                          : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
+    
+    if (fontsAntiAlias()) {
+        // For antialiased fonts, use different strategies based on font size
+        // Small fonts (< 12pt) benefit from slight hinting to improve clarity
+        if (pointSize < 12) {
+            font.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality));
+            font.setHintingPreference(QFont::PreferDefaultHinting);
+        } else {
+            // Larger fonts can use full antialiasing without aggressive hinting
+            font.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality));
+            font.setHintingPreference(QFont::PreferNoHinting);
+        }
+    } else {
+        font.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
+        font.setHintingPreference(QFont::PreferFullHinting);
+    }
+    
     return font;
 }
 
