@@ -35,12 +35,12 @@
  * 3. Profile data persistence
  * 4. Profile reuse for existing connections
  */
-class MudletTelnetUriIntegrationTests : public QObject {
+class MudletTelnetUriIntegrationTest : public QObject {
     Q_OBJECT
 
 public:
-    MudletTelnetUriIntegrationTests() = default;
-    ~MudletTelnetUriIntegrationTests() override = default;
+    MudletTelnetUriIntegrationTest() {}
+    ~MudletTelnetUriIntegrationTest() override {}
 
 private:
     QTemporaryDir* tempDir = nullptr;
@@ -308,4 +308,4 @@ private slots:
 };
 
 #include "MudletTelnetUriIntegrationTest.moc"
-QTEST_MAIN(MudletTelnetUriIntegrationTests)
+QTEST_MAIN(MudletTelnetUriIntegrationTest)
