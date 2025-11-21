@@ -28,6 +28,7 @@
 #include "TStringUtils.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
+#include "TEncodingHelper.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -35,7 +36,6 @@
 #include <QJsonParseError>
 #include <QJsonValue>
 #include <QTextBoundaryFinder>
-#include <QTextCodec>
 #include <QRegularExpression>
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
@@ -4894,10 +4894,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, gbSequenceLength).c_str(), gbSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5011,10 +5009,8 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, big5SequenceLength).c_str(), static_cast<int>(big5SequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, big5SequenceLength).c_str(), big5SequenceLength), mEncoding);
             switch (codePoint.size()) {
                 default:
                     Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5136,10 +5132,8 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, eucSequenceLength).c_str(), static_cast<int>(eucSequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, eucSequenceLength).c_str(), eucSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
                     Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5205,16 +5199,11 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
-            mMainIncomingCodec = QTextCodec::codecForName(mEncoding);
-            if (!mMainIncomingCodec) {
+            if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {
-                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Installing a codec that can handle:" << mMainIncomingCodec->aliases();
+                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Encoding is available and will be used.";
             }
-        } else if (mMainIncomingCodec) {
-            qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Uninstall a codec that can handle:" << mMainIncomingCodec->aliases() << " as the new encoding setting of: "
-                               << mEncoding << " does not need a dedicated one explicitly set...";
-            mMainIncomingCodec = nullptr;
         }
     }
 }

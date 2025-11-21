@@ -198,6 +198,7 @@ set(mudlet_SRCS
     TTabBar.cpp
     TDetachedWindow.cpp
     TTextCodec.cpp
+    TEncodingHelper.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -466,8 +467,7 @@ find_package(Qt6 6.4.0 REQUIRED
                OpenGL
                UiTools
                Widgets
-               Concurrent
-               Core5Compat)
+               Concurrent)
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
@@ -482,7 +482,6 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets
-              Qt6::Core5Compat
               qt6keychain)
 
 if(Qt6TextToSpeech_FOUND)
