@@ -39,6 +39,7 @@ public:
     static bool canEncode(const QString& str, const QByteArray& encoding);
     static bool isEncodingAvailable(const QByteArray& encoding);
     static QList<QByteArray> aliases(const QByteArray& encoding);
+    static bool requiresSpecialFont(const QByteArray& encoding);
     
 private:
     static bool isCustomEncoding(const QByteArray& encoding);

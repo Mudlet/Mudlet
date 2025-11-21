@@ -41,6 +41,7 @@
 #include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
+#include "FontManager.h"
 #include "TTextEdit.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
@@ -256,6 +257,12 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
         if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
             if (TEncodingHelper::isEncodingAvailable(encoding)) {
                 qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing encoding for OOB protocols.";
+                
+                // Set up font fallback for encodings that use special character sets
+                if (TEncodingHelper::requiresSpecialFont(encoding)) {
+                    QString displayFont = mpHost->getDisplayFont().family();
+                    FontManager::setupEncodingFontFallback(encoding, displayFont);
+                }
             } else {
                 qWarning().nospace() << "cTelnet::encodingChanged(" << encoding << ") WARNING - Unable to locate an encoding that can handle: " << mEncoding;
             }

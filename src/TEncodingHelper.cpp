@@ -142,3 +142,15 @@ QList<QByteArray> TEncodingHelper::aliases(const QByteArray& encoding)
     
     return {};
 }
+
+bool TEncodingHelper::requiresSpecialFont(const QByteArray& encoding)
+{
+    // Encodings that use Private Use Area or other special codepoints
+    // requiring a specific font for proper display
+    static const QSet<QByteArray> specialFontEncodings = {
+        "M_MEDIEVIA",
+        "MEDIEVIA"
+    };
+    
+    return specialFontEncodings.contains(encoding);
+}

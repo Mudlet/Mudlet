@@ -121,3 +121,24 @@ void FontManager::addEmojiFont()
 #endif
 #endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 }
+
+void FontManager::setupEncodingFontFallback(const QByteArray& encoding, const QString& displayFontFamily)
+{
+    // Map of encodings to their recommended fallback fonts for special glyphs
+    static const QMap<QByteArray, QString> encodingFontMap = {
+        {"M_MEDIEVIA", qsl("Medievia")},
+        {"MEDIEVIA", qsl("Medievia")}
+    };
+
+    if (encodingFontMap.contains(encoding)) {
+        const QString& fallbackFont = encodingFontMap.value(encoding);
+        
+        // Set up font substitution so the display font falls back to the
+        // encoding-specific font for glyphs it doesn't contain
+        if (!displayFontFamily.isEmpty() && displayFontFamily != fallbackFont) {
+            QFont::insertSubstitution(displayFontFamily, fallbackFont);
+            qDebug() << "Font fallback configured: primary font" << displayFontFamily
+                     << "will use" << fallbackFont << "for missing glyphs when encoding is" << encoding;
+        }
+    }
+}
