@@ -38,6 +38,10 @@
 class MudletTelnetUriIntegrationTest : public QObject {
     Q_OBJECT
 
+public:
+    MudletTelnetUriIntegrationTest() = default;
+    ~MudletTelnetUriIntegrationTest() override = default;
+
 private:
     QTemporaryDir* tempDir = nullptr;
 
