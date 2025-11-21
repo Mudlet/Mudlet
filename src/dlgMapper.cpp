@@ -89,19 +89,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(toolButton_mapperMenu, &QToolButton::clicked, this, &dlgMapper::slot_setupMapperMenu);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
-    // Apply stylesheet to ensure proper selection colors in both light and dark themes
-    // Using QSS for reliable cross-platform behavior, especially on Windows
-    // Apply only to the dropdown view to avoid affecting the combobox button itself
+    // Explicitly set the palette to ensure proper selection colors in both light and dark themes
+    comboBox_showArea->setPalette(qApp->palette());
     if (auto* view = comboBox_showArea->view()) {
-        view->setStyleSheet(
-            qsl("QAbstractItemView::item:selected:active {"
-                "    background-color: palette(highlight);"
-                "    color: palette(highlighted-text);"
-                "}"
-                "QAbstractItemView::item:selected:!active {"
-                "    background-color: palette(highlight);"
-                "    color: palette(highlighted-text);"
-                "}"));
+        view->setPalette(qApp->palette());
     }
 #if defined(INCLUDE_3DMAPPER)
     mIs3DMode = mpHost->mShow3DView;
