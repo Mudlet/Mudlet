@@ -24,7 +24,6 @@
 TriggerHighlighter::TriggerHighlighter(QTextDocument *parent)
     : QSyntaxHighlighter(parent)
 {
-    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
     setTheme("Mudlet"); // start with the default theme
 }
 
