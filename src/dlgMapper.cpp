@@ -101,8 +101,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
             "QAbstractItemView::item:selected:!active {"
             "    background-color: palette(highlight);"
             "    color: palette(highlighted-text);"
-            "}"
-        ));
+            "}));
     }
 #if defined(INCLUDE_3DMAPPER)
     mIs3DMode = mpHost->mShow3DView;

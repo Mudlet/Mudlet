@@ -448,8 +448,7 @@ void T2DMap::init()
         "QTreeWidget::item:selected:!active {"
         "    background-color: palette(highlight);"
         "    color: palette(highlighted-text);"
-        "}"
-    ));
+        "}));
 
     eSize = mpHost->mLineSize;
     rSize = mpHost->mRoomSize;
