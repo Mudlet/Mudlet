@@ -144,25 +144,36 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 mudlet::mudlet()
 : QMainWindow()
 {
-    // Initialisation happens later in setupConfig() and init()
+    // Most initialisation happens later in setupConfig() and init()
+    QFile gitShaFile(qsl(":/app-build.txt"));
+    if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        mAppBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+#if defined (INCLUDE_UPDATER)
+        if (mAppBuild.isEmpty()) {
+            mBuildType = BuildType::Release;
+        } else {
+            if (mAppBuild.startsWith(qsl("-ptb"))) {
+                mBuildType = BuildType::PublicTest;
+            } else {
+                mBuildType = BuildType::NotUpdateable;
+            }
+        }
+#else
+        mBuildType = BuildType::NotUpdateable;
+#endif
+    } else {
+        qWarning().nospace().noquote() << "mudlet::mudlet() WARNING - failed to open app-build.txt for reading: " << gitShaFile.errorString();
+        // Force this to be treated as a "development" - not
+        // updateable - type build; mAppBuild being a null would otherwise seem
+        // to be a "release" one!
+        mBuildType = BuildType::NotUpdateable;
+    }
+    scmVersion = qsl("Mudlet " APP_VERSION "%1").arg(mAppBuild);
 }
 
 void mudlet::init()
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
-
-    QFile gitShaFile(":/app-build.txt");
-    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "mudlet: failed to open app-build.txt for reading:" << gitShaFile.errorString();
-    }
-    const QString gitSha = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-
-    mAppBuild = gitSha;
-    releaseVersion = mAppBuild.isEmpty();
-    publicTestVersion = mAppBuild.startsWith("-ptb");
-    developmentVersion = !releaseVersion && !publicTestVersion;
-
-    scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
 
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     readEarlySettings(*mpSettings);
@@ -211,11 +222,14 @@ void mudlet::init()
     setAttribute(Qt::WA_DeleteOnClose);
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(scmVersion);
-    if (releaseVersion) {
+    switch (getBuildType()) {
+    case BuildType::Release:
         setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
-    } else if (publicTestVersion) {
+        break;
+    case BuildType::PublicTest:
         setWindowIcon(QIcon(qsl(":/icons/mudlet_ptb_256px.png")));
-    } else { // developmentVersion
+        break;
+    default:
         setWindowIcon(QIcon(qsl(":/icons/mudlet_dev_256px.png")));
     }
     mpMainToolBar = new QToolBar(this);
@@ -490,7 +504,7 @@ void mudlet::init()
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
 #if defined(INCLUDE_UPDATER)
-    if (publicTestVersion) {
+    if (BuildType::PublicTest == getBuildType()) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
         const QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
@@ -592,17 +606,13 @@ void mudlet::init()
     });
 
 #if defined(INCLUDE_UPDATER)
-    // Show the update option if the code is present AND if this is a
-    // release OR a public test version, or if you're specifically trying to test Sparkle.
-    dactionUpdate->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
-    dactionChangelog->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
+    // Show the update option if the code is present AND if this is an
+    // updateable version, or if you're specifically trying to test Sparkle.
+    dactionUpdate->setVisible(isUpdateable() || qEnvironmentVariableIsSet("DEV_UPDATER"));
+    dactionChangelog->setVisible(isUpdateable() || qEnvironmentVariableIsSet("DEV_UPDATER"));
 
-    // Show the report issue option if the updater code is present (as it is
-    // less likely to be for: {Linux} distribution packaged versions of Mudlet
-    // - or people hacking their own versions and neither of those types are
-    // going to want the updater to change things for them) AND only for a
-    // public test version:
-    if (publicTestVersion) {
+    // Show the report issue option only for PTBs:
+    if (BuildType::PublicTest == getBuildType()) {
         dactionReportIssue->setVisible(true);
         connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_reportIssue);
         connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_reportIssue);
@@ -713,7 +723,7 @@ void mudlet::init()
     connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings, publicTestVersion);
+    pUpdater = new Updater(mpSettings);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
     connect(dactionChangelog, &QAction::triggered, this, &mudlet::slot_showFullChangelog);
@@ -5297,9 +5307,10 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER")) {
+    if (isUpdateable() || qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // Only try and create an updater (which checks for updates online) if
-        // this is a release/public test version, or if you are testing Sparkle (env flag set).
+        // this is an updateable version, or if you are testing Sparkle (env
+        // flag set).
         pUpdater->checkUpdatesOnStart();
     }
 }
@@ -6722,19 +6733,20 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 }
 
 // gets the splash screen image to display
-// flags releaseVersion and testVersion are passed as parameters since
-// mudlet::self() might not be initialised yet at all times this function will be called
-/*static*/ QImage mudlet::getSplashScreen(bool releaseVersion, bool testVersion)
+QImage mudlet::getSplashScreen()
 {
 #if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
+    // Enables random different splashscreens on certain occasions for ANY type
+    // of build - and those splashscreens do not indicate the type of build
+    // although the overlaid version information will still do so:
     auto now = QDateTime::currentDateTime();
     // clang-format off
 #if defined(DEBUG_EASTER_EGGS)
-    if (bool layEasterEgg = (now.time().second() < 30); layEasterEgg) {
+    if (const bool layEasterEgg = (now.time().second() < 30); layEasterEgg) {
         // Only do it in the first half of any minute:
 #else
     if (const bool layEasterEgg = (now.date().month() == 4
-                        && now.date().day() == 1); layEasterEgg) {
+                                   && now.date().day() == 1); layEasterEgg) {
 #endif // ! DEBUG_EASTER_EGGS
         // clang-format on
         // Set to one more than the highest number Mudlet_splashscreen_other_NN.png:
@@ -6742,25 +6754,27 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
         if (egg) {
             auto eggFileName = qsl(":/splash/Mudlet_splashscreen_other_%1.png").arg(egg, 2, 10, QLatin1Char('0'));
             return QImage(eggFileName);
-        } else {
-            // For the zeroth case just rotate the picture 180 degrees:
-            const QImage original(releaseVersion
-                                    ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                                    : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
-                                                                     : qsl(":/splash/Mudlet_splashscreen_development.png"));
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-            return original.flipped(Qt::Horizontal|Qt::Vertical);
-#else
-            // Deprecated in 6.9 and due for removal in 6.13:
-            return original.mirrored(true, true);
-#endif
         }
-    } else {
-        return QImage(releaseVersion
+        // For the zeroth case just rotate the picture 180 degrees:
+        const QImage original((BuildType::Release == getBuildType())
                               ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                              : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
-                                                               : qsl(":/splash/Mudlet_splashscreen_development.png"));
+                              : (BuildType::PublicTest == getBuildType())
+                                ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                : qsl(":/splash/Mudlet_splashscreen_development.png"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+        return original.flipped(Qt::Horizontal|Qt::Vertical);
+#else
+        // QIMage::mirrored(...) deprecated in 6.9 and due for removal in 6.13:
+        return original.mirrored(true, true);
+#endif
     }
+    // else fixed splashscreen dependent on build type:
+    // For the zeroth case just rotate the picture 180 degrees:
+    return QImage((BuildType::Release == getBuildType())
+                      ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                      : (BuildType::PublicTest == getBuildType())
+                        ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                        : qsl(":/splash/Mudlet_splashscreen_development.png"));
 #else
     return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN
@@ -8590,4 +8604,25 @@ void mudlet::reattachOrphanedProfiles()
     updateMainWindowTabBarAutoHide();
     refreshTabBar();
     enableToolbarButtons();
+}
+
+mudlet::BuildType mudlet::getBuildType() const
+{
+    // Don't allow the uninitialised value to be used - trap it for builds where
+    // QT_NO_DEBUG is NOT defined - Fail hard and fast if we don't know what
+    // type of build we are:
+    Q_ASSERT_X(mBuildType != BuildType::Unknown, "mudlet::getBuildType()", "mBuildType not (yet) determined!");
+
+    return mBuildType;
+}
+
+bool mudlet::isUpdateable() const
+{
+    // Don't allow the uninitialised value to be used - trap it for builds where
+    // QT_NO_DEBUG is NOT defined - Fail hard and fast if we don't know what
+    // type of build we are:
+    Q_ASSERT_X(mBuildType != BuildType::Unknown, "mudlet::isUpdateable()", "mBuildType not (yet) determined!");
+
+    return (BuildType::Release == mBuildType
+            || BuildType::PublicTest == mBuildType);
 }

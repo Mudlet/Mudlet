@@ -133,15 +133,20 @@ static void cleanupSquirrelTempFiles()
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObject(parent)
+Updater::Updater(QSettings* settings)
+: QObject(mudlet::self())
 , mpInstallOrRestart(new QPushButton(tr("Update")))
 , mUpdateInstalled(false)
 {
-    Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
+    Q_ASSERT_X(settings, "Updater::Updater(QSettings*)", "QSettings object is required for the updater to work");
+    const auto buildType = mudlet::self()->getBuildType();
+    Q_ASSERT_X(mudlet::BuildType::PublicTest == buildType || mudlet::BuildType::Release == buildType, "Updater::Updater(QSettings*)", "mudlet::mBuildType is not set to an updateable type value");
     this->settings = settings;
 
     QString baseUrl = QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw");
-    QString channel = testVersion ? QStringLiteral("public-test-build") : QStringLiteral("release");
+    QString channel = (mudlet::BuildType::PublicTest == buildType)
+                              ? QStringLiteral("public-test-build")
+                              : QStringLiteral("release");
 
     // On 32-bit Windows, check if we can upgrade to 64-bit
 #if defined(Q_OS_WINDOWS)
@@ -374,7 +379,7 @@ void Updater::setupOnLinux()
     connect(feed, &dblsqd::Feed::ready, this, [=, this]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (mudlet::self()->developmentVersion) {
+        if (!mudlet::self()->isUpdateable()) {
             return;
         }
 
@@ -567,7 +572,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (mudlet::self()->developmentVersion || !updateAutomatically()) {
+    if (!mudlet::self()->isUpdateable() || !updateAutomatically()) {
         return false;
     }
 

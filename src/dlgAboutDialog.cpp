@@ -41,7 +41,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 {
     setupUi(this);
 
-    QImage splashImage = mudlet::getSplashScreen(mudlet::self()->releaseVersion, mudlet::self()->publicTestVersion);
+    QImage splashImage = mudlet::self()->getSplashScreen();
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);

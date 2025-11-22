@@ -1883,32 +1883,29 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
-            // This is a release/public test version - should not support any map file versions higher that it was built for
+        if (mudlet::self()->isUpdateable()) {
+            // This is not a development version - so it should not support any
+            // map file versions higher that it was built for:
             if (fileVersion) {
                 *fileVersion = otherProfileVersion;
             }
             file.close();
             return true;
-        } else {
-            // Is a development version so check against mMaxVersion
-            if (otherProfileVersion > mMaxVersion) {
-                // Oh dear, can't handle THIS
-                if (fileVersion) {
-                    *fileVersion = otherProfileVersion;
-                }
-                file.close();
-                return true;
-            } else {
-                if (fileVersion) {
-                    *fileVersion = otherProfileVersion;
-                }
+        }
+
+        // Is a development version so check against mMaxVersion
+        if (otherProfileVersion > mMaxVersion) {
+            // Oh dear, can't handle THIS
+            if (fileVersion) {
+                *fileVersion = otherProfileVersion;
             }
+            file.close();
+            return true;
         }
-    } else {
-        if (fileVersion) {
-            *fileVersion = otherProfileVersion;
-        }
+    }
+
+    if (fileVersion) {
+        *fileVersion = otherProfileVersion;
     }
 
     if (otherProfileVersion >= 4) {

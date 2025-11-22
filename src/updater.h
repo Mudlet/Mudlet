@@ -37,7 +37,7 @@ class Updater : public QObject
 
 public:
     Q_DISABLE_COPY(Updater)
-    explicit Updater(QObject* parent = nullptr, QSettings* settings = nullptr, bool testVersion = false);
+    explicit Updater(QSettings* settings = nullptr);
     virtual ~Updater();
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
