@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGTRIGGERPATTERNEDIT_H
-#define MUDLET_DLGTRIGGERPATTERNEDIT_H
-
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2025 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,43 +17,49 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#ifndef MUDLET_MIDDLEMOUSEPANHANDLER_H
+#define MUDLET_MIDDLEMOUSEPANHANDLER_H
 
-#include "ui_trigger_pattern_edit.h"
-#include <QPalette>
+#include "T2DMap.h"
 
+#include <QElapsedTimer>
+#include <QPointF>
+#include <QTimer>
 
-class QAction;
+class QPainter;
 
-class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
+class MiddleMousePanHandler : public T2DMap::IInteractionHandler
 {
-    Q_OBJECT
-
 public:
-    Q_DISABLE_COPY(dlgTriggerPatternEdit)
-    explicit dlgTriggerPatternEdit(QWidget*);
+    explicit MiddleMousePanHandler(T2DMap& mapWidget);
 
-    void applyThemePalette(const QPalette& editorPalette);
+    bool matches(const T2DMap::MapInteractionContext& context) const override;
+    bool handle(T2DMap::MapInteractionContext& context) override;
 
-    int mRow = 0;
+    void renderIndicator(QPainter& painter);
+    void handleTick();
+    void cancel();
 
-
-public slots:
-    void slot_triggerTypeComboBoxChanged(const int);
-
+    bool isActive() const { return mActive; }
+    bool isPressActive() const { return mPressActive; }
 
 private:
-    void resetThemePalette();
+    void beginPan(const QPointF& widgetPosition, bool fromPress);
+    void updatePointer(const QPointF& widgetPosition);
+    void finishPress();
 
-    QPalette mDefaultPalette;
-    QPalette mDefaultPatternNumberPalette;
-    QPalette mDefaultPromptPalette;
-    QPalette mDefaultComboPalette;
-    QPalette mDefaultSpinPalette;
-    QPalette mDefaultForegroundButtonPalette;
-    QPalette mDefaultBackgroundButtonPalette;
-    QPalette mDefaultPatternEditPalette;
-    QPalette mDefaultPatternEditViewportPalette;
-    bool mDefaultPatternEditViewportAutoFillBackground = false;
+    bool handleMousePress(T2DMap::MapInteractionContext& context);
+    bool handleMouseMove(T2DMap::MapInteractionContext& context);
+    bool handleMouseRelease(T2DMap::MapInteractionContext& context);
+
+    T2DMap& mMapWidget;
+
+    bool mActive = false;
+    bool mPressActive = false;
+    QPointF mAnchor;
+    QPointF mCurrentPosition;
+    QTimer mTimer;
+    QElapsedTimer mPressTimer;
 };
 
-#endif // MUDLET_DLGTRIGGERPATTERNEDIT_H
+#endif // MUDLET_MIDDLEMOUSEPANHANDLER_H

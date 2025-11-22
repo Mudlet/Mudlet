@@ -87,10 +87,6 @@ qtHaveModule(texttospeech) {
     !build_pass : message("Using TextToSpeech module")
 }
 
-greaterThan(QT_MAJOR_VERSION, 5) {
-    QT += core5compat
-}
-
 TEMPLATE = app
 
 # Define a variable for the Git executable
@@ -691,6 +687,7 @@ SOURCES += \
     CustomLineEditHandler.cpp \
     CustomLineSession.cpp \
     LabelInteractionHandler.cpp \
+    MiddleMousePanHandler.cpp \
     PanInteractionHandler.cpp \
     RoomContextMenuHandler.cpp \
     RoomMoveActivationHandler.cpp \
@@ -730,6 +727,7 @@ SOURCES += \
     TMedia.cpp \
     TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
+    TMxpHRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
@@ -763,6 +761,7 @@ SOURCES += \
     TTabBar.cpp \
     TDetachedWindow.cpp \
     TTextCodec.cpp \
+    TEncodingHelper.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -846,6 +845,7 @@ HEADERS += \
     CustomLineEditHandler.h \
     CustomLineSession.h \
     LabelInteractionHandler.h \
+    MiddleMousePanHandler.h \
     PanInteractionHandler.h \
     RoomContextMenuHandler.h \
     RoomMoveActivationHandler.h \
@@ -883,6 +883,7 @@ HEADERS += \
     TMediaData.h \
     TMediaPlaylist.h \
     TMxpBRTagHandler.h \
+    TMxpHRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
     TMxpCustomElementTagHandler.h \
@@ -919,6 +920,7 @@ HEADERS += \
     TTabBar.h \
     TDetachedWindow.h \
     TTextCodec.h \
+    TEncodingHelper.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \

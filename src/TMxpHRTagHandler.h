@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGTRIGGERPATTERNEDIT_H
-#define MUDLET_DLGTRIGGERPATTERNEDIT_H
-
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,43 +17,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#ifndef MUDLET_TMXPHRTAGHANDLER_H
+#define MUDLET_TMXPHRTAGHANDLER_H
+#include "TMxpTagHandler.h"
 
-#include "ui_trigger_pattern_edit.h"
-#include <QPalette>
-
-
-class QAction;
-
-class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
+class TMxpHRTagHandler : public TMxpSingleTagHandler
 {
-    Q_OBJECT
-
 public:
-    Q_DISABLE_COPY(dlgTriggerPatternEdit)
-    explicit dlgTriggerPatternEdit(QWidget*);
+    TMxpHRTagHandler()
+    : TMxpSingleTagHandler("HR")
+    {}
 
-    void applyThemePalette(const QPalette& editorPalette);
-
-    int mRow = 0;
-
-
-public slots:
-    void slot_triggerTypeComboBoxChanged(const int);
-
-
-private:
-    void resetThemePalette();
-
-    QPalette mDefaultPalette;
-    QPalette mDefaultPatternNumberPalette;
-    QPalette mDefaultPromptPalette;
-    QPalette mDefaultComboPalette;
-    QPalette mDefaultSpinPalette;
-    QPalette mDefaultForegroundButtonPalette;
-    QPalette mDefaultBackgroundButtonPalette;
-    QPalette mDefaultPatternEditPalette;
-    QPalette mDefaultPatternEditViewportPalette;
-    bool mDefaultPatternEditViewportAutoFillBackground = false;
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
-
-#endif // MUDLET_DLGTRIGGERPATTERNEDIT_H
+#include "TMxpTagHandler.h"
+#endif //MUDLET_TMXPHRTAGHANDLER_H

@@ -1122,7 +1122,6 @@ void TMainConsole::setSystemSpellDictionary(const QString& newDict)
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
         qDebug().noquote().nospace() << "TMainConsole::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
-        mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
     }
 }
 
@@ -1636,6 +1635,15 @@ void TMainConsole::showStatistics()
 
 void TMainConsole::closeEvent(QCloseEvent* event)
 {
+    // Guard against duplicate close events during widget destruction.
+    // The first close comes from explicit close(), the second can come
+    // from Qt during widget deletion. Processing the event twice can
+    // cause crashes in TBuffer destruction.
+    if (mEnableClose) {
+        event->accept();
+        return;
+    }
+
     qDebug().nospace().noquote() << "TMainConsole::closeEvent(...) INFO - received by \"" << mpHost->getName() << "\".";
     TEvent conCloseEvent{};
     conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
@@ -1670,6 +1678,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
             }
         }
         mpHost->waitForProfileSave();
+        mEnableClose = true;
         event->accept();
         return;
     }

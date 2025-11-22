@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,16 +17,32 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// MSVC debug builds redefine allocation functions to track leak locations.
-// These pragmas make sure the macros do not break includes from third parties.
-#if defined(_DEBUG) && defined(_MSC_VER)
-#pragma push_macro("new")
-#undef new
-#pragma push_macro("malloc")
-#undef malloc
-#pragma push_macro("realloc")
-#undef realloc
-#pragma push_macro("free")
-#undef free
-#endif // _DEBUG && _MSC_VER
+#ifndef TENCODINGHELPER_H
+#define TENCODINGHELPER_H
 
+/***************************************************************************
+ *   This class provides helper functions for text encoding/decoding       *
+ *   using both Qt6's QStringConverter and custom codecs.                  *
+ ***************************************************************************/
+
+#include <QByteArray>
+#include <QList>
+#include <QString>
+#include <QStringConverter>
+#include <optional>
+
+class TEncodingHelper
+{
+public:
+    static QString decode(const QByteArray& bytes, const QByteArray& encoding);
+    static QByteArray encode(const QString& str, const QByteArray& encoding);
+    static bool canEncode(const QString& str, const QByteArray& encoding);
+    static bool isEncodingAvailable(const QByteArray& encoding);
+    static QList<QByteArray> aliases(const QByteArray& encoding);
+    
+private:
+    static bool isCustomEncoding(const QByteArray& encoding);
+    static std::optional<QStringConverter::Encoding> getQtEncoding(const QByteArray& encoding);
+};
+
+#endif // TENCODINGHELPER_H

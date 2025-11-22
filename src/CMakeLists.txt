@@ -126,6 +126,7 @@ set(mudlet_SRCS
     CustomLineEditHandler.cpp
     CustomLineSession.cpp
     LabelInteractionHandler.cpp
+    MiddleMousePanHandler.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -170,6 +171,7 @@ set(mudlet_SRCS
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
+    TMxpHRTagHandler.cpp
     TMxpColorTagHandler.cpp
     TMxpCustomElementTagHandler.cpp
     TMxpElementDefinitionHandler.cpp
@@ -204,6 +206,7 @@ set(mudlet_SRCS
     TTabBar.cpp
     TDetachedWindow.cpp
     TTextCodec.cpp
+    TEncodingHelper.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -363,6 +366,7 @@ set(mudlet_HDRS
     TMedia.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h
+    TMxpHRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
     TMxpContext.h
@@ -477,8 +481,7 @@ find_package(Qt6 6.4.0 REQUIRED
                OpenGL
                UiTools
                Widgets
-               Concurrent
-               Core5Compat)
+               Concurrent)
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
@@ -493,7 +496,6 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets
-              Qt6::Core5Compat
               qt6keychain)
 
 if(Qt6TextToSpeech_FOUND)
@@ -509,7 +511,8 @@ find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
-find_package(Boost 1.44)
+find_package(Boost 1.44 CONFIG REQUIRED)
+message(STATUS "Found Boost: ${Boost_DIR} (found version \"${Boost_VERSION}\")")
 
 
 # FreeBSD's sysinfo() call is done in a package, libsysinfo.
@@ -804,10 +807,6 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
-   install(
-    FILES "../mudlet.desktop"
-    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-      WORLD_READ)
 
   install(
     FILES "../mudlet.desktop"
@@ -819,7 +818,7 @@ if(UNIX AND NOT APPLE)
     WORLD_READ)
   install(
     FILES "../mudlet.png"
-    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    DESTINATION "share/icons/hicolor/512x512/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
     WORLD_READ)
 
   install(
