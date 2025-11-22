@@ -1942,6 +1942,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 } else {
                     int originalType = patternTypes.value(0);
                     int newType = REGEX_PERL;
+                    qDebug() << "  Original pattern type:" << originalType << "Target type:" << newType;
 
                     if (editor->mTriggerPatternEdit.size() > 0) {
                         editor->mTriggerPatternEdit[0]->comboBox_patternType->setCurrentIndex(1); // Index 1 = REGEX_PERL
@@ -1952,19 +1953,24 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                         TEST_PASS("Trigger: Type change applied");
 
                         editor->mpUndoStack->undo();
-                        if (pT->getRegexCodePropertyList().value(0) == originalType) {
+                        int actualTypeAfterUndo = pT->getRegexCodePropertyList().value(0);
+                        if (actualTypeAfterUndo == originalType) {
                             TEST_PASS("Trigger: Type change undo works");
 
                             editor->mpUndoStack->redo();
-                            if (pT->getRegexCodePropertyList().value(0) == newType) {
+                            int actualTypeAfterRedo = pT->getRegexCodePropertyList().value(0);
+                            if (actualTypeAfterRedo == newType) {
                                 TEST_PASS("Trigger: Type change redo works");
                             } else {
+                                qDebug() << "  Expected type after redo:" << newType << "Actual:" << actualTypeAfterRedo;
                                 TEST_FAIL("Trigger: Type change redo failed");
                             }
                         } else {
+                            qDebug() << "  Expected type after undo:" << originalType << "Actual:" << actualTypeAfterUndo;
                             TEST_FAIL("Trigger: Type change undo failed");
                         }
                     } else {
+                        qDebug() << "  Expected type after change:" << newType << "Actual:" << pT->getRegexCodePropertyList().value(0);
                         TEST_FAIL("Trigger: Type change not applied");
                     }
                 }
