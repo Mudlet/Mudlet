@@ -25,7 +25,7 @@
 #include <QString>
 
 // Undo command for modifying item properties. Stores complete XML snapshots of old and new states.
-// Updates items in place (no ID changes). No skip-first-redo needed (change already applied).
+// Updates items in place (no ID changes).
 class EditorModifyPropertyCommand : public EditorCommand
 {
 public:
@@ -53,6 +53,7 @@ private:
     QString mItemName;
     QString mOldStateXML;
     QString mNewStateXML;
+    bool mSkipFirstRedo = true; // Skip initial redo() called by QUndoStack::push()
 };
 
 #endif // MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H

@@ -113,13 +113,20 @@ void EditorModifyPropertyCommand::undo()
 
 void EditorModifyPropertyCommand::redo()
 {
+    // Skip the first redo() which is automatically called by QUndoStack::push()
+    // The property change has already been applied before creating this command
+    if (mSkipFirstRedo) {
+#if defined(DEBUG_UNDO_REDO)
+        qDebug() << "EditorModifyPropertyCommand::redo() - Skipping first redo (change already applied)";
+#endif
+        mSkipFirstRedo = false;
+        return;
+    }
+
 #if defined(DEBUG_UNDO_REDO)
     qDebug() << "EditorModifyPropertyCommand::redo() - Applying new state to" << mItemName << "(ID:" << mItemID << ")";
 #endif
     // Apply the new state
-    // Note: Unlike AddItemCommand, we don't skip the first redo because ModifyPropertyCommand
-    // doesn't use QUndoStack::push() automatically calling redo(). The change has already
-    // been applied by the time we create the command, so redo() is only called after undo().
     switch (mViewType) {
     case EditorViewType::cmTriggerView: {
         TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(mItemID);

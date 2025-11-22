@@ -593,7 +593,13 @@ void EditorDeleteItemCommand::redo()
                 // Nullify mpHost on trigger and all children recursively
                 trigger->mpHost = nullptr;
                 std::function<void(TTrigger*)> nullifyChildren = [&nullifyChildren](TTrigger* t) {
+                    if (!t || !t->mpMyChildrenList) {
+                        return;
+                    }
                     for (auto child : *t->mpMyChildrenList) {
+                        if (!child) {
+                            continue;
+                        }
                         child->mpHost = nullptr;
                         nullifyChildren(child);
                     }
@@ -619,7 +625,13 @@ void EditorDeleteItemCommand::redo()
                 // Nullify mpHost on alias and all children recursively
                 alias->mpHost = nullptr;
                 std::function<void(TAlias*)> nullifyChildren = [&nullifyChildren](TAlias* a) {
+                    if (!a || !a->mpMyChildrenList) {
+                        return;
+                    }
                     for (auto child : *a->mpMyChildrenList) {
+                        if (!child) {
+                            continue;
+                        }
                         child->mpHost = nullptr;
                         nullifyChildren(child);
                     }
@@ -645,7 +657,13 @@ void EditorDeleteItemCommand::redo()
                 // Nullify mpHost on timer and all children recursively
                 timer->mpHost = nullptr;
                 std::function<void(TTimer*)> nullifyChildren = [&nullifyChildren](TTimer* t) {
+                    if (!t || !t->mpMyChildrenList) {
+                        return;
+                    }
                     for (auto child : *t->mpMyChildrenList) {
+                        if (!child) {
+                            continue;
+                        }
                         child->mpHost = nullptr;
                         nullifyChildren(child);
                     }
@@ -671,7 +689,13 @@ void EditorDeleteItemCommand::redo()
                 // Nullify mpHost on script and all children recursively
                 script->mpHost = nullptr;
                 std::function<void(TScript*)> nullifyChildren = [&nullifyChildren](TScript* s) {
+                    if (!s || !s->mpMyChildrenList) {
+                        return;
+                    }
                     for (auto child : *s->mpMyChildrenList) {
+                        if (!child) {
+                            continue;
+                        }
                         child->mpHost = nullptr;
                         nullifyChildren(child);
                     }
@@ -697,7 +721,13 @@ void EditorDeleteItemCommand::redo()
                 // Nullify mpHost on key and all children recursively
                 key->mpHost = nullptr;
                 std::function<void(TKey*)> nullifyChildren = [&nullifyChildren](TKey* k) {
+                    if (!k || !k->mpMyChildrenList) {
+                        return;
+                    }
                     for (auto child : *k->mpMyChildrenList) {
+                        if (!child) {
+                            continue;
+                        }
                         child->mpHost = nullptr;
                         nullifyChildren(child);
                     }
@@ -723,7 +753,13 @@ void EditorDeleteItemCommand::redo()
                 // Nullify mpHost on action and all children recursively
                 action->mpHost = nullptr;
                 std::function<void(TAction*)> nullifyChildren = [&nullifyChildren](TAction* a) {
+                    if (!a || !a->mpMyChildrenList) {
+                        return;
+                    }
                     for (auto child : *a->mpMyChildrenList) {
+                        if (!child) {
+                            continue;
+                        }
                         child->mpHost = nullptr;
                         nullifyChildren(child);
                     }
@@ -738,8 +774,10 @@ void EditorDeleteItemCommand::redo()
     }
 
     // Now manually unregister and delete all items
-    // Since mpHost is null, destructors won't try to unregister, so we must do it manually
-    // Only delete items whose parent is not also being deleted (parent deletion handles children)
+    // Since mpHost is null on validated items, destructors won't try to unregister,
+    // so we must do it manually. Only delete items whose parent is not also being
+    // deleted (parent deletion handles children), and only if they still match the
+    // recorded name to avoid deleting unrelated items.
     for (const auto& info : mDeletedItems) {
         // Skip items whose parent is also in the deletion list
         // (they will be automatically deleted when the parent is deleted)
@@ -753,50 +791,92 @@ void EditorDeleteItemCommand::redo()
         switch (mViewType) {
         case EditorViewType::cmTriggerView: {
             TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(info.itemID);
-            if (trigger) {
-                mpHost->getTriggerUnit()->unregisterTrigger(trigger);
-                delete trigger;
+            if (!trigger) {
+                break;
             }
+            if (trigger->getName() != info.itemName) {
+                qWarning() << "EditorDeleteItemCommand::redo() - Trigger ID" << info.itemID
+                           << "name changed from" << info.itemName << "to" << trigger->getName()
+                           << "- not deleting";
+                break;
+            }
+            mpHost->getTriggerUnit()->unregisterTrigger(trigger);
+            delete trigger;
             break;
         }
         case EditorViewType::cmAliasView: {
             TAlias* alias = mpHost->getAliasUnit()->getAlias(info.itemID);
-            if (alias) {
-                mpHost->getAliasUnit()->unregisterAlias(alias);
-                delete alias;
+            if (!alias) {
+                break;
             }
+            if (alias->getName() != info.itemName) {
+                qWarning() << "EditorDeleteItemCommand::redo() - Alias ID" << info.itemID
+                           << "name changed from" << info.itemName << "to" << alias->getName()
+                           << "- not deleting";
+                break;
+            }
+            mpHost->getAliasUnit()->unregisterAlias(alias);
+            delete alias;
             break;
         }
         case EditorViewType::cmTimerView: {
             TTimer* timer = mpHost->getTimerUnit()->getTimer(info.itemID);
-            if (timer) {
-                mpHost->getTimerUnit()->unregisterTimer(timer);
-                delete timer;
+            if (!timer) {
+                break;
             }
+            if (timer->getName() != info.itemName) {
+                qWarning() << "EditorDeleteItemCommand::redo() - Timer ID" << info.itemID
+                           << "name changed from" << info.itemName << "to" << timer->getName()
+                           << "- not deleting";
+                break;
+            }
+            mpHost->getTimerUnit()->unregisterTimer(timer);
+            delete timer;
             break;
         }
         case EditorViewType::cmScriptView: {
             TScript* script = mpHost->getScriptUnit()->getScript(info.itemID);
-            if (script) {
-                mpHost->getScriptUnit()->unregisterScript(script);
-                delete script;
+            if (!script) {
+                break;
             }
+            if (script->getName() != info.itemName) {
+                qWarning() << "EditorDeleteItemCommand::redo() - Script ID" << info.itemID
+                           << "name changed from" << info.itemName << "to" << script->getName()
+                           << "- not deleting";
+                break;
+            }
+            mpHost->getScriptUnit()->unregisterScript(script);
+            delete script;
             break;
         }
         case EditorViewType::cmKeysView: {
             TKey* key = mpHost->getKeyUnit()->getKey(info.itemID);
-            if (key) {
-                mpHost->getKeyUnit()->unregisterKey(key);
-                delete key;
+            if (!key) {
+                break;
             }
+            if (key->getName() != info.itemName) {
+                qWarning() << "EditorDeleteItemCommand::redo() - Key ID" << info.itemID
+                           << "name changed from" << info.itemName << "to" << key->getName()
+                           << "- not deleting";
+                break;
+            }
+            mpHost->getKeyUnit()->unregisterKey(key);
+            delete key;
             break;
         }
         case EditorViewType::cmActionView: {
             TAction* action = mpHost->getActionUnit()->getAction(info.itemID);
-            if (action) {
-                mpHost->getActionUnit()->unregisterAction(action);
-                delete action;
+            if (!action) {
+                break;
             }
+            if (action->getName() != info.itemName) {
+                qWarning() << "EditorDeleteItemCommand::redo() - Action ID" << info.itemID
+                           << "name changed from" << info.itemName << "to" << action->getName()
+                           << "- not deleting";
+                break;
+            }
+            mpHost->getActionUnit()->unregisterAction(action);
+            delete action;
             break;
         }
         default:
