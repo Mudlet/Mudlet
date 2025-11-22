@@ -144,164 +144,201 @@ private:
     }
 
 private slots:
-    void initTestCase() {
-        tempDir = new QTemporaryDir();
-        QVERIFY2(tempDir->isValid(), "Failed to create temporary directory for tests");
-        qDebug() << "Test profile directory:" << tempDir->path();
-    }
+    void initTestCase();
+    void cleanupTestCase();
+    void init();
+    void testBasicTelnetUriParsing();
+    void testProfileDirectoryIsCreated();
+    void testProfileDataIsPersisted();
+    void testExistingProfileIsReused();
+    void testProfileNameUniqueness();
+    void testProfileNameSanitization();
+    void testEmptyHostHandling();
+    void testPortValidation();
+    void testUsernameExtraction();
+    void testPasswordExtraction();
+    void testDefaultPort();
+    void testIPv4AddressSupport();
+    void testIPv6AddressSupport();
+    void testRealWorldExample_MudClessidra();
+    void testCaseInsensitivity();
+};
 
-    void cleanupTestCase() {
-        delete tempDir;
-        tempDir = nullptr;
-    }
+void MudletTelnetUriIntegrationTest::initTestCase()
+{
+    tempDir = new QTemporaryDir();
+    QVERIFY2(tempDir->isValid(), "Failed to create temporary directory for tests");
+    qDebug() << "Test profile directory:" << tempDir->path();
+}
 
-    void init() {
-        // Clean up for each test
-        if (tempDir) {
-            QDir dir(tempDir->path());
-            for (const QString& entry : dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-                QDir(tempDir->path() + "/" + entry).removeRecursively();
-            }
+void MudletTelnetUriIntegrationTest::cleanupTestCase()
+{
+    delete tempDir;
+    tempDir = nullptr;
+}
+
+void MudletTelnetUriIntegrationTest::init()
+{
+    // Clean up for each test
+    if (tempDir) {
+        QDir dir(tempDir->path());
+        for (const QString& entry : dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            QDir(tempDir->path() + "/" + entry).removeRecursively();
         }
     }
+}
 
-    void testBasicTelnetUriParsing() {
-        QUrl url("telnet://mud.clessidra.it:4000");
-        QVERIFY2(url.isValid(), "telnet://mud.clessidra.it:4000 should be a valid URI");
-        QCOMPARE(url.scheme(), QString("telnet"));
-        QCOMPARE(url.host(), QString("mud.clessidra.it"));
-        QCOMPARE(url.port(), 4000);
-    }
+void MudletTelnetUriIntegrationTest::testBasicTelnetUriParsing()
+{
+    QUrl url("telnet://mud.clessidra.it:4000");
+    QVERIFY2(url.isValid(), "telnet://mud.clessidra.it:4000 should be a valid URI");
+    QCOMPARE(url.scheme(), QString("telnet"));
+    QCOMPARE(url.host(), QString("mud.clessidra.it"));
+    QCOMPARE(url.port(), 4000);
+}
 
-    void testProfileDirectoryIsCreated() {
-        QString host = "mud.clessidra.it";
-        int port = 4000;
-        QString profileName = addProfile(host, port, QString(), QString());
-        QVERIFY2(!profileName.isEmpty(), "addProfile should return a non-empty profile name");
-        QString profilePath = getProfileHomePath(profileName);
-        QVERIFY2(QDir(profilePath).exists(),
-                  QString("Profile directory should exist at: %1").arg(profilePath).toUtf8().constData());
-    }
+void MudletTelnetUriIntegrationTest::testProfileDirectoryIsCreated()
+{
+    QString host = "mud.clessidra.it";
+    int port = 4000;
+    QString profileName = addProfile(host, port, QString(), QString());
+    QVERIFY2(!profileName.isEmpty(), "addProfile should return a non-empty profile name");
+    QString profilePath = getProfileHomePath(profileName);
+    QVERIFY2(QDir(profilePath).exists(),
+              QString("Profile directory should exist at: %1").arg(profilePath).toUtf8().constData());
+}
 
-    void testProfileDataIsPersisted() {
-        QString host = "mud.example.com";
-        int port = 4000;
-        QString login = "testuser";
-        QString profileName = addProfile(host, port, login, QString());
-        QVERIFY2(!profileName.isEmpty(), "Profile should be created");
-        
-        QCOMPARE(readProfileData(profileName, "url"), host);
-        QCOMPARE(readProfileData(profileName, "port").toInt(), port);
-        QCOMPARE(readProfileData(profileName, "login"), login);
-    }
+void MudletTelnetUriIntegrationTest::testProfileDataIsPersisted()
+{
+    QString host = "mud.example.com";
+    int port = 4000;
+    QString login = "testuser";
+    QString profileName = addProfile(host, port, login, QString());
+    QVERIFY2(!profileName.isEmpty(), "Profile should be created");
+    
+    QCOMPARE(readProfileData(profileName, "url"), host);
+    QCOMPARE(readProfileData(profileName, "port").toInt(), port);
+    QCOMPARE(readProfileData(profileName, "login"), login);
+}
 
-    void testExistingProfileIsReused() {
-        QString host = "mud.example.com";
-        int port = 4000;
-        
-        QString profileName1 = addProfile(host, port, QString(), QString());
-        QVERIFY(!profileName1.isEmpty());
-        
-        QString profileName2 = addProfile(host, port, QString(), QString());
-        QCOMPARE(profileName1, profileName2);
-    }
+void MudletTelnetUriIntegrationTest::testExistingProfileIsReused()
+{
+    QString host = "mud.example.com";
+    int port = 4000;
+    
+    QString profileName1 = addProfile(host, port, QString(), QString());
+    QVERIFY(!profileName1.isEmpty());
+    
+    QString profileName2 = addProfile(host, port, QString(), QString());
+    QCOMPARE(profileName1, profileName2);
+}
 
-    void testProfileNameUniqueness() {
-        QString host = "mud.example.com";
-        
-        QString profile1 = addProfile(host, 4000, QString(), QString());
-        QString profile2 = addProfile(host, 4001, QString(), QString());
-        QString profile3 = addProfile(host, 4002, QString(), QString());
-        
-        QVERIFY(profile1 != profile2);
-        QVERIFY(profile2 != profile3);
-        QVERIFY(profile1 != profile3);
-    }
+void MudletTelnetUriIntegrationTest::testProfileNameUniqueness()
+{
+    QString host = "mud.example.com";
+    
+    QString profile1 = addProfile(host, 4000, QString(), QString());
+    QString profile2 = addProfile(host, 4001, QString(), QString());
+    QString profile3 = addProfile(host, 4002, QString(), QString());
+    
+    QVERIFY(profile1 != profile2);
+    QVERIFY(profile2 != profile3);
+    QVERIFY(profile1 != profile3);
+}
 
-    void testProfileNameSanitization() {
-        QString host = "mud/test:example?com";
-        int port = 4000;
-        QString profileName = addProfile(host, port, QString(), QString());
-        QVERIFY2(!profileName.isEmpty(), "Profile should be created even with invalid characters in host");
-        QVERIFY(!profileName.contains('/'));
-        QVERIFY(!profileName.contains(':'));
-        QVERIFY(!profileName.contains('?'));
-    }
+void MudletTelnetUriIntegrationTest::testProfileNameSanitization()
+{
+    QString host = "mud/test:example?com";
+    int port = 4000;
+    QString profileName = addProfile(host, port, QString(), QString());
+    QVERIFY2(!profileName.isEmpty(), "Profile should be created even with invalid characters in host");
+    QVERIFY(!profileName.contains('/'));
+    QVERIFY(!profileName.contains(':'));
+    QVERIFY(!profileName.contains('?'));
+}
 
-    void testEmptyHostHandling() {
-        QString profileName = addProfile(QString(), 4000, QString(), QString());
-        QVERIFY(!profileName.isEmpty());
-        QCOMPARE(profileName, QString("New Profile"));
-    }
+void MudletTelnetUriIntegrationTest::testEmptyHostHandling()
+{
+    QString profileName = addProfile(QString(), 4000, QString(), QString());
+    QVERIFY(!profileName.isEmpty());
+    QCOMPARE(profileName, QString("New Profile"));
+}
 
-    void testPortValidation() {
-        QUrl url1("telnet://mud.example.com:0");
-        QUrl url2("telnet://mud.example.com:65536");
-        QUrl url3("telnet://mud.example.com:4000");
-        
-        QVERIFY(!(url1.port() >= 1 && url1.port() <= 65535));
-        QVERIFY(!(url2.port() >= 1 && url2.port() <= 65535));
-        QVERIFY(url3.port() >= 1 && url3.port() <= 65535);
-    }
+void MudletTelnetUriIntegrationTest::testPortValidation()
+{
+    QUrl url1("telnet://mud.example.com:0");
+    QUrl url2("telnet://mud.example.com:65536");
+    QUrl url3("telnet://mud.example.com:4000");
+    
+    QVERIFY(!(url1.port() >= 1 && url1.port() <= 65535));
+    QVERIFY(!(url2.port() >= 1 && url2.port() <= 65535));
+    QVERIFY(url3.port() >= 1 && url3.port() <= 65535);
+}
 
-    void testUsernameExtraction() {
-        QUrl url("telnet://player@mud.example.com:4000");
-        QVERIFY(url.isValid());
-        QCOMPARE(url.userName(), QString("player"));
-        QCOMPARE(url.host(), QString("mud.example.com"));
-    }
+void MudletTelnetUriIntegrationTest::testUsernameExtraction()
+{
+    QUrl url("telnet://player@mud.example.com:4000");
+    QVERIFY(url.isValid());
+    QCOMPARE(url.userName(), QString("player"));
+    QCOMPARE(url.host(), QString("mud.example.com"));
+}
 
-    void testPasswordExtraction() {
-        QUrl url("telnet://player:secret@mud.example.com:4000");
-        QVERIFY(url.isValid());
-        QCOMPARE(url.userName(), QString("player"));
-        QCOMPARE(url.password(), QString("secret"));
-        QCOMPARE(url.host(), QString("mud.example.com"));
-    }
+void MudletTelnetUriIntegrationTest::testPasswordExtraction()
+{
+    QUrl url("telnet://player:secret@mud.example.com:4000");
+    QVERIFY(url.isValid());
+    QCOMPARE(url.userName(), QString("player"));
+    QCOMPARE(url.password(), QString("secret"));
+    QCOMPARE(url.host(), QString("mud.example.com"));
+}
 
-    void testDefaultPort() {
-        QUrl url("telnet://mud.example.com");
-        QVERIFY(url.isValid());
-        QCOMPARE(url.port(23), 23);
-    }
+void MudletTelnetUriIntegrationTest::testDefaultPort()
+{
+    QUrl url("telnet://mud.example.com");
+    QVERIFY(url.isValid());
+    QCOMPARE(url.port(23), 23);
+}
 
-    void testIPv4AddressSupport() {
-        QUrl url("telnet://192.168.1.100:4000");
-        QVERIFY(url.isValid());
-        QCOMPARE(url.host(), QString("192.168.1.100"));
-        QCOMPARE(url.port(), 4000);
-        
-        QString profileName = addProfile("192.168.1.100", 4000, QString(), QString());
-        QVERIFY(!profileName.isEmpty());
-    }
+void MudletTelnetUriIntegrationTest::testIPv4AddressSupport()
+{
+    QUrl url("telnet://192.168.1.100:4000");
+    QVERIFY(url.isValid());
+    QCOMPARE(url.host(), QString("192.168.1.100"));
+    QCOMPARE(url.port(), 4000);
+    
+    QString profileName = addProfile("192.168.1.100", 4000, QString(), QString());
+    QVERIFY(!profileName.isEmpty());
+}
 
-    void testIPv6AddressSupport() {
-        QUrl url("telnet://[::1]:4000");
-        QVERIFY(url.isValid());
-        QCOMPARE(url.host(), QString("::1"));
-        QCOMPARE(url.port(), 4000);
-    }
+void MudletTelnetUriIntegrationTest::testIPv6AddressSupport()
+{
+    QUrl url("telnet://[::1]:4000");
+    QVERIFY(url.isValid());
+    QCOMPARE(url.host(), QString("::1"));
+    QCOMPARE(url.port(), 4000);
+}
 
-    void testRealWorldExample_MudClessidra() {
-        QUrl url("telnet://mud.clessidra.it:4000");
-        QVERIFY(url.isValid());
-        QCOMPARE(url.scheme(), QString("telnet"));
-        QCOMPARE(url.host(), QString("mud.clessidra.it"));
-        QCOMPARE(url.port(), 4000);
-        
-        QString profileName = addProfile("mud.clessidra.it", 4000, QString(), QString());
-        QVERIFY(!profileName.isEmpty());
-        QVERIFY(QDir(getProfileHomePath(profileName)).exists());
-        QCOMPARE(readProfileData(profileName, "url"), QString("mud.clessidra.it"));
-        QCOMPARE(readProfileData(profileName, "port").toInt(), 4000);
-    }
+void MudletTelnetUriIntegrationTest::testRealWorldExample_MudClessidra()
+{
+    QUrl url("telnet://mud.clessidra.it:4000");
+    QVERIFY(url.isValid());
+    QCOMPARE(url.scheme(), QString("telnet"));
+    QCOMPARE(url.host(), QString("mud.clessidra.it"));
+    QCOMPARE(url.port(), 4000);
+    
+    QString profileName = addProfile("mud.clessidra.it", 4000, QString(), QString());
+    QVERIFY(!profileName.isEmpty());
+    QVERIFY(QDir(getProfileHomePath(profileName)).exists());
+    QCOMPARE(readProfileData(profileName, "url"), QString("mud.clessidra.it"));
+    QCOMPARE(readProfileData(profileName, "port").toInt(), 4000);
+}
 
-    void testCaseInsensitivity() {
-        QString profile1 = addProfile("MUD.Example.COM", 4000, QString(), QString());
-        QString profile2 = addProfile("mud.example.com", 4000, QString(), QString());
-        QCOMPARE(profile1, profile2);
-    }
-};
+void MudletTelnetUriIntegrationTest::testCaseInsensitivity()
+{
+    QString profile1 = addProfile("MUD.Example.COM", 4000, QString(), QString());
+    QString profile2 = addProfile("mud.example.com", 4000, QString(), QString());
+    QCOMPARE(profile1, profile2);
+}
 
 #include "MudletTelnetUriIntegrationTest.moc"
 QTEST_MAIN(MudletTelnetUriIntegrationTest)
