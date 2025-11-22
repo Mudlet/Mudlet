@@ -36,6 +36,14 @@ public:
     EditorViewType viewType() const override { return mViewType; }
     QList<int> affectedItemIDs() const override { return {mItemID}; }
     void remapItemID(int oldID, int newID) override;
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+
+    // Command ID for merging - must match EditorAddItemCommand::CommandId
+    static constexpr int CommandId = 1;
+
+    // Allow EditorAddItemCommand to access private members for merging
+    friend class EditorAddItemCommand;
 
 private:
     static QString generateText(EditorViewType viewType, const QString& itemName);

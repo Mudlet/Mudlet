@@ -226,3 +226,34 @@ QString EditorModifyPropertyCommand::generateText(EditorViewType viewType, const
         return QObject::tr("modify item \"%1\"").arg(itemName);
     }
 }
+
+int EditorModifyPropertyCommand::id() const
+{
+    return CommandId;
+}
+
+bool EditorModifyPropertyCommand::mergeWith(const QUndoCommand* other)
+{
+    // Try to cast to another ModifyPropertyCommand
+    auto* otherModify = dynamic_cast<const EditorModifyPropertyCommand*>(other);
+    if (!otherModify) {
+        return false;
+    }
+
+    // Only merge if same item and same view type
+    if (otherModify->mItemID != mItemID || otherModify->mViewType != mViewType) {
+        return false;
+    }
+
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "EditorModifyPropertyCommand::mergeWith() - Merging consecutive modify for" << otherModify->mItemName;
+#endif
+
+    // Keep our old state, but use the new command's new state
+    // This way: undo goes back to our original old state, redo applies the latest change
+    mNewStateXML = otherModify->mNewStateXML;
+    mItemName = otherModify->mItemName;
+    setText(otherModify->text());
+
+    return true;
+}

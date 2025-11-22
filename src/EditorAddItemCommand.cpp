@@ -20,6 +20,7 @@
 #include "EditorAddItemCommand.h"
 
 #include "EditorItemXMLHelpers.h"
+#include "EditorModifyPropertyCommand.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -627,4 +628,35 @@ QString EditorAddItemCommand::generateText(EditorViewType viewType, const QStrin
             return QObject::tr("add item \"%1\"").arg(itemName);
         }
     }
+}
+
+int EditorAddItemCommand::id() const
+{
+    return CommandId;
+}
+
+bool EditorAddItemCommand::mergeWith(const QUndoCommand* other)
+{
+    // Try to cast to ModifyPropertyCommand
+    auto* modifyCmd = dynamic_cast<const EditorModifyPropertyCommand*>(other);
+    if (!modifyCmd) {
+        return false;
+    }
+
+    // Only merge if same item and same view type
+    if (modifyCmd->mItemID != mItemID || modifyCmd->mViewType != mViewType) {
+        return false;
+    }
+
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "EditorAddItemCommand::mergeWith() - Merging modify command for" << modifyCmd->mItemName;
+#endif
+
+    // Update our text to reflect the final item name (for undo menu display)
+    setText(modifyCmd->text());
+
+    // The modify has already been applied to the actual item in the data model.
+    // When undo() is eventually called, it will capture the current (modified) state
+    // to mItemSnapshot, so redo will recreate the item with modifications.
+    return true;
 }

@@ -5595,12 +5595,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 {
     saveTrigger();
 
-    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New trigger group") : tr("New trigger");
-    if (mpUndoStack) {
-        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New trigger")
-        mpUndoStack->beginMacro(tr("add %1").arg(name));
-    }
     QStringList nameList { name };
     const QStringList patterns;
     QList<int> const patternKinds;
@@ -5704,10 +5699,8 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
         mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // End macro - this groups the Add command with any Modify commands from slot_triggerSelected()
-    if (mpUndoStack) {
-        mpUndoStack->endMacro();
-    }
+    // Note: Subsequent modify commands will automatically merge with this Add command
+    // via EditorAddItemCommand::mergeWith(), grouping them into one undo operation.
 }
 
 
@@ -5715,12 +5708,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
 {
     saveTimer();
 
-    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New timer group") : tr("New timer");
-    if (mpUndoStack) {
-        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New timer")
-        mpUndoStack->beginMacro(tr("add %1").arg(name));
-    }
     QStringList nameList = { name };
     const QString command = "";
     const QTime time;
@@ -5812,13 +5800,8 @@ void dlgTriggerEditor::addTimer(bool isFolder)
         mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // Process any pending events to ensure Modify commands are pushed before macro ends
-    QCoreApplication::processEvents();
-
-    // End macro - this groups the Add command with any Modify commands from slot_timerSelected()
-    if (mpUndoStack) {
-        mpUndoStack->endMacro();
-    }
+    // Note: Subsequent modify commands will automatically merge with this Add command
+    // via EditorAddItemCommand::mergeWith(), grouping them into one undo operation.
 }
 
 void dlgTriggerEditor::addVar(bool isFolder)
@@ -5891,12 +5874,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
 {
     saveKey();
 
-    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder? tr("New key group") : tr("New key");
-    if (mpUndoStack) {
-        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New key")
-        mpUndoStack->beginMacro(tr("add %1").arg(name));
-    }
     QStringList nameList = { name };
     const QString script = "";
 
@@ -5987,13 +5965,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
         mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // Process any pending events to ensure Modify commands are pushed before macro ends
-    QCoreApplication::processEvents();
-
-    // End macro - this groups the Add command with any Modify commands from slot_keySelected()
-    if (mpUndoStack) {
-        mpUndoStack->endMacro();
-    }
+    // Note: Subsequent modify commands will automatically merge with this Add command
+    // via EditorAddItemCommand::mergeWith(), grouping them into one undo operation.
 }
 
 
@@ -6001,12 +5974,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
 {
     saveAlias();
 
-    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New alias group") : tr("New alias");
-    if (mpUndoStack) {
-        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New alias")
-        mpUndoStack->beginMacro(tr("add %1").arg(name));
-    }
     QStringList nameList = { name };
     const QString regex = "";
     const QString command = "";
@@ -6104,22 +6072,15 @@ void dlgTriggerEditor::addAlias(bool isFolder)
         mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // End macro - this groups the Add command with any Modify commands from slot_aliasSelected()
-    if (mpUndoStack) {
-        mpUndoStack->endMacro();
-    }
+    // Note: Subsequent modify commands will automatically merge with this Add command
+    // via EditorAddItemCommand::mergeWith(), grouping them into one undo operation.
 }
 
 void dlgTriggerEditor::addAction(bool isFolder)
 {
     saveAction();
 
-    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New menu") : tr("New button");
-    if (mpUndoStack) {
-        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New button")
-        mpUndoStack->beginMacro(tr("add %1").arg(name));
-    }
     QStringList nameList = { name };
     const QString cmdButtonUp = "";
     const QString cmdButtonDown = "";
@@ -6219,13 +6180,8 @@ void dlgTriggerEditor::addAction(bool isFolder)
         mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // Process any pending events to ensure Modify commands are pushed before macro ends
-    QCoreApplication::processEvents();
-
-    // End macro - this groups the Add command with any Modify commands from slot_actionSelected()
-    if (mpUndoStack) {
-        mpUndoStack->endMacro();
-    }
+    // Note: Subsequent modify commands will automatically merge with this Add command
+    // via EditorAddItemCommand::mergeWith(), grouping them into one undo operation.
 }
 
 
@@ -6233,12 +6189,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
 {
     saveScript();
 
-    // Begin macro to group Add + initial Modify into one undo operation
     QString name = isFolder ? tr("New script group") : tr("New script");
-    if (mpUndoStack) {
-        //: Undo/redo text for adding a new item. %1 = item name (e.g., "New script")
-        mpUndoStack->beginMacro(tr("add %1").arg(name));
-    }
     QStringList nameList = { name };
     const QString script;
 
@@ -6328,10 +6279,8 @@ void dlgTriggerEditor::addScript(bool isFolder)
         mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // End macro - this groups the Add command with any Modify commands from slot_scriptsSelected()
-    if (mpUndoStack) {
-        mpUndoStack->endMacro();
-    }
+    // Note: Subsequent modify commands will automatically merge with this Add command
+    // via EditorAddItemCommand::mergeWith(), grouping them into one undo operation.
 }
 
 void dlgTriggerEditor::selectTriggerByID(int id)
