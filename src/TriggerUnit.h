@@ -98,6 +98,7 @@ private:
     int statsActiveItems = 0;
     int statsPatternsTotal = 0;
     int statsPatternsActive = 0;
+    bool mIsProcessing = false;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H
