@@ -6756,14 +6756,7 @@ void dlgTriggerEditor::saveTimer()
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML;
-        pugi::xml_document oldDoc;
-        auto oldRoot = oldDoc.append_child("TimerSnapshot");
-        XMLexport oldExporter(pT);
-        oldExporter.writeTimer(pT, oldRoot);
-        std::ostringstream oldOss;
-        oldDoc.save(oldOss);
-        oldStateXML = QString::fromStdString(oldOss.str());
+        QString oldStateXML = exportTimerToXML(pT);
 
         pT->setName(name);
         const QString command = mpTimersMainArea->lineEdit_timer_command->text();
@@ -6866,14 +6859,7 @@ void dlgTriggerEditor::saveTimer()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML;
-        pugi::xml_document newDoc;
-        auto newRoot = newDoc.append_child("TimerSnapshot");
-        XMLexport newExporter(pT);
-        newExporter.writeTimer(pT, newRoot);
-        std::ostringstream newOss;
-        newDoc.save(newOss);
-        newStateXML = QString::fromStdString(newOss.str());
+        QString newStateXML = exportTimerToXML(pT);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6939,14 +6925,7 @@ void dlgTriggerEditor::saveAlias()
     TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML;
-        pugi::xml_document oldDoc;
-        auto oldRoot = oldDoc.append_child("AliasSnapshot");
-        XMLexport oldExporter(pT);
-        oldExporter.writeAlias(pT, oldRoot);
-        std::ostringstream oldOss;
-        oldDoc.save(oldOss);
-        oldStateXML = QString::fromStdString(oldOss.str());
+        QString oldStateXML = exportAliasToXML(pT);
 
         pT->setName(name);
         pT->setCommand(substitution);
@@ -7057,14 +7036,7 @@ void dlgTriggerEditor::saveAlias()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML;
-        pugi::xml_document newDoc;
-        auto newRoot = newDoc.append_child("AliasSnapshot");
-        XMLexport newExporter(pT);
-        newExporter.writeAlias(pT, newRoot);
-        std::ostringstream newOss;
-        newDoc.save(newOss);
-        newStateXML = QString::fromStdString(newOss.str());
+        QString newStateXML = exportAliasToXML(pT);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -7124,14 +7096,7 @@ void dlgTriggerEditor::saveAction()
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML;
-        pugi::xml_document oldDoc;
-        auto oldRoot = oldDoc.append_child("ActionSnapshot");
-        XMLexport oldExporter(pA);
-        oldExporter.writeAction(pA, oldRoot);
-        std::ostringstream oldOss;
-        oldDoc.save(oldOss);
-        oldStateXML = QString::fromStdString(oldOss.str());
+        QString oldStateXML = exportActionToXML(pA);
 
         // Check if data has been changed before it gets updated.
         bool actionDataChanged = false;
@@ -7247,14 +7212,7 @@ void dlgTriggerEditor::saveAction()
         }
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML;
-        pugi::xml_document newDoc;
-        auto newRoot = newDoc.append_child("ActionSnapshot");
-        XMLexport newExporter(pA);
-        newExporter.writeAction(pA, newRoot);
-        std::ostringstream newOss;
-        newDoc.save(newOss);
-        newStateXML = QString::fromStdString(newOss.str());
+        QString newStateXML = exportActionToXML(pA);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -7340,14 +7298,7 @@ void dlgTriggerEditor::saveScript()
     }
 
     // Capture OLD state before modifications (for undo)
-    QString oldStateXML;
-    pugi::xml_document oldDoc;
-    auto oldRoot = oldDoc.append_child("ScriptSnapshot");
-    XMLexport oldExporter(pT);
-    oldExporter.writeScript(pT, oldRoot);
-    std::ostringstream oldOss;
-    oldDoc.save(oldOss);
-    oldStateXML = QString::fromStdString(oldOss.str());
+    QString oldStateXML = exportScriptToXML(pT);
 
     pT->setName(name);
     pT->setEventHandlerList(handlerList);
@@ -7453,14 +7404,7 @@ void dlgTriggerEditor::saveScript()
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
     // Capture NEW state after modifications (for redo)
-    QString newStateXML;
-    pugi::xml_document newDoc;
-    auto newRoot = newDoc.append_child("ScriptSnapshot");
-    XMLexport newExporter(pT);
-    newExporter.writeScript(pT, newRoot);
-    std::ostringstream newOss;
-    newDoc.save(newOss);
-    newStateXML = QString::fromStdString(newOss.str());
+    QString newStateXML = exportScriptToXML(pT);
 
     // Only push undo command if something actually changed
     if (oldStateXML != newStateXML) {
@@ -7761,14 +7705,7 @@ void dlgTriggerEditor::saveKey()
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML;
-        pugi::xml_document oldDoc;
-        auto oldRoot = oldDoc.append_child("KeySnapshot");
-        XMLexport oldExporter(pT);
-        oldExporter.writeKey(pT, oldRoot);
-        std::ostringstream oldOss;
-        oldDoc.save(oldOss);
-        oldStateXML = QString::fromStdString(oldOss.str());
+        QString oldStateXML = exportKeyToXML(pT);
 
         const QString old_name = pT->getName();
         pItem->setText(0, name);
@@ -7877,14 +7814,7 @@ void dlgTriggerEditor::saveKey()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML;
-        pugi::xml_document newDoc;
-        auto newRoot = newDoc.append_child("KeySnapshot");
-        XMLexport newExporter(pT);
-        newExporter.writeKey(pT, newRoot);
-        std::ostringstream newOss;
-        newDoc.save(newOss);
-        newStateXML = QString::fromStdString(newOss.str());
+        QString newStateXML = exportKeyToXML(pT);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
