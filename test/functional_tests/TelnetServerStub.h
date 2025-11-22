@@ -35,7 +35,7 @@ public:
     explicit TelnetServerStub(QObject* parent = nullptr);
 
     void start(const QString& host, quint16 port);
-    void setWelcomeMessage(const QString& msg) { mpWelcomeMessage = msg; }
+    void setWelcomeMessage(const QString& message) { mpWelcomeMessage = message; }
 
 private slots:
     void onNewConnection();
