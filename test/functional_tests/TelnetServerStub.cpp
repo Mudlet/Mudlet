@@ -22,7 +22,9 @@
 #include <QTimer>
 #include <QHostAddress>
 #include <QDebug>
+
 #include "TelnetServerStub.h"
+#include "utils.h"
 
 TelnetServerStub::TelnetServerStub(QObject* parent)
     : QTcpServer(parent)
@@ -33,11 +35,9 @@ TelnetServerStub::TelnetServerStub(QObject* parent)
 void TelnetServerStub::start(const QString& host, quint16 port)
 {
     if (listen(QHostAddress(host), port)) {
-        qInfo().noquote()
-            << QStringLiteral("✅ TelnetServerStub listening on %1:%2").arg(host).arg(port);
+        qInfo().noquote() << qsl("✅ TelnetServerStub listening on %1:%2").arg(host).arg(port);
     } else {
-        qCritical().noquote()
-            << QStringLiteral("❌ Failed to start TelnetServerStub: %1").arg(errorString());
+        qCritical().noquote() << qsl("❌ Failed to start TelnetServerStub: %1").arg(errorString());
     }
 }
 
@@ -49,8 +49,7 @@ void TelnetServerStub::onNewConnection()
         qWarning() << "⚠️ onNewConnection called but no pending connection.";
         return;
     }
-    qInfo().noquote() << QStringLiteral("🔌 Client connected: %1")
-                         .arg(client->peerAddress().toString());
+    qInfo().noquote() << qsl("🔌 Client connected: %1").arg(client->peerAddress().toString());
 
     QPointer<QTcpSocket> safeClient = client;
 
@@ -62,7 +61,7 @@ void TelnetServerStub::onNewConnection()
         const auto bytesWritten = safeClient->write(welcomeMessage.toUtf8() + "\r\n");
         safeClient->flush();
         if (bytesWritten <= 0) {
-            qWarning().noquote() << QStringLiteral("⚠️ Failed to send welcome message to %1")
+            qWarning().noquote() << qsl("⚠️ Failed to send welcome message to %1")
                                     .arg(safeClient->peerAddress().toString());
         }
     });
@@ -72,8 +71,7 @@ void TelnetServerStub::onNewConnection()
         if (!safeClient) {
             return;
         }
-        qInfo().noquote() << QStringLiteral("Client disconnected: %1")
-                             .arg(safeClient->peerAddress().toString());
+        qInfo().noquote() << qsl("Client disconnected: %1").arg(safeClient->peerAddress().toString());
         safeClient->deleteLater();
     });
 }
