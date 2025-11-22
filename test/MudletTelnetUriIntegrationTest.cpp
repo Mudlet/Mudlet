@@ -28,123 +28,19 @@
 
 /**
  * Integration tests for telnet:// URI support
- *
- * These tests verify the complete workflow:
- * 1. URI parsing and validation
- * 2. Profile creation with proper directory structure
- * 3. Profile data persistence
- * 4. Profile reuse for existing connections
  */
 class MudletTelnetUriIntegrationTest : public QObject {
-    Q_OBJECT
-
-public:
-    ~MudletTelnetUriIntegrationTest() override;
+Q_OBJECT
 
 private:
     QTemporaryDir* tempDir = nullptr;
 
-    // Helper function to simulate mudlet's profile directory structure
-    QString getProfileHomePath(const QString& profileName) {
-        if (!tempDir) return QString();
-        return tempDir->path() + "/" + profileName;
-    }
-
-    QString getProfileDataItemPath(const QString& profileName, const QString& item) {
-        if (!tempDir) return QString();
-        return tempDir->path() + "/" + profileName + "/" + item;
-    }
-
-    // Simulate mudlet::writeProfileData
-    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what) {
-        QString filePath = getProfileDataItemPath(profile, item);
-        QFileInfo fileInfo(filePath);
-        QDir dir;
-        if (!dir.mkpath(fileInfo.absolutePath())) {
-            return {false, "Failed to create directory"};
-        }
-        QFile file(filePath);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-            return {false, file.errorString()};
-        }
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << what;
-        file.close();
-        return {true, QString()};
-    }
-
-    // Simulate mudlet::readProfileData
-    QString readProfileData(const QString& profile, const QString& item) {
-        QString filePath = getProfileDataItemPath(profile, item);
-        QFile file(filePath);
-        if (!file.open(QIODevice::ReadOnly)) {
-            return QString();
-        }
-        QDataStream ifs(&file);
-        ifs.setVersion(QDataStream::Qt_5_12);
-        QString ret;
-        ifs >> ret;
-        file.close();
-        return ret;
-    }
-
-    // Simulate mudlet::profileExists
-    bool profileExists(const QString& profileName) {
-        QString profilePath = getProfileHomePath(profileName);
-        return QDir(profilePath).exists();
-    }
-
-    // Simulate mudlet::addProfile
-    QString addProfile(const QString& host, const int port, const QString& login, const QString& password) {
-        qDebug() << "addProfile() - Creating profile for host:" << host << "port:" << port;
-        
-        if (!tempDir) return QString();
-
-        // Check if a profile with the same host and port already exists
-        QStringList profileNames = QDir(tempDir->path()).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-        for (const auto& profileName : profileNames) {
-            if (readProfileData(profileName, "url").compare(host, Qt::CaseInsensitive) == 0
-                 && readProfileData(profileName, "port").toInt() == port) {
-                qDebug() << "addProfile() - Found existing profile:" << profileName;
-                return profileName;
-            }
-        }
-
-        // Create a new profile with unique name derived from host
-        QString baseName = host;
-        if (baseName.isEmpty()) {
-            baseName = "New Profile";
-        }
-        baseName.remove(QRegularExpression(R"([/\\:*?"<>|])"));
-        if (baseName.isEmpty()) {
-            baseName = "New Profile";
-        }
-
-        QString newProfileName = baseName;
-        int counter = 1;
-        while (profileExists(newProfileName)) {
-            newProfileName = baseName + QString(" (%1)").arg(counter);
-            counter++;
-        }
-
-        qDebug() << "addProfile() - Creating new profile:" << newProfileName;
-
-        // Create the profile directory BEFORE writing data
-        QDir dir;
-        if (!dir.mkpath(getProfileHomePath(newProfileName))) {
-            qWarning() << "addProfile() - Failed to create profile directory for:" << newProfileName;
-            return QString();
-        }
-
-        // Save profile data
-        writeProfileData(newProfileName, "url", host);
-        writeProfileData(newProfileName, "port", QString::number(port));
-        writeProfileData(newProfileName, "login", login);
-
-        qDebug() << "addProfile() - Successfully created profile:" << newProfileName;
-        return newProfileName;
-    }
+    QString getProfileHomePath(const QString& profileName);
+    QString getProfileDataItemPath(const QString& profileName, const QString& item);
+    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    QString readProfileData(const QString& profile, const QString& item);
+    bool profileExists(const QString& profileName);
+    QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
 
 private slots:
     void initTestCase();
@@ -167,7 +63,108 @@ private slots:
     void testCaseInsensitivity();
 };
 
-MudletTelnetUriIntegrationTest::~MudletTelnetUriIntegrationTest() = default;
+QString MudletTelnetUriIntegrationTest::getProfileHomePath(const QString& profileName)
+{
+    if (!tempDir) return QString();
+    return tempDir->path() + "/" + profileName;
+}
+
+QString MudletTelnetUriIntegrationTest::getProfileDataItemPath(const QString& profileName, const QString& item)
+{
+    if (!tempDir) return QString();
+    return tempDir->path() + "/" + profileName + "/" + item;
+}
+
+QPair<bool, QString> MudletTelnetUriIntegrationTest::writeProfileData(const QString& profile, const QString& item, const QString& what)
+{
+    QString filePath = getProfileDataItemPath(profile, item);
+    QFileInfo fileInfo(filePath);
+    QDir dir;
+    if (!dir.mkpath(fileInfo.absolutePath())) {
+        return {false, "Failed to create directory"};
+    }
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        return {false, file.errorString()};
+    }
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << what;
+    file.close();
+    return {true, QString()};
+}
+
+QString MudletTelnetUriIntegrationTest::readProfileData(const QString& profile, const QString& item)
+{
+    QString filePath = getProfileDataItemPath(profile, item);
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QString();
+    }
+    QDataStream ifs(&file);
+    ifs.setVersion(QDataStream::Qt_5_12);
+    QString ret;
+    ifs >> ret;
+    file.close();
+    return ret;
+}
+
+bool MudletTelnetUriIntegrationTest::profileExists(const QString& profileName)
+{
+    QString profilePath = getProfileHomePath(profileName);
+    return QDir(profilePath).exists();
+}
+
+QString MudletTelnetUriIntegrationTest::addProfile(const QString& host, const int port, const QString& login, const QString& password)
+{
+    qDebug() << "addProfile() - Creating profile for host:" << host << "port:" << port;
+    
+    if (!tempDir) return QString();
+
+    // Check if a profile with the same host and port already exists
+    QStringList profileNames = QDir(tempDir->path()).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const auto& profileName : profileNames) {
+        if (readProfileData(profileName, "url").compare(host, Qt::CaseInsensitive) == 0
+             && readProfileData(profileName, "port").toInt() == port) {
+            qDebug() << "addProfile() - Found existing profile:" << profileName;
+            return profileName;
+        }
+    }
+
+    // Create a new profile with unique name derived from host
+    QString baseName = host;
+    if (baseName.isEmpty()) {
+        baseName = "New Profile";
+    }
+    baseName.remove(QRegularExpression(R"([/\\:*?"<>|])"));
+    if (baseName.isEmpty()) {
+        baseName = "New Profile";
+    }
+
+    QString newProfileName = baseName;
+    int counter = 1;
+    while (profileExists(newProfileName)) {
+        newProfileName = baseName + QString(" (%1)").arg(counter);
+        counter++;
+    }
+
+    qDebug() << "addProfile() - Creating new profile:" << newProfileName;
+
+    // Create the profile directory BEFORE writing data
+    QDir dir;
+    if (!dir.mkpath(getProfileHomePath(newProfileName))) {
+        qWarning() << "addProfile() - Failed to create profile directory for:" << newProfileName;
+        return QString();
+    }
+
+    // Save profile data
+    writeProfileData(newProfileName, "url", host);
+    writeProfileData(newProfileName, "port", QString::number(port));
+    writeProfileData(newProfileName, "login", login);
+
+    qDebug() << "addProfile() - Successfully created profile:" << newProfileName;
+    return newProfileName;
+}
 
 void MudletTelnetUriIntegrationTest::initTestCase()
 {
