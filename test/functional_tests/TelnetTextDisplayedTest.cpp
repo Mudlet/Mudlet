@@ -41,7 +41,6 @@ private:
     const QString mpPort = "4000";
     const QString mpLocalhost = "127.0.0.1";
 
-
 private slots:
     void initTestCase()
     {
@@ -54,9 +53,7 @@ private slots:
         mpServer->start(mpLocalhost, mpPort.toUShort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        mudlet::self()->takeOwnershipOfInstanceCoordinator(
-            std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator")
-        );
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         deleteProfileDirectory(mpHostname);
     }

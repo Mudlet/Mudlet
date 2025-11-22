@@ -6,7 +6,6 @@ set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
 )
 
-
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file} ${FUNCTIONAL_TEST_UTILS})

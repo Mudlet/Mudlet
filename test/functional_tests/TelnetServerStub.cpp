@@ -43,7 +43,7 @@ void TelnetServerStub::start(const QString& host, quint16 port)
 
 void TelnetServerStub::onNewConnection()
 {
-    QTcpSocket*             client = nextPendingConnection();
+    QTcpSocket* client = nextPendingConnection();
 
     if (!client) {
         qWarning() << "⚠️ onNewConnection called but no pending connection.";
@@ -52,7 +52,7 @@ void TelnetServerStub::onNewConnection()
     qInfo().noquote() << QStringLiteral("🔌 Client connected: %1")
                          .arg(client->peerAddress().toString());
 
-    QPointer<QTcpSocket>    safeClient = client;
+    QPointer<QTcpSocket> safeClient = client;
 
     QTimer::singleShot(100, [safeClient, welcomeMessage = mpWelcomeMessage]()
     {
