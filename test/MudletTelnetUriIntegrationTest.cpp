@@ -38,6 +38,9 @@
 class MudletTelnetUriIntegrationTest : public QObject {
     Q_OBJECT
 
+public:
+    ~MudletTelnetUriIntegrationTest() override;
+
 private:
     QTemporaryDir* tempDir = nullptr;
 
@@ -163,6 +166,8 @@ private slots:
     void testRealWorldExample_MudClessidra();
     void testCaseInsensitivity();
 };
+
+MudletTelnetUriIntegrationTest::~MudletTelnetUriIntegrationTest() = default;
 
 void MudletTelnetUriIntegrationTest::initTestCase()
 {
