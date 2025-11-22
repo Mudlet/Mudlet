@@ -23,6 +23,7 @@
 #include "EditorCommand.h"
 
 #include <QList>
+#include <QPair>
 #include <QString>
 
 // Undo command for deleting items. Stores XML snapshots of deleted items (including children).

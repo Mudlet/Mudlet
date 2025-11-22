@@ -48,6 +48,7 @@
 #include "TrailingWhitespaceMarker.h"
 #include "EditorAddItemCommand.h"
 #include "EditorDeleteItemCommand.h"
+#include "EditorItemXMLHelpers.h"
 #include "EditorModifyPropertyCommand.h"
 #include "EditorMoveItemCommand.h"
 #include "EditorToggleActiveCommand.h"
@@ -6564,14 +6565,7 @@ void dlgTriggerEditor::saveTrigger()
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML;
-        pugi::xml_document oldDoc;
-        auto oldRoot = oldDoc.append_child("TriggerSnapshot");
-        XMLexport oldExporter(pT);
-        oldExporter.writeTrigger(pT, oldRoot);
-        std::ostringstream oldOss;
-        oldDoc.save(oldOss);
-        oldStateXML = QString::fromStdString(oldOss.str());
+        QString oldStateXML = exportTriggerToXML(pT);
 
         pT->setName(name);
         pT->setCommand(command);
@@ -6720,14 +6714,7 @@ void dlgTriggerEditor::saveTrigger()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML;
-        pugi::xml_document newDoc;
-        auto newRoot = newDoc.append_child("TriggerSnapshot");
-        XMLexport newExporter(pT);
-        newExporter.writeTrigger(pT, newRoot);
-        std::ostringstream newOss;
-        newDoc.save(newOss);
-        newStateXML = QString::fromStdString(newOss.str());
+        QString newStateXML = exportTriggerToXML(pT);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {

@@ -360,8 +360,14 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot) {
         return false;
     }
 
+    QString xml = decompressXML(xmlSnapshot);
+    if (xml.isEmpty()) {
+        qWarning() << "updateTriggerFromXML: Failed to decompress XML";
+        return false;
+    }
+
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xmlSnapshot.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
     if (!result) {
         qWarning() << "updateTriggerFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -547,8 +553,14 @@ bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot) {
         return false;
     }
 
+    QString xml = decompressXML(xmlSnapshot);
+    if (xml.isEmpty()) {
+        qWarning() << "updateAliasFromXML: Failed to decompress XML";
+        return false;
+    }
+
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xmlSnapshot.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
     if (!result) {
         qWarning() << "updateAliasFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -701,8 +713,14 @@ bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot) {
         return false;
     }
 
+    QString xml = decompressXML(xmlSnapshot);
+    if (xml.isEmpty()) {
+        qWarning() << "updateTimerFromXML: Failed to decompress XML";
+        return false;
+    }
+
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xmlSnapshot.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
     if (!result) {
         qWarning() << "updateTimerFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -860,8 +878,14 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot) {
         return false;
     }
 
+    QString xml = decompressXML(xmlSnapshot);
+    if (xml.isEmpty()) {
+        qWarning() << "updateScriptFromXML: Failed to decompress XML";
+        return false;
+    }
+
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xmlSnapshot.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
     if (!result) {
         qWarning() << "updateScriptFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -1020,8 +1044,14 @@ bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot) {
         return false;
     }
 
+    QString xml = decompressXML(xmlSnapshot);
+    if (xml.isEmpty()) {
+        qWarning() << "updateKeyFromXML: Failed to decompress XML";
+        return false;
+    }
+
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xmlSnapshot.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
     if (!result) {
         qWarning() << "updateKeyFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -1199,8 +1229,14 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot) {
         return false;
     }
 
+    QString xml = decompressXML(xmlSnapshot);
+    if (xml.isEmpty()) {
+        qWarning() << "updateActionFromXML: Failed to decompress XML";
+        return false;
+    }
+
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xmlSnapshot.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
     if (!result) {
         qWarning() << "updateActionFromXML: Failed to parse XML:" << result.description();
         return false;
