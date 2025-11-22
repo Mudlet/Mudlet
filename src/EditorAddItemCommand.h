@@ -48,6 +48,10 @@ public:
     // Includes the item itself and all its descendants
     QList<QPair<int, int>> getIDChanges() const { return mIDChanges; }
 
+    // Get parent ID and position for selection handling when item is deleted (undo)
+    int getParentID() const { return mParentID; }
+    int getPositionInParent() const { return mPositionInParent; }
+
     // Command ID for merging - must match EditorModifyPropertyCommand::id()
     static constexpr int CommandId = 1;
 
