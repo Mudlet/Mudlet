@@ -363,6 +363,13 @@ void TTreeWidget::dragEnterEvent(QDragEnterEvent* event)
     QTreeWidget::dragEnterEvent(event);
 }
 
+void TTreeWidget::dragLeaveEvent(QDragLeaveEvent* event)
+{
+    // Reset flag when drag is cancelled (user presses Esc, drags outside, etc.)
+    mIsDropAction = false;
+    QTreeWidget::dragLeaveEvent(event);
+}
+
 void TTreeWidget::dropEvent(QDropEvent* event)
 {
     QTreeWidgetItem* pItem = itemAt(event->position().toPoint());
@@ -382,6 +389,9 @@ void TTreeWidget::dropEvent(QDropEvent* event)
     }
     mIsDropAction = true;
     QTreeWidget::dropEvent(event);
+
+    // Reset flag after drop completes
+    mIsDropAction = false;
 }
 
 void TTreeWidget::beginInsertRows(const QModelIndex& parent, int first, int last)

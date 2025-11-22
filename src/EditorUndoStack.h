@@ -58,6 +58,17 @@ public:
 
     // Get the most recently executed command (either undo or redo)
     // Returns nullptr if no commands have been executed yet
+    //
+    // LIFETIME WARNING: The returned pointer is owned by QUndoStack and becomes invalid if:
+    // - The stack is cleared (clear())
+    // - The command is removed
+    // - Any stack modification occurs (push, beginMacro, etc.)
+    //
+    // The pointer MUST be used immediately and MUST NOT be stored.
+    // Usage pattern:
+    //   if (auto* cmd = dynamic_cast<const SomeCommand*>(stack->getLastExecutedCommand())) {
+    //       cmd->doSomething();  // Use immediately, don't store
+    //   }
     const QUndoCommand* getLastExecutedCommand() const;
 
 signals:
