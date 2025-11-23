@@ -45,10 +45,11 @@ QString GLWidgetFactory::getWidgetTypeName(QOpenGLWidget* widget)
     if (!widget) {
         return QStringLiteral("null");
     }
-    
+
     if (dynamic_cast<ModernGLWidget*>(widget)) {
         return QStringLiteral("ModernGLWidget");
-    } else if (dynamic_cast<GLWidget*>(widget)) {
+    }
+    if (dynamic_cast<GLWidget*>(widget)) {
         return QStringLiteral("GLWidget");
     }
     return QStringLiteral("Unknown");

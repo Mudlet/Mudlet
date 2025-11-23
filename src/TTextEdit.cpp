@@ -2381,7 +2381,8 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
             if (value >= 0xFDD0 && value <= 0xFDEF) {
                 //: Unicode codepoint in range U+FFD0 to U+FDEF - not a character
                 return htmlCenter(tr("{noncharacter}")); break;
-            } else if ((value >= 0xFFF0 && value <= 0xFFF8) || value == 0xFFFE || value == 0xFFFF) {
+            }
+            if ((value >= 0xFFF0 && value <= 0xFFF8) || value == 0xFFFE || value == 0xFFFF) {
                 //: Unicode codepoint in range U+FFFx - not a character.
                 return htmlCenter(tr("{noncharacter}")); break;
             }
@@ -2406,10 +2407,9 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
             if ((value % 0x10000 == 0xFFFE) || (value % 0x10000 == 0xFFFF)) {
                 //: Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.
                 return htmlCenter(tr("{noncharacter}")); break;
-            } else {
-                // The '%' is the QStringBuilder append operator here:
-                return htmlCenter(first % second);
             }
+            // The '%' is the QStringBuilder append operator here:
+            return htmlCenter(first % second);
         }
     }
     // clang-format on

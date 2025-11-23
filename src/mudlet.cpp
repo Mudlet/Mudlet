@@ -5420,13 +5420,13 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     // load an old profile if there is any
-    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
-        pHost = mHostManager.getHost(profile_name);
-        if (!pHost) {
-            return pHost;
-        }
+    if (!mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+        return pHost;
     }
-    return pHost;
+    pHost = mHostManager.getHost(profile_name);
+    if (!pHost) {
+        return pHost;
+    }
 
     LuaInterface* lI = pHost->getLuaInterface();
     lI->getVars(true);
@@ -6739,19 +6739,18 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
         if (egg) {
             auto eggFileName = qsl(":/splash/Mudlet_splashscreen_other_%1.png").arg(egg, 2, 10, QLatin1Char('0'));
             return QImage(eggFileName);
-        } else {
-            // For the zeroth case just rotate the picture 180 degrees:
-            const QImage original(releaseVersion
-                                    ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                                    : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
-                                                                     : qsl(":/splash/Mudlet_splashscreen_development.png"));
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-            return original.flipped(Qt::Horizontal|Qt::Vertical);
-#else
-            // Deprecated in 6.9 and due for removal in 6.13:
-            return original.mirrored(true, true);
-#endif
         }
+        // For the zeroth case just rotate the picture 180 degrees:
+        const QImage original(releaseVersion
+                                ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                                : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                                 : qsl(":/splash/Mudlet_splashscreen_development.png"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+        return original.flipped(Qt::Horizontal|Qt::Vertical);
+#else
+        // Deprecated in 6.9 and due for removal in 6.13:
+        return original.mirrored(true, true);
+#endif
     }
     return QImage(releaseVersion
                               ? qsl(":/splash/Mudlet_splashscreen_main.png")
