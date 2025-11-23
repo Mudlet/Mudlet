@@ -27,6 +27,7 @@
 
 #include <QMultiMap>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 
 #include <list>
@@ -69,7 +70,7 @@ public:
     void doCleanup();
 
     QMultiMap<QString, TAlias*> mLookupTable;
-    std::list<TAlias*> mCleanupList;
+    QSet<TAlias*> mCleanupSet;
     QList<TAlias*> uninstallList;
 
 
