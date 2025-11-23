@@ -2713,6 +2713,43 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelFont
+int TLuaInterpreter::setLabelFont(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    const QString fontName = getVerifiedString(L, __func__, 2, "font name");
+    
+    if (fontName.trimmed().isEmpty()) {
+        return warnArgumentValue(L, __func__, "font name cannot be empty");
+    }
+
+    Host& host = getHostFromLua(L);
+    
+    // Check if font is available
+    if (!mudlet::self()->getAvailableFonts().contains(fontName, Qt::CaseInsensitive)) {
+        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+    }
+
+    auto pLabel = host.mpConsole->mLabelMap.value(labelName);
+    if (!pLabel) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    // Get point size from optional 3rd argument, or use current font size
+    int pointSize = pLabel->font().pointSize();
+    if (lua_gettop(L) >= 3) {
+        pointSize = getVerifiedInt(L, __func__, 3, "point size", true);
+        if (pointSize < 1) {
+            return warnArgumentValue(L, __func__, "font size must be at least 1");
+        }
+    }
+
+    pLabel->setFontFromProfile(fontName, pointSize);
+    
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelClickCallback
 int TLuaInterpreter::setLabelClickCallback(lua_State* L)
 {

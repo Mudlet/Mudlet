@@ -65,6 +65,7 @@ public:
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
     void setClickThrough(bool clickthrough);
+    void setFontFromProfile(const QString& fontName, int pointSize);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();

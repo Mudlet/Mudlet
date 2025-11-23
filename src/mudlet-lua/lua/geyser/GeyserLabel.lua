@@ -263,6 +263,10 @@ function Geyser.Label:setFont(font)
     debugc(err)
   end
   self.font = font
+  -- Apply the profile's antialiasing settings to the label
+  if font ~= "" then
+    setLabelFont(self.name, font, self.fontSize)
+  end
   self:echo()
 end
 
@@ -434,6 +438,10 @@ function Geyser.Label:setFontSize(fontSize)
   self.formatTable.fontSize = fontSize
   self.format = self.format:gsub("%d", "")
   self.format = self.format .. fontSize
+  -- Apply the profile's antialiasing settings to the label when font size changes
+  if self.font and self.font ~= "" then
+    setLabelFont(self.name, self.font, fontSize)
+  end
   self:echo()
 end
 

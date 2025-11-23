@@ -1108,31 +1108,8 @@ void Host::setDisplayFontSize(int size)
 // This ensures fonts created from a name string inherit the host's antialiasing preference
 QFont Host::createFontWithSettings(const QString& fontName, int pointSize) const
 {
-    QFont font(fontName, pointSize);
-    
-    if (fontsAntiAlias()) {
-        font.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality));
-        
-#ifdef Q_OS_WIN
-        // Windows uses ClearType which works best with vertical hinting
-        // This provides better subpixel antialiasing on Windows displays
-        font.setHintingPreference(QFont::PreferVerticalHinting);
-#else
-        // For other platforms, use different strategies based on font size
-        // Small fonts (< 12pt) benefit from slight hinting to improve clarity
-        if (pointSize < 12) {
-            font.setHintingPreference(QFont::PreferDefaultHinting);
-        } else {
-            // Larger fonts can use full antialiasing without aggressive hinting
-            font.setHintingPreference(QFont::PreferNoHinting);
-        }
-#endif
-    } else {
-        font.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
-        font.setHintingPreference(QFont::PreferFullHinting);
-    }
-    
-    return font;
+    // Delegate to centralized TFontAttributes implementation to avoid duplication
+    return TFontAttributes::createFont(fontName, pointSize, fontsAntiAlias());
 }
 
 // Helper function to parse font names that may include style information

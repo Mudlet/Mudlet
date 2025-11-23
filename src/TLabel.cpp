@@ -312,6 +312,18 @@ void TLabel::setClickThrough(bool clickthrough)
     }
 }
 
+void TLabel::setFontFromProfile(const QString& fontName, int pointSize)
+{
+    if (!mpHost) {
+        return;
+    }
+    
+    // Use the host's antialiasing settings to create the font
+    // This ensures labels benefit from Windows ClearType optimizations
+    QFont font = mpHost->createFontWithSettings(fontName, pointSize);
+    setFont(font);
+}
+
 void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline)
 {
     mLinkColor = linkColor;

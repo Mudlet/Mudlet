@@ -90,6 +90,21 @@ struct TFontAttributes
 
     TFontAttributes& operator=(const TFontAttributes& other) = default;
 
+    // Static factory method to create a QFont with proper antialiasing settings
+    // This delegates to makeFont() which contains the platform-specific logic
+    static QFont createFont(const QString& fontName, int pointSize, bool isAntiAliased) {
+        TFontAttributes attrs(isAntiAliased);
+        attrs.mName = fontName;
+        attrs.mPointSize = pointSize;
+        // Override TFontAttributes defaults to match basic QFont(name, size) behavior
+        attrs.mWeight = QFont::Normal;
+        attrs.mItalic = false;
+        attrs.mFixedPitch = false;
+        attrs.mKerning = true;
+        attrs.mStyleHint = QFont::AnyStyle;
+        return attrs.makeFont();
+    }
+
     QFont makeFont() const {
         QFont font = QFont(mName, mPointSize, mWeight, mItalic);
         font.setFixedPitch(mFixedPitch);
