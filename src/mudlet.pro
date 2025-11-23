@@ -87,10 +87,6 @@ qtHaveModule(texttospeech) {
     !build_pass : message("Using TextToSpeech module")
 }
 
-greaterThan(QT_MAJOR_VERSION, 5) {
-    QT += core5compat
-}
-
 TEMPLATE = app
 
 # Define a variable for the Git executable
@@ -303,9 +299,12 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
 # day of the fourth month of the Gregorian calendar year:
 # DEFINES+=DEBUG_EASTER_EGGS
 #
-# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-# commands for suboptions - change the value to 2 to get a bit more detail
-# about the size or nature of the command:
+# * Uncomment this and set to a integer value with the following bits to:
+#   1 - debugging messages about WILL/WONT/DO/DONT and other commands for
+#       suboptions
+#   2 - more detail about the size or nature of the command:
+#   4 - to monitor the use of and choice of both sockets (one each for IPv4
+#       and IPv6 prototcols)
 DEFINES+=DEBUG_TELNET=1
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
@@ -402,7 +401,9 @@ unix:!macx {
         -lpugixml
 
     isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       LIBS += -lGLU
+       LIBS += \
+         -lGLU \
+         -lassimp
     }
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
@@ -613,6 +614,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
+    WideComboBox.cpp \
     ctelnet.cpp \
     DarkTheme.cpp \
     discord.cpp \
@@ -630,6 +632,7 @@ SOURCES += \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
     dlgPackageManager.cpp \
+    PackageItemDelegate.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
@@ -672,6 +675,7 @@ SOURCES += \
     CustomLineEditHandler.cpp \
     CustomLineSession.cpp \
     LabelInteractionHandler.cpp \
+    MiddleMousePanHandler.cpp \
     PanInteractionHandler.cpp \
     RoomContextMenuHandler.cpp \
     RoomMoveActivationHandler.cpp \
@@ -711,6 +715,7 @@ SOURCES += \
     TMedia.cpp \
     TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
+    TMxpHRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
@@ -744,6 +749,7 @@ SOURCES += \
     TTabBar.cpp \
     TDetachedWindow.cpp \
     TTextCodec.cpp \
+    TEncodingHelper.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -760,6 +766,7 @@ HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    WideComboBox.h \
     ctelnet.h \
     DarkTheme.h \
     discord.h \
@@ -777,6 +784,7 @@ HEADERS += \
     dlgNotepad.h \
     dlgPackageExporter.h \
     dlgPackageManager.h \
+    PackageItemDelegate.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \
@@ -817,6 +825,7 @@ HEADERS += \
     CustomLineEditHandler.h \
     CustomLineSession.h \
     LabelInteractionHandler.h \
+    MiddleMousePanHandler.h \
     PanInteractionHandler.h \
     RoomContextMenuHandler.h \
     RoomMoveActivationHandler.h \
@@ -854,6 +863,7 @@ HEADERS += \
     TMediaData.h \
     TMediaPlaylist.h \
     TMxpBRTagHandler.h \
+    TMxpHRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
     TMxpCustomElementTagHandler.h \
@@ -890,6 +900,7 @@ HEADERS += \
     TTabBar.h \
     TDetachedWindow.h \
     TTextCodec.h \
+    TEncodingHelper.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
