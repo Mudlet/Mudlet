@@ -24,6 +24,7 @@
 
 #include "TCommandLine.h"
 
+#include "TEncodingHelper.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
@@ -181,12 +182,23 @@ bool TCommandLine::event(QEvent* event)
         }
 
         if (ke->matches(QKeySequence::Copy)){ // Copy is Ctrl+C and possibly Ctrl+Ins, F16
-            if (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0)) {
-                // Only process if there is a selection active in the TConsole
+            // Check for console selections in both upper and lower panes
+            // Prioritize console selection over command line text
+            const bool hasUpperPaneSelection = !mpConsole->mUpperPane->mSelectedRegion.isEmpty();
+            const bool hasLowerPaneSelection = !mpConsole->mLowerPane->mSelectedRegion.isEmpty();
+            
+            if (hasUpperPaneSelection) {
+                // Copy from upper pane if it has a selection
                 mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
+            } else if (hasLowerPaneSelection) {
+                // Copy from lower pane if it has a selection
+                mpConsole->mLowerPane->slot_copySelectionToClipboard();
+                ke->accept();
+                return true;
             }
+            // If no console selection, fall through to default command line copy behavior
         }
 
         if (ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
@@ -634,6 +646,11 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 
 void TCommandLine::hideEvent(QHideEvent* event)
 {
+    // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
+    if (mType == SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
+        mpHost->mpConsole->mpCommandLine->setFocus();
+    }
+
     QPlainTextEdit::hideEvent(event);
 }
 
@@ -733,7 +750,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         return;
     }
 
-    auto codec = mpHost->mpConsole->getHunspellCodec_system();
+    auto codecName = mpHost->mpConsole->getHunspellCodecName_system();
     auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
     auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
     bool haveAddOption = false;
@@ -783,13 +800,12 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     // need to have a codec prepared for it and can use QString::toUtf8()
     // directly:
     const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
-    if (!(handle_system && codec)) {
+    if (!(handle_system && !codecName.isEmpty())) {
         mSystemDictionarySuggestionsCount = 0;
     } else {
         // The dictionary used from "the system" may not be UTF-8 encoded so we
-        // will need to transform the UTF-16BE "QString" to the appropriate encoding
-        // using "codec" declared previously in this method:
-        const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+        // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+        const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
         if (!Hunspell_spell(handle_system, encodedText.constData())) {
             // The word is NOT in the main system dictionary:
             if (handle_profile) {
@@ -824,14 +840,14 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
     if (mSystemDictionarySuggestionsCount) {
         for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
-            auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
+            auto pA = new QAction(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
 #if defined(Q_OS_FREEBSD)
             // Adding the text afterwards as user data as well as in the
             // constructor is to fix a bug(?) in FreeBSD that
             // automagically adds a '&' somewhere in the text to be a
             // shortcut - but doesn't show it and forgets to remove
             // it when asked for the text later:
-            pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
+            pA->setData(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
 #endif
             connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
             spellings_system << pA;
@@ -850,14 +866,14 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     if (handle_profile) {
         if (mUserDictionarySuggestionsCount) {
             for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
+                auto pA = new QAction(QString::fromUtf8(mpUserSuggestionsList[i]));
 #if defined(Q_OS_FREEBSD)
                 // Adding the text afterwards as user data as well as in the
                 // constructor is to fix a bug(?) in FreeBSD that
                 // automagically adds a '&' somewhere in the text to be a
                 // shortcut - but doesn't show it and forgets to remove
                 // it when asked for the text later:
-                pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
+                pA->setData(QString::fromUtf8(mpUserSuggestionsList[i]));
 #endif
                 connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                 spellings_profile << pA;
@@ -1250,9 +1266,18 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     }
 
     // The dictionary used from "the system" may not be UTF-8 encoded so we
-    // will need to transform the UTF-16BE "QString" to the appropriate encoding
-    // using the correct "codec":
-    const QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
+    // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+    const QByteArray codecName = mpHost->mpConsole->getHunspellCodecName_system();
+    if (codecName.isEmpty()) {
+        // If we don't know the encoding, we can't safely spell-check
+        f.setFontUnderline(false);
+        c.setCharFormat(f);
+        setTextCursor(c);
+        mSpellChecking = false;
+        return;
+    }
+
+    const QByteArray encodedText = TEncodingHelper::encode(spellCheckedWord, codecName);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
