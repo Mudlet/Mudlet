@@ -170,8 +170,9 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
                     return false;
                 }
             }
+        } else {
+            return false;
         }
-        return false;
         if (lua_gettop(L)) {
             return lua_type(L, -1) == var->getValueType();
         }
