@@ -360,6 +360,7 @@ public:
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
     void updateAnsi16ColorsInTable();
+    void updateExtendedAnsiColorsInTable();
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
@@ -378,6 +379,10 @@ public:
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool setClickthrough(const QString& name, bool clickthrough);
+    bool setLabelStyleSheet(const QString& name, const QString& styleSheet);
+    bool setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
+    bool resetLinkStyle(const QString& name);
+    bool clearVisitedLinks(const QString& name);
     void hideMudletsVariables();
     bool createBuffer(const QString& name);
     QSize calcFontSize(const QString& windowName);
@@ -687,6 +692,7 @@ public:
     QColor mUpperLevelColor{QColorConstants::White};
     QColor mRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
+    QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight = false;
@@ -713,6 +719,7 @@ public:
 
     double mLineSize = 10.0;
     double mRoomSize = 0.5;
+    double mMapGridLineSize = 0.5;
     QSet<QString> mMapInfoContributors{qsl("Short")};
     bool mBubbleMode = false;
     bool mMapViewOnly = true;
@@ -727,6 +734,7 @@ public:
     QColor mCommandLineBgColor{Qt::black};
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
+    bool mMapperShowGrid = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;

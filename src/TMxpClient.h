@@ -103,6 +103,19 @@ public:
     }
 
     virtual void setCaptionForSendEvent(const QString& caption) { Q_UNUSED(caption) }
+    
+    // Get the encoding used by the connection (for proper decoding of MXP tags)
+    // Default implementation returns UTF-8 for test clients
+    virtual QByteArray getEncoding() const { return QByteArrayLiteral("UTF-8"); }
+
+    // Get the console wrap width for layout purposes (e.g., HR tag)
+    virtual int getWrapWidth() const { return 80; } // Default fallback
+    
+    // Insert text directly into the output (e.g., for HR tag)
+    virtual void insertText(const QString& text) { Q_UNUSED(text) }
+    
+    // Check if force MXP should prevent server from changing default mode
+    virtual bool shouldLockModeToSecure() const { return false; }
 };
 
 #endif //MUDLET_TMXPCLIENT_H

@@ -38,7 +38,15 @@
 
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
-: QOpenGLWidget(parent), mShaderManager(&mResourceManager, this), mVertexBuffer(QOpenGLBuffer::VertexBuffer), mColorBuffer(QOpenGLBuffer::VertexBuffer), mNormalBuffer(QOpenGLBuffer::VertexBuffer), mIndexBuffer(QOpenGLBuffer::IndexBuffer), mInstanceBuffer(QOpenGLBuffer::VertexBuffer), mpMap(pMap), mpHost(pHost)
+: QOpenGLWidget(parent)
+, mpMap(pMap)
+, mShaderManager(&mResourceManager, this)
+, mVertexBuffer(QOpenGLBuffer::VertexBuffer)
+, mColorBuffer(QOpenGLBuffer::VertexBuffer)
+, mNormalBuffer(QOpenGLBuffer::VertexBuffer)
+, mIndexBuffer(QOpenGLBuffer::IndexBuffer)
+, mInstanceBuffer(QOpenGLBuffer::VertexBuffer)
+, mpHost(pHost)
 {
     if (mpHost->mBgColor_2.alpha() < 255) {
         setAttribute(Qt::WA_OpaquePaintEvent, false);
@@ -217,7 +225,6 @@ void ModernGLWidget::paintGL()
 
     glEnable(GL_MULTISAMPLE);
 
-    float px, py, pz;
     if (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) && mShiftMode) {
         mShiftMode = false;
     }
@@ -285,16 +292,11 @@ void ModernGLWidget::paintGL()
         mPreviousRID = mRID; // Update tracking
         mPreviousAID = mAID; // Update area tracking
 
-
     } else {
         ox = mMapCenterX;
         oy = mMapCenterY;
         oz = mMapCenterZ;
     }
-
-    px = static_cast<float>(ox);
-    py = static_cast<float>(oy);
-    pz = static_cast<float>(oz);
 
     TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
     if (!pArea) {
@@ -405,8 +407,6 @@ void ModernGLWidget::renderRooms()
         bool isCurrentRoom = (rz == pz) && (rx == px) && (ry == py);
         bool isTargetRoom = (currentRoomId == mTargetRoomId);
         bool belowOrAtLevel = (rz <= pz);
-        float roomAlpha = 1.0f;
-        const float defaultSize = 1.0f / scale;
 
         // 1. Collect main room cube data
         if (isCurrentRoom) {
