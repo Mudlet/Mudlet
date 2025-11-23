@@ -79,13 +79,23 @@ void dlgComposer::slot_spellCheck()
         return;
     }
 
-    QTextCursor oldCursor = edit->textCursor();
-    QTextCursor c = edit->textCursor();
-    spellCheckWord(c);
-    QTextCharFormat f;
-    f.setFontUnderline(false);
-    oldCursor.setCharFormat(f);
-    edit->setTextCursor(oldCursor);
+    if (mSpellChecking) {
+        return;
+    }
+
+    mSpellChecking = true;
+    QTextCursor cursor = edit->textCursor();
+    int originalPosition = cursor.position();
+
+    spellCheckWord(cursor);
+
+    // Restore cursor position without selection and clear any formatting
+    cursor.setPosition(originalPosition);
+    QTextCharFormat clearFormat;
+    clearFormat.setFontUnderline(false);
+    cursor.setCharFormat(clearFormat);
+    edit->setTextCursor(cursor);
+    mSpellChecking = false;
 }
 
 void dlgComposer::spellCheckWord(QTextCursor& c)
@@ -100,17 +110,17 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
     }
 
     QTextCharFormat f;
-    mSpellChecking = true;
-    c.select(QTextCursor::WordUnderCursor);
+    // Use StartOfWord/EndOfWord for precise selection without whitespace
+    c.movePosition(QTextCursor::StartOfWord, QTextCursor::MoveAnchor);
+    c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
     const QString spellCheckedWord = c.selectedText();
+
     const bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
     if (!wantSpellCheck) {
         // We don't check when the word is too short, but may need to
-        // undo any prior underline, and we need to also reset the flag:
+        // undo any prior underline
         f.setFontUnderline(false);
         c.setCharFormat(f);
-        edit->setTextCursor(c);
-        mSpellChecking = false;
         return;
     }
 
@@ -121,8 +131,6 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
         // If we don't know the encoding, we can't safely spell-check
         f.setFontUnderline(false);
         c.setCharFormat(f);
-        edit->setTextCursor(c);
-        mSpellChecking = false;
         return;
     }
 
@@ -155,8 +163,6 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
         f.setFontUnderline(false);
     }
     c.setCharFormat(f);
-    edit->setTextCursor(c);
-    mSpellChecking = false;
 }
 
 void dlgComposer::recheckWholeLine()
@@ -165,6 +171,11 @@ void dlgComposer::recheckWholeLine()
         return;
     }
 
+    if (mSpellChecking) {
+        return;
+    }
+
+    mSpellChecking = true;
     // Save the current position
     const QTextCursor oldCursor = edit->textCursor();
 
@@ -184,6 +195,7 @@ void dlgComposer::recheckWholeLine()
     }
     // Jump back to where we started
     edit->setTextCursor(oldCursor);
+    mSpellChecking = false;
 }
 
 void dlgComposer::slot_contextMenu(const QPoint& pos)
@@ -204,7 +216,9 @@ void dlgComposer::slot_contextMenu(const QPoint& pos)
 void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 {
     QTextCursor c = edit->cursorForPosition(event->pos());
-    c.select(QTextCursor::WordUnderCursor);
+    // Use StartOfWord/EndOfWord for precise selection without whitespace
+    c.movePosition(QTextCursor::StartOfWord, QTextCursor::MoveAnchor);
+    c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
     mSpellCheckedWord = c.selectedText();
 
     const bool wantSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
@@ -217,9 +231,45 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
     bool haveAddOption = false;
     bool haveRemoveOption = false;
+    bool wordIsMisspelled = false;
     QAction* action_addWord = nullptr;
     QAction* action_removeWord = nullptr;
     QAction* action_dictionarySeparatorLine = nullptr;
+
+    // We always use UTF-8 for the per profile/shared dictionary so we do not
+    // need to have a codec prepared for it and can use QString::toUtf8()
+    // directly:
+    const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
+
+    // Check if word is misspelled
+    if (handle_system && !codecName.isEmpty()) {
+        // The dictionary used from "the system" may not be UTF-8 encoded so we
+        // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+        const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
+        if (!Hunspell_spell(handle_system, encodedText.constData())) {
+            // The word is NOT in the main system dictionary:
+            if (handle_profile) {
+                // Have a user dictionary so check it:
+                if (!Hunspell_spell(handle_profile, utf8Text.constData())) {
+                    // The word is NOT in the profile one either - so it's misspelled
+                    wordIsMisspelled = true;
+                    haveAddOption = true;
+                } else {
+                    // However the word is in the profile one - so enable remove option
+                    haveRemoveOption = true;
+                }
+            } else {
+                // No user dictionary and word not in system dictionary - it's misspelled
+                wordIsMisspelled = true;
+            }
+        }
+    }
+
+    // Only show spellcheck suggestions if the word is actually misspelled
+    if (!wordIsMisspelled) {
+        return;
+    }
+
     if (handle_profile) {
         //: Context menu action to add a word to the user's personal dictionary
         action_addWord = new QAction(tr("Add to user dictionary"));
@@ -243,43 +293,24 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
         }
         action_dictionarySeparatorLine->setEnabled(false);
+
+        if (haveAddOption) {
+            action_addWord->setEnabled(true);
+            connect(action_addWord, &QAction::triggered, this, &dlgComposer::slot_addWord);
+        }
+        if (haveRemoveOption) {
+            action_removeWord->setEnabled(true);
+            connect(action_removeWord, &QAction::triggered, this, &dlgComposer::slot_removeWord);
+        }
     }
 
     QList<QAction*> spellings_system;
     QList<QAction*> spellings_profile;
-    // We always use UTF-8 for the per profile/shared dictionary so we do not
-    // need to have a codec prepared for it and can use QString::toUtf8()
-    // directly:
-    const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
+
     if (!(handle_system && !codecName.isEmpty())) {
         mSystemDictionarySuggestionsCount = 0;
     } else {
-        // The dictionary used from "the system" may not be UTF-8 encoded so we
-        // will need to transform the UTF-16BE "QString" to the appropriate encoding:
         const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
-        if (!Hunspell_spell(handle_system, encodedText.constData())) {
-            // The word is NOT in the main system dictionary:
-            if (handle_profile) {
-                // Have a user dictionary so check it:
-                if (!Hunspell_spell(handle_profile, utf8Text.constData())) {
-                    // The word is NOT in the profile one either - so enable add option
-                    haveAddOption = true;
-                } else {
-                    // However the word is in the profile one - so enable remove option
-                    haveRemoveOption = true;
-                }
-
-                if (haveAddOption) {
-                    action_addWord->setEnabled(true);
-                    connect(action_addWord, &QAction::triggered, this, &dlgComposer::slot_addWord);
-                }
-                if (haveRemoveOption) {
-                    action_removeWord->setEnabled(true);
-                    connect(action_removeWord, &QAction::triggered, this, &dlgComposer::slot_removeWord);
-                }
-            }
-        }
-
         mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
     }
 
