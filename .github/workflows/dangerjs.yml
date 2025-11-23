@@ -10,12 +10,12 @@ jobs:
     #if: github.event_name  == 'pull_request' # only run pull requests, no really
     steps:
     - name: Checkout develop branch for danger config
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         path: danger-config
         fetch-depth: 1
     - name: Checkout PR head for file analysis
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         ref: ${{github.event.pull_request.head.sha}}
         path: pr-files

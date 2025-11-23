@@ -44,7 +44,7 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     setObjectName(qsl("label_%1_%2").arg(pH->getName(), mName));
 
     setTextFormat(Qt::RichText);
-    setTextInteractionFlags(Qt::TextBrowserInteraction);
+    setTextInteractionFlags(Qt::NoTextInteraction);
     setOpenExternalLinks(false);
 
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
@@ -60,10 +60,18 @@ TLabel::~TLabel()
 
 void TLabel::setText(const QString& text)
 {
+    // Enable TextBrowserInteraction only when the label contains hyperlinks
+    // This prevents Qt's default context menu from appearing on labels without links
+    if (text.contains(qsl("<a "), Qt::CaseInsensitive)) {
+        setTextInteractionFlags(Qt::TextBrowserInteraction);
+    } else {
+        setTextInteractionFlags(Qt::NoTextInteraction);
+    }
+
     // If we have link styling configured and the text contains HTML links,
     // we need to inject inline styles because QTextDocument doesn't use
     // widget stylesheets or QPalette for link colors when a stylesheet exists
-    if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && text.contains(qsl("<a "))) {
+    if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && text.contains(qsl("<a "), Qt::CaseInsensitive)) {
         QString styledText = text;
 
         // Replace all <a href="..."> tags with <a href="..." style="...">
@@ -175,7 +183,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 {
     // If the label has rich text with potential hyperlinks, let QLabel handle the event first
     // QLabel will emit linkActivated if a link was clicked
-    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "))) {
+    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "), Qt::CaseInsensitive)) {
         QLabel::mousePressEvent(event);
         // If QLabel didn't accept the event, then it wasn't a link click
         if (event->isAccepted()) {
@@ -207,7 +215,7 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     // If the label has rich text with potential hyperlinks, let QLabel handle the event first
-    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "))) {
+    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "), Qt::CaseInsensitive)) {
         QLabel::mouseReleaseEvent(event);
         // If QLabel accepted the event, it was handling a link click
         if (event->isAccepted()) {
@@ -295,8 +303,12 @@ void TLabel::setClickThrough(bool clickthrough)
     if (clickthrough) {
         setTextInteractionFlags(Qt::NoTextInteraction);
     } else {
-        // Re-enable text interaction for clickable hyperlinks
-        setTextInteractionFlags(Qt::TextBrowserInteraction);
+        // Re-enable text interaction only if the current text has hyperlinks
+        if (text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+            setTextInteractionFlags(Qt::TextBrowserInteraction);
+        } else {
+            setTextInteractionFlags(Qt::NoTextInteraction);
+        }
     }
 }
 
@@ -347,7 +359,7 @@ void TLabel::clearVisitedLinks()
     mVisitedLinks.clear();
 
     QString currentText = text();
-    if (!currentText.isEmpty() && currentText.contains(qsl("<a "))) {
+    if (!currentText.isEmpty() && currentText.contains(qsl("<a "), Qt::CaseInsensitive)) {
         setText(currentText);
     }
 }
@@ -364,7 +376,7 @@ void TLabel::slot_linkActivated(const QString& link)
         // Refresh the label to update link colors
         // We need to re-apply the current text to trigger the styling update
         QString currentText = text();
-        if (!currentText.isEmpty() && currentText.contains(qsl("<a "))) {
+        if (!currentText.isEmpty() && currentText.contains(qsl("<a "), Qt::CaseInsensitive)) {
             setText(currentText);
         }
     }
