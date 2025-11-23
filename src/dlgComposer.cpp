@@ -68,7 +68,6 @@ void dlgComposer::init(const QString &newTitle, const QString &newText)
 {
     title->setText(newTitle);
     edit->setPlainText(newText);
-    // Recheck spelling after setting text
     if (mpHost && mpHost->mEnableSpellCheck) {
         recheckWholeLine();
     }
@@ -79,17 +78,14 @@ bool dlgComposer::eventFilter(QObject* obj, QEvent* event)
     if (obj == edit && event->type() == QEvent::KeyPress && mpHost && mpHost->mEnableSpellCheck) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
 
-        // Get current word boundaries before the key is processed
         QTextCursor oldCursor = edit->textCursor();
         oldCursor.movePosition(QTextCursor::StartOfWord, QTextCursor::MoveAnchor);
         oldCursor.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
         const int wordStart = oldCursor.selectionStart();
         const int wordEnd = oldCursor.selectionEnd();
 
-        // Let the event be processed normally first
         bool result = QMainWindow::eventFilter(obj, event);
 
-        // Check if this key should trigger spellcheck
         bool isDelimiter = false;
         const QString text = keyEvent->text();
         if (!text.isEmpty()) {
@@ -129,7 +125,6 @@ void dlgComposer::slot_spellCheck()
 
     spellCheckWord(cursor);
 
-    // Restore cursor position without selection and clear any formatting
     cursor.setPosition(originalPosition);
     QTextCharFormat clearFormat;
     clearFormat.setFontUnderline(false);
@@ -157,8 +152,6 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
 
     const bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
     if (!wantSpellCheck) {
-        // We don't check when the word is too short, but may need to
-        // undo any prior underline
         f.setFontUnderline(false);
         c.setCharFormat(f);
         return;
@@ -168,7 +161,6 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
     // will need to transform the UTF-16BE "QString" to the appropriate encoding:
     const QByteArray codecName = mpHost->mpConsole->getHunspellCodecName_system();
     if (codecName.isEmpty()) {
-        // If we don't know the encoding, we can't safely spell-check
         f.setFontUnderline(false);
         c.setCharFormat(f);
         return;
@@ -176,30 +168,23 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
 
     const QByteArray encodedText = TEncodingHelper::encode(spellCheckedWord, codecName);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
-        // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
         if (userDictionaryhandle) {
             // The per-profile/shared dictionary is always UTF-8 encoded - so
             // we can use QString::toUtf8() directly to get the bytes needed:
             if (Hunspell_spell(userDictionaryhandle, spellCheckedWord.toUtf8().constData())) {
-                // We are using a user dictionary and it does contain this word - so
-                // use a different underline, on many systems the spell-check underline is
-                // a wavy line but on macOs it is a dotted line - so use dash underline
+                // Use dash underline for words in user dictionary
                 f.setUnderlineStyle(QTextCharFormat::DashUnderline);
                 f.setUnderlineColor(Qt::cyan);
             } else {
-                // The word is not in it either:
                 f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
                 f.setUnderlineColor(Qt::red);
             }
         } else {
-            // The word is not in the main dictionary and that is all we are using:
             f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
             f.setUnderlineColor(Qt::red);
         }
-
     } else {
-        // Word is spelt correctly
         f.setFontUnderline(false);
     }
     c.setCharFormat(f);
@@ -281,31 +266,24 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     // directly:
     const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
 
-    // Check if word is misspelled
     if (handle_system && !codecName.isEmpty()) {
         // The dictionary used from "the system" may not be UTF-8 encoded so we
         // will need to transform the UTF-16BE "QString" to the appropriate encoding:
         const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
         if (!Hunspell_spell(handle_system, encodedText.constData())) {
-            // The word is NOT in the main system dictionary:
             if (handle_profile) {
-                // Have a user dictionary so check it:
                 if (!Hunspell_spell(handle_profile, utf8Text.constData())) {
-                    // The word is NOT in the profile one either - so it's misspelled
                     wordIsMisspelled = true;
                     haveAddOption = true;
                 } else {
-                    // However the word is in the profile one - so enable remove option
                     haveRemoveOption = true;
                 }
             } else {
-                // No user dictionary and word not in system dictionary - it's misspelled
                 wordIsMisspelled = true;
             }
         }
     }
 
-    // Only show spellcheck suggestions if the word is actually misspelled
     if (!wordIsMisspelled) {
         return;
     }
