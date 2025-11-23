@@ -419,11 +419,13 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_WINDOWS)
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         // This variable is not set - and later versions of Qt 6.x need it for
-        // sound to work:
-        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
-            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        // sound to work - the alternative to "ffmpeg" is "windows" but that
+        // is a less capable backend (it doesn't support ".ogg" or ".opus"
+        // audio files):
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("ffmpeg"))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\".";
         } else {
-            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\", sound may not work.";
         }
     } else {
         qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
@@ -831,19 +833,20 @@ bool runUpdate()
 }
 #endif // defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 
+// Force usage of Qt Resource Collections (QRC) used by Mudlet.
+// Ensures QRC symbols from the static library reach the executable.
+// without this, the linker might discard them and the QRC would not be accessible at runtime.
 void initializeQRCResources()
 {
-    #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-        qInitResources_additional_splash_screens();
-    #endif
-
-    #ifdef INCLUDE_FONTS
-        qInitResources_mudlet_fonts_common();
-        #if defined(__linux__) || defined(__FreeBSD__)
-            qInitResources_mudlet_fonts_posix();
-        #endif
-    #endif
-
+#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
+    qInitResources_additional_splash_screens();
+#endif
+#ifdef INCLUDE_FONTS
+    qInitResources_mudlet_fonts_common();
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    qInitResources_mudlet_fonts_posix();
+#endif
+#endif
     qInitResources_mudlet();
     qInitResources_qm();
 }

@@ -26,7 +26,7 @@
 #include "mudlet.h"
 
 #include <QDir>
-#include <QTextCodec>
+#include <QStringConverter>
 
 using namespace std::chrono;
 

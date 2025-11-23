@@ -107,11 +107,13 @@ private:
     void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackage);
-    void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
+    static void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
     bool saveXmlFile(QSaveFile& file);
     bool saveXml(const QString&);
+    static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);
     pugi::xml_node writeXmlHeader();
-    void sanitizeForQxml(std::string& output);
+    static void sanitizeForQxml(std::string& output);
+    void runAsyncSave(const QString& fileName, const QString& xmlSavedKey);
     QString saveXml();
     QStringList remapAnsiToColorNumber(const QStringList&, const QList<int>&);
 };

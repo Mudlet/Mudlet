@@ -1,10 +1,5 @@
-#ifndef MUDLET_TENCODINGTABLE_H
-#define MUDLET_TENCODINGTABLE_H
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,32 +17,32 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QApplication>
-#include <QChar>
-#include <QMap>
-#include <QPair>
+#ifndef TENCODINGHELPER_H
+#define TENCODINGHELPER_H
+
+/***************************************************************************
+ *   This class provides helper functions for text encoding/decoding       *
+ *   using both Qt6's QStringConverter and custom codecs.                  *
+ ***************************************************************************/
+
+#include <QByteArray>
+#include <QList>
 #include <QString>
-#include <QVector>
+#include <QStringConverter>
+#include <optional>
 
-// a map of encoding names to encodings
-class TEncodingTable
+class TEncodingHelper
 {
-    static const QMap<QByteArray, QVector<QChar>> csmEncodings;
-    inline static const QVector<QChar> csmEmptyLookupTable = {};
-
-    const QMap<QByteArray, QVector<QChar>>& mEncodingMap;
-
 public:
-    static const TEncodingTable csmDefaultInstance;
-
-    explicit TEncodingTable(const QMap<QByteArray, QVector<QChar>>& encodings)
-    : mEncodingMap(encodings)
-    {}
-
-    const QMap<QByteArray, QVector<QChar>> getEncodings() const { return mEncodingMap; }
-    QList<QByteArray> getEncodingNames() const;
-
-    const QVector<QChar>& getLookupTable(const QByteArray& encoding) const;
+    static QString decode(const QByteArray& bytes, const QByteArray& encoding);
+    static QByteArray encode(const QString& str, const QByteArray& encoding);
+    static bool canEncode(const QString& str, const QByteArray& encoding);
+    static bool isEncodingAvailable(const QByteArray& encoding);
+    static QList<QByteArray> aliases(const QByteArray& encoding);
+    
+private:
+    static bool isCustomEncoding(const QByteArray& encoding);
+    static std::optional<QStringConverter::Encoding> getQtEncoding(const QByteArray& encoding);
 };
 
-#endif //MUDLET_TENCODINGTABLE_H
+#endif // TENCODINGHELPER_H
