@@ -1103,6 +1103,13 @@ function Geyser.Label:new (cons, container)
   if cons.clickthrough then me:enableClickthrough() end
 
   if me.stylesheet then me:setStyleSheet() end
+  
+  -- Apply profile antialiasing if requested and font is set
+  -- This ensures antialiasing is properly initialized during construction
+  if me.useProfileAntialiasing and me.font and me.font ~= "" then
+    me:setFont(me.font)
+  end
+  
   me:autoAdjustSize()
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
