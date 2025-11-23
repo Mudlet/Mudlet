@@ -395,18 +395,15 @@ std::tuple<QString, int, int, int> AliasUnit::assembleReport()
 
 void AliasUnit::doCleanup()
 {
-    for (auto alias : mCleanupList) {
-        delete alias;
+    QMutableSetIterator<TAlias*> itAlias(mCleanupSet);
+    while (itAlias.hasNext()) {
+        auto pAlias = itAlias.next();
+        itAlias.remove();
+        delete pAlias;
     }
-    mCleanupList.clear();
 }
 
 void AliasUnit::markCleanup(TAlias* pT)
 {
-    for (auto alias : mCleanupList) {
-        if (alias == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }
