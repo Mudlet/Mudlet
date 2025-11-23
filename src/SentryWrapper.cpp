@@ -35,7 +35,6 @@
 #include <string>
 #include <cstdlib>
 #include <algorithm>
-#include <mutex>
 
 #include "SentryWrapper.h"
 
@@ -77,9 +76,6 @@ std::string makeExecutablePath(const std::string& dir, const std::string& name)
 // Returns the directory containing the current executable
 std::string getExeDir()
 {
-    static std::mutex mtx;
-    std::lock_guard<std::mutex> lock(mtx);
-
 #if defined(Q_OS_WIN)
     char path[MAX_PATH];
     GetModuleFileNameA(NULL, path, MAX_PATH);
@@ -90,8 +86,8 @@ std::string getExeDir()
 
     return dir;
 #elif defined(Q_OS_MAC)
-    char        path[PATH_MAX];
-    uint32_t    size = sizeof(path);
+    char path[PATH_MAX];
+    uint32_t size = sizeof(path);
 
     if (_NSGetExecutablePath(path, &size) != 0) {
         return ".";
@@ -103,14 +99,17 @@ std::string getExeDir()
     }
     return exePath.substr(0, pos);
 #else
-    char        result[PATH_MAX];
-    ssize_t     count = readlink("/proc/self/exe", result, PATH_MAX);
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX); // Flawfinder: ignore
 
     if (count <= 0) {
-        return std::string(".");
+        return ".";
     }
     std::string exePath(result, count);
     size_t pos = exePath.find_last_of("/");
+    if (pos == std::string::npos) {
+        return exePath;
+    }
     return exePath.substr(0, pos);
 #endif
 }
