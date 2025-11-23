@@ -54,7 +54,7 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73
         cache: true
-        modules: qt5compat qtmultimedia qthttpserver
+        modules: qt5compat qtmultimedia qtwebsockets qthttpserver
 
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v4
@@ -63,7 +63,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: qt5compat qtmultimedia qthttpserver
+        modules: qt5compat qtmultimedia qtwebsockets qthttpserver
 
     - name: Restore Boost cache
       uses: actions/cache@v4
