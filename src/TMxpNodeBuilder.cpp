@@ -23,19 +23,6 @@
 
 TMxpNodeBuilder::TMxpNodeBuilder(bool ignoreText)
 : mOptionIgnoreText(ignoreText)
-, mIsEndTag(false)
-, mIsEmptyTag(false)
-, mIsInsideTag(false)
-, mIsInsideAttr(false)
-, mReadingAttrValue(false)
-, mIsInsideSequence(false)
-, mIsQuotedSequence(false)
-, mOpeningQuote('\0')
-, mSequenceHasSpaces(false)
-, mHasSequence(false)
-, mIsInsideText(false)
-, mHasNode(false)
-, mIsText(false)
 {
 }
 
@@ -44,11 +31,12 @@ bool TMxpNodeBuilder::accept(char ch)
     if (mIsInsideTag) { // inside tag
         mCurrentText.clear();
         mIsText = false;
-
+        mRawTagContent += ch;
         if (!acceptTag(ch)) {
             return false;
         } else {
             mIsInsideTag = false;
+            mRawTagContent.clear();
             return true;
         }
     } else if (ch == '<') { // start tag
@@ -59,6 +47,7 @@ bool TMxpNodeBuilder::accept(char ch)
             return true;
         } else {              // second call
             mHasNode = false; //mIsText = false
+            mRawTagContent.clear();
             return acceptTag(ch);
         }
     } else if (!mOptionIgnoreText) { // text
@@ -92,7 +81,12 @@ bool TMxpNodeBuilder::acceptTag(char ch)
     }
 
     if (ch == '<') { // reset
+        if (!mIsInsideTag) {
         resetCurrentTag();
+        }
+        if (!mRawTagContent.empty() && mRawTagContent.back() == '<') {
+            mRawTagContent.pop_back();
+        }
         mIsInsideTag = true;
         return false;
     }
@@ -131,7 +125,7 @@ void TMxpNodeBuilder::resetCurrentTag()
     mIsInsideTag = false;
     mCurrentTagName.clear();
     mCurrentTagAttrs.clear();
-
+    mRawTagContent.clear();
     resetCurrentAttribute();
 }
 bool TMxpNodeBuilder::acceptAttribute(char ch)
@@ -230,4 +224,11 @@ void TMxpNodeBuilder::reset()
 {
     resetCurrentTag();
     mCurrentText.clear();
+}
+
+void TMxpNodeBuilder::resetForNewTag()
+{
+    reset();
+    mOptionIgnoreText = true;
+    mIsInsideTag = true;
 }

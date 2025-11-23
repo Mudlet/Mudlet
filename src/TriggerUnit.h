@@ -23,11 +23,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QMultiMap>
 #include <QPointer>
+#include <QSet>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
@@ -46,6 +45,7 @@ public:
     , mMaxID(0)
     , mModuleMember()
     {}
+    ~TriggerUnit();
 
     std::list<TTrigger*> getTriggerRootNodeList()
     {
@@ -70,7 +70,7 @@ public:
     void stopAllTriggers();
     void reenableAllTriggers();
     std::tuple<QString, int, int, int, int, int> assembleReport();
-    std::list<TTrigger*> mCleanupList;
+    QSet<TTrigger*> mCleanupSet;
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);

@@ -27,9 +27,12 @@
 #include "TDockWidget.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
+#include <QDesktopServices>
+#include <QRegularExpression>
+#include <QTextCursor>
+#include <QTimer>
+#include <QUrl>
 #include <QtEvents>
-#include "post_guard.h"
 
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
@@ -39,6 +42,12 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 {
     setMouseTracking(true);
     setObjectName(qsl("label_%1_%2").arg(pH->getName(), mName));
+
+    setTextFormat(Qt::RichText);
+    setTextInteractionFlags(Qt::NoTextInteraction);
+    setOpenExternalLinks(false);
+
+    connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
 }
 
 TLabel::~TLabel()
@@ -46,6 +55,85 @@ TLabel::~TLabel()
     if (mpMovie) {
         mpMovie->deleteLater();
         mpMovie = nullptr;
+    }
+}
+
+void TLabel::setText(const QString& text)
+{
+    // Enable TextBrowserInteraction only when the label contains hyperlinks
+    // This prevents Qt's default context menu from appearing on labels without links
+    if (text.contains(qsl("<a "), Qt::CaseInsensitive)) {
+        setTextInteractionFlags(Qt::TextBrowserInteraction);
+    } else {
+        setTextInteractionFlags(Qt::NoTextInteraction);
+    }
+
+    // If we have link styling configured and the text contains HTML links,
+    // we need to inject inline styles because QTextDocument doesn't use
+    // widget stylesheets or QPalette for link colors when a stylesheet exists
+    if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && text.contains(qsl("<a "), Qt::CaseInsensitive)) {
+        QString styledText = text;
+
+        // Replace all <a href="..."> tags with <a href="..." style="...">
+        // Note: This regex is intentionally strict (lowercase, href first, no spacing around =)
+        // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
+        // uses this format. User-provided HTML outside this pattern will still render as
+        // clickable links (Qt handles that), but won't receive custom styling.
+        QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
+        QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
+
+        // Process matches in reverse order to avoid offset issues
+        QList<QRegularExpressionMatch> matches;
+        while (it.hasNext()) {
+            matches.prepend(it.next());
+        }
+
+        for (const auto& match : matches) {
+            QString fullMatch = match.captured(0);
+            QString hrefPart = match.captured(1);  // The href="..." part
+            QString otherAttrs = match.captured(2); // Other attributes
+
+            // Extract the actual URL from hrefPart (remove quotes)
+            QString url = hrefPart;
+            url.remove(0, 1); // Remove opening quote
+            url.chop(1);      // Remove closing quote
+
+            bool isVisited = mVisitedLinks.contains(url);
+
+            QString linkStyle;
+            if (isVisited && !mLinkVisitedColor.isEmpty()) {
+                linkStyle += qsl("color: %1; ").arg(mLinkVisitedColor);
+            } else if (!mLinkColor.isEmpty()) {
+                linkStyle += qsl("color: %1; ").arg(mLinkColor);
+            }
+
+            if (!mLinkUnderline) {
+                linkStyle += qsl("text-decoration: none; ");
+            }
+
+            if (!linkStyle.isEmpty()) {
+                linkStyle = linkStyle.trimmed();
+
+                QString replacement;
+                if (otherAttrs.contains(qsl("style="))) {
+                    // Already has a style attribute - merge our styles
+                    // This is complex, so for now just prepend our styles
+                    replacement = qsl("<a href=%1 style=\"%2\"").arg(hrefPart, linkStyle);
+                    // Intentionally overwrites any existing style attribute rather than merging
+                    // to keep implementation simple for the common case (labels without pre-existing inline styles)
+                    otherAttrs.remove(QRegularExpression(qsl("style=([\"'][^\"']*[\"'])")));
+                    replacement += otherAttrs + qsl(">");
+                } else {
+                    replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, otherAttrs);
+                }
+
+                styledText.replace(match.capturedStart(), match.capturedLength(), replacement);
+            }
+        }
+
+        QLabel::setText(styledText);
+    } else {
+        QLabel::setText(text);
     }
 }
 
@@ -93,6 +181,15 @@ void TLabel::setLeave(const int func)
 
 void TLabel::mousePressEvent(QMouseEvent* event)
 {
+    // If the label has rich text with potential hyperlinks, let QLabel handle the event first
+    // QLabel will emit linkActivated if a link was clicked
+    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+        QLabel::mousePressEvent(event);
+        // If QLabel didn't accept the event, then it wasn't a link click
+        if (event->isAccepted()) {
+            return;
+        }
+    }
 
     if (mpHost && mClickFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
@@ -117,6 +214,15 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
+    // If the label has rich text with potential hyperlinks, let QLabel handle the event first
+    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+        QLabel::mouseReleaseEvent(event);
+        // If QLabel accepted the event, it was handling a link click
+        if (event->isAccepted()) {
+            return;
+        }
+    }
+
     auto labelParent = qobject_cast<TConsole*>(parent());
     if (labelParent && labelParent->mpDockWidget && labelParent->mpDockWidget->isFloating()) {
         // move focus back to the active console / command line:
@@ -191,4 +297,133 @@ void TLabel::releaseFunc(const int existingFunction, const int newFunction)
 void TLabel::setClickThrough(bool clickthrough)
 {
     setAttribute(Qt::WA_TransparentForMouseEvents, clickthrough);
+
+    // If clickthrough is enabled, text interaction (including hyperlinks) won't work
+    // So we need to disable text interaction when clickthrough is on
+    if (clickthrough) {
+        setTextInteractionFlags(Qt::NoTextInteraction);
+    } else {
+        // Re-enable text interaction only if the current text has hyperlinks
+        if (text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+            setTextInteractionFlags(Qt::TextBrowserInteraction);
+        } else {
+            setTextInteractionFlags(Qt::NoTextInteraction);
+        }
+    }
+}
+
+void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline)
+{
+    mLinkColor = linkColor;
+    mLinkVisitedColor = linkVisitedColor;
+    mLinkUnderline = underline;
+
+    // Set QPalette as a fallback (works if no stylesheet is set on the widget)
+    QPalette palette = this->palette();
+
+    if (!linkColor.isEmpty()) {
+        QColor color(linkColor);
+        palette.setColor(QPalette::Active, QPalette::Link, color);
+        palette.setColor(QPalette::Inactive, QPalette::Link, color);
+    }
+
+    if (!linkVisitedColor.isEmpty()) {
+        QColor color(linkVisitedColor);
+        palette.setColor(QPalette::Active, QPalette::LinkVisited, color);
+        palette.setColor(QPalette::Inactive, QPalette::LinkVisited, color);
+    }
+
+    setPalette(palette);
+
+    // Note: Widget stylesheets don't affect QTextDocument rendering
+    // Link colors are applied via inline styles in setText()
+
+    // Force update to re-render with new styles
+    update();
+}
+
+void TLabel::resetLinkStyle()
+{
+    setPalette(QPalette());
+
+    mLinkColor.clear();
+    mLinkVisitedColor.clear();
+    mLinkUnderline = true;
+
+    // Force update to re-render with new styles
+    update();
+}
+
+void TLabel::clearVisitedLinks()
+{
+    mVisitedLinks.clear();
+
+    QString currentText = text();
+    if (!currentText.isEmpty() && currentText.contains(qsl("<a "), Qt::CaseInsensitive)) {
+        setText(currentText);
+    }
+}
+
+void TLabel::slot_linkActivated(const QString& link)
+{
+    if (!mpHost) {
+        return;
+    }
+
+    if (!mLinkVisitedColor.isEmpty()) {
+        mVisitedLinks.insert(link);
+
+        // Refresh the label to update link colors
+        // We need to re-apply the current text to trigger the styling update
+        QString currentText = text();
+        if (!currentText.isEmpty() && currentText.contains(qsl("<a "), Qt::CaseInsensitive)) {
+            setText(currentText);
+        }
+    }
+
+    // Check for custom schemes by looking for the colon separator
+    const int colonPos = link.indexOf(':');
+
+    if (colonPos > 0) {
+        const QString scheme = link.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
+        const QString payload = link.mid(colonPos + 1); // Everything after the colon
+
+        // Handle custom Mudlet URL schemes for Lua commands
+        if (scheme == qsl("send")) {
+            // send: scheme - send the command to the MUD immediately
+            mpHost->send(payload);
+            return;
+        }
+
+        if (scheme == qsl("prompt")) {
+            // prompt: scheme - put text in command line and wait for user to press enter
+            if (mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
+                QPointer<TCommandLine> commandLine = mpHost->mpConsole->mpCommandLine;
+                commandLine->setPlainText(payload);
+                QTextCursor cursor = commandLine->textCursor();
+                cursor.movePosition(QTextCursor::End);
+                commandLine->setTextCursor(cursor);
+                // Defer the focus operation to avoid issues with QPointer manipulation
+                // during the signal handler execution
+                QTimer::singleShot(0, commandLine.data(), [commandLine]() {
+                    if (commandLine) {
+                        commandLine->setFocus();
+                    }
+                });
+            }
+            return;
+        }
+
+        if (scheme == qsl("http") || scheme == qsl("https")) {
+            QDesktopServices::openUrl(QUrl(link));
+            return;
+        }
+
+        // Unknown scheme - ignore safely to prevent unintended Lua execution
+        // Only links without a scheme should be treated as Lua code
+        return;
+    }
+
+    // No scheme - treat as Lua code to execute
+    mpHost->mLuaInterpreter.compileAndExecuteScript(link);
 }

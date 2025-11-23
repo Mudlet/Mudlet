@@ -26,10 +26,8 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QPointer>
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -79,6 +77,7 @@ public:
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     bool mRegisteredAnonymousLuaFunction = false;
+    QPointer<Host> mpHost;
 
 private:
     TKey() = default;
@@ -102,7 +101,6 @@ private:
 
     QString mScript;
     QString mFuncName;
-    QPointer<Host> mpHost;
     bool mNeedsToBeCompiled = true;
     bool mModuleMember = false;
 };

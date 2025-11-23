@@ -38,87 +38,43 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QVersionNumber>
 #include <QtConcurrent>
 #include <QFile>
 #include <sstream>
-#include "post_guard.h"
 
 XMLexport::XMLexport( Host * pH )
 : mpHost(pH)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TTrigger * pT )
-: mpHost(nullptr)
-, mpTrigger(pT)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(nullptr)
+: mpTrigger(pT)
 {
 }
 
 XMLexport::XMLexport( TTimer * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(pT)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(nullptr)
+: mpTimer(pT)
 {
 }
 
 XMLexport::XMLexport( TAlias * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(pT)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(nullptr)
+: mpAlias(pT)
 {
 }
 
 XMLexport::XMLexport( TAction * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(pT)
-, mpScript(nullptr)
-, mpKey(nullptr)
+: mpAction(pT)
 {
 }
 
 XMLexport::XMLexport( TScript * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(pT)
-, mpKey(nullptr)
+: mpScript(pT)
 {
 }
 
 XMLexport::XMLexport( TKey * pT )
-: mpHost(nullptr)
-, mpTrigger(nullptr)
-, mpTimer(nullptr)
-, mpAlias(nullptr)
-, mpAction(nullptr)
-, mpScript(nullptr)
-, mpKey(pT)
+: mpKey(pT)
 {
 }
 
@@ -195,16 +151,7 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
         helpPackage.append_child("helpURL").text().set("");
     }
     if (async) {
-        auto future = QtConcurrent::run([&, fileName]() { return saveXml(fileName); });
-        auto watcher = new QFutureWatcher<bool>;
-        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
-            if (!mpHost) {
-                return;
-            }
-            mpHost->xmlSaved(fileName);
-        });
-        watcher->setFuture(future);
-        saveFutures.append(future);
+        runAsyncSave(fileName, fileName);
     } else {
         saveXml(fileName);
         mpHost->xmlSaved(fileName);
@@ -215,15 +162,34 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
 {
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
-    auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
 
+    runAsyncSave(filename_pugi_xml, qsl("profile"));
+}
+
+// Helper to encapsulate async save pattern: clone document, save in background thread,
+// notify host when complete
+void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
+{
+    // Clone XML document on main thread, then serialize and save on background thread.
+    // Cloning is fast and safe; each document owns its own tree, so the clone can be
+    // serialized on a background thread without thread-safety issues.
+    QPointer<Host> host = mpHost;
+    pugi::xml_document docClone;
+    // Deep copy the entire document tree
+    for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
+        docClone.append_copy(child);
+    }
+    auto future = QtConcurrent::run([fileName, docClone = std::move(docClone)]() mutable { 
+        return XMLexport::saveXmlDocToFile(fileName, docClone); 
+    });
     auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
-        if (!mpHost) {
+    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey]() {
+        if (!host) {
             return;
         }
-        mpHost->xmlSaved(qsl("profile"));
+        host->xmlSaved(xmlSavedKey);
     });
+    connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -340,6 +306,45 @@ bool XMLexport::saveXml(const QString& fileName)
     return success;
 }
 
+// Save an XML document to a file. This is thread-safe and can be called from a background thread
+// as long as the document is not being modified concurrently (which we ensure by passing a clone).
+// Static method so it can be called without keeping XMLexport alive.
+// Note: This is a static member method that doesn't access any instance state,
+// making it safe to call from background threads.
+bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc)
+{
+    QSaveFile file(fileName);
+
+    auto printErrorMessage = [&](const QString& errorString) {
+        qDebug().noquote().nospace() << "XMLexport::saveXmlDocToFile(\"" << fileName << "\") ERROR - failed to save package, reason: " << errorString << ".";
+    };
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        printErrorMessage(file.errorString().prepend("failed to open file, "));
+        return false;
+    }
+
+    // Serialize the document to a stringstream
+    std::stringstream saveStringStream(std::ios::out);
+    doc.save(saveStringStream);
+    std::string output(saveStringStream.str());
+    
+    // Apply sanitization for control characters
+    sanitizeForQxml(output);
+
+    file.write(output.data(), output.size());
+    bool success = file.error() == QFileDevice::NoError;
+    
+    if (!success) {
+        printErrorMessage(file.errorString());
+    } else if (!file.commit()) {
+        printErrorMessage(file.errorString());
+        success = false;
+    }
+
+    return success;
+}
+
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
 bool XMLexport::saveXmlFile(QSaveFile& file)
 {
@@ -384,6 +389,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // that can be expressed solely with the Latin1 character encoding so that
     // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
+    host.append_attribute("disablePasswordMasking") = pHost->mDisablePasswordMasking ? "yes" : "no";
     host.append_attribute("HighlightHistory") = pHost->mHighlightHistory ? "yes" : "no";
     host.append_attribute("commandEchoMode") = QString::number(static_cast<int>(pHost->mCommandEchoMode)).toLatin1().data();
     // Keep legacy attribute for backward compatibility
@@ -415,6 +421,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableMTTS") = pHost->mEnableMTTS ? "yes" : "no";
     host.append_attribute("mEnableMNES") = pHost->mEnableMNES ? "yes" : "no";
     host.append_attribute("mEnableMXP") = pHost->mEnableMXP ? "yes" : "no";
+    host.append_attribute("mEnableCHARSET") = pHost->mEnableCHARSET ? "yes" : "no";
+    host.append_attribute("mEnableNEWENVIRON") = pHost->mEnableNEWENVIRON ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
     bool enableUserDictionary;
@@ -428,16 +436,16 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
+    host.append_attribute("mMapperShowGrid") = pHost->mMapperShowGrid ? "yes" : "no";
     host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
-    host.append_attribute("mFORCE_CHARSET_NEGOTIATION_OFF") = pHost->mFORCE_CHARSET_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("mVersionInTTYPE") = pHost->mVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mPromptedForVersionInTTYPE") = pHost->mPromptedForVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mForceMXPProcessorOn") = pHost->getForceMXPProcessorOn() ? "yes" : "no";
     host.append_attribute("mPromptedForMXPProcessorOn") = pHost->mPromptedForMXPProcessorOn ? "yes" : "no";
-    host.append_attribute("forceNewEnvironNegotiationOff") = pHost->mForceNewEnvironNegotiationOff ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
+    host.append_attribute("mMapGridLineSize") = QString::number(pHost->mMapGridLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
     host.append_attribute("mMapViewOnly") = pHost->mMapViewOnly ? "yes" : "no";
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
@@ -456,14 +464,14 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
-    
+
     // Handle proxy password based on application version for backward compatibility
     // For version 4.20.0+, use secure storage and clear XML; for older versions, maintain plaintext in XML
     const QString currentAppVersion = QString(APP_VERSION);
     const QVersionNumber appVersion = QVersionNumber::fromString(currentAppVersion);
     const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
     const bool useSecureStorage = appVersion >= secureStorageVersion;
-    
+
     if (useSecureStorage) {
         // Modern versions: store in secure storage, clear from XML
         if (!pHost->mProxyPassword.isEmpty()) {
@@ -610,6 +618,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mUpperLevelColor").text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
         host.append_child("mRoomCollisionBorderColor").text().set(pHost->mRoomCollisionBorderColor.name().toUtf8().constData());
+        auto mapGridColorNode = host.append_child("mMapGridColor");
+        mapGridColorNode.text().set(pHost->mMapGridColor.name().toUtf8().constData());
+        mapGridColorNode.append_attribute("alpha").set_value(pHost->mMapGridColor.alpha());
         auto mapInfoBgNode = host.append_child("mMapInfoBg");
         mapInfoBgNode.text().set(pHost->mMapInfoBg.name().toUtf8().constData());
         mapInfoBgNode.append_attribute("alpha").set_value(pHost->mMapInfoBg.alpha());
@@ -675,7 +686,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
-    
+
     // Write experiments
     {
         QStringList allExperiments = pHost->getAllExperiments();
@@ -687,7 +698,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
-    
+
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);
@@ -829,35 +840,25 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     auto mudletPackage = writeXmlHeader();
 
     if (writeGenericPackage(mpHost, mudletPackage)) {
-        auto future = QtConcurrent::run([&, exportFileName]() { return saveXml(exportFileName); });
-        auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=, this]() {
-            if (!mpHost) {
-                return;
-            }
-            mpHost->xmlSaved(qsl("profile"));
-        });
-        watcher->setFuture(future);
-        saveFutures.append(future);
-
+        runAsyncSave(exportFileName, qsl("profile"));
         return true;
     }
 
     return false;
 }
 
-bool XMLexport::exportPackage(const QString& exportFileName, bool ignoreModuleMember)
+bool XMLexport::exportPackage(const QString& exportFileName, bool ignoreModuleMember, bool ignoreVariables)
 {
     auto mudletPackage = writeXmlHeader();
 
-    if (writeGenericPackage(mpHost, mudletPackage, ignoreModuleMember)) {
+    if (writeGenericPackage(mpHost, mudletPackage, ignoreModuleMember, ignoreVariables)) {
         return saveXml(exportFileName);
     }
 
     return false;
 }
 
-bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMember)
+bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMember, bool ignoreVariables)
 {
     writeTriggerPackage(pHost, mudletPackage, ignoreModuleMember);
     writeTimerPackage(pHost, mudletPackage, ignoreModuleMember);
@@ -866,7 +867,9 @@ bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, 
     writeScriptPackage(pHost, mudletPackage, ignoreModuleMember);
     writeKeyPackage(pHost, mudletPackage, ignoreModuleMember);
     // variables weren't previously exported as a generic package
-    writeVariablePackage(pHost, mudletPackage);
+    if (!ignoreVariables) {
+        writeVariablePackage(pHost, mudletPackage);
+    }
 
     return true;
 }

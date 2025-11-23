@@ -30,7 +30,6 @@
 #endif
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QColor>
 #include <QFont>
@@ -41,11 +40,11 @@
 #include <QNetworkReply>
 #include <QPixmap>
 #include <QPointer>
+#include <QSet>
 #include <QSizeF>
 #include <QVector3D>
 #include <stdlib.h>
 #include <optional>
-#include "post_guard.h"
 
 #define DIR_NORTH 1
 #define DIR_NORTHEAST 2
@@ -345,6 +344,14 @@ public slots:
 
 
 private:
+    void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+                             const QMap<QString, int>& exitWeights,
+                             unsigned int source,
+                             TRoom* pSourceR,
+                             int target,
+                             quint8 direction,
+                             const QString& exitKey,
+                             const QSet<unsigned int>& unUsableRoomSet);
     const QString createFileHeaderLine(QString, QChar);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);

@@ -41,7 +41,6 @@
 #include "updater.h"
 #endif
 
-#include "pre_guard.h"
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
 #include <QAction>
@@ -93,7 +92,6 @@
 #else
 // Any other OS?
 #endif
-#include "post_guard.h"
 
 class QCloseEvent;
 class QMediaPlayer;
@@ -112,7 +110,12 @@ class QTimer;
 class dlgAboutDialog;
 class dlgConnectionProfiles;
 class dlgIRC;
+class dlgNotepad;
+class dlgPackageManager;
+class dlgModuleManager;
+class dlgPackageExporter;
 class dlgProfilePreferences;
+class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
 class TConsole;
@@ -246,6 +249,7 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     HostManager& getHostManager() { return mHostManager; }
+    ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
@@ -268,7 +272,7 @@ public:
     bool isVersionAtLeast(const QString& minVersion);
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
-    
+
     // Profile validation and orphan detection
     bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
@@ -502,6 +506,13 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    static void restoreProfileFocus(const QString& profileName);
+    static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
+    void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
+    void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
+    void setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager);
+    void setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter);
+    void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
     void slot_toggleMainToolBar();
@@ -572,6 +583,7 @@ private:
 
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+    static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString &dictionaryPath);
     void goingDown() { mIsGoingDown = true; }

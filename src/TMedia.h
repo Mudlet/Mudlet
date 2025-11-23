@@ -31,19 +31,15 @@
 #include "TMediaData.h"
 #include "TMediaPlaylist.h"
 
-#include "pre_guard.h"
 #include <memory> // std::shared_ptr
 #include <QAudioOutput>
 #include <QMediaPlayer>
-#include "post_guard.h"
 
 using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
 class TMediaPlayer
 {
 public:
-    TMediaPlayer()
-    : mMediaData()
-    {}
+    TMediaPlayer() = default;
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
     : mpHost(pHost),
       mMediaData(mediaData),

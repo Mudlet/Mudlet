@@ -25,10 +25,8 @@
 
 #include "TVar.h"
 
-#include "pre_guard.h"
 #include <QScopedPointer>
 #include <QSet>
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -74,7 +72,7 @@ public:
     static int onPanic(lua_State*);
 
 private:
-    int depth;
+    int depth = 0;
     lua_State* mL;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;

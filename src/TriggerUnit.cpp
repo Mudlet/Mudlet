@@ -27,6 +27,29 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
+#include <functional>
+
+TriggerUnit::~TriggerUnit()
+{
+    // Set mpHost to null on all triggers (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TTrigger*)> nullifyChildren = [&nullifyChildren](TTrigger* t) {
+            for (auto child : *t->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(trigger);
+    }
+    for (auto trigger : mTriggerRootNodeList) {
+        delete trigger;
+    }
+}
+
 void TriggerUnit::resetStats()
 {
     statsItemsTotal = 0;
@@ -237,24 +260,23 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    const QByteArray utf8Data = data.toUtf8();
+    const char* utf8Ptr = utf8Data.constData();
+    const int utf8Length = utf8Data.size();
+
 #if defined(Q_OS_WINDOWS)
     // strndup(3) - a safe strdup(3) does not seem to be available in the
     // original mingw or the replacement mingw-w64 enmvironment we use:
-    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().constData()) + 1));
-    strcpy(subject, data.toUtf8().constData());
+    char* subject = static_cast<char*>(malloc(utf8Length + 1));
+    strcpy(subject, utf8Ptr);
 #else
-    char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+    char* subject = strndup(utf8Ptr, utf8Length);
 #endif
 
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }
     free(subject);
-
-    for (auto& trigger : mCleanupList) {
-        delete trigger;
-    }
-    mCleanupList.clear();
 }
 
 void TriggerUnit::compileAll()
@@ -412,18 +434,15 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 
 void TriggerUnit::doCleanup()
 {
-    for (auto trigger : mCleanupList) {
-        delete trigger;
+    QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
+    while (itTrigger.hasNext()) {
+        auto pTrigger = itTrigger.next();
+        itTrigger.remove();
+        delete pTrigger;
     }
-    mCleanupList.clear();
 }
 
 void TriggerUnit::markCleanup(TTrigger* pT)
 {
-    for (auto trigger : mCleanupList) {
-        if (trigger == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }

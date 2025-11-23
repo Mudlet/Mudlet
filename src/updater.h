@@ -29,9 +29,7 @@
 #endif
 
 
-#include "pre_guard.h"
 #include <QObject>
-#include "post_guard.h"
 
 class Updater : public QObject
 {
@@ -51,7 +49,7 @@ public:
 
 private:
     dblsqd::Feed* feed;
-    dblsqd::UpdateDialog* updateDialog;
+    dblsqd::UpdateDialog* updateDialog{nullptr};
     QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
     QSettings* settings;

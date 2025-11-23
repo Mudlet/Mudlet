@@ -32,9 +32,7 @@
 #include "utils.h"
 
 
-#include "pre_guard.h"
 #include <QAction>
-#include "post_guard.h"
 
 // A template for tooltip HTML formatting so that we do not have
 // 30 copies of the same QString in the read-only segment of the code:
@@ -103,6 +101,8 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
     mpEditor = new QLineEdit(parent);
     mpEditor->setFrame(false);
     mpEditor->setPlaceholderText(mpDlgRoomExits->mSpecialExitRoomIdPlaceholder);
+    // Hide anything in the original QLineEdit that this sits on top of:
+    mpEditor->setAutoFillBackground(true);
     if (mpDlgRoomExits) {
         if (!mpHost) {
             mpHost = mpDlgRoomExits->getHost();
@@ -464,7 +464,6 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
 
-// >>>>>>> development
     specialExits->addTopLevelItem(pI);
 
     setIconAndToolTipsOnSpecialExit(pI, true);

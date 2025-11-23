@@ -9,12 +9,23 @@ jobs:
     runs-on: ubuntu-latest
     #if: github.event_name  == 'pull_request' # only run pull requests, no really
     steps:
-    - uses: actions/checkout@v5
+    - name: Checkout develop branch for danger config
+      uses: actions/checkout@v6
       with:
-        ref: ${{github.event.pull_request.head.ref}}
-        repository: ${{github.event.pull_request.head.repo.full_name}}
+        path: danger-config
+        fetch-depth: 1
+    - name: Checkout PR head for file analysis
+      uses: actions/checkout@v6
+      with:
+        ref: ${{github.event.pull_request.head.sha}}
+        path: pr-files
         fetch-depth: 0
+    - name: Copy danger config to PR workspace
+      run: |
+        cp danger-config/dangerfile.js pr-files/
+        cp danger-config/package.json pr-files/ 2>/dev/null || true
     - name: Install yarn dependencies and run danger
+      working-directory: pr-files
       run: |
         yarn add danger --dev
         yarn danger ci

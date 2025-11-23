@@ -25,6 +25,29 @@
 #include "Host.h"
 #include "TAlias.h"
 
+#include <functional>
+
+AliasUnit::~AliasUnit()
+{
+    // Set mpHost to null on all aliases (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto alias : mAliasRootNodeList) {
+        alias->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TAlias*)> nullifyChildren = [&nullifyChildren](TAlias* a) {
+            for (auto child : *a->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(alias);
+    }
+    for (auto alias : mAliasRootNodeList) {
+        delete alias;
+    }
+}
+
 void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
     std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
@@ -372,18 +395,15 @@ std::tuple<QString, int, int, int> AliasUnit::assembleReport()
 
 void AliasUnit::doCleanup()
 {
-    for (auto alias : mCleanupList) {
-        delete alias;
+    QMutableSetIterator<TAlias*> itAlias(mCleanupSet);
+    while (itAlias.hasNext()) {
+        auto pAlias = itAlias.next();
+        itAlias.remove();
+        delete pAlias;
     }
-    mCleanupList.clear();
 }
 
 void AliasUnit::markCleanup(TAlias* pT)
 {
-    for (auto alias : mCleanupList) {
-        if (alias == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }

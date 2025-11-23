@@ -25,10 +25,8 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QFileDialog>
 #include <QMessageBox>
-#include "post_guard.h"
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
@@ -251,4 +249,12 @@ void dlgModuleManager::slot_helpModule()
             }
         }
     }
+}
+
+void dlgModuleManager::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit moduleManagerClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
 }
