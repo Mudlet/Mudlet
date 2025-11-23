@@ -4301,6 +4301,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
+    if (mHostManager.hostLoaded(profile_name)) {
+        qDebug() << "Profile" << profile_name << "already loaded, skipping duplicate autologin";
+        return;
+    }
+
     loadProfile(profile_name, true);
 
     slot_connectionDialogueFinished(profile_name, true);
@@ -5655,8 +5660,6 @@ bool mudlet::migratePasswordsToProfileStorage()
 
     const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
-    bool anyMigrationNeeded = false;
-
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
         QString password = CredentialManager::retrieveCredential(profile, "character");
@@ -5673,7 +5676,6 @@ bool mudlet::migratePasswordsToProfileStorage()
             } else {
                 qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile << "\" to profile storage (secure storage preserved for compatibility).";
             }
-            anyMigrationNeeded = true;
         }
 
         // Also check for old-format keychain entries (service: "Mudlet profile", key: profile name)

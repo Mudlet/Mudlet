@@ -23,6 +23,7 @@
 
 
 #include "TEncodingTable.h"
+#include "TEncodingHelper.h"
 #include "TTextCodec.h"
 
 const TEncodingTable TEncodingTable::csmDefaultInstance = TEncodingTable(csmEncodings);
@@ -37,40 +38,19 @@ QList<QByteArray> TEncodingTable::getEncodingNames() const
         QMutableByteArrayListIterator itEncoding(results);
         while (itEncoding.hasNext()) {
             const QByteArray encoding{itEncoding.next()};
-            QTextCodec* pEncoding = QTextCodec::codecForName(encoding);
-            if (!pEncoding) {
+            if (!TEncodingHelper::isEncodingAvailable(encoding)) {
                 // We do not have that encoder available after all
                 itEncoding.remove();
                 if (encoding == "CP437") {
-                    // Okay to insert our replacement TTextCodex_XXXX into the
-                    // system we must instantiate them once:
-                    auto* pTTextCodec_437 = new (std::nothrow) TTextCodec_437();
-                    // Now that it has been instantiated, the system knows about
-                    // it - indeed it takes possession of it and we must NOT
-                    // delete it ourselves!
-                    if (pTTextCodec_437) {
-                        itEncoding.insert(pTTextCodec_437->name());
-                    }
+                    itEncoding.insert(TTextCodec_437::name());
                 } else if (encoding == "CP667") {
-                    auto* pTTextCodec_667 = new (std::nothrow) TTextCodec_667();
-                    if (pTTextCodec_667) {
-                        itEncoding.insert(pTTextCodec_667->name());
-                    }
+                    itEncoding.insert(TTextCodec_667::name());
                 } else if (encoding == "CP737") {
-                    auto* pTTextCodec_737 = new (std::nothrow) TTextCodec_737();
-                    if (pTTextCodec_737) {
-                        itEncoding.insert(pTTextCodec_737->name());
-                    }
+                    itEncoding.insert(TTextCodec_737::name());
                 } else if (encoding == "CP869") {
-                    auto* pTTextCodec_869 = new (std::nothrow) TTextCodec_869();
-                    if (pTTextCodec_869) {
-                        itEncoding.insert(pTTextCodec_869->name());
-                    }
+                    itEncoding.insert(TTextCodec_869::name());
                 } else if (encoding == "MEDIEVIA") {
-                    auto* pTTextCodec_medievia = new TTextCodec_medievia();
-                    if (pTTextCodec_medievia) {
-                        itEncoding.insert(pTTextCodec_medievia->name());
-                    }
+                    itEncoding.insert(TTextCodec_medievia::name());
                 }
             }
         }

@@ -452,7 +452,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
                  </size>
                 </property>
                 <property name="text">
-                 <string>-</string>
+                 <string notr="true">-</string>
                 </property>
                </widget>
               </item>

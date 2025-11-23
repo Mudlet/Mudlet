@@ -36,8 +36,8 @@ TKey::TKey(TKey* parent, Host* pHost)
 
 TKey::TKey(QString name, Host* pHost)
 : Tree<TKey>( nullptr )
-, mName(name)
 , mpHost(pHost)
+, mName(name)
 {
 }
 
