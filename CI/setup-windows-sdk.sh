@@ -103,6 +103,7 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-qt6-translations" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-httpserver" \
     "mingw-w64-${BUILDCOMPONENT}-angleproject" \
     "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6" \
     git \
