@@ -277,11 +277,6 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         trigger->match(subject, data, line);
     }
     free(subject);
-
-    for (auto& trigger : mCleanupList) {
-        delete trigger;
-    }
-    mCleanupList.clear();
 }
 
 void TriggerUnit::compileAll()
@@ -439,18 +434,15 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 
 void TriggerUnit::doCleanup()
 {
-    for (auto trigger : mCleanupList) {
-        delete trigger;
+    QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
+    while (itTrigger.hasNext()) {
+        auto pTrigger = itTrigger.next();
+        itTrigger.remove();
+        delete pTrigger;
     }
-    mCleanupList.clear();
 }
 
 void TriggerUnit::markCleanup(TTrigger* pT)
 {
-    for (auto trigger : mCleanupList) {
-        if (trigger == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }

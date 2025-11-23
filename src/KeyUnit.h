@@ -27,6 +27,7 @@
 #include <QMap>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 
 #include <list>
@@ -76,7 +77,7 @@ public:
 
 
     QMultiMap<QString, TKey*> mLookupTable;
-    std::list<TKey*> mCleanupList;
+    QSet<TKey*> mCleanupSet;
     QList<TKey*> uninstallList;
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally
