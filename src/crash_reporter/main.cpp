@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     if (storedOption.isValid()) {
         option = static_cast<TCrashSendOption>(storedOption.toInt());
     }
-    switch(option) {
+    switch (option) {
         case AlwaysSend:
             sendCrashReport(argv[1]);
             break;
@@ -84,8 +84,7 @@ TCrashSendOption createCrashDialog() {
     QLabel *label = new QLabel(QCoreApplication::translate(
         "CrashReporter",
         "<div align='center'><b>Mudlet has encountered a problem.</b><br>"
-        "You can choose to send a crash report to help us improve the application.</div>"
-    ));
+        "You can choose to send a crash report to help us improve the application.</div>"));
     label->setAlignment(Qt::AlignCenter);
     vLayout->addWidget(label);
 

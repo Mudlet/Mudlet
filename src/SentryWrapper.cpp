@@ -18,17 +18,18 @@
  ***************************************************************************/
 
 #ifdef WITH_SENTRY
-    #include <QStandardPaths>
-    #include "sentry.h"
+#include <QStandardPaths>
+#include "sentry.h"
 #endif
-#if defined(_WIN32) || defined(_WIN64)
-    #include <windows.h>
-#elif defined(__APPLE__)
-    #include <mach-o/dyld.h>
-    #include <limits.h>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#elif defined(Q_OS_MAC)
+#include <mach-o/dyld.h>
+#include <limits.h>
 #else
-    #include <unistd.h>
-    #include <limits.h>
+#include <unistd.h>
+#include <limits.h>
 #endif
 
 #include <string>
@@ -38,15 +39,13 @@
 
 #include "SentryWrapper.h"
 
-/**
- * Initializes Sentry options for crash/error reporting,
- * Crashes are first stored in a local cache folder, then automatically sent.
- *
- * Expected cache locations:
- *   Linux   : ~/.cache/mudlet/sentry
- *   macOS   : ~/Library/Caches/mudlet/sentry
- *   Windows : C:\Users\...\AppData\Local\Cache\Mudlet\sentry
- */
+// Initializes Sentry options for crash/error reporting.
+// Crashes are first stored in a local cache folder, then automatically sent.
+//
+// Expected cache locations:
+//   Linux   : ~/.cache/mudlet/sentry
+//   macOS   : ~/Library/Caches/mudlet/sentry
+//   Windows : C:\Users\...\AppData\Local\Cache\Mudlet\sentry
 void initSentry()
 {
     #ifdef WITH_SENTRY
@@ -68,7 +67,7 @@ void initSentry()
 
 std::string makeExecutablePath(const std::string& dir, const std::string& name)
 {
-    #ifdef _WIN32
+    #ifdef Q_OS_WIN
         return dir + "/" + name + ".exe";
     #else
         return dir + "/" + name;
@@ -81,39 +80,39 @@ std::string getExeDir()
     static std::mutex mtx;
     std::lock_guard<std::mutex> lock(mtx);
 
-    #if defined(_WIN32) || defined(_WIN64)
-        char path[MAX_PATH];
-        GetModuleFileNameA(NULL, path, MAX_PATH);
-        std::string exePath(path);
-        size_t pos = exePath.find_last_of("\\/");
-        std::string dir = exePath.substr(0, pos);
-        std::replace(dir.begin(), dir.end(), '\\', '/');
+#if defined(Q_OS_WIN)
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    std::string exePath(path);
+    size_t pos = exePath.find_last_of("\\/");
+    std::string dir = exePath.substr(0, pos);
+    std::replace(dir.begin(), dir.end(), '\\', '/');
 
-        return dir;
-    #elif defined(__APPLE__)
-        char        path[PATH_MAX];
-        uint32_t    size = sizeof(path);
+    return dir;
+#elif defined(Q_OS_MAC)
+    char        path[PATH_MAX];
+    uint32_t    size = sizeof(path);
 
-        if (_NSGetExecutablePath(path, &size) != 0) {
-            return ".";
-        }
-        std::string exePath(path);
-        size_t pos = exePath.find_last_of("/");
-        if (pos == std::string::npos) {
-            return exePath;
-        }
-        return exePath.substr(0, pos);
-    #else
-        char        result[PATH_MAX];
-        ssize_t     count = readlink("/proc/self/exe", result, PATH_MAX);
+    if (_NSGetExecutablePath(path, &size) != 0) {
+        return ".";
+    }
+    std::string exePath(path);
+    size_t pos = exePath.find_last_of("/");
+    if (pos == std::string::npos) {
+        return exePath;
+    }
+    return exePath.substr(0, pos);
+#else
+    char        result[PATH_MAX];
+    ssize_t     count = readlink("/proc/self/exe", result, PATH_MAX);
 
-        if (count <= 0) {
-            return std::string(".");
-        }
-        std::string exePath(result, count);
-        size_t pos = exePath.find_last_of("/");
-        return exePath.substr(0, pos);
-    #endif
+    if (count <= 0) {
+        return std::string(".");
+    }
+    std::string exePath(result, count);
+    size_t pos = exePath.find_last_of("/");
+    return exePath.substr(0, pos);
+#endif
 }
 
 void crashIfRequested()

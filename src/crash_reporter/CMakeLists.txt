@@ -37,19 +37,6 @@ set(MUDLET_CRASH_REPORTER_LIBS
     crashpad_mpack crashpad_snapshot crashpad_tools crashpad_util
     mini_chromium
 )
-# target_link_libraries(MudletCrashReporter PRIVATE
-#     Qt6::Core
-#     Qt6::Widgets
-#     sentry
-#     crashpad_client
-#     crashpad_handler_lib
-#     crashpad_minidump
-#     crashpad_mpack
-#     crashpad_snapshot
-#     crashpad_tools
-#     crashpad_util
-#     mini_chromium
-# )
 
 if(WIN32)
     list(APPEND MUDLET_CRASH_REPORTER_LIBS
@@ -79,27 +66,3 @@ elseif(UNIX)
 endif()
 
 target_link_libraries(MudletCrashReporter PRIVATE ${MUDLET_CRASH_REPORTER_LIBS})
-
-
-# if(NOT APPLE)
-#     target_link_libraries(MudletCrashReporter PRIVATE crashpad_compat)
-# else()
-#     target_link_libraries(MudletCrashReporter PRIVATE bsm)
-# endif()
-
-# if(WIN32)
-#     target_link_libraries(MudletCrashReporter PRIVATE
-#         ws2_32
-#         shlwapi
-#         winhttp
-#         version
-#         dbghelp
-#     )
-# elseif(UNIX)
-#     target_link_libraries(MudletCrashReporter PRIVATE
-#         pthread
-#         dl
-#         z
-#         curl
-#     )
-# endif()
