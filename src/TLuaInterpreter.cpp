@@ -43,6 +43,7 @@
 #include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
+#include "TEncodingHelper.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
 #include "dlgIRC.h"
@@ -66,6 +67,7 @@
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
+#include <limits>
 
 using namespace std::chrono_literals;
 
@@ -1139,16 +1141,14 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             // We need to transcode it from UTF-8 into the current Game Server
             // encoding - this can fail if it includes any characters (as UTF-8)
             // that the game encoding cannot convey:
-        auto* pDataCodec = QTextCodec::codecForName(currentEncoding);
-        auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
-            if (!pDataCodec->canEncode(dataQString)) {
+            if (!TEncodingHelper::canEncode(dataQString, currentEncoding)) {
                 return warnArgumentValue(L, __func__, qsl(
                     "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'")
                     .arg(data.constData(), currentEncoding.constData()));
             }
 
-            std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
+            std::string encodedText{TEncodingHelper::encode(dataQString, currentEncoding).toStdString()};
             host.mpConsole->printOnDisplay(encodedText);
             lua_pushboolean(L, true);
             return 1;
@@ -4568,16 +4568,33 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     lua_State* L = pGlobalLua;
+    
+    // Validate Lua state before attempting to call event handler
+    if (!L) {
+        qWarning() << "TLuaInterpreter::callEventHandler() - Lua state is null for function:" << function;
+        return false;
+    }
+    
+    // Check if we're in emergency stop mode
+    if (mpHost && mpHost->mEmergencyStop) {
+        return false;
+    }
+    
+    // Record initial stack size for cleanup
+    const int initialStackSize = lua_gettop(L);
 
     int error = luaL_dostring(L, qsl("return %1").arg(function).toUtf8().constData());
     if (error) {
         std::string err;
-        if (lua_isstring(L, 1)) {
+        if (lua_isstring(L, -1)) {
             err = "Lua error: ";
-            err += lua_tostring(L, 1);
+            err += lua_tostring(L, -1);
         }
         const QString name = "event handler function";
         logError(err, name, function);
+        
+        // Clean up stack after error
+        lua_settop(L, initialStackSize);
         return false;
     }
 
@@ -4631,6 +4648,12 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
+    // Ensure stack is properly cleaned up and validate before cleanup
+    const int finalStackSize = lua_gettop(L);
+    if (finalStackSize > initialStackSize) {
+        qWarning() << "TLuaInterpreter::callEventHandler() - Stack grew during execution. Initial:" << initialStackSize << "Final:" << finalStackSize;
+    }
+    
     lua_pop(L, lua_gettop(L));
     return !error;
 }
@@ -5373,6 +5396,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "getMapZoom", TLuaInterpreter::getMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
+    lua_register(pGlobalLua, "setExitWeightFilter", TLuaInterpreter::setExitWeightFilter);
     lua_register(pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight);
     lua_register(pGlobalLua, "setDoor", TLuaInterpreter::setDoor);
     lua_register(pGlobalLua, "getDoors", TLuaInterpreter::getDoors);
@@ -6603,10 +6627,10 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
                 "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
-        encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
+        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
     }
     // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
-    lua_pushboolean(L, Hunspell_spell(handle, text.toUtf8().constData()));
+    lua_pushboolean(L, Hunspell_spell(handle, encodedText.constData()));
     return 1;
 }
 
@@ -6642,14 +6666,20 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
                 "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
-        encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
+        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
     }
     // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     wordCount = Hunspell_suggest(handle, &wordList, encodedText.constData());
     lua_newtable(L);
     for (size_t i = 0; i < wordCount; ++i) {
         lua_pushnumber(L, i+1);
-        lua_pushstring(L, wordList[i]);
+        QString suggestion;
+        if (hasUserDictionary) {
+            suggestion = QString::fromUtf8(wordList[i]);
+        } else {
+            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.mpConsole->getHunspellCodecName_system());
+        }
+        lua_pushstring(L, suggestion.toUtf8().constData());
         lua_settable(L, -3);
     }
     Hunspell_free_list(handle, &wordList, wordCount);

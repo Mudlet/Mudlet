@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
+#include "TEncodingHelper.h"
 #include <QDebug>
 
 bool TMxpProcessor::setMode(const QString& code)
@@ -163,9 +164,23 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     && mMxpTagBuilder.isInsideTag()
     && !mMxpTagBuilder.isQuotedSequence()
     && !mMxpTagBuilder.isInsideComment()) {
-        lastEntityValue = QStringLiteral("<") + QString::fromStdString(mMxpTagBuilder.getRawTagContent());
+        // Error recovery: nested '<' inside a tag
+        // Decode using connection encoding for consistency
+        const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
+        const QByteArray encoding = mpMxpClient->getEncoding();
+        QString decoded;
+        
+        if (encoding == qsl("UTF-8")) {
+            decoded = QString::fromStdString(rawBytes);
+        } else if (encoding == qsl("ISO 8859-1")) {
+            decoded = QString::fromLatin1(rawBytes.c_str(), static_cast<int>(rawBytes.length()));
+        } else {
+            decoded = TEncodingHelper::decode(QByteArray::fromRawData(rawBytes.c_str(), rawBytes.length()), encoding);
+        }
+        
+        lastEntityValue = qsl("<") + decoded;
         mMxpTagBuilder.resetForNewTag();
-        return HANDLER_INSERT_ENTITY_LIT;
+        return HANDLER_INSERT_ENTITY_SYS;
     }
 
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
@@ -173,6 +188,24 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     }
     
     if (mMxpTagBuilder.hasTag()) {
+        // Save raw tag content before it gets cleared by buildTag()
+        // Note: getRawTagContent() returns content INCLUDING the closing '>'
+        const std::string rawTagBytes = mMxpTagBuilder.getRawTagContent();
+        const QByteArray encoding = mpMxpClient->getEncoding();
+        
+        // Build the tag content string with proper encoding
+        QString rawTagContent = qsl("<");
+        
+        // Decode the raw bytes using the proper encoding
+        if (encoding == qsl("UTF-8")) {
+            rawTagContent += QString::fromStdString(rawTagBytes);
+        } else if (encoding == qsl("ISO 8859-1")) {
+            rawTagContent += QString::fromLatin1(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
+        } else {
+            // For other encodings (GBK, BIG5, EUC-KR, etc.), use TEncodingHelper
+            rawTagContent += TEncodingHelper::decode(QByteArray::fromRawData(rawTagBytes.c_str(), rawTagBytes.length()), encoding);
+        }
+        
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
         //        qDebug() << "TAG RECEIVED: " << tag->asString();
@@ -183,9 +216,11 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
 
         // If tag was not handled (not valid MXP and not a custom element), display it as-is
+        // Use HANDLER_INSERT_ENTITY_SYS so the Unicode content is inserted directly
+        // without being reprocessed through toLatin1() which would destroy non-ASCII chars
         if (result == MXP_TAG_NOT_HANDLED) {
-            lastEntityValue = tag->toString();
-            return HANDLER_INSERT_ENTITY_LIT;
+            lastEntityValue = rawTagContent;
+            return HANDLER_INSERT_ENTITY_SYS;
         }
 
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;

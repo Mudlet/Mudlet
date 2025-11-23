@@ -198,6 +198,7 @@ set(mudlet_SRCS
     TTabBar.cpp
     TDetachedWindow.cpp
     TTextCodec.cpp
+    TEncodingHelper.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -464,8 +465,7 @@ find_package(Qt6 6.4.0 REQUIRED
                OpenGL
                UiTools
                Widgets
-               Concurrent
-               Core5Compat)
+               Concurrent)
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
@@ -480,7 +480,6 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::OpenGL
               Qt6::UiTools
               Qt6::Widgets
-              Qt6::Core5Compat
               qt6keychain)
 
 if(Qt6TextToSpeech_FOUND)
@@ -496,7 +495,8 @@ find_package(ZLIB REQUIRED)
 find_package(PCRE2 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
-find_package(Boost 1.44)
+find_package(Boost 1.44 CONFIG REQUIRED)
+message(STATUS "Found Boost: ${Boost_DIR} (found version \"${Boost_VERSION}\")")
 
 
 # FreeBSD's sysinfo() call is done in a package, libsysinfo.

@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: ZedThree/clang-tidy-review/post@v0.22.0
+      - uses: ZedThree/clang-tidy-review/post@v0.22.1
         with:
           # don't post any comments if the PR is fine
           lgtm_comment_body: ''

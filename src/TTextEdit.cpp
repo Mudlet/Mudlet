@@ -308,7 +308,7 @@ void TTextEdit::showNewLines()
     update();
 
 
-    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole
+    if (mpHost && QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole
         && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
         QString newLines;
 
@@ -453,7 +453,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 
     // If caret mode is enabled and the line is empty, still draw the caret.
-    if (mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
+    if (mpHost && mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
         auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
         painter.fillRect(textRect, mCaretColor);
     }
@@ -582,7 +582,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     }
     textRects.append(textRect);
     QColor bgColor;
-    bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
     if (Q_UNLIKELY(charStyle.isFound())) {
         if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
             fgColors.append(mSearchHighlightBgColor);
@@ -1346,7 +1346,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 void TTextEdit::slot_popupMenu()
 {
     auto* pA = qobject_cast<QAction*>(sender());
-    if (!pA) {
+    if (!pA || !mpHost) {
         return;
     }
     // index is set to be greater than zero for every possible sender():
@@ -1412,7 +1412,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
                     int luaReference = mpBuffer->mLinkStore.getReference(linkIndex).value(0, false);
                     QString func;
-                    if (!command.empty()) {
+                    if (!command.empty() && mpHost) {
                         func = command.at(0);
 
                         // Set active state for CSS pseudo-class support
@@ -1550,7 +1550,7 @@ void TTextEdit::slot_copySelectionToClipboard()
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
-    if (!establishSelectedText()) {
+    if (!establishSelectedText() || !mpHost) {
         return;
     }
 
@@ -1783,7 +1783,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
 void TTextEdit::searchSelectionOnline()
 {
-    if (!establishSelectedText()) {
+    if (!establishSelectedText() || !mpHost) {
         return;
     }
 
@@ -1959,7 +1959,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 
-        QString selectedEngine = mpHost->getSearchEngine().first;
+        QString selectedEngine = mpHost ? mpHost->getSearchEngine().first : tr("Unknown");
         QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
@@ -2020,17 +2020,21 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         }
 
         // Add user actions
-        QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
-        while (it.hasNext()) {
-            it.next();
-            QStringList actionInfo = it.value();
-            const QString& uniqueName = it.key();
-            const QString& actionName = actionInfo.at(1);
-            QAction* mouseAction = new QAction(actionName, this);
-            mouseAction->setToolTip(actionInfo.at(2));
-            popup->addAction(mouseAction);
-            connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
+        if (mpHost) {
+            QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
+
+            while (it.hasNext()) {
+                it.next();
+                QStringList actionInfo = it.value();
+                const QString& uniqueName = it.key();
+                const QString& actionName = actionInfo.at(1);
+                QAction* mouseAction = new QAction(actionName, this);
+                mouseAction->setToolTip(actionInfo.at(2));
+                popup->addAction(mouseAction);
+                connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
+            }
         }
+
         popup->popup(mapToGlobal(eventPos), action);
         event->accept();
         return;
@@ -2824,6 +2828,10 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
 
 void TTextEdit::slot_mouseAction(const QString &uniqueName)
 {
+    if (!mpHost) {
+        return;
+    }
+
     TEvent event {};
     QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
     event.mArgumentList.append(mouseEvent[0]);
@@ -2891,7 +2899,7 @@ void TTextEdit::setCaretPosition(int line, int column)
     mCaretLine = line;
     mCaretColumn = column;
 
-    if (!mpHost->caretEnabled()) {
+    if (!mpHost || !mpHost->caretEnabled()) {
         return;
     }
 
@@ -2963,7 +2971,7 @@ void TTextEdit::updateCaret()
 // you act upon the key.
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
-    if (!mpHost->caretEnabled()) {
+    if (!mpHost || !mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
     }
