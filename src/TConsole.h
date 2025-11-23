@@ -110,19 +110,20 @@ struct TFontAttributes
         font.setFixedPitch(mFixedPitch);
         font.setStyleHint(mStyleHint, mStyleStrategy);
         
-        // Apply platform-specific hinting for better rendering
+        // Apply size-dependent hinting for better rendering
+        // Small fonts (< 12pt) need full hinting to avoid scaling/aliasing issues
+        // Larger fonts look better with reduced hinting
         if (mStyleStrategy & QFont::PreferAntialias) {
-#ifdef Q_OS_WIN
-            // Windows uses ClearType which works best with vertical hinting
-            font.setHintingPreference(QFont::PreferVerticalHinting);
-#else
-            // For other platforms, use size-dependent hinting
             if (mPointSize < 12) {
                 font.setHintingPreference(QFont::PreferDefaultHinting);
             } else {
+#ifdef Q_OS_WIN
+                // Windows ClearType works best with vertical hinting for larger fonts
+                font.setHintingPreference(QFont::PreferVerticalHinting);
+#else
                 font.setHintingPreference(QFont::PreferNoHinting);
-            }
 #endif
+            }
         } else {
             font.setHintingPreference(mHintingPreference);
         }
