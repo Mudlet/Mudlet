@@ -54,6 +54,9 @@ private slots:
     void slot_removeWord();
     void slot_popupMenu();
 
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
+
 private:
     void spellCheckWord(QTextCursor& cursor);
     void recheckWholeLine();
@@ -67,6 +70,8 @@ private:
     char** mpSystemSuggestionsList = nullptr;
     char** mpUserSuggestionsList = nullptr;
     QPoint mPopupPosition;
+    int mLastWordStart = -1;
+    int mLastWordEnd = -1;
 };
 
 #endif // MUDLET_DLGCOMPOSER_H

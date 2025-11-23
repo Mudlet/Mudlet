@@ -29,6 +29,7 @@
 #include "TMainConsole.h"
 #include "mudlet.h"
 
+#include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QTextCursor>
@@ -43,8 +44,8 @@ dlgComposer::dlgComposer(Host* pH)
     connect(saveButton, &QAbstractButton::clicked, this, &dlgComposer::slot_save);
     connect(cancelButton, &QAbstractButton::clicked, this, &dlgComposer::slot_cancel);
 
-    // Set up spellcheck
-    connect(edit, &QPlainTextEdit::textChanged, this, &dlgComposer::slot_spellCheck);
+    // Set up spellcheck - use event filter for deferred checking
+    edit->installEventFilter(this);
     edit->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(edit, &QWidget::customContextMenuRequested, this, &dlgComposer::slot_contextMenu);
 
@@ -71,6 +72,45 @@ void dlgComposer::init(const QString &newTitle, const QString &newText)
     if (mpHost && mpHost->mEnableSpellCheck) {
         recheckWholeLine();
     }
+}
+
+bool dlgComposer::eventFilter(QObject* obj, QEvent* event)
+{
+    if (obj == edit && event->type() == QEvent::KeyPress && mpHost && mpHost->mEnableSpellCheck) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+
+        // Get current word boundaries before the key is processed
+        QTextCursor oldCursor = edit->textCursor();
+        oldCursor.movePosition(QTextCursor::StartOfWord, QTextCursor::MoveAnchor);
+        oldCursor.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+        const int wordStart = oldCursor.selectionStart();
+        const int wordEnd = oldCursor.selectionEnd();
+
+        // Let the event be processed normally first
+        bool result = QMainWindow::eventFilter(obj, event);
+
+        // Check if this key should trigger spellcheck
+        bool isDelimiter = false;
+        const QString text = keyEvent->text();
+        if (!text.isEmpty()) {
+            const QChar ch = text.at(0);
+            isDelimiter = ch.isSpace() || ch.isPunct();
+        }
+
+        bool leftWord = false;
+        if (text.isEmpty() && !isDelimiter) {
+            const int pos = edit->textCursor().position();
+            leftWord = pos < wordStart || pos > wordEnd;
+        }
+
+        if (isDelimiter || leftWord) {
+            slot_spellCheck();
+        }
+
+        return result;
+    }
+
+    return QMainWindow::eventFilter(obj, event);
 }
 
 void dlgComposer::slot_spellCheck()
