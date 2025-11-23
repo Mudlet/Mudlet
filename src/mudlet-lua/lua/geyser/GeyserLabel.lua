@@ -10,7 +10,8 @@ Geyser.Label = Geyser.Window:new({
   format = "",
   font = "",
   args = "",
-  fillBg = 1, })
+  fillBg = 1,
+  useProfileAntialiasing = false, })
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
 --- Prints a message to the window.  All parameters are optional and if not
@@ -263,9 +264,8 @@ function Geyser.Label:setFont(font)
     debugc(err)
   end
   self.font = font
-  -- Apply the profile's antialiasing settings to the label
-  if font ~= "" then
-    setLabelFont(self.name, font, self.fontSize)
+  if self.useProfileAntialiasing and font ~= "" then
+    applyProfileAntialiasing(self.name, true)
   end
   self:echo()
 end
@@ -438,11 +438,23 @@ function Geyser.Label:setFontSize(fontSize)
   self.formatTable.fontSize = fontSize
   self.format = self.format:gsub("%d", "")
   self.format = self.format .. fontSize
-  -- Apply the profile's antialiasing settings to the label when font size changes
-  if self.font and self.font ~= "" then
-    setLabelFont(self.name, self.font, fontSize)
+  if self.useProfileAntialiasing and self.font and self.font ~= "" then
+    applyProfileAntialiasing(self.name, true)
   end
   self:echo()
+end
+
+--- Enable or disable using the profile's antialiasing settings for this label.
+-- When enabled, the label's current font will be rendered with the same antialiasing
+-- and hinting settings as the main console, which fixes rendering issues on Windows 10.
+-- This does NOT change the label's font or size, only how it's rendered.
+-- @param enable true to use profile's antialiasing, false to use default Qt rendering
+function Geyser.Label:setUseProfileAntialiasing(enable)
+  self.useProfileAntialiasing = enable
+  -- Apply or disable profile antialiasing immediately if font is set
+  if self.font and self.font ~= "" then
+    applyProfileAntialiasing(self.name, enable)
+  end
 end
 
 --- Sets the alignment for the label

@@ -5096,7 +5096,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteCommandLine", TLuaInterpreter::deleteCommandLine);
     lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
-    lua_register(pGlobalLua, "setLabelFont", TLuaInterpreter::setLabelFont);
+    lua_register(pGlobalLua, "applyProfileAntialiasing", TLuaInterpreter::applyProfileAntialiasing);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
     lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
