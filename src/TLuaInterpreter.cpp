@@ -5640,7 +5640,11 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre2"), tr("Some functions may not be available."));
+    loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre"));
+    if (!loaded) {
+         loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre2"), tr("Some regular expression functions may not be available."), QString(), qsl("rex_pcre"));
+    }
+
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
