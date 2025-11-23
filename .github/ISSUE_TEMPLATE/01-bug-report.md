@@ -2,8 +2,9 @@
 name: Bug report
 about: Report a bug to help improve Mudlet
 title: ''
-labels: ['bug']
+labels: ['']
 assignees: ''
+type: 'bug'
 
 ---
 

@@ -28,6 +28,7 @@
 #include "TStringUtils.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
+#include "TEncodingHelper.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -35,7 +36,6 @@
 #include <QJsonParseError>
 #include <QJsonValue>
 #include <QTextBoundaryFinder>
-#include <QTextCodec>
 #include <QRegularExpression>
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
@@ -1070,7 +1070,7 @@ void TBuffer::processMxpWatchdogCallback()
                 size_t      unusedBufferPosition = 0;
 
                 mMudLine.append(lastEntityValue);
-                for (size_t i = 0; i < lastEntityValue.size(); ++i) {
+                for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
                     mMudBuffer.push_back(style);
                 }
                 commitLine('\r', unusedBufferPosition);
@@ -2475,7 +2475,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Add menu items in pairs (label, command)
                 // The first menu item becomes the primary left-click action (index 0)
                 // All items (including first) appear in the right-click menu (index 1+)
-                bool isFirstItem = true;
                 for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
                     QString menuLabel = mCurrentHyperlinkMenu[i];
                     QString menuCommand = mCurrentHyperlinkMenu[i + 1];
@@ -2498,7 +2497,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
                         menuHints.append(menuLabel);
                     }
-                    isFirstItem = false;
                 }
 
                 // Set the tooltip for the link (what shows on hover)
@@ -2797,7 +2795,7 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
         // First, extract and parse any base properties (properties not in pseudo-classes)
         // These are properties that come before any pseudo-class or between pseudo-classes
         QString baseProperties;
-        QRegularExpression pseudoClassRegex(R"(:([\w-]+)\s*\{([^}]*)\})");
+        static const QRegularExpression pseudoClassRegex(R"(:([\w-]+)\s*\{([^}]*)\})");
 
         // Extract base properties by removing all pseudo-class blocks
         QString remainingStyle = styleString;
@@ -4896,10 +4894,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, gbSequenceLength).c_str(), gbSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5013,10 +5009,8 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, big5SequenceLength).c_str(), static_cast<int>(big5SequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, big5SequenceLength).c_str(), big5SequenceLength), mEncoding);
             switch (codePoint.size()) {
                 default:
                     Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5138,10 +5132,8 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, eucSequenceLength).c_str(), static_cast<int>(eucSequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, eucSequenceLength).c_str(), eucSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
                     Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5207,16 +5199,11 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
-            mMainIncomingCodec = QTextCodec::codecForName(mEncoding);
-            if (!mMainIncomingCodec) {
+            if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {
-                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Installing a codec that can handle:" << mMainIncomingCodec->aliases();
+                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Encoding is available and will be used.";
             }
-        } else if (mMainIncomingCodec) {
-            qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Uninstall a codec that can handle:" << mMainIncomingCodec->aliases() << " as the new encoding setting of: "
-                               << mEncoding << " does not need a dedicated one explicitly set...";
-            mMainIncomingCodec = nullptr;
         }
     }
 }
@@ -5813,8 +5800,6 @@ void TBuffer::setActiveLink(int linkIndex)
 
     // Reset previous active link
     if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
-        // Check current state to preserve visited links
-        Mudlet::HyperlinkStyling::LinkState currentState = getLinkState(previousActiveLink);
 
         // Return to hover if it's still hovered
         if (previousActiveLink == mCurrentHoveredLinkIndex) {
@@ -5888,7 +5873,7 @@ int TBuffer::getLinkIndexAt(int line, int column) const
     const auto& bufferLine = buffer.at(line);
 
     // Validate column bounds
-    if (column < 0 || column >= bufferLine.size()) {
+    if (column < 0 || column >= static_cast<int>(bufferLine.size())) {
         return 0;
     }
 
