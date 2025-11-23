@@ -58,7 +58,11 @@ struct TFontAttributes
     : mStyleStrategy(isAntiAliased
                              ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality))
+#ifdef Q_OS_WIN
+    , mHintingPreference(isAntiAliased ? QFont::PreferVerticalHinting : QFont::PreferFullHinting)
+#else
     , mHintingPreference(isAntiAliased ? QFont::PreferDefaultHinting : QFont::PreferFullHinting)
+#endif
     {}
 
     explicit TFontAttributes(const QFont& font) {
@@ -91,11 +95,19 @@ struct TFontAttributes
         font.setFixedPitch(mFixedPitch);
         font.setStyleHint(mStyleHint, mStyleStrategy);
         
-        // Apply size-dependent hinting for better rendering at small sizes
-        if (mPointSize < 12 && (mStyleStrategy & QFont::PreferAntialias)) {
-            font.setHintingPreference(QFont::PreferDefaultHinting);
-        } else if (mPointSize >= 12 && (mStyleStrategy & QFont::PreferAntialias)) {
-            font.setHintingPreference(QFont::PreferNoHinting);
+        // Apply platform-specific hinting for better rendering
+        if (mStyleStrategy & QFont::PreferAntialias) {
+#ifdef Q_OS_WIN
+            // Windows uses ClearType which works best with vertical hinting
+            font.setHintingPreference(QFont::PreferVerticalHinting);
+#else
+            // For other platforms, use size-dependent hinting
+            if (mPointSize < 12) {
+                font.setHintingPreference(QFont::PreferDefaultHinting);
+            } else {
+                font.setHintingPreference(QFont::PreferNoHinting);
+            }
+#endif
         } else {
             font.setHintingPreference(mHintingPreference);
         }
@@ -112,7 +124,11 @@ struct TFontAttributes
         mStyleStrategy = isAntiAliased
                                  ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
                                  : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality);
+#ifdef Q_OS_WIN
+        mHintingPreference = isAntiAliased ? QFont::PreferVerticalHinting : QFont::PreferFullHinting;
+#else
         mHintingPreference = isAntiAliased ? QFont::PreferDefaultHinting : QFont::PreferFullHinting;
+#endif
     }
 
     // enums to consider:
