@@ -4513,6 +4513,32 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="6" column="0">
+              <widget class="QLabel" name="label_crashReportPolicy">
+                  <property name="text">
+                      <string>Crash report sending policy:</string>
+                  </property>
+              </widget>
+          </item>
+          <item row="6" column="1">
+              <widget class="QComboBox" name="comboBox_crashReportPolicy">
+                  <item>
+                      <property name="text">
+                          <string>Always send</string>
+                      </property>
+                  </item>
+                  <item>
+                      <property name="text">
+                          <string>Never send</string>
+                      </property>
+                  </item>
+                  <item>
+                      <property name="text">
+                          <string>Ask each time</string>
+                      </property>
+                  </item>
+              </widget>
+          </item>
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
             <property name="toolTip">
