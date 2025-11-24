@@ -450,12 +450,6 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
-if(NOT WIN32)
-  include(cmake/EnableSanitizers.cmake)
-else()
-  message(STATUS "Sanitizers disabled on Windows")
-endif()
-
 find_package(Qt6 6.4.0 REQUIRED
     COMPONENTS Core
                Multimedia
@@ -686,6 +680,12 @@ if(USE_VARIABLE_SPLASH_SCREEN)
 endif()
 
 target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
+
+if(NOT WIN32)
+  include(cmake/EnableSanitizers.cmake)
+else()
+  message(STATUS "Sanitizers disabled on Windows")
+endif()
 
 add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})

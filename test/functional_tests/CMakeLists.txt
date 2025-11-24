@@ -13,12 +13,9 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
-    
-    # By default, tests run in offscreen mode to avoid opening windows.
-    # If you want to actually see the GUI during the test, you can comment out
-    # the QT_QPA_PLATFORM=offscreen line below.
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
         LABELS "functional"
+        TIMEOUT 60  # seconds
     )
 endforeach()

@@ -64,6 +64,10 @@ jobs:
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
+    - name: (Windows) Run QTest
+      shell: msys2 {0}
+      run: ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/release --output-on-failure
+
     - name: (Windows) Run Lua tests
       timeout-minutes: 5
       shell: msys2 {0}
