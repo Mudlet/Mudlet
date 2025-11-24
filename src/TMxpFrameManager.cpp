@@ -20,6 +20,7 @@
 #include "TMxpFrameManager.h"
 #include "Host.h"
 #include "TConsole.h"
+#include "TDockWidget.h"
 #include "TMainConsole.h"
 
 #include <QDebug>
@@ -92,6 +93,15 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     frame->scrolling = attributes.value(qsl("SCROLLING"), qsl("YES")).toUpper() == qsl("YES");
     frame->dockFrame = attributes.value(qsl("DOCK"));
     
+    // If there's an active DEST and no explicit DOCK attribute, use current destination as parent
+    if (frame->dockFrame.isEmpty() && !mCurrentDestination.isEmpty() && frame->isInternal) {
+        auto* potentialParent = getFrame(mCurrentDestination);
+
+        if (potentialParent && potentialParent->isInternal) {
+            frame->dockFrame = mCurrentDestination;
+        }
+    }
+    
     // Check for action attribute
     QString action = attributes.value(qsl("ACTION"), qsl("open")).toLower();
 
@@ -140,6 +150,12 @@ bool TMxpFrameManager::closeFrame(const QString& name)
         if (child) {
             closeFrame(child->name);
         }
+    }
+    
+    // Unregister from main console maps before deletion
+    if (mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->mSubConsoleMap.remove(name);
+        mpHost->mpConsole->mDockWidgetMap.remove(name);
     }
     
     // Remove from hierarchy
@@ -251,6 +267,17 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         return;
     }
     
+    // Check if frame should be nested in another frame's dock widget
+    if (!frame->dockFrame.isEmpty()) {
+        auto* parentFrame = getFrame(frame->dockFrame);
+
+        if (parentFrame && parentFrame->dockWidget) {
+            // Nest this frame inside parent's dock widget
+            layoutNestedFrame(frame, parentFrame);
+            return;
+        }
+    }
+    
     // Get main window for docking
     auto* mainWindow = qobject_cast<QMainWindow*>(mpHost->mpConsole->window());
 
@@ -259,10 +286,15 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         return;
     }
     
-    // Create dock widget
-    auto* dockWidget = new QDockWidget(frame->title, mainWindow);
-    dockWidget->setObjectName(frame->name);
+    // Create TDockWidget for MXP frame
+    auto* dockWidget = new TDockWidget(mpHost, frame->name);
+    dockWidget->setObjectName(qsl("mxpFrame_%1_%2").arg(mpHost->getName(), frame->name));
+    dockWidget->setWindowTitle(frame->title);
+    dockWidget->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     frame->dockWidget = dockWidget;
+    
+    // Register in main console's dock widget map
+    mpHost->mpConsole->mDockWidgetMap.insert(frame->name, dockWidget);
     
     // Calculate size
     QSize mainSize = mainWindow->size();
@@ -291,8 +323,14 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         console->setScrolling(false);
     }
     
-    // Set console as dock widget content
-    dockWidget->setWidget(console);
+    // Register console in main console's sub-console map
+    mpHost->mpConsole->mSubConsoleMap.insert(frame->name, console);
+    
+    // Set console as dock widget content and link them
+    dockWidget->setTConsole(console);
+    
+    // Apply profile stylesheet
+    dockWidget->setStyleSheet(mpHost->mProfileStyleSheet);
     
     // Determine dock area and add to main window
     Qt::DockWidgetArea area = alignmentToDockArea(frame->align);
@@ -514,4 +552,103 @@ void TMxpFrameManager::removeFrameFromHierarchy(TMxpFrame* frame)
     }
 
     frame->childFrames.clear();
+}
+
+void TMxpFrameManager::layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFrame)
+{
+    if (!mpHost || !mpHost->mpConsole || !parentFrame) {
+        qWarning() << "TMxpFrameManager::layoutNestedFrame: Invalid parent frame";
+        return;
+    }
+    
+    // Calculate size based on parent's content size
+    QSize parentSize;
+
+    if (parentFrame->dockWidget) {
+        parentSize = parentFrame->dockWidget->size();
+    } else if (parentFrame->widget) {
+        parentSize = parentFrame->widget->size();
+    } else {
+        parentSize = QSize(400, 300); // Fallback default
+    }
+    
+    QSize frameSize = calculateFrameSize(frame->width, parentSize, false) + 
+                      calculateFrameSize(frame->height, parentSize, true);
+    
+    // Create mini console for content
+    auto* console = mpHost->mpConsole->createMiniConsole(
+        qsl("main"), 
+        frame->name, 
+        0, 0, 
+        frameSize.width(), 
+        frameSize.height());
+    
+    if (!console) {
+        qWarning() << "TMxpFrameManager::layoutNestedFrame: Failed to create console";
+        return;
+    }
+    
+    frame->widget = console;
+    
+    // Configure scrolling
+    if (!frame->scrolling) {
+        console->setScrolling(false);
+    }
+    
+    // Register console in main console's sub-console map
+    mpHost->mpConsole->mSubConsoleMap.insert(frame->name, console);
+    
+    // Set up parent-child relationship
+    frame->parentFrame = parentFrame;
+    parentFrame->childFrames.append(frame);
+    
+    // Get or create a container widget for the parent's dock widget
+    QWidget* containerWidget = nullptr;
+    QBoxLayout* layout = nullptr;
+    
+    if (parentFrame->dockWidget) {
+        containerWidget = parentFrame->dockWidget->widget();
+        
+        // If parent already has a layout container, reuse it
+        if (containerWidget && containerWidget->layout()) {
+            layout = qobject_cast<QBoxLayout*>(containerWidget->layout());
+        }
+        
+        // Need to create a new container with layout
+        if (!layout) {
+            auto* newContainer = new QWidget();
+            
+            // Determine orientation from alignment
+            if (frame->align == qsl("top") || frame->align == qsl("bottom")) {
+                layout = new QVBoxLayout(newContainer);
+            } else {
+                layout = new QHBoxLayout(newContainer);
+            }
+            
+            layout->setContentsMargins(0, 0, 0, 0);
+            layout->setSpacing(2);
+            
+            // If parent had an existing widget, add it to the layout first
+            if (parentFrame->widget && parentFrame->widget != containerWidget) {
+                layout->addWidget(parentFrame->widget);
+            }
+            
+            parentFrame->dockWidget->setWidget(newContainer);
+            containerWidget = newContainer;
+        }
+    }
+    
+    // Add this frame's console to the layout
+    if (layout) {
+        // Determine position based on alignment
+        if (frame->align == qsl("top") || frame->align == qsl("left")) {
+            layout->insertWidget(0, console);
+        } else {
+            layout->addWidget(console);
+        }
+        
+        console->show();
+    } else {
+        qWarning() << "TMxpFrameManager::layoutNestedFrame: Could not create layout for nested frame";
+    }
 }

@@ -22,17 +22,20 @@
 
 #include "utils.h"
 
-#include <QDockWidget>
+#include <QBoxLayout>
+#include <QHBoxLayout>
 #include <QMap>
 #include <QPointer>
 #include <QSize>
 #include <QString>
 #include <QStringList>
 #include <QTabWidget>
+#include <QVBoxLayout>
 #include <QWidget>
 
 class Host;
 class TConsole;
+class TDockWidget;
 
 struct TMxpFrame {
     QString name;
@@ -46,7 +49,7 @@ struct TMxpFrame {
     
     // UI elements - using QPointer for automatic null on deletion
     QPointer<QWidget> widget;           // The actual display widget (TConsole, TLabel, etc.)
-    QPointer<QDockWidget> dockWidget;   // Container for internal frames
+    QPointer<TDockWidget> dockWidget;   // Container for internal frames
     QPointer<QTabWidget> tabWidget;     // For tab-based frames
     
     // Hierarchy tracking
@@ -93,6 +96,7 @@ private:
     void layoutInternalFrame(TMxpFrame* frame);
     void layoutExternalFrame(TMxpFrame* frame);
     void layoutTabFrame(TMxpFrame* frame);
+    void layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFrame);
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
     Qt::DockWidgetArea alignmentToDockArea(const QString& align);
     

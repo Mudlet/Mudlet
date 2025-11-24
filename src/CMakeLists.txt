@@ -175,6 +175,7 @@ set(mudlet_SRCS
     TMxpFrameManager.cpp
     TMxpFrameTagHandler.cpp
     TMxpDestTagHandler.cpp
+    TMxpImageTagHandler.cpp
     TMxpLinkTagHandler.cpp
     TMxpMudlet.cpp
     TMxpMusicTagHandler.cpp
@@ -367,6 +368,7 @@ set(mudlet_HDRS
     TMxpFormattingTagsHandler.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
+    TMxpImageTagHandler.h
     TMxpLinkTagHandler.h
     TMxpMudlet.h
     TMxpMusicTagHandler.h

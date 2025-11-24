@@ -728,6 +728,7 @@ SOURCES += \
     TMxpCustomElementTagHandler.cpp \
     TMxpDestTagHandler.cpp \
     TMxpFontTagHandler.cpp \
+    TMxpImageTagHandler.cpp \
     TMxpLinkTagHandler.cpp \
     TMxpMusicTagHandler.cpp \
     TMxpSoundTagHandler.cpp \
@@ -883,6 +884,7 @@ HEADERS += \
     TMxpFormattingTagsHandler.h \
     TMxpFrameManager.h \
     TMxpFrameTagHandler.h \
+    TMxpImageTagHandler.h \
     TMxpMudlet.h \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
