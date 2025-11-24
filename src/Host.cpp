@@ -323,7 +323,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     if (mudlet::self()->smFirstLaunch) {
-        QTimer::singleShot(0, this, [this]() { 
+        QTimer::singleShot(0, this, [this]() {
             if (mpConsole) {
                 mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
             }

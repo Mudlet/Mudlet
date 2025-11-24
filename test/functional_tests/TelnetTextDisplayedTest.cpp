@@ -37,7 +37,7 @@ class TelnetTextDisplayedTest : public QObject {
 
 private:
     TelnetServerStub* mpServer = nullptr;
-    const QString mpHostname = "Test-Telnet"; 
+    const QString mpHostname = "Test-Telnet";
     const QString mpPort = "4000";
     const QString mpLocalhost = "127.0.0.1";
 
@@ -57,7 +57,7 @@ private slots:
         mudlet::self()->init();
         deleteProfileDirectory(mpHostname);
     }
- 
+
     void test_TelnetTextDisplayed()
     {
         QString messageFromTheMud("\x1B[1z<B>Greetings < hunters & sorcerers</B>\x1B[7z");

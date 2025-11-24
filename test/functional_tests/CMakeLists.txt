@@ -1,3 +1,5 @@
+include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
+
 set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
 )
@@ -14,7 +16,7 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
