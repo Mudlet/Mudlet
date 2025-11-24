@@ -16,8 +16,10 @@ if(TARGET ${EXE_MUDLET_TARGET})
     )
 endif()
 
+add_dependencies(MudletCrashReporter sentry_with_transport)
+
 target_include_directories(MudletCrashReporter PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/install/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/install_with_transport/include
      ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/src
 )
 
@@ -27,7 +29,7 @@ target_compile_definitions(MudletCrashReporter PRIVATE
 )
 
 target_link_directories(MudletCrashReporter PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/install/lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/install_with_transport/lib
 )
 
 set(MUDLET_CRASH_REPORTER_LIBS

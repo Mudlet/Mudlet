@@ -5,8 +5,7 @@ endif()
 message(STATUS "Building with Sentry enabled")
 
 set(SENTRY_PATH "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native")
-set(SENTRY_CMAKE_ARGS
-    -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install/
+set(SENTRY_COMMON_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
     -DCMAKE_C_COMPILER=clang
     -DCMAKE_CXX_COMPILER=clang++
@@ -17,7 +16,7 @@ set(SENTRY_CMAKE_ARGS
 )
 
 if(UNIX AND NOT APPLE)
-    list(APPEND SENTRY_CMAKE_ARGS -DSENTRY_TRANSPORT=curl)
+    list(APPEND SENTRY_CMAKE_ARGS -DSENTRY_TRANSPORT=none)
 endif()
 
 if(APPLE)
@@ -35,19 +34,36 @@ if(APPLE)
         set(ARCH_LIST "arm64;x86_64")
     endif()
 
-    list(APPEND SENTRY_CMAKE_ARGS
+    list(APPEND SENTRY_COMMON_ARGS
         "-DCMAKE_OSX_ARCHITECTURES=${ARCH_LIST}"
         "-DCMAKE_OSX_SYSROOT=${MACOSX_SYSROOT}"
     )
 endif()
+
 include(ExternalProject)
+
+# 1) SENTRY WITHOUT TRANSPORT  → used by MUDLET
 ExternalProject_Add(
-    sentry_native
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rdparty/sentry-native
-    CMAKE_ARGS ${SENTRY_CMAKE_ARGS}
+    sentry_without_transport
+    SOURCE_DIR ${SENTRY_PATH}
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_without_transport
+        ${SENTRY_COMMON_ARGS}
+        -DSENTRY_TRANSPORT=none
 )
 
-add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
+
+# 2) SENTRY WITH TRANSPORT  → used by CrashReporter
+ExternalProject_Add(
+    sentry_with_transport
+    SOURCE_DIR ${SENTRY_PATH}
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_with_transport
+        ${SENTRY_COMMON_ARGS}
+)
+
+
+add_dependencies(${LIB_MUDLET_TARGET} sentry_without_transport)
 
 target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -g)
 
@@ -63,10 +79,10 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC
 )
 
 target_include_directories(${LIB_MUDLET_TARGET} PRIVATE
-   "${SENTRY_PATH}/install/include/"
+   "${SENTRY_PATH}/install_without_transport/include/"
 )
 target_link_directories(${LIB_MUDLET_TARGET} PUBLIC
-    "${SENTRY_PATH}/install/lib/"
+    "${SENTRY_PATH}/install_without_transport/lib/"
 )
 target_link_libraries(${LIB_MUDLET_TARGET}
     sentry
@@ -78,14 +94,12 @@ target_link_libraries(${LIB_MUDLET_TARGET}
     crashpad_tools
     crashpad_util
     mini_chromium
-    curl
 )
 
 if(APPLE)
     target_link_libraries(${LIB_MUDLET_TARGET} bsm)
 elseif(WIN32)
     target_link_libraries(${LIB_MUDLET_TARGET}
-        winhttp
         dbghelp
         version
     )
@@ -93,7 +107,7 @@ else()
     target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat)
 endif()
 
-set(SENTRY_BINARIES "${SENTRY_PATH}/install/bin")
+set(SENTRY_BINARIES "${SENTRY_PATH}/install_without_transport/bin")
 set(STAMP_FILE "${CMAKE_CURRENT_BINARY_DIR}/sentry_binaries.stamp")
 
 add_custom_command(OUTPUT ${STAMP_FILE}
@@ -103,7 +117,7 @@ add_custom_command(OUTPUT ${STAMP_FILE}
 )
 
 add_custom_target(copy_sentry ALL DEPENDS ${STAMP_FILE})
-add_dependencies(copy_sentry sentry_native)
+add_dependencies(copy_sentry sentry_without_transport)
 add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
