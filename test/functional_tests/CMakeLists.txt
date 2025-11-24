@@ -1,4 +1,6 @@
-include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
+if(NOT WIN32)
+    include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
+endif()
 
 set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
