@@ -219,6 +219,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mLuaInterpreter(this, hostname, id)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
+, mMxpFrameManager(this)
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))

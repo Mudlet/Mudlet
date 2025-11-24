@@ -4364,7 +4364,21 @@ void cTelnet::postData()
     if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
         return;
     }
-    mpHost->mpConsole->printOnDisplay(mMudData, true);
+    
+    // Check if there's an active MXP destination frame
+    TConsole* destinationConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
+
+    if (destinationConsole && destinationConsole != mpHost->mpConsole) {
+        // Route output to the destination frame console
+        // We need to process the data through the buffer directly since frame consoles
+        // don't have printOnDisplay()
+        destinationConsole->buffer.translateToPlainText(mMudData, true);
+        destinationConsole->mUpperPane->showNewLines();
+        destinationConsole->mLowerPane->showNewLines();
+    } else {
+        // Default: output to main console (which has printOnDisplay())
+        mpHost->mpConsole->printOnDisplay(mMudData, true);
+    }
 }
 
 void cTelnet::initStreamDecompressor()

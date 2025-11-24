@@ -290,3 +290,47 @@ bool TMxpMudlet::shouldLockModeToSecure() const
 {
     return mpHost && mpHost->getForceMXPProcessorOn();
 }
+
+bool TMxpMudlet::createMxpFrame(const QString& name, const QMap<QString, QString>& attributes)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    return mpHost->mMxpFrameManager.createFrame(name, attributes);
+}
+
+bool TMxpMudlet::closeMxpFrame(const QString& name)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    return mpHost->mMxpFrameManager.closeFrame(name);
+}
+
+bool TMxpMudlet::setMxpDestination(const QString& frameName, bool eol, bool eof)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    mpHost->mMxpFrameManager.setDestination(frameName, eol, eof);
+    return true;
+}
+
+void TMxpMudlet::clearMxpDestination()
+{
+    if (mpHost) {
+        mpHost->mMxpFrameManager.clearDestination();
+    }
+}
+
+QString TMxpMudlet::getMxpCurrentDestination() const
+{
+    if (!mpHost) {
+        return QString();
+    }
+
+    return mpHost->mMxpFrameManager.getCurrentDestination();
+}
