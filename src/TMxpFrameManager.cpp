@@ -275,8 +275,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         frame->name, 
         0, 0, 
         frameSize.width(), 
-        frameSize.height()
-    );
+        frameSize.height());
     
     if (!console) {
         qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console";
@@ -321,8 +320,7 @@ void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
         frame->name,
         0, 0,
         frameSize.width(),
-        frameSize.height()
-    );
+        frameSize.height());
     
     if (!console) {
         qWarning() << "TMxpFrameManager::layoutExternalFrame: Failed to create console";
@@ -389,8 +387,7 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
         frame->name,
         0, 0,
         frameSize.width(),
-        frameSize.height()
-    );
+        frameSize.height());
     
     if (!console) {
         qWarning() << "TMxpFrameManager::layoutTabFrame: Failed to create console";
