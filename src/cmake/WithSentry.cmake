@@ -121,18 +121,33 @@ add_dependencies(copy_sentry sentry_without_transport)
 add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
-    add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-        COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
-        COMMAND strip -x $<TARGET_FILE:${EXE_MUDLET_TARGET}>
-        COMMENT "Creating .dSYM bundle and stripping executable"
-    )
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+            COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
+            COMMAND strip -x $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+            COMMENT "Creating .dSYM bundle and stripping executable"
+        )
+    else()
+        add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+            COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
+            COMMENT "Creating .dSYM bundle without stripping"
+        )
+    endif()
 elseif(UNIX)
-    add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-        COMMAND objcopy --only-keep-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}> $<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug
-        COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
-        COMMAND objcopy --add-gnu-debuglink=$<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
-        COMMENT "Creating separate debug file and stripping executable"
-    )
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+            COMMAND objcopy --only-keep-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}> $<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug
+            COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+            COMMAND objcopy --add-gnu-debuglink=$<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+            COMMENT "Creating separate debug file and stripping executable"
+        )
+    else()
+        add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
+            COMMAND objcopy --only-keep-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}> $<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug
+            COMMAND objcopy --add-gnu-debuglink=$<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
+            COMMENT "Creating separate debug file without stripping"
+        )
+    endif()
 else()
     add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/mudlet.pdb"

@@ -46,7 +46,6 @@ datetime = {
   }
 }
 
-
 -- the timestamp is stored in UTC time, so work out the difference in seconds
 -- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
 function datetime:calculate_UTCdiff(ts)
