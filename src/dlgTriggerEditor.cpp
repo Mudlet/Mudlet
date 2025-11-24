@@ -1837,13 +1837,15 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
-    // Disconnect ALL signals from undo systems to this object before destruction begins
-    if (mpTextUndoStack) {
-        disconnect(mpTextUndoStack, nullptr, this, nullptr);
-    }
-    if (mpUndoStack) {
-        disconnect(mpUndoStack, nullptr, this, nullptr);
-        mpUndoStack->clear();
+    // Only disconnect signals and clear undo stack if the dialog is being destroyed (WA_DeleteOnClose set)
+    // This happens when the profile closes (Host::closeChildren), not when the user just closes the editor window
+    if (testAttribute(Qt::WA_DeleteOnClose)) {
+        if (mpTextUndoStack) {
+            disconnect(mpTextUndoStack, nullptr, this, nullptr);
+        }
+        if (mpUndoStack) {
+            disconnect(mpUndoStack, nullptr, this, nullptr);
+        }
     }
 
     emit editorClosing();
