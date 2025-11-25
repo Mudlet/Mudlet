@@ -22,6 +22,7 @@
 
 #include "EditorCommand.h"
 
+#include <QElapsedTimer>
 #include <QString>
 
 // Undo command for modifying item properties. Stores complete XML snapshots of old and new states.
@@ -39,6 +40,11 @@ public:
     int id() const override;
     bool mergeWith(const QUndoCommand* other) override;
 
+    // Set a property ID for time-based merging of rapid consecutive edits to the same property.
+    // Format: "viewType:itemID:propertyName" e.g., "trigger:42:lineMargin"
+    // When set, consecutive commands with the same propertyId within MERGE_TIMEOUT_MS will merge.
+    void setPropertyId(const QString& propertyId);
+
     // Command ID for merging - must match EditorAddItemCommand::CommandId
     static constexpr int CommandId = 1;
 
@@ -54,6 +60,11 @@ private:
     QString mOldStateXML;
     QString mNewStateXML;
     bool mSkipFirstRedo = true; // Skip initial redo() called by QUndoStack::push()
+
+    // For time-based merging of rapid consecutive edits to the same property
+    QString mPropertyId;         // Identifies which property changed for merge grouping
+    QElapsedTimer mCreationTime; // Tracks when command was created for time-based merging
+    static constexpr int MERGE_TIMEOUT_MS = 500; // Merge window in milliseconds
 };
 
 #endif // MUDLET_MUDLETMODIFYPROPERTYCOMMAND_H

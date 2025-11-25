@@ -334,6 +334,48 @@ private slots:
     void slot_bannerDismissClicked();
     void slot_itemsChanged(::EditorViewType viewType, QList<int> affectedItemIDs);
 
+    // Per-property immediate save slots for triggers (create individual undo entries)
+    void slot_saveProperty_TriggerName();
+    void slot_saveProperty_TriggerCommand();
+    void slot_saveProperty_TriggerStayOpen();
+    void slot_saveProperty_TriggerLineMargin();
+    void slot_saveProperty_TriggerFilterTrigger();
+    void slot_saveProperty_TriggerPerlSlashG();
+    void slot_saveProperty_TriggerSoundEnabled();
+    void slot_saveProperty_TriggerSoundFile();
+    void slot_saveProperty_TriggerColorizer();
+    void slot_saveProperty_TriggerPattern(int patternIndex);
+    void slot_saveProperty_TriggerPatternType(int patternIndex);
+
+    // Per-property immediate save slots for aliases
+    void slot_saveProperty_AliasName();
+    void slot_saveProperty_AliasPattern();
+    void slot_saveProperty_AliasCommand();
+
+    // Per-property immediate save slots for timers
+    void slot_saveProperty_TimerName();
+    void slot_saveProperty_TimerCommand();
+    void slot_saveProperty_TimerTime();
+
+    // Per-property immediate save slots for scripts
+    void slot_saveProperty_ScriptName();
+    void slot_saveProperty_ScriptEventHandlers();
+
+    // Per-property immediate save slots for keys
+    void slot_saveProperty_KeyName();
+    void slot_saveProperty_KeyCommand();
+
+    // Per-property immediate save slots for actions (buttons)
+    void slot_saveProperty_ActionName();
+    void slot_saveProperty_ActionCommandDown();
+    void slot_saveProperty_ActionCommandUp();
+    void slot_saveProperty_ActionIsPushDown();
+    void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarOrientation();
+    void slot_saveProperty_ActionBarLocation();
+    void slot_saveProperty_ActionButtonRotation();
+    void slot_saveProperty_ActionCSS();
+
 public:
     TConsole* mpErrorConsole = nullptr;
     bool mNeedUpdateData = false;
@@ -637,6 +679,10 @@ private:
 
     // tracks whether the initial profile load has completed (to avoid clearing undo stack on refreshes)
     bool mInitialLoadDone = false;
+
+    // Blocks property saves during UI updates (e.g., when loading a selected item or during undo/redo)
+    // to prevent recursive saves and duplicate undo entries
+    bool mBlockPropertySave = false;
 
     // profile autosave interval in minutes
     int mAutosaveInterval = 2;

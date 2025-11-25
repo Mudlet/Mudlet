@@ -31,6 +31,7 @@
 EditorModifyPropertyCommand::EditorModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host)
 : EditorCommand(generateText(viewType, itemName), host), mViewType(viewType), mItemID(itemID), mItemName(itemName), mOldStateXML(oldStateXML), mNewStateXML(newStateXML)
 {
+    mCreationTime.start();
 }
 
 void EditorModifyPropertyCommand::undo()
@@ -241,8 +242,39 @@ int EditorModifyPropertyCommand::id() const
 
 bool EditorModifyPropertyCommand::mergeWith(const QUndoCommand* other)
 {
-    // Don't merge consecutive modify commands - each modification should be individually undoable
-    // Note: Add+Modify merging is handled by EditorAddItemCommand::mergeWith()
-    Q_UNUSED(other);
-    return false;
+    // Only merge if this command has a property ID set (for per-property immediate saves)
+    if (mPropertyId.isEmpty()) {
+        return false;
+    }
+
+    const auto* otherCmd = dynamic_cast<const EditorModifyPropertyCommand*>(other);
+    if (!otherCmd) {
+        return false;
+    }
+
+    // Only merge if same property on same item
+    if (mPropertyId != otherCmd->mPropertyId) {
+        return false;
+    }
+
+    // Only merge if within time window (check if the OTHER command was created within the window)
+    // Note: mCreationTime tracks when THIS command was created
+    if (mCreationTime.elapsed() > MERGE_TIMEOUT_MS) {
+        return false;
+    }
+
+#if defined(DEBUG_UNDO_REDO)
+    qDebug() << "EditorModifyPropertyCommand::mergeWith() - Merging" << mPropertyId << "commands within" << mCreationTime.elapsed() << "ms";
+#endif
+
+    // Merge: keep our old state, take their new state
+    mNewStateXML = otherCmd->mNewStateXML;
+    // Reset the timer so we can continue merging rapid edits
+    mCreationTime.restart();
+    return true;
+}
+
+void EditorModifyPropertyCommand::setPropertyId(const QString& propertyId)
+{
+    mPropertyId = propertyId;
 }

@@ -1140,23 +1140,69 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpTriggersMainArea->lineEdit_trigger_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+
+    // Per-property immediate saves for triggers (creates individual undo entries)
+    connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_TriggerName);
+    connect(mpTriggersMainArea->lineEdit_trigger_command, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_TriggerCommand);
+    connect(mpTriggersMainArea->spinBox_stayOpen, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_saveProperty_TriggerStayOpen);
+    connect(mpTriggersMainArea->spinBox_lineMargin, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_saveProperty_TriggerLineMargin);
+    connect(mpTriggersMainArea->checkBox_filterTrigger, &QCheckBox::toggled, this, &dlgTriggerEditor::slot_saveProperty_TriggerFilterTrigger);
+    connect(mpTriggersMainArea->checkBox_perlSlashGOption, &QCheckBox::toggled, this, &dlgTriggerEditor::slot_saveProperty_TriggerPerlSlashG);
+    connect(mpTriggersMainArea->groupBox_soundTrigger, &QGroupBox::toggled, this, &dlgTriggerEditor::slot_saveProperty_TriggerSoundEnabled);
+    connect(mpTriggersMainArea->lineEdit_soundFile, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_TriggerSoundFile);
+    connect(mpTriggersMainArea->groupBox_triggerColorizer, &QGroupBox::toggled, this, &dlgTriggerEditor::slot_saveProperty_TriggerColorizer);
+
     // aliases
     connect(mpAliasMainArea->lineEdit_alias_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpAliasMainArea->lineEdit_alias_pattern, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpAliasMainArea->lineEdit_alias_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+
+    // Per-property immediate saves for aliases
+    connect(mpAliasMainArea->lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_AliasName);
+    connect(mpAliasMainArea->lineEdit_alias_pattern, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_AliasPattern);
+    connect(mpAliasMainArea->lineEdit_alias_command, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_AliasCommand);
+
     // scripts
     connect(mpScriptsMainArea->lineEdit_script_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+
+    // Per-property immediate saves for scripts
+    connect(mpScriptsMainArea->lineEdit_script_name, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_ScriptName);
+
     // timers
     connect(mpTimersMainArea->lineEdit_timer_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpTimersMainArea->lineEdit_timer_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+
+    // Per-property immediate saves for timers
+    connect(mpTimersMainArea->lineEdit_timer_name, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_TimerName);
+    connect(mpTimersMainArea->lineEdit_timer_command, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_TimerCommand);
+    connect(mpTimersMainArea->timeEdit_timer_hours, &QTimeEdit::timeChanged, this, &dlgTriggerEditor::slot_saveProperty_TimerTime);
+    connect(mpTimersMainArea->timeEdit_timer_minutes, &QTimeEdit::timeChanged, this, &dlgTriggerEditor::slot_saveProperty_TimerTime);
+    connect(mpTimersMainArea->timeEdit_timer_seconds, &QTimeEdit::timeChanged, this, &dlgTriggerEditor::slot_saveProperty_TimerTime);
+    connect(mpTimersMainArea->timeEdit_timer_msecs, &QTimeEdit::timeChanged, this, &dlgTriggerEditor::slot_saveProperty_TimerTime);
+
     // keys
     connect(mpKeysMainArea->lineEdit_key_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpKeysMainArea->lineEdit_key_command, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_itemEdited);
+
+    // Per-property immediate saves for keys
+    connect(mpKeysMainArea->lineEdit_key_name, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_KeyName);
+    connect(mpKeysMainArea->lineEdit_key_command, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_KeyCommand);
+
     // buttons
     connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
     connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
+
+    // Per-property immediate saves for actions (buttons)
+    connect(mpActionsMainArea->lineEdit_action_name, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_ActionName);
+    connect(mpActionsMainArea->lineEdit_action_button_command_down, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_ActionCommandDown);
+    connect(mpActionsMainArea->lineEdit_action_button_command_up, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_ActionCommandUp);
+    connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::toggled, this, &dlgTriggerEditor::slot_saveProperty_ActionIsPushDown);
+    connect(mpActionsMainArea->spinBox_action_bar_columns, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionBarColumns);
+    connect(mpActionsMainArea->comboBox_action_bar_orientation, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionBarOrientation);
+    connect(mpActionsMainArea->comboBox_action_bar_location, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionBarLocation);
+    connect(mpActionsMainArea->comboBox_action_button_rotation, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionButtonRotation);
 
     comboBox_searchTerms->lineEdit()->setClearButtonEnabled(true);
     auto pLineEdit_searchTerm = comboBox_searchTerms->lineEdit();
@@ -8239,6 +8285,9 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         saveTrigger();
     }
 
+    // Block property saves while loading the new item to prevent spurious undo entries
+    mBlockPropertySave = true;
+
     mpCurrentTriggerItem = pItem;
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
@@ -8417,6 +8466,9 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         // selected - so show the help message:
         clearTriggerForm();
     }
+
+    // Unblock property saves now that item loading is complete
+    mBlockPropertySave = false;
 }
 
 void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
@@ -8431,6 +8483,9 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
     if (pItem != mpCurrentAliasItem) {
         saveAlias();
     }
+
+    // Block property saves while loading the new item to prevent spurious undo entries
+    mBlockPropertySave = true;
 
     mpCurrentAliasItem = pItem;
     mpAliasMainArea->show();
@@ -8486,6 +8541,9 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         // selected - so show the help message:
         clearAliasForm();
     }
+
+    // Unblock property saves now that item loading is complete
+    mBlockPropertySave = false;
 }
 
 void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
@@ -8500,6 +8558,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     if (pItem != mpCurrentKeyItem) {
         saveKey();
     }
+
+    // Block property saves while loading the new item to prevent spurious undo entries
+    mBlockPropertySave = true;
 
     mpCurrentKeyItem = pItem;
     mpKeysMainArea->show();
@@ -8553,6 +8614,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
         // selected - so show the help message:
         clearKeyForm();
     }
+
+    // Unblock property saves now that item loading is complete
+    mBlockPropertySave = false;
 }
 
 // This should not modify the contents of what pItem points at:
@@ -8856,6 +8920,9 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         saveAction();
     }
 
+    // Block property saves while loading the new item to prevent spurious undo entries
+    mBlockPropertySave = true;
+
     mpActionsMainArea->show();
     mpSourceEditorArea->show();
 
@@ -8980,6 +9047,8 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         // On root of treewidget_actions: - show help message instead
         clearActionForm();
     }
+
+    mBlockPropertySave = false;
 }
 
 void dlgTriggerEditor::slot_treeSelectionChanged()
@@ -9031,6 +9100,9 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     if (pItem != mpCurrentScriptItem) {
         saveScript();
     }
+
+    // Block property saves while loading the new item to prevent spurious undo entries
+    mBlockPropertySave = true;
 
     mpCurrentScriptItem = pItem;
     mpScriptsMainArea->show();
@@ -9087,6 +9159,8 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
         // selected - so show the help message:
         clearScriptForm();
     }
+
+    mBlockPropertySave = false;
 }
 
 void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
@@ -9101,6 +9175,9 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
     if (pItem != mpCurrentTimerItem) {
         saveTimer();
     }
+
+    // Block property saves while loading the new item to prevent spurious undo entries
+    mBlockPropertySave = true;
 
     mpCurrentTimerItem = pItem;
     mpTimersMainArea->show();
@@ -9160,6 +9237,8 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         // selected - so show the help message:
         clearTimerForm();
     }
+
+    mBlockPropertySave = false;
 }
 
 void dlgTriggerEditor::fillout_form()
@@ -14614,4 +14693,901 @@ void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, const
     if (!hidden) {
         mTemporarilyHiddenBanners.remove(key);
     }
+}
+
+// Helper function for per-property trigger saves
+// Creates an undo command for a single property change with time-based merging support
+static void pushTriggerPropertyCommand(EditorUndoStack* undoStack, Host* host, int triggerID, const QString& triggerName,
+                                        const QString& propertyName, const QString& oldStateXML, const QString& newStateXML)
+{
+    if (oldStateXML == newStateXML) {
+        return; // No change
+    }
+
+    auto* cmd = new EditorModifyPropertyCommand(
+        EditorViewType::cmTriggerView,
+        triggerID,
+        triggerName,
+        oldStateXML,
+        newStateXML,
+        host);
+    cmd->setPropertyId(qsl("trigger:%1:%2").arg(triggerID).arg(propertyName));
+    undoStack->pushCommand(cmd);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerName()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    mpTriggersMainArea->trimName();
+    const QString newName = mpTriggersMainArea->lineEdit_trigger_name->text();
+
+    // Skip if no actual change
+    if (pT->getName() == newName) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    pT->setName(newName);
+    mpCurrentTriggerItem->setText(0, newName);
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, newName, qsl("name"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerCommand()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newCommand = mpTriggersMainArea->lineEdit_trigger_command->text();
+
+    if (pT->getCommand() == newCommand) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    pT->setCommand(newCommand);
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerStayOpen()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    const int newValue = mpTriggersMainArea->spinBox_stayOpen->value();
+
+    if (pT->mStayOpen == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    pT->mStayOpen = newValue;
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("stayOpen"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerLineMargin()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    const int newValue = mpTriggersMainArea->spinBox_lineMargin->value();
+    const bool newIsMultiline = newValue >= 0;
+
+    // Check if anything actually changed
+    if (pT->isMultiline() == newIsMultiline &&
+        (!newIsMultiline || pT->getConditionLineDelta() == newValue)) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    if (newValue >= 0) {
+        pT->setConditionLineDelta(newValue);
+        pT->setIsMultiline(true);
+    } else {
+        pT->setIsMultiline(false);
+    }
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("lineMargin"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerFilterTrigger()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    const bool newValue = mpTriggersMainArea->checkBox_filterTrigger->isChecked();
+
+    if (pT->mFilterTrigger == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    pT->mFilterTrigger = newValue;
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("filterTrigger"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerPerlSlashG()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    const bool newValue = mpTriggersMainArea->checkBox_perlSlashGOption->isChecked();
+
+    if (pT->mPerlSlashGOption == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    pT->mPerlSlashGOption = newValue;
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("perlSlashG"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerSoundEnabled()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    const bool newValue = mpTriggersMainArea->groupBox_soundTrigger->isChecked();
+
+    if (pT->mSoundTrigger == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    pT->mSoundTrigger = newValue;
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("soundEnabled"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerSoundFile()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newValue = mpTriggersMainArea->lineEdit_soundFile->text();
+
+    if (pT->mSoundFile == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    pT->setSound(newValue);
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("soundFile"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerColorizer()
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    const bool newValue = mpTriggersMainArea->groupBox_triggerColorizer->isChecked();
+
+    if (pT->isColorizerTrigger() == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportTriggerToXML(pT);
+    pT->setIsColorizerTrigger(newValue);
+    QString newStateXML = exportTriggerToXML(pT);
+
+    pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("colorizer"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerPattern(int patternIndex)
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    // This slot would need to capture all patterns and update them
+    // For now, patterns are handled by saveTrigger()
+    Q_UNUSED(patternIndex);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TriggerPatternType(int patternIndex)
+{
+    if (mBlockPropertySave || !mpCurrentTriggerItem) {
+        return;
+    }
+
+    const int triggerID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    // This slot would need to capture all patterns and update them
+    // For now, patterns are handled by saveTrigger()
+    Q_UNUSED(patternIndex);
+}
+
+// =============================================================================
+// Alias Per-Property Save Slots
+// =============================================================================
+
+// Helper function for per-property alias saves
+static void pushAliasPropertyCommand(EditorUndoStack* undoStack, Host* host, int aliasID, const QString& aliasName,
+                                      const QString& propertyName, const QString& oldStateXML, const QString& newStateXML)
+{
+    if (oldStateXML == newStateXML) {
+        return;
+    }
+
+    auto* cmd = new EditorModifyPropertyCommand(
+        EditorViewType::cmAliasView,
+        aliasID,
+        aliasName,
+        oldStateXML,
+        newStateXML,
+        host);
+    cmd->setPropertyId(qsl("alias:%1:%2").arg(aliasID).arg(propertyName));
+    undoStack->pushCommand(cmd);
+}
+
+void dlgTriggerEditor::slot_saveProperty_AliasName()
+{
+    if (mBlockPropertySave || !mpCurrentAliasItem) {
+        return;
+    }
+
+    const int aliasID = mpCurrentAliasItem->data(0, Qt::UserRole).toInt();
+    TAlias* pT = mpHost->getAliasUnit()->getAlias(aliasID);
+    if (!pT) {
+        return;
+    }
+
+    mpAliasMainArea->trimName();
+    const QString newName = mpAliasMainArea->lineEdit_alias_name->text();
+
+    if (pT->getName() == newName) {
+        return;
+    }
+
+    QString oldStateXML = exportAliasToXML(pT);
+    pT->setName(newName);
+    mpCurrentAliasItem->setText(0, newName);
+    QString newStateXML = exportAliasToXML(pT);
+
+    pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, newName, qsl("name"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_AliasPattern()
+{
+    if (mBlockPropertySave || !mpCurrentAliasItem) {
+        return;
+    }
+
+    const int aliasID = mpCurrentAliasItem->data(0, Qt::UserRole).toInt();
+    TAlias* pT = mpHost->getAliasUnit()->getAlias(aliasID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newPattern = mpAliasMainArea->lineEdit_alias_pattern->text();
+
+    if (pT->getRegexCode() == newPattern) {
+        return;
+    }
+
+    QString oldStateXML = exportAliasToXML(pT);
+    pT->setRegexCode(newPattern);
+    QString newStateXML = exportAliasToXML(pT);
+
+    pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("pattern"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_AliasCommand()
+{
+    if (mBlockPropertySave || !mpCurrentAliasItem) {
+        return;
+    }
+
+    const int aliasID = mpCurrentAliasItem->data(0, Qt::UserRole).toInt();
+    TAlias* pT = mpHost->getAliasUnit()->getAlias(aliasID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newCommand = mpAliasMainArea->lineEdit_alias_command->text();
+
+    if (pT->getCommand() == newCommand) {
+        return;
+    }
+
+    QString oldStateXML = exportAliasToXML(pT);
+    pT->setCommand(newCommand);
+    QString newStateXML = exportAliasToXML(pT);
+
+    pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
+}
+
+// =============================================================================
+// Timer Per-Property Save Slots
+// =============================================================================
+
+// Helper function for per-property timer saves
+static void pushTimerPropertyCommand(EditorUndoStack* undoStack, Host* host, int timerID, const QString& timerName,
+                                      const QString& propertyName, const QString& oldStateXML, const QString& newStateXML)
+{
+    if (oldStateXML == newStateXML) {
+        return;
+    }
+
+    auto* cmd = new EditorModifyPropertyCommand(
+        EditorViewType::cmTimerView,
+        timerID,
+        timerName,
+        oldStateXML,
+        newStateXML,
+        host);
+    cmd->setPropertyId(qsl("timer:%1:%2").arg(timerID).arg(propertyName));
+    undoStack->pushCommand(cmd);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TimerName()
+{
+    if (mBlockPropertySave || !mpCurrentTimerItem) {
+        return;
+    }
+
+    const int timerID = mpCurrentTimerItem->data(0, Qt::UserRole).toInt();
+    TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
+    if (!pT) {
+        return;
+    }
+
+    mpTimersMainArea->trimName();
+    const QString newName = mpTimersMainArea->lineEdit_timer_name->text();
+
+    if (pT->getName() == newName) {
+        return;
+    }
+
+    QString oldStateXML = exportTimerToXML(pT);
+    pT->setName(newName);
+    mpCurrentTimerItem->setText(0, newName);
+    QString newStateXML = exportTimerToXML(pT);
+
+    pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, newName, qsl("name"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TimerCommand()
+{
+    if (mBlockPropertySave || !mpCurrentTimerItem) {
+        return;
+    }
+
+    const int timerID = mpCurrentTimerItem->data(0, Qt::UserRole).toInt();
+    TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newCommand = mpTimersMainArea->lineEdit_timer_command->text();
+
+    if (pT->getCommand() == newCommand) {
+        return;
+    }
+
+    QString oldStateXML = exportTimerToXML(pT);
+    pT->setCommand(newCommand);
+    QString newStateXML = exportTimerToXML(pT);
+
+    pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_TimerTime()
+{
+    if (mBlockPropertySave || !mpCurrentTimerItem) {
+        return;
+    }
+
+    const int timerID = mpCurrentTimerItem->data(0, Qt::UserRole).toInt();
+    TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
+    if (!pT) {
+        return;
+    }
+
+    const QTime newTime(mpTimersMainArea->timeEdit_timer_hours->time().hour(),
+                        mpTimersMainArea->timeEdit_timer_minutes->time().minute(),
+                        mpTimersMainArea->timeEdit_timer_seconds->time().second(),
+                        mpTimersMainArea->timeEdit_timer_msecs->time().msec());
+
+    if (pT->getTime() == newTime) {
+        return;
+    }
+
+    QString oldStateXML = exportTimerToXML(pT);
+    pT->setTime(newTime);
+    QString newStateXML = exportTimerToXML(pT);
+
+    pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, pT->getName(), qsl("time"), oldStateXML, newStateXML);
+}
+
+// =============================================================================
+// Script Per-Property Save Slots
+// =============================================================================
+
+// Helper function for per-property script saves
+static void pushScriptPropertyCommand(EditorUndoStack* undoStack, Host* host, int scriptID, const QString& scriptName,
+                                       const QString& propertyName, const QString& oldStateXML, const QString& newStateXML)
+{
+    if (oldStateXML == newStateXML) {
+        return;
+    }
+
+    auto* cmd = new EditorModifyPropertyCommand(
+        EditorViewType::cmScriptView,
+        scriptID,
+        scriptName,
+        oldStateXML,
+        newStateXML,
+        host);
+    cmd->setPropertyId(qsl("script:%1:%2").arg(scriptID).arg(propertyName));
+    undoStack->pushCommand(cmd);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ScriptName()
+{
+    if (mBlockPropertySave || !mpCurrentScriptItem) {
+        return;
+    }
+
+    const int scriptID = mpCurrentScriptItem->data(0, Qt::UserRole).toInt();
+    TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
+    if (!pT) {
+        return;
+    }
+
+    mpScriptsMainArea->trimName();
+    const QString newName = mpScriptsMainArea->lineEdit_script_name->text();
+
+    if (pT->getName() == newName) {
+        return;
+    }
+
+    QString oldStateXML = exportScriptToXML(pT);
+    pT->setName(newName);
+    mpCurrentScriptItem->setText(0, newName);
+    QString newStateXML = exportScriptToXML(pT);
+
+    pushScriptPropertyCommand(mpUndoStack, mpHost, scriptID, newName, qsl("name"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ScriptEventHandlers()
+{
+    if (mBlockPropertySave || !mpCurrentScriptItem) {
+        return;
+    }
+
+    const int scriptID = mpCurrentScriptItem->data(0, Qt::UserRole).toInt();
+    TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
+    if (!pT) {
+        return;
+    }
+
+    // Collect event handlers from the list widget
+    QStringList newHandlers;
+    for (int i = 0; i < mpScriptsMainArea->listWidget_script_registered_event_handlers->count(); ++i) {
+        newHandlers << mpScriptsMainArea->listWidget_script_registered_event_handlers->item(i)->text();
+    }
+
+    if (pT->getEventHandlerList() == newHandlers) {
+        return;
+    }
+
+    QString oldStateXML = exportScriptToXML(pT);
+    pT->setEventHandlerList(newHandlers);
+    QString newStateXML = exportScriptToXML(pT);
+
+    pushScriptPropertyCommand(mpUndoStack, mpHost, scriptID, pT->getName(), qsl("eventHandlers"), oldStateXML, newStateXML);
+}
+
+// =============================================================================
+// Key Per-Property Save Slots
+// =============================================================================
+
+// Helper function for per-property key saves
+static void pushKeyPropertyCommand(EditorUndoStack* undoStack, Host* host, int keyID, const QString& keyName,
+                                    const QString& propertyName, const QString& oldStateXML, const QString& newStateXML)
+{
+    if (oldStateXML == newStateXML) {
+        return;
+    }
+
+    auto* cmd = new EditorModifyPropertyCommand(
+        EditorViewType::cmKeysView,
+        keyID,
+        keyName,
+        oldStateXML,
+        newStateXML,
+        host);
+    cmd->setPropertyId(qsl("key:%1:%2").arg(keyID).arg(propertyName));
+    undoStack->pushCommand(cmd);
+}
+
+void dlgTriggerEditor::slot_saveProperty_KeyName()
+{
+    if (mBlockPropertySave || !mpCurrentKeyItem) {
+        return;
+    }
+
+    const int keyID = mpCurrentKeyItem->data(0, Qt::UserRole).toInt();
+    TKey* pT = mpHost->getKeyUnit()->getKey(keyID);
+    if (!pT) {
+        return;
+    }
+
+    mpKeysMainArea->trimName();
+    const QString newName = mpKeysMainArea->lineEdit_key_name->text();
+
+    if (pT->getName() == newName) {
+        return;
+    }
+
+    QString oldStateXML = exportKeyToXML(pT);
+    pT->setName(newName);
+    mpCurrentKeyItem->setText(0, newName);
+    QString newStateXML = exportKeyToXML(pT);
+
+    pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, newName, qsl("name"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_KeyCommand()
+{
+    if (mBlockPropertySave || !mpCurrentKeyItem) {
+        return;
+    }
+
+    const int keyID = mpCurrentKeyItem->data(0, Qt::UserRole).toInt();
+    TKey* pT = mpHost->getKeyUnit()->getKey(keyID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newCommand = mpKeysMainArea->lineEdit_key_command->text();
+
+    if (pT->getCommand() == newCommand) {
+        return;
+    }
+
+    QString oldStateXML = exportKeyToXML(pT);
+    pT->setCommand(newCommand);
+    QString newStateXML = exportKeyToXML(pT);
+
+    pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
+}
+
+// =============================================================================
+// Action Per-Property Save Slots
+// =============================================================================
+
+// Helper function for per-property action saves
+static void pushActionPropertyCommand(EditorUndoStack* undoStack, Host* host, int actionID, const QString& actionName,
+                                       const QString& propertyName, const QString& oldStateXML, const QString& newStateXML)
+{
+    if (oldStateXML == newStateXML) {
+        return;
+    }
+
+    auto* cmd = new EditorModifyPropertyCommand(
+        EditorViewType::cmActionView,
+        actionID,
+        actionName,
+        oldStateXML,
+        newStateXML,
+        host);
+    cmd->setPropertyId(qsl("action:%1:%2").arg(actionID).arg(propertyName));
+    undoStack->pushCommand(cmd);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionName()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    mpActionsMainArea->trimName();
+    const QString newName = mpActionsMainArea->lineEdit_action_name->text();
+
+    if (pT->getName() == newName) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->setName(newName);
+    mpCurrentActionItem->setText(0, newName);
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, newName, qsl("name"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionCommandDown()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newCommand = mpActionsMainArea->lineEdit_action_button_command_down->text();
+
+    if (pT->getCommandButtonDown() == newCommand) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->setCommandButtonDown(newCommand);
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("commandDown"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionCommandUp()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newCommand = mpActionsMainArea->lineEdit_action_button_command_up->text();
+
+    if (pT->getCommandButtonUp() == newCommand) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->setCommandButtonUp(newCommand);
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("commandUp"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionIsPushDown()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const bool newValue = mpActionsMainArea->checkBox_action_button_isPushDown->isChecked();
+
+    if (pT->isPushDownButton() == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->setIsPushDownButton(newValue);
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("isPushDown"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionBarColumns()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const int newValue = mpActionsMainArea->spinBox_action_bar_columns->value();
+
+    if (pT->getButtonColumns() == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->setButtonColumns(newValue);
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("barColumns"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionBarOrientation()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const int newValue = mpActionsMainArea->comboBox_action_bar_orientation->currentIndex();
+
+    if (pT->mOrientation == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->mOrientation = newValue;
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("barOrientation"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionBarLocation()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const int newValue = mpActionsMainArea->comboBox_action_bar_location->currentIndex();
+
+    if (pT->mLocation == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->mLocation = newValue;
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("barLocation"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionButtonRotation()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const int newValue = mpActionsMainArea->comboBox_action_button_rotation->currentIndex();
+
+    if (pT->getButtonRotation() == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->setButtonRotation(newValue);
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonRotation"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionCSS()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const QString newCSS = mpActionsMainArea->plainTextEdit_action_css->toPlainText();
+
+    if (pT->css == newCSS) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->css = newCSS;
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("css"), oldStateXML, newStateXML);
 }
