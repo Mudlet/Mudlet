@@ -39,7 +39,7 @@ private:
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-Telnet";
     const QString mpPort = "4000";
-    const QString mpLocalhost = "127.0.0.1";
+    const QString mpLocalhost = "localhost";
 
 private slots:
     void initTestCase()
@@ -103,7 +103,12 @@ private slots:
         if (!spy.wait(1000)) {
             QFAIL("Profile took too long to load.");
         }
-        QSignalSpy spy2(&(mudlet::self()->getActiveHost()->mTelnet), &cTelnet::signal_connected);
+        auto host = mudlet::self()->getActiveHost();
+        if (!host) {
+            QFAIL("No active host available for the test.");
+        }
+
+        QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
         if (!spy2.wait(500)) {
             QFAIL("Could not connect with the host.");
         }

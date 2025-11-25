@@ -22,6 +22,7 @@
 #include <QTimer>
 #include <QHostAddress>
 #include <QDebug>
+#include <QHostInfo>
 
 #include "TelnetServerStub.h"
 #include "utils.h"
@@ -34,10 +35,20 @@ TelnetServerStub::TelnetServerStub(QObject* parent)
 
 void TelnetServerStub::start(const QString& host, quint16 port)
 {
-    if (listen(QHostAddress(host), port)) {
-        qInfo().noquote() << qsl("✅ TelnetServerStub listening on %1:%2").arg(host).arg(port);
+    QHostInfo info = QHostInfo::fromName(host);
+
+    if (!info.addresses().isEmpty()) {
+        QHostAddress addr = info.addresses().first();
+        if (listen(addr, port)) {
+            qInfo().noquote() << qsl("✅ TelnetServerStub listening on %1 (%2):%3")
+                        .arg(host)
+                        .arg(addr.toString())
+                        .arg(port);
+        } else {
+            qCritical().noquote() << qsl("❌ Failed to start TelnetServerStub: %1").arg(errorString());
+        }
     } else {
-        qCritical().noquote() << qsl("❌ Failed to start TelnetServerStub: %1").arg(errorString());
+        qCritical() << "Could not resolve host:" << host;
     }
 }
 
