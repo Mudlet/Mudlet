@@ -20,5 +20,6 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # Install Lua dependencies
 RUN luarocks install luautf8 \
     && luarocks install lua-yajl \
+    && luarocks install lua-sql-sqlite3 \
     && luarocks install lrexlib-pcre2 \
     && luarocks install busted
