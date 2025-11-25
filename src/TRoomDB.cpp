@@ -320,7 +320,9 @@ bool TRoomDB::removeRoom(int id)
             mpMap->mTargetID = 0;
         }
         TRoom* pR = getRoom(id);
-        delete pR;
+        if (pR) {
+            delete pR;
+        }
         return true;
     }
     return false;
