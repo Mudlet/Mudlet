@@ -13,13 +13,11 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
         lua-filesystem lua-zip lua-sql-sqlite3 libxkbcommon-dev qmake6-bin qt6-base-dev \
         libqt6opengl6-dev qt6-multimedia-dev qt6-tools-dev qtkeychain-qt6-dev luarocks ccache \
         libpugixml-dev libqt6core5compat6-dev qt6-speech-dev ninja-build cmake libzstd-dev \
-        firefox-esr \
+        libsqlite3-dev firefox-esr \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Lua dependencies
+# Install Lua dependencies (lua-sql-sqlite3 and lua-rex-pcre2 are already installed via apt)
 RUN luarocks install luautf8 \
     && luarocks install lua-yajl \
-    && luarocks install lua-sql-sqlite3 \
-    && luarocks install lrexlib-pcre2 \
     && luarocks install busted
