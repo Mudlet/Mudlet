@@ -26,8 +26,6 @@ endif()
 
 project(communi)
 
-option(WITH_QT6 "Whether to build with Qt6 or Qt5." ON)
-
 find_package(Qt6 REQUIRED COMPONENTS Core Network)
 set(QT_LIBS Qt6::Core Qt6::Network)
 
