@@ -5223,7 +5223,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             painter.setBrush(QBrush(mpHost->mLowerLevelColor));
 
             // Draw shadow room using the same approach as paintEvent (lines 1426-1442)
-            // Cast to qreal before multiplication to ensure double precision and avoid potential overflow
             const qreal scaledRoomSize = static_cast<qreal>(finalRoomSize) * rSize;
             if (mBubbleMode) {
                 const QPointF roomCenter(rx, ry);
