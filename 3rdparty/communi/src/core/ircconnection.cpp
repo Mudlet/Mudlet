@@ -641,14 +641,7 @@ IrcConnection* IrcConnection::clone(QObject *parent) const
 }
 
 /*!
-    This property holds the FALLBACK encoding for received messages.
-
-    The fallback encoding is used when the message is detected not
-    to be valid \c UTF-8 and the consequent auto-detection of message
-    encoding fails. See QTextCodec::availableCodecs() for the list of
-    supported encodings.
-
-    The default value is \c ISO-8859-15.
+    Only support UTF-8 encoding for now.
 
     \par Access functions:
     \li QByteArray <b>encoding</b>() const
