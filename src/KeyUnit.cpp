@@ -439,12 +439,7 @@ std::tuple<QString, int, int, int> KeyUnit::assembleReport()
 
 void KeyUnit::markCleanup(TKey* pT)
 {
-    for (auto key : mCleanupList) {
-        if (key == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }
 
 void KeyUnit::doCleanup()
@@ -455,10 +450,12 @@ void KeyUnit::doCleanup()
         return;
     }
 
-    for (auto key : mCleanupList) {
-        delete key;
+    QMutableSetIterator<TKey*> itKey(mCleanupSet);
+    while (itKey.hasNext()) {
+        auto pKey = itKey.next();
+        itKey.remove();
+        delete pKey;
     }
-    mCleanupList.clear();
 }
 
 void KeyUnit::setupKeyNames()

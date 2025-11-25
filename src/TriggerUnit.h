@@ -25,6 +25,7 @@
 
 #include <QMultiMap>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 
 #include <list>
@@ -69,7 +70,7 @@ public:
     void stopAllTriggers();
     void reenableAllTriggers();
     std::tuple<QString, int, int, int, int, int> assembleReport();
-    std::list<TTrigger*> mCleanupList;
+    QSet<TTrigger*> mCleanupSet;
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);

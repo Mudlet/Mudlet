@@ -260,13 +260,17 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    const QByteArray utf8Data = data.toUtf8();
+    const char* utf8Ptr = utf8Data.constData();
+    const int utf8Length = utf8Data.size();
+
 #if defined(Q_OS_WINDOWS)
     // strndup(3) - a safe strdup(3) does not seem to be available in the
     // original mingw or the replacement mingw-w64 enmvironment we use:
-    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().constData()) + 1));
-    strcpy(subject, data.toUtf8().constData());
+    char* subject = static_cast<char*>(malloc(utf8Length + 1));
+    strcpy(subject, utf8Ptr);
 #else
-    char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+    char* subject = strndup(utf8Ptr, utf8Length);
 #endif
 
     // Set processing flag to prevent re-entrant cleanup during trigger execution
@@ -277,12 +281,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     }
     free(subject);
 
-    // Clear processing flag and perform cleanup
+    // Clear processing flag and perform any deferred cleanup
     mIsProcessing = false;
-    for (auto& trigger : mCleanupList) {
-        delete trigger;
-    }
-    mCleanupList.clear();
+    doCleanup();
 }
 
 void TriggerUnit::compileAll()
@@ -446,18 +447,15 @@ void TriggerUnit::doCleanup()
         return;
     }
 
-    for (auto trigger : mCleanupList) {
-        delete trigger;
+    QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
+    while (itTrigger.hasNext()) {
+        auto pTrigger = itTrigger.next();
+        itTrigger.remove();
+        delete pTrigger;
     }
-    mCleanupList.clear();
 }
 
 void TriggerUnit::markCleanup(TTrigger* pT)
 {
-    for (auto trigger : mCleanupList) {
-        if (trigger == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }

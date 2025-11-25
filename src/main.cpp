@@ -833,19 +833,20 @@ bool runUpdate()
 }
 #endif // defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 
+// Force usage of Qt Resource Collections (QRC) used by Mudlet.
+// Ensures QRC symbols from the static library reach the executable.
+// without this, the linker might discard them and the QRC would not be accessible at runtime.
 void initializeQRCResources()
 {
-    #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-        qInitResources_additional_splash_screens();
-    #endif
-
-    #ifdef INCLUDE_FONTS
-        qInitResources_mudlet_fonts_common();
-        #if defined(__linux__) || defined(__FreeBSD__)
-            qInitResources_mudlet_fonts_posix();
-        #endif
-    #endif
-
+#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
+    qInitResources_additional_splash_screens();
+#endif
+#ifdef INCLUDE_FONTS
+    qInitResources_mudlet_fonts_common();
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    qInitResources_mudlet_fonts_posix();
+#endif
+#endif
     qInitResources_mudlet();
     qInitResources_qm();
 }
