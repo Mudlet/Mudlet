@@ -1,7 +1,7 @@
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.208.0/containers/cpp/.devcontainer/base.Dockerfile
 
-# [Choice] Debian / Ubuntu version (use Debian 12/11, Ubuntu 22.04/24.04 on local arm64/Apple Silicon): debian-12, debian-11, ubuntu-24.04, ubuntu-22.04
-ARG VARIANT=debian-12
+# [Choice] Debian / Ubuntu version: debian-13, debian-12, debian-11, ubuntu-24.04, ubuntu-22.04
+ARG VARIANT=debian-13
 FROM mcr.microsoft.com/devcontainers/cpp:${VARIANT}
 ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
 
