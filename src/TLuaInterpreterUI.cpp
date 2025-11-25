@@ -2523,6 +2523,9 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
     for (auto actionId : actionIds) {
         auto action = host.getActionUnit()->getAction(actionId);
+        if (!action) {
+            continue;
+        }
         action->css = css;
     }
     host.getActionUnit()->updateToolbar();
