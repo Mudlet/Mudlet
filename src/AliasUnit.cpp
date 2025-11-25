@@ -167,18 +167,16 @@ TAlias* AliasUnit::getAlias(int id)
 {
     if (mAliasMap.find(id) != mAliasMap.end()) {
         return mAliasMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TAlias* AliasUnit::getAliasPrivate(int id)
 {
     if (mAliasMap.find(id) != mAliasMap.end()) {
         return mAliasMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool AliasUnit::registerAlias(TAlias* pT)

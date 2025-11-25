@@ -673,13 +673,11 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
             return QLatin1String("in");
         } else if (!direction.compare(QLatin1String("o"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("out"), Qt::CaseInsensitive)) {
             return QLatin1String("out");
-        } else {
-            return direction;
         }
+        return direction;
 
-    } else {
-        return QString();
     }
+    return QString();
 }
 
 // No documentation available in wiki - internal function
@@ -4884,9 +4882,8 @@ QString TLuaInterpreter::getLuaString(const QString& stringName)
     const int error = luaL_dostring(L, qsl("return %1").arg(stringName).toUtf8().constData());
     if (!error) {
         return lua_tostring(L, 1);
-    } else {
-        return QString();
     }
+    return QString();
 }
 
 // check for <whitespace><no_valid_representation> as output

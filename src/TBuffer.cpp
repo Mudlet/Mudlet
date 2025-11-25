@@ -3939,9 +3939,8 @@ bool TBuffer::deleteLines(int from, int to)
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, QVector<int> luaReference)
@@ -3983,9 +3982,8 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 // Replaces (bool)TBuffer::applyXxxx(QPoint& P_begin, QPoint& P_end, bool state)
@@ -4028,9 +4026,8 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
@@ -4070,9 +4067,8 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
@@ -5714,9 +5710,8 @@ Mudlet::HyperlinkStyling::LinkState TBuffer::getLinkState(int linkIndex) const
 {
     if (linkIndex <= 0) {
         return Mudlet::HyperlinkStyling::StateDefault;
-    } else {
-        return mLinkStates.value(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
     }
+    return mLinkStates.value(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
 }
 
 Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) const
