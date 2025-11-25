@@ -42,7 +42,6 @@
 #include <QRegularExpression>
 #include <QDateTime>
 #include <QTcpSocket>
-//#include <QTextCodec>
 #include <QMetaObject>
 #include <QMetaMethod>
 #include <QMetaEnum>
@@ -646,8 +645,6 @@ IrcConnection* IrcConnection::clone(QObject *parent) const
     \par Access functions:
     \li QByteArray <b>encoding</b>() const
     \li void <b>setEncoding</b>(const QByteArray& encoding)
-
-    \sa QTextCodec::availableCodecs(), QTextCodec::codecForLocale()
  */
 QByteArray IrcConnection::encoding() const
 {
