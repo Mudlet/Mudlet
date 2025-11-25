@@ -2123,11 +2123,9 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 int originalRotationIndex = editor->mpActionsMainArea->comboBox_action_button_rotation->currentIndex();
 
                 // Set new rotation: index 1 = 90° left, index 2 = 90° right
+                // Per-property saves automatically create undo command when combobox changes
                 int newRotationIndex = 1;
                 editor->mpActionsMainArea->comboBox_action_button_rotation->setCurrentIndex(newRotationIndex);
-
-                // Save to create undo command
-                editor->saveAction();
 
                 if (editor->mpActionsMainArea->comboBox_action_button_rotation->currentIndex() == newRotationIndex) {
                     TEST_PASS("Button: Rotation change applied");
