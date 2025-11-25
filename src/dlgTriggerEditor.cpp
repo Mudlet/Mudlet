@@ -9849,12 +9849,8 @@ void dlgTriggerEditor::slot_deleteItemOrGroup()
     }
 }
 
-void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_saveSelectedItem()
 {
-    if (!pItem) {
-        return;
-    }
-
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         saveTrigger();
