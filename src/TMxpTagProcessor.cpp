@@ -116,7 +116,8 @@ TMxpTagProcessor::TMxpTagProcessor()
     registerHandler(TMxpFeatureOptions({"music", {"fname", "v", "l", "p", "c", "t", "u"}}), new TMxpMusicTagHandler());
 
     // Image tag (placeholder - not yet implemented, but swallow it)
-    registerHandler(TMxpFeatureOptions({"image", {"fname", "url", "t", "h", "w", "hspace", "vspace", "align"}}), new TMxpImageTagHandler());
+    // Register without advertising support since IMAGE is not fully implemented
+    registerHandler(new TMxpImageTagHandler());
 
     // Frame and destination tags
     registerHandler(TMxpFeatureOptions({"frame", {"name", "action", "internal", "external", "align", "left", "right", "top", "bottom", "width", "height", "scrolling", "floating", "title"}}), new TMxpFrameTagHandler());

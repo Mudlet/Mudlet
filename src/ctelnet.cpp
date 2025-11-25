@@ -4370,13 +4370,11 @@ void cTelnet::postData()
 
     if (destinationConsole && destinationConsole != mpHost->mpConsole) {
         // Route output to the destination frame console
-        // We need to process the data through the buffer directly since frame consoles
-        // don't have printOnDisplay()
         destinationConsole->buffer.translateToPlainText(mMudData, true);
         destinationConsole->mUpperPane->showNewLines();
         destinationConsole->mLowerPane->showNewLines();
     } else {
-        // Default: output to main console (which has printOnDisplay())
+        // Default: output to main console
         mpHost->mpConsole->printOnDisplay(mMudData, true);
     }
 }

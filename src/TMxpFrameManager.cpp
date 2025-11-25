@@ -556,22 +556,20 @@ void TMxpFrameManager::removeFrameFromHierarchy(TMxpFrame* frame)
 
 void TMxpFrameManager::layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFrame)
 {
-    if (!mpHost || !mpHost->mpConsole || !parentFrame) {
-        qWarning() << "TMxpFrameManager::layoutNestedFrame: Invalid parent frame";
+    if (!mpHost || !mpHost->mpConsole || !parentFrame || !parentFrame->dockWidget) {
+        qWarning() << "TMxpFrameManager::layoutNestedFrame: Invalid parent frame or dock widget";
+        return;
+    }
+    
+    // Get main window for docking
+    auto* mainWindow = qobject_cast<QMainWindow*>(mpHost->mpConsole->window());
+    if (!mainWindow) {
+        qWarning() << "TMxpFrameManager::layoutNestedFrame: Main window not found";
         return;
     }
     
     // Calculate size based on parent's content size
-    QSize parentSize;
-
-    if (parentFrame->dockWidget) {
-        parentSize = parentFrame->dockWidget->size();
-    } else if (parentFrame->widget) {
-        parentSize = parentFrame->widget->size();
-    } else {
-        parentSize = QSize(400, 300); // Fallback default
-    }
-    
+    QSize parentSize = parentFrame->dockWidget->size();
     QSize frameSize = calculateFrameSize(frame->width, parentSize, false) + 
                       calculateFrameSize(frame->height, parentSize, true);
     
@@ -602,53 +600,50 @@ void TMxpFrameManager::layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFram
     frame->parentFrame = parentFrame;
     parentFrame->childFrames.append(frame);
     
-    // Get or create a container widget for the parent's dock widget
-    QWidget* containerWidget = nullptr;
-    QBoxLayout* layout = nullptr;
+    // Create a new TDockWidget for this nested frame
+    auto* dockWidget = new TDockWidget(mpHost, frame->name);
+    dockWidget->setObjectName(qsl("mxpFrame_%1_%2").arg(mpHost->getName(), frame->name));
+    dockWidget->setWindowTitle(frame->title);
+    dockWidget->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    frame->dockWidget = dockWidget;
     
-    if (parentFrame->dockWidget) {
-        containerWidget = parentFrame->dockWidget->widget();
-        
-        // If parent already has a layout container, reuse it
-        if (containerWidget && containerWidget->layout()) {
-            layout = qobject_cast<QBoxLayout*>(containerWidget->layout());
-        }
-        
-        // Need to create a new container with layout
-        if (!layout) {
-            auto* newContainer = new QWidget();
-            
-            // Determine orientation from alignment
-            if (frame->align == qsl("top") || frame->align == qsl("bottom")) {
-                layout = new QVBoxLayout(newContainer);
-            } else {
-                layout = new QHBoxLayout(newContainer);
-            }
-            
-            layout->setContentsMargins(0, 0, 0, 0);
-            layout->setSpacing(2);
-            
-            // If parent had an existing widget, add it to the layout first
-            if (parentFrame->widget && parentFrame->widget != containerWidget) {
-                layout->addWidget(parentFrame->widget);
-            }
-            
-            parentFrame->dockWidget->setWidget(newContainer);
-            containerWidget = newContainer;
-        }
-    }
+    // Register in main console's dock widget map
+    mpHost->mpConsole->mDockWidgetMap.insert(frame->name, dockWidget);
     
-    // Add this frame's console to the layout
-    if (layout) {
-        // Determine position based on alignment
-        if (frame->align == qsl("top") || frame->align == qsl("left")) {
-            layout->insertWidget(0, console);
-        } else {
-            layout->addWidget(console);
-        }
-        
-        console->show();
+    // Set console as dock widget content
+    dockWidget->setTConsole(console);
+    
+    // Apply profile stylesheet
+    dockWidget->setStyleSheet(mpHost->mProfileStyleSheet);
+    
+    // Determine where to place this dock widget relative to parent
+    // Use Qt's splitDockWidget to place nested frames adjacent to parent
+    Qt::Orientation orientation;
+    bool insertBefore;
+    
+    if (frame->align == qsl("top")) {
+        orientation = Qt::Vertical;
+        insertBefore = true;
+    } else if (frame->align == qsl("bottom")) {
+        orientation = Qt::Vertical;
+        insertBefore = false;
+    } else if (frame->align == qsl("left")) {
+        orientation = Qt::Horizontal;
+        insertBefore = true;
     } else {
-        qWarning() << "TMxpFrameManager::layoutNestedFrame: Could not create layout for nested frame";
+        // Default to right
+        orientation = Qt::Horizontal;
+        insertBefore = false;
     }
+    
+    // Split the parent dock widget to make room for this nested frame
+    if (insertBefore) {
+        mainWindow->splitDockWidget(parentFrame->dockWidget, dockWidget, orientation);
+    } else {
+        mainWindow->splitDockWidget(dockWidget, parentFrame->dockWidget, orientation);
+        // splitDockWidget places first arg before second, so swap order for "after"
+        mainWindow->splitDockWidget(parentFrame->dockWidget, dockWidget, orientation);
+    }
+    
+    dockWidget->show();
 }
