@@ -42,7 +42,7 @@
 #include <QRegularExpression>
 #include <QDateTime>
 #include <QTcpSocket>
-#include <QTextCodec>
+//#include <QTextCodec>
 #include <QMetaObject>
 #include <QMetaMethod>
 #include <QMetaEnum>
@@ -1439,6 +1439,8 @@ void IrcConnection::quit(const QString& reason)
 
     \sa sendData()
  */
+
+
 bool IrcConnection::sendCommand(IrcCommand* command)
 {
     Q_D(IrcConnection);
@@ -1455,18 +1457,19 @@ bool IrcConnection::sendCommand(IrcCommand* command)
                 d->activeCommandFilters.pop();
             }
         }
-        if (filtered) {
-            res = false;
-        } else {
-            QTextCodec* codec = QTextCodec::codecForName(command->encoding());
-            Q_ASSERT(codec);
-            res = sendData(codec->fromUnicode(command->toString()));
+        if (!filtered) {
+            QStringEncoder encoder(QStringEncoder::Utf8);
+            QByteArray encoded = encoder.encode(command->toString());
+            res = sendData(encoded);
         }
         if (!command->parent())
             command->deleteLater();
     }
     return res;
 }
+
+
+
 
 /*!
     Sends raw \a data to the server.

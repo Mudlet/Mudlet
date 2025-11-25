@@ -31,7 +31,7 @@
 #include "ircconnection.h"
 #include "ircmessage.h"
 #include "irccore_p.h"
-#include <QTextCodec>
+//#include <QTextCodec>
 #include <QMetaEnum>
 #include <QDebug>
 
