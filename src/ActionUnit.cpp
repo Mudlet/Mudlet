@@ -199,18 +199,16 @@ TAction* ActionUnit::getAction(int id)
 {
     if (mActionMap.contains(id)) {
         return mActionMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TAction* ActionUnit::getActionPrivate(int id)
 {
     if (mActionMap.find(id) != mActionMap.end()) {
         return mActionMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool ActionUnit::registerAction(TAction* pT)

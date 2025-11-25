@@ -160,18 +160,16 @@ TTrigger* TriggerUnit::getTrigger(int id)
 {
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TTrigger* TriggerUnit::getTriggerPrivate(int id)
 {
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool TriggerUnit::registerTrigger(TTrigger* pT)

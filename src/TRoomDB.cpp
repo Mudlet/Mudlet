@@ -387,9 +387,8 @@ bool TRoomDB::removeArea(const QString& name)
 {
     if (areaNamesMap.values().contains(name)) {
         return removeArea(areaNamesMap.key(name)); // i.e. call the removeArea(int) method
-    } else {
-        return false;
     }
+    return false;
 }
 
 void TRoomDB::removeArea(TArea* pA)
@@ -460,9 +459,8 @@ TArea* TRoomDB::getArea(int id)
     //area id of -1 is a room in the "void", 0 is a failure
     if (id > 0 || id == -1) {
         return areas.value(id, nullptr);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 // Used by TMap::audit() - can detect and return areas with normally invalids Id (less than -1 or zero)!
@@ -580,9 +578,8 @@ bool TRoomDB::addArea(int id, QString name)
             areaNamesMap[id] = name;
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 // Used by TMap::readJsonMapFile(...) to insert an already populated area in:

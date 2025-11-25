@@ -4273,9 +4273,8 @@ bool T2DMap::getCenterSelection()
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void T2DMap::wheelEvent(QWheelEvent* e)
