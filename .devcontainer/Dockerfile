@@ -5,6 +5,11 @@ ARG VARIANT=debian-13
 FROM mcr.microsoft.com/devcontainers/cpp:${VARIANT}
 ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
 
+# Add deb-multimedia repo for libpcre3-dev (not available in Debian 13+)
+RUN echo "deb http://www.deb-multimedia.org trixie main" >> /etc/apt/sources.list \
+    && apt-get update -oAcquire::AllowInsecureRepositories=true \
+    && apt-get install -y --allow-unauthenticated deb-multimedia-keyring
+
 # Install C++ dependencies
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends build-essential git libglu1-mesa-dev \
