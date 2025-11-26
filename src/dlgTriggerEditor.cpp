@@ -86,6 +86,10 @@
 // Forward declaration for undo/redo test suite (implemented in test/dlgTriggerEditorUndoRedoTest.cpp)
 void runUndoRedoTestSuite(dlgTriggerEditor* editor);
 
+// Forward declaration for per-property undo helper (defined later in this file)
+static void pushKeyPropertyCommand(EditorUndoStack* undoStack, Host* host, int keyID, const QString& keyName,
+                                   const QString& propertyName, const QString& oldStateXML, const QString& newStateXML);
+
 using namespace std::chrono_literals;
 
 // Used as a QObject::property so that we can keep track of the color for the
@@ -13019,15 +13023,22 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
         return;
     }
     const QString keyName = pKeyUnit->getKeyName(key, modifier);
-    const QString name = keyName;
-    mpKeysMainArea->lineEdit_key_binding->setText(name);
+    mpKeysMainArea->lineEdit_key_binding->setText(keyName);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
-        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
+        const int keyID = pItem->data(0, Qt::UserRole).toInt();
+        TKey* pT = mpHost->getKeyUnit()->getKey(keyID);
         if (pT) {
+            if (pT->getKeyCode() == key && pT->getKeyModifiers() == modifier) {
+                return;
+            }
+
+            QString oldStateXML = exportKeyToXML(pT);
             pT->setKeyCode(key);
             pT->setKeyModifiers(modifier);
+            QString newStateXML = exportKeyToXML(pT);
+
+            pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("keyBinding"), oldStateXML, newStateXML);
         }
     }
 }
