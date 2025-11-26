@@ -4365,18 +4365,9 @@ void cTelnet::postData()
         return;
     }
     
-    // Check if there's an active MXP destination frame
-    TConsole* destinationConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
-
-    if (destinationConsole && destinationConsole != mpHost->mpConsole) {
-        // Route output to the destination frame console
-        destinationConsole->buffer.translateToPlainText(mMudData, true);
-        destinationConsole->mUpperPane->showNewLines();
-        destinationConsole->mLowerPane->showNewLines();
-    } else {
-        // Default: output to main console
-        mpHost->mpConsole->printOnDisplay(mMudData, true);
-    }
+    // All data goes through main console's printOnDisplay which calls
+    // translateToPlainText - MXP DEST routing happens inside that process
+    mpHost->mpConsole->printOnDisplay(mMudData, true);
 }
 
 void cTelnet::initStreamDecompressor()

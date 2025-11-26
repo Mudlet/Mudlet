@@ -925,13 +925,67 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         localBufferPosition++;
                         continue;
                     }
+                    case HANDLER_INSERT_AND_REPROCESS: {
+                        // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position
+                        // This is used for error recovery when a '<' is found inside a tag -
+                        // we output the incomplete tag as text, then reprocess the '<' to start a new tag
+
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        // Do NOT increment position - the current character needs to be reprocessed
+                        continue;
+                    }
                     default:
                         //HANDLER_FALL_THROUGH -> do nothing
                         assert(localBuffer[localBufferPosition] == ch);
                     }
                 } else if (mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
-                    localBufferPosition++;
-                    continue;
+                    // Mode is LOCKED but we're inside a tag that started in a different mode.
+                    // We need to continue feeding characters to the tag builder to complete the tag.
+                    TMxpProcessingResult const result =
+                            mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+                    
+                    switch (result) {
+                    case HANDLER_NEXT_CHAR:
+                        localBufferPosition++;
+                        continue;
+                    case HANDLER_INSERT_ENTITY_SYS: {
+                        // Tag was not handled, output as text
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        localBufferPosition++;
+                        continue;
+                    }
+                    case HANDLER_INSERT_AND_REPROCESS: {
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        continue;
+                    }
+                    default:
+                        localBufferPosition++;
+                        continue;
+                    }
                 } else {
                     mpHost->mMxpProcessor.processRawInput(ch);
                 }
@@ -939,7 +993,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             if (CHAR_IS_COMMIT_CHAR(ch)) {
                 // after a newline (but not a <br>) return to default mode
-                mpHost->mMxpProcessor.resetToDefaultMode();
+                // BUT only if we're not in the middle of parsing a tag (tags can span lines)
+                if (!mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    mpHost->mMxpProcessor.resetToDefaultMode();
+                }
             }
         }
 
@@ -1119,6 +1176,24 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         // text would alter the prior contents but as that is on a separate
         // line there should not be any changes to text before a line feed
         // which sort of seems to be implied by the current value of ch:
+
+        // Check if there's an active MXP DEST - route to destination frame
+        if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+            qDebug() << "TBuffer::commitLine - active DEST:" << mpHost->mMxpFrameManager.getCurrentDestination() << "mMudLine:" << mMudLine.left(80);
+            TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
+            if (destConsole && destConsole != mpHost->mpConsole && !mMudLine.isEmpty()) {
+                qDebug() << "TBuffer::commitLine - ROUTING to:" << mpHost->mMxpFrameManager.getCurrentDestination();
+                // Send the accumulated line to the destination console
+                destConsole->print(mMudLine + qsl("\n"));
+                mMudLine.clear();
+                mMudBuffer.clear();
+                ++localBufferPosition;
+                return true;
+            } else {
+                qDebug() << "TBuffer::commitLine - NOT routing: destConsole=" << (destConsole ? destConsole->objectName() : "null")
+                         << "isMain=" << (destConsole == mpHost->mpConsole) << "empty=" << mMudLine.isEmpty();
+            }
+        }
 
         // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
         // https://bugreports.qt.io/browse/QTBUG-105035

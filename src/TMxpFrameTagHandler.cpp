@@ -19,6 +19,7 @@
 
 #include "TMxpFrameTagHandler.h"
 #include "TMxpClient.h"
+#include <QDebug>
 
 bool TMxpFrameTagHandler::supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
 {
@@ -31,21 +32,30 @@ TMxpTagHandlerResult TMxpFrameTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 {
     Q_UNUSED(ctx)
     
+    qDebug() << "TMxpFrameTagHandler::handleStartTag() tag:" << tag->toString();
+    
     // Extract all attributes
     QMap<QString, QString> attributes = extractAttributes(tag);
+    
+    qDebug() << "  Extracted attributes:" << attributes;
     
     // Frame name is required
     QString frameName = attributes.value(qsl("NAME"));
 
     if (frameName.isEmpty()) {
+        qDebug() << "  REJECTED: empty frame name";
         return MXP_TAG_NOT_HANDLED;
     }
     
+    qDebug() << "  Creating frame:" << frameName;
+    
     // Delegate frame creation to client
     if (client.createMxpFrame(frameName, attributes)) {
+        qDebug() << "  SUCCESS";
         return MXP_TAG_HANDLED;
     }
     
+    qDebug() << "  FAILED: createMxpFrame returned false";
     return MXP_TAG_NOT_HANDLED;
 }
 

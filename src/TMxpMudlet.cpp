@@ -217,6 +217,7 @@ bool TMxpMudlet::startTagReceived(MxpStartTag* startTag)
 {
     // Get the current MXP mode from the processor
     TMXPMode currentMode = mpHost->mMxpProcessor.mode();
+    const QString tagName = startTag->getName().toUpper();
     
     // In LOCKED mode, no tags are allowed
     if (currentMode == MXP_MODE_LOCKED) {
@@ -224,8 +225,6 @@ bool TMxpMudlet::startTagReceived(MxpStartTag* startTag)
     }
     
     // Check if this tag is allowed in the current mode
-    const QString tagName = startTag->getName().toUpper();
-
     if (!isTagAllowedInMode(tagName, currentMode)) {
         return false;
     }

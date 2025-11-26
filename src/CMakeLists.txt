@@ -591,7 +591,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about the decoding of ANSI MXP sequences although
 #   there is not much against this item at present {only an announcement of the
 #   type (?) of an `\x1b[?z` received}:
-# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_MXP_PROCESSING)
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_MXP_PROCESSING)
 #
 # * Enable the features associated with reporting problems in processing Unicode
 #   codepoints that cannot be displayed on screen in a `TConsole`:

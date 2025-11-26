@@ -61,8 +61,12 @@ TMxpFrameManager::~TMxpFrameManager()
 
 bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QString>& attributes)
 {
+    qDebug() << "TMxpFrameManager::createFrame() called with name:" << name;
+    qDebug() << "  Attributes:" << attributes;
+    
     // Don't create frames if MXP is not enabled
     if (!mpHost->mMxpProcessor.isEnabled()) {
+        qDebug() << "  REJECTED: MXP not enabled";
         return false;
     }
     
@@ -72,8 +76,9 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     }
     
     if (frameExists(name)) {
-        qWarning() << "TMxpFrameManager::createFrame: Frame already exists:" << name;
-        return false;
+        // Frame already exists - this is normal on screen refresh.
+        // Return true to indicate the tag was handled (silently ignore duplicate).
+        return true;
     }
     
     if (!canCreateFrame()) {
@@ -93,14 +98,18 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     frame->scrolling = attributes.value(qsl("SCROLLING"), qsl("YES")).toUpper() == qsl("YES");
     frame->dockFrame = attributes.value(qsl("DOCK"));
     
-    // If there's an active DEST and no explicit DOCK attribute, use current destination as parent
-    if (frame->dockFrame.isEmpty() && !mCurrentDestination.isEmpty() && frame->isInternal) {
-        auto* potentialParent = getFrame(mCurrentDestination);
-
-        if (potentialParent && potentialParent->isInternal) {
-            frame->dockFrame = mCurrentDestination;
-        }
-    }
+    qDebug() << "  Parsed frame attributes:";
+    qDebug() << "    isInternal:" << frame->isInternal;
+    qDebug() << "    align:" << frame->align;
+    qDebug() << "    width:" << frame->width;
+    qDebug() << "    height:" << frame->height;
+    qDebug() << "    title:" << frame->title;
+    qDebug() << "    scrolling:" << frame->scrolling;
+    qDebug() << "    dockFrame:" << frame->dockFrame;
+    
+    // Note: We don't auto-assign dockFrame based on current DEST anymore.
+    // MXP FRAME positioning is based on ALIGN attribute relative to main window,
+    // not nested inside the current destination frame.
     
     // Check for action attribute
     QString action = attributes.value(qsl("ACTION"), qsl("open")).toLower();
@@ -114,13 +123,17 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     }
     
     // Create the appropriate UI layout
+    qDebug() << "  Creating UI layout - isInternal:" << frame->isInternal << "dockFrame:" << frame->dockFrame << "align:" << frame->align;
     if (frame->isInternal) {
         if (!frame->dockFrame.isEmpty() && frame->align == qsl("client")) {
+            qDebug() << "  -> layoutTabFrame";
             layoutTabFrame(frame);
         } else {
+            qDebug() << "  -> layoutInternalFrame";
             layoutInternalFrame(frame);
         }
     } else {
+        qDebug() << "  -> layoutExternalFrame";
         layoutExternalFrame(frame);
     }
     
@@ -189,12 +202,16 @@ bool TMxpFrameManager::focusFrame(const QString& name)
 
 void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool eof)
 {
+    qDebug() << "TMxpFrameManager::setDestination() called:" << frameName << "eol:" << eol << "eof:" << eof;
+    
     // Don't set destination if MXP is not enabled
     if (!mpHost->mMxpProcessor.isEnabled()) {
+        qDebug() << "  REJECTED: MXP not enabled";
         return;
     }
     
     if (frameName.isEmpty()) {
+        qDebug() << "  Clearing destination (empty name)";
         clearDestination();
         return;
     }
@@ -206,6 +223,7 @@ void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool e
         return;
     }
     
+    qDebug() << "  Setting destination to:" << frameName;
     mCurrentDestination = frameName;
     
     // Handle content clearing
@@ -242,7 +260,29 @@ QWidget* TMxpFrameManager::getCurrentDestinationWidget() const
 TConsole* TMxpFrameManager::getCurrentDestinationConsole() const
 {
     QWidget* widget = getCurrentDestinationWidget();
-    return qobject_cast<TConsole*>(widget);
+    TConsole* console = qobject_cast<TConsole*>(widget);
+    
+    if (!mCurrentDestination.isEmpty()) {
+        qDebug() << "TMxpFrameManager::getCurrentDestinationConsole() dest:" << mCurrentDestination
+                 << "widget:" << (widget ? widget->objectName() : "null")
+                 << "console:" << (console ? "valid" : "null");
+    }
+    
+    return console;
+}
+
+void TMxpFrameManager::sendTextToDestination(const QString& text)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+    
+    TConsole* console = getCurrentDestinationConsole();
+    if (console && console != mpHost->mpConsole) {
+        // Send to destination frame's console
+        console->print(text);
+    }
+    // If no valid destination, text stays in main console (default behavior)
 }
 
 TMxpFrame* TMxpFrameManager::getFrame(const QString& name)
@@ -290,7 +330,8 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     auto* dockWidget = new TDockWidget(mpHost, frame->name);
     dockWidget->setObjectName(qsl("mxpFrame_%1_%2").arg(mpHost->getName(), frame->name));
     dockWidget->setWindowTitle(frame->title);
-    dockWidget->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    // MXP frames: allow closing but not moving/floating for cleaner layout
+    dockWidget->setFeatures(QDockWidget::DockWidgetClosable);
     frame->dockWidget = dockWidget;
     
     // Register in main console's dock widget map
@@ -302,6 +343,14 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     QSize heightSize = calculateFrameSize(frame->height, mainSize, true);
     int frameWidth = widthSize.width();
     int frameHeight = heightSize.height();
+    
+    qDebug() << "  layoutInternalFrame:" << frame->name << "mainSize:" << mainSize 
+             << "spec:" << frame->width << "x" << frame->height
+             << "calculated:" << frameWidth << "x" << frameHeight;
+    
+    // Ensure minimum size for visibility
+    if (frameWidth < 100) frameWidth = 200;
+    if (frameHeight < 50) frameHeight = 150;
     
     // Create mini console for content
     auto* console = mpHost->mpConsole->createMiniConsole(
@@ -336,7 +385,26 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     // Determine dock area and add to main window
     Qt::DockWidgetArea area = alignmentToDockArea(frame->align);
+    
+    // Check if there's already a dock widget in this area to tabify with
+    QDockWidget* existingDock = nullptr;
+    for (auto it = mFrames.begin(); it != mFrames.end(); ++it) {
+        TMxpFrame* otherFrame = it.value();
+        if (otherFrame != frame && otherFrame->dockWidget) {
+            Qt::DockWidgetArea otherArea = mainWindow->dockWidgetArea(otherFrame->dockWidget);
+            if (otherArea == area) {
+                existingDock = otherFrame->dockWidget;
+                break;
+            }
+        }
+    }
+    
     mainWindow->addDockWidget(area, dockWidget);
+    
+    // Tabify with existing dock widget in the same area for cleaner layout
+    if (existingDock) {
+        mainWindow->tabifyDockWidget(existingDock, dockWidget);
+    }
     
     // Apply the requested size using resizeDocks
     // For left/right dock areas, use the width; for top/bottom, use the height
@@ -350,8 +418,9 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         }
     }
     
-    // Show the dock widget
+    // Show and raise the dock widget (raise makes it the active tab if tabified)
     dockWidget->show();
+    dockWidget->raise();
 }
 
 void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
