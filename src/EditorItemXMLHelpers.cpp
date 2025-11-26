@@ -1191,7 +1191,7 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
             pA->mSizeX = nodeValue.toInt();
         } else if (nodeName == "sizeY") {
             pA->mSizeY = nodeValue.toInt();
-        } else if (nodeName == "mButtonColumns") {
+        } else if (nodeName == "buttonColumn") {
             pA->mButtonColumns = nodeValue.toInt();
         } else if (nodeName == "buttonColor") {
             // Deprecated - skip this element
@@ -1289,7 +1289,7 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot) {
             pA->mSizeX = nodeValue.toInt();
         } else if (nodeName == "sizeY") {
             pA->mSizeY = nodeValue.toInt();
-        } else if (nodeName == "mButtonColumns") {
+        } else if (nodeName == "buttonColumn") {
             pA->mButtonColumns = nodeValue.toInt();
         } else if (nodeName == "buttonColor") {
             // Deprecated - skip this element
