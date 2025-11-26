@@ -298,16 +298,18 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     // Calculate size
     QSize mainSize = mainWindow->size();
-    QSize frameSize = calculateFrameSize(frame->width, mainSize, false) + 
-                      calculateFrameSize(frame->height, mainSize, true);
+    QSize widthSize = calculateFrameSize(frame->width, mainSize, false);
+    QSize heightSize = calculateFrameSize(frame->height, mainSize, true);
+    int frameWidth = widthSize.width();
+    int frameHeight = heightSize.height();
     
     // Create mini console for content
     auto* console = mpHost->mpConsole->createMiniConsole(
         qsl("main"), 
         frame->name, 
         0, 0, 
-        frameSize.width(), 
-        frameSize.height());
+        frameWidth, 
+        frameHeight);
     
     if (!console) {
         qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console";
@@ -336,6 +338,18 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     Qt::DockWidgetArea area = alignmentToDockArea(frame->align);
     mainWindow->addDockWidget(area, dockWidget);
     
+    // Apply the requested size using resizeDocks
+    // For left/right dock areas, use the width; for top/bottom, use the height
+    if (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea) {
+        if (frameWidth > 0) {
+            mainWindow->resizeDocks({dockWidget}, {frameWidth}, Qt::Horizontal);
+        }
+    } else {
+        if (frameHeight > 0) {
+            mainWindow->resizeDocks({dockWidget}, {frameHeight}, Qt::Vertical);
+        }
+    }
+    
     // Show the dock widget
     dockWidget->show();
 }
@@ -349,16 +363,18 @@ void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
     
     // Calculate size
     QSize mainSize = mpHost->mpConsole->size();
-    QSize frameSize = calculateFrameSize(frame->width, mainSize, false) + 
-                      calculateFrameSize(frame->height, mainSize, true);
+    QSize widthSize = calculateFrameSize(frame->width, mainSize, false);
+    QSize heightSize = calculateFrameSize(frame->height, mainSize, true);
+    int frameWidth = widthSize.width();
+    int frameHeight = heightSize.height();
     
     // Create standalone window with mini console
     auto* console = mpHost->mpConsole->createMiniConsole(
         qsl("main"),
         frame->name,
         0, 0,
-        frameSize.width(),
-        frameSize.height());
+        frameWidth,
+        frameHeight);
     
     if (!console) {
         qWarning() << "TMxpFrameManager::layoutExternalFrame: Failed to create console";
@@ -570,16 +586,18 @@ void TMxpFrameManager::layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFram
     
     // Calculate size based on parent's content size
     QSize parentSize = parentFrame->dockWidget->size();
-    QSize frameSize = calculateFrameSize(frame->width, parentSize, false) + 
-                      calculateFrameSize(frame->height, parentSize, true);
+    QSize widthSize = calculateFrameSize(frame->width, parentSize, false);
+    QSize heightSize = calculateFrameSize(frame->height, parentSize, true);
+    int frameWidth = widthSize.width();
+    int frameHeight = heightSize.height();
     
     // Create mini console for content
     auto* console = mpHost->mpConsole->createMiniConsole(
         qsl("main"), 
         frame->name, 
         0, 0, 
-        frameSize.width(), 
-        frameSize.height());
+        frameWidth, 
+        frameHeight);
     
     if (!console) {
         qWarning() << "TMxpFrameManager::layoutNestedFrame: Failed to create console";
@@ -616,33 +634,43 @@ void TMxpFrameManager::layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFram
     // Apply profile stylesheet
     dockWidget->setStyleSheet(mpHost->mProfileStyleSheet);
     
-    // Determine where to place this dock widget relative to parent
-    // Use Qt's splitDockWidget to place nested frames adjacent to parent
+    // Determine orientation and order for splitDockWidget
+    // splitDockWidget(first, second, orientation) places first before second
+    // For top/left alignment: new frame should appear before parent
+    // For bottom/right alignment: new frame should appear after parent
     Qt::Orientation orientation;
-    bool insertBefore;
+    bool newFrameFirst;
+    int sizeToApply;
     
     if (frame->align == qsl("top")) {
         orientation = Qt::Vertical;
-        insertBefore = true;
+        newFrameFirst = true;
+        sizeToApply = frameHeight;
     } else if (frame->align == qsl("bottom")) {
         orientation = Qt::Vertical;
-        insertBefore = false;
+        newFrameFirst = false;
+        sizeToApply = frameHeight;
     } else if (frame->align == qsl("left")) {
         orientation = Qt::Horizontal;
-        insertBefore = true;
+        newFrameFirst = true;
+        sizeToApply = frameWidth;
     } else {
         // Default to right
         orientation = Qt::Horizontal;
-        insertBefore = false;
+        newFrameFirst = false;
+        sizeToApply = frameWidth;
     }
     
     // Split the parent dock widget to make room for this nested frame
-    if (insertBefore) {
-        mainWindow->splitDockWidget(parentFrame->dockWidget, dockWidget, orientation);
-    } else {
+    if (newFrameFirst) {
         mainWindow->splitDockWidget(dockWidget, parentFrame->dockWidget, orientation);
-        // splitDockWidget places first arg before second, so swap order for "after"
+    } else {
         mainWindow->splitDockWidget(parentFrame->dockWidget, dockWidget, orientation);
+    }
+    
+    // Apply the requested size using resizeDocks
+    if (sizeToApply > 0) {
+        mainWindow->resizeDocks({dockWidget}, {sizeToApply}, orientation);
     }
     
     dockWidget->show();
