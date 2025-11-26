@@ -5222,14 +5222,15 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             painter.setBrush(QBrush(mpHost->mLowerLevelColor));
 
             // Draw shadow room using the same approach as paintEvent (lines 1426-1442)
+            const qreal scaledRoomSize = static_cast<qreal>(finalRoomSize) * rSize;
             if (mBubbleMode) {
                 const QPointF roomCenter(rx, ry);
-                const float roomRadius = (finalRoomSize * rSize) / 2.0f;
+                const qreal roomRadius = scaledRoomSize / 2.0;
                 QPainterPath diameterPath;
                 diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
                 painter.drawPath(diameterPath);
             } else {
-                const QRectF shadowRect(rx - (finalRoomSize * rSize * 0.8), ry - (finalRoomSize * rSize * 0.2), finalRoomSize * rSize, finalRoomSize * rSize);
+                const QRectF shadowRect(rx - (scaledRoomSize * 0.8), ry - (scaledRoomSize * 0.2), scaledRoomSize, scaledRoomSize);
                 painter.drawRect(shadowRect);
             }
             painter.restore();

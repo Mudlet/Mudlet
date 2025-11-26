@@ -150,11 +150,10 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 , mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
 , mpHost(pH)
-, mTagWatchdog(nullptr)
+, mTagWatchdog(std::make_unique<QTimer>())
 {
-    mTagWatchdog = new QTimer();
     mTagWatchdog->setSingleShot(true);
-    QObject::connect(mTagWatchdog, &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
     // All additions to the buffer must use append()/appendLine() to preserve formatting via TChar.
     // Direct modification of the `buffer` vector may bypass formatting and should be avoided.
     clear();
@@ -170,7 +169,170 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 
 TBuffer::~TBuffer()
 {
-    delete mTagWatchdog;
+}
+
+TBuffer::TBuffer(const TBuffer& other)
+: bufferLine(other.bufferLine)
+, buffer(other.buffer)
+, lineBuffer(other.lineBuffer)
+, timeBuffer(other.timeBuffer)
+, promptBuffer(other.promptBuffer)
+, mLinkStore(other.mLinkStore)
+, mLinesLimit(other.mLinesLimit)
+, mBatchDeleteSize(other.mBatchDeleteSize)
+, mWrapAt(other.mWrapAt)
+, mWrapIndent(other.mWrapIndent)
+, mWrapHangingIndent(other.mWrapHangingIndent)
+, mCursorY(other.mCursorY)
+, mEchoingText(other.mEchoingText)
+, mpConsole(other.mpConsole)
+, mGotESC(other.mGotESC)
+, mGotCSI(other.mGotCSI)
+, mGotOSC(other.mGotOSC)
+, mIsDefaultColor(other.mIsDefaultColor)
+, mBlack(other.mBlack)
+, mLightBlack(other.mLightBlack)
+, mRed(other.mRed)
+, mLightRed(other.mLightRed)
+, mLightGreen(other.mLightGreen)
+, mGreen(other.mGreen)
+, mLightBlue(other.mLightBlue)
+, mBlue(other.mBlue)
+, mLightYellow(other.mLightYellow)
+, mYellow(other.mYellow)
+, mLightCyan(other.mLightCyan)
+, mCyan(other.mCyan)
+, mLightMagenta(other.mLightMagenta)
+, mMagenta(other.mMagenta)
+, mLightWhite(other.mLightWhite)
+, mWhite(other.mWhite)
+, mForeGroundColor(other.mForeGroundColor)
+, mForeGroundColorLight(other.mForeGroundColorLight)
+, mBackGroundColor(other.mBackGroundColor)
+, mpHost(other.mpHost)
+, mBold(other.mBold)
+, mItalics(other.mItalics)
+, mOverline(other.mOverline)
+, mReverse(other.mReverse)
+, mStrikeOut(other.mStrikeOut)
+, mUnderline(other.mUnderline)
+, mUnderlineWavy(other.mUnderlineWavy)
+, mUnderlineDotted(other.mUnderlineDotted)
+, mUnderlineDashed(other.mUnderlineDashed)
+, mBlink(other.mBlink)
+, mFastBlink(other.mFastBlink)
+, mConcealed(other.mConcealed)
+, mAltFont(other.mAltFont)
+, mMudLine(other.mMudLine)
+, mMudBuffer(other.mMudBuffer)
+, mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
+, lastLoggedFromLine(other.lastLoggedFromLine)
+, lastloggedToLine(other.lastloggedToLine)
+, lastTextToLog(other.lastTextToLog)
+, mEncoding(other.mEncoding)
+, mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
+, mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
+, mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
+, mHyperlinkActive(other.mHyperlinkActive)
+, mWatchdogPhase(other.mWatchdogPhase)
+, mTagWatchdog(std::make_unique<QTimer>())
+, mWatchdogTagSnapshot(other.mWatchdogTagSnapshot)
+, mCurrentHyperlinkStyling(other.mCurrentHyperlinkStyling)
+, mCurrentHyperlinkMenu(other.mCurrentHyperlinkMenu)
+, mLinkStates(other.mLinkStates)
+, mVisitedLinks(other.mVisitedLinks)
+, mLinkOriginalBackgrounds(other.mLinkOriginalBackgrounds)
+, mLinkOriginalCharacters(other.mLinkOriginalCharacters)
+, mCurrentHoveredLinkIndex(other.mCurrentHoveredLinkIndex)
+, mCurrentActiveLinkIndex(other.mCurrentActiveLinkIndex)
+, mCurrentFocusedLinkIndex(other.mCurrentFocusedLinkIndex)
+{
+    mTagWatchdog->setSingleShot(true);
+    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+}
+
+TBuffer& TBuffer::operator=(const TBuffer& other)
+{
+    if (this != &other) {
+        bufferLine = other.bufferLine;
+        buffer = other.buffer;
+        lineBuffer = other.lineBuffer;
+        timeBuffer = other.timeBuffer;
+        promptBuffer = other.promptBuffer;
+        mLinkStore = other.mLinkStore;
+        mLinesLimit = other.mLinesLimit;
+        mBatchDeleteSize = other.mBatchDeleteSize;
+        mWrapAt = other.mWrapAt;
+        mWrapIndent = other.mWrapIndent;
+        mWrapHangingIndent = other.mWrapHangingIndent;
+        mCursorY = other.mCursorY;
+        mEchoingText = other.mEchoingText;
+        mpConsole = other.mpConsole;
+        mGotESC = other.mGotESC;
+        mGotCSI = other.mGotCSI;
+        mGotOSC = other.mGotOSC;
+        mIsDefaultColor = other.mIsDefaultColor;
+        mBlack = other.mBlack;
+        mLightBlack = other.mLightBlack;
+        mRed = other.mRed;
+        mLightRed = other.mLightRed;
+        mLightGreen = other.mLightGreen;
+        mGreen = other.mGreen;
+        mLightBlue = other.mLightBlue;
+        mBlue = other.mBlue;
+        mLightYellow = other.mLightYellow;
+        mYellow = other.mYellow;
+        mLightCyan = other.mLightCyan;
+        mCyan = other.mCyan;
+        mLightMagenta = other.mLightMagenta;
+        mMagenta = other.mMagenta;
+        mLightWhite = other.mLightWhite;
+        mWhite = other.mWhite;
+        mForeGroundColor = other.mForeGroundColor;
+        mForeGroundColorLight = other.mForeGroundColorLight;
+        mBackGroundColor = other.mBackGroundColor;
+        mpHost = other.mpHost;
+        mBold = other.mBold;
+        mItalics = other.mItalics;
+        mOverline = other.mOverline;
+        mReverse = other.mReverse;
+        mStrikeOut = other.mStrikeOut;
+        mUnderline = other.mUnderline;
+        mUnderlineWavy = other.mUnderlineWavy;
+        mUnderlineDotted = other.mUnderlineDotted;
+        mUnderlineDashed = other.mUnderlineDashed;
+        mBlink = other.mBlink;
+        mFastBlink = other.mFastBlink;
+        mConcealed = other.mConcealed;
+        mAltFont = other.mAltFont;
+        mMudLine = other.mMudLine;
+        mMudBuffer = other.mMudBuffer;
+        mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
+        lastLoggedFromLine = other.lastLoggedFromLine;
+        lastloggedToLine = other.lastloggedToLine;
+        lastTextToLog = other.lastTextToLog;
+        mEncoding = other.mEncoding;
+        mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
+        mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
+        mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
+        mHyperlinkActive = other.mHyperlinkActive;
+        mWatchdogPhase = other.mWatchdogPhase;
+        mWatchdogTagSnapshot = other.mWatchdogTagSnapshot;
+        mCurrentHyperlinkStyling = other.mCurrentHyperlinkStyling;
+        mCurrentHyperlinkMenu = other.mCurrentHyperlinkMenu;
+        mLinkStates = other.mLinkStates;
+        mVisitedLinks = other.mVisitedLinks;
+        mLinkOriginalBackgrounds = other.mLinkOriginalBackgrounds;
+        mLinkOriginalCharacters = other.mLinkOriginalCharacters;
+        mCurrentHoveredLinkIndex = other.mCurrentHoveredLinkIndex;
+        mCurrentActiveLinkIndex = other.mCurrentActiveLinkIndex;
+        mCurrentFocusedLinkIndex = other.mCurrentFocusedLinkIndex;
+        
+        mTagWatchdog = std::make_unique<QTimer>();
+        mTagWatchdog->setSingleShot(true);
+        QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+    }
+    return *this;
 }
 
 // user-defined literal to represent megabytes
