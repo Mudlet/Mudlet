@@ -448,9 +448,8 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     containerWidget->setGeometry(x, y, frameWidth, frameHeight);
     containerWidget->setFrameStyle(QFrame::Panel | QFrame::Raised);
     containerWidget->setLineWidth(1);
-    containerWidget->setStyleSheet(qsl(
-        "QFrame { background-color: #1a1a1a; border: 1px solid #444444; }"
-    ));
+    containerWidget->setStyleSheet(
+        qsl("QFrame { background-color: #1a1a1a; border: 1px solid #444444; }"));
     
     // Create title bar using TLabel
     auto* titleLabel = mainConsole->createLabel(
@@ -464,9 +463,8 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     if (titleLabel) {
         titleLabel->setText(frame->title);
         titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        titleLabel->setStyleSheet(qsl(
-            "QLabel { background-color: #2a2a2a; color: #cccccc; padding-left: 5px; border-bottom: 1px solid #444444; font-weight: bold; }"
-        ));
+        titleLabel->setStyleSheet(
+            qsl("QLabel { background-color: #2a2a2a; color: #cccccc; padding-left: 5px; border-bottom: 1px solid #444444; font-weight: bold; }"));
     }
     
     // Create mini console inside the container (below the title bar)
