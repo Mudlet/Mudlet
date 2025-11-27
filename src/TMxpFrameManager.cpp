@@ -287,8 +287,8 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     TMainConsole* mainConsole = mpHost->mpConsole.data();
     
-    // Note: DOCKFRAME tabbing is handled in createFrame() when ALIGN=CLIENT is set.
-    // Per CMUD forum discussion (2008), ALIGN=CLIENT + DOCKFRAME creates tabbed frames.
+    // Note: DOCK tabbing is handled in createFrame() when ALIGN=CLIENT is set.
+    // Per CMUD, ALIGN=CLIENT + DOCK creates tabbed frames.
     // This is a CMUD extension, not part of the official MXP 1.0 specification.
     
     // Check if we're inside a DEST - if so, nest this frame inside the destination
