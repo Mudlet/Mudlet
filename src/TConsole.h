@@ -263,6 +263,7 @@ public:
     void print(const QString& msg);
     void print(const char*);
     void print(const QString& msg, QColor fgColor, QColor bgColor);
+    void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();

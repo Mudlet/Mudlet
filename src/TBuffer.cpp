@@ -1183,8 +1183,8 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
             TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
             if (destConsole && destConsole != mpHost->mpConsole && !mMudLine.isEmpty()) {
                 qDebug() << "TBuffer::commitLine - ROUTING to:" << mpHost->mMxpFrameManager.getCurrentDestination();
-                // Send the accumulated line to the destination console
-                destConsole->print(mMudLine + qsl("\n"));
+                // Send the accumulated line with formatting and links to the destination console
+                destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
                 mMudLine.clear();
                 mMudBuffer.clear();
                 ++localBufferPosition;
@@ -3442,6 +3442,72 @@ void TBuffer::resetColors()
 void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
 {
     append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
+}
+
+void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+
+    // Ensure we have a line to append to
+    if (buffer.empty()) {
+        appendEmptyLine();
+    }
+
+    // Track link ID mapping from source to destination
+    int oldSourceLinkId = 0;
+    int destLinkId = 0;
+
+    // Append each character with its corresponding formatting
+    const int length = std::min(text.size(), static_cast<qsizetype>(formatting.size()));
+    for (int i = 0; i < length; ++i) {
+        const QChar ch = text.at(i);
+        if (ch == QChar::LineFeed) {
+            appendEmptyLine();
+            continue;
+        }
+        
+        // Handle link transfer - copy links from source to destination link store
+        const TChar& srcChar = formatting.at(i);
+        const int sourceLinkId = srcChar.linkIndex();
+        if (sourceLinkId && (oldSourceLinkId != sourceLinkId)) {
+            // New link - copy it to our link store
+            destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), 
+                                              sourceLinkStore.getHintsConst(sourceLinkId), 
+                                              mpHost);
+            oldSourceLinkId = sourceLinkId;
+        } else if (!sourceLinkId) {
+            destLinkId = 0;
+        }
+        
+        lineBuffer.back().append(ch);
+        // Create new TChar with the destination link ID
+        TChar destChar(srcChar.mFgColor, srcChar.mBgColor, srcChar.mFlags, destLinkId);
+        buffer.back().push_back(destChar);
+    }
+
+    // Append a newline at the end
+    appendEmptyLine();
+
+    // Handle wrapping
+    if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
+        log(lastLineBeforeWrap, lastLineBeforeWrap);
+        wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    } else {
+        wrapLine(lastLineBeforeWrap, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    }
+
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
+        shrinkBuffer();
+    }
+
+    if (!mpConsole.isNull()) {
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    }
 }
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end,

@@ -48,13 +48,18 @@ struct TMxpFrame {
     QString dockFrame;      // For tab support - name of frame to dock into
     
     // UI elements - using QPointer for automatic null on deletion
-    QPointer<QWidget> widget;           // The actual display widget (TConsole, TLabel, etc.)
+    QPointer<QWidget> widget;           // The container widget (QFrame with title bar)
+    QPointer<TConsole> console;         // The actual TConsole for text output
     QPointer<TDockWidget> dockWidget;   // Container for internal frames
     QPointer<QTabWidget> tabWidget;     // For tab-based frames
     
     // Hierarchy tracking
     TMxpFrame* parentFrame = nullptr;
     QList<TMxpFrame*> childFrames;
+    
+    // VBox-style layout tracking
+    int usedHeight = 0;     // Pixels used by child frames (for VBox stacking)
+    int usedWidth = 0;      // Pixels used by child frames (for HBox stacking)
     
     ~TMxpFrame();
 };
@@ -95,6 +100,7 @@ private:
     Host* mpHost;
     QMap<QString, TMxpFrame*> mFrames;
     QString mCurrentDestination;  // Current output target (empty = main console)
+    QMargins mMxpBorders;         // MXP-specific borders, separate from Host::mBorders
     
     // Layout and sizing helpers
     void layoutInternalFrame(TMxpFrame* frame);

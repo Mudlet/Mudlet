@@ -165,7 +165,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     && !mMxpTagBuilder.isQuotedSequence()
     && !mMxpTagBuilder.isInsideComment()) {
         // Error recovery: nested '<' inside a tag
-        // Output the incomplete tag as text, then reprocess the '<' to start a new tag
+        // Output the incomplete tag as text and prepare to process the new '<' as a tag start
         const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
         const QByteArray encoding = mpMxpClient->getEncoding();
         QString decoded;
@@ -179,8 +179,10 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         }
         
         lastEntityValue = qsl("<") + decoded;
-        mMxpTagBuilder.reset();  // Full reset, not resetForNewTag - let the '<' be processed normally
-        return HANDLER_INSERT_AND_REPROCESS;  // Insert text but don't skip the '<'
+        // resetForNewTag() puts the builder in "inside tag" state, as if we just processed '<'
+        // This allows the next character to be processed as part of the new tag
+        mMxpTagBuilder.resetForNewTag();
+        return HANDLER_INSERT_ENTITY_SYS;
     }
 
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
