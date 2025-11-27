@@ -107,6 +107,7 @@ private:
     void layoutExternalFrame(TMxpFrame* frame);
     void layoutTabFrame(TMxpFrame* frame);
     void layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFrame);
+    void layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* targetFrame);
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
     Qt::DockWidgetArea alignmentToDockArea(const QString& align);
     

@@ -92,7 +92,9 @@ QMap<QString, QString> TMxpFrameTagHandler::extractAttributes(MxpStartTag* tag)
             attributes[qsl("SCROLLING")] = attr.getValue();
         } else if (upperName == qsl("TITLE")) {
             attributes[qsl("TITLE")] = attr.getValue();
-        } else if (upperName == qsl("DOCK")) {
+        } else if (upperName == qsl("DOCK") || upperName == qsl("DOCKFRAME")) {
+            // DOCK or DOCKFRAME: Add this frame as a tab in an existing frame
+            // This is a Mudlet extension for tabbed frames
             attributes[qsl("DOCK")] = attr.getValue();
         } else if (upperName == qsl("ACTION")) {
             attributes[qsl("ACTION")] = attr.getValue();

@@ -39,15 +39,12 @@ TMxpFrame::~TMxpFrame()
         delete widget.data();
     }
     
-    // Don't delete child frames here - they're owned by TMxpFrameManager
-    // Just clear parent pointers to avoid dangling references
-    for (auto* child : childFrames) {
-        if (child) {
-            child->parentFrame = nullptr;
-        }
-    }
-
-    childFrames.clear();
+    // Note: We don't touch childFrames or parentFrame here.
+    // When TMxpFrameManager::~TMxpFrameManager() calls qDeleteAll,
+    // the iteration order is unpredictable, so child frames may already
+    // be deleted. Accessing them would cause use-after-free.
+    // The childFrames list is only valid during normal operation,
+    // not during shutdown cleanup.
 }
 
 TMxpFrameManager::TMxpFrameManager(Host* host)
@@ -314,6 +311,16 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     TMainConsole* mainConsole = mpHost->mpConsole.data();
     
+    // Check if DOCKFRAME is specified - if so, add as tab to existing frame
+    if (!frame->dockFrame.isEmpty()) {
+        TMxpFrame* targetFrame = getFrame(frame->dockFrame);
+        if (targetFrame && targetFrame->tabWidget) {
+            // Add this frame as a new tab in the target's TabWidget
+            layoutTabIntoExistingFrame(frame, targetFrame);
+            return;
+        }
+    }
+    
     // Check if we're inside a DEST - if so, nest this frame inside the destination
     TMxpFrame* parentFrame = nullptr;
     if (!mCurrentDestination.isEmpty()) {
@@ -439,8 +446,8 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     qDebug() << "  Frame position:" << x << "," << y << "size:" << frameWidth << "x" << frameHeight;
     
-    // Create a container frame with title bar
-    const int titleBarHeight = 20;
+    // Create a container frame with TabWidget header
+    const int tabBarHeight = 24;
     
     // Create the container widget for the frame
     auto* containerWidget = new QFrame(mainConsole->mpMainFrame);
@@ -451,29 +458,35 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     containerWidget->setStyleSheet(
         qsl("QFrame { background-color: #1a1a1a; border: 1px solid #444444; }"));
     
-    // Create title bar using TLabel
-    auto* titleLabel = mainConsole->createLabel(
-        qsl("main"),
-        frame->name + qsl("_title"),
-        x, y,
-        frameWidth, titleBarHeight,
-        true,   // fillBackground
-        false); // clickThrough
+    // Create a layout for the container
+    auto* containerLayout = new QVBoxLayout(containerWidget);
+    containerLayout->setContentsMargins(0, 0, 0, 0);
+    containerLayout->setSpacing(0);
     
-    if (titleLabel) {
-        titleLabel->setText(frame->title);
-        titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        titleLabel->setStyleSheet(
-            qsl("QLabel { background-color: #2a2a2a; color: #cccccc; padding-left: 5px; border-bottom: 1px solid #444444; font-weight: bold; }"));
-    }
+    // Create TabWidget as the header - allows future tab additions
+    auto* tabWidget = new QTabWidget(containerWidget);
+    tabWidget->setObjectName(frame->name + qsl("_tabs"));
+    tabWidget->setTabPosition(QTabWidget::North);
+    tabWidget->setDocumentMode(true);  // Cleaner look
+    tabWidget->setStyleSheet(qsl(
+        "QTabWidget::pane { border: none; background-color: transparent; }"
+        "QTabBar::tab { background-color: #2a2a2a; color: #cccccc; padding: 4px 12px; "
+        "              border: 1px solid #444444; border-bottom: none; margin-right: 2px; }"
+        "QTabBar::tab:selected { background-color: #3a3a3a; color: #ffffff; }"
+        "QTabBar::tab:hover { background-color: #333333; }"));
     
-    // Create mini console inside the container (below the title bar)
+    // Create a page widget to hold the console
+    auto* tabPage = new QWidget();
+    auto* tabPageLayout = new QVBoxLayout(tabPage);
+    tabPageLayout->setContentsMargins(0, 0, 0, 0);
+    
+    // Create mini console inside the tab page
     auto* console = mainConsole->createMiniConsole(
         qsl("main"), 
         frame->name, 
-        x, y + titleBarHeight, 
+        0, 0,  // Position managed by layout
         frameWidth, 
-        frameHeight - titleBarHeight);
+        frameHeight - tabBarHeight);
     
     if (!console) {
         qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
@@ -481,8 +494,18 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         return;
     }
     
-    // Store the container as the frame widget and the console separately
+    // Add console to tab page layout
+    tabPageLayout->addWidget(console);
+    
+    // Add the tab with the frame title
+    tabWidget->addTab(tabPage, frame->title);
+    
+    // Add TabWidget to container
+    containerLayout->addWidget(tabWidget);
+    
+    // Store the container, TabWidget, and console
     frame->widget = containerWidget;
+    frame->tabWidget = tabWidget;
     frame->console = console;
     frame->dockWidget = nullptr;
     frame->usedHeight = 0;  // Initialize for potential child frames
@@ -511,8 +534,10 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     // Register console
     mainConsole->mSubConsoleMap.insert(frame->name, console);
     
+    // Show the container widget and its contents
+    containerWidget->show();
+    containerWidget->raise();
     console->show();
-    console->raise();
 }
 
 void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
@@ -842,4 +867,78 @@ void TMxpFrameManager::layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFram
     }
     
     dockWidget->show();
+}
+
+void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* targetFrame)
+{
+    if (!mpHost || !mpHost->mpConsole) {
+        qWarning() << "TMxpFrameManager::layoutTabIntoExistingFrame: No console available";
+        return;
+    }
+    
+    if (!targetFrame->tabWidget) {
+        qWarning() << "TMxpFrameManager::layoutTabIntoExistingFrame: Target frame has no TabWidget:" << targetFrame->name;
+        return;
+    }
+    
+    TMainConsole* mainConsole = mpHost->mpConsole.data();
+    QTabWidget* tabWidget = targetFrame->tabWidget;
+    
+    qDebug() << "  Adding frame" << frame->name << "as tab in" << targetFrame->name;
+    
+    // Create a page widget to hold the console
+    auto* tabPage = new QWidget();
+    auto* tabPageLayout = new QVBoxLayout(tabPage);
+    tabPageLayout->setContentsMargins(0, 0, 0, 0);
+    
+    // Get size from target frame's container
+    QSize containerSize = targetFrame->widget ? targetFrame->widget->size() : QSize(200, 200);
+    
+    // Create mini console for this tab
+    auto* console = mainConsole->createMiniConsole(
+        qsl("main"), 
+        frame->name, 
+        0, 0,  // Position managed by layout
+        containerSize.width(), 
+        containerSize.height() - 30);  // Account for tab bar
+    
+    if (!console) {
+        qWarning() << "TMxpFrameManager::layoutTabIntoExistingFrame: Failed to create console for" << frame->name;
+        delete tabPage;
+        return;
+    }
+    
+    // Add console to tab page layout
+    tabPageLayout->addWidget(console);
+    
+    // Add the new tab
+    int tabIndex = tabWidget->addTab(tabPage, frame->title);
+    
+    // Store references
+    frame->widget = tabPage;
+    frame->tabWidget = tabWidget;  // Share the TabWidget reference
+    frame->console = console;
+    frame->parentFrame = targetFrame;
+    targetFrame->childFrames.append(frame);
+    
+    // Configure scrolling
+    if (!frame->scrolling) {
+        console->setScrolling(false);
+    }
+    
+    // Set console colors
+    console->setFgColor(mainConsole->mFgColor);
+    QColor frameBgColor = mainConsole->mBgColor;
+    frameBgColor = frameBgColor.lighter(115);
+    console->setBgColor(frameBgColor);
+    
+    // Register console
+    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    
+    // Optionally switch to the new tab
+    tabWidget->setCurrentIndex(tabIndex);
+    
+    console->show();
+    
+    qDebug() << "  Tab added successfully, total tabs:" << tabWidget->count();
 }
