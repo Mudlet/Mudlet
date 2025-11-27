@@ -287,15 +287,9 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     TMainConsole* mainConsole = mpHost->mpConsole.data();
     
-    // Check if DOCKFRAME is specified - if so, add as tab to existing frame
-    if (!frame->dockFrame.isEmpty()) {
-        TMxpFrame* targetFrame = getFrame(frame->dockFrame);
-        if (targetFrame && targetFrame->tabWidget) {
-            // Add this frame as a new tab in the target's TabWidget
-            layoutTabIntoExistingFrame(frame, targetFrame);
-            return;
-        }
-    }
+    // Note: DOCKFRAME tabbing is handled in createFrame() when ALIGN=CLIENT is set.
+    // Per CMUD 2.30 documentation, ALIGN=CLIENT + DOCKFRAME is the canonical way
+    // to create tabbed frames. DOCKFRAME without ALIGN=CLIENT is not supported.
     
     // Check if we're inside a DEST - if so, nest this frame inside the destination
     TMxpFrame* parentFrame = nullptr;
