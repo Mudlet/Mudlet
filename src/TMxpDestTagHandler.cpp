@@ -31,31 +31,18 @@ TMxpTagHandlerResult TMxpDestTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 {
     Q_UNUSED(ctx)
     
-    qDebug() << "TMxpDestTagHandler::handleStartTag() tag:" << tag->toString();
-    
-    // Extract frame name (first positional argument or NAME attribute)
     QString frameName = extractFrameName(tag);
-
-    qDebug() << "  Extracted frameName:" << frameName;
-    
     if (frameName.isEmpty()) {
-        qDebug() << "  REJECTED: empty frame name";
         return MXP_TAG_NOT_HANDLED;
     }
     
-    // Check for EOL and EOF flags
     bool eol = hasEOL(tag);
     bool eof = hasEOF(tag);
     
-    qDebug() << "  Setting destination to:" << frameName << "eol:" << eol << "eof:" << eof;
-    
-    // Set destination via client
     if (client.setMxpDestination(frameName, eol, eof)) {
-        qDebug() << "  SUCCESS";
         return MXP_TAG_HANDLED;
     }
     
-    qDebug() << "  FAILED: setMxpDestination returned false";
     return MXP_TAG_NOT_HANDLED;
 }
 
@@ -64,9 +51,6 @@ TMxpTagHandlerResult TMxpDestTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
     Q_UNUSED(ctx)
     Q_UNUSED(tag)
     
-    qDebug() << "TMxpDestTagHandler::handleEndTag() - clearing destination";
-    
-    // Clear destination when </DEST> is encountered
     client.clearMxpDestination();
     
     return MXP_TAG_HANDLED;

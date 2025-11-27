@@ -61,12 +61,7 @@ TMxpFrameManager::~TMxpFrameManager()
 
 bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QString>& attributes)
 {
-    qDebug() << "TMxpFrameManager::createFrame() called with name:" << name;
-    qDebug() << "  Attributes:" << attributes;
-    
-    // Don't create frames if MXP is not enabled
     if (!mpHost->mMxpProcessor.isEnabled()) {
-        qDebug() << "  REJECTED: MXP not enabled";
         return false;
     }
     
@@ -98,20 +93,6 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     frame->scrolling = attributes.value(qsl("SCROLLING"), qsl("YES")).toUpper() == qsl("YES");
     frame->dockFrame = attributes.value(qsl("DOCK"));
     
-    qDebug() << "  Parsed frame attributes:";
-    qDebug() << "    isInternal:" << frame->isInternal;
-    qDebug() << "    align:" << frame->align;
-    qDebug() << "    width:" << frame->width;
-    qDebug() << "    height:" << frame->height;
-    qDebug() << "    title:" << frame->title;
-    qDebug() << "    scrolling:" << frame->scrolling;
-    qDebug() << "    dockFrame:" << frame->dockFrame;
-    
-    // Note: We don't auto-assign dockFrame based on current DEST anymore.
-    // MXP FRAME positioning is based on ALIGN attribute relative to main window,
-    // not nested inside the current destination frame.
-    
-    // Check for action attribute
     QString action = attributes.value(qsl("ACTION"), qsl("open")).toLower();
 
     if (action == qsl("close")) {
@@ -123,17 +104,13 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     }
     
     // Create the appropriate UI layout
-    qDebug() << "  Creating UI layout - isInternal:" << frame->isInternal << "dockFrame:" << frame->dockFrame << "align:" << frame->align;
     if (frame->isInternal) {
         if (!frame->dockFrame.isEmpty() && frame->align == qsl("client")) {
-            qDebug() << "  -> layoutTabFrame";
             layoutTabFrame(frame);
         } else {
-            qDebug() << "  -> layoutInternalFrame";
             layoutInternalFrame(frame);
         }
     } else {
-        qDebug() << "  -> layoutExternalFrame";
         layoutExternalFrame(frame);
     }
     
@@ -202,16 +179,11 @@ bool TMxpFrameManager::focusFrame(const QString& name)
 
 void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool eof)
 {
-    qDebug() << "TMxpFrameManager::setDestination() called:" << frameName << "eol:" << eol << "eof:" << eof;
-    
-    // Don't set destination if MXP is not enabled
     if (!mpHost->mMxpProcessor.isEnabled()) {
-        qDebug() << "  REJECTED: MXP not enabled";
         return;
     }
     
     if (frameName.isEmpty()) {
-        qDebug() << "  Clearing destination (empty name)";
         clearDestination();
         return;
     }
@@ -223,7 +195,6 @@ void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool e
         return;
     }
     
-    qDebug() << "  Setting destination to:" << frameName;
     mCurrentDestination = frameName;
     
     // Handle content clearing
@@ -264,27 +235,7 @@ TConsole* TMxpFrameManager::getCurrentDestinationConsole() const
     }
     
     const auto* frame = getFrame(mCurrentDestination);
-    TConsole* console = frame ? frame->console.data() : nullptr;
-    
-    qDebug() << "TMxpFrameManager::getCurrentDestinationConsole() dest:" << mCurrentDestination
-             << "frame:" << (frame ? frame->name : "null")
-             << "console:" << (console ? "valid" : "null");
-    
-    return console;
-}
-
-void TMxpFrameManager::sendTextToDestination(const QString& text)
-{
-    if (text.isEmpty()) {
-        return;
-    }
-    
-    TConsole* console = getCurrentDestinationConsole();
-    if (console && console != mpHost->mpConsole) {
-        // Send to destination frame's console
-        console->print(text);
-    }
-    // If no valid destination, text stays in main console (default behavior)
+    return frame ? frame->console.data() : nullptr;
 }
 
 TMxpFrame* TMxpFrameManager::getFrame(const QString& name)
@@ -341,11 +292,6 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         // Track used space in parent for VBox-style stacking
         containerY += parentFrame->usedHeight;
         containerSize.setHeight(containerSize.height() - parentFrame->usedHeight);
-        
-        qDebug() << "  Nested frame in parent:" << parentFrame->name 
-                 << "containerPos:" << containerX << "," << containerY
-                 << "containerSize:" << containerSize
-                 << "parent usedHeight:" << parentFrame->usedHeight;
     } else {
         // Top-level frame - use MXP-specific borders (not Host borders which are for Lua)
         containerSize = mainConsole->size();
@@ -353,11 +299,6 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         containerY = mMxpBorders.top();
         containerSize.setWidth(containerSize.width() - mMxpBorders.left() - mMxpBorders.right());
         containerSize.setHeight(containerSize.height() - mMxpBorders.top() - mMxpBorders.bottom());
-        
-        qDebug() << "  Top-level frame - windowSize:" << mainConsole->size()
-                 << "mxpBorders:" << mMxpBorders
-                 << "containerPos:" << containerX << "," << containerY
-                 << "containerSize:" << containerSize;
     }
     
     // Calculate frame dimensions relative to container
@@ -368,14 +309,8 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     // For "100%" height in a nested context, use remaining space
     if (frame->height.trimmed() == qsl("100%") && parentFrame) {
-        frameHeight = containerSize.height();  // Remaining height after usedHeight
+        frameHeight = containerSize.height();
     }
-    
-    qDebug() << "  layoutInternalFrame:" << frame->name 
-             << "containerSize:" << containerSize
-             << "spec:" << frame->width << "x" << frame->height
-             << "calculated:" << frameWidth << "x" << frameHeight
-             << "align:" << frame->align;
     
     // Ensure minimum size for visibility
     if (frameWidth < 50) frameWidth = 100;
@@ -437,14 +372,8 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
             y = containerY;
         }
         
-        qDebug() << "  Updated mMxpBorders:" << mMxpBorders;
-        
-        // Apply MXP borders to Host so main console resizes to accommodate frames
-        qDebug() << "  Calling mpHost->setBorders(" << mMxpBorders << ")";
         mpHost->setBorders(mMxpBorders);
     }
-    
-    qDebug() << "  Frame position:" << x << "," << y << "size:" << frameWidth << "x" << frameHeight;
     
     // Create a container frame with TabWidget header
     const int tabBarHeight = 24;
@@ -671,11 +600,9 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
         
         if (isHeight) {
             int result = chars * fm.lineSpacing();
-            qDebug() << "    calculateFrameSize: spec=" << spec << "chars=" << chars << "lineSpacing=" << fm.lineSpacing() << "result=" << result;
             return QSize(0, result);
         } else {
             int result = chars * fm.averageCharWidth();
-            qDebug() << "    calculateFrameSize: spec=" << spec << "chars=" << chars << "avgCharWidth=" << fm.averageCharWidth() << "result=" << result;
             return QSize(result, 0);
         }
     }
@@ -692,7 +619,6 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
         int dimension = isHeight ? containerSize.height() : containerSize.width();
         int size = (dimension * percent) / 100;
         
-        qDebug() << "    calculateFrameSize: spec=" << spec << "percent=" << percent << "dimension=" << dimension << "result=" << size;
         return isHeight ? QSize(0, size) : QSize(size, 0);
     }
     
@@ -763,112 +689,6 @@ void TMxpFrameManager::removeFrameFromHierarchy(TMxpFrame* frame)
     frame->childFrames.clear();
 }
 
-void TMxpFrameManager::layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFrame)
-{
-    if (!mpHost || !mpHost->mpConsole || !parentFrame || !parentFrame->dockWidget) {
-        qWarning() << "TMxpFrameManager::layoutNestedFrame: Invalid parent frame or dock widget";
-        return;
-    }
-    
-    // Get main window for docking
-    auto* mainWindow = qobject_cast<QMainWindow*>(mpHost->mpConsole->window());
-    if (!mainWindow) {
-        qWarning() << "TMxpFrameManager::layoutNestedFrame: Main window not found";
-        return;
-    }
-    
-    // Calculate size based on parent's content size
-    QSize parentSize = parentFrame->dockWidget->size();
-    QSize widthSize = calculateFrameSize(frame->width, parentSize, false);
-    QSize heightSize = calculateFrameSize(frame->height, parentSize, true);
-    int frameWidth = widthSize.width();
-    int frameHeight = heightSize.height();
-    
-    // Create mini console for content
-    auto* console = mpHost->mpConsole->createMiniConsole(
-        qsl("main"), 
-        frame->name, 
-        0, 0, 
-        frameWidth, 
-        frameHeight);
-    
-    if (!console) {
-        qWarning() << "TMxpFrameManager::layoutNestedFrame: Failed to create console";
-        return;
-    }
-    
-    frame->widget = console;
-    
-    // Configure scrolling
-    if (!frame->scrolling) {
-        console->setScrolling(false);
-    }
-    
-    // Register console in main console's sub-console map
-    mpHost->mpConsole->mSubConsoleMap.insert(frame->name, console);
-    
-    // Set up parent-child relationship
-    frame->parentFrame = parentFrame;
-    parentFrame->childFrames.append(frame);
-    
-    // Create a new TDockWidget for this nested frame
-    auto* dockWidget = new TDockWidget(mpHost, frame->name);
-    dockWidget->setObjectName(qsl("mxpFrame_%1_%2").arg(mpHost->getName(), frame->name));
-    dockWidget->setWindowTitle(frame->title);
-    dockWidget->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-    frame->dockWidget = dockWidget;
-    
-    // Register in main console's dock widget map
-    mpHost->mpConsole->mDockWidgetMap.insert(frame->name, dockWidget);
-    
-    // Set console as dock widget content
-    dockWidget->setTConsole(console);
-    
-    // Apply profile stylesheet
-    dockWidget->setStyleSheet(mpHost->mProfileStyleSheet);
-    
-    // Determine orientation and order for splitDockWidget
-    // splitDockWidget(first, second, orientation) places first before second
-    // For top/left alignment: new frame should appear before parent
-    // For bottom/right alignment: new frame should appear after parent
-    Qt::Orientation orientation;
-    bool newFrameFirst;
-    int sizeToApply;
-    
-    if (frame->align == qsl("top")) {
-        orientation = Qt::Vertical;
-        newFrameFirst = true;
-        sizeToApply = frameHeight;
-    } else if (frame->align == qsl("bottom")) {
-        orientation = Qt::Vertical;
-        newFrameFirst = false;
-        sizeToApply = frameHeight;
-    } else if (frame->align == qsl("left")) {
-        orientation = Qt::Horizontal;
-        newFrameFirst = true;
-        sizeToApply = frameWidth;
-    } else {
-        // Default to right
-        orientation = Qt::Horizontal;
-        newFrameFirst = false;
-        sizeToApply = frameWidth;
-    }
-    
-    // Split the parent dock widget to make room for this nested frame
-    if (newFrameFirst) {
-        mainWindow->splitDockWidget(dockWidget, parentFrame->dockWidget, orientation);
-    } else {
-        mainWindow->splitDockWidget(parentFrame->dockWidget, dockWidget, orientation);
-    }
-    
-    // Apply the requested size using resizeDocks
-    if (sizeToApply > 0) {
-        mainWindow->resizeDocks({dockWidget}, {sizeToApply}, orientation);
-    }
-    
-    dockWidget->show();
-}
-
 void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* targetFrame)
 {
     if (!mpHost || !mpHost->mpConsole) {
@@ -884,9 +704,6 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
     TMainConsole* mainConsole = mpHost->mpConsole.data();
     QTabWidget* tabWidget = targetFrame->tabWidget;
     
-    qDebug() << "  Adding frame" << frame->name << "as tab in" << targetFrame->name;
-    
-    // Create a page widget to hold the console
     auto* tabPage = new QWidget();
     auto* tabPageLayout = new QVBoxLayout(tabPage);
     tabPageLayout->setContentsMargins(0, 0, 0, 0);
@@ -939,6 +756,4 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
     tabWidget->setCurrentIndex(tabIndex);
     
     console->show();
-    
-    qDebug() << "  Tab added successfully, total tabs:" << tabWidget->count();
 }

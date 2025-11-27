@@ -83,9 +83,6 @@ public:
     TConsole* getCurrentDestinationConsole() const;
     bool hasActiveDestination() const { return !mCurrentDestination.isEmpty(); }
     
-    // Send text to the current destination (or main console if no destination)
-    void sendTextToDestination(const QString& text);
-    
     // Frame queries
     TMxpFrame* getFrame(const QString& name);
     const TMxpFrame* getFrame(const QString& name) const;
@@ -106,7 +103,6 @@ private:
     void layoutInternalFrame(TMxpFrame* frame);
     void layoutExternalFrame(TMxpFrame* frame);
     void layoutTabFrame(TMxpFrame* frame);
-    void layoutNestedFrame(TMxpFrame* frame, TMxpFrame* parentFrame);
     void layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* targetFrame);
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
     Qt::DockWidgetArea alignmentToDockArea(const QString& align);
