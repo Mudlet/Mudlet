@@ -81,14 +81,12 @@ win32 {
     DEFINES += INCLUDE_WINSOCK2
 }
 
-QT += network uitools multimedia multimediawidgets gui concurrent
+# Qt6 Core5Compat is needed by third-party libraries (communi, edbee-lib)
+# Mudlet itself doesn't use it, but these dependencies still require it
+QT += network uitools multimedia multimediawidgets gui concurrent core5compat
 qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
-}
-
-greaterThan(QT_MAJOR_VERSION, 5) {
-    QT += core5compat
 }
 
 TEMPLATE = app
@@ -753,6 +751,7 @@ SOURCES += \
     TTabBar.cpp \
     TDetachedWindow.cpp \
     TTextCodec.cpp \
+    TEncodingHelper.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -903,6 +902,7 @@ HEADERS += \
     TTabBar.h \
     TDetachedWindow.h \
     TTextCodec.h \
+    TEncodingHelper.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \

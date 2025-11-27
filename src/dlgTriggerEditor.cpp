@@ -9849,12 +9849,8 @@ void dlgTriggerEditor::slot_deleteItemOrGroup()
     }
 }
 
-void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_saveSelectedItem()
 {
-    if (!pItem) {
-        return;
-    }
-
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         saveTrigger();
@@ -11956,9 +11952,8 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
         const QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
         return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                 .arg(QLatin1String("darkGray"), disabledColor.name());
-    } else {
-        return QString();
     }
+    return QString();
 }
 
 // Retrieve the background-color or color setting from the previous method, the

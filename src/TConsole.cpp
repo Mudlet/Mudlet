@@ -48,7 +48,6 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
-#include <QTextCodec>
 #include <QPainter>
 
 const QString TConsole::cmLuaLineVariable("line");
@@ -1270,9 +1269,8 @@ bool TConsole::hasSelection()
 {
     if (P_begin != P_end) {
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void TConsole::insertText(const QString& msg)
@@ -1602,9 +1600,8 @@ bool TConsole::moveCursor(int x, int y)
         mUserCursor.setX(x);
         mUserCursor.setY(y);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 int TConsole::select(const QString& text, int numOfMatch)

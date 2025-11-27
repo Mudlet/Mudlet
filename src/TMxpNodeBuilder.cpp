@@ -142,9 +142,8 @@ bool TMxpNodeBuilder::acceptAttribute(char ch)
     if (ch == '=' && !mReadingAttrValue) {
         mReadingAttrValue = true;
         return false;
-    } else {
-        return true;
     }
+    return true;
 }
 void TMxpNodeBuilder::resetCurrentAttribute()
 {
