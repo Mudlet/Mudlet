@@ -45,6 +45,8 @@ struct TMxpFrame {
     QString align;          // "top", "bottom", "left", "right", "client"
     QString width;          // "40c", "25%", "350px"
     QString height;
+    QString left;           // Absolute X position (pixels or percentage)
+    QString top;            // Absolute Y position (pixels or percentage)
     bool scrolling = true;
     QString dockFrame;      // For tab support - name of frame to dock into
     
@@ -75,6 +77,7 @@ public:
     bool createFrame(const QString& name, const QMap<QString, QString>& attributes);
     bool closeFrame(const QString& name);
     bool focusFrame(const QString& name);
+    bool showFrame(const QString& name);
     
     // Output destination management
     void setDestination(const QString& frameName, bool eol, bool eof);

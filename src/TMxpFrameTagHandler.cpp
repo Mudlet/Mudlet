@@ -83,6 +83,15 @@ QMap<QString, QString> TMxpFrameTagHandler::extractAttributes(MxpStartTag* tag)
             attributes[qsl("DOCK")] = attr.getValue();
         } else if (upperName == qsl("ACTION")) {
             attributes[qsl("ACTION")] = attr.getValue();
+        } else if (upperName == qsl("LEFT")) {
+            // Absolute X position (pixels or percentage)
+            attributes[qsl("LEFT")] = attr.getValue();
+        } else if (upperName == qsl("TOP")) {
+            // Absolute Y position (pixels or percentage)
+            attributes[qsl("TOP")] = attr.getValue();
+        } else if (upperName == qsl("FLOATING")) {
+            // FLOATING makes the frame a floating window (similar to EXTERNAL)
+            attributes[qsl("FLOATING")] = qsl("true");
         }
     }
     

@@ -70,10 +70,22 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
         return false;
     }
     
+    // Parse action first - avoids unnecessary TMxpFrame allocation for close/focus
+    // Per Zugg/CMUD behavior: action determines what to do with the frame
+    QString action = attributes.value(qsl("ACTION"), qsl("open")).toLower();
+    
+    if (action == qsl("close")) {
+        return closeFrame(name);
+    } else if (action == qsl("focus")) {
+        return focusFrame(name);
+    }
+    
+    // action="open" (default) - show existing frame or create new one
     if (frameExists(name)) {
-        // Frame already exists - this is normal on screen refresh.
-        // Return true to indicate the tag was handled (silently ignore duplicate).
-        return true;
+        // Frame already exists - per CMUD 2.30 behavior, don't recreate or resize.
+        // This respects any user changes to frame position/size.
+        // Just ensure the frame is visible and return success.
+        return showFrame(name);
     }
     
     if (!canCreateFrame()) {
@@ -89,19 +101,11 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     frame->align = attributes.value(qsl("ALIGN"), qsl("left")).toLower();
     frame->width = attributes.value(qsl("WIDTH"), qsl("25%"));
     frame->height = attributes.value(qsl("HEIGHT"), qsl("25%"));
+    frame->left = attributes.value(qsl("LEFT"));
+    frame->top = attributes.value(qsl("TOP"));
     frame->title = attributes.value(qsl("TITLE"), name);
     frame->scrolling = attributes.value(qsl("SCROLLING"), qsl("YES")).toUpper() == qsl("YES");
     frame->dockFrame = attributes.value(qsl("DOCK"));
-    
-    QString action = attributes.value(qsl("ACTION"), qsl("open")).toLower();
-
-    if (action == qsl("close")) {
-        delete frame;
-        return closeFrame(name);
-    } else if (action == qsl("focus")) {
-        delete frame;
-        return focusFrame(name);
-    }
     
     // Create the appropriate UI layout
     if (frame->isInternal) {
@@ -172,6 +176,27 @@ bool TMxpFrameManager::focusFrame(const QString& name)
     } else if (frame->widget) {
         frame->widget->raise();
         frame->widget->setFocus();
+    }
+    
+    return true;
+}
+
+bool TMxpFrameManager::showFrame(const QString& name)
+{
+    auto* frame = getFrame(name);
+
+    if (!frame) {
+        return false;
+    }
+    
+    // Make the frame visible - per CMUD 2.30 behavior, action="open" on existing
+    // frame should just show it without changing size/position
+    if (frame->dockWidget) {
+        frame->dockWidget->show();
+        frame->dockWidget->raise();
+    } else if (frame->widget) {
+        frame->widget->show();
+        frame->widget->raise();
     }
     
     return true;
