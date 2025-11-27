@@ -3444,13 +3444,13 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
         return;
     }
 
-    const int lastLineBeforeWrap = buffer.size() - 1;
-    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
-
-    // Ensure we have a line to append to
+    // Ensure we have a line to append to BEFORE computing line indices
     if (buffer.empty()) {
         appendEmptyLine();
     }
+
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
 
     // Track link ID mapping from source to destination
     int oldSourceLinkId = 0;
@@ -3473,14 +3473,18 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
             destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), 
                                               sourceLinkStore.getHintsConst(sourceLinkId), 
                                               mpHost);
+            // Also copy per-link styling (CSS/decoration hints)
+            mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
             oldSourceLinkId = sourceLinkId;
         } else if (!sourceLinkId) {
             destLinkId = 0;
         }
         
         lineBuffer.back().append(ch);
-        // Create new TChar with the destination link ID
-        TChar destChar(srcChar.mFgColor, srcChar.mBgColor, srcChar.mFlags, destLinkId);
+        // Copy the source TChar to preserve all fields (colors, flags, decoration colors)
+        // then update only the link index to the destination link ID
+        TChar destChar(srcChar);
+        destChar.mLinkIndex = destLinkId;
         buffer.back().push_back(destChar);
     }
 

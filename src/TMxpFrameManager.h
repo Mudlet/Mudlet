@@ -25,6 +25,7 @@
 #include <QBoxLayout>
 #include <QHBoxLayout>
 #include <QMap>
+#include <QMargins>
 #include <QPointer>
 #include <QSize>
 #include <QString>
