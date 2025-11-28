@@ -172,6 +172,13 @@ if(USE_OWN_QTKEYCHAIN)
     SUBMODULE_PATH "3rdparty/qtkeychain"
     READABLE_NAME "QtKeychain")
   add_subdirectory(3rdparty/qtkeychain)
+
+  # Handle both old (files in qtkeychain/) and new (files in qtkeychain/qtkeychain/) directory structures
+  # so includes via <qtkeychain/keychain.h> work in both cases
+  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qtkeychain/qtkeychain/keychain.h")
+    # Old structure: add 3rdparty to include path so <qtkeychain/keychain.h> resolves correctly
+    target_include_directories(qt6keychain PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty>)
+  endif()
 endif()
 
 git_submodule_init(
