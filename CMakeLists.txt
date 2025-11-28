@@ -111,6 +111,8 @@ file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
 message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
+set(LIB_MUDLET_TARGET "mudlet_core")
+
 # For release builds, comment out the above and uncomment below:
 # file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
 # message(STATUS "Value written to app-build.txt file: {nothing}")
@@ -146,6 +148,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
 
 find_package(Qt6 6.8.2 REQUIRED)
 
+# Find Core5Compat for third-party libraries (communi, edbee-lib) that still need it
+find_package(Qt6 COMPONENTS Core5Compat REQUIRED)
+
 find_package(Lua 5.1 EXACT)
 
 # Set Qt version for edbee-lib and dblsqd
@@ -169,6 +174,13 @@ if(USE_OWN_QTKEYCHAIN)
     SUBMODULE_PATH "3rdparty/qtkeychain"
     READABLE_NAME "QtKeychain")
   add_subdirectory(3rdparty/qtkeychain)
+
+  # Handle both old (files in qtkeychain/) and new (files in qtkeychain/qtkeychain/) directory structures
+  # so includes via <qtkeychain/keychain.h> work in both cases
+  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qtkeychain/qtkeychain/keychain.h")
+    # Old structure: add 3rdparty to include path so <qtkeychain/keychain.h> resolves correctly
+    target_include_directories(qt6keychain PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty>)
+  endif()
 endif()
 
 git_submodule_init(

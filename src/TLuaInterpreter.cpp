@@ -673,13 +673,11 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
             return QLatin1String("in");
         } else if (!direction.compare(QLatin1String("o"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("out"), Qt::CaseInsensitive)) {
             return QLatin1String("out");
-        } else {
-            return direction;
         }
+        return direction;
 
-    } else {
-        return QString();
     }
+    return QString();
 }
 
 // No documentation available in wiki - internal function
@@ -2749,7 +2747,9 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
     if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
         const int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
         auto checkItem = moduleManager->moduleTable->item(row, 2);
-        checkItem->setCheckState(Qt::Checked);
+        if (checkItem) {
+            checkItem->setCheckState(Qt::Checked);
+        }
     }
 
     lua_pushboolean(L, true);
@@ -2769,7 +2769,9 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
     if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
         const int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
         auto checkItem = moduleManager->moduleTable->item(row, 2);
-        checkItem->setCheckState(Qt::Unchecked);
+        if (checkItem) {
+            checkItem->setCheckState(Qt::Unchecked);
+        }
     }
 
     lua_pushboolean(L, true);
@@ -4884,9 +4886,8 @@ QString TLuaInterpreter::getLuaString(const QString& stringName)
     const int error = luaL_dostring(L, qsl("return %1").arg(stringName).toUtf8().constData());
     if (!error) {
         return lua_tostring(L, 1);
-    } else {
-        return QString();
     }
+    return QString();
 }
 
 // check for <whitespace><no_valid_representation> as output
