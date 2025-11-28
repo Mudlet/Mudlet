@@ -320,7 +320,8 @@ bool TMxpMudlet::setMxpDestination(const QString& frameName, bool eol, bool eof)
 
 void TMxpMudlet::clearMxpDestination()
 {
-    if (mpHost) {
+    if (mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->buffer.flushPendingDestinationContent();
         mpHost->mMxpFrameManager.clearDestination();
     }
 }

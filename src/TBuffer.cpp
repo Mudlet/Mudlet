@@ -1164,6 +1164,22 @@ COMMIT_LINE:
     }
 }
 
+void TBuffer::flushPendingDestinationContent()
+{
+    if (!mpHost || mMudLine.isEmpty()) {
+        return;
+    }
+    
+    if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+        TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
+
+        if (destConsole && destConsole != mpHost->mpConsole) {
+            destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            mMudLine.clear();
+            mMudBuffer.clear();
+        }
+    }
+}
 
 bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 {

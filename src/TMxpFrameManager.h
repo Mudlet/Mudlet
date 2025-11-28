@@ -78,6 +78,7 @@ public:
     bool closeFrame(const QString& name);
     bool focusFrame(const QString& name);
     bool showFrame(const QString& name);
+    void resetAllFrames();
     
     // Output destination management
     void setDestination(const QString& frameName, bool eol, bool eof);

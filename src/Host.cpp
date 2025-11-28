@@ -341,6 +341,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     connect(&mTelnet, &cTelnet::signal_connected, this, [this]() {
         purgeTimer.stop();
 
+        // Reset MXP frames on reconnect - per user feedback, frames shouldn't persist
+        // between sessions as the server should send new FRAME commands
+        mMxpFrameManager.resetAllFrames();
+
         if (getForceMXPProcessorOn()) {
             mMxpProcessor.enable();
             // When force-enabling MXP (typically for games like IRE MUDs that don't

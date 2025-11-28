@@ -202,6 +202,27 @@ bool TMxpFrameManager::showFrame(const QString& name)
     return true;
 }
 
+void TMxpFrameManager::resetAllFrames()
+{
+    // Close all frames and reset borders
+    // This should be called on reconnect so MXP frames don't persist between sessions
+    QStringList frameNames = mFrames.keys();
+
+    for (const QString& name : frameNames) {
+        closeFrame(name);
+    }
+    
+    // Reset MXP borders to zero
+    mMxpBorders = QMargins();
+    
+    // Reset Host borders that were set by MXP frames
+    if (mpHost) {
+        mpHost->setBorders(QMargins());
+    }
+    
+    clearDestination();
+}
+
 void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool eof)
 {
     if (!mpHost->mMxpProcessor.isEnabled()) {
@@ -360,7 +381,25 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         // Top-level frame - position at window edges and update MXP borders
         QSize windowSize = mainConsole->size();
         
-        if (align == qsl("left")) {
+        // Check for LEFT/TOP absolute positioning first - these take precedence over alignment
+        bool hasAbsolutePosition = !frame->left.isEmpty() || !frame->top.isEmpty();
+        
+        if (hasAbsolutePosition) {
+            // Absolute positioning via LEFT/TOP attributes
+            if (!frame->left.isEmpty()) {
+                QSize leftSize = calculateFrameSize(frame->left, windowSize, false);
+                if (leftSize.width() > 0) {
+                    x = leftSize.width();
+                }
+            }
+            if (!frame->top.isEmpty()) {
+                QSize topSize = calculateFrameSize(frame->top, windowSize, true);
+                if (topSize.height() > 0) {
+                    y = topSize.height();
+                }
+            }
+            // Absolute positioned frames don't modify MXP borders
+        } else if (align == qsl("left")) {
             // Left-aligned: position at actual left edge (after existing left MXP frames)
             x = mMxpBorders.left();
             y = 0;
@@ -386,7 +425,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
             frameWidth = windowSize.width() - mMxpBorders.left() - mMxpBorders.right();
             mMxpBorders.setBottom(mMxpBorders.bottom() + frameHeight);
         } else {
-            // No alignment specified - treat as client/center area
+            // No alignment and no absolute positioning - use container defaults
             x = containerX;
             y = containerY;
         }
@@ -619,6 +658,8 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
         
         if (isHeight) {
             int result = chars * fm.lineSpacing();
+            // Account for frame overhead: TabWidget header (~24px) + container border (2px)
+            result += 26;
             return QSize(0, result);
         } else {
             int result = chars * fm.averageCharWidth();
