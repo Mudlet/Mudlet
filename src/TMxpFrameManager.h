@@ -48,6 +48,7 @@ struct TMxpFrame {
     QString left;           // Absolute X position (pixels or percentage)
     QString top;            // Absolute Y position (pixels or percentage)
     bool scrolling = true;
+    bool floating = false;  // When true, frame has no title bar/header (borderless)
     QString dockFrame;      // For tab support - name of frame to dock into
     
     // UI elements - using QPointer for automatic null on deletion

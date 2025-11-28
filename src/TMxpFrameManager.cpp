@@ -105,6 +105,7 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     frame->top = attributes.value(qsl("TOP"));
     frame->title = attributes.value(qsl("TITLE"), name);
     frame->scrolling = attributes.value(qsl("SCROLLING"), qsl("YES")).toUpper() == qsl("YES");
+    frame->floating = attributes.contains(qsl("FLOATING"));
     frame->dockFrame = attributes.value(qsl("DOCK"));
     
     // Create the appropriate UI layout
@@ -433,69 +434,95 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         mpHost->setBorders(mMxpBorders);
     }
     
-    // Create a container frame with TabWidget header
-    const int tabBarHeight = 24;
+    // FLOATING attribute or empty title = borderless frame without header
+    // This allows frames like "rsrc" to appear without a visible title bar
+    bool showHeader = !frame->floating && !frame->title.isEmpty();
+    const int tabBarHeight = showHeader ? 24 : 0;
     
     // Create the container widget for the frame
     auto* containerWidget = new QFrame(mainConsole->mpMainFrame);
     containerWidget->setObjectName(frame->name + qsl("_container"));
     containerWidget->setGeometry(x, y, frameWidth, frameHeight);
-    containerWidget->setFrameStyle(QFrame::Panel | QFrame::Raised);
-    containerWidget->setLineWidth(1);
-    containerWidget->setStyleSheet(
-        qsl("QFrame { background-color: #1a1a1a; border: 1px solid #444444; }"));
+    
+    if (showHeader) {
+        containerWidget->setFrameStyle(QFrame::Panel | QFrame::Raised);
+        containerWidget->setLineWidth(1);
+        containerWidget->setStyleSheet(
+            qsl("QFrame { background-color: #1a1a1a; border: 1px solid #444444; }"));
+    } else {
+        containerWidget->setFrameStyle(QFrame::NoFrame);
+        containerWidget->setLineWidth(0);
+        containerWidget->setStyleSheet(
+            qsl("QFrame { background-color: transparent; border: none; }"));
+    }
     
     // Create a layout for the container
     auto* containerLayout = new QVBoxLayout(containerWidget);
     containerLayout->setContentsMargins(0, 0, 0, 0);
     containerLayout->setSpacing(0);
     
-    // Create TabWidget as the header - allows future tab additions
-    auto* tabWidget = new QTabWidget(containerWidget);
-    tabWidget->setObjectName(frame->name + qsl("_tabs"));
-    tabWidget->setTabPosition(QTabWidget::North);
-    tabWidget->setDocumentMode(true);  // Cleaner look
-    tabWidget->setStyleSheet(qsl(
-        "QTabWidget::pane { border: none; background-color: transparent; }"
-        "QTabBar::tab { background-color: #2a2a2a; color: #cccccc; padding: 4px 12px; "
-        "              border: 1px solid #444444; border-bottom: none; margin-right: 2px; }"
-        "QTabBar::tab:selected { background-color: #3a3a3a; color: #ffffff; }"
-        "QTabBar::tab:hover { background-color: #333333; }"));
+    QTabWidget* tabWidget = nullptr;
+    TConsole* console = nullptr;
     
-    // Create a page widget to hold the console
-    auto* tabPage = new QWidget();
-    auto* tabPageLayout = new QVBoxLayout(tabPage);
-    tabPageLayout->setContentsMargins(0, 0, 0, 0);
-    
-    // Create mini console inside the tab page
-    auto* console = mainConsole->createMiniConsole(
-        qsl("main"), 
-        frame->name, 
-        0, 0,  // Position managed by layout
-        frameWidth, 
-        frameHeight - tabBarHeight);
-    
-    if (!console) {
-        qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
-        delete containerWidget;
-        return;
+    if (showHeader) {
+        // Create TabWidget as the header - allows future tab additions
+        tabWidget = new QTabWidget(containerWidget);
+        tabWidget->setObjectName(frame->name + qsl("_tabs"));
+        tabWidget->setTabPosition(QTabWidget::North);
+        tabWidget->setDocumentMode(true);
+        tabWidget->setStyleSheet(qsl(
+            "QTabWidget::pane { border: none; background-color: transparent; }"
+            "QTabBar::tab { background-color: #2a2a2a; color: #cccccc; padding: 4px 12px; "
+            "              border: 1px solid #444444; border-bottom: none; margin-right: 2px; }"
+            "QTabBar::tab:selected { background-color: #3a3a3a; color: #ffffff; }"
+            "QTabBar::tab:hover { background-color: #333333; }"));
+        
+        // Create a page widget to hold the console
+        auto* tabPage = new QWidget();
+        auto* tabPageLayout = new QVBoxLayout(tabPage);
+        tabPageLayout->setContentsMargins(0, 0, 0, 0);
+        
+        // Create mini console inside the tab page
+        console = mainConsole->createMiniConsole(
+            qsl("main"), 
+            frame->name, 
+            0, 0,
+            frameWidth, 
+            frameHeight - tabBarHeight);
+        
+        if (!console) {
+            qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
+            delete containerWidget;
+            return;
+        }
+        
+        tabPageLayout->addWidget(console);
+        tabWidget->addTab(tabPage, frame->title);
+        containerLayout->addWidget(tabWidget);
+    } else {
+        // Floating/borderless: console directly in container, no tab header
+        console = mainConsole->createMiniConsole(
+            qsl("main"), 
+            frame->name, 
+            0, 0,
+            frameWidth, 
+            frameHeight);
+        
+        if (!console) {
+            qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
+            delete containerWidget;
+            return;
+        }
+        
+        containerLayout->addWidget(console);
     }
     
-    // Add console to tab page layout
-    tabPageLayout->addWidget(console);
-    
-    // Add the tab with the frame title
-    tabWidget->addTab(tabPage, frame->title);
-    
-    // Add TabWidget to container
-    containerLayout->addWidget(tabWidget);
-    
-    // Store the container, TabWidget, and console
+    // Store the container, TabWidget (may be null), and console
     frame->widget = containerWidget;
     frame->tabWidget = tabWidget;
     frame->console = console;
     frame->dockWidget = nullptr;
-    frame->usedHeight = 0;  // Initialize for potential child frames
+    frame->usedHeight = 0;
     
     // Track parent-child relationship
     if (parentFrame) {
