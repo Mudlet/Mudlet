@@ -2715,26 +2715,6 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#applyProfileAntialiasing
-int TLuaInterpreter::applyProfileAntialiasing(lua_State* L)
-{
-    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
-    const bool enable = getVerifiedBool(L, __func__, 2, "enable");
-    Host& host = getHostFromLua(L);
-
-    auto pLabel = host.mpConsole->mLabelMap.value(labelName);
-
-    if (!pLabel) {
-        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
-    }
-
-    // Apply or disable the profile's antialiasing setting for this label
-    pLabel->applyProfileAntialiasing(enable);
-    
-    lua_pushboolean(L, true);
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelClickCallback
 int TLuaInterpreter::setLabelClickCallback(lua_State* L)
 {

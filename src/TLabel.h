@@ -65,15 +65,12 @@ public:
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
     void setClickThrough(bool clickthrough);
-    void applyProfileAntialiasing(bool enable);
-    void updateFont();
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
 
     QPointer<Host> mpHost;
     QString mName;
-    bool mUseProfileAntialiasing = false;
     int mClickFunction = 0;
     int mDoubleClickFunction = 0;
     int mReleaseFunction = 0;

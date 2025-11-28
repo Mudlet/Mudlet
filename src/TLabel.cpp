@@ -312,37 +312,6 @@ void TLabel::setClickThrough(bool clickthrough)
     }
 }
 
-void TLabel::applyProfileAntialiasing(bool enable)
-{
-    mUseProfileAntialiasing = enable;
-    updateFont();
-}
-
-void TLabel::updateFont()
-{
-    if (!mpHost) {
-        return;
-    }
-    
-    QFont currentFont = font();
-    QString fontName = currentFont.family();
-    int pointSize = currentFont.pointSize();
-
-    if (pointSize < 1) {
-        pointSize = 10;
-    }
-    
-    QFont newFont;
-
-    if (mUseProfileAntialiasing) {
-        newFont = mpHost->createFontWithSettings(fontName, pointSize);
-    } else {
-        newFont = QFont(fontName, pointSize);
-    }
-
-    setFont(newFont);
-}
-
 void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline)
 {
     mLinkColor = linkColor;

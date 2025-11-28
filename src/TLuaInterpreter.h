@@ -411,7 +411,6 @@ public:
     static int deleteCommandLine(lua_State*);
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
-    static int applyProfileAntialiasing(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
     static int moveWindow(lua_State*);
