@@ -2591,6 +2591,7 @@ int TLuaInterpreter::setFont(lua_State* L)
 
     QString windowName;
     int s = 1;
+
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, s++);
     }
@@ -2633,21 +2634,28 @@ int TLuaInterpreter::setFont(lua_State* L)
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
         QFont newFont = host.createFontWithSettings(effectiveFontName, host.getDisplayFont().pointSize());
+
         if (fontWeight != QFont::Normal) {
             newFont.setWeight(fontWeight);
         }
+
         auto result = host.setDisplayFont(newFont);
+
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);
         }
+
         console->refreshView();
     } else {
         QFont newFont = host.createFontWithSettings(effectiveFontName, console->font().pointSize());
+
         if (fontWeight != QFont::Normal) {
             newFont.setWeight(fontWeight);
         }
+
         console->setFont(newFont);
     }
+
     lua_pushboolean(L, true);
     return 1;
 }
