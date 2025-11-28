@@ -32,7 +32,18 @@ TMxpTagHandlerResult TMxpDestTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     Q_UNUSED(ctx)
     
     QString frameName = extractFrameName(tag);
+    
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpDestTagHandler::handleStartTag: DEST tag received"
+             << "frameName:" << frameName
+             << "EOL:" << hasEOL(tag)
+             << "EOF:" << hasEOF(tag);
+#endif
+    
     if (frameName.isEmpty()) {
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "TMxpDestTagHandler::handleStartTag: Empty frame name, not handled";
+#endif
         return MXP_TAG_NOT_HANDLED;
     }
     
@@ -40,9 +51,15 @@ TMxpTagHandlerResult TMxpDestTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     bool eof = hasEOF(tag);
     
     if (client.setMxpDestination(frameName, eol, eof)) {
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "TMxpDestTagHandler::handleStartTag: Destination set to:" << frameName;
+#endif
         return MXP_TAG_HANDLED;
     }
     
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpDestTagHandler::handleStartTag: Failed to set destination:" << frameName;
+#endif
     return MXP_TAG_NOT_HANDLED;
 }
 
@@ -51,6 +68,9 @@ TMxpTagHandlerResult TMxpDestTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
     Q_UNUSED(ctx)
     Q_UNUSED(tag)
     
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpDestTagHandler::handleEndTag: Clearing destination";
+#endif
     client.clearMxpDestination();
     
     return MXP_TAG_HANDLED;

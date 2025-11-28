@@ -33,14 +33,30 @@ TMxpTagHandlerResult TMxpFrameTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
     
     QMap<QString, QString> attributes = extractAttributes(tag);
     QString frameName = attributes.value(qsl("NAME"));
+    
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpFrameTagHandler::handleStartTag: FRAME tag received"
+             << "name:" << frameName
+             << "attributes:" << attributes;
+#endif
+    
     if (frameName.isEmpty()) {
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "TMxpFrameTagHandler::handleStartTag: Empty frame name, not handled";
+#endif
         return MXP_TAG_NOT_HANDLED;
     }
     
     if (client.createMxpFrame(frameName, attributes)) {
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "TMxpFrameTagHandler::handleStartTag: Frame created successfully:" << frameName;
+#endif
         return MXP_TAG_HANDLED;
     }
     
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpFrameTagHandler::handleStartTag: Frame creation failed:" << frameName;
+#endif
     return MXP_TAG_NOT_HANDLED;
 }
 

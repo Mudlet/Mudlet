@@ -23,11 +23,15 @@
 #include "TDockWidget.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QFontMetrics>
 #include <QFrame>
 #include <QMainWindow>
+#include <QSizePolicy>
+#include <QTimer>
 #include <QVBoxLayout>
 
 TMxpFrame::~TMxpFrame()
@@ -107,6 +111,13 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     frame->scrolling = attributes.value(qsl("SCROLLING"), qsl("YES")).toUpper() == qsl("YES");
     frame->floating = attributes.contains(qsl("FLOATING"));
     frame->dockFrame = attributes.value(qsl("DOCK"));
+    
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpFrameManager::createFrame:" << name 
+             << "TITLE attr:" << attributes.value(qsl("TITLE"))
+             << "title:" << frame->title
+             << "floating:" << frame->floating;
+#endif
     
     // Create the appropriate UI layout
     if (frame->isInternal) {
@@ -227,10 +238,16 @@ void TMxpFrameManager::resetAllFrames()
 void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool eof)
 {
     if (!mpHost->mMxpProcessor.isEnabled()) {
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "TMxpFrameManager::setDestination: MXP not enabled, ignoring";
+#endif
         return;
     }
     
     if (frameName.isEmpty()) {
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "TMxpFrameManager::setDestination: Empty frame name, clearing destination";
+#endif
         clearDestination();
         return;
     }
@@ -239,8 +256,17 @@ void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool e
 
     if (!frame) {
         qWarning() << "TMxpFrameManager::setDestination: Frame not found:" << frameName;
+#ifdef DEBUG_MXP_PROCESSING
+        qDebug() << "TMxpFrameManager::setDestination: Available frames:" << getFrameNames();
+#endif
         return;
     }
+    
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpFrameManager::setDestination: Setting destination to" << frameName
+             << "frame->console:" << (frame->console ? "valid" : "null")
+             << "eol:" << eol << "eof:" << eof;
+#endif
     
     mCurrentDestination = frameName;
     
@@ -434,13 +460,20 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         mpHost->setBorders(mMxpBorders);
     }
     
-    // FLOATING attribute or empty title = borderless frame without header
-    // This allows frames like "rsrc" to appear without a visible title bar
-    bool showHeader = !frame->floating && !frame->title.isEmpty();
+    // FLOATING attribute, empty title, or very small height = borderless frame without header
+    // Small frames (< 50px) don't have enough room for both a tab bar and content
+    bool showHeader = !frame->floating && !frame->title.isEmpty() && frameHeight >= 50;
     const int tabBarHeight = showHeader ? 24 : 0;
     
-    // Create the container widget for the frame
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpFrameManager::layoutInternalFrame: Creating frame" << frame->name 
+             << "at" << x << y << "size" << frameWidth << "x" << frameHeight
+             << "showHeader:" << showHeader;
+#endif
+    
+    // Create the container widget for the frame - use WA_DontShowOnScreen to prevent any rendering
     auto* containerWidget = new QFrame(mainConsole->mpMainFrame);
+    containerWidget->setAttribute(Qt::WA_DontShowOnScreen, true);
     containerWidget->setObjectName(frame->name + qsl("_container"));
     containerWidget->setGeometry(x, y, frameWidth, frameHeight);
     
@@ -470,6 +503,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         tabWidget->setObjectName(frame->name + qsl("_tabs"));
         tabWidget->setTabPosition(QTabWidget::North);
         tabWidget->setDocumentMode(true);
+        tabWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         tabWidget->setStyleSheet(qsl(
             "QTabWidget::pane { border: none; background-color: transparent; }"
             "QTabBar::tab { background-color: #2a2a2a; color: #cccccc; padding: 4px 12px; "
@@ -479,40 +513,66 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         
         // Create a page widget to hold the console
         auto* tabPage = new QWidget();
+        tabPage->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        // Make tab page background transparent to avoid showing a box before console loads
+        tabPage->setStyleSheet(qsl("background-color: transparent;"));
         auto* tabPageLayout = new QVBoxLayout(tabPage);
         tabPageLayout->setContentsMargins(0, 0, 0, 0);
         
-        // Create mini console inside the tab page
-        console = mainConsole->createMiniConsole(
-            qsl("main"), 
-            frame->name, 
-            0, 0,
-            frameWidth, 
-            frameHeight - tabBarHeight);
-        
+        // Create console directly with tabPage as parent to avoid flash on mpMainFrame
+        // (createMiniConsole parents to mpMainFrame and calls show() before we can intervene)
+        console = new TConsole(mpHost, frame->name, TConsole::SubConsole, tabPage);
         if (!console) {
             qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
             delete containerWidget;
             return;
         }
         
+        // Setup console properties (mirroring what createMiniConsole does)
+        console->setObjectName(frame->name);
+        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
+        console->setFocusProxy(hostCommandLine);
+        console->mUpperPane->setFocusProxy(hostCommandLine);
+        console->mLowerPane->setFocusProxy(hostCommandLine);
+        console->resize(frameWidth, frameHeight - tabBarHeight);
+        console->mOldX = 0;
+        console->mOldY = 0;
+        console->setContentsMargins(0, 0, 0, 0);
+        int fontSize = mpHost->getDisplayFont().pointSize();
+        console->setFontSize(fontSize > 0 ? fontSize : 12);
+        console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        // Don't show yet - wait until frame is fully set up
+        console->hide();
+        
         tabPageLayout->addWidget(console);
-        tabWidget->addTab(tabPage, frame->title);
+        int tabIndex = tabWidget->addTab(tabPage, frame->title);
+        tabWidget->setCurrentIndex(tabIndex);  // Make this tab active
         containerLayout->addWidget(tabWidget);
     } else {
         // Floating/borderless: console directly in container, no tab header
-        console = mainConsole->createMiniConsole(
-            qsl("main"), 
-            frame->name, 
-            0, 0,
-            frameWidth, 
-            frameHeight);
+        // Create console directly with containerWidget as parent to avoid flash
+        console = new TConsole(mpHost, frame->name, TConsole::SubConsole, containerWidget);
         
         if (!console) {
             qWarning() << "TMxpFrameManager::layoutInternalFrame: Failed to create console for" << frame->name;
             delete containerWidget;
             return;
         }
+        
+        // Setup console properties (mirroring what createMiniConsole does)
+        console->setObjectName(frame->name);
+        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
+        console->setFocusProxy(hostCommandLine);
+        console->mUpperPane->setFocusProxy(hostCommandLine);
+        console->mLowerPane->setFocusProxy(hostCommandLine);
+        console->resize(frameWidth, frameHeight);
+        console->mOldX = 0;
+        console->mOldY = 0;
+        console->setContentsMargins(0, 0, 0, 0);
+        int fontSize = mpHost->getDisplayFont().pointSize();
+        console->setFontSize(fontSize > 0 ? fontSize : 12);
+        console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        console->hide();
         
         containerLayout->addWidget(console);
     }
@@ -542,16 +602,34 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     frameBgColor = frameBgColor.lighter(115);  // 15% lighter than main console
     console->setBgColor(frameBgColor);
     
-    // Add a subtle border to visually separate frames
-    console->setStyleSheet(qsl("QWidget { border: 1px solid #444444; }"));
+    // Only add border for borderless/floating frames (no tab header)
+    // Tabbed frames already have visual separation from the tab widget
+    if (!showHeader) {
+        console->setStyleSheet(qsl("QWidget { border: 1px solid #444444; }"));
+    }
     
     // Register console
     mainConsole->mSubConsoleMap.insert(frame->name, console);
     
-    // Show the container widget and its contents
+    // Force layout to calculate sizes
+    containerWidget->layout()->activate();
+    if (tabWidget) {
+        tabWidget->adjustSize();
+        // Make sure the current tab page fills the available space
+        if (tabWidget->currentWidget()) {
+            tabWidget->currentWidget()->resize(tabWidget->size());
+        }
+    }
+    
+    // Clear the WA_DontShowOnScreen attribute and show immediately
+    containerWidget->setAttribute(Qt::WA_DontShowOnScreen, false);
+    console->show();
     containerWidget->show();
     containerWidget->raise();
-    console->show();
+    
+    // Force immediate repaint to prevent visual artifacts
+    containerWidget->update();
+    QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 }
 
 void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
@@ -636,20 +714,44 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
     QSize frameSize = calculateFrameSize(frame->width, tabSize, false) + 
                       calculateFrameSize(frame->height, tabSize, true);
     
-    // Create console for this tab
-    auto* console = mpHost->mpConsole->createMiniConsole(
-        qsl("main"),
-        frame->name,
-        0, 0,
-        frameSize.width(),
-        frameSize.height());
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "TMxpFrameManager::layoutTabFrame: Adding tab" << frame->name 
+             << "to parent" << frame->dockFrame << "size" << frameSize;
+#endif
+    
+    // Create a page widget to hold the console (avoids flash on mpMainFrame)
+    auto* tabPage = new QWidget();
+    tabPage->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    auto* tabPageLayout = new QVBoxLayout(tabPage);
+    tabPageLayout->setContentsMargins(0, 0, 0, 0);
+    
+    // Create console directly with tabPage as parent
+    auto* console = new TConsole(mpHost, frame->name, TConsole::SubConsole, tabPage);
     
     if (!console) {
         qWarning() << "TMxpFrameManager::layoutTabFrame: Failed to create console";
+        delete tabPage;
         return;
     }
     
-    frame->widget = console;
+    // Setup console properties
+    TMainConsole* mainConsole = mpHost->mpConsole;
+    console->setObjectName(frame->name);
+    const auto& hostCommandLine = mainConsole->mpCommandLine;
+    console->setFocusProxy(hostCommandLine);
+    console->mUpperPane->setFocusProxy(hostCommandLine);
+    console->mLowerPane->setFocusProxy(hostCommandLine);
+    console->resize(frameSize.width(), frameSize.height());
+    console->mOldX = 0;
+    console->mOldY = 0;
+    console->setContentsMargins(0, 0, 0, 0);
+    int fontSize = mpHost->getDisplayFont().pointSize();
+    console->setFontSize(fontSize > 0 ? fontSize : 12);
+    console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    
+    tabPageLayout->addWidget(console);
+    
+    frame->widget = tabPage;
     frame->console = console;
     frame->parentFrame = parentFrame;
     parentFrame->childFrames.append(frame);
@@ -659,8 +761,17 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
         console->setScrolling(false);
     }
     
-    // Add as new tab
-    parentFrame->tabWidget->addTab(console, frame->title);
+    // Register console in map
+    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    
+    // Add as new tab - if this is the first child tab, select it
+    // (The parent frame's own tab at index 0 is typically unused for content)
+    int newTabIndex = parentFrame->tabWidget->addTab(tabPage, frame->title);
+    if (parentFrame->childFrames.size() == 1) {
+        // First child tab - select it instead of the parent's empty tab
+        parentFrame->tabWidget->setCurrentIndex(newTabIndex);
+    }
+    console->show();
 }
 
 QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight)
@@ -811,6 +922,9 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
         delete tabPage;
         return;
     }
+    
+    // Ensure console expands to fill available space in the tab
+    console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     
     // Add console to tab page layout
     tabPageLayout->addWidget(console);
