@@ -79,6 +79,17 @@ jobs:
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v3.30.3
 
+    - name: (Linux) Install Lua via GitHub Actions
+      uses: leafo/gh-actions-lua@v12
+      if: runner.os == 'Linux'
+      with:
+        luaVersion: "5.1.5"
+        buildCache: false
+
+    - name: (Linux) Install Luarocks via GitHub Actions
+      uses: leafo/gh-actions-luarocks@v6
+      if: runner.os == 'Linux'
+
     - name: (Linux) Install dependencies
       if: runner.os == 'Linux'
       run: |
@@ -89,7 +100,13 @@ jobs:
         sudo apt-get install libsecret-1-dev ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev \
           libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
 
-        echo "Skipping generation of translation stats, so not installing lua-yajl."
+        # Install lua-yajl early to generate translation statistics
+        luarocks install --local lua-yajl
+
+        # Allow stats generation script to see location of lua-yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: Generate compile_commands.json
       uses: lukka/run-cmake@v3
