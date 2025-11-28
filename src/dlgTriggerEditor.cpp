@@ -1757,6 +1757,9 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     // Taken from slot_scriptMainAreaEditHandler():
                     // Note the handler item being edited:
                     mpScriptsMainAreaEditHandlerItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
+                    if (!mpScriptsMainAreaEditHandlerItem) {
+                        break;
+                    }
                     // Copy the event name to the entry widget:
                     mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(mpScriptsMainAreaEditHandlerItem->text());
                     // Activate editing flag:
