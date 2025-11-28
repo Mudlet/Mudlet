@@ -709,53 +709,54 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QAction* viewTriggerAction = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
-    viewTriggerAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Triggers"), tr("Ctrl+1")));
+    viewTriggerAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Triggers"), QKeySequence(Qt::CTRL | Qt::Key_1).toString(QKeySequence::NativeText)));
     connect(viewTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showTriggers);
 
     QAction* viewAliasAction = new QAction(QIcon(qsl(":/icons/system-users.png")), tr("Aliases"), this);
     viewAliasAction->setStatusTip(tr("Show Aliases"));
-    viewAliasAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Aliases"), tr("Ctrl+2")));
+    viewAliasAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Aliases"), QKeySequence(Qt::CTRL | Qt::Key_2).toString(QKeySequence::NativeText)));
     connect(viewAliasAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showAliases);
 
     QAction* viewScriptsAction = new QAction(QIcon(qsl(":/icons/document-properties.png")), tr("Scripts"), this);
     viewScriptsAction->setStatusTip(tr("Show Scripts"));
-    viewScriptsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Scripts"), tr("Ctrl+3")));
+    viewScriptsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Scripts"), QKeySequence(Qt::CTRL | Qt::Key_3).toString(QKeySequence::NativeText)));
     connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showScripts);
 
     QAction* showTimersAction = new QAction(QIcon(qsl(":/icons/chronometer.png")), tr("Timers"), this);
     showTimersAction->setStatusTip(tr("Show Timers"));
-    showTimersAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Timers"), tr("Ctrl+4")));
+    showTimersAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Timers"), QKeySequence(Qt::CTRL | Qt::Key_4).toString(QKeySequence::NativeText)));
     connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showTimers);
 
     QAction* viewKeysAction = new QAction(QIcon(qsl(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     viewKeysAction->setStatusTip(tr("Show Keybindings"));
-    viewKeysAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Keybindings"), tr("Ctrl+5")));
+    viewKeysAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Keybindings"), QKeySequence(Qt::CTRL | Qt::Key_5).toString(QKeySequence::NativeText)));
     connect(viewKeysAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showKeys);
 
     QAction* viewVarsAction = new QAction(QIcon(qsl(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
-    viewVarsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Variables"), tr("Ctrl+6")));
+    viewVarsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Variables"), QKeySequence(Qt::CTRL | Qt::Key_6).toString(QKeySequence::NativeText)));
     connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showVariables);
 
     QAction* viewActionAction = new QAction(QIcon(qsl(":/icons/bookmarks.png")), tr("Buttons"), this);
     viewActionAction->setStatusTip(tr("Show Buttons"));
-    viewActionAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Buttons"), tr("Ctrl+7")));
+    viewActionAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Buttons"), QKeySequence(Qt::CTRL | Qt::Key_7).toString(QKeySequence::NativeText)));
     connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showActions);
 
 
     QAction* viewErrorsAction = new QAction(QIcon(qsl(":/icons/errors.png")), tr("Errors"), this);
     viewErrorsAction->setStatusTip(tr("Show/Hide the errors console in the bottom right of this editor."));
-    viewErrorsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show/Hide errors console"), tr("Ctrl+8")));
+    viewErrorsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show/Hide errors console"), QKeySequence(Qt::CTRL | Qt::Key_8).toString(QKeySequence::NativeText)));
     connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
 
     QAction* viewStatsAction = new QAction(QIcon(qsl(":/icons/view-statistics.png")), tr("Statistics"), this);
     viewStatsAction->setStatusTip(tr("Generate a statistics summary display on the main profile console."));
-    viewStatsAction->setToolTip(qsl("%1 (%2)").arg(tr("Generate statistics"), tr("Ctrl+9")));
+    viewStatsAction->setToolTip(qsl("%1 (%2)").arg(tr("Generate statistics"), QKeySequence(Qt::CTRL | Qt::Key_9).toString(QKeySequence::NativeText)));
     connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
 
     QAction* showDebugAreaAction = new QAction(QIcon(qsl(":/icons/tools-report-bug.png")), tr("Debug"), this);
     showDebugAreaAction->setStatusTip(tr("Show/Hide the separate Central Debug Console - when being displayed the system will be slower."));
-    showDebugAreaAction->setToolTip(utils::richText(tr("Show/Hide Debug Console (Ctrl+0) -> system will be <b><i>slower</i></b>.")));
+    //: %1 is a keyboard shortcut, e.g. 'Ctrl+0' on Windows/Linux or '⌘0' on macOS
+    showDebugAreaAction->setToolTip(utils::richText(tr("Show/Hide Debug Console (%1) -> system will be <b><i>slower</i></b>.").arg(QKeySequence(Qt::CTRL | Qt::Key_0).toString(QKeySequence::NativeText))));
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleCentralDebugConsole);
 
 
@@ -785,7 +786,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mDeleteItem, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
-    mAddGroup->setToolTip(tr("Add Group (Control+Shift+N)"));
+    //: %1 is a keyboard shortcut, e.g. 'Ctrl+Shift+N' on Windows/Linux or '⌘⇧N' on macOS
+    mAddGroup->setToolTip(tr("Add Group (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N).toString(QKeySequence::NativeText)));
     mAddGroup->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     mAddGroup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
     frame_left->addAction(mAddGroup);
@@ -794,9 +796,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
     // PLACEMARKER 1/3 save button texts need to be kept in sync
     mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), qsl("Save Item"), this);
-    mSaveItem->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
+    //: %1 is a keyboard shortcut, e.g. 'Ctrl+S' on Windows/Linux or '⌘S' on macOS
+    mSaveItem->setToolTip(tr("<p>Saves the selected item. (%1)</p>"
                               "<p>Saving causes any changes to the item to take effect. It will not save to disk, "
-                              "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
+                              "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>").arg(QKeySequence(QKeySequence::Save).toString(QKeySequence::NativeText)));
     connect(mSaveItem, &QAction::triggered, this, &dlgTriggerEditor::slot_saveEdits);
 
     QAction* copyAction = new QAction(tr("Copy"), this);
@@ -873,7 +876,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpCreateModuleAction, &QAction::triggered, this, &dlgTriggerEditor::slot_createModule);
 
     mProfileSaveAction = new QAction(QIcon(qsl(":/icons/document-save-all.png")), tr("Save Profile"), this);
-    mProfileSaveAction->setToolTip(tr("<p>Saves your profile. (Ctrl+Shift+S)</p>"
+    //: %1 is a keyboard shortcut, e.g. 'Ctrl+Shift+S' on Windows/Linux or '⌘⇧S' on macOS
+    mProfileSaveAction->setToolTip(tr("<p>Saves your profile. (%1)</p>"
                                       "<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and "
                                       "keys, but not the map or script-specific settings) to your computer disk, so "
                                       "in case of a computer or program crash, all changes you have done will be "
@@ -882,7 +886,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                       "when connecting.</p>"
                                       "<p>Should there be any modules that are marked to be \"<i>synced</i>\" this will "
                                       "also cause them to be saved and reloaded into other profiles if they too are "
-                                      "active.</p>"));
+                                      "active.</p>").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S).toString(QKeySequence::NativeText)));
     mProfileSaveAction->setStatusTip(tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
 
     mProfileSaveAsAction = new QAction(QIcon(qsl(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
