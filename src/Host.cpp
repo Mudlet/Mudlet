@@ -1112,8 +1112,10 @@ void Host::setDisplayFontSize(int size)
 // This ensures fonts created from a name string inherit the host's antialiasing preference
 QFont Host::createFontWithSettings(const QString& fontName, int pointSize) const
 {
-    // Delegate to centralized TFontAttributes implementation to avoid duplication
-    return TFontAttributes::createFont(fontName, pointSize, fontsAntiAlias());
+    TFontAttributes attrs(fontsAntiAlias());
+    attrs.mName = fontName;
+    attrs.mPointSize = pointSize;
+    return attrs.makeFont();
 }
 
 // Helper function to parse font names that may include style information
@@ -1142,6 +1144,7 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
 
     // Try each possible split point from the end of the font name
     const QStringList words = fontName.split(' ', Qt::SkipEmptyParts);
+
     if (words.size() < 2) {
         return {fontName, QFont::Normal};
     }
@@ -1149,6 +1152,7 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     // Try matching the last word(s) as a style
     for (int i = words.size() - 1; i > 0; --i) {
         QString possibleStyle = words.mid(i).join(' ').toLower();
+
         if (styleWeightMap.contains(possibleStyle)) {
             QString baseName = words.mid(0, i).join(' ');
             return {baseName, styleWeightMap.value(possibleStyle)};

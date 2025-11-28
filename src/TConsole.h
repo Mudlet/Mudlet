@@ -58,11 +58,6 @@ struct TFontAttributes
     : mStyleStrategy(isAntiAliased
                              ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality))
-#ifdef Q_OS_WIN
-    , mHintingPreference(isAntiAliased ? QFont::PreferVerticalHinting : QFont::PreferFullHinting)
-#else
-    , mHintingPreference(isAntiAliased ? QFont::PreferDefaultHinting : QFont::PreferFullHinting)
-#endif
     {}
 
     explicit TFontAttributes(const QFont& font) {
@@ -70,7 +65,6 @@ struct TFontAttributes
         mPointSize = font.pointSize();
         mStyleHint = font.styleHint();
         mStyleStrategy = font.styleStrategy();
-        mHintingPreference = font.hintingPreference();
         mFixedPitch = font.fixedPitch();
         mKerning = font.kerning();
         mWeight = font.weight();
@@ -90,44 +84,10 @@ struct TFontAttributes
 
     TFontAttributes& operator=(const TFontAttributes& other) = default;
 
-    // Static factory method to create a QFont with proper antialiasing settings
-    // This delegates to makeFont() which contains the platform-specific logic
-    static QFont createFont(const QString& fontName, int pointSize, bool isAntiAliased) {
-        TFontAttributes attrs(isAntiAliased);
-        attrs.mName = fontName;
-        attrs.mPointSize = pointSize;
-        // Override TFontAttributes defaults to match basic QFont(name, size) behavior
-        attrs.mWeight = QFont::Normal;
-        attrs.mItalic = false;
-        attrs.mFixedPitch = false;
-        attrs.mKerning = true;
-        attrs.mStyleHint = QFont::AnyStyle;
-        return attrs.makeFont();
-    }
-
     QFont makeFont() const {
         QFont font = QFont(mName, mPointSize, mWeight, mItalic);
         font.setFixedPitch(mFixedPitch);
         font.setStyleHint(mStyleHint, mStyleStrategy);
-        
-        // Apply size-dependent hinting for better rendering
-        // Small fonts (< 12pt) need full hinting to avoid scaling/aliasing issues
-        // Larger fonts look better with reduced hinting
-        if (mStyleStrategy & QFont::PreferAntialias) {
-            if (mPointSize < 12) {
-                font.setHintingPreference(QFont::PreferDefaultHinting);
-            } else {
-#ifdef Q_OS_WIN
-                // Windows ClearType works best with vertical hinting for larger fonts
-                font.setHintingPreference(QFont::PreferVerticalHinting);
-#else
-                font.setHintingPreference(QFont::PreferNoHinting);
-#endif
-            }
-        } else {
-            font.setHintingPreference(mHintingPreference);
-        }
-        
         font.setKerning(mKerning);
         font.setUnderline(mUnderline);
         font.setOverline(mOverline);
@@ -140,15 +100,11 @@ struct TFontAttributes
         mStyleStrategy = isAntiAliased
                                  ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
                                  : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality);
-#ifdef Q_OS_WIN
-        mHintingPreference = isAntiAliased ? QFont::PreferVerticalHinting : QFont::PreferFullHinting;
-#else
-        mHintingPreference = isAntiAliased ? QFont::PreferDefaultHinting : QFont::PreferFullHinting;
-#endif
     }
 
     // enums to consider:
     // Not used: QFont::Capitalization mCapitalization; // { MixedCase, AllUppercase, AllLowercase, SmallCaps, Capitalize }
+    // Not used: QFont::HintingPreference mHintingPreference; // { PreferDefaultHinting, PreferNoHinting, PreferVerticalHinting, PreferFullHinting }
     // Not used: QFont::SpacingType mSpacingType; // { PercentageSpacing, AbsoluteSpacing }
     // Not used: QFont::Stretch mStretch; // { AnyStretch, UltraCondensed, ExtraCondensed, Condensed, SemiCondensed, …, UltraExpanded }
     // Not used: QFont::Style mStyle; // { StyleNormal, StyleItalic, StyleOblique }
@@ -166,7 +122,6 @@ struct TFontAttributes
     // TConsoles but the main one can be set to (QFont::PreferAntialias |
     // QFont::PreferQuality) instead - see constuctor:
     QFont::StyleStrategy mStyleStrategy;
-    QFont::HintingPreference mHintingPreference = QFont::PreferDefaultHinting;
     // qreal mLetterSpacing = 0.0;
     // QFont::SpacingType mSpacingType = QFont::AbsoluteSpacing;
     // We use but don't set "Line Spacing" - so don't worry about it.
