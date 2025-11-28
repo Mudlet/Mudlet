@@ -107,7 +107,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.22.1
+      uses: ZedThree/clang-tidy-review@v0.22.2
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory
@@ -118,4 +118,4 @@ jobs:
         split_workflow: true
 
     - name: Upload check results
-      uses: ZedThree/clang-tidy-review/upload@v0.22.1
+      uses: ZedThree/clang-tidy-review/upload@v0.22.2
