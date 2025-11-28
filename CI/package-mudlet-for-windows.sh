@@ -109,7 +109,7 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
 fi
 
 if [ "${WITH_SENTRY}" = "yes" ]; then
-    FILES_TO_COPY+=("crashpad_handler.exe" "crashpad_wer.dll")
+    FILES_TO_COPY+=("crashpad_handler.exe" "crashpad_wer.dll" "MudletCrashReporter.exe")
 fi
 
 for f in "${FILES_TO_COPY[@]}"; do
