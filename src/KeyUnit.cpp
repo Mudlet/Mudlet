@@ -93,6 +93,10 @@ void KeyUnit::uninstall(const QString& packageName)
 bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers modifiers)
 {
     bool isMatchFound = false;
+
+    // Set processing flag to prevent re-entrant cleanup during key execution
+    mIsProcessing = true;
+
     for (auto keyObject : mKeyRootNodeList) {
         // Skip null or invalid key objects during profile closing/destruction
         // Skip null or invalid key objects during profile closing/destruction
@@ -102,11 +106,18 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 
         if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
+                // Clear processing flag and perform any deferred cleanup before returning
+                mIsProcessing = false;
+                doCleanup();
                 return true;
             }
             isMatchFound = true;
         }
     }
+
+    // Clear processing flag and perform any deferred cleanup
+    mIsProcessing = false;
+    doCleanup();
 
     return isMatchFound;
 }
@@ -433,6 +444,12 @@ void KeyUnit::markCleanup(TKey* pT)
 
 void KeyUnit::doCleanup()
 {
+    // Skip cleanup if we're currently processing keys to prevent iterator invalidation
+    // Cleanup will be performed when processDataStream() completes
+    if (mIsProcessing) {
+        return;
+    }
+
     QMutableSetIterator<TKey*> itKey(mCleanupSet);
     while (itKey.hasNext()) {
         auto pKey = itKey.next();

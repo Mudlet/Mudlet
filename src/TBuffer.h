@@ -45,6 +45,7 @@
 #include "TMxpProcessor.h"
 
 #include <deque>
+#include <memory>
 #include <string>
 
 class Host;
@@ -381,6 +382,8 @@ class TBuffer
 public:
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
     ~TBuffer();
+    TBuffer(const TBuffer& other);
+    TBuffer& operator=(const TBuffer& other);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -581,7 +584,7 @@ private:
     };
     static constexpr int    MAX_TAG_TIMEOUT_MS = 1300;
     WatchdogPhase           mWatchdogPhase = WatchdogPhase::None;
-    QTimer*                 mTagWatchdog;
+    std::unique_ptr<QTimer> mTagWatchdog;
     std::string             mWatchdogTagSnapshot;
 
     // Enhanced OSC 8 hyperlink styling and menu support
