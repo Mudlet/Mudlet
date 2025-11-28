@@ -110,7 +110,7 @@ while true; do
     rsync \
     "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-toolchain" \
-    "mingw-w64-${BUILDCOMPONENT}-pcre" \
+    "mingw-w64-${BUILDCOMPONENT}-pcre2" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
     "mingw-w64-${BUILDCOMPONENT}-ntldd" \
     "mingw-w64-${BUILDCOMPONENT}-pugixml" \
@@ -173,7 +173,7 @@ ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
-WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre" "luasql-sqlite3" "argparse" "lunajson" "busted")
+WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre2" "luasql-sqlite3" "argparse" "lunajson" "busted")
 
 success="true"
 for ROCK in "${WANTED_ROCKS[@]}"; do
