@@ -131,7 +131,7 @@ jobs:
         exclude: '3rdparty'
         config_file: '.clang-tidy'
         # the action doesn't see system-level libraries, need to replicate them here
-        apt_packages: 'gettext, pkg-config, libzip-dev, libglu1-mesa-dev, libpulse-dev'
+        apt_packages: 'gettext, pkg-config, libzip-dev, libglu1-mesa-dev, libpulse-dev, libpcre3-dev, liblua5.1-0-dev, libassimp-dev, libboost-dev, libhunspell-dev, libpugixml-dev, libsecret-1-dev, libsqlite3-dev, libyajl-dev'
         split_workflow: true
 
     - name: Upload check results
