@@ -433,8 +433,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         line_style = Qt::DashDotDotLine;
     } else {
         return warnArgumentValue(L, __func__, qsl(
-            "invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'")
-            .arg(lineStyleString));
+                "invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'")
+                .arg(lineStyleString));
     }
 
     if (!lua_istable(L, 5)) {
@@ -707,9 +707,8 @@ int TLuaInterpreter::centerview(lua_State* L)
         }
         lua_pushboolean(L, true);
         return 1;
-    } else {
-        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
     }
+    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearAreaUserData
@@ -2126,9 +2125,8 @@ int TLuaInterpreter::getRoomExits(lua_State* L)
             lua_settable(L, -3);
         }
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomHashByID
@@ -2287,9 +2285,8 @@ int TLuaInterpreter::getRoomWeight(lua_State* L)
     if (pR) {
         lua_pushnumber(L, pR->getWeight());
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 // documented in the wiki!
@@ -2565,9 +2562,8 @@ int TLuaInterpreter::loadMap(lua_State* L)
             if (!errMsg.isEmpty()) {
                 lua_pushstring(L, errMsg.toUtf8().constData());
                 return 2;
-            } else {
-                return 1;
             }
+            return 1;
         }
     } else {
         isOk = host.mpConsole->loadMap(location);
@@ -3527,6 +3523,133 @@ int TLuaInterpreter::setExitStub(lua_State* L)
     pR->setExitStub(dir, status);
     host.mpMap->update();
     return 0;
+}
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeightFilter
+// Function passed to setExitWeightFilter should return numeric exit weight (current or modified)
+// Scripts may return false or the string "block" from the callback which will prevent the exit from being added to the pathfinding graph.
+int TLuaInterpreter::setExitWeightFilter(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (lua_isnoneornil(L, 1)) {
+        if (auto* interpreter = host.getLuaInterpreter(); interpreter) {
+            interpreter->clearExitWeightFilter(L);
+        }
+        if (host.mpMap) {
+            host.mpMap->mMapGraphNeedsUpdate = true;
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    if (!lua_isfunction(L, 1)) {
+        lua_pushfstring(L,
+                        "setExitWeightFilter: bad argument #1 type (callback as function expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    if (auto* interpreter = host.getLuaInterpreter(); interpreter) {
+        interpreter->storeExitWeightFilter(L, 1);
+    }
+
+    if (host.mpMap) {
+        host.mpMap->mMapGraphNeedsUpdate = true;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(int roomId, const QString& exitCommand)
+{
+    ExitWeightFilterResult result;
+    if (mExitWeightFilterRef == LUA_NOREF || !pGlobalLua) {
+        return result;
+    }
+
+    lua_State* L = pGlobalLua;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mExitWeightFilterRef);
+    lua_pushinteger(L, roomId);
+    const QByteArray exitCommandUtf8 = exitCommand.toUtf8();
+    lua_pushlstring(L, exitCommandUtf8.constData(), exitCommandUtf8.size());
+
+    const int error = lua_pcall(L, 2, 1, 0);
+    if (error) {
+        if (mudlet::smDebugMode && lua_isstring(L, -1)) {
+            const char* errorMessage = lua_tostring(L, -1);
+            if (errorMessage) {
+                TDebug(QColor(Qt::white), QColor(Qt::red))
+                    << "LUA ERROR: when running exit weight filter\nreason: " << errorMessage << "\n" >> 0;
+            }
+        }
+        lua_pop(L, 1);
+        return result;
+    }
+
+    if (lua_isboolean(L, -1)) {
+        if (!lua_toboolean(L, -1)) {
+            result.blocked = true;
+        } else if (mudlet::smDebugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red))
+                << "LUA WARNING: exit weight filter returned boolean 'true', expected numeric weight. Ignoring.\n" >> 0;
+        }
+    } else if (lua_isnil(L, -1)) {
+        // nothing to do
+    } else if (lua_isnumber(L, -1)) {
+        double rawWeight = lua_tonumber(L, -1);
+        if (rawWeight < 1.0) {
+            rawWeight = 1.0;
+        } else if (rawWeight > std::numeric_limits<int>::max()) {
+            rawWeight = std::numeric_limits<int>::max();
+        }
+        result.weightOverride = qRound(rawWeight);
+    } else if (lua_isstring(L, -1)) {
+        size_t length = 0;
+        const char* rawValue = lua_tolstring(L, -1, &length);
+        const QString value = QString::fromUtf8(rawValue, static_cast<int>(length));
+        if (value.compare(qsl("block"), Qt::CaseInsensitive) == 0) {
+            result.blocked = true;
+        } else if (mudlet::smDebugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red))
+                << "LUA WARNING: exit weight filter returned unexpected string '" << value
+                << "', expected numeric weight. Ignoring.\n" >> 0;
+        }
+    } else {
+        if (mudlet::smDebugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red))
+                << "LUA WARNING: exit weight filter returned unexpected type '" << luaL_typename(L, -1) << "', ignoring.\n" >> 0;
+        }
+    }
+
+    lua_pop(L, 1);
+    return result;
+}
+
+bool TLuaInterpreter::hasExitWeightFilter() const
+{
+    return mExitWeightFilterRef != LUA_NOREF;
+}
+
+void TLuaInterpreter::storeExitWeightFilter(lua_State* L, int index)
+{
+    if (!L) {
+        return;
+    }
+
+    clearExitWeightFilter(L);
+    lua_pushvalue(L, index);
+    mExitWeightFilterRef = luaL_ref(L, LUA_REGISTRYINDEX);
+}
+
+void TLuaInterpreter::clearExitWeightFilter(lua_State* L)
+{
+    if (mExitWeightFilterRef == LUA_NOREF || !L) {
+        return;
+    }
+
+    luaL_unref(L, LUA_REGISTRYINDEX, mExitWeightFilterRef);
+    mExitWeightFilterRef = LUA_NOREF;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeight

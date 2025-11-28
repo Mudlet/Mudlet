@@ -355,12 +355,13 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
 
         retrieveCredential(service, key, fallbackCallback);
     } else {
-        // Use SecureStringUtils directly
+        // Use SecureStringUtils directly (portable/test mode)
         QString password = retrieveCredentialFromFile(profileName, key);
         bool success = !password.isEmpty();
 
         if (callback) {
-            callback(success, password, success ? QString() : qsl("Failed to retrieve password with SecureStringUtils"));
+            // Empty password is normal for first-time profiles - not an error
+            callback(success, password, success ? QString() : qsl("No password stored in encrypted file storage"));
         }
     }
 }

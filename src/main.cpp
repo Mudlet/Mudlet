@@ -51,6 +51,13 @@
 
 using namespace std::chrono_literals;
 
+extern void qInitResources_mudlet();
+extern void qInitResources_qm();
+extern void qInitResources_additional_splash_screens();
+extern void qInitResources_mudlet_fonts_common();
+extern void qInitResources_mudlet_fonts_posix();
+void        initializeQRCResources();
+
 #if defined(Q_OS_WINDOWS)
 bool runUpdate();
 #endif
@@ -91,6 +98,8 @@ void removeOldNoteColorEmojiFonts()
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.1, take 3"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    // Release: "Unicode 16.0"
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(mudlet::getMudletPath(enums::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -150,6 +159,7 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 
 int main(int argc, char* argv[])
 {
+    initializeQRCResources();
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {
@@ -389,9 +399,8 @@ int main(int argc, char* argv[])
             const bool successful = instanceCoordinator->installPackagesRemotely();
             if (successful) {
                 return 0;
-            } else {
-                return 1;
             }
+            return 1;
         }
     }
 
@@ -409,11 +418,13 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_WINDOWS)
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         // This variable is not set - and later versions of Qt 6.x need it for
-        // sound to work:
-        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
-            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        // sound to work - the alternative to "ffmpeg" is "windows" but that
+        // is a less capable backend (it doesn't support ".ogg" or ".opus"
+        // audio files):
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("ffmpeg"))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\".";
         } else {
-            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\", sound may not work.";
         }
     } else {
         qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
@@ -524,8 +535,8 @@ int main(int argc, char* argv[])
     // Only needed/works on GNU/Linux and FreeBSD to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
-    // Release: "Unicode 16.0"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(mudlet::getMudletPath(enums::mainFontsPath))};
+    // Release: "Unicode 17.0 update mk1"
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2025-09-15-v2.051").arg(mudlet::getMudletPath(enums::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -581,8 +592,8 @@ int main(int argc, char* argv[])
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     // PLACEMARKER: current Noto Color Emoji font version file extraction
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2024-10-03-v2.047"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2024-10-03-v2.047"), qsl("LICENSE"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("LICENSE"));
 #endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 #endif // defined(INCLUDE_FONTS)
 
@@ -819,4 +830,22 @@ bool runUpdate()
     }
     return false;
 }
+#endif // defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+
+// Force usage of Qt Resource Collections (QRC) used by Mudlet.
+// Ensures QRC symbols from the static library reach the executable.
+// without this, the linker might discard them and the QRC would not be accessible at runtime.
+void initializeQRCResources()
+{
+#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
+    qInitResources_additional_splash_screens();
 #endif
+#ifdef INCLUDE_FONTS
+    qInitResources_mudlet_fonts_common();
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    qInitResources_mudlet_fonts_posix();
+#endif
+#endif
+    qInitResources_mudlet();
+    qInitResources_qm();
+}

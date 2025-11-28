@@ -40,6 +40,7 @@
 #include <QNetworkReply>
 #include <QPixmap>
 #include <QPointer>
+#include <QSet>
 #include <QSizeF>
 #include <QVector3D>
 #include <stdlib.h>
@@ -343,6 +344,14 @@ public slots:
 
 
 private:
+    void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+                             const QMap<QString, int>& exitWeights,
+                             unsigned int source,
+                             TRoom* pSourceR,
+                             int target,
+                             quint8 direction,
+                             const QString& exitKey,
+                             const QSet<unsigned int>& unUsableRoomSet);
     const QString createFileHeaderLine(QString, QChar);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);

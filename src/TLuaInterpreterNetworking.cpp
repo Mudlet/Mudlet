@@ -321,13 +321,18 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
+    // Check connection status first (most common issue)
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending ATCP"));
+    }
+
     if (!host.mTelnet.isATCPEnabled()) {
-        return warnArgumentValue(L, __func__, "ATCP is not currently enabled");
+        return warnArgumentValue(L, __func__, qsl("ATCP is not currently enabled"));
     }
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
-        return warnArgumentValue(L, __func__, "unable to send all of the ATCP message");
+        return warnArgumentValue(L, __func__, qsl("failed to send ATCP message - connection may have been lost or a socket write error occurred"));
     }
 
     lua_pushboolean(L, true);
@@ -365,13 +370,18 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
+    // Check connection status first (most common issue)
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending GMCP"));
+    }
+
     if (!host.mTelnet.isGMCPEnabled()) {
-        return warnArgumentValue(L, __func__, "GMCP is not currently enabled");
+        return warnArgumentValue(L, __func__, qsl("GMCP is not currently enabled"));
     }
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
-        return warnArgumentValue(L, __func__, "unable to send all of the GMCP message");
+        return warnArgumentValue(L, __func__, qsl("failed to send GMCP message - connection may have been lost or a socket write error occurred"));
     }
 
     lua_pushboolean(L, true);

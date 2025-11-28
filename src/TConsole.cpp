@@ -48,7 +48,6 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
-#include <QTextCodec>
 #include <QPainter>
 
 const QString TConsole::cmLuaLineVariable("line");
@@ -338,8 +337,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     replayButton->setMaximumSize(QSize(30, 30));
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
-    replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
-    replayButton->setToolTip(utils::richText(tr("Toggle recording of replays")));
+
+    QIcon replayIcon;
+    replayIcon.addPixmap(QPixmap(qsl(":/icons/media-tape.png")), QIcon::Normal, QIcon::Off);
+    replayIcon.addPixmap(QPixmap(qsl(":/icons/media-tape-red-cross.png")), QIcon::Normal, QIcon::On);
+    replayButton->setIcon(replayIcon);
+    //: Button tooltip for the replay recording toggle button
+    replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
@@ -348,7 +352,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     logButton->setCheckable(true);
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
-    logButton->setToolTip(utils::richText(tr("Toggle logging")));
+    //: Button tooltip for the logging button
+    logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
 
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
@@ -399,7 +404,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     emergencyStop->setMinimumSize(QSize(30, 30));
     emergencyStop->setMaximumSize(QSize(30, 30));
-    emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
+
+    QIcon emergencyIcon;
+    emergencyIcon.addPixmap(QPixmap(qsl(":/icons/edit-bomb.png")), QIcon::Normal, QIcon::Off);
+    emergencyIcon.addPixmap(QPixmap(qsl(":/icons/red-bomb.png")), QIcon::Normal, QIcon::On);
+    emergencyStop->setIcon(emergencyIcon);
+
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
@@ -476,6 +486,10 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     layoutLayer2->addWidget(mpButtonMainLayer);
+    layoutLayer2->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(layer);
+    layerCommandLine->setAutoFillBackground(true);
+
     if (mType == MainConsole) {
         // All console control buttons should only be on MainConsole
         layoutButtonLayer->addWidget(mpBufferSearchBox);
@@ -486,24 +500,23 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         layoutButtonLayer->addWidget(logButton);
         layoutButtonLayer->addWidget(emergencyStop);
         layoutButtonLayer->addWidget(mpLineEdit_networkLatency);
+
+        commandSplitter = new QSplitter(Qt::Horizontal, this);
+        commandSplitter->setFocusPolicy(Qt::NoFocus);
+        connect(commandSplitter, &QSplitter::splitterMoved, this, &TConsole::slot_saveCommandSearchSettings);
+        commandSplitter->addWidget(layerCommandLine);
+        commandSplitter->addWidget(mpButtonMainLayer);
+        commandSplitter->setStretchFactor(0, 3); // command line
+        commandSplitter->setStretchFactor(1, 1); // search layer
+
+        commandSplitter->setCollapsible(0, false); // command line cannot collapse
+        commandSplitter->setCollapsible(1, false); // search layer cannot collapse
+
+        centralLayout->addWidget(commandSplitter);
+        restoreCommandSearchSettings();
+    } else {
+        centralLayout->addWidget(layerCommandLine);
     }
-    layoutLayer2->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(layer);
-    layerCommandLine->setAutoFillBackground(true);
-
-    commandSplitter = new QSplitter(Qt::Horizontal, this);
-    commandSplitter->setFocusPolicy(Qt::NoFocus);
-    connect(commandSplitter, &QSplitter::splitterMoved, this, &TConsole::slot_saveCommandSearchSettings);
-    commandSplitter->addWidget(layerCommandLine);
-    commandSplitter->addWidget(mpButtonMainLayer);
-    commandSplitter->setStretchFactor(0, 3); // command line
-    commandSplitter->setStretchFactor(1, 1); // search layer
-
-    commandSplitter->setCollapsible(0, false); // command line cannot collapse
-    commandSplitter->setCollapsible(1, false); // search layer cannot collapse
-
-    centralLayout->addWidget(commandSplitter);
-    restoreCommandSearchSettings();
 
     QList<int> sizeList;
     sizeList << 6 << 2;
@@ -638,6 +651,12 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // or event handling system point of view - so abort doing anything
         // with the event:
         return;
+    }
+
+    // prevents the command line from being hidden
+    if (layoutLayer2) {
+        layoutLayer2->invalidate();
+        layoutLayer2->activate();
     }
 
     if (mType & (MainConsole|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
@@ -869,6 +888,10 @@ void TConsole::slot_toggleReplayRecording()
         mReplayFile.setFileName(mLogFileName);
         if (!mReplayFile.open(QIODevice::WriteOnly)) {
             qWarning() << "TConsole: failed to open replay file for writing:" << mReplayFile.errorString();
+            mRecordReplay = false;
+            //: Informational message displayed when replay recording file could not be opened
+            printSystemMessage(tr("Failed to open replay recording file for writing.") % QChar::LineFeed);
+            return;
         }
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             mReplayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
@@ -876,13 +899,19 @@ void TConsole::slot_toggleReplayRecording()
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
         printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
     } else {
         if (!mReplayFile.commit()) {
             qDebug() << "TConsole::slot_toggleReplayRecording: error saving replay: " << mReplayFile.errorString();
+            //: Informational message displayed when replay recording is stopped but could not be saved
             printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved.") % QChar::LineFeed);
         } else {
+            //: Informational message displayed when replay recording is stopped
             printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
         }
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     }
 }
 
@@ -1055,7 +1084,7 @@ void TConsole::scrollUp(int lines)
     mLowerPane->forceUpdate();
 
     if (lowerAppears) {
-        QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
+        QTimer::singleShot(0, this, [this, lines]() {  mUpperPane->scrollUp(mLowerPane->getRowCount() + lines); });
         if (mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
@@ -1065,8 +1094,9 @@ void TConsole::scrollUp(int lines)
             mpHost->postMessage(infoMsg);
             mudlet::self()->showedSplitscreenTutorial();
         }
+    } else {
+        mUpperPane->scrollUp(lines);
     }
-    mUpperPane->scrollUp(lines);
     slot_adjustAccessibleNames();
 }
 
@@ -1239,9 +1269,8 @@ bool TConsole::hasSelection()
 {
     if (P_begin != P_end) {
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void TConsole::insertText(const QString& msg)
@@ -1571,9 +1600,8 @@ bool TConsole::moveCursor(int x, int y)
         mUserCursor.setX(x);
         mUserCursor.setY(y);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 int TConsole::select(const QString& text, int numOfMatch)
@@ -1894,10 +1922,8 @@ void TConsole::slot_stopAllItems(bool b)
 {
     if (b) {
         mpHost->stopAllTriggers();
-        emergencyStop->setIcon(QIcon(qsl(":/icons/red-bomb.png")));
     } else {
         mpHost->reenableAllTriggers();
-        emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
     }
 }
 

@@ -1230,7 +1230,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         }
     }
 
-    if (!writer.exportPackage(mXmlPathFileName, false)) {
+    if (!writer.exportPackage(mXmlPathFileName, false, true)) {
         //: This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened
         displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".")
                              .arg(mXmlPathFileName.toHtmlEscaped()), false);
@@ -1457,8 +1457,8 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
             // If successful will get to HERE...
 
-        } else {
-            return {false,
+        }
+        return {false,
                     tr("Required file \"%1\" was not found in the staging area. "
                        "This area contains the Mudlet items chosen for the package, "
                        "which you selected to be included in the package file. "
@@ -1466,7 +1466,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                        "\"%2\" - "
                        "Do you have the necessary permissions and free disk-space?")
                             .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
-        }
     }
 
     if (isOk) {

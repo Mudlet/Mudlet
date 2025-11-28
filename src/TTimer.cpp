@@ -252,12 +252,10 @@ bool TTimer::canBeUnlocked()
     if (shouldBeActive()) {
         if (!mpParent) {
             return true;
-        } else {
-            return mpParent->canBeUnlocked();
         }
-    } else {
-        return false;
+        return mpParent->canBeUnlocked();
     }
+    return false;
 }
 
 void TTimer::enableTimer(int id)

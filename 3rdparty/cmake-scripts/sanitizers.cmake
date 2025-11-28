@@ -95,11 +95,13 @@ function(test_san_flags RETURN_VAR LINK_OPTIONS)
   set(OPTION_FLAGS_BACKUP ${CMAKE_REQUIRED_FLAGS})
   set(LINK_FLAGS_BACKUP ${CMAKE_REQUIRED_LINK_OPTIONS})
 
-  # set link options
-  unset(CMAKE_REQUIRED_LINK_OPTIONS)
-  foreach(ARG ${${LINK_OPTIONS}})
-    set(CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS};${ARG})
-  endforeach()
+  # set link options (only non MSVC, which does infer automagically)
+  if(NOT MSVC)
+    unset(CMAKE_REQUIRED_LINK_OPTIONS)
+    foreach(ARG ${${LINK_OPTIONS}})
+      set(CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS};${ARG})
+    endforeach()
+  endif()
 
   # set compile options
   unset(CMAKE_REQUIRED_FLAGS)

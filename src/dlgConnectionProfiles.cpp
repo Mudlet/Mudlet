@@ -300,6 +300,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mSearchTextTimer.setSingleShot(true);
     QCoreApplication::instance()->installEventFilter(this);
     connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
+
+    profile_history->view()->setTextElideMode(Qt::ElideNone);
 }
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
@@ -931,9 +933,8 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
 
     if (file.error() == QFileDevice::NoError) {
         return {true, QString()};
-    } else {
-        return {false, file.errorString()};
     }
+    return {false, file.errorString()};
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
@@ -1890,26 +1891,26 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(
-                        qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
-        }
-
-        if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(
-                        qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server."), check.errorString()));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
+        // Need to reject raw IP addresses (of either version 4 or 6 type) as
+        // it is very unlikely that the Security Certificates include them as
+        // a Host Name.
+        if (port_ssl_tsl->isChecked() && (cTelnet::isRawIPv4Address(url) || cTelnet::isRawIPv6Address(url))) {
+            notificationAreaIconLabelError->show();
+            // As the only tags are not on the first line the default
+            // Qt::AutoFormat won't detect that rich-text is present in this text!
+            notificationAreaMessageBox->setTextFormat(Qt::RichText);
+            /*: Please use two line-feeds after the first line so the second
+             *  line can be italicised and spaced out - if appropriate for
+             *  the locale.
+             */
+            notificationAreaMessageBox->setText(qsl("%1%2\n\n%3").arg(!notificationAreaMessageBox->text().isEmpty() ? notificationAreaMessageBox->text().append(QChar::LineFeed) : QString(),
+                                                                      tr("Please enter the URL of the Game server.\n\n"
+                                                                         "<i>SSL/TLS connections require a URL, as an IP address is not a suitable "
+                                                                         "identifier for the certification of the Game Server.</i>"),
+                                                                      check.errorString()));
+            host_name_entry->setPalette(mErrorPalette);
+            validUrl = false;
+            valid = false;
         }
 
         if (valid) {
@@ -2300,9 +2301,9 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                             qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
                         }
                     } else {
-                        // Fallback to QSettings only if keychain operation failed
+                        // Fallback to QSettings only if credential retrieval failed
                         loadPasswordFromSettings(profile_name);
-                        qDebug() << "dlgConnectionProfiles: Keychain failed for" << profile_name << ", using file fallback:" << errorMessage;
+                        qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
                     }
                 }
 

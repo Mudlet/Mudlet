@@ -323,7 +323,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     if (mudlet::self()->smFirstLaunch) {
-        QTimer::singleShot(0, this, [this]() { mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game")); });
+        QTimer::singleShot(0, this, [this]() {
+            if (mpConsole) {
+                mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+            }
+        });
     }
 
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this]() {
@@ -338,6 +342,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
         if (getForceMXPProcessorOn()) {
             mMxpProcessor.enable();
+            // When force-enabling MXP (typically for games like IRE MUDs that don't
+            // negotiate properly), lock to secure mode for compatibility
+            mMxpProcessor.setMode(6); // Lock secure mode
             qDebug() << "MXP enabled (forced)";
         }
     });
@@ -346,6 +353,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         if (enabled) {
             if (!mMxpProcessor.isEnabled()) {
                 mMxpProcessor.enable();
+                // When force-enabling MXP (typically for games like IRE MUDs that don't
+                // negotiate properly), lock to secure mode for compatibility with games
+                // that use secure tags without sending mode switches
+                mMxpProcessor.setMode(6); // Lock secure mode
                 qDebug() << "MXP enabled (forced)";
             }
         } else if (mMxpProcessor.isEnabled() && !mTelnet.isMXPEnabled()) {
@@ -441,11 +452,7 @@ void Host::closeChildren()
     mIsClosingDown = true;
     const auto hostToolBarMap = getActionUnit()->getToolBarList();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    if (mSslTsl) {
-        mTelnet.abortConnection();
-    } else {
-        mTelnet.disconnectIt();
-    }
+    mTelnet.terminateConnection();
 
     stopAllTriggers();
 
@@ -1215,9 +1222,8 @@ QPair<QString, QString> Host::getSearchEngine()
 {
     if (mSearchEngineData.contains(mSearchEngineName)) {
         return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
-    } else {
-        return qMakePair(qsl("Google"), mSearchEngineData.value(qsl("Google")));
     }
+    return qMakePair(qsl("Google"), mSearchEngineData.value(qsl("Google")));
 }
 
 // cmd is UTF-16BE encoded here, but will be transcoded to Server's one by
@@ -1367,9 +1373,8 @@ QPair<bool, double> Host::getStopWatchTime(const int id) const
     auto pStopWatch = mStopWatchMap.value(id);
     if (pStopWatch) {
         return qMakePair(true, pStopWatch->getElapsedMilliSeconds() / 1000.0);
-    } else {
-        return qMakePair(false, 0.0);
     }
+    return qMakePair(false, 0.0);
 }
 
 QPair<bool, QString> Host::getBrokenDownStopWatchTime(const int id) const
@@ -1377,9 +1382,8 @@ QPair<bool, QString> Host::getBrokenDownStopWatchTime(const int id) const
     auto pStopWatch = mStopWatchMap.value(id);
     if (pStopWatch) {
         return qMakePair(true, pStopWatch->getElapsedDayTimeString());
-    } else {
-        return qMakePair(false, qsl("stopwatch with id %1 not found").arg(id));
     }
+    return qMakePair(false, qsl("stopwatch with id %1 not found").arg(id));
 }
 
 QPair<bool, QString> Host::startStopWatch(const QString& name)
@@ -1388,9 +1392,8 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
     if (!watchId) {
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
-        } else {
-            return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
         }
+        return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
     auto pStopWatch = mStopWatchMap.value(watchId);
@@ -1427,9 +1430,8 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
     if (!watchId) {
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
-        } else {
-            return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
         }
+        return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
     auto pStopWatch = mStopWatchMap.value(watchId);
@@ -1466,9 +1468,8 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
     if (!watchId) {
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
-        } else {
-            return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
         }
+        return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(name));
     }
 
     auto pStopWatch = mStopWatchMap.value(watchId);
@@ -1479,9 +1480,8 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
 
         if (name.isEmpty()) {
             return qMakePair(false, qsl("the first unnamed stopwatch (id:%1) was already reset").arg(watchId));
-        } else {
-            return qMakePair(false, qsl("stopwatch with name '%1' (id:%2) was already reset").arg(name, QString::number(watchId)));
         }
+        return qMakePair(false, qsl("stopwatch with name '%1' (id:%2) was already reset").arg(name, QString::number(watchId)));
     }
 
     // This should, indeed, be:
@@ -1598,9 +1598,8 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
     if (!pStopWatch) {
         if (currentName.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
-        } else {
-            return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(currentName));
         }
+        return qMakePair(false, qsl("stopwatch with name '%1' not found").arg(currentName));
     }
 
     if (isAlreadyUsed) {
@@ -1771,6 +1770,18 @@ bool Host::killTrigger(const QString& name)
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing)
 {
+    // Wait for profile save to complete before installing package
+    // to prevent Lua state corruption during concurrent operations
+    if (currentlySavingProfile()) {
+        // Auto-retry installation after save completes
+        QObject* obj = new QObject(this);
+        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
+            installPackage(fileName, thing);
+            obj->deleteLater();
+        });
+        return {true, QString()};
+    }
+
     // As the pointer to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidentally re-enter this method in the future.
@@ -1986,40 +1997,50 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         installPackageFonts(packageName);
     }
 
-    // raise 2 events - a generic one and a more detailed one to serve both
-    // a simple need ("I just want the install event") and a more specific need
-    // ("I specifically need to know when the module was synced")
-    TEvent genericInstallEvent {};
-    genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
-    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    genericInstallEvent.mArgumentList.append(packageName);
-    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent(genericInstallEvent);
+    // Defer raising install events until the next event loop iteration
+    // This ensures all package installation is complete (including variable loading)
+    // before event handlers execute, preventing Lua state corruption
+    QTimer::singleShot(0, this, [this, thing, packageName, fileName]() {
+        // Don't raise events if Host is shutting down to avoid handlers executing during teardown
+        if (isClosingDown()) {
+            return;
+        }
 
-    TEvent detailedInstallEvent {};
-    switch (thing) {
-    case enums::PackageModuleType::Package:
-        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
-        break;
-    case enums::PackageModuleType::ModuleFromUI:
-        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
-        break;
-    case enums::PackageModuleType::ModuleSync:
-        detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
-        break;
-    case enums::PackageModuleType::ModuleFromScript:
-        detailedInstallEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
-        break;
-    }
-    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    detailedInstallEvent.mArgumentList.append(packageName);
-    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    detailedInstallEvent.mArgumentList.append(fileName);
-    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent(detailedInstallEvent);
+        // raise 2 events - a generic one and a more detailed one to serve both
+        // a simple need ("I just want the install event") and a more specific need
+        // ("I specifically need to know when the module was synced")
+        TEvent genericInstallEvent {};
+        genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
+        genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        genericInstallEvent.mArgumentList.append(packageName);
+        genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        raiseEvent(genericInstallEvent);
+
+        TEvent detailedInstallEvent {};
+        switch (thing) {
+        case enums::PackageModuleType::Package:
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
+            break;
+        case enums::PackageModuleType::ModuleFromUI:
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
+            break;
+        case enums::PackageModuleType::ModuleSync:
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
+            break;
+        case enums::PackageModuleType::ModuleFromScript:
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
+            break;
+        }
+        detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        detailedInstallEvent.mArgumentList.append(packageName);
+        detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        detailedInstallEvent.mArgumentList.append(fileName);
+        detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        raiseEvent(detailedInstallEvent);
+    });
 
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     if (mpModuleManager) {
         mpModuleManager->layoutModules();
@@ -2210,7 +2231,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mpEditorDialog->doCleanReset();
     }
     if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
+        mpPackageManager->resetPackageList();
     }
     return true;
 }
@@ -2476,9 +2497,8 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 
     if (file.error() == QFile::NoError) {
         return qMakePair(true, QString());
-    } else {
-        return qMakePair(false, file.errorString());
     }
+    return qMakePair(false, file.errorString());
 }
 
 // Similar to the above, a convenience for reading profile data for this host.
@@ -2882,9 +2902,8 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
 
     if (!userDiscriminator.isEmpty() && !mRequiredDiscordUserDiscriminator.isEmpty() && userDiscriminator != mRequiredDiscordUserDiscriminator) {
         return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 QString  Host::getSpellDic()
@@ -3061,6 +3080,11 @@ void Host::updateAnsi16ColorsInTable()
     mLuaInterpreter.updateAnsi16ColorsInTable();
 }
 
+void Host::updateExtendedAnsiColorsInTable()
+{
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
+}
+
 void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter, const quint8 innerDiameter, const QColor& outerColor, const QColor& innerColor)
 {
     mPlayerRoomStyle = styleCode;
@@ -3137,9 +3161,8 @@ QPointer<TConsole> Host::findConsole(QString name)
         // Reason for the deref-plus-ref in the next line: `QPointer`s do not
         // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258
         return &*mpConsole;
-    } else {
-        return mpConsole->mSubConsoleMap.value(name);
     }
+    return mpConsole->mSubConsoleMap.value(name);
 }
 
 QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
@@ -3248,9 +3271,8 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
             dockwidget->setFloating(false);
             mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
             return {true, QString()};
-        } else {
-            return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
         }
+        return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
     }
 }
 
@@ -3339,6 +3361,66 @@ bool Host::setClickthrough(const QString& name, bool clickthrough)
     return false;
 }
 
+bool Host::setLabelStyleSheet(const QString& name, const QString& styleSheet)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setStyleSheet(styleSheet);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setLinkStyle(linkColor, linkVisitedColor, underline);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::resetLinkStyle(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->resetLinkStyle();
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::clearVisitedLinks(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->clearVisitedLinks();
+        return true;
+    }
+
+    return false;
+}
+
 void Host::hideMudletsVariables()
 {
     auto varUnit = getLuaInterface()->getVarUnit();
@@ -3410,9 +3492,8 @@ bool Host::showWindow(const QString& name)
             pD->show();
             // TODO: conside refactoring TConsole::showWindow(name) so that there is a TConsole::showWindow() that can be called directly on the TConsole concerned?
             return mpConsole->showWindow(name);
-        } else {
-            return mpConsole->showWindow(name);
         }
+        return mpConsole->showWindow(name);
     }
 
     if (pS) {
@@ -3695,9 +3776,8 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
             pM->setFloating(false);
             mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
             return {true, QString()};
-        } else {
-            return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
         }
+        return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
     }
 }
 
@@ -3750,9 +3830,8 @@ bool Host::echoWindow(const QString& name, const QString& text)
     } else if (pL) {
         pL->setText(text);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool Host::pasteWindow(const QString& name)
@@ -3765,9 +3844,8 @@ bool Host::pasteWindow(const QString& name)
     if (pC) {
         pC->pasteWindow(mpConsole->mClipboard);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool Host::setCmdLineAction(const QString& name, const int func)
@@ -3996,9 +4074,12 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
         QString styleSheet = pL->styleSheet();
         QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
         if (styleSheet.contains(qsl("background-color"))) {
-            QRegularExpression re("background-color: .*;");
+            QRegularExpression re("background-color:[^;]*;");
             styleSheet.replace(re, newColor);
         } else {
+            if (!styleSheet.isEmpty() && !styleSheet.endsWith('\n')) {
+                styleSheet.append('\n');
+            }
             styleSheet.append(newColor);
         }
 
@@ -4406,6 +4487,9 @@ void Host::setFocusOnHostActiveCommandLine()
 
 void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
 {
+    if (!pCommandLine) {
+        return;
+    }
     mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
     mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
 }

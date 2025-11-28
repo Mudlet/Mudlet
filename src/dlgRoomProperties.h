@@ -75,6 +75,7 @@ private:
     QColor mRoomColor;
     int mRoomColorNumber = -1;
     bool mChangeRoomColor = false;
+    bool mSymbolColorWasChanged = false;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:
