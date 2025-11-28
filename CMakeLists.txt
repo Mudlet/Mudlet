@@ -111,6 +111,8 @@ file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
 message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
+set(LIB_MUDLET_TARGET "mudlet_core")
+
 # For release builds, comment out the above and uncomment below:
 # file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
 # message(STATUS "Value written to app-build.txt file: {nothing}")
@@ -145,6 +147,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
 
 find_package(Qt6 6.8.2 REQUIRED)
+
+# Find Core5Compat for third-party libraries (communi, edbee-lib) that still need it
+find_package(Qt6 COMPONENTS Core5Compat REQUIRED)
 
 find_package(Lua 5.1 EXACT)
 

@@ -82,10 +82,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     widget_panel->setVisible(mpHost->mShowPanel);
     connect(toolButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
     connect(toolButton_shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
-    connect(toolButton_shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftLeft);
-    connect(toolButton_shiftRight, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftRight);
-    connect(toolButton_shiftUp, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftUp);
-    connect(toolButton_shiftDown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftDown);
     connect(toolButton_mapperMenu, &QToolButton::clicked, this, &dlgMapper::slot_setupMapperMenu);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
@@ -248,10 +244,6 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
         connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
         connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
-        connect(toolButton_shiftLeft, SIGNAL(clicked()), glWidget, SLOT(slot_shiftLeft()));
-        connect(toolButton_shiftRight, SIGNAL(clicked()), glWidget, SLOT(slot_shiftRight()));
-        connect(toolButton_shiftUp, SIGNAL(clicked()), glWidget, SLOT(slot_shiftUp()));
-        connect(toolButton_shiftDown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftDown()));
         connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
         connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
         connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
@@ -437,10 +429,6 @@ void dlgMapper::recreate3DWidget()
     connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
     connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
     connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
-    connect(toolButton_shiftLeft, SIGNAL(clicked()), glWidget, SLOT(slot_shiftLeft()));
-    connect(toolButton_shiftRight, SIGNAL(clicked()), glWidget, SLOT(slot_shiftRight()));
-    connect(toolButton_shiftUp, SIGNAL(clicked()), glWidget, SLOT(slot_shiftUp()));
-    connect(toolButton_shiftDown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftDown()));
     connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
     connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
     connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));

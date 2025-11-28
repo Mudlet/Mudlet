@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2025 by Nicolas Keita - nicolaskeita2@@gmail.com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,40 +17,28 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "glwidget_integration.h"
-#include "Host.h"
+#ifndef TELNET_SERVER_STUB_H
+#define TELNET_SERVER_STUB_H
 
-QOpenGLWidget* GLWidgetFactory::createGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
+#include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
+#include <QTimer>
+#include <QDebug>
+
+class TelnetServerStub : public QTcpServer
 {
-    if (pHost && pHost->getUseModern3DMapper()) {
-        return new ModernGLWidget(pMap, pHost, parent);
-    }
-    return new GLWidget(pMap, pHost, parent);
-}
+    Q_OBJECT
 
-bool GLWidgetFactory::isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost)
-{
-    if (!widget || !pHost) {
-        return false;
-    }
-    
-    bool shouldUseModern = pHost->getUseModern3DMapper();
-    bool isModern = dynamic_cast<ModernGLWidget*>(widget) != nullptr;
-    
-    return shouldUseModern == isModern;
-}
+    QString mpWelcomeMessage = "";
 
-QString GLWidgetFactory::getWidgetTypeName(QOpenGLWidget* widget)
-{
-    if (!widget) {
-        return QStringLiteral("null");
-    }
+public:
+    explicit TelnetServerStub(QObject* parent = nullptr);
 
-    if (dynamic_cast<ModernGLWidget*>(widget)) {
-        return QStringLiteral("ModernGLWidget");
-    }
-    if (dynamic_cast<GLWidget*>(widget)) {
-        return QStringLiteral("GLWidget");
-    }
-    return QStringLiteral("Unknown");
-}
+    void start(const QString& host, quint16 port);
+    void setWelcomeMessage(const QString& message) { mpWelcomeMessage = message; }
+
+private slots:
+    void onNewConnection();
+};
+
+#endif // TELNET_SERVER_STUB_H

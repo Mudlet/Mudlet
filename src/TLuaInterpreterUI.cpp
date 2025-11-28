@@ -1990,9 +1990,8 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L){
     if (lua_result) {
         lua_pushboolean(L, true);
         return 1;
-    } else {
-        return warnArgumentValue(L, __func__, qsl("command line name '%1' not found").arg(name));
     }
+    return warnArgumentValue(L, __func__, qsl("command line name '%1' not found").arg(name));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetBackgroundImage
@@ -2523,6 +2522,9 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
     for (auto actionId : actionIds) {
         auto action = host.getActionUnit()->getAction(actionId);
+        if (!action) {
+            continue;
+        }
         action->css = css;
     }
     host.getActionUnit()->updateToolbar();
