@@ -55,6 +55,7 @@ private slots:
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mpHostname);
     }
 
