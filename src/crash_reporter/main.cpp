@@ -49,20 +49,11 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QSettings settings("Mudlet", "CrashReporter");
     QVariant storedOption = settings.value("autoSendCrashReports", QVariant());
-    TCrashSendOption option = AskEachTime;
 
-    if (storedOption.isValid()) {
-        option = static_cast<TCrashSendOption>(storedOption.toInt());
-    }
-    switch (option) {
-        case AlwaysSend:
-            sendCrashReport(argv[1]);
-            break;
-        case NeverSend:
-            break;
-        default:
-            showCrashDialogAndSend(argv[1], settings);
-            break;
+    if (storedOption.isValid() && storedOption.toInt() == AlwaysSend) {
+        sendCrashReport(argv[1]);
+    } else {
+        showCrashDialogAndSend(argv[1], settings);
     }
     return 0;
 }
@@ -70,8 +61,10 @@ int main(int argc, char *argv[])
 void showCrashDialogAndSend(const char *envelopePath, QSettings &settings) {
     TCrashSendOption result = createCrashDialog();
 
-    settings.setValue("autoSendCrashReports", static_cast<int>(result));
-    if (result == AlwaysSend || result == AskEachTime) {
+    if (result == AlwaysSend) {
+        settings.setValue("autoSendCrashReports", static_cast<int>(AlwaysSend));
+        sendCrashReport(envelopePath);
+    } else if (result == SendThisTime) {
         sendCrashReport(envelopePath);
     }
 }
@@ -83,28 +76,28 @@ TCrashSendOption createCrashDialog() {
     QVBoxLayout *vLayout = new QVBoxLayout(&dialog);
     QLabel *label = new QLabel(QCoreApplication::translate(
         "CrashReporter",
-        "<div align='center'><b>Mudlet has encountered a problem.</b><br>"
+        "<div align='center'><b>Mudlet has encountered a problem.</b><br><br>"
         "You can choose to send a crash report to help us improve the application.</div>"));
     label->setAlignment(Qt::AlignCenter);
     vLayout->addWidget(label);
 
     QHBoxLayout *hLayout = new QHBoxLayout();
+    QPushButton *sendBtn   = new QPushButton(QCoreApplication::translate("CrashReporter", "Send this time"));
     QPushButton *alwaysBtn = new QPushButton(QCoreApplication::translate("CrashReporter", "Always send"));
-    QPushButton *neverBtn  = new QPushButton(QCoreApplication::translate("CrashReporter", "Never send"));
-    QPushButton *askBtn    = new QPushButton(QCoreApplication::translate("CrashReporter", "Ask me each time"));
+    QPushButton *dontBtn   = new QPushButton(QCoreApplication::translate("CrashReporter", "Don't send"));
 
     hLayout->addStretch();
+    hLayout->addWidget(sendBtn);
     hLayout->addWidget(alwaysBtn);
-    hLayout->addWidget(neverBtn);
-    hLayout->addWidget(askBtn);
+    hLayout->addWidget(dontBtn);
     hLayout->addStretch();
     vLayout->addLayout(hLayout);
 
+    QObject::connect(sendBtn,   &QPushButton::clicked, [&dialog](){ dialog.done(static_cast<int>(SendThisTime)); });
     QObject::connect(alwaysBtn, &QPushButton::clicked, [&dialog](){ dialog.done(static_cast<int>(AlwaysSend)); });
-    QObject::connect(neverBtn,  &QPushButton::clicked, [&dialog](){ dialog.done(static_cast<int>(NeverSend)); });
-    QObject::connect(askBtn,    &QPushButton::clicked, [&dialog](){ dialog.done(static_cast<int>(AskEachTime)); });
+    QObject::connect(dontBtn,   &QPushButton::clicked, [&dialog](){ dialog.done(static_cast<int>(DontSend)); });
 
-    alwaysBtn->setDefault(true);
+    sendBtn->setDefault(true);
 
     return static_cast<TCrashSendOption>(dialog.exec());
 }

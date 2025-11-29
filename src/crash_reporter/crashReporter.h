@@ -23,9 +23,9 @@
 #include <QSettings>
 
 enum TCrashSendOption {
-    AlwaysSend = 1,
-    NeverSend  = 2,
-    AskEachTime = 3
+    AlwaysSend   = 1,
+    SendThisTime = 2,
+    DontSend     = 3
 };
 
 void sendCrashReport(const char *envelopePath);
