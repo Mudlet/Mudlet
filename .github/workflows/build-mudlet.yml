@@ -230,19 +230,13 @@ jobs:
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
-    - name: Check SENTRY_AUTH_TOKEN
+    - name: Check SENTRY_AUTH_TOKEN secret
       run: |
-        if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
-          echo "❌ SENTRY_AUTH_TOKEN is not defined (neither as secret nor normal variable)!"
+        if [ -z "${{ secrets.SENTRY_AUTH_TOKEN }}" ]; then
+          echo "❌ SENTRY_AUTH_TOKEN secret is not defined!"
           exit 1
         else
-          echo "✅ SENTRY_AUTH_TOKEN is defined"
-
-          if [ -n "${{ secrets.SENTRY_AUTH_TOKEN }}" ]; then
-            echo "🔒 SENTRY_AUTH_TOKEN comes from a secret"
-          else
-            echo "📝 SENTRY_AUTH_TOKEN comes from a normal variable"
-          fi
+          echo "✅ SENTRY_AUTH_TOKEN secret is defined 🔒"
         fi
 
     - name: Build Mudlet
