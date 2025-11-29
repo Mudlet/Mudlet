@@ -6,6 +6,12 @@ on:
     - '**.cpp'
     - '**.h'
     - '.github/workflows/clangtidy-diff-analysis.yml'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to analyze (required for clang-tidy to have files to check)'
+        required: true
+        type: number
 
 jobs:
   compile-mudlet:
@@ -127,11 +133,14 @@ jobs:
       uses: ZedThree/clang-tidy-review@v0.22.2
       id: static_analysis
       with:
+        pr: ${{ inputs.pr_number || github.event.pull_request.number }}
         build_dir: 'b/ninja' # path is relative to checkout directory
         exclude: '3rdparty'
         config_file: '.clang-tidy'
         # the action doesn't see system-level libraries, need to replicate them here
         apt_packages: 'gettext, pkg-config, libzip-dev, libglu1-mesa-dev, libpulse-dev, libpcre3-dev, liblua5.1-0-dev, libassimp-dev, libboost-dev, libhunspell-dev, libpugixml-dev, libsecret-1-dev, libsqlite3-dev, libyajl-dev'
+        # workaround for https://github.com/ZedThree/clang-tidy-review/issues/157
+        extra_arguments: '--allow-no-checks'
         split_workflow: true
 
     - name: Upload check results
