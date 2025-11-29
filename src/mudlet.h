@@ -138,10 +138,10 @@ public:
     ~mudlet() override;
 
     enum class BuildType {
-        Unknown = 0,
-        NotUpdateable, // Previously developmentVersion = true
-        Release, // Previously releaseVersion = true
-        PublicTest // Previously publicTestVersion = true
+        Unknown = 0, // Uninitialized state (should never be used)
+        NotUpdateable, // Development or distribution package build
+        Release, // Official release build with updater
+        PublicTest // Public test build (PTB) with updater
     };
 
     static QString getMudletPath(enums::mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
@@ -350,10 +350,6 @@ public:
     bool isUpdateable() const;
     QImage getSplashScreen();
 
-    // Try to avoid reading this value directly but instead access it via
-    // getBuildType() so that usages before it has been initialised can be
-    // trapped:
-    BuildType mBuildType = BuildType::Unknown;
     QString mAppBuild;
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
@@ -587,8 +583,6 @@ private slots:
 
 
 private:
-
-
     void assignKeySequences();
     QString autodetectPreferredLanguage();
     static bool needsCustomDarkTheme();
@@ -618,7 +612,10 @@ private:
 
 
     inline static QPointer<mudlet> smpSelf = nullptr;
-
+    // Try to avoid reading this value directly but instead access it via
+    // getBuildType() so that usages before it has been initialised can be
+    // trapped:
+    BuildType mBuildType = BuildType::Unknown;
 
     bool mDarkMode = false;
     QString mDefaultStyle;
