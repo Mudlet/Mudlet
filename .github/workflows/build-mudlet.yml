@@ -230,18 +230,16 @@ jobs:
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
-    - name: ❌ Fail if SENTRY_AUTH_TOKEN is missing
-          # This step runs only if the secret is missing (empty value)
-      if: ${{ secrets.SENTRY_AUTH_TOKEN == '' }} 
+    - name: Check SENTRY_AUTH_TOKEN secret
+      env:
+        SENTRY_AUTH_TOKEN: ${{ secrets.DEPLOY_PATH }}
       run: |
-        echo "::error title=Missing SENTRY_AUTH_TOKEN Secret::The SENTRY_AUTH_TOKEN secret has not been defined in the repository or organization settings."
-        # Causes the job to fail immediately
-        exit 1
-            
-    - name: ✅ Confirm SENTRY_AUTH_TOKEN is present
-      # This step runs only if the secret is defined (non-empty value)
-      if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
-      run: echo "The SENTRY_AUTH_TOKEN secret is defined and ready for use. 🔒"
+        if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+          echo "❌ SENTRY_AUTH_TOKEN secret is not defined!"
+          exit 1
+        else
+          echo "✅ SENTRY_AUTH_TOKEN secret is defined 🔒"
+        fi
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
