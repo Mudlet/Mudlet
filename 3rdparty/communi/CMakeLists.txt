@@ -26,21 +26,8 @@ endif()
 
 project(communi)
 
-option(WITH_QT6 "Whether to build with Qt6 or Qt5." ON)
-
-if(WITH_QT6)
-  find_package(Qt6 REQUIRED COMPONENTS Core Network Core5Compat)
-  set(QT_LIBS Qt6::Core Qt6::Network Qt6::Core5Compat)
-else()
-  find_package(Qt5 REQUIRED COMPONENTS Core Network)
-  set(QT_LIBS Qt5::Core Qt5::Network)
-  # Versionless QT_* commands are only supported since Qt 5.15
-  if (Qt5Core_VERSION VERSION_LESS 5.15)
-    macro(QT_GENERATE_MOC)
-      QT5_GENERATE_MOC(${ARGN})
-    endmacro()
-  endif()
-endif()
+find_package(Qt6 REQUIRED COMPONENTS Core Network)
+set(QT_LIBS Qt6::Core Qt6::Network)
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcCore

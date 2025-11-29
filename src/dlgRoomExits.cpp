@@ -481,6 +481,9 @@ void dlgRoomExits::save()
 
     for (int i = 0; i < specialExits->topLevelItemCount(); ++i) {
         QTreeWidgetItem* pI = specialExits->topLevelItem(i);
+        if (!pI) {
+            continue;
+        }
         const int value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
         const int weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
         int door = 0;
@@ -1959,6 +1962,9 @@ void dlgRoomExits::slot_checkModified()
         int currentCount = 0;
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);
+            if (!pI) {
+                continue;
+            }
 /*            qDebug("dlgRoomExits::slot_checkModified() considering specialExit (item %i, pass 1) to:%i, command:%s",
  *                   i,
  *                   pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt(),
@@ -1981,6 +1987,9 @@ void dlgRoomExits::slot_checkModified()
                 // set isModified...
                 for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
                     QTreeWidgetItem* pI = specialExits->topLevelItem(i);
+                    if (!pI) {
+                        continue;
+                    }
 /*                    qDebug("dlgRoomExits::slot_checkModified() considering specialExit (item %i, pass 2) to:%i, command:%s",
  *                           i,
  *                           pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt(),

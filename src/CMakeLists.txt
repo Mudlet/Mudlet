@@ -22,7 +22,6 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-set(LIB_MUDLET_TARGET "mudlet_core")
 set(EXE_MUDLET_NAME "mudlet")
 set(EXE_MUDLET_TARGET "mudlet_executable")
 

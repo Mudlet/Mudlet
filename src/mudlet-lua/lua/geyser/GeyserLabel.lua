@@ -953,7 +953,7 @@ function doNestLeave(label)
   if Geyser.Label.closeAllTimer then
     killTimer(Geyser.Label.closeAllTimer)
   end
-  Geyser.Label.closeAllTimer = tempTimer(2, function() closeAllLevels(label) end)
+  Geyser.Label.closeAllTimer = tempTimer(.5, function() closeAllLevels(label) end)
 end
 
 -- Save a reference to our parent constructor

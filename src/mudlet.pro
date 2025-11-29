@@ -81,7 +81,9 @@ win32 {
     DEFINES += INCLUDE_WINSOCK2
 }
 
-QT += network uitools multimedia multimediawidgets gui concurrent
+# Qt6 Core5Compat is needed by third-party libraries (communi, edbee-lib)
+# Mudlet itself doesn't use it, but these dependencies still require it
+QT += network uitools multimedia multimediawidgets gui concurrent core5compat
 qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")

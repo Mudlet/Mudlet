@@ -542,9 +542,8 @@ QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
     // Handle using localhost as an off-line testing case
     if (deducedName == QLatin1String("localhost")) {
         return qMakePair(true, deducedName);
-    } else {
-        return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);
     }
+    return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);
 }
 
 bool Discord::libraryLoaded()
@@ -582,9 +581,8 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
         UpdatePresence();
 
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void Discord::resetData(Host* pHost){

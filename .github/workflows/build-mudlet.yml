@@ -255,6 +255,11 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
+    - name: Run QTest
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
+
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |

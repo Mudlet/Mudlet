@@ -399,9 +399,8 @@ int main(int argc, char* argv[])
             const bool successful = instanceCoordinator->installPackagesRemotely();
             if (successful) {
                 return 0;
-            } else {
-                return 1;
             }
+            return 1;
         }
     }
 
