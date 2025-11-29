@@ -231,8 +231,10 @@ jobs:
       run: ccache --zero-stats --show-stats
 
     - name: Check SENTRY_AUTH_TOKEN variable
+      env:
+        SENTRY_AUTH_TOKEN: ${{ vars.SENTRY_AUTH_TOKEN }}
       run: |
-        if [ "${{ vars.SENTRY_AUTH_TOKEN }}" = "" ]; then
+        if [ -z "$SENTRY_AUTH_TOKEN" ]; then
           echo "❌ SENTRY_AUTH_TOKEN is not defined!"
           exit 1
         else
