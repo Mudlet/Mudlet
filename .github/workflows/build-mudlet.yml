@@ -230,17 +230,6 @@ jobs:
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
-    - name: Check SENTRY_AUTH_TOKEN secret
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.DEPLOY_PATH }}
-      run: |
-        if [ -z "$SENTRY_AUTH_TOKEN" ]; then
-          echo "❌ SENTRY_AUTH_TOKEN secret is not defined!"
-          exit 1
-        else
-          echo "✅ SENTRY_AUTH_TOKEN secret is defined 🔒"
-        fi
-
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
@@ -254,10 +243,10 @@ jobs:
           -DUSE_SANITIZER=""
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=1
-          -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
+          -DSENTRY_DSN=${{ vars.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
-        SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+        SENTRY_AUTH_TOKEN: ${{vars.SENTRY_AUTH_TOKEN}}
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
