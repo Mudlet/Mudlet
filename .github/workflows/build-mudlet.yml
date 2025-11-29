@@ -232,7 +232,7 @@ jobs:
 
     - name: Check SENTRY_AUTH_TOKEN variable
       run: |
-        if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+        if [ "${{ vars.SENTRY_AUTH_TOKEN }}" = "" ]; then
           echo "❌ SENTRY_AUTH_TOKEN is not defined!"
           exit 1
         else
