@@ -108,7 +108,7 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
     FILES_TO_COPY+=("mudlet.exe.debug")
 fi
 
-if [ "${WITH_SENTRY}" = "yes" ]; then
+if [ "${WITH_SENTRY}" = "ON" ]; then
     FILES_TO_COPY+=("crashpad_handler.exe" "crashpad_wer.dll" "MudletCrashReporter.exe")
 fi
 

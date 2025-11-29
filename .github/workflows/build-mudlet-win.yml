@@ -114,7 +114,9 @@ jobs:
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
-
+      env:
+        WITH_SENTRY: "ON"
+  
     - name: (Windows) Login to Azure
       uses: azure/login@v2
       if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
