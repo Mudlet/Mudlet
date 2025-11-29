@@ -230,6 +230,15 @@ jobs:
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
+    - name: Check SENTRY_AUTH_TOKEN variable
+      run: |
+        if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+          echo "❌ SENTRY_AUTH_TOKEN is not defined!"
+          exit 1
+        else
+          echo "✅ SENTRY_AUTH_TOKEN is defined"
+        fi
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
