@@ -92,7 +92,7 @@ void MudletInstanceCoordinator::incomingConnection(quintptr socketDescriptor)
     connect(socket, &QLocalSocket::disconnected, this, &MudletInstanceCoordinator::handleDisconnected);
 }
 
-// Receive package paths and install them
+// Receive package paths/telnet URIs and handle them
 void MudletInstanceCoordinator::handleReadyRead()
 {
     QLocalSocket* socket = qobject_cast<QLocalSocket*>(sender());
@@ -101,13 +101,30 @@ void MudletInstanceCoordinator::handleReadyRead()
     }
 
     mMutex.lock();
-    // Receive package paths and add them the install queue.
+    // Receive data - could be package paths or telnet URI
     QByteArray data = socket->readAll();
-    const QStringList packagePaths = QString::fromUtf8(data).split(QChar::LineFeed, Qt::SkipEmptyParts);
-    mQueuedPackagePaths << packagePaths;
-    mMutex.unlock();
-
-    installPackagesLocally();
+    const QString message = QString::fromUtf8(data);
+    
+    // Check if it's a telnet URI (prefixed with "TELNET_URI:")
+    if (message.startsWith(qsl("TELNET_URI:"))) {
+        mQueuedTelnetUri = message.mid(11);  // Remove "TELNET_URI:" prefix
+        mMutex.unlock();
+        
+        // Handle telnet URI on main thread
+        QTimer::singleShot(0, this, [this]() {
+            if (!mQueuedTelnetUri.isEmpty()) {
+                mudlet::self()->handleTelnetUri(mQueuedTelnetUri);
+                mQueuedTelnetUri.clear();
+            }
+        });
+    } else {
+        // It's package paths
+        const QStringList packagePaths = message.split(QChar::LineFeed, Qt::SkipEmptyParts);
+        mQueuedPackagePaths << packagePaths;
+        mMutex.unlock();
+        
+        installPackagesLocally();
+    }
 }
 
 // Find the active host and install queued packages to it
@@ -138,3 +155,37 @@ void MudletInstanceCoordinator::handleDisconnected()
         socket->deleteLater();
     }
 }
+
+// Telnet URI queue and forwarding for multi-instance support
+void MudletInstanceCoordinator::queueTelnetUri(const QString& uri)
+{
+    mQueuedTelnetUri = uri;
+}
+
+// Forward telnet URI to an already running Mudlet instance
+// Returns true on success
+bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
+{
+    if (mQueuedTelnetUri.isEmpty()) {
+        return false;
+    }
+   
+    QLocalSocket socket;
+    socket.connectToServer(mServerName);
+    
+    if (socket.waitForConnected(WAIT_FOR_RESPONSE_MS)) {
+        // Prepend "TELNET_URI:" to distinguish from package paths
+        const QString message = qsl("TELNET_URI:") + mQueuedTelnetUri;
+        socket.write(message.toUtf8());
+        socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
+        socket.disconnectFromServer();
+        return true;
+    }
+    return false;
+}
+
+QString MudletInstanceCoordinator::readTelnetUriQueue()
+{
+    return mQueuedTelnetUri;
+}
+

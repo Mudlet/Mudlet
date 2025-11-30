@@ -37,6 +37,11 @@ public:
     void installPackagesLocally();
     bool installPackagesRemotely();
     QStringList readPackageQueue();
+    
+    // Telnet URI forwarding for multi-instance support
+    void queueTelnetUri(const QString& uri);
+    bool forwardTelnetUriToRunningInstance();
+    QString readTelnetUriQueue();
 
 protected:
     void incomingConnection(quintptr socketDescriptor) override;
@@ -49,6 +54,7 @@ private:
     QMutex mMutex;
     QString mServerName;
     QStringList mQueuedPackagePaths;
+    QString mQueuedTelnetUri;  // Store telnet URI for forwarding
 };
 
 #endif // MUDLETINSTANCECOORDINATOR_H

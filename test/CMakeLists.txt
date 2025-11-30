@@ -110,4 +110,12 @@ if(USE_OWN_QTKEYCHAIN)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
 
+# Note: TelnetUriTest requires the full mudlet library to test parseTelnetUri
+# This is commented out for now as it would require significant refactoring
+# to make parseTelnetUri testable in isolation
+# add_executable(TelnetUriTest TelnetUriTest.cpp)
+# target_link_libraries(TelnetUriTest mudlet)
+# add_test(NAME TelnetUriTest COMMAND TelnetUriTest)
+
 add_subdirectory(functional_tests)
+
