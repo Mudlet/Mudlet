@@ -242,11 +242,11 @@ jobs:
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DUSE_SANITIZER=""
           -DWITH_SENTRY=ON
-          -DSENTRY_SEND_DEBUG=1
+          -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
           -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
-        SENTRY_AUTH_TOKEN: "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"
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'

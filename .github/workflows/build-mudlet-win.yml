@@ -62,10 +62,9 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        SENTRY_AUTH_TOKEN: "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"
         # Enable debug sending only for tags and scheduled builds (Release builds and PTB builds)
-        #SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
-        SENTRY_SEND_DEBUG: "1"
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         WITH_SENTRY: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
