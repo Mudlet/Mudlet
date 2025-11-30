@@ -243,10 +243,10 @@ jobs:
           -DUSE_SANITIZER=""
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=1
-          -DSENTRY_DSN="https://b207505f6b88191fa4bbcb9b166f61ae@o4510296017338368.ingest.de.sentry.io/4510330003849296"
+          -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
-        SENTRY_AUTH_TOKEN: "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"
+        SENTRY_AUTH_TOKEN: "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"
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
