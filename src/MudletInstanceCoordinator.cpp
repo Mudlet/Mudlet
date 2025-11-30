@@ -112,8 +112,14 @@ void MudletInstanceCoordinator::handleReadyRead()
         // Handle telnet URI on main thread
         QTimer::singleShot(0, this, [this]() {
             if (!mQueuedTelnetUri.isEmpty()) {
-                mudlet::self()->handleTelnetUri(mQueuedTelnetUri);
-                mQueuedTelnetUri.clear();
+                mudlet* app = mudlet::self();
+                Q_ASSERT(app);
+                if (app) {
+                    app->handleTelnetUri(mQueuedTelnetUri);
+                    mMutex.lock();
+                    mQueuedTelnetUri.clear();
+                    mMutex.unlock();
+                }
             }
         });
     } else {
@@ -158,6 +164,7 @@ void MudletInstanceCoordinator::handleDisconnected()
 // Telnet URI queue and forwarding for multi-instance support
 void MudletInstanceCoordinator::queueTelnetUri(const QString& uri)
 {
+    QMutexLocker locker(&mMutex);
     mQueuedTelnetUri = uri;
 }
 
@@ -165,6 +172,7 @@ void MudletInstanceCoordinator::queueTelnetUri(const QString& uri)
 // Returns true on success
 bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
 {
+    QMutexLocker locker(&mMutex);
     if (mQueuedTelnetUri.isEmpty()) {
         return false;
     }
@@ -178,6 +186,7 @@ bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
         socket.write(message.toUtf8());
         socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
         socket.disconnectFromServer();
+        mQueuedTelnetUri.clear();  // Clear after successful forward
         return true;
     }
     return false;
@@ -185,6 +194,7 @@ bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
 
 QString MudletInstanceCoordinator::readTelnetUriQueue()
 {
+    QMutexLocker locker(&mMutex);
     return mQueuedTelnetUri;
 }
 
