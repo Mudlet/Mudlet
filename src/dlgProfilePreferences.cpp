@@ -337,6 +337,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         }
     }
 
+    QSettings settings("Mudlet", "CrashReporter");
+    QVariant storedOption = settings.value("autoSendCrashReports", QVariant());
+    int option = 2;
+    if (storedOption.isValid()) {
+        option = storedOption.toInt() - 1;
+    }
+    comboBox_crashReportPolicy->setCurrentIndex(option);
+    connect(comboBox_crashReportPolicy,
+        qOverload<int>(&QComboBox::currentIndexChanged),
+        this,
+        &dlgProfilePreferences::slot_crashReportPolicyChanged);
+
     setupPasswordsMigration();
 
     connect(label_darkEditorPrompt, &QLabel::linkActivated, this, &dlgProfilePreferences::slot_enableDarkEditor);
@@ -4754,6 +4766,12 @@ void dlgProfilePreferences::slot_roomSizeChanged(int size)
             mpHost->mpMap->mpMapper->mp2dMap->update();
         }
     }
+}
+
+void dlgProfilePreferences::slot_crashReportPolicyChanged(int index)
+{
+    QSettings settings("Mudlet", "CrashReporter");
+    settings.setValue("autoSendCrashReports", index + 1);
 }
 
 void dlgProfilePreferences::slot_exitSizeChanged(int size)
