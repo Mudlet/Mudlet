@@ -35,7 +35,7 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
         # https://github.com/ZedThree/clang-tidy-review/issues/10
         ref: ${{ github.event.pull_request.head.sha }}

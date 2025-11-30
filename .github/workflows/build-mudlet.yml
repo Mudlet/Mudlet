@@ -63,7 +63,7 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
 
     - name: Install Qt
@@ -154,6 +154,7 @@ jobs:
           imagemagick \
           libassimp-dev \
           libboost-dev \
+          libcurl4-openssl-dev \
           libglu1-mesa-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
@@ -167,6 +168,9 @@ jobs:
           libzip-dev \
           pcre2-utils \
           pkg-config \
+          libssl-dev \
+          openssl \
+          ca-certificates \
           -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
@@ -237,8 +241,12 @@ jobs:
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DUSE_SANITIZER=""
+          -DWITH_SENTRY=ON
+          -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+          -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
@@ -328,6 +336,7 @@ jobs:
         APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
         APPLE_PASSWORD: ${{secrets.APPLE_PASSWORD}}
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
+        WITH_SENTRY: "ON"
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v5

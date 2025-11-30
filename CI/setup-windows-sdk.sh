@@ -127,6 +127,11 @@ while true; do
     "mingw-w64-${BUILDCOMPONENT}-meson" \
     "mingw-w64-${BUILDCOMPONENT}-ninja" \
     "mingw-w64-${BUILDCOMPONENT}-assimp" \
+    "mingw-w64-${BUILDCOMPONENT}-curl" \
+    "mingw-w64-${BUILDCOMPONENT}-uasm" \
+    "mingw-w64-${BUILDCOMPONENT}-clang" \
+    "mingw-w64-${BUILDCOMPONENT}-lld" \
+    "mingw-w64-${BUILDCOMPONENT}-cmake" \
     "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
