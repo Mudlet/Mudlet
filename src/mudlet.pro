@@ -611,6 +611,65 @@ contains( DEFINES, INCLUDE_UPDATER ) {
     }
 }
 
+WITH_SENTRY {
+    DEFINES += WITH_SENTRY
+
+
+    CONFIG(debug, debug|release) {
+        BUILD_SUBDIR = debug
+    } else {
+        BUILD_SUBDIR = release
+    }
+
+    DEFINES += SENTRY_DSN=\\\"$$SENTRY_DSN\\\"
+
+    APP_DIR_PATH = $$OUT_PWD/$$BUILD_SUBDIR
+    DEFINES += APP_DIR_PATH=\\\"$$APP_DIR_PATH\\\"
+    DEFINES += SENTRY_BUILD_STATIC
+
+    SENTRY_PATH = $$PWD/../3rdparty/sentry-native
+
+    !exists($$SENTRY_PATH/install) {
+        message("Sentry install missing, building sentry-native from sources")
+
+        system(cmake -S $$SENTRY_PATH -B $$SENTRY_PATH/build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DSENTRY_BACKEND=crashpad -D SENTRY_BUILD_SHARED_LIBS=OFF --log-level=ERROR)
+        system(cmake --build $$SENTRY_PATH/build --parallel)
+        system(cmake --install $$SENTRY_PATH/build --prefix $$SENTRY_PATH/install)
+    }
+
+    INCLUDEPATH += $$SENTRY_PATH/install/include
+    LIBS        += -L$$SENTRY_PATH/install/lib
+    LIBS += -lsentry \
+        -lcrashpad_client -lcrashpad_handler_lib -lcrashpad_minidump \
+        -lcrashpad_mpack -lcrashpad_snapshot -lcrashpad_tools \
+        -lcrashpad_util -lmini_chromium -lcrashpad_compat -lwinhttp -ldbghelp -lversion
+
+    QMAKE_CFLAGS_RELEASE    += -g
+    QMAKE_CXXFLAGS_RELEASE  += -g
+    QMAKE_LFLAGS_RELEASE    += -g -gcodeview
+    QMAKE_LFLAGS_RELEASE    -= -Wl,-s
+
+
+    QMAKE_POST_LINK += $$quote($$QMAKE_MOVE $$OUT_PWD/mudlet.pdb $$APP_DIR_PATH/) ;
+    QMAKE_POST_LINK += $$quote(cp -f $$SENTRY_PATH/install/bin/* $$APP_DIR_PATH/) ;
+
+    system(cmake -S $$PWD/crash_reporter/ -B $$PWD/crash_reporter/build/ -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$$APP_DIR_PATH/)
+    system(cmake --build $$PWD/crash_reporter/build/)
+
+    SENTRY_SEND_DEBUG = $$SENTRY_SEND_DEBUG
+    equals(SENTRY_SEND_DEBUG, 1) {
+        SENTRY_AUTH_TOKEN = $$getenv(SENTRY_AUTH_TOKEN)
+        isEmpty(SENTRY_AUTH_TOKEN) {
+            error([Option SENTRY_SEND_DEBUG enabled] The environment variable SENTRY_AUTH_TOKEN is missing.
+                    SENTRY_AUTH_TOKEN is required to authenticate with Sentry before uploading debug files.
+                    Fix: try exporting SENTRY_AUTH_TOKEN="...")
+        }
+        QMAKE_POST_LINK += $$quote(bash "$$PWD/../CI/send_debug_files_to_sentry.sh" "$$APP_DIR_PATH/mudlet.exe") ;
+    }
+
+    QMAKE_POST_LINK += $$quote(strip --strip-debug $$APP_DIR_PATH/mudlet.exe) ;
+}
+
 ################################## File Lists ##################################
 SOURCES += \
     ActionUnit.cpp \
@@ -683,6 +742,7 @@ SOURCES += \
     RoomMoveActivationHandler.cpp \
     RoomMoveDragHandler.cpp \
     SelectionRectangleHandler.cpp \
+    SentryWrapper.cpp \
     TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \

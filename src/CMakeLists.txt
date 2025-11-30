@@ -108,6 +108,7 @@ set(mudlet_SRCS
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
+    SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
@@ -319,6 +320,7 @@ set(mudlet_HDRS
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
     SelectionRectangleHandler.h
+    SentryWrapper.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h
@@ -695,6 +697,11 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
 # will fail to load with "undefined symbol" errors.
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
+
+if (WITH_SENTRY)
+  include(cmake/WithSentry.cmake)
+  add_subdirectory(crash_reporter)
+endif()
 
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)

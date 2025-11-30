@@ -101,10 +101,20 @@ if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet
   exit 6
 fi
 
-cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
+
+FILES_TO_COPY=("mudlet.exe")
+
 if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+    FILES_TO_COPY+=("mudlet.exe.debug")
 fi
+
+if [ "${WITH_SENTRY}" = "ON" ]; then
+    FILES_TO_COPY+=("crashpad_handler.exe" "crashpad_wer.dll" "MudletCrashReporter.exe")
+fi
+
+for f in "${FILES_TO_COPY[@]}"; do
+    cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/$f" "${PACKAGE_DIR}/"
+done
 
 # The location that windeployqt6 puts the Qt translation files by default is
 # "./translations" unfortunately "QLibraryInfo::path(QLibraryInfo::TranslationsPath)"

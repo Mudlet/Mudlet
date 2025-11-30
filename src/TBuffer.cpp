@@ -29,6 +29,7 @@
 #include "TTextProperties.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
+#include "SentryWrapper.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -571,6 +572,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     } else {
         localBuffer = incoming;
     }
+
+    crashIfRequested();
 
     // Fixup table for our own, substitute QTextCodecs:
     QByteArray encodingTableToUse{mEncoding};
