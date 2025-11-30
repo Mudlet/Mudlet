@@ -349,6 +349,9 @@ public:
     void showedMuteAllMediaTutorial();
     bool experiencedMudletPlayer();
 
+    // Telnet URI handling
+    void handleTelnetUri(const QString& uri);
+
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
     // issue:
@@ -762,11 +765,27 @@ private:
     QString mAIModelPath;
     bool mAIAutoStart = true;
 
+    // Telnet URI handling - store URI until GUI is ready
+    QString mPendingTelnetUri;
+
     // Helper methods for AI integration
     void initializeAI();
     void shutdownAI();
     bool findAIModel();
     void setupAIConfig();
+
+    // Telnet URI handling structures and methods
+    struct TelnetUriData {
+        QString host;
+        int port = 23;
+        QString username;  // Optional, rarely used per RFC 4248
+        QString password;  // Optional, rarely used per RFC 4248
+        bool valid = false;
+    };
+
+    TelnetUriData parseTelnetUri(const QString& uri);
+    QString findMatchingProfile(const QString& host, int port);
+    QString createProfileForUri(const TelnetUriData& uriData);
 
     // Helper method for detached windows cleanup
     void saveDetachedWindowsGeometry();

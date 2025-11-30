@@ -4322,6 +4322,160 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
+// Telnet URI handling implementation
+// Parse a telnet:// URI according to RFC 4248
+mudlet::TelnetUriData mudlet::parseTelnetUri(const QString& uri)
+{
+    TelnetUriData data;
+    
+    QUrl url(uri);
+    
+    // Validate scheme
+    if (url.scheme().toLower() != qsl("telnet")) {
+        qDebug() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << url.scheme() << "expected 'telnet'";
+        data.valid = false;
+        return data;
+    }
+    
+    // Extract host
+    data.host = url.host();
+    if (data.host.isEmpty()) {
+        qDebug() << "mudlet::parseTelnetUri() - URI missing host:" << uri;
+        data.valid = false;
+        return data;
+    }
+    
+    // Extract port (default to 23 per RFC 4248)
+    data.port = url.port(23);
+    
+    // Extract optional username and password (rarely used per RFC 4248)
+    if (!url.userName().isEmpty()) {
+        data.username = url.userName();
+    }
+    if (!url.password().isEmpty()) {
+        data.password = url.password();
+    }
+    
+    data.valid = true;
+    qDebug() << "mudlet::parseTelnetUri() - Parsed URI successfully: host=" << data.host << "port=" << data.port;
+    return data;
+}
+
+// Find existing profile matching host and port
+QString mudlet::findMatchingProfile(const QString& host, int port)
+{
+    QDir profilesDir(getMudletPath(enums::profilesPath));
+    QStringList profileNames = profilesDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    
+    // Also check predefined game profiles
+    profileNames += TGameDetails::keys();
+    profileNames.removeDuplicates();
+    
+    QString matchedProfile;
+    QDateTime latestTime;
+    
+    for (const auto& profileName : profileNames) {
+        QString profileHost = readProfileData(profileName, qsl("host_url"));
+        QString profilePort = readProfileData(profileName, qsl("port_number"));
+        
+        // Match based on host and port
+        if (profileHost.toLower() == host.toLower() && profilePort.toInt() == port) {
+            // Found a match! If multiple matches, use the most recently modified one
+            QString profilePath = getMudletPath(enums::profileHomePath, profileName);
+            QFileInfo profileInfo(profilePath);
+            
+            if (matchedProfile.isEmpty() || profileInfo.lastModified() > latestTime) {
+                matchedProfile = profileName;
+                latestTime = profileInfo.lastModified();
+            }
+        }
+    }
+    
+    if (!matchedProfile.isEmpty()) {
+        qDebug() << "mudlet::findMatchingProfile() - Found matching profile:" << matchedProfile;
+    }
+    
+    return matchedProfile;
+}
+
+// Create a new profile for a telnet URI
+QString mudlet::createProfileForUri(const TelnetUriData& uriData)
+{
+    if (!uriData.valid) {
+        return QString();
+    }
+    
+    // Generate profile name: "hostname" or "hostname:port" for non-standard ports
+    QString profileName = uriData.host;
+    if (uriData.port != 23) {
+        profileName += qsl(":%1").arg(uriData.port);
+    }
+    
+    // Handle name collisions by appending -2, -3, etc.
+    QString originalName = profileName;
+    int suffix = 2;
+    while (profileExists(profileName)) {
+        profileName = qsl("%1-%2").arg(originalName).arg(suffix++);
+    }
+    
+    qDebug() << "mudlet::createProfileForUri() - Creating new profile:" << profileName;
+    
+    // Create the profile using HostManager
+    if (!mHostManager.addHost(profileName, QString::number(uriData.port), QString(), QString())) {
+        qDebug() << "mudlet::createProfileForUri() - ERROR: Failed to create host for profile:" << profileName;
+        return QString();
+    }
+    
+    // Write profile settings
+    writeProfileData(profileName, qsl("host_url"), uriData.host);
+    writeProfileData(profileName, qsl("port_number"), QString::number(uriData.port));
+    
+    // Optionally write username if provided (though rarely used)
+    if (!uriData.username.isEmpty()) {
+        writeProfileData(profileName, qsl("login"), uriData.username);
+    }
+    
+    qDebug() << "mudlet::createProfileForUri() - Profile created successfully:" << profileName;
+    return profileName;
+}
+
+// Main entry point for handling telnet:// URIs
+void mudlet::handleTelnetUri(const QString& uri)
+{
+    if (uri.isEmpty()) {
+        qDebug() << "mudlet::handleTelnetUri() - Called with empty URI";
+        return;
+    }
+    
+    qDebug() << "mudlet::handleTelnetUri() - Processing telnet URI:" << uri;
+    
+    // Parse the URI
+    TelnetUriData uriData = parseTelnetUri(uri);
+    if (!uriData.valid) {
+        qWarning() << "mudlet::handleTelnetUri() - Invalid telnet URI:" << uri;
+        // Fall back to showing connection dialog
+        slot_showConnectionDialog();
+        return;
+    }
+    
+    // Try to find existing profile
+    QString profileName = findMatchingProfile(uriData.host, uriData.port);
+    
+    // If no match found, create a new profile
+    if (profileName.isEmpty()) {
+        profileName = createProfileForUri(uriData);
+        if (profileName.isEmpty()) {
+            qWarning() << "mudlet::handleTelnetUri() - Failed to create profile for URI:" << uri;
+            slot_showConnectionDialog();
+            return;
+        }
+    }
+    
+    // Load profile and auto-connect
+    qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
+    doAutoLogin(profileName);
+}
+
 void mudlet::processEventLoopHack()
 {
     QTimer::singleShot(1ms, this, &mudlet::slot_processEventLoopHackTimerRun);

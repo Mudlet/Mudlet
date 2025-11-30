@@ -392,15 +392,34 @@ int main(int argc, char* argv[])
     const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
 
     const QStringList positionalArguments = parser.positionalArguments();
+    QString telnetUri;
+    
     if (!positionalArguments.isEmpty()) {
-        const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        instanceCoordinator->queuePackage(absPath);
-        if (!firstInstanceOfMudlet) {
-            const bool successful = instanceCoordinator->installPackagesRemotely();
-            if (successful) {
-                return 0;
+        const QString firstArg = positionalArguments.first();
+        
+        // Check if it's a telnet:// URI
+        if (firstArg.startsWith("telnet://", Qt::CaseInsensitive)) {
+            telnetUri = firstArg;
+            qDebug() << "main: Detected telnet URI:" << telnetUri;
+            
+            if (!firstInstanceOfMudlet) {
+                // Another instance is running - we'll need to send the URI to it
+                // For now, just start the first instance normally which will handle it
+                // TODO: Implement telnet URI forwarding via MudletInstanceCoordinator
+                qDebug() << "main: Another Mudlet instance is running, URI handling in existing instance not yet implemented";
+                // For now, just proceed to start this instance which will handle the URI
             }
-            return 1;
+        } else {
+            // It's a package file
+            const QString absPath = QDir(firstArg).absolutePath();
+            instanceCoordinator->queuePackage(absPath);
+            if (!firstInstanceOfMudlet) {
+                const bool successful = instanceCoordinator->installPackagesRemotely();
+                if (successful) {
+                    return 0;
+                }
+                return 1;
+            }
         }
     }
 
@@ -637,6 +656,14 @@ int main(int argc, char* argv[])
     settings.setValue(".mpackage", "MudletPackage");
     settings.setValue("MudletPackage/.", "Mudlet Package");
     settings.setValue("MudletPackage/shell/open/command/.", "mudlet %1");
+    
+    // Register telnet:// protocol handler
+    const QString mudletExe = QCoreApplication::applicationFilePath().replace('/', '\\');
+    settings.setValue("telnet/.", "URL:Telnet Protocol");
+    settings.setValue("telnet/URL Protocol", "");
+    settings.setValue("telnet/DefaultIcon/.", mudletExe + ",1");
+    settings.setValue("telnet/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
+    qDebug() << "main: Registered Mudlet as telnet:// protocol handler";
 #endif
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.
@@ -679,9 +706,15 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles]() {
+    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri]() {
         // ensure Mudlet singleton is initialised before calling profile loading
-        mudlet::self()->startAutoLogin(cliProfiles);
+        if (!telnetUri.isEmpty()) {
+            // Handle telnet URI if provided
+            mudlet::self()->handleTelnetUri(telnetUri);
+        } else {
+            // Normal profile auto-login
+            mudlet::self()->startAutoLogin(cliProfiles);
+        }
     });
 
 #if defined(INCLUDE_UPDATER)
