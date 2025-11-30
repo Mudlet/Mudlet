@@ -54,7 +54,7 @@ private:
     QMutex mMutex;
     QString mServerName;
     QStringList mQueuedPackagePaths;
-    QString mQueuedTelnetUri;  // Store telnet URI for forwarding
+    QString mQueuedTelnetUri;  // Store telnet URI for forwarding (single URI, last one wins)
 };
 
 #endif // MUDLETINSTANCECOORDINATOR_H

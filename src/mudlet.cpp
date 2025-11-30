@@ -4363,7 +4363,7 @@ mudlet::TelnetUriData mudlet::parseTelnetUri(const QString& uri)
     // Extract host
     data.host = url.host();
     if (data.host.isEmpty()) {
-        qDebug() << "mudlet::parseTelnetUri() - URI missing host:" << uri;
+        qDebug() << "mudlet::parseTelnetUri() - URI missing host";
         data.valid = false;
         return data;
     }
@@ -4428,10 +4428,11 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
         return QString();
     }
     
-    // Generate profile name: "hostname" or "hostname:port" for non-standard ports
+    // Generate profile name: "hostname" or "hostname_port" for non-standard ports
+    // Use underscore instead of colon for Windows filesystem compatibility
     QString profileName = uriData.host;
     if (uriData.port != 23) {
-        profileName += qsl(":%1").arg(uriData.port);
+        profileName += qsl("_%1").arg(uriData.port);
     }
     
     // Handle name collisions by appending -2, -3, etc.
@@ -4475,7 +4476,7 @@ void mudlet::handleTelnetUri(const QString& uri)
     // Parse the URI
     TelnetUriData uriData = parseTelnetUri(uri);
     if (!uriData.valid) {
-        qWarning() << "mudlet::handleTelnetUri() - Invalid telnet URI:" << uri;
+        qWarning() << "mudlet::handleTelnetUri() - Invalid telnet URI (credentials redacted)";
         // Fall back to showing connection dialog
         slot_showConnectionDialog();
         return;
