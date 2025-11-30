@@ -400,14 +400,18 @@ int main(int argc, char* argv[])
         // Check if it's a telnet:// URI
         if (firstArg.startsWith("telnet://", Qt::CaseInsensitive)) {
             telnetUri = firstArg;
+            instanceCoordinator->queueTelnetUri(telnetUri);
             qDebug() << "main: Detected telnet URI:" << telnetUri;
             
             if (!firstInstanceOfMudlet) {
-                // Another instance is running - we'll need to send the URI to it
-                // For now, just start the first instance normally which will handle it
-                // TODO: Implement telnet URI forwarding via MudletInstanceCoordinator
-                qDebug() << "main: Another Mudlet instance is running, URI handling in existing instance not yet implemented";
-                // For now, just proceed to start this instance which will handle the URI
+                // Forward to existing instance
+                const bool successful = instanceCoordinator->forwardTelnetUriToRunningInstance();
+                if (successful) {
+                    qDebug() << "main: Telnet URI forwarded to existing Mudlet instance";
+                    return 0;
+                }
+                // If forwarding failed, continue to start this instance
+                qDebug() << "main: Failed to forward URI, starting new instance";
             }
         } else {
             // It's a package file
