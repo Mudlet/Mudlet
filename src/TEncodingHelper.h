@@ -43,6 +43,10 @@ public:
 private:
     static bool isCustomEncoding(const QByteArray& encoding);
     static std::optional<QStringConverter::Encoding> getQtEncoding(const QByteArray& encoding);
+    static bool hasLookupTable(const QByteArray& encoding);
+    static QString decodeWithLookupTable(const QByteArray& bytes, const QByteArray& encoding);
+    static QByteArray encodeWithLookupTable(const QString& str, const QByteArray& encoding);
+    static bool canEncodeWithLookupTable(const QString& str, const QByteArray& encoding);
 };
 
 #endif // TENCODINGHELPER_H
