@@ -1900,6 +1900,10 @@ int TLuaInterpreter::tempAlias(lua_State* L)
         Q_ASSERT_X(alias,
                    "TLuaInterpreter::tempAlias(...)",
                    "Got a positive result from LuaInterpreter::startTempAlias(...) but that failed to produce pointer to it from Host::mAliasUnit::getAlias(...)");
+        if (!alias) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         alias->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, alias);
         lua_pushvalue(L, 2);
@@ -2380,6 +2384,10 @@ int TLuaInterpreter::tempKey(lua_State* L)
         Q_ASSERT_X(key,
                    "TLuaInterpreter::tempKey(...)",
                    "Got a positive result from LuaInterpreter::startTempKey(...) but that failed to produce pointer to it from Host::mKeyUnit::getKey(...)");
+        if (!key) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         key->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, key);
         lua_pushvalue(L, argIndex);
@@ -2533,6 +2541,10 @@ int TLuaInterpreter::tempTimer(lua_State* L)
         Q_ASSERT_X(timer,
                    "TLuaInterpreter::tempTimer(...)",
                    "Got a positive result from LuaInterpreter::startTempTimer(...) but that failed to produce pointer to it from Host::mTimerUnit::getTimer(...)");
+        if (!timer) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         timer->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, timer);
         lua_pushvalue(L, 2);
@@ -2645,12 +2657,11 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 
 
         auto host = hostManager.getHost(profile);
-        const auto loaded = static_cast<bool>(host);
         lua_pushstring(L, "loaded");
-        lua_pushboolean(L, loaded);
+        lua_pushboolean(L, host != nullptr);
         lua_settable(L, -3);
 
-        if (loaded) {
+        if (host) {
             auto [hostName, hostPort, connected] = host->mTelnet.getConnectionInfo();
 
             lua_pushstring(L, "connected");

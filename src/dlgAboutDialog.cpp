@@ -851,9 +851,9 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString luaSql_Sqlite3Header(tr("<h2><u>LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).</u></h2>"
                                     "<h3>Copyright © 2003-2019, The Kepler Project</h3>"));
 
-    QString lrexlib_pcreHeader(tr("<h2><u>Lrexlib-pcre -  Regular expression library binding (PCRE flavour).</u></h2>"
-                                  "<h3>Copyright © Reuben Thomas 2000-2020<br>"
-                                  "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
+    QString lrexlib_pcre2Header(tr("<h2><u>Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).</u></h2>"
+                                   "<h3>Copyright © Reuben Thomas 2000-2020<br>"
+                                   "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
@@ -944,7 +944,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                luaYajlHeader,                  //  8 - lua_yajl header - translatable
                                                luaUTF8Header,                  //  9 - luautf8 header - translatable
                                                luaSql_Sqlite3Header,           // 10 - luaSql_Sqlite3 header - translatable
-                                               lrexlib_pcreHeader,             // 11 - lrexlib_pcre header - translatable
+                                               lrexlib_pcre2Header,            // 11 - lrexlib_pcre2 header - translatable
                                                MIT_Body));                     // 12 - six copies of the body MIT for all of the above - not translatable
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)

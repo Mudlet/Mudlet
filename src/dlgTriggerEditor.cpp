@@ -1757,6 +1757,9 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     // Taken from slot_scriptMainAreaEditHandler():
                     // Note the handler item being edited:
                     mpScriptsMainAreaEditHandlerItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
+                    if (!mpScriptsMainAreaEditHandlerItem) {
+                        break;
+                    }
                     // Copy the event name to the entry widget:
                     mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(mpScriptsMainAreaEditHandlerItem->text());
                     // Activate editing flag:
@@ -6470,7 +6473,8 @@ void dlgTriggerEditor::saveVar()
     if (!varUnit->shouldSave(variable)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
         pItem->setForeground(0, QBrush(QColor("grey")));
-        pItem->setToolTip(0, QString());
+        const QString reason = varUnit->getUnsaveableReason(variable);
+        pItem->setToolTip(0, reason.isEmpty() ? QString() : utils::richText(reason));
         pItem->setCheckState(0, Qt::Unchecked);
     } else if (varUnit->isSaved(variable)) {
         pItem->setCheckState(0, Qt::Checked);
@@ -7622,7 +7626,8 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     if (!vu->shouldSave(var)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
         pItem->setForeground(0, QBrush(QColor("grey")));
-        pItem->setToolTip(0, "");
+        const QString reason = vu->getUnsaveableReason(var);
+        pItem->setToolTip(0, reason.isEmpty() ? QString() : utils::richText(reason));
     } else if (vu->isSaved(var)) {
         pItem->setCheckState(0, Qt::Checked);
     }
@@ -9849,12 +9854,8 @@ void dlgTriggerEditor::slot_deleteItemOrGroup()
     }
 }
 
-void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_saveSelectedItem()
 {
-    if (!pItem) {
-        return;
-    }
-
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         saveTrigger();

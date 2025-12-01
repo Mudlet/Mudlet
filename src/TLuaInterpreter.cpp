@@ -2747,7 +2747,9 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
     if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
         const int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
         auto checkItem = moduleManager->moduleTable->item(row, 2);
-        checkItem->setCheckState(Qt::Checked);
+        if (checkItem) {
+            checkItem->setCheckState(Qt::Checked);
+        }
     }
 
     lua_pushboolean(L, true);
@@ -2767,7 +2769,9 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
     if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
         const int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
         auto checkItem = moduleManager->moduleTable->item(row, 2);
-        checkItem->setCheckState(Qt::Unchecked);
+        if (checkItem) {
+            checkItem->setCheckState(Qt::Unchecked);
+        }
     }
 
     lua_pushboolean(L, true);
@@ -5637,7 +5641,11 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre"), tr("Some functions may not be available."));
+    loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre2"));
+    if (!loaded) {
+         loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre"), tr("Some regular expression functions may not be available."), QString(), qsl("rex_pcre2"));
+    }
+
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }

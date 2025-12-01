@@ -6,7 +6,7 @@
 		"dockerfile": "Dockerfile",
 		// Update 'VARIANT' to pick an Debian / Ubuntu OS version: debian-12, debian-11, ubuntu-24.04, ubuntu-22.04
 		// Use Debian 12, Debian 11, Ubuntu 22.04 or Ubuntu 24.04 on local arm64/Apple Silicon
-		"args": { "VARIANT": "debian-12" }
+		"args": { "VARIANT": "debian-13" }
 	},
 	"runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
 
@@ -16,7 +16,8 @@
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
 		"ms-vscode.cpptools",
-		"ms-vscode.cmake-tools"
+		"ms-vscode.cmake-tools",
+		"ms-dotnettools.vscode-dotnet-runtime"
 	],
 
 	"forwardPorts": [5900, 5901, 6080],
