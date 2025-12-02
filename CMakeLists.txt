@@ -78,6 +78,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(WITH_SENTRY "Enable crash reporting via Sentry" OFF)
+option(SENTRY_SEND_DEBUG "Send debug files to Sentry after build" OFF)
+
 find_package(Git REQUIRED)
 # Get Git SHA1 hash
 execute_process(
@@ -174,6 +177,13 @@ if(USE_OWN_QTKEYCHAIN)
     SUBMODULE_PATH "3rdparty/qtkeychain"
     READABLE_NAME "QtKeychain")
   add_subdirectory(3rdparty/qtkeychain)
+
+  # Handle both old (files in qtkeychain/) and new (files in qtkeychain/qtkeychain/) directory structures
+  # so includes via <qtkeychain/keychain.h> work in both cases
+  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qtkeychain/qtkeychain/keychain.h")
+    # Old structure: add 3rdparty to include path so <qtkeychain/keychain.h> resolves correctly
+    target_include_directories(qt6keychain PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty>)
+  endif()
 endif()
 
 git_submodule_init(
