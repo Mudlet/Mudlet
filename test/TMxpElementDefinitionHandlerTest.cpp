@@ -204,6 +204,42 @@ private slots:
         }
         QCOMPARE(mxpProcessor.getMxpTagProcessor().getEntityResolver().getResolution("&ob;"), "lamp");
     }
+
+    void testIncompleteNumericTagNoEncodingCorruption()
+    {
+        TMxpStubClient stub;
+        TMxpProcessor processor(&stub);
+
+        // Test the specific issue: "<33" (incomplete tag) followed by another '<' which triggers error recovery
+        // This should not cause encoding corruption (question marks) in subsequent text
+        QString testInput = "<33<b>café</b>";
+
+        QString result;
+        TMxpProcessingResult lastResult = HANDLER_FALL_THROUGH;
+
+        for (int i = 0; i < testInput.length(); ++i) {
+            QChar qch = testInput[i];
+            char ch = qch.toLatin1(); // Convert to single byte for MXP processing
+            
+            lastResult = processor.processMxpInput(ch, true);
+            
+            if (lastResult == HANDLER_INSERT_ENTITY_SYS) {
+                result += processor.getEntityValue();
+            } else if (lastResult == HANDLER_FALL_THROUGH) {
+                result += qch; // Use original QChar to preserve Unicode
+            }
+        }
+
+        // The result should not contain question marks (encoding corruption indicators)
+        QVERIFY2(!result.contains("?"), qPrintable(QString("Result contained '?': %1").arg(result)));
+
+        // Should contain the recovered incomplete tag "<33"
+        QVERIFY2(result.contains("<33"), qPrintable(QString("Expected to recover '<33', got: %1").arg(result)));
+
+        // Should preserve the text content 
+        QVERIFY2(result.contains("café") || result.contains("caf"), 
+                 qPrintable(QString("Expected to preserve 'café', got: %1").arg(result)));
+    }
 };
 
 #include "TMxpElementDefinitionHandlerTest.moc"

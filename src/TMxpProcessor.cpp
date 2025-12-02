@@ -165,20 +165,12 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     && !mMxpTagBuilder.isQuotedSequence()
     && !mMxpTagBuilder.isInsideComment()) {
         // Error recovery: nested '<' inside a tag
-        // Decode using connection encoding for consistency
+        // Preserve the original bytes to avoid encoding corruption
         const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
-        const QByteArray encoding = mpMxpClient->getEncoding();
-        QString decoded;
         
-        if (encoding == qsl("UTF-8")) {
-            decoded = QString::fromStdString(rawBytes);
-        } else if (encoding == qsl("ISO 8859-1")) {
-            decoded = QString::fromLatin1(rawBytes.c_str(), static_cast<int>(rawBytes.length()));
-        } else {
-            decoded = TEncodingHelper::decode(QByteArray::fromRawData(rawBytes.c_str(), rawBytes.length()), encoding);
-        }
-        
-        lastEntityValue = qsl("<") + decoded;
+        // For incomplete tags, especially numeric ones like "<33", treat as literal text
+        // Use Latin1 encoding to preserve byte values and avoid encoding corruption
+        lastEntityValue = qsl("<") + QString::fromLatin1(rawBytes.c_str(), static_cast<int>(rawBytes.length()));
         mMxpTagBuilder.resetForNewTag();
         return HANDLER_INSERT_ENTITY_SYS;
     }
