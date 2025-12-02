@@ -27,8 +27,7 @@ bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
            encoding == "CP437" ||
            encoding == "CP667" ||
            encoding == "CP737" ||
-           encoding == "CP869" ||
-           encoding == "MEDIEVIA";
+           encoding == "CP869";
 }
 
 std::optional<QStringConverter::Encoding> TEncodingHelper::getQtEncoding(const QByteArray& encoding)
