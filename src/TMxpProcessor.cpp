@@ -183,20 +183,10 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         // Save raw tag content before it gets cleared by buildTag()
         // Note: getRawTagContent() returns content INCLUDING the closing '>'
         const std::string rawTagBytes = mMxpTagBuilder.getRawTagContent();
-        const QByteArray encoding = mpMxpClient->getEncoding();
         
-        // Build the tag content string with proper encoding
-        QString rawTagContent = qsl("<");
-        
-        // Decode the raw bytes using the proper encoding
-        if (encoding == qsl("UTF-8")) {
-            rawTagContent += QString::fromStdString(rawTagBytes);
-        } else if (encoding == qsl("ISO 8859-1")) {
-            rawTagContent += QString::fromLatin1(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
-        } else {
-            // For other encodings (GBK, BIG5, EUC-KR, etc.), use TEncodingHelper
-            rawTagContent += TEncodingHelper::decode(QByteArray::fromRawData(rawTagBytes.c_str(), rawTagBytes.length()), encoding);
-        }
+        // Build the tag content string preserving byte values to avoid encoding corruption
+        // Use Latin1 to preserve original bytes without conversion artifacts
+        QString rawTagContent = qsl("<") + QString::fromLatin1(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
         
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 

@@ -240,6 +240,39 @@ private slots:
         QVERIFY2(result.contains("café") || result.contains("caf"), 
                  qPrintable(QString("Expected to preserve 'café', got: %1").arg(result)));
     }
+
+    void testMalformedTagsPreserveEncoding()
+    {
+        TMxpStubClient stub;
+        TMxpProcessor processor(&stub);
+        
+        // Test various malformed tag scenarios that could cause encoding issues
+        QStringList testCases = {
+            "<33 text",         // Incomplete numeric tag with space 
+            "<invalid café",    // Invalid tag name with accented chars
+        };
+        
+        for (const QString& testInput : testCases) {
+            QString result;
+            
+            for (int i = 0; i < testInput.length(); ++i) {
+                QChar qch = testInput[i];
+                char ch = qch.toLatin1();
+                
+                TMxpProcessingResult res = processor.processMxpInput(ch, true);
+                
+                if (res == HANDLER_INSERT_ENTITY_SYS) {
+                    result += processor.getEntityValue();
+                } else if (res == HANDLER_FALL_THROUGH) {
+                    result += qch;
+                }
+            }
+            
+            // Should not contain encoding corruption artifacts
+            QVERIFY2(!result.contains("?"), 
+                     qPrintable(QString("Test '%1' produced encoding corruption: %2").arg(testInput, result)));
+        }
+    }
 };
 
 #include "TMxpElementDefinitionHandlerTest.moc"

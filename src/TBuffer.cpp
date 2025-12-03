@@ -1228,7 +1228,8 @@ void TBuffer::processMxpWatchdogCallback()
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
         if (isMxpParserFrozen) {
-            mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
+            // Use Latin1 to preserve byte values and avoid encoding corruption during timeout recovery
+            mpHost->mMxpProcessor.setLastEntityValue(qsl("<") + QString::fromLatin1(currentTagContent.c_str(), static_cast<int>(currentTagContent.length())));
             QTimer::singleShot(0, [this] () {
                 const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
                 QString     lastEntityValue = mpHost->mMxpProcessor.getEntityValue();
