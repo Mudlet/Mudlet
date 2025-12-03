@@ -58,7 +58,13 @@ QString TEncodingHelper::decodeWithLookupTable(const QByteArray& bytes, const QB
         if (byte < 128) {
             result.append(QChar(byte));
         } else {
-            result.append(lookupTable.at(byte - 128));
+            const int index = byte - 128;
+
+            if (index < lookupTable.size()) {
+                result.append(lookupTable.at(index));
+            } else {
+                result.append(QChar(0xFFFD)); // Unicode replacement character
+            }
         }
     }
 

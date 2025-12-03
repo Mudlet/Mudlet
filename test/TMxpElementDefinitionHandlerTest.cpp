@@ -219,14 +219,21 @@ private slots:
 
         for (int i = 0; i < testInput.length(); ++i) {
             QChar qch = testInput[i];
-            char ch = qch.toLatin1(); // Convert to single byte for MXP processing
+            QByteArray utf8Bytes = QString(qch).toUtf8(); // Convert to UTF-8 encoding
             
-            lastResult = processor.processMxpInput(ch, true);
-            
-            if (lastResult == HANDLER_INSERT_ENTITY_SYS) {
-                result += processor.getEntityValue();
-            } else if (lastResult == HANDLER_FALL_THROUGH) {
-                result += qch; // Use original QChar to preserve Unicode
+            // Process each UTF-8 byte since processMxpInput expects single bytes
+            for (int byteIndex = 0; byteIndex < utf8Bytes.size(); ++byteIndex) {
+                char ch = utf8Bytes[byteIndex];
+                lastResult = processor.processMxpInput(ch, true);
+                
+                if (lastResult == HANDLER_INSERT_ENTITY_SYS) {
+                    result += processor.getEntityValue();
+                } else if (lastResult == HANDLER_FALL_THROUGH) {
+                    // Only add the original character on the last byte of the UTF-8 sequence
+                    if (byteIndex == utf8Bytes.size() - 1) {
+                        result += qch; // Use original QChar to preserve Unicode
+                    }
+                }
             }
         }
 
@@ -237,7 +244,7 @@ private slots:
         QVERIFY2(result.contains("<33"), qPrintable(QString("Expected to recover '<33', got: %1").arg(result)));
 
         // Should preserve the text content 
-        QVERIFY2(result.contains("café") || result.contains("caf"), 
+        QVERIFY2(result.contains("café"), 
                  qPrintable(QString("Expected to preserve 'café', got: %1").arg(result)));
     }
 
@@ -257,14 +264,21 @@ private slots:
             
             for (int i = 0; i < testInput.length(); ++i) {
                 QChar qch = testInput[i];
-                char ch = qch.toLatin1();
+                QByteArray utf8Bytes = QString(qch).toUtf8(); // Convert to UTF-8 encoding
                 
-                TMxpProcessingResult res = processor.processMxpInput(ch, true);
-                
-                if (res == HANDLER_INSERT_ENTITY_SYS) {
-                    result += processor.getEntityValue();
-                } else if (res == HANDLER_FALL_THROUGH) {
-                    result += qch;
+                // Process each UTF-8 byte since processMxpInput expects single bytes
+                for (int byteIndex = 0; byteIndex < utf8Bytes.size(); ++byteIndex) {
+                    char ch = utf8Bytes[byteIndex];
+                    TMxpProcessingResult res = processor.processMxpInput(ch, true);
+                    
+                    if (res == HANDLER_INSERT_ENTITY_SYS) {
+                        result += processor.getEntityValue();
+                    } else if (res == HANDLER_FALL_THROUGH) {
+                        // Only add the original character on the last byte of the UTF-8 sequence
+                        if (byteIndex == utf8Bytes.size() - 1) {
+                            result += qch; // Use original QChar to preserve Unicode
+                        }
+                    }
                 }
             }
             
