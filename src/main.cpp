@@ -671,7 +671,7 @@ int main(int argc, char* argv[])
     // Register telnet:// protocol handler
     const QString mudletExe = QCoreApplication::applicationFilePath().replace('/', '\\');
     settings.setValue("telnet/.", "URL:Telnet Protocol");
-    settings.setValue("telnet/URL Protocol", "");
+    settings.setValue("telnet/URL Protocol", QString());
     settings.setValue("telnet/DefaultIcon/.", mudletExe + ",1");
     settings.setValue("telnet/shell/open/command/.", qsl("\"%1\" \"%%1\"").arg(mudletExe));
     qDebug() << "main: Registered Mudlet as telnet:// protocol handler";
