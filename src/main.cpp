@@ -673,7 +673,7 @@ int main(int argc, char* argv[])
     settings.setValue("telnet/.", "URL:Telnet Protocol");
     settings.setValue("telnet/URL Protocol", "");
     settings.setValue("telnet/DefaultIcon/.", mudletExe + ",1");
-    settings.setValue("telnet/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
+    settings.setValue("telnet/shell/open/command/.", qsl("\"%1\" \"%%1\"").arg(mudletExe));
     qDebug() << "main: Registered Mudlet as telnet:// protocol handler";
 #endif
 
