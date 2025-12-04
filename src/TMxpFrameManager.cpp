@@ -381,7 +381,25 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     // Ensure minimum size for visibility
     if (frameWidth < 50) frameWidth = 100;
-    if (frameHeight < 20) frameHeight = 50;
+    
+    // For character-based height specs, handle minimum size more carefully
+    bool isCharacterHeight = frame->height.trimmed().endsWith('c', Qt::CaseInsensitive);
+    bool willHaveTitle = !frame->floating && !frame->title.isEmpty();
+    
+    // Apply minimum size for visibility to non-character-based frames
+    if (frameHeight < 20 && !isCharacterHeight) {
+        frameHeight = 50;
+    }
+    
+    // For character-based frames with titles, ensure minimum space for both header and adequate content
+    if (isCharacterHeight && willHaveTitle) {
+        // For "1c" with title: give enough space for gauges to be visible
+        // Minimum = header (24px) + generous content space for gauge display
+        int minFrameSize = 24 + 30; // Header + adequate content space for gauges
+        if (frameHeight < minFrameSize) {
+            frameHeight = minFrameSize;
+        }
+    }
     
     // Calculate position based on alignment
     int x = containerX;
@@ -461,8 +479,9 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     }
     
     // FLOATING attribute, empty title, or very small height = borderless frame without header
-    // Small frames (< 50px) don't have enough room for both a tab bar and content
-    bool showHeader = !frame->floating && !frame->title.isEmpty() && frameHeight >= 50;
+    // Exception: character-based frames with titles always show headers
+    bool showHeader = !frame->floating && !frame->title.isEmpty() && 
+                      (frameHeight >= 50 || (isCharacterHeight && willHaveTitle));
     const int tabBarHeight = showHeader ? 24 : 0;
     
 #ifdef DEBUG_MXP_PROCESSING
@@ -796,8 +815,6 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
         
         if (isHeight) {
             int result = chars * fm.lineSpacing();
-            // Account for frame overhead: TabWidget header (~24px) + container border (2px)
-            result += 26;
             return QSize(0, result);
         } else {
             int result = chars * fm.averageCharWidth();
