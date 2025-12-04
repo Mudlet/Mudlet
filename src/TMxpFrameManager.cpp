@@ -108,6 +108,7 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     frame->left = attributes.value(qsl("LEFT"));
     frame->top = attributes.value(qsl("TOP"));
     frame->title = attributes.value(qsl("TITLE"), name);
+    frame->hasExplicitTitle = attributes.contains(qsl("TITLE"));
     frame->scrolling = attributes.value(qsl("SCROLLING"), qsl("YES")).toUpper() == qsl("YES");
     frame->floating = attributes.contains(qsl("FLOATING"));
     frame->dockFrame = attributes.value(qsl("DOCK"));
@@ -384,18 +385,24 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     // For character-based height specs, handle minimum size more carefully
     bool isCharacterHeight = frame->height.trimmed().endsWith('c', Qt::CaseInsensitive);
-    bool willHaveTitle = !frame->floating && !frame->title.isEmpty();
+    bool willHaveTitle = !frame->floating && frame->hasExplicitTitle;
     
     // Apply minimum size for visibility to non-character-based frames
     if (frameHeight < 20 && !isCharacterHeight) {
         frameHeight = 50;
     }
     
-    // For character-based frames with titles, ensure minimum space for both header and adequate content
-    if (isCharacterHeight && willHaveTitle) {
-        // For "1c" with title: give enough space for gauges to be visible
-        // Minimum = header (24px) + generous content space for gauge display
-        int minFrameSize = 24 + 30; // Header + adequate content space for gauges
+    // For character-based frames, ensure adequate space regardless of title
+    if (isCharacterHeight) {
+        int minFrameSize;
+        if (willHaveTitle) {
+            // Has explicit title: minimum = header (24px) + content space (30px)
+            minFrameSize = 24 + 30;
+        } else {
+            // No title: just ensure adequate content space (30px minimum)
+            minFrameSize = 30;
+        }
+        
         if (frameHeight < minFrameSize) {
             frameHeight = minFrameSize;
         }
@@ -478,9 +485,9 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         mpHost->setBorders(mMxpBorders);
     }
     
-    // FLOATING attribute, empty title, or very small height = borderless frame without header
-    // Exception: character-based frames with titles always show headers
-    bool showHeader = !frame->floating && !frame->title.isEmpty() && 
+    // FLOATING attribute, no explicit title, or very small height = borderless frame without header
+    // Exception: character-based frames with explicit titles always show headers
+    bool showHeader = !frame->floating && frame->hasExplicitTitle && 
                       (frameHeight >= 50 || (isCharacterHeight && willHaveTitle));
     const int tabBarHeight = showHeader ? 24 : 0;
     

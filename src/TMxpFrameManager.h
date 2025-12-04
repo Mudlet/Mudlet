@@ -41,6 +41,7 @@ class TDockWidget;
 struct TMxpFrame {
     QString name;
     QString title;
+    bool hasExplicitTitle = false; // True if TITLE attribute was explicitly provided
     bool isInternal = true;
     QString align;          // "top", "bottom", "left", "right", "client"
     QString width;          // "40c", "25%", "350px"
