@@ -4402,7 +4402,7 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
         QString profilePort = readProfileData(profileName, qsl("port_number"));
         
         // Match based on host and port
-        if (profileHost.toLower() == host.toLower() && profilePort.toInt() == port) {
+        if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
             // Found a match! If multiple matches, use the most recently modified one
             QString profilePath = getMudletPath(enums::profileHomePath, profileName);
             QFileInfo profileInfo(profilePath);
