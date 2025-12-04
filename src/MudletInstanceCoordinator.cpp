@@ -182,7 +182,7 @@ bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
     
     if (socket.waitForConnected(WAIT_FOR_RESPONSE_MS)) {
         // Prepend "TELNET_URI:" to distinguish from package paths
-        const QString message = qsl("TELNET_URI:") + mQueuedTelnetUri;
+        const QString message = qsl("TELNET_URI:%1").arg(mQueuedTelnetUri);
         socket.write(message.toUtf8());
         socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
         socket.disconnectFromServer();
