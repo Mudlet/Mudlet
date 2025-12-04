@@ -348,7 +348,7 @@ public:
     void showedMuteAllMediaTutorial();
     bool experiencedMudletPlayer();
     BuildType getBuildType() const;
-    bool isUpdateable() const;
+    bool updateableBuild() const;
     QImage getSplashScreen();
 
     QString mAppBuild;

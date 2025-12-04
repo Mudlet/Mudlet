@@ -1890,7 +1890,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (mudlet::self()->isUpdateable() || (otherProfileVersion > mMaxVersion)) {
+        if (mudlet::self()->updateableBuild() || (otherProfileVersion > mMaxVersion)) {
             // EITHER this is release version - so it should not
             // support any map file versions higher that it was built for
             // OR it is a development version but the map version is too high

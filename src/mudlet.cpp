@@ -607,8 +607,8 @@ void mudlet::init()
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is an
     // updateable version, or if you're specifically trying to test Sparkle.
-    dactionUpdate->setVisible(isUpdateable() || qEnvironmentVariableIsSet("DEV_UPDATER"));
-    dactionChangelog->setVisible(isUpdateable() || qEnvironmentVariableIsSet("DEV_UPDATER"));
+    dactionUpdate->setVisible(updateableBuild() || qEnvironmentVariableIsSet("DEV_UPDATER"));
+    dactionChangelog->setVisible(updateableBuild() || qEnvironmentVariableIsSet("DEV_UPDATER"));
 
     // Show the report issue option only for PTBs:
     if (BuildType::PublicTest == getBuildType()) {
@@ -5318,7 +5318,7 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (isUpdateable() || qEnvironmentVariableIsSet("DEV_UPDATER")) {
+    if (updateableBuild() || qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // Only try and create an updater (which checks for updates online) if
         // this is an updateable version, or if you are testing Sparkle (env
         // flag set).
@@ -8618,12 +8618,12 @@ mudlet::BuildType mudlet::getBuildType() const
     return mBuildType;
 }
 
-bool mudlet::isUpdateable() const
+bool mudlet::updateableBuild() const
 {
     // Don't allow the uninitialised value to be used - trap it for builds where
     // QT_NO_DEBUG is NOT defined - Fail hard and fast if we don't know what
     // type of build we are:
-    Q_ASSERT_X(mBuildType != BuildType::Unknown, "mudlet::isUpdateable()", "mBuildType not (yet) determined!");
+    Q_ASSERT_X(mBuildType != BuildType::Unknown, "mudlet::updateableBuild()", "mBuildType not (yet) determined!");
 
     return (BuildType::Release == mBuildType
             || BuildType::PublicTest == mBuildType);

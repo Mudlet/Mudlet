@@ -379,7 +379,7 @@ void Updater::setupOnLinux()
     connect(feed, &dblsqd::Feed::ready, this, [=, this]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (!mudlet::self()->isUpdateable()) {
+        if (!mudlet::self()->updateableBuild()) {
             return;
         }
 
@@ -572,7 +572,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (!mudlet::self()->isUpdateable() || !updateAutomatically()) {
+    if (!mudlet::self()->updateableBuild() || !updateAutomatically()) {
         return false;
     }
 
