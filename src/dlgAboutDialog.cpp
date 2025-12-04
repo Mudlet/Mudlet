@@ -1130,7 +1130,7 @@ QString dlgAboutDialog::createBuildInfo() const
                       * but keep the text the same as used in the past for
                       * that.
                       */
-                     tr("CPU (64-bits)")
+                     tr("CPU (64-bits)"), // %6
 #else
                      //: This is shown for all other OSes than Windows.
                      tr("CPU"), // %6
@@ -1170,7 +1170,7 @@ QString dlgAboutDialog::createBuildInfo() const
                   * but keep the text the same as used in the past for
                   * that.
                   */
-                 tr("CPU (64-bits)")
+                 tr("CPU (64-bits)"), // %6
 #else
                  //: This is shown for all other OSes than Windows.
                  tr("CPU"), // %6
