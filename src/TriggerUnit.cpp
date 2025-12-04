@@ -160,18 +160,16 @@ TTrigger* TriggerUnit::getTrigger(int id)
 {
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TTrigger* TriggerUnit::getTriggerPrivate(int id)
 {
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool TriggerUnit::registerTrigger(TTrigger* pT)
@@ -273,15 +271,17 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     char* subject = strndup(utf8Ptr, utf8Length);
 #endif
 
+    // Set processing flag to prevent re-entrant cleanup during trigger execution
+    mIsProcessing = true;
+
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }
     free(subject);
 
-    for (auto& trigger : mCleanupList) {
-        delete trigger;
-    }
-    mCleanupList.clear();
+    // Clear processing flag and perform any deferred cleanup
+    mIsProcessing = false;
+    doCleanup();
 }
 
 void TriggerUnit::compileAll()
@@ -439,18 +439,21 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 
 void TriggerUnit::doCleanup()
 {
-    for (auto trigger : mCleanupList) {
-        delete trigger;
+    // Skip cleanup if we're currently processing triggers to prevent iterator invalidation
+    // Cleanup will be performed when processDataStream() completes
+    if (mIsProcessing) {
+        return;
     }
-    mCleanupList.clear();
+
+    QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
+    while (itTrigger.hasNext()) {
+        auto pTrigger = itTrigger.next();
+        itTrigger.remove();
+        delete pTrigger;
+    }
 }
 
 void TriggerUnit::markCleanup(TTrigger* pT)
 {
-    for (auto trigger : mCleanupList) {
-        if (trigger == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }

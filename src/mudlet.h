@@ -58,7 +58,7 @@
 #include <QWindow>
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include <../3rdparty/qtkeychain/keychain.h>
+#include <qtkeychain/keychain.h>
 #else
 #include <qt6keychain/keychain.h>
 #endif
@@ -331,6 +331,7 @@ public:
     void showOptionsDialog(const QString&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
@@ -559,7 +560,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
-
+    void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);

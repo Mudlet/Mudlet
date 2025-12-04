@@ -1457,8 +1457,8 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
             // If successful will get to HERE...
 
-        } else {
-            return {false,
+        }
+        return {false,
                     tr("Required file \"%1\" was not found in the staging area. "
                        "This area contains the Mudlet items chosen for the package, "
                        "which you selected to be included in the package file. "
@@ -1466,7 +1466,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                        "\"%2\" - "
                        "Do you have the necessary permissions and free disk-space?")
                             .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
-        }
     }
 
     if (isOk) {

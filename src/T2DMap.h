@@ -247,7 +247,7 @@ public:
     // centered on mRoomID - it seems to be needed if the room concerned
     // is being moved by the mouse as part of a selection:
     bool mShiftMode = false;
-    QComboBox* arealist_combobox = nullptr;
+    QPointer<QComboBox> arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom = 0;
     int mCustomLinesRoomTo = 0;
@@ -413,8 +413,8 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
 
-    dlgRoomProperties* mpDlgRoomProperties = nullptr;
-    dlgMapLabel* mpDlgMapLabel = nullptr;
+    QPointer<dlgRoomProperties> mpDlgRoomProperties;
+    QPointer<dlgMapLabel> mpDlgMapLabel;
     // Track the area last viewed so we can raise an event when it changes,
     // initialised to an invalid area that is different to the one that mAreaID
     // is initialised to - so that the xyzoom gets read for the first area that

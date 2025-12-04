@@ -89,9 +89,8 @@ bool TVarLessThan(TVar* varA, TVar* varB)
     // of whether one or both of the QStrings was NOT actually a number
     if (a.toInt(&isAOk) && b.toInt(&isBOk) && isAOk && isBOk) {
         return a.toInt() < b.toInt();
-    } else {
-        return a.toLower() < b.toLower();
     }
+    return a.toLower() < b.toLower();
 }
 
 QList<TVar*> TVar::getChildren(const bool isToSort)

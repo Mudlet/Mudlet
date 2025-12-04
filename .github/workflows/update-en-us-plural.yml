@@ -16,7 +16,7 @@ jobs:
     - uses: actions/checkout@v6
       with:
         ref: development
-        submodules: true
+        submodules: recursive
 
     - name: update plural american english file
       uses: Mudlet/lupdate-action@master

@@ -126,9 +126,8 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
         mudlet::smDebugMode = false;
         mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
-    } else {
-        return QObject::eventFilter(obj, event);
     }
+    return QObject::eventFilter(obj, event);
 }
 
 /*static*/ void mudlet::start()
@@ -2489,9 +2488,8 @@ bool mudlet::saveWindowLayout()
         }
         mHasSavedLayout = true;
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::loadWindowLayout()
@@ -3942,24 +3940,36 @@ void mudlet::slot_showAboutDialog()
 void mudlet::slot_toggleTimeStamp()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->timeStampButton->click();
 }
 
 void mudlet::slot_toggleReplay()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->replayButton->click();
 }
 
 void mudlet::slot_toggleLogging()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->logButton->click();
 }
 
 void mudlet::slot_toggleEmergencyStop()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->emergencyStop->click();
 }
 
@@ -4427,6 +4437,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
     pHost->raiseEvent(event);
     pHost->mIsProfileLoadingSequence = false;
+    emit signal_profileLoaded();
 }
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
@@ -5433,12 +5444,11 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     // load an old profile if there is any
-    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
-        pHost = mHostManager.getHost(profile_name);
-        if (!pHost) {
-            return pHost;
-        }
-    } else {
+    if (!mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+        return pHost;
+    }
+    pHost = mHostManager.getHost(profile_name);
+    if (!pHost) {
         return pHost;
     }
 
@@ -6755,7 +6765,7 @@ QImage mudlet::getSplashScreen()
             auto eggFileName = qsl(":/splash/Mudlet_splashscreen_other_%1.png").arg(egg, 2, 10, QLatin1Char('0'));
             return QImage(eggFileName);
         }
-        // For the zeroth case just rotate the picture 180 degrees:
+        // For the zeroth (normal) case just rotate the picture 180 degrees:
         const QImage original((BuildType::Release == getBuildType())
                               ? qsl(":/splash/Mudlet_splashscreen_main.png")
                               : (BuildType::PublicTest == getBuildType())
@@ -6768,14 +6778,6 @@ QImage mudlet::getSplashScreen()
         return original.mirrored(true, true);
 #endif
     }
-    // else fixed splashscreen dependent on build type:
-    // For the zeroth case just rotate the picture 180 degrees:
-    return QImage((BuildType::Release == getBuildType())
-                      ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                      : (BuildType::PublicTest == getBuildType())
-                        ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
-                        : qsl(":/splash/Mudlet_splashscreen_development.png"));
-#else
     return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN
 }

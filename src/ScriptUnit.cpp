@@ -127,18 +127,16 @@ TScript* ScriptUnit::getScript(int id)
 {
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TScript* ScriptUnit::getScriptPrivate(int id)
 {
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool ScriptUnit::registerScript(TScript* pT)
