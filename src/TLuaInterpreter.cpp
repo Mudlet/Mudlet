@@ -5641,9 +5641,12 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre2"));
-    if (!loaded) {
-         loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre"), tr("Some regular expression functions may not be available."), QString(), qsl("rex_pcre2"));
+    loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre2"), QString(), QString(), qsl("rex_pcre"));
+    if (loaded) {
+        // PCRE2 renamed fullinfo() to patterninfo(), add wrapper for backwards compatibility
+        luaL_dostring(pGlobalLua, "rex_pcre.fullinfo = rex_pcre.patterninfo");
+    } else {
+        loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre"), tr("Some regular expression functions may not be available."));
     }
 
     while (!modLoadMessageQueue.isEmpty()) {
