@@ -405,7 +405,7 @@ int main(int argc, char* argv[])
         const QString firstArg = positionalArguments.first();
         
         // Check if it's a telnet:// URI
-        if (firstArg.startsWith("telnet://", Qt::CaseInsensitive)) {
+        if (firstArg.startsWith(qsl("telnet://"), Qt::CaseInsensitive)) {
             telnetUri = firstArg;
             instanceCoordinator->queueTelnetUri(telnetUri);
             qDebug() << "main: Detected telnet URI:" << telnetUri;
