@@ -571,9 +571,7 @@ void EditorDeleteItemCommand::redo()
     // Track if any items are valid (not invalidated by Lua API changes)
     mLastOperationWasValid = false;
 
-    // Important: Set mpHost to null before deleting to prevent items from trying to
-    // unregister themselves during destruction (which could cause iterator invalidation
-    // or access to partially-destroyed parent items)
+    // First pass: validate that items still exist and have the expected names
     for (const auto& info : mDeletedItems) {
         switch (mViewType) {
         case EditorViewType::cmTriggerView: {
@@ -589,23 +587,6 @@ void EditorDeleteItemCommand::redo()
             }
             // Valid item found
             mLastOperationWasValid = true;
-            if (trigger) {
-                // Nullify mpHost on trigger and all children recursively
-                trigger->mpHost = nullptr;
-                std::function<void(TTrigger*)> nullifyChildren = [&nullifyChildren](TTrigger* t) {
-                    if (!t || !t->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto child : *t->mpMyChildrenList) {
-                        if (!child) {
-                            continue;
-                        }
-                        child->mpHost = nullptr;
-                        nullifyChildren(child);
-                    }
-                };
-                nullifyChildren(trigger);
-            }
             break;
         }
         case EditorViewType::cmAliasView: {
@@ -621,23 +602,6 @@ void EditorDeleteItemCommand::redo()
             }
             // Valid item found
             mLastOperationWasValid = true;
-            if (alias) {
-                // Nullify mpHost on alias and all children recursively
-                alias->mpHost = nullptr;
-                std::function<void(TAlias*)> nullifyChildren = [&nullifyChildren](TAlias* a) {
-                    if (!a || !a->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto child : *a->mpMyChildrenList) {
-                        if (!child) {
-                            continue;
-                        }
-                        child->mpHost = nullptr;
-                        nullifyChildren(child);
-                    }
-                };
-                nullifyChildren(alias);
-            }
             break;
         }
         case EditorViewType::cmTimerView: {
@@ -653,23 +617,6 @@ void EditorDeleteItemCommand::redo()
             }
             // Valid item found
             mLastOperationWasValid = true;
-            if (timer) {
-                // Nullify mpHost on timer and all children recursively
-                timer->mpHost = nullptr;
-                std::function<void(TTimer*)> nullifyChildren = [&nullifyChildren](TTimer* t) {
-                    if (!t || !t->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto child : *t->mpMyChildrenList) {
-                        if (!child) {
-                            continue;
-                        }
-                        child->mpHost = nullptr;
-                        nullifyChildren(child);
-                    }
-                };
-                nullifyChildren(timer);
-            }
             break;
         }
         case EditorViewType::cmScriptView: {
@@ -685,23 +632,6 @@ void EditorDeleteItemCommand::redo()
             }
             // Valid item found
             mLastOperationWasValid = true;
-            if (script) {
-                // Nullify mpHost on script and all children recursively
-                script->mpHost = nullptr;
-                std::function<void(TScript*)> nullifyChildren = [&nullifyChildren](TScript* s) {
-                    if (!s || !s->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto child : *s->mpMyChildrenList) {
-                        if (!child) {
-                            continue;
-                        }
-                        child->mpHost = nullptr;
-                        nullifyChildren(child);
-                    }
-                };
-                nullifyChildren(script);
-            }
             break;
         }
         case EditorViewType::cmKeysView: {
@@ -717,23 +647,6 @@ void EditorDeleteItemCommand::redo()
             }
             // Valid item found
             mLastOperationWasValid = true;
-            if (key) {
-                // Nullify mpHost on key and all children recursively
-                key->mpHost = nullptr;
-                std::function<void(TKey*)> nullifyChildren = [&nullifyChildren](TKey* k) {
-                    if (!k || !k->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto child : *k->mpMyChildrenList) {
-                        if (!child) {
-                            continue;
-                        }
-                        child->mpHost = nullptr;
-                        nullifyChildren(child);
-                    }
-                };
-                nullifyChildren(key);
-            }
             break;
         }
         case EditorViewType::cmActionView: {
@@ -749,23 +662,6 @@ void EditorDeleteItemCommand::redo()
             }
             // Valid item found
             mLastOperationWasValid = true;
-            if (action) {
-                // Nullify mpHost on action and all children recursively
-                action->mpHost = nullptr;
-                std::function<void(TAction*)> nullifyChildren = [&nullifyChildren](TAction* a) {
-                    if (!a || !a->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto child : *a->mpMyChildrenList) {
-                        if (!child) {
-                            continue;
-                        }
-                        child->mpHost = nullptr;
-                        nullifyChildren(child);
-                    }
-                };
-                nullifyChildren(action);
-            }
             break;
         }
         default:
@@ -773,11 +669,11 @@ void EditorDeleteItemCommand::redo()
         }
     }
 
-    // Now manually unregister and delete all items
-    // Since mpHost is null on validated items, destructors won't try to unregister,
-    // so we must do it manually. Only delete items whose parent is not also being
-    // deleted (parent deletion handles children), and only if they still match the
-    // recorded name to avoid deleting unrelated items.
+    // Now manually unregister and delete all items.
+    // We nullify mpHost right before deleting each item to prevent destructors from
+    // trying to unregister. Only delete items whose parent is not also being deleted
+    // (parent deletion handles children), and only if they still match the recorded
+    // name to avoid deleting unrelated items.
     for (const auto& info : mDeletedItems) {
         // Skip items whose parent is also in the deletion list
         // (they will be automatically deleted when the parent is deleted)
@@ -801,6 +697,7 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             mpHost->getTriggerUnit()->unregisterTrigger(trigger);
+            trigger->mpHost = nullptr;
             delete trigger;
             break;
         }
@@ -816,6 +713,7 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             mpHost->getAliasUnit()->unregisterAlias(alias);
+            alias->mpHost = nullptr;
             delete alias;
             break;
         }
@@ -831,6 +729,7 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             mpHost->getTimerUnit()->unregisterTimer(timer);
+            timer->mpHost = nullptr;
             delete timer;
             break;
         }
@@ -846,6 +745,7 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             mpHost->getScriptUnit()->unregisterScript(script);
+            script->mpHost = nullptr;
             delete script;
             break;
         }
@@ -861,6 +761,7 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             mpHost->getKeyUnit()->unregisterKey(key);
+            key->mpHost = nullptr;
             delete key;
             break;
         }
@@ -876,6 +777,7 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             mpHost->getActionUnit()->unregisterAction(action);
+            action->mpHost = nullptr;
             delete action;
             break;
         }
