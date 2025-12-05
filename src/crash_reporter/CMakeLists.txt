@@ -5,6 +5,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(NOT SENTRY_DSN OR SENTRY_DSN STREQUAL "")
+    message(FATAL_ERROR
+        "WITH_SENTRY=ON but SENTRY_DSN is empty!\n"
+        "Please provide a SENTRY_DSN via -DSENTRY_DSN=...\n"
+        "For testing/development, you can use a placeholder DSN like '-DSENTRY_DSN=test'"
+    )
+endif()
+
 find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
 
 add_executable(MudletCrashReporter main.cpp)
