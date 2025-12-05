@@ -148,6 +148,14 @@ CMAKE_ARGS=(
   -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
 )
 
+if [ "${WITH_SENTRY}" = "ON" ]; then
+    CMAKE_ARGS+=("-DWITH_SENTRY=ON")
+fi
+
+if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
+    CMAKE_ARGS+=("-DSENTRY_SEND_DEBUG=1")
+fi
+
 # Enable ccache for CMake
 export WITH_CCACHE="YES"
 if [ "${WITH_CCACHE}" = "YES" ]; then

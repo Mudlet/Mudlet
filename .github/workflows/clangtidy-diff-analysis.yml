@@ -35,7 +35,7 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
         # https://github.com/ZedThree/clang-tidy-review/issues/10
         ref: ${{ github.event.pull_request.head.sha }}
@@ -104,7 +104,7 @@ jobs:
         # Install all required dependencies
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
         sudo apt-get install libsecret-1-dev ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev \
-          libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
+          libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
 
         # Install lua-yajl early to generate translation statistics
         luarocks install --local lua-yajl

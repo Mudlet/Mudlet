@@ -284,10 +284,9 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
 dlgRoomExits::~dlgRoomExits()
 {
-    delete mpAction_otherAreaExit;
-    delete mpAction_inAreaExit;
-    delete mpAction_invalidExit;
-    delete mpAction_noExit;
+    // QActions are children of this dialog (created with 'this' as parent),
+    // so Qt's parent-child system handles their deletion automatically.
+    // Manual deletion here would cause double-delete crashes.
 }
 
 void dlgRoomExits::slot_endEditSpecialExits()

@@ -180,6 +180,7 @@ private slots:
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
     void slot_changeShowTabConnectionIndicators(bool state);
+    void slot_crashReportPolicyChanged(int index);
 
 
 signals:
