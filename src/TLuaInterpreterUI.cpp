@@ -325,25 +325,25 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, key);
+                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 if (isMain(windowName)) {
                     windowName.clear();
                 }
             } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("commandLineName"), Qt::CaseInsensitive)) {
-                commandLineName = getVerifiedString(L, __func__, -1, key);
+                commandLineName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasName = true;
             } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, key);
+                x = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasX = true;
             } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, key);
+                y = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasY = true;
             } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
-                width = getVerifiedInt(L, __func__, -1, key);
+                width = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasWidth = true;
             } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
-                height = getVerifiedInt(L, __func__, -1, key);
+                height = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasHeight = true;
             }
 
@@ -536,25 +536,25 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, key);
+                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 if (isMain(windowName)) {
                     windowName.clear();
                 }
             } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("miniConsoleName"), Qt::CaseInsensitive)) {
-                name = getVerifiedString(L, __func__, -1, key);
+                name = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasName = true;
             } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, key);
+                x = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasX = true;
             } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, key);
+                y = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasY = true;
             } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
-                width = getVerifiedInt(L, __func__, -1, key);
+                width = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasWidth = true;
             } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
-                height = getVerifiedInt(L, __func__, -1, key);
+                height = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasHeight = true;
             }
 
@@ -638,25 +638,25 @@ int TLuaInterpreter::createScrollBox(lua_State* L)
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, key);
+                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 if (isMain(windowName)) {
                     windowName.clear();
                 }
             } else if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("scrollBoxName"), Qt::CaseInsensitive)) {
-                name = getVerifiedString(L, __func__, -1, key);
+                name = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasName = true;
             } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
-                x = getVerifiedInt(L, __func__, -1, key);
+                x = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasX = true;
             } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
-                y = getVerifiedInt(L, __func__, -1, key);
+                y = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasY = true;
             } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
-                width = getVerifiedInt(L, __func__, -1, key);
+                width = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasWidth = true;
             } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
-                height = getVerifiedInt(L, __func__, -1, key);
+                height = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasHeight = true;
             }
 
@@ -916,19 +916,19 @@ int TLuaInterpreter::echoLink(lua_State* L)
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, key);
+                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
             } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
-                text = getVerifiedString(L, __func__, -1, key);
+                text = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasText = true;
             } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
                 parseCommandOrFunction(L, __func__, -1, command, luaReference);
                 hasCommand = true;
             } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive)) {
-                hint = getVerifiedString(L, __func__, -1, key);
+                hint = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasHint = true;
             } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("useCurrentLinkFormat"), Qt::CaseInsensitive)) {
-                useCurrentFormat = getVerifiedBool(L, __func__, -1, key);
+                useCurrentFormat = getVerifiedBool(L, __func__, -1, qPrintable(key));
             }
 
             lua_pop(L, 1);
@@ -1830,16 +1830,16 @@ int TLuaInterpreter::insertLink(lua_State* L)
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, key);
+                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
             } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
-                text = getVerifiedString(L, __func__, -1, key);
+                text = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasText = true;
             } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
                 parseCommandOrFunction(L, __func__, -1, command, luaReference);
                 hasCommand = true;
             } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("tooltip"), Qt::CaseInsensitive)) {
-                hint = getVerifiedString(L, __func__, -1, key);
+                hint = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasHint = true;
             } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
                 if (lua_isboolean(L, -1)) {
@@ -1952,9 +1952,9 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 
                 if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                     !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                    windowName = getVerifiedString(L, __func__, -1, key);
+                    windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
-                    text = getVerifiedString(L, __func__, -1, key);
+                    text = getVerifiedString(L, __func__, -1, qPrintable(key));
                     hasText = true;
                 } else if (!key.compare(QLatin1String("commands"), Qt::CaseInsensitive)) {
                     parseCommandsOrFunctionsTable(L, __func__, -1, commandList, luaReferences);
@@ -3572,36 +3572,36 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, key);
+                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
             } else if (!key.compare(QLatin1String("bgR"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("bgRed"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("backgroundRed"), Qt::CaseInsensitive)) {
-                bgR = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                bgR = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
                 hasBgR = true;
             } else if (!key.compare(QLatin1String("bgG"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("bgGreen"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("backgroundGreen"), Qt::CaseInsensitive)) {
-                bgG = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                bgG = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
                 hasBgG = true;
             } else if (!key.compare(QLatin1String("bgB"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("bgBlue"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("backgroundBlue"), Qt::CaseInsensitive)) {
-                bgB = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                bgB = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
                 hasBgB = true;
             } else if (!key.compare(QLatin1String("fgR"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("fgRed"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("foregroundRed"), Qt::CaseInsensitive)) {
-                fgR = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                fgR = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
                 hasFgR = true;
             } else if (!key.compare(QLatin1String("fgG"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("fgGreen"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("foregroundGreen"), Qt::CaseInsensitive)) {
-                fgG = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                fgG = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
                 hasFgG = true;
             } else if (!key.compare(QLatin1String("fgB"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("fgBlue"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("foregroundBlue"), Qt::CaseInsensitive)) {
-                fgB = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, key), 255.0));
+                fgB = qRound(qBound(0.0, getVerifiedDouble(L, __func__, -1, qPrintable(key)), 255.0));
                 hasFgB = true;
             } else if (!key.compare(QLatin1String("bold"), Qt::CaseInsensitive)) {
                 if (lua_isboolean(L, -1)) {
@@ -3971,10 +3971,10 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, key);
+                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
             } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
-                r = getVerifiedInt(L, __func__, -1, key);
+                r = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasR = true;
                 if (!validRange(r)) {
                     lua_pop(L, 2);
@@ -3982,7 +3982,7 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
                 }
             } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
-                g = getVerifiedInt(L, __func__, -1, key);
+                g = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasG = true;
                 if (!validRange(g)) {
                     lua_pop(L, 2);
@@ -3990,7 +3990,7 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
                 }
             } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
-                b = getVerifiedInt(L, __func__, -1, key);
+                b = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasB = true;
                 if (!validRange(b)) {
                     lua_pop(L, 2);
@@ -3998,7 +3998,7 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
                 }
             } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
-                alpha = getVerifiedInt(L, __func__, -1, key);
+                alpha = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 if (!validRange(alpha)) {
                     lua_pop(L, 2);
                     return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));
@@ -4102,10 +4102,10 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
-                windowName = getVerifiedString(L, __func__, -1, key);
+                windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
             } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
-                r = getVerifiedInt(L, __func__, -1, key);
+                r = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasR = true;
                 if (!validRange(r)) {
                     lua_pop(L, 2);
@@ -4113,7 +4113,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
                 }
             } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
-                g = getVerifiedInt(L, __func__, -1, key);
+                g = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasG = true;
                 if (!validRange(g)) {
                     lua_pop(L, 2);
@@ -4121,7 +4121,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
                 }
             } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
-                b = getVerifiedInt(L, __func__, -1, key);
+                b = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasB = true;
                 if (!validRange(b)) {
                     lua_pop(L, 2);
@@ -4129,7 +4129,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
                 }
             } else if (!key.compare(QLatin1String("alpha"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("transparency"), Qt::CaseInsensitive)) {
-                alpha = getVerifiedInt(L, __func__, -1, key);
+                alpha = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 if (!validRange(alpha)) {
                     lua_pop(L, 2);
                     return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(alpha));

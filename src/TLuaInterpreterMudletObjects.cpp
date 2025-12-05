@@ -1270,18 +1270,18 @@ int TLuaInterpreter::permKey(lua_State* L)
             QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyName"), Qt::CaseInsensitive)) {
-                keyName = getVerifiedString(L, __func__, -1, key);
+                keyName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasName = true;
             } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parentGroup"), Qt::CaseInsensitive)) {
-                parentGroup = getVerifiedString(L, __func__, -1, key);
+                parentGroup = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasParent = true;
             } else if (!key.compare(QLatin1String("modifier"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyModifier"), Qt::CaseInsensitive)) {
-                keyModifier = getVerifiedInt(L, __func__, -1, key, true);
+                keyModifier = getVerifiedInt(L, __func__, -1, qPrintable(key), true);
             } else if (!key.compare(QLatin1String("keyCode"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)) {
-                keyCode = getVerifiedInt(L, __func__, -1, key);
+                keyCode = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasKeyCode = true;
             } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) || !key.compare(QLatin1String("luaCode"), Qt::CaseInsensitive) || !key.compare(QLatin1String("luaFunction"), Qt::CaseInsensitive)) {
-                luaFunction = getVerifiedString(L, __func__, -1, key);
+                luaFunction = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasCode = true;
             }
             lua_pop(L, 1);
@@ -2261,11 +2261,11 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
             if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("triggerName"), Qt::CaseInsensitive)) {
-                triggerName = getVerifiedString(L, __func__, -1, key);
+                triggerName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasName = true;
             } else if (!key.compare(QLatin1String("regex"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("pattern"), Qt::CaseInsensitive)) {
-                pattern = getVerifiedString(L, __func__, -1, key);
+                pattern = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasPattern = true;
             } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
@@ -2280,7 +2280,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                 hasCode = true;
             } else if (!key.compare(QLatin1String("multiline"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("multiLine"), Qt::CaseInsensitive)) {
-                multiLine = getVerifiedBool(L, __func__, -1, key);
+                multiLine = getVerifiedBool(L, __func__, -1, qPrintable(key));
                 hasMultiline = true;
             } else if (!key.compare(QLatin1String("fgColor"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("foregroundColor"), Qt::CaseInsensitive)) {
@@ -2288,18 +2288,18 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     colorTrigger = false;
                 } else {
                     colorTrigger = true;
-                    fgColor = getVerifiedString(L, __func__, -1, key);
+                    fgColor = getVerifiedString(L, __func__, -1, qPrintable(key));
                 }
             } else if (!key.compare(QLatin1String("bgColor"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("backgroundColor"), Qt::CaseInsensitive)) {
                 if (!lua_isnumber(L, -1)) {
-                    bgColor = getVerifiedString(L, __func__, -1, key);
+                    bgColor = getVerifiedString(L, __func__, -1, qPrintable(key));
                 }
             } else if (!key.compare(QLatin1String("filter"), Qt::CaseInsensitive)) {
-                filter = getVerifiedBool(L, __func__, -1, key);
+                filter = getVerifiedBool(L, __func__, -1, qPrintable(key));
                 hasFilter = true;
             } else if (!key.compare(QLatin1String("matchAll"), Qt::CaseInsensitive)) {
-                matchAll = getVerifiedBool(L, __func__, -1, key);
+                matchAll = getVerifiedBool(L, __func__, -1, qPrintable(key));
                 hasMatchAll = true;
             } else if (!key.compare(QLatin1String("highlightFgColor"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("highlightForegroundColor"), Qt::CaseInsensitive)) {
@@ -2307,7 +2307,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     highlight = false;
                 } else {
                     highlight = true;
-                    QString color = getVerifiedString(L, __func__, -1, key);
+                    QString color = getVerifiedString(L, __func__, -1, qPrintable(key));
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                     hlFgColor.setNamedColor(color);
 #else
@@ -2318,7 +2318,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                        !key.compare(QLatin1String("highlightBackgroundColor"), Qt::CaseInsensitive)) {
                 if (!lua_isnumber(L, -1)) {
                     highlight = true;
-                    QString color = getVerifiedString(L, __func__, -1, key);
+                    QString color = getVerifiedString(L, __func__, -1, qPrintable(key));
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                     hlBgColor.setNamedColor(color);
 #else
@@ -2329,13 +2329,13 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                        !key.compare(QLatin1String("playSoundFile"), Qt::CaseInsensitive)) {
                 if (lua_type(L, -1) == LUA_TSTRING) {
                     playSound = true;
-                    soundFile = getVerifiedString(L, __func__, -1, key);
+                    soundFile = getVerifiedString(L, __func__, -1, qPrintable(key));
                 }
             } else if (!key.compare(QLatin1String("fireLength"), Qt::CaseInsensitive)) {
-                fireLength = getVerifiedInt(L, __func__, -1, key);
+                fireLength = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasFireLength = true;
             } else if (!key.compare(QLatin1String("lineDelta"), Qt::CaseInsensitive)) {
-                lineDelta = getVerifiedInt(L, __func__, -1, key);
+                lineDelta = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasLineDelta = true;
             } else if (!key.compare(QLatin1String("expireAfter"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("expiryCount"), Qt::CaseInsensitive)) {
