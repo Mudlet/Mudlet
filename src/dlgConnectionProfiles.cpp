@@ -933,9 +933,8 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
 
     if (file.error() == QFileDevice::NoError) {
         return {true, QString()};
-    } else {
-        return {false, file.errorString()};
     }
+    return {false, file.errorString()};
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
@@ -2302,9 +2301,9 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                             qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
                         }
                     } else {
-                        // Fallback to QSettings only if keychain operation failed
+                        // Fallback to QSettings only if credential retrieval failed
                         loadPasswordFromSettings(profile_name);
-                        qDebug() << "dlgConnectionProfiles: Keychain failed for" << profile_name << ", using file fallback:" << errorMessage;
+                        qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
                     }
                 }
 

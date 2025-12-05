@@ -4,9 +4,9 @@
 	"name": "C++",
 	"build": {
 		"dockerfile": "Dockerfile",
-		// Update 'VARIANT' to pick an Debian / Ubuntu OS version: debian-11, debian-10, debian-9, ubuntu-21.04, ubuntu-20.04, ubuntu-18.04
-		// Use Debian 11, Debian 9, Ubuntu 18.04 or Ubuntu 21.04 on local arm64/Apple Silicon
-		"args": { "VARIANT": "debian-11" }
+		// Update 'VARIANT' to pick an Debian / Ubuntu OS version: debian-12, debian-11, ubuntu-24.04, ubuntu-22.04
+		// Use Debian 12, Debian 11, Ubuntu 22.04 or Ubuntu 24.04 on local arm64/Apple Silicon
+		"args": { "VARIANT": "debian-13" }
 	},
 	"runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
 
@@ -16,7 +16,8 @@
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
 		"ms-vscode.cpptools",
-		"ms-vscode.cmake-tools"
+		"ms-vscode.cmake-tools",
+		"ms-dotnettools.vscode-dotnet-runtime"
 	],
 
 	"forwardPorts": [5900, 5901, 6080],
@@ -32,10 +33,10 @@
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
 	"features": {
-    "desktop-lite": {
-        "password": "mudlet",
-        "webPort": "6080",
-        "vncPort": "5901"
-    }
+		"ghcr.io/devcontainers/features/desktop-lite:1": {
+			"password": "mudlet",
+			"webPort": "6080",
+			"vncPort": "5901"
+		}
 	}
 }

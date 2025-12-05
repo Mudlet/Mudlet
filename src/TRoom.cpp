@@ -183,9 +183,8 @@ bool TRoom::hasExitStub(int direction)
 {
     if (exitStubs.contains(direction)) {
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void TRoom::setExitStub(int direction, bool status)
@@ -223,12 +222,10 @@ bool TRoom::hasExitWeight(const QString& cmd)
     if (exitWeights.contains(cmd)) {
         if (exitWeights.value(cmd) > 0) {
             return true;
-        } else {
-            return false;
         }
-    } else {
         return false;
     }
+    return false;
 }
 
 void TRoom::setWeight(int w)

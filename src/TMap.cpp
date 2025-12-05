@@ -547,6 +547,9 @@ void TMap::audit()
             itArea.next();
             const int areaID = itArea.key();
             TArea* pArea = mpRoomDB->getArea(areaID);
+            if (!pArea) {
+                continue;
+            }
             if (!pArea->mMapLabels.isEmpty()) {
                 QList<int> const labelIDList = pArea->mMapLabels.keys();
                 for (const int& i : labelIDList) {

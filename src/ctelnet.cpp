@@ -4951,9 +4951,8 @@ QByteArray cTelnet::decodeBytes(const char* bytes)
     if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Convert from given encoding to QString UTF-16BE Unicode form, then to UTF-8:
         return TEncodingHelper::decode(QByteArray(bytes), mEncoding).toUtf8();
-    } else {
-        return QByteArray(bytes);
     }
+    return QByteArray(bytes);
 }
 
 // Converts a Unicode (UTF-8) encoded std::string into the current Mud Server
@@ -4971,9 +4970,8 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
     if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Convert from UTF8 std::string to QString, then encode to Mud Server encoding
         return mudlet::replaceString(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString(), "\xff", "\xff\xff");
-    } else {
-        return mudlet::replaceString(data, "\xff", "\xff\xff");
     }
+    return mudlet::replaceString(data, "\xff", "\xff\xff");
 }
 
 void cTelnet::setPostingTimeout(const int timeout)
