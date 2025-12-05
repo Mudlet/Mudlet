@@ -5,13 +5,20 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+message(STATUS "=== Sentry Configuration ===")
+message(STATUS "WITH_SENTRY: ${WITH_SENTRY}")
 if(NOT SENTRY_DSN OR SENTRY_DSN STREQUAL "")
-    message(FATAL_ERROR
-        "WITH_SENTRY=ON but SENTRY_DSN is empty!\n"
-        "Please provide a SENTRY_DSN via -DSENTRY_DSN=...\n"
-        "For testing/development, you can use a placeholder DSN like '-DSENTRY_DSN=test'"
-    )
+    message(STATUS "SENTRY_DSN: NOT SET")
+else()
+    message(STATUS "SENTRY_DSN: SET")
 endif()
+
+if(NOT SENTRY_AUTH_TOKEN OR SENTRY_AUTH_TOKEN STREQUAL "")
+    message(STATUS "SENTRY_AUTH_TOKEN: NOT SET")
+else()
+    message(STATUS "SENTRY_AUTH_TOKEN: SET")
+endif()
+message(STATUS "============================")
 
 find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
 
