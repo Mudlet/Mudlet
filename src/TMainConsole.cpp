@@ -83,9 +83,11 @@ TMainConsole::~TMainConsole()
     if (mpHunspell_profile) {
         Hunspell_destroy(mpHunspell_profile);
         mpHunspell_profile = nullptr;
-        // Need to commit any changes to personal dictionary
-        qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
-        mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+        if (mudlet::self()) {
+            // Need to commit any changes to personal dictionary
+            qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
+            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+        }
     }
 }
 
@@ -411,7 +413,7 @@ void TMainConsole::luaWrapLine(QString& buf, int line)
     }
 }
 
-QString TMainConsole::getCurrentLine(std::string& buf)
+QString TMainConsole::getCurrentLine(const std::string& buf)
 {
     const QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {

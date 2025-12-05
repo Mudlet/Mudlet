@@ -25,6 +25,7 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
+#include <QKeySequence>
 #include <QMouseEvent>
 #include <QRect>
 #include <QRectF>
@@ -111,6 +112,9 @@ bool SelectionRectangleHandler::handleMousePress(T2DMap::MapInteractionContext& 
             //: %1 is the platform-specific key name for Shift
             mMapWidget.mHelpMsg += qsl(" ")
                 + T2DMap::tr("Hold %1 to add rooms or labels to your current selection.").arg(QKeySequence(Qt::ShiftModifier).toString(QKeySequence::NativeText).remove(QLatin1Char('+')));
+            //: %1 is the platform-specific key name for Alt (Alt on Windows/Linux, Option on macOS)
+            mMapWidget.mHelpMsg += qsl(" ")
+                + T2DMap::tr("Hold %1 and drag to pan the map.").arg(QKeySequence(Qt::AltModifier).toString(QKeySequence::NativeText).remove(QLatin1Char('+')));
         }
         if (!hasShift) {
             mMapWidget.mMultiSelectionSet.clear();

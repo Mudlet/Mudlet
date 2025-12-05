@@ -4427,6 +4427,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
     pHost->raiseEvent(event);
     pHost->mIsProfileLoadingSequence = false;
+    emit signal_profileLoaded();
 }
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)

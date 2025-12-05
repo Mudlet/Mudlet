@@ -353,6 +353,8 @@ public:
     std::pair<bool, QString> setDisplayFont(const QFont&);
     void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
+    QFont createFontWithSettings(const QString& fontName, int pointSize) const;
+    std::pair<QString, QFont::Weight> parseFontNameAndStyle(const QString& fontName) const;
     int getConsoleBufferSize() const { return mConsoleBufferSize; }
     void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
     bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
@@ -535,11 +537,11 @@ public:
     bool mIsProfileLoadingSequence = false;
 
 
-    dlgTriggerEditor* mpEditorDialog{nullptr};
+    QPointer<dlgTriggerEditor> mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
-    dlgNotepad* mpNotePad{nullptr};
+    QPointer<dlgNotepad> mpNotePad;
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {
