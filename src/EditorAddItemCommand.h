@@ -36,8 +36,6 @@ public:
     EditorViewType viewType() const override { return mViewType; }
     QList<int> affectedItemIDs() const override { return {mItemID}; }
     void remapItemID(int oldID, int newID) override;
-    int id() const override;
-    bool mergeWith(const QUndoCommand* other) override;
 
     // Check if item ID changed during redo (when item was recreated)
     bool didItemIDChange() const { return mOldItemID != -1 && mOldItemID != mItemID; }
@@ -51,9 +49,6 @@ public:
     // Get parent ID and position for selection handling when item is deleted (undo)
     int getParentID() const { return mParentID; }
     int getPositionInParent() const { return mPositionInParent; }
-
-    // Command ID for merging - must match EditorModifyPropertyCommand::id()
-    static constexpr int CommandId = 1;
 
 private:
     static QString generateText(EditorViewType viewType, const QString& itemName, bool isFolder);
