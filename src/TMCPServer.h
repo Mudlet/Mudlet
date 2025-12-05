@@ -23,7 +23,6 @@
 #include "Host.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -37,7 +36,6 @@
 #include <QHttpServerResponse>
 #include <QHttpHeaders>
 #include <QTcpServer>
-#include "post_guard.h"
 
 class TMCPLuaBridge;
 

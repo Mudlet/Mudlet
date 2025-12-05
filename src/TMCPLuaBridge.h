@@ -23,7 +23,6 @@
 #include "Host.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -31,7 +30,6 @@
 #include <QString>
 #include <QStringList>
 #include <QVariant>
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
