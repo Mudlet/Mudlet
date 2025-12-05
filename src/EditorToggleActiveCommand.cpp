@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "EditorToggleActiveCommand.h"
+#include "dlgTriggerEditor.h"
 
 #include "Host.h"
 #include "TriggerUnit.h"
@@ -63,12 +64,26 @@ void EditorToggleActiveCommand::undo()
     }
     case EditorViewType::cmTimerView: {
         TTimer* t = mpHost->getTimerUnit()->getTimer(mItemId);
-        if (t) t->setIsActive(targetState);
+        if (t) {
+            if (!t->isOffsetTimer()) {
+                t->setIsActive(targetState);
+            } else {
+                t->setShouldBeActive(targetState);
+            }
+            if (t->shouldBeActive()) {
+                t->enableTimer(t->getID());
+            } else {
+                t->disableTimer(t->getID());
+            }
+        }
         break;
     }
     case EditorViewType::cmActionView: {
         TAction* a = mpHost->getActionUnit()->getAction(mItemId);
-        if (a) a->setIsActive(targetState);
+        if (a) {
+            a->setIsActive(targetState);
+            a->setDataChanged();
+        }
         break;
     }
     case EditorViewType::cmScriptView: {
@@ -76,7 +91,7 @@ void EditorToggleActiveCommand::undo()
         if (s) s->setIsActive(targetState);
         break;
     }
-    case EditorViewType::cmKeyView: {
+    case EditorViewType::cmKeysView: {
         TKey* k = mpHost->getKeyUnit()->getKey(mItemId);
         if (k) k->setIsActive(targetState);
         break;
@@ -84,6 +99,7 @@ void EditorToggleActiveCommand::undo()
     default:
         break;
     }
+    mpHost->getEditorDialog()->itemUpdated(mViewType, mItemId);
 }
 
 void EditorToggleActiveCommand::redo()
@@ -104,12 +120,26 @@ void EditorToggleActiveCommand::redo()
     }
     case EditorViewType::cmTimerView: {
         TTimer* t = mpHost->getTimerUnit()->getTimer(mItemId);
-        if (t) t->setIsActive(targetState);
+        if (t) {
+            if (!t->isOffsetTimer()) {
+                t->setIsActive(targetState);
+            } else {
+                t->setShouldBeActive(targetState);
+            }
+            if (t->shouldBeActive()) {
+                t->enableTimer(t->getID());
+            } else {
+                t->disableTimer(t->getID());
+            }
+        }
         break;
     }
     case EditorViewType::cmActionView: {
         TAction* a = mpHost->getActionUnit()->getAction(mItemId);
-        if (a) a->setIsActive(targetState);
+        if (a) {
+            a->setIsActive(targetState);
+            a->setDataChanged();
+        }
         break;
     }
     case EditorViewType::cmScriptView: {
@@ -117,7 +147,7 @@ void EditorToggleActiveCommand::redo()
         if (s) s->setIsActive(targetState);
         break;
     }
-    case EditorViewType::cmKeyView: {
+    case EditorViewType::cmKeysView: {
         TKey* k = mpHost->getKeyUnit()->getKey(mItemId);
         if (k) k->setIsActive(targetState);
         break;
@@ -125,6 +155,7 @@ void EditorToggleActiveCommand::redo()
     default:
         break;
     }
+    mpHost->getEditorDialog()->itemUpdated(mViewType, mItemId);
 }
 
 int EditorToggleActiveCommand::id() const

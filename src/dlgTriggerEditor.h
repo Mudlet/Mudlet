@@ -339,6 +339,7 @@ public:
 
     void itemAdded(EditorViewType viewType, int itemID);
     void itemRemoved(EditorViewType viewType, int itemID);
+    void itemUpdated(EditorViewType viewType, int itemID);
 
 private:
     void populateTriggers();

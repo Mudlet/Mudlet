@@ -20,6 +20,7 @@
 #include "EditorModifyPropertyCommand.h"
 
 #include "EditorItemXMLHelpers.h"
+#include "dlgTriggerEditor.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -89,6 +90,7 @@ void EditorModifyPropertyCommand::undo()
     if (!success) {
         qWarning() << "EditorModifyPropertyCommand::undo() - Failed to revert properties for" << mItemName;
     }
+    mpHost->getEditorDialog()->itemUpdated(mViewType, mItemID);
 }
 
 void EditorModifyPropertyCommand::redo()
@@ -147,6 +149,7 @@ void EditorModifyPropertyCommand::redo()
     if (!success) {
         qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply properties for" << mItemName;
     }
+    mpHost->getEditorDialog()->itemUpdated(mViewType, mItemID);
 }
 
 int EditorModifyPropertyCommand::id() const
