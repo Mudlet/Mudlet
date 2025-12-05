@@ -24,6 +24,8 @@
  ***************************************************************************/
 
 
+#include "utils.h"
+
 #include <QMap>
 #include <QPointer>
 #include <QString>
@@ -63,6 +65,9 @@ public:
     bool registerAction(TAction* pT);
     void unregisterAction(TAction* pT);
     void reParentAction(int childID, int oldParentID, int newParentID, int parentPostion = -1, int childPosition = -1);
+    void reParentAction(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
+    void reParentAction(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
+    void reParentAction(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position);
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);

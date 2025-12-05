@@ -85,9 +85,12 @@ set(mudlet_SRCS
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
+    ../test/dlgTriggerEditorUndoRedoTest.cpp
     dlgTriggerPatternEdit.cpp
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
+
+    EditorUndoStack.cpp
     EAction.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
@@ -105,6 +108,12 @@ set(mudlet_SRCS
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MxpTag.cpp
+    EditorUndoStack.cpp
+    EditorAddItemCommand.cpp
+    EditorDeleteItemCommand.cpp
+    EditorModifyPropertyCommand.cpp
+    EditorMoveItemCommand.cpp
+    EditorToggleActiveCommand.cpp
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
@@ -288,6 +297,15 @@ set(mudlet_HDRS
     dlgTriggerPatternEdit.h
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
+    EditorItemXMLHelpers.h
+    EditorAddItemCommand.h
+    EditorCommand.h
+    EditorDeleteItemCommand.h
+    EditorItemXMLHelpers.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
+    EditorUndoStack.h
     EAction.h
     exitstreewidget.h
     FileOpenHandler.h
@@ -302,8 +320,15 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    EditorCommand.h
     MudletInstanceCoordinator.h
+    EditorUndoStack.h
     MxpTag.h
+    EditorAddItemCommand.h
+    EditorDeleteItemCommand.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
@@ -514,19 +539,6 @@ if(NOT USE_OWN_QTKEYCHAIN)
   find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
 
   # No need to test for it being found as the REQUIRED will make it error out
-  # if it is NOT found!
-  message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
-endif()
-
-if(USE_3DMAPPER)
-  if(POLICY CMP0072)
-    cmake_policy(SET CMP0072 NEW)
-  endif()
-  find_package(OpenGL REQUIRED)
-  find_package(assimp REQUIRED)
-endif()
-
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_SRCS}
@@ -597,6 +609,11 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
+
+# * Enable debug output for Undo/Redo operations
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_UNDO_REDO)
+
+
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

@@ -115,6 +115,30 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
     }
 }
 
+void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    TScript* pOldParent = getScriptPrivate(oldParentID);
+    TScript* pNewParent = getScriptPrivate(newParentID);
+    TScript* pChild = getScriptPrivate(childID);
+    if (!pChild) {
+        return;
+    }
+    if (pOldParent) {
+        pOldParent->popChild(pChild);
+    }
+    if (!pOldParent) {
+        removeScriptRootNode(pChild);
+    }
+    if (pNewParent) {
+        pNewParent->addChild(pChild, mode, position);
+        pChild->setParent(pNewParent);
+    } else {
+        pChild->Tree<TScript>::setParent(nullptr);
+        // Handle root node insertion
+        int childPos = (mode == TreeItemInsertMode::AtPosition) ? position : -1;
+        addScriptRootNode(pChild, -1, childPos);
+    }
+
 void ScriptUnit::removeScriptRootNode(TScript* pT)
 {
     if (!pT) {

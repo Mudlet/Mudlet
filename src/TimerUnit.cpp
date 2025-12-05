@@ -161,6 +161,36 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
     pChild->enableTimer(childID);
 }
 
+void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    TTimer* pOldParent = getTimerPrivate(oldParentID);
+    TTimer* pNewParent = getTimerPrivate(newParentID);
+    TTimer* pChild = getTimerPrivate(childID);
+    if (!pChild) {
+        return;
+    }
+
+    pChild->disableTimer(childID);
+
+    if (pOldParent) {
+        pOldParent->popChild(pChild);
+    }
+    if (!pOldParent) {
+        mTimerRootNodeList.remove(pChild);
+    }
+    if (pNewParent) {
+        pNewParent->addChild(pChild, mode, position);
+        pChild->setParent(pNewParent);
+    } else {
+        pChild->Tree<TTimer>::setParent(nullptr);
+        // Handle root node insertion
+        int childPos = (mode == TreeItemInsertMode::AtPosition) ? position : -1;
+        addTimerRootNode(pChild, -1, childPos);
+    }
+
+    pChild->enableTimer(childID);
+}
+
 void TimerUnit::removeAllTempTimers()
 {
     mCleanupSet.clear();

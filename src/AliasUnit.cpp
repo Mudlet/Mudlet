@@ -139,6 +139,18 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
     }
 }
 
+void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentAlias(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentAlias(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
+
+
 void AliasUnit::removeAliasRootNode(TAlias* pT)
 {
     if (!pT) {

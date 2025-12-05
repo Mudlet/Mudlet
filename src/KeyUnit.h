@@ -63,6 +63,7 @@ public:
     bool registerKey(TKey* pT);
     void unregisterKey(TKey* pT);
     void reParentKey(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position);
     std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
     QString getKeyName(const Qt::Key, const Qt::KeyboardModifiers) const;

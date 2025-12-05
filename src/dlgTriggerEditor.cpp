@@ -47,6 +47,13 @@
 #include "TrailingWhitespaceMarker.h"
 #include "mudlet.h"
 #include "utils.h"
+#include "EditorUndoStack.h"
+#include "EditorAddItemCommand.h"
+#include "EditorDeleteItemCommand.h"
+#include "EditorModifyPropertyCommand.h"
+#include "EditorMoveItemCommand.h"
+#include "EditorToggleActiveCommand.h"
+#include "EditorItemXMLHelpers.h"
 #include "edbee/models/textdocumentscopes.h"
 
 #include <QCheckBox>
@@ -86,6 +93,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 : mpHost(pH)
 , mSearchOptions(pH->mSearchOptions)
 {
+    createUndoStack();
     // init generated dialog
     setupUi(this);
 
@@ -4730,6 +4738,31 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     pNewTrigger->setConditionLineDelta(0);
     pNewTrigger->registerTrigger();
 
+    // Push command to undo stack
+    if (mpUndoStack) {
+        int parentID = 0;
+        int positionInParent = 0;
+        if (pNewTrigger->getParent()) {
+            parentID = pNewTrigger->getParent()->getID();
+            positionInParent = pNewTrigger->getParent()->getChildrenList()->indexOf(pNewTrigger);
+        } else {
+            // Root item
+            // We need to find its position in the root list if possible, but for now 0 is used for insertion
+            // However, for redo, we need the correct position.
+            // Since we inserted at 0 (top), position is 0.
+            positionInParent = 0;
+        }
+
+        auto* command = new EditorAddItemCommand(EditorViewType::cmTriggerView,
+                                                 pNewTrigger->getID(),
+                                                 parentID,
+                                                 positionInParent,
+                                                 isFolder,
+                                                 name,
+                                                 mpHost);
+        mpUndoStack->push(command);
+    }
+
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewTrigger->getID());
     pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
@@ -4812,6 +4845,27 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     pNewTimer->setIsFolder(isFolder);
     pNewTimer->setIsActive(false);
     mpHost->getTimerUnit()->registerTimer(pNewTimer);
+
+    // Push command to undo stack
+    if (mpUndoStack) {
+        int parentID = 0;
+        int positionInParent = 0;
+        if (pNewTimer->getParent()) {
+            parentID = pNewTimer->getParent()->getID();
+            positionInParent = pNewTimer->getParent()->getChildrenList()->indexOf(pNewTimer);
+        } else {
+            positionInParent = 0;
+        }
+
+        auto* command = new EditorAddItemCommand(EditorViewType::cmTimerView,
+                                                 pNewTimer->getID(),
+                                                 parentID,
+                                                 positionInParent,
+                                                 isFolder,
+                                                 name,
+                                                 mpHost);
+        mpUndoStack->push(command);
+    }
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewTimer->getID());
@@ -4954,6 +5008,27 @@ void dlgTriggerEditor::addKey(bool isFolder)
     pNewKey->setShouldBeActive(true);
     pNewKey->registerKey();
 
+    // Push command to undo stack
+    if (mpUndoStack) {
+        int parentID = 0;
+        int positionInParent = 0;
+        if (pNewKey->getParent()) {
+            parentID = pNewKey->getParent()->getID();
+            positionInParent = pNewKey->getParent()->getChildrenList()->indexOf(pNewKey);
+        } else {
+            positionInParent = 0;
+        }
+
+        auto* command = new EditorAddItemCommand(EditorViewType::cmKeysView,
+                                                 pNewKey->getID(),
+                                                 parentID,
+                                                 positionInParent,
+                                                 isFolder,
+                                                 name,
+                                                 mpHost);
+        mpUndoStack->push(command);
+    }
+
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewKey->getID());
     pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
@@ -5031,6 +5106,27 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     pNewAlias->setIsActive(false);
     pNewAlias->setShouldBeActive(true);
     pNewAlias->registerAlias();
+
+    // Push command to undo stack
+    if (mpUndoStack) {
+        int parentID = 0;
+        int positionInParent = 0;
+        if (pNewAlias->getParent()) {
+            parentID = pNewAlias->getParent()->getID();
+            positionInParent = pNewAlias->getParent()->getChildrenList()->indexOf(pNewAlias);
+        } else {
+            positionInParent = 0;
+        }
+
+        auto* command = new EditorAddItemCommand(EditorViewType::cmAliasView,
+                                                 pNewAlias->getID(),
+                                                 parentID,
+                                                 positionInParent,
+                                                 isFolder,
+                                                 name,
+                                                 mpHost);
+        mpUndoStack->push(command);
+    }
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewAlias->getID());
@@ -5113,6 +5209,27 @@ void dlgTriggerEditor::addAction(bool isFolder)
     pNewAction->setIsActive(false);
     pNewAction->registerAction();
 
+    // Push command to undo stack
+    if (mpUndoStack) {
+        int parentID = 0;
+        int positionInParent = 0;
+        if (pNewAction->getParent()) {
+            parentID = pNewAction->getParent()->getID();
+            positionInParent = pNewAction->getParent()->getChildrenList()->indexOf(pNewAction);
+        } else {
+            positionInParent = 0;
+        }
+
+        auto* command = new EditorAddItemCommand(EditorViewType::cmActionView,
+                                                 pNewAction->getID(),
+                                                 parentID,
+                                                 positionInParent,
+                                                 isFolder,
+                                                 name,
+                                                 mpHost);
+        mpUndoStack->push(command);
+    }
+
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewAction->getID());
     pNewItem->setIcon(0, QIcon(QPixmap(isFolder ?
@@ -5190,6 +5307,27 @@ void dlgTriggerEditor::addScript(bool isFolder)
     pNewScript->setIsActive(false);
     pNewScript->setShouldBeActive(true);
     pNewScript->registerScript();
+
+    // Push command to undo stack
+    if (mpUndoStack) {
+        int parentID = 0;
+        int positionInParent = 0;
+        if (pNewScript->getParent()) {
+            parentID = pNewScript->getParent()->getID();
+            positionInParent = pNewScript->getParent()->getChildrenList()->indexOf(pNewScript);
+        } else {
+            positionInParent = 0;
+        }
+
+        auto* command = new EditorAddItemCommand(EditorViewType::cmScriptView,
+                                                 pNewScript->getID(),
+                                                 parentID,
+                                                 positionInParent,
+                                                 isFolder,
+                                                 name,
+                                                 mpHost);
+        mpUndoStack->push(command);
+    }
 
     // Initialize tree item properties
     pNewItem->setData(0, Qt::UserRole, pNewScript->getID());
@@ -12559,5 +12697,193 @@ void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, const
 
     if (!hidden) {
         mTemporarilyHiddenBanners.remove(key);
+    }
+}
+
+void dlgTriggerEditor::createUndoStack()
+{
+    mpUndoStack = new EditorUndoStack(mpHost, this);
+    QAction* undoAction = mpUndoStack->createUndoAction(this, tr("&Undo"));
+    undoAction->setShortcuts(QKeySequence::Undo);
+    this->addAction(undoAction);
+
+    QAction* redoAction = mpUndoStack->createRedoAction(this, tr("&Redo"));
+    redoAction->setShortcuts(QKeySequence::Redo);
+    this->addAction(redoAction);
+}
+
+void dlgTriggerEditor::itemAdded(EditorViewType viewType, int itemID)
+{
+    QTreeWidget* treeWidget = nullptr;
+    QString itemIconName = qsl(":/icons/document-save-as.png");
+    QString folderIconName = qsl(":/icons/folder-red.png");
+
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+        treeWidget = treeWidget_triggers;
+        break;
+    case EditorViewType::cmAliasView:
+        treeWidget = treeWidget_aliases;
+        break;
+    case EditorViewType::cmTimerView:
+        treeWidget = treeWidget_timers;
+        break;
+    case EditorViewType::cmScriptView:
+        treeWidget = treeWidget_scripts;
+        break;
+    case EditorViewType::cmKeysView:
+        treeWidget = treeWidget_keys;
+        break;
+    case EditorViewType::cmActionView:
+        treeWidget = treeWidget_actions;
+        break;
+    default:
+        return;
+    }
+
+    QString name;
+    bool isFolder = false;
+    int parentID = 0;
+    int position = 0;
+
+    switch (viewType) {
+    case EditorViewType::cmTriggerView: {
+        auto* item = mpHost->getTriggerUnit()->getTrigger(itemID);
+        if (!item) return;
+        name = item->getName();
+        isFolder = item->isFolder();
+        if (item->getParent()) {
+            parentID = item->getParent()->getID();
+            position = item->getParent()->getChildrenList()->indexOf(item);
+        } else {
+            position = mpHost->getTriggerUnit()->getTriggerRootNodeList().indexOf(item);
+        }
+        break;
+    }
+    case EditorViewType::cmAliasView: {
+        auto* item = mpHost->getAliasUnit()->getAlias(itemID);
+        if (!item) return;
+        name = item->getName();
+        isFolder = item->isFolder();
+        if (item->getParent()) {
+            parentID = item->getParent()->getID();
+            position = item->getParent()->getChildrenList()->indexOf(item);
+        } else {
+            position = mpHost->getAliasUnit()->getAliasRootNodeList().indexOf(item);
+        }
+        break;
+    }
+    case EditorViewType::cmTimerView: {
+        auto* item = mpHost->getTimerUnit()->getTimer(itemID);
+        if (!item) return;
+        name = item->getName();
+        isFolder = item->isFolder();
+        if (item->getParent()) {
+            parentID = item->getParent()->getID();
+            position = item->getParent()->getChildrenList()->indexOf(item);
+        } else {
+            position = mpHost->getTimerUnit()->getTimerRootNodeList().indexOf(item);
+        }
+        break;
+    }
+    case EditorViewType::cmScriptView: {
+        auto* item = mpHost->getScriptUnit()->getScript(itemID);
+        if (!item) return;
+        name = item->getName();
+        isFolder = item->isFolder();
+        if (item->getParent()) {
+            parentID = item->getParent()->getID();
+            position = item->getParent()->getChildrenList()->indexOf(item);
+        } else {
+            position = mpHost->getScriptUnit()->getScriptRootNodeList().indexOf(item);
+        }
+        break;
+    }
+    case EditorViewType::cmKeysView: {
+        auto* item = mpHost->getKeyUnit()->getKey(itemID);
+        if (!item) return;
+        name = item->getName();
+        isFolder = item->isFolder();
+        if (item->getParent()) {
+            parentID = item->getParent()->getID();
+            position = item->getParent()->getChildrenList()->indexOf(item);
+        } else {
+            position = mpHost->getKeyUnit()->getKeyRootNodeList().indexOf(item);
+        }
+        break;
+    }
+    case EditorViewType::cmActionView: {
+        auto* item = mpHost->getActionUnit()->getAction(itemID);
+        if (!item) return;
+        name = item->getName();
+        isFolder = item->isFolder();
+        if (item->getParent()) {
+            parentID = item->getParent()->getID();
+            position = item->getParent()->getChildrenList()->indexOf(item);
+        } else {
+            position = mpHost->getActionUnit()->getActionRootNodeList().indexOf(item);
+        }
+        break;
+    }
+    default:
+        return;
+    }
+
+    QTreeWidgetItem* pParentItem = nullptr;
+    if (parentID != 0) {
+        QTreeWidgetItemIterator it(treeWidget);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == parentID) {
+                pParentItem = *it;
+                break;
+            }
+            ++it;
+        }
+    }
+
+    QTreeWidgetItem* pNewItem = nullptr;
+    QStringList nameList { name };
+
+    if (pParentItem) {
+        pNewItem = new QTreeWidgetItem(pParentItem, nameList);
+        if (position != -1 && position < pParentItem->childCount()) {
+            pParentItem->removeChild(pNewItem);
+            pParentItem->insertChild(position, pNewItem);
+        }
+    } else {
+        pNewItem = new QTreeWidgetItem(treeWidget, nameList);
+        if (position != -1 && position < treeWidget->topLevelItemCount()) {
+            treeWidget->takeTopLevelItem(treeWidget->indexOfTopLevelItem(pNewItem));
+            treeWidget->insertTopLevelItem(position, pNewItem);
+        }
+    }
+
+    pNewItem->setData(0, Qt::UserRole, itemID);
+    pNewItem->setIcon(0, QIcon(QPixmap(isFolder ? folderIconName : itemIconName)));
+    
+    treeWidget->setCurrentItem(pNewItem);
+    pNewItem->setSelected(true);
+}
+
+void dlgTriggerEditor::itemRemoved(EditorViewType viewType, int itemID)
+{
+    QTreeWidget* treeWidget = nullptr;
+    switch (viewType) {
+    case EditorViewType::cmTriggerView: treeWidget = treeWidget_triggers; break;
+    case EditorViewType::cmAliasView: treeWidget = treeWidget_aliases; break;
+    case EditorViewType::cmTimerView: treeWidget = treeWidget_timers; break;
+    case EditorViewType::cmScriptView: treeWidget = treeWidget_scripts; break;
+    case EditorViewType::cmKeysView: treeWidget = treeWidget_keys; break;
+    case EditorViewType::cmActionView: treeWidget = treeWidget_actions; break;
+    default: return;
+    }
+
+    QTreeWidgetItemIterator it(treeWidget);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == itemID) {
+            delete *it;
+            return;
+        }
+        ++it;
     }
 }

@@ -94,6 +94,7 @@ class TKey;
 class TConsole;
 class dlgVarsMainArea;
 class QShortcut;
+class EditorUndoStack;
 
 
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
@@ -333,7 +334,11 @@ private slots:
 
 public:
     TConsole* mpErrorConsole = nullptr;
+    EditorUndoStack* mpUndoStack = nullptr;
     bool mNeedUpdateData = false;
+
+    void itemAdded(EditorViewType viewType, int itemID);
+    void itemRemoved(EditorViewType viewType, int itemID);
 
 private:
     void populateTriggers();
@@ -404,6 +409,8 @@ private:
     void exportMultipleActionsToClipboard(const QList<TAction*>& actions);
     void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
     void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
+
+    void createUndoStack();
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 

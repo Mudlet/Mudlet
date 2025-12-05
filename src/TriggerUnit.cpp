@@ -142,6 +142,29 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     }
 }
 
+void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    TTrigger* pOldParent = getTriggerPrivate(oldParentID);
+    TTrigger* pNewParent = getTriggerPrivate(newParentID);
+    TTrigger* pChild = getTriggerPrivate(childID);
+    if (!pChild) {
+        return;
+    }
+    if (pOldParent) {
+        pOldParent->popChild(pChild);
+    } else {
+        mTriggerRootNodeList.remove(pChild);
+    }
+    if (pNewParent) {
+        pNewParent->addChild(pChild, mode, position);
+        pChild->setParent(pNewParent);
+    } else {
+        pChild->Tree<TTrigger>::setParent(nullptr);
+        // Handle root node insertion
+        int childPos = (mode == TreeItemInsertMode::AtPosition) ? position : -1;
+        addTriggerRootNode(pChild, -1, childPos, true);
+    }
+
 void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
 {
     if (!pT) {

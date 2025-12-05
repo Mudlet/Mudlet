@@ -169,6 +169,7 @@ public:
 
 
     QString         getName()                        { return mHostName; }
+    dlgTriggerEditor* getEditorDialog()              { return mpEditorDialog; }
     QString         getCommandSeparator()            { return mCommandSeparator; }
     void            setName(const QString& name);
     QString         getUrl()                         { return mUrl; }

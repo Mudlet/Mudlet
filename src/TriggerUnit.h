@@ -64,6 +64,7 @@ public:
     bool registerTrigger(TTrigger* pT);
     void unregisterTrigger(TTrigger* pT);
     void reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentTrigger(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position);
     void processDataStream(const QString&, int);
     void compileAll();
     void setTriggerStayOpen(const QString&, int);

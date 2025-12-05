@@ -285,6 +285,29 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
     }
 }
 
+void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    TKey* pOldParent = getKeyPrivate(oldParentID);
+    TKey* pNewParent = getKeyPrivate(newParentID);
+    TKey* pChild = getKeyPrivate(childID);
+    if (!pChild) {
+        return;
+    }
+    if (pOldParent) {
+        pOldParent->popChild(pChild);
+    } else {
+        mKeyRootNodeList.remove(pChild);
+    }
+    if (pNewParent) {
+        pNewParent->addChild(pChild, mode, position);
+        pChild->setParent(pNewParent);
+    } else {
+        pChild->Tree<TKey>::setParent(nullptr);
+        // Handle root node insertion
+        int childPos = (mode == TreeItemInsertMode::AtPosition) ? position : -1;
+        addKeyRootNode(pChild, -1, childPos, true);
+    }
+
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
     if (!pT) {

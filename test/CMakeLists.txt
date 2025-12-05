@@ -120,3 +120,8 @@ endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
 
 add_subdirectory(functional_tests)
+
+add_executable(EditorUndoRedoTest EditorUndoRedoTest.cpp)
+target_link_libraries(EditorUndoRedoTest mudlet_core Qt6::Test)
+add_test(NAME EditorUndoRedoTest COMMAND EditorUndoRedoTest)
+

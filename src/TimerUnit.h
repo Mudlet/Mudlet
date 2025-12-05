@@ -61,6 +61,7 @@ public:
     bool registerTimer(TTimer* pT);
     void unregisterTimer(TTimer* pT);
     void reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position);
     void stopAllTriggers();
     void reenableAllTriggers();
     void markCleanup(TTimer*);
