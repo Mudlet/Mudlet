@@ -1108,6 +1108,60 @@ void Host::setDisplayFontSize(int size)
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
 }
 
+// Helper function to create a QFont with proper antialiasing settings
+// This ensures fonts created from a name string inherit the host's antialiasing preference
+QFont Host::createFontWithSettings(const QString& fontName, int pointSize) const
+{
+    TFontAttributes attrs(fontsAntiAlias());
+    attrs.mName = fontName;
+    attrs.mPointSize = pointSize;
+    return attrs.makeFont();
+}
+
+// Helper function to parse font names that may include style information
+// Returns a pair of (base family name, weight) for backward compatibility with static fonts
+// Examples: "EB Garamond SemiBold" -> ("EB Garamond", QFont::DemiBold)
+//           "Arial Bold" -> ("Arial", QFont::Bold)
+std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fontName) const
+{
+    // Map of style keywords to QFont::Weight values
+    static const QMap<QString, QFont::Weight> styleWeightMap = {
+        {qsl("thin"), QFont::Thin},
+        {qsl("extralight"), QFont::ExtraLight},
+        {qsl("ultralight"), QFont::ExtraLight},
+        {qsl("light"), QFont::Light},
+        {qsl("normal"), QFont::Normal},
+        {qsl("regular"), QFont::Normal},
+        {qsl("medium"), QFont::Medium},
+        {qsl("demibold"), QFont::DemiBold},
+        {qsl("semibold"), QFont::DemiBold},
+        {qsl("bold"), QFont::Bold},
+        {qsl("extrabold"), QFont::ExtraBold},
+        {qsl("ultrabold"), QFont::ExtraBold},
+        {qsl("black"), QFont::Black},
+        {qsl("heavy"), QFont::Black}
+    };
+
+    // Try each possible split point from the end of the font name
+    const QStringList words = fontName.split(' ', Qt::SkipEmptyParts);
+
+    if (words.size() < 2) {
+        return {fontName, QFont::Normal};
+    }
+
+    // Try matching the last word(s) as a style
+    for (int i = words.size() - 1; i > 0; --i) {
+        QString possibleStyle = words.mid(i).join(' ').toLower();
+
+        if (styleWeightMap.contains(possibleStyle)) {
+            QString baseName = words.mid(0, i).join(' ');
+            return {baseName, styleWeightMap.value(possibleStyle)};
+        }
+    }
+
+    return {fontName, QFont::Normal};
+}
+
 // Now returns the total weight of the path
 unsigned int Host::assemblePath()
 {
