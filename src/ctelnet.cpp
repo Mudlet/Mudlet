@@ -136,6 +136,16 @@ void cTelnet::reset()
     iac = false;
     iac2 = false;
     insb = false;
+    
+    // Reset all protocol enable flags to ensure proper re-negotiation on reconnect
+    enableATCP = false;
+    enableGMCP = false;
+    enableMSSP = false;
+    enableMSDP = false;
+    enableMSP = false;
+    enableMXP = false;
+    enableChannel102 = false;
+    
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
     mGA_Driver = false;
