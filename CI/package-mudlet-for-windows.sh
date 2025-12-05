@@ -101,10 +101,20 @@ if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet
   exit 6
 fi
 
-cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
+
+FILES_TO_COPY=("mudlet.exe")
+
 if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+    FILES_TO_COPY+=("mudlet.exe.debug")
 fi
+
+if [ "${WITH_SENTRY}" = "ON" ]; then
+    FILES_TO_COPY+=("crashpad_handler.exe" "crashpad_wer.dll" "MudletCrashReporter.exe")
+fi
+
+for f in "${FILES_TO_COPY[@]}"; do
+    cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/$f" "${PACKAGE_DIR}/"
+done
 
 # The location that windeployqt6 puts the Qt translation files by default is
 # "./translations" unfortunately "QLibraryInfo::path(QLibraryInfo::TranslationsPath)"
@@ -150,7 +160,7 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lua-utf8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre2.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll"
 
 mkdir ./luasql

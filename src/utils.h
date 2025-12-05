@@ -55,9 +55,8 @@ public:
                                                                  .arg(offset >= 0 ? QLatin1Char('+') : QLatin1Char('-'))
                                                                  .arg(hoursOff, 2, 10, QLatin1Char('0'))
                                                                  .arg(minutesOff, 2, 10, QLatin1Char('0')));
-        } else {
-            return localNow.toString(Qt::ISODate).append(qsl("+00:00"));
         }
+        return localNow.toString(Qt::ISODate).append(qsl("+00:00"));
 #else
         auto localNow = QDateTime::currentDateTime();
         const int offset = localNow.offsetFromUtc();
