@@ -1312,7 +1312,7 @@ int TLuaInterpreter::permKey(lua_State* L)
         }
 
         auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
-        if(keyID == - 1) {
+        if (keyID == -1) {
             lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
             return lua_error(L);
         }
@@ -1340,7 +1340,7 @@ int TLuaInterpreter::permKey(lua_State* L)
 
     luaFunction = lua_tostring(L, argIndex);
     auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
-    if(keyID == - 1) {
+    if (keyID == -1) {
         lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
         return lua_error(L);
     }
