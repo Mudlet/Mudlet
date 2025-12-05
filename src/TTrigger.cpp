@@ -105,9 +105,9 @@ void TTrigger::setName(const QString& name)
     mpHost->getTriggerUnit()->mLookupTable.insert(name, this);
 }
 
-static void pcre_deleter(pcre* pointer)
+static void pcre2_code_deleter(pcre2_code* pointer)
 {
-    pcre_free(pointer);
+    pcre2_code_free(pointer);
 }
 
 //FIXME: lock if code *OR* regex doesn't compile
@@ -159,16 +159,25 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mPatternKinds.append(patternKinds.at(i));
 
             if (patternKinds.at(i) == REGEX_PERL) {
-                const char* error;
                 const QByteArray& regexp = patterns.at(i).toUtf8();
 
-                int erroffset;
+                int errorcode;
+                PCRE2_SIZE erroffset;
 
-                // PCRE_UTF8 needed to run compile in UTF-8 mode
-                // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
-                QSharedPointer<pcre> const re(pcre_compile(regexp.constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
+                // PCRE2_UTF needed to run compile in UTF-8 mode
+                // PCRE2_UCP needed for \d, \w etc. to use Unicode properties:
+                QSharedPointer<pcre2_code> const re(pcre2_compile(
+                    reinterpret_cast<PCRE2_SPTR>(regexp.constData()),
+                    PCRE2_ZERO_TERMINATED,
+                    PCRE2_UTF | PCRE2_UCP,
+                    &errorcode,
+                    &erroffset,
+                    nullptr), pcre2_code_deleter);
 
                 if (!re) {
+                    PCRE2_UCHAR errorBuffer[256];
+                    pcre2_get_error_message(errorcode, errorBuffer, sizeof(errorBuffer));
+                    const char* error = reinterpret_cast<const char*>(errorBuffer);
                     if (mudlet::smDebugMode) {
                         TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
                         TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
@@ -242,7 +251,7 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
 {
     assert(mRegexMap.contains(patternNumber));
 
-    QSharedPointer<pcre> const re = mRegexMap[patternNumber];
+    QSharedPointer<pcre2_code> const re = mRegexMap[patternNumber];
 
     if (!re) {
         if (mudlet::smDebugMode) {
@@ -255,32 +264,29 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
     }
 
     const int haystackCLength = strlen(haystackC);
-    int rc = -1;
-    int ovector[MAX_CAPTURE_GROUPS * 3];
 
-    rc = pcre_exec(re.data(), nullptr, haystackC, haystackCLength, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
-
-    if (rc < 0) {
+    pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(re.data(), nullptr);
+    if (!match_data) {
         return false;
     }
 
-    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, rc, ovector);
+    int rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
 
+    if (rc < 0) {
+        pcre2_match_data_free(match_data);
+        return false;
+    }
+
+    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, match_data, rc);
+
+    pcre2_match_data_free(match_data);
     return true;
 }
 
 void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                                 const QSharedPointer<pcre>& re, int haystackCLength, int rc, int* ovector)
+                                 const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data, int rc)
 {
-    if (rc == 0) {
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(
-                qsl("%1\n").arg(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
-                QColor(255, 128, 0),
-                QColor(Qt::black));
-        }
-        qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
-    }
+    PCRE2_SIZE* ovector = pcre2_get_ovector_pointer(match_data);
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::blue, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
@@ -312,46 +318,45 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
         }
     }
 
-    int namecount = 0;
-    int name_entry_size = 0;
-    char* tabptr = nullptr;
+    uint32_t namecount = 0;
+    uint32_t name_entry_size = 0;
+    PCRE2_SPTR tabptr = nullptr;
 
-    pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
+    pcre2_pattern_info(re.data(), PCRE2_INFO_NAMECOUNT, &namecount);
 
     if (namecount > 0) {
-        // Based on snippet https://github.com/vmg/pcre/blob/master/pcredemo.c#L216
-        // Retrieves char table end entry size and extracts name of group and captures from
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &tabptr);
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-        for (i = 0; i < namecount; ++i) {
+        // Retrieves char table and entry size and extracts name of group and captures
+        pcre2_pattern_info(re.data(), PCRE2_INFO_NAMETABLE, &tabptr);
+        pcre2_pattern_info(re.data(), PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+        for (uint32_t j = 0; j < namecount; ++j) {
             const int n = (tabptr[0] << 8) | tabptr[1];
-            auto name = QString::fromUtf8(&tabptr[2]).trimmed(); //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
+            auto name = QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed(); //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
             auto* substring_start = haystackC + ovector[2*n]; //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
             auto substring_length = ovector[2*n+1] - ovector[2*n]; //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
             auto utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
-            namePositions.insert(name, qMakePair(utf16_pos + posOffset, substring_length));
+            namePositions.insert(name, qMakePair(utf16_pos + posOffset, static_cast<int>(substring_length)));
         }
     }
     if (mIsColorizerTrigger || mFilterTrigger) {
         numberOfCaptureGroups = captureList.size();
     }
     for (; mPerlSlashGOption;) {
-        int options = 0;
-        const int start_offset = ovector[1];
+        uint32_t options = 0;
+        const PCRE2_SIZE start_offset = ovector[1];
 
         if (ovector[0] == ovector[1]) {
-            if (ovector[0] >= haystackCLength) {
+            if (ovector[0] >= static_cast<PCRE2_SIZE>(haystackCLength)) {
                 goto END;
             }
-            options = PCRE_NOTEMPTY | PCRE_ANCHORED;
+            options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), nullptr, haystackC, haystackCLength, start_offset, options, ovector, MAX_CAPTURE_GROUPS * 3);
+        rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, start_offset, options, match_data, nullptr);
 
-        if (rc == PCRE_ERROR_NOMATCH) {
+        if (rc == PCRE2_ERROR_NOMATCH) {
             if (options == 0) {
                 break;
             }
@@ -359,11 +364,6 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             continue;
         } else if (rc < 0) {
             goto END;
-        } else if (rc == 0) {
-            if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
-            }
-            qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
         }
 
         for (i = 0; i < rc; i++) {

@@ -707,9 +707,8 @@ void XMLimport::readHost(Host* pHost)
         if (attributes().hasAttribute(legacyAttribute)) {
             bool value = attributes().value(legacyAttribute) == YES;
             return invert ? !value : value;
-        } else {
-            return defaultsTo;
         }
+        return defaultsTo;
     };
 
     auto setBoolAttributeWithDefault = [&](const QString& attribute, bool& target, const bool defaultsTo) {

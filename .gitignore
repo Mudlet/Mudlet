@@ -11,6 +11,7 @@ qrc_*.cpp
 *.autosave
 mudlet
 app-build.txt
+src/crash_reporter/build/
 
 # Qt creator's clangd cache
 .cache

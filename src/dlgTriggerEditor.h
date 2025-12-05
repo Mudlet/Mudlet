@@ -249,7 +249,7 @@ public slots:
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
     void slot_colorizeTriggerSetFgColor();
-    void slot_saveSelectedItem(QTreeWidgetItem* pItem);
+    void slot_saveSelectedItem();
     void slot_export();
     void slot_import();
     void slot_createModule();

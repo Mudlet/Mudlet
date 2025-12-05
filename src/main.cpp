@@ -43,6 +43,7 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
+#include "SentryWrapper.h"
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -160,6 +161,12 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
+
+    #ifdef WITH_SENTRY
+        initSentry();
+        auto sentryClose = qScopeGuard([] { sentry_close(); });
+    #endif
+
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {
@@ -402,9 +409,8 @@ int main(int argc, char* argv[])
             const bool successful = instanceCoordinator->installPackagesRemotely();
             if (successful) {
                 return 0;
-            } else {
-                return 1;
             }
+            return 1;
         }
     }
 

@@ -147,6 +147,9 @@ void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
         if (rect.contains(event->pos())) {
             QTreeWidgetItem* clicked = itemFromIndex(indexClicked);
+            if (!clicked) {
+                return;
+            }
             if (!(clicked->flags() & Qt::ItemIsUserCheckable)) {
                 return;
             }

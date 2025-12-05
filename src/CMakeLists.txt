@@ -22,7 +22,6 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-set(LIB_MUDLET_TARGET "mudlet_core")
 set(EXE_MUDLET_NAME "mudlet")
 set(EXE_MUDLET_TARGET "mudlet_executable")
 
@@ -117,6 +116,7 @@ set(mudlet_SRCS
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
+    SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
@@ -336,6 +336,7 @@ set(mudlet_HDRS
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
     SelectionRectangleHandler.h
+    SentryWrapper.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h
@@ -508,7 +509,7 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(PCRE REQUIRED)
+find_package(PCRE2 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 CONFIG REQUIRED)
@@ -671,7 +672,7 @@ target_link_libraries(
         Boost::boost
         HUNSPELL::HUNSPELL
         LUA51::LUA51
-        PCRE::PCRE
+        PCRE2::PCRE2
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
@@ -718,6 +719,11 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
 # will fail to load with "undefined symbol" errors.
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
+
+if (WITH_SENTRY)
+  include(cmake/WithSentry.cmake)
+  add_subdirectory(crash_reporter)
+endif()
 
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
