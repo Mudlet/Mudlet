@@ -385,6 +385,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     
     // For character-based height specs, handle minimum size more carefully
     bool isCharacterHeight = frame->height.trimmed().endsWith('c', Qt::CaseInsensitive);
+    bool isCharacterWidth = frame->width.trimmed().endsWith('c', Qt::CaseInsensitive);
     bool willHaveTitle = !frame->floating && frame->hasExplicitTitle;
     
     // Apply minimum size for visibility to non-character-based frames
@@ -405,6 +406,17 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         
         if (frameHeight < minFrameSize) {
             frameHeight = minFrameSize;
+        }
+    }
+    
+    // Add small padding compensation for character-based frames to ensure full character visibility
+    // This accounts for any internal widget padding or text rendering margins
+    if (isCharacterHeight || isCharacterWidth) {
+        if (isCharacterWidth && frameWidth > 0) {
+            frameWidth += 4;  // Add 4px horizontal padding for character visibility
+        }
+        if (isCharacterHeight && frameHeight > 0) {
+            frameHeight += 4; // Add 4px vertical padding for character visibility  
         }
     }
     
@@ -821,10 +833,14 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
         QFontMetrics fm(font);
         
         if (isHeight) {
-            int result = chars * fm.lineSpacing();
+            // Use height() instead of lineSpacing() to match Host::calcFontSize()
+            // and avoid extra line spacing that reduces actual character count
+            int result = chars * fm.height();
             return QSize(0, result);
         } else {
-            int result = chars * fm.averageCharWidth();
+            // Use horizontalAdvance('W') instead of averageCharWidth() for consistency 
+            // with Host::calcFontSize() which uses this for more accurate character width
+            int result = chars * fm.horizontalAdvance(QChar('W'));
             return QSize(result, 0);
         }
     }
