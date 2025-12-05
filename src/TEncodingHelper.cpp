@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "TEncodingHelper.h"
+#include "TEncodingTable.h"
 #include "TTextCodec.h"
 #include <QDebug>
 
@@ -27,14 +28,86 @@ bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
            encoding == "CP437" ||
            encoding == "CP667" ||
            encoding == "CP737" ||
-           encoding == "CP869" ||
-           encoding == "MEDIEVIA";
+           encoding == "CP869";
 }
 
 std::optional<QStringConverter::Encoding> TEncodingHelper::getQtEncoding(const QByteArray& encoding)
 {
     auto enc = QStringConverter::encodingForName(encoding.constData());
     return enc;
+}
+
+bool TEncodingHelper::hasLookupTable(const QByteArray& encoding)
+{
+    const auto& table = TEncodingTable::csmDefaultInstance.getLookupTable(encoding);
+    return !table.isEmpty();
+}
+
+QString TEncodingHelper::decodeWithLookupTable(const QByteArray& bytes, const QByteArray& encoding)
+{
+    const auto& lookupTable = TEncodingTable::csmDefaultInstance.getLookupTable(encoding);
+    if (lookupTable.isEmpty()) {
+        return QString::fromLatin1(bytes);
+    }
+
+    QString result;
+    result.reserve(bytes.size());
+
+    for (const char c : bytes) {
+        const auto byte = static_cast<quint8>(c);
+        if (byte < 128) {
+            result.append(QChar(byte));
+        } else {
+            result.append(lookupTable.at(byte - 128));
+        }
+    }
+
+    return result;
+}
+
+QByteArray TEncodingHelper::encodeWithLookupTable(const QString& str, const QByteArray& encoding)
+{
+    const auto& lookupTable = TEncodingTable::csmDefaultInstance.getLookupTable(encoding);
+    if (lookupTable.isEmpty()) {
+        return str.toLatin1();
+    }
+
+    QByteArray result;
+    result.reserve(str.size());
+
+    for (const QChar& ch : str) {
+        if (ch.unicode() < 128) {
+            result.append(static_cast<char>(ch.unicode()));
+        } else {
+            int index = lookupTable.indexOf(ch);
+            if (index >= 0) {
+                result.append(static_cast<char>(index + 128));
+            } else {
+                result.append('?');
+            }
+        }
+    }
+
+    return result;
+}
+
+bool TEncodingHelper::canEncodeWithLookupTable(const QString& str, const QByteArray& encoding)
+{
+    const auto& lookupTable = TEncodingTable::csmDefaultInstance.getLookupTable(encoding);
+    if (lookupTable.isEmpty()) {
+        return false;
+    }
+
+    for (const QChar& ch : str) {
+        if (ch.unicode() < 128) {
+            continue;
+        }
+        if (lookupTable.indexOf(ch) < 0) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encoding)
@@ -60,7 +133,11 @@ QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encod
         QStringDecoder decoder(*qtEnc);
         return decoder.decode(bytes);
     }
-    
+
+    if (hasLookupTable(encoding)) {
+        return decodeWithLookupTable(bytes, encoding);
+    }
+
     return QString::fromLatin1(bytes);
 }
 
@@ -87,7 +164,11 @@ QByteArray TEncodingHelper::encode(const QString& str, const QByteArray& encodin
         QStringEncoder encoder(*qtEnc);
         return encoder.encode(str);
     }
-    
+
+    if (hasLookupTable(encoding)) {
+        return encodeWithLookupTable(str, encoding);
+    }
+
     return str.toLatin1();
 }
 
@@ -111,7 +192,11 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
         QByteArray encoded = encoder.encode(str);
         return encoder.hasError() == false;
     }
-    
+
+    if (hasLookupTable(encoding)) {
+        return canEncodeWithLookupTable(str, encoding);
+    }
+
     // Unknown encoding - cannot encode
     return false;
 }
@@ -119,6 +204,10 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
 bool TEncodingHelper::isEncodingAvailable(const QByteArray& encoding)
 {
     if (isCustomEncoding(encoding)) {
+        return true;
+    }
+
+    if (hasLookupTable(encoding)) {
         return true;
     }
     

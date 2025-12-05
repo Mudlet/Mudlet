@@ -369,7 +369,7 @@ public:
     QWidget* mpRightToolBar = nullptr;
     QWidget* mpMainDisplay = nullptr;
 
-    dlgMapper* mpMapper = nullptr;
+    QPointer<dlgMapper> mpMapper;
 
     QScrollBar* mpScrollBar = nullptr;
     QScrollBar* mpHScrollBar = nullptr;

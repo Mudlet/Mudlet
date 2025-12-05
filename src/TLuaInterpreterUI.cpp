@@ -2591,6 +2591,7 @@ int TLuaInterpreter::setFont(lua_State* L)
 
     QString windowName;
     int s = 1;
+
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, s++);
     }
@@ -2601,15 +2602,29 @@ int TLuaInterpreter::setFont(lua_State* L)
         return warnArgumentValue(L, __func__, "font must not be empty");
     }
 
+    QString effectiveFontName = fontName;
+    QFont::Weight fontWeight = QFont::Normal;
+
     if (!mudlet::self()->getAvailableFonts().contains(fontName, Qt::CaseInsensitive)) {
-        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+        // Font not found - try parsing as a static font name with style
+        auto [baseName, weight] = host.parseFontNameAndStyle(fontName);
+        
+        if (mudlet::self()->getAvailableFonts().contains(baseName, Qt::CaseInsensitive)) {
+            // Found the base font family, use it with the parsed weight
+            effectiveFontName = baseName;
+            fontWeight = weight;
+            qDebug() << "setFont(): Font" << fontName << "not found, using" << baseName << "with weight" << fontWeight;
+        } else {
+            // Still not found - report error
+            return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+        }
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 #if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
-    QFont::insertSubstitution(fontName, qsl("Noto Color Emoji"));
+    QFont::insertSubstitution(effectiveFontName, qsl("Noto Color Emoji"));
     // TODO issue #4159: a nonexisting font breaks the console
 #endif
     // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
@@ -2618,15 +2633,29 @@ int TLuaInterpreter::setFont(lua_State* L)
     auto console = CONSOLE(L, windowName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
-        auto result = host.setDisplayFont(QFont(fontName, host.getDisplayFont().pointSize()));
+        QFont newFont = host.createFontWithSettings(effectiveFontName, host.getDisplayFont().pointSize());
+
+        if (fontWeight != QFont::Normal) {
+            newFont.setWeight(fontWeight);
+        }
+
+        auto result = host.setDisplayFont(newFont);
+
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);
         }
+
         console->refreshView();
     } else {
-        auto font = QFont(fontName, console->font().pointSize());
-        console->setFont(font);
+        QFont newFont = host.createFontWithSettings(effectiveFontName, console->font().pointSize());
+
+        if (fontWeight != QFont::Normal) {
+            newFont.setWeight(fontWeight);
+        }
+
+        console->setFont(newFont);
     }
+
     lua_pushboolean(L, true);
     return 1;
 }

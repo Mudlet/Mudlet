@@ -86,7 +86,7 @@ public slots:
 private:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
-    QMenu* mpInfoMenu = nullptr;
+    QPointer<QMenu> mpInfoMenu;
     bool mIs3DMode = false;
 };
 
