@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -98,10 +98,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
 
       - name: update submodule to latest
@@ -139,10 +139,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
 
       - name: update submodule to latest in branch
@@ -183,7 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -263,7 +263,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 

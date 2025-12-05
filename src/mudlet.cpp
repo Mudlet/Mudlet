@@ -126,9 +126,8 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
         mudlet::smDebugMode = false;
         mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
-    } else {
-        return QObject::eventFilter(obj, event);
     }
+    return QObject::eventFilter(obj, event);
 }
 
 /*static*/ void mudlet::start()
@@ -2479,9 +2478,8 @@ bool mudlet::saveWindowLayout()
         }
         mHasSavedLayout = true;
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::loadWindowLayout()
@@ -3932,24 +3930,36 @@ void mudlet::slot_showAboutDialog()
 void mudlet::slot_toggleTimeStamp()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->timeStampButton->click();
 }
 
 void mudlet::slot_toggleReplay()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->replayButton->click();
 }
 
 void mudlet::slot_toggleLogging()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->logButton->click();
 }
 
 void mudlet::slot_toggleEmergencyStop()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->emergencyStop->click();
 }
 
@@ -4301,6 +4311,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
+    if (mHostManager.hostLoaded(profile_name)) {
+        qDebug() << "Profile" << profile_name << "already loaded, skipping duplicate autologin";
+        return;
+    }
+
     loadProfile(profile_name, true);
 
     slot_connectionDialogueFinished(profile_name, true);
@@ -4361,6 +4376,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // are ready for use.
     pHost->getScriptUnit()->compileAll(true);
     pHost->updateAnsi16ColorsInTable();
+    pHost->updateExtendedAnsiColorsInTable();
 
     //Load rest of modules after scripts
     while (it2.hasNext()) {
@@ -4411,6 +4427,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
     pHost->raiseEvent(event);
     pHost->mIsProfileLoadingSequence = false;
+    emit signal_profileLoaded();
 }
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
@@ -5416,12 +5433,11 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     // load an old profile if there is any
-    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
-        pHost = mHostManager.getHost(profile_name);
-        if (!pHost) {
-            return pHost;
-        }
-    } else {
+    if (!mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+        return pHost;
+    }
+    pHost = mHostManager.getHost(profile_name);
+    if (!pHost) {
         return pHost;
     }
 
@@ -5654,8 +5670,6 @@ bool mudlet::migratePasswordsToProfileStorage()
 
     const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
-    bool anyMigrationNeeded = false;
-
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
         QString password = CredentialManager::retrieveCredential(profile, "character");
@@ -5672,7 +5686,6 @@ bool mudlet::migratePasswordsToProfileStorage()
             } else {
                 qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile << "\" to profile storage (secure storage preserved for compatibility).";
             }
-            anyMigrationNeeded = true;
         }
 
         // Also check for old-format keychain entries (service: "Mudlet profile", key: profile name)
@@ -6739,25 +6752,23 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
         if (egg) {
             auto eggFileName = qsl(":/splash/Mudlet_splashscreen_other_%1.png").arg(egg, 2, 10, QLatin1Char('0'));
             return QImage(eggFileName);
-        } else {
-            // For the zeroth case just rotate the picture 180 degrees:
-            const QImage original(releaseVersion
-                                    ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                                    : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
-                                                                     : qsl(":/splash/Mudlet_splashscreen_development.png"));
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-            return original.flipped(Qt::Horizontal|Qt::Vertical);
-#else
-            // Deprecated in 6.9 and due for removal in 6.13:
-            return original.mirrored(true, true);
-#endif
         }
-    } else {
-        return QImage(releaseVersion
+        // For the zeroth case just rotate the picture 180 degrees:
+        const QImage original(releaseVersion
+                                ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                                : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                                 : qsl(":/splash/Mudlet_splashscreen_development.png"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+        return original.flipped(Qt::Horizontal|Qt::Vertical);
+#else
+        // Deprecated in 6.9 and due for removal in 6.13:
+        return original.mirrored(true, true);
+#endif
+    }
+    return QImage(releaseVersion
                               ? qsl(":/splash/Mudlet_splashscreen_main.png")
                               : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                : qsl(":/splash/Mudlet_splashscreen_development.png"));
-    }
 #else
     return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN

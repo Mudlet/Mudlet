@@ -851,9 +851,9 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString luaSql_Sqlite3Header(tr("<h2><u>LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).</u></h2>"
                                     "<h3>Copyright © 2003-2019, The Kepler Project</h3>"));
 
-    QString lrexlib_pcreHeader(tr("<h2><u>Lrexlib-pcre -  Regular expression library binding (PCRE flavour).</u></h2>"
-                                  "<h3>Copyright © Reuben Thomas 2000-2020<br>"
-                                  "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
+    QString lrexlib_pcre2Header(tr("<h2><u>Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).</u></h2>"
+                                   "<h3>Copyright © Reuben Thomas 2000-2020<br>"
+                                   "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
@@ -944,7 +944,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                luaYajlHeader,                  //  8 - lua_yajl header - translatable
                                                luaUTF8Header,                  //  9 - luautf8 header - translatable
                                                luaSql_Sqlite3Header,           // 10 - luaSql_Sqlite3 header - translatable
-                                               lrexlib_pcreHeader,             // 11 - lrexlib_pcre header - translatable
+                                               lrexlib_pcre2Header,            // 11 - lrexlib_pcre2 header - translatable
                                                MIT_Body));                     // 12 - six copies of the body MIT for all of the above - not translatable
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
@@ -1023,6 +1023,14 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     license_3rdParty_texts.append(qsl("<hr>%41%42")
                                   .arg(Utf8_filenamesHeader,                   // 41 - utf8_filename header - translatable
                                        MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
+
+    QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
+                               "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
+                               "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
+                               "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
+
+    license_3rdParty_texts.append(qsl("<hr>%43")
+                                  .arg(swordModelHeader));                      // 43 - sword model attribution - translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

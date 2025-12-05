@@ -4,15 +4,14 @@ set +e
 shopt -s expand_aliases
 #Removed boost as first item as a temporary workaround to prevent trying to
 #upgrade to boost version 1.68.0 which has not been bottled yet...
-BREWS="luarocks cmake hunspell libzip mudlet/dependencies/lua@5.1 pcre pkg-config yajl ccache pugixml qt6"
+BREWS="luarocks cmake hunspell libzip mudlet/dependencies/lua@5.1 pcre2 pkg-config yajl ccache pugixml qt6 assimp"
 OUTDATED_BREWS=$(brew outdated)
 
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo " "
     echo "Considering whether to upgrade: ${i}"
-    #Added the -w (whole-word) option so that the grep will NOT match for pcre2
-    #when we are considering pcre:
+    #Added the -w (whole-word) option so that the grep will match the exact package:
     echo "${OUTDATED_BREWS}" | grep -w -q $i
     STATUS="$?"
     if [ "${STATUS}" -ne 0 ]; then

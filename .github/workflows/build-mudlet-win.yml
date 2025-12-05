@@ -27,9 +27,9 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
 
     - name: (Windows) Setup MSYS2
@@ -62,7 +62,24 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        # Enable debug sending only for tags and scheduled builds (Release builds and PTB builds)
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        WITH_SENTRY: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+
+    - name: (Windows) Run QTest
+      shell: msys2 {0}
+      run: |
+        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        export LUA_PATH
+        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        export LUA_CPATH
+
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
       timeout-minutes: 5
@@ -98,7 +115,9 @@ jobs:
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
-
+      env:
+        WITH_SENTRY: "ON"
+  
     - name: (Windows) Login to Azure
       uses: azure/login@v2
       if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
@@ -131,7 +150,7 @@ jobs:
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
 
     - name: Create intermediate artifact for debugging
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: env.INTERMEDIATE_ARTIFACT_NAME
       with:
         name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
@@ -143,7 +162,7 @@ jobs:
       # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
       # the given name - the Environmental variables are created by the
       # deploy-mudlet-for-windows.sh script:
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: env.ARTIFACT_NAME
       with:
         name: ${{env.ARTIFACT_NAME}}

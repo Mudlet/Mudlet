@@ -62,18 +62,26 @@ describe("Tests Other.lua functions", function()
         _G.oldPermTimer = _G.permTimer
         _G.oldPermSubstringTrigger = _G.permSubstringTrigger
         _G.oldPermAlias = _G.permAlias
+        _G.oldPermKey = _G.permKey
+        _G.oldPermScript = _G.permScript
         _G.permTimer = function() return 1 end
         _G.permSubstringTrigger = function() return 1 end
         _G.permAlias = function() return 1 end
+        _G.permKey = function() return 1 end
+        _G.permScript = function() return 1 end
       end)
 
       teardown(function()
         _G.permTimer = _G.oldPermTimer
         _G.permSubstringTrigger = _G.oldPermSubstringTrigger
         _G.permAlias = _G.oldPermAlias
+        _G.permKey = _G.oldPermKey
+        _G.permScript = _G.oldPermScript
         _G.oldPermTimer = nil
         _G.oldPermSubstringTrigger = nil
         _G.oldPermAlias = nil
+        _G.oldPermKey = nil
+        _G.oldPermScript = nil
       end)
 
       it("should return true if the timer group was created", function()
@@ -102,6 +110,32 @@ describe("Tests Other.lua functions", function()
         assert.spy(permTrigger).was.called_with(name, parent, {}, "")
         assert.is_true(successful)
       end)
+
+      it("should return true if the key group was created", function()
+        local permKey = spy.on(_G, "permKey")
+        local name = "TestKey"
+        local parent = "Parent"
+        local successful = permGroup(name, "key", parent)
+        assert.spy(permKey).was.called_with(name, parent, -1, "")
+        assert.is_true(successful)
+      end)
+
+      it("should return true if the script group was created", function()
+        local permScript = spy.on(_G, "permScript")
+        local name = "TestScript"
+        local parent = "Parent"
+        local successful = permGroup(name, "script", parent)
+        assert.spy(permScript).was.called_with(name, parent, "", "")
+        assert.is_true(successful)
+      end)
+
+      it("should use empty string as default parent when parent is not provided", function()
+        local permTimer = spy.on(_G, "permTimer")
+        local name = "TestTimer"
+        local successful = permGroup(name, "timer")
+        assert.spy(permTimer).was.called_with(name, "", 0, "")
+        assert.is_true(successful)
+      end)
     end)
 
     describe("failure", function()
@@ -109,18 +143,26 @@ describe("Tests Other.lua functions", function()
         _G.oldPermTimer = _G.permTimer
         _G.oldPermSubstringTrigger = _G.permSubstringTrigger
         _G.oldPermAlias = _G.permAlias
+        _G.oldPermKey = _G.permKey
+        _G.oldPermScript = _G.permScript
         _G.permTimer = function() return -1 end
         _G.permSubstringTrigger = function() return -1 end
         _G.permAlias = function() return -1 end
+        _G.permKey = function() return -1 end
+        _G.permScript = function() return -1 end
       end)
 
       teardown(function()
         _G.permTimer = _G.oldPermTimer
         _G.permSubstringTrigger = _G.oldPermSubstringTrigger
         _G.permAlias = _G.oldPermAlias
+        _G.permKey = _G.oldPermKey
+        _G.permScript = _G.oldPermScript
         _G.oldPermTimer = nil
         _G.oldPermSubstringTrigger = nil
         _G.oldPermAlias = nil
+        _G.oldPermKey = nil
+        _G.oldPermScript = nil
       end)
 
       it("should return false if the timer group was not created", function()
@@ -148,6 +190,60 @@ describe("Tests Other.lua functions", function()
         local successful = permGroup(name, "trigger", parent)
         assert.spy(permTrigger).was.called_with(name, parent, {}, "")
         assert.is_false(successful)
+      end)
+
+      it("should return false if the key group was not created", function()
+        local permKey = spy.on(_G, "permKey")
+        local name = "TestKey"
+        local parent = "Parent"
+        local successful = permGroup(name, "key", parent)
+        assert.spy(permKey).was.called_with(name, parent, -1, "")
+        assert.is_false(successful)
+      end)
+
+      it("should return false if the script group was not created", function()
+        local permScript = spy.on(_G, "permScript")
+        local name = "TestScript"
+        local parent = "Parent"
+        local successful = permGroup(name, "script", parent)
+        assert.spy(permScript).was.called_with(name, parent, "", "")
+        assert.is_false(successful)
+      end)
+    end)
+
+    describe("error handling", function()
+      setup(function()
+        _G.oldPermTimer = _G.permTimer
+        _G.permTimer = function() return 1 end
+      end)
+
+      teardown(function()
+        _G.permTimer = _G.oldPermTimer
+        _G.oldPermTimer = nil
+      end)
+
+      it("should raise an error if name is not a string", function()
+        assert.has_error(function()
+          permGroup(123, "timer")
+        end, "permGroup: need a name for the new thing")
+      end)
+
+      it("should raise an error if name is nil", function()
+        assert.has_error(function()
+          permGroup(nil, "timer")
+        end, "permGroup: need a name for the new thing")
+      end)
+
+      it("should raise an error if itemtype is invalid", function()
+        assert.has_error(function()
+          permGroup("TestName", "invalid_type")
+        end, "permGroup: invalid_type isn't a valid type")
+      end)
+
+      it("should raise an error if itemtype is nil", function()
+        assert.has_error(function()
+          permGroup("TestName", nil)
+        end, "permGroup: nil isn't a valid type")
       end)
     end)
   end)
