@@ -150,6 +150,7 @@ CMAKE_ARGS=(
 
 if [ "${WITH_SENTRY}" = "ON" ]; then
     CMAKE_ARGS+=("-DWITH_SENTRY=ON")
+    CMAKE_ARGS+=("-DSENTRY_DSN=${SENTRY_DSN}")
 fi
 
 if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
