@@ -1225,11 +1225,14 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         // Check if there's an active MXP DEST - route to destination frame
         if (mpHost->mMxpFrameManager.hasActiveDestination()) {
             TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
-            if (destConsole && destConsole != mpHost->mpConsole && !mMudLine.isEmpty()) {
-                destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            if (destConsole && destConsole != mpHost->mpConsole) {
+                if (!mMudLine.isEmpty()) {
+                    destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+                }
                 mMudLine.clear();
                 mMudBuffer.clear();
                 ++localBufferPosition;
+                // Skip creating lines in main console while destination is active
                 return true;
             }
         }
