@@ -36,19 +36,31 @@
 
 TMxpFrame::~TMxpFrame()
 {
+    // Mark as being destroyed to prevent re-entrant access
+    mBeingDestroyed = true;
+    
+    // Remove this frame from parent's childFrames list (if parent exists and is valid)
+    if (parentFrame && !parentFrame->mBeingDestroyed) {
+        parentFrame->childFrames.removeOne(this);
+    }
+    parentFrame = nullptr;
+    
+    // Orphan all children (set their parentFrame to nullptr)
+    // We do NOT delete children - TMxpFrameManager owns all frames
+    // and is responsible for deletion (flat ownership model)
+    for (TMxpFrame* child : childFrames) {
+        if (child && !child->mBeingDestroyed) {
+            child->parentFrame = nullptr;
+        }
+    }
+    childFrames.clear();
+    
     // Clean up UI elements
     if (dockWidget) {
         delete dockWidget.data();
     } else if (widget) {
         delete widget.data();
     }
-    
-    // Note: We don't touch childFrames or parentFrame here.
-    // When TMxpFrameManager::~TMxpFrameManager() calls qDeleteAll,
-    // the iteration order is unpredictable, so child frames may already
-    // be deleted. Accessing them would cause use-after-free.
-    // The childFrames list is only valid during normal operation,
-    // not during shutdown cleanup.
 }
 
 TMxpFrameManager::TMxpFrameManager(Host* host)
@@ -58,9 +70,8 @@ TMxpFrameManager::TMxpFrameManager(Host* host)
 
 TMxpFrameManager::~TMxpFrameManager()
 {
-    // Clean up all frames
-    qDeleteAll(mFrames);
-    mFrames.clear();
+    // Clean up all frames properly (children before parents, clear destinations, etc.)
+    resetAllFrames();
 }
 
 bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QString>& attributes)
@@ -280,9 +291,7 @@ void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool e
             console->buffer.clear();
         } else if (eol) {
             // Clear only the current (last) line being built
-            if (!console->buffer.buffer.empty()) {
-                console->buffer.buffer.back().clear();
-            }
+            console->buffer.clearLastLine();
         }
     }
 }
@@ -918,20 +927,22 @@ bool TMxpFrameManager::canCreateFrame() const
 
 void TMxpFrameManager::removeFrameFromHierarchy(TMxpFrame* frame)
 {
-    if (!frame) {
+    if (!frame || frame->mBeingDestroyed) {
         return;
     }
     
-    // Remove from parent's child list
-    if (frame->parentFrame) {
+    // Remove from parent's child list (if parent is valid)
+    if (frame->parentFrame && !frame->parentFrame->mBeingDestroyed) {
         frame->parentFrame->childFrames.removeOne(frame);
     }
+    frame->parentFrame = nullptr;
     
-    // Handle orphaned children
-    for (auto* child : frame->childFrames) {
-        child->parentFrame = nullptr;
+    // Orphan children (set their parentFrame to nullptr)
+    for (TMxpFrame* child : frame->childFrames) {
+        if (child && !child->mBeingDestroyed) {
+            child->parentFrame = nullptr;
+        }
     }
-
     frame->childFrames.clear();
 }
 

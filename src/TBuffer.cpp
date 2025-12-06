@@ -3497,24 +3497,46 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
         appendEmptyLine();
     }
 
+    // Check for text/formatting size mismatch - this is a programming error
+    if (text.size() != static_cast<qsizetype>(formatting.size())) {
+        qWarning() << "TBuffer::appendFormatted: text size" << text.size() 
+                   << "differs from formatting size" << formatting.size()
+                   << "- using longer length with default formatting for missing entries";
+    }
+
     const int lastLineBeforeWrap = buffer.size() - 1;
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+
+    // Track whether we're appending the first character to an empty line (for timestamp)
+    bool firstChar = lineBuffer.back().isEmpty();
 
     // Track link ID mapping from source to destination
     int oldSourceLinkId = 0;
     int destLinkId = 0;
 
+    // Use the longer of text or formatting length to avoid dropping characters
+    const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
+    // Default TChar for when formatting is shorter than text
+    const TChar defaultChar;
+
     // Append each character with its corresponding formatting
-    const int length = std::min(text.size(), static_cast<qsizetype>(formatting.size()));
-    for (int i = 0; i < length; ++i) {
+    for (qsizetype i = 0; i < length; ++i) {
+        // Skip if we've exhausted the text (extra formatting entries are ignored)
+        if (i >= text.size()) {
+            break;
+        }
+        
         const QChar ch = text.at(i);
         if (ch == QChar::LineFeed) {
+            firstChar = true;
             appendEmptyLine();
             continue;
         }
         
+        // Get formatting - use default if we've exhausted the formatting deque
+        const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
+        
         // Handle link transfer - copy links from source to destination link store
-        const TChar& srcChar = formatting.at(i);
         const int sourceLinkId = srcChar.linkIndex();
         if (sourceLinkId && (oldSourceLinkId != sourceLinkId)) {
             // New link - copy it to our link store
@@ -3534,6 +3556,12 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
         TChar destChar(srcChar);
         destChar.mLinkIndex = destLinkId;
         buffer.back().push_back(destChar);
+
+        // Set timestamp when appending first character to an empty line
+        if (firstChar) {
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+            firstChar = false;
+        }
     }
 
     // Append a newline at the end
@@ -4242,6 +4270,16 @@ void TBuffer::clear()
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
+}
+
+void TBuffer::clearLastLine()
+{
+    if (!buffer.empty()) {
+        buffer.back().clear();
+        if (!lineBuffer.isEmpty()) {
+            lineBuffer.back().clear();
+        }
+    }
 }
 
 bool TBuffer::deleteLine(int y)

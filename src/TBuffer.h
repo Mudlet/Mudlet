@@ -410,6 +410,7 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
+    void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
     void flushPendingDestinationContent();

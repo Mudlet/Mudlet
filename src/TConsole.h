@@ -47,6 +47,7 @@
 
 #include <hunspell/hunspell.h>
 
+#include <deque>
 #include <list>
 #include <map>
 

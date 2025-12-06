@@ -38,6 +38,17 @@ class Host;
 class TConsole;
 class TDockWidget;
 
+/**
+ * @brief Represents a single MXP frame for multi-window layouts.
+ * 
+ * Ownership Model:
+ * - TMxpFrameManager owns all TMxpFrame instances via mFrames map (flat ownership)
+ * - parentFrame/childFrames are NON-OWNING references for hierarchy tracking only
+ * - TMxpFrameManager is responsible for deleting all frames; TMxpFrame destructor
+ *   does NOT delete children (to avoid double-deletion)
+ * - During destruction, frames remove themselves from parent's childFrames list
+ *   and orphan their children (set child->parentFrame = nullptr)
+ */
 struct TMxpFrame {
     QString name;
     QString title;
@@ -58,9 +69,13 @@ struct TMxpFrame {
     QPointer<TDockWidget> dockWidget;   // Container for internal frames
     QPointer<QTabWidget> tabWidget;     // For tab-based frames
     
-    // Hierarchy tracking
+    // Hierarchy tracking (non-owning references - see ownership model above)
     TMxpFrame* parentFrame = nullptr;
     QList<TMxpFrame*> childFrames;
+    
+    // Destruction state flag - set true when destructor begins to prevent
+    // re-entrant access from children/parents during cleanup
+    bool mBeingDestroyed = false;
     
     // VBox-style layout tracking
     int usedHeight = 0;     // Pixels used by child frames (for VBox stacking)

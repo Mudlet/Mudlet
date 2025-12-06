@@ -39,9 +39,11 @@ private slots:
     {
         // Test that FRAME tag is parsed correctly
         auto node = parseNode(R"(<FRAME name="Status" align="left" width="25%" height="100%">)");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getName(), "FRAME");
         QVERIFY(tag->hasAttribute("name"));
@@ -59,13 +61,20 @@ private slots:
         TMxpFrameTagHandler handler;
         
         auto tag = parseNode(R"(<FRAME name="TestFrame" width="300px" height="200px">)");
+        QVERIFY(tag != nullptr);
+        QVERIFY(tag->asTag() != nullptr);
         
         // The handler should delegate to the client
         TMxpTagHandlerResult result = handler.handleTag(ctx, stub, tag->asTag());
         
-        // Since TMxpStubClient doesn't implement frame methods, it should return false
-        // but the handler should have attempted to call it
-        QVERIFY(result == MXP_TAG_HANDLED || result == MXP_TAG_NOT_HANDLED);
+        // Verify the handler attempted to call createMxpFrame on the client
+        QVERIFY(stub.createMxpFrameCalled);
+        QCOMPARE(stub.lastCreatedFrameName, qsl("TestFrame"));
+        QCOMPARE(stub.lastFrameAttributes.value(qsl("WIDTH")), qsl("300px"));
+        QCOMPARE(stub.lastFrameAttributes.value(qsl("HEIGHT")), qsl("200px"));
+        
+        // Since TMxpStubClient::createMxpFrame returns false, handler should return NOT_HANDLED
+        QCOMPARE(result, MXP_TAG_NOT_HANDLED);
     }
 
     void testFrameCloseTag()
@@ -79,19 +88,21 @@ private slots:
         
         // Test that handler processes the end tag
         TMxpFrameTagHandler handler;
-        handler.handleTag(ctx, stub, &endTag);
+        TMxpTagHandlerResult result = handler.handleTag(ctx, stub, &endTag);
         
-        // Verify the close method was called (would need to enhance TMxpStubClient to track this)
-        QVERIFY(true); // Basic validation that end tag is accepted
+        // FRAME end tag is not handled (no handleEndTag override in TMxpFrameTagHandler)
+        QCOMPARE(result, MXP_TAG_NOT_HANDLED);
     }
 
     void testDestTagParsing()
     {
         // Test basic DEST tag
         auto node = parseNode(R"(<DEST name="Status">)");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getName(), "DEST");
         QVERIFY(tag->hasAttribute("name"));
@@ -104,9 +115,11 @@ private slots:
     {
         // Test DEST tag with EOL flag
         auto node = parseNode(R"(<DEST name="Combat" eol>)");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getName(), "DEST");
         QCOMPARE(tag->getAttributeValue("name"), "Combat");
@@ -117,9 +130,11 @@ private slots:
     {
         // Test DEST tag with EOF flag
         auto node = parseNode(R"(<DEST name="Log" eof>)");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getName(), "DEST");
         QCOMPARE(tag->getAttributeValue("name"), "Log");
@@ -134,31 +149,56 @@ private slots:
         TMxpDestTagHandler handler;
         
         auto tag = parseNode(R"(<DEST name="TestDest" eol>)");
+        QVERIFY(tag != nullptr);
+        QVERIFY(tag->asTag() != nullptr);
         
         TMxpTagHandlerResult result = handler.handleTag(ctx, stub, tag->asTag());
         
-        // The handler should attempt to set destination
-        QVERIFY(result == MXP_TAG_HANDLED || result == MXP_TAG_NOT_HANDLED);
+        // Verify the handler attempted to call setMxpDestination on the client
+        QVERIFY(stub.setMxpDestinationCalled);
+        QCOMPARE(stub.lastDestinationName, qsl("TestDest"));
+        QVERIFY(stub.lastDestinationEol);
+        QVERIFY(!stub.lastDestinationEof);
+        
+        // Since TMxpStubClient::setMxpDestination returns false, handler should return NOT_HANDLED
+        QCOMPARE(result, MXP_TAG_NOT_HANDLED);
     }
 
     void testDestCloseTag()
     {
         // Test closing DEST (clears destination)
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+        TMxpDestTagHandler handler;
+        
         auto node = parseNode("</DEST>");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isEndTag());
         MxpEndTag* tag = node->asEndTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getName(), "DEST");
+        
+        // Handle the end tag
+        TMxpTagHandlerResult result = handler.handleTag(ctx, stub, tag);
+        
+        // Verify clearMxpDestination was called
+        QVERIFY(stub.clearMxpDestinationCalled);
+        
+        // DEST end tag clears destination and returns HANDLED
+        QCOMPARE(result, MXP_TAG_HANDLED);
     }
 
     void testFrameWithAllAttributes()
     {
         // Test FRAME tag with all possible attributes
         auto node = parseNode(R"(<FRAME name="Complete" parent="main" title="Complete Test" align="top" width="50%" height="300px" scrolling="no" external="yes">)");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getName(), "FRAME");
         QCOMPARE(tag->getAttributeValue("name"), "Complete");
@@ -175,9 +215,11 @@ private slots:
     {
         // Test character-based frame sizing
         auto node = parseNode(R"(<FRAME name="Chars" width="40c" height="20c">)");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getAttributeValue("width"), "40c");
         QCOMPARE(tag->getAttributeValue("height"), "20c");
@@ -187,9 +229,11 @@ private slots:
     {
         // Test pixel-based frame sizing  
         auto node = parseNode(R"(<FRAME name="Pixels" width="640px" height="480px">)");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getAttributeValue("width"), "640px");
         QCOMPARE(tag->getAttributeValue("height"), "480px");
@@ -199,9 +243,11 @@ private slots:
     {
         // Test percentage-based frame sizing
         auto node = parseNode(R"(<FRAME name="Percent" width="75%" height="50%">)");
+        QVERIFY(node != nullptr);
         
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag != nullptr);
         
         QCOMPARE(tag->getAttributeValue("width"), "75%");
         QCOMPARE(tag->getAttributeValue("height"), "50%");
