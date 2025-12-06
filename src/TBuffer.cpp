@@ -3507,21 +3507,13 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
     const int lastLineBeforeWrap = buffer.size() - 1;
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
 
-    // Track whether we're appending the first character to an empty line (for timestamp)
     bool firstChar = lineBuffer.back().isEmpty();
-
-    // Track link ID mapping from source to destination
     int oldSourceLinkId = 0;
     int destLinkId = 0;
-
-    // Use the longer of text or formatting length to avoid dropping characters
     const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
-    // Default TChar for when formatting is shorter than text
     const TChar defaultChar;
 
-    // Append each character with its corresponding formatting
     for (qsizetype i = 0; i < length; ++i) {
-        // Skip if we've exhausted the text (extra formatting entries are ignored)
         if (i >= text.size()) {
             break;
         }
@@ -3533,17 +3525,13 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
             continue;
         }
         
-        // Get formatting - use default if we've exhausted the formatting deque
         const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
         
-        // Handle link transfer - copy links from source to destination link store
         const int sourceLinkId = srcChar.linkIndex();
         if (sourceLinkId && (oldSourceLinkId != sourceLinkId)) {
-            // New link - copy it to our link store
             destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), 
                                               sourceLinkStore.getHintsConst(sourceLinkId), 
                                               mpHost);
-            // Also copy per-link styling (CSS/decoration hints)
             mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
             oldSourceLinkId = sourceLinkId;
         } else if (!sourceLinkId) {
@@ -3551,23 +3539,18 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
         }
         
         lineBuffer.back().append(ch);
-        // Copy the source TChar to preserve all fields (colors, flags, decoration colors)
-        // then update only the link index to the destination link ID
         TChar destChar(srcChar);
         destChar.mLinkIndex = destLinkId;
         buffer.back().push_back(destChar);
 
-        // Set timestamp when appending first character to an empty line
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
             firstChar = false;
         }
     }
 
-    // Append a newline at the end
     appendEmptyLine();
 
-    // Handle wrapping
     if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
         log(lastLineBeforeWrap, lastLineBeforeWrap);
         wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);

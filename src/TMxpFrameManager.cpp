@@ -36,18 +36,14 @@
 
 TMxpFrame::~TMxpFrame()
 {
-    // Mark as being destroyed to prevent re-entrant access
     mBeingDestroyed = true;
     
-    // Remove this frame from parent's childFrames list (if parent exists and is valid)
     if (parentFrame && !parentFrame->mBeingDestroyed) {
         parentFrame->childFrames.removeOne(this);
     }
     parentFrame = nullptr;
     
-    // Orphan all children (set their parentFrame to nullptr)
-    // We do NOT delete children - TMxpFrameManager owns all frames
-    // and is responsible for deletion (flat ownership model)
+    // Orphan children - we do NOT delete them since TMxpFrameManager owns all frames
     for (TMxpFrame* child : childFrames) {
         if (child && !child->mBeingDestroyed) {
             child->parentFrame = nullptr;
@@ -55,7 +51,6 @@ TMxpFrame::~TMxpFrame()
     }
     childFrames.clear();
     
-    // Clean up UI elements
     if (dockWidget) {
         delete dockWidget.data();
     } else if (widget) {
@@ -155,13 +150,11 @@ bool TMxpFrameManager::closeFrame(const QString& name)
         return false;
     }
     
-    // Clear destination if it was pointing to this frame (before deletion)
     if (mCurrentDestination == name) {
         clearDestination();
     }
     
-    // Close all child frames first to avoid dangling pointers
-    // Make a copy of childFrames list since closeFrame modifies it
+    // Close children first - make a copy since closeFrame modifies the list
     QList<TMxpFrame*> childrenCopy = frame->childFrames;
 
     for (auto* child : childrenCopy) {
@@ -170,16 +163,13 @@ bool TMxpFrameManager::closeFrame(const QString& name)
         }
     }
     
-    // Unregister from main console maps before deletion
     if (mpHost && mpHost->mpConsole) {
         mpHost->mpConsole->mSubConsoleMap.remove(name);
         mpHost->mpConsole->mDockWidgetMap.remove(name);
     }
     
-    // Remove from hierarchy
     removeFrameFromHierarchy(frame);
     
-    // Remove from map and delete
     mFrames.remove(name);
     delete frame;
     
@@ -228,18 +218,15 @@ bool TMxpFrameManager::showFrame(const QString& name)
 
 void TMxpFrameManager::resetAllFrames()
 {
-    // Close all frames and reset borders
-    // This should be called on reconnect so MXP frames don't persist between sessions
+    // Called on reconnect - MXP frames don't persist between sessions
     QStringList frameNames = mFrames.keys();
 
     for (const QString& name : frameNames) {
         closeFrame(name);
     }
     
-    // Reset MXP borders to zero
     mMxpBorders = QMargins();
     
-    // Reset Host borders that were set by MXP frames
     if (mpHost) {
         mpHost->setBorders(QMargins());
     }
@@ -282,15 +269,12 @@ void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool e
     
     mCurrentDestination = frameName;
     
-    // Handle content clearing
     auto* console = getCurrentDestinationConsole();
 
     if (console) {
         if (eof) {
-            // Clear all content in the frame
             console->buffer.clear();
         } else if (eol) {
-            // Clear only the current (last) line being built
             console->buffer.clearLastLine();
         }
     }

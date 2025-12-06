@@ -254,7 +254,7 @@ public:
         createMxpFrameCalled = true;
         lastCreatedFrameName = name;
         lastFrameAttributes = attributes;
-        return false; // Stub returns false (not actually implemented)
+        return false;
     }
     
     bool setMxpDestination(const QString& frameName, bool eol, bool eof) override
@@ -263,7 +263,7 @@ public:
         lastDestinationName = frameName;
         lastDestinationEol = eol;
         lastDestinationEof = eof;
-        return false; // Stub returns false (not actually implemented)
+        return false;
     }
     
     void clearMxpDestination() override
