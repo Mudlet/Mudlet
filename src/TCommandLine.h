@@ -31,7 +31,6 @@
 #include <QPointer>
 #include <QString>
 #include <QStringList>
-#include <QTextDecoder>
 #include <QToolButton>
 #include <QResizeEvent>
 
