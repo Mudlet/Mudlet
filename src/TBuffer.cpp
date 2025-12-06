@@ -1184,6 +1184,32 @@ void TBuffer::flushPendingDestinationContent()
     }
 }
 
+void TBuffer::resetCurrentTextFormat()
+{
+    if (!mpHost) {
+        return;
+    }
+    
+    // Reset to default colors and attributes - equivalent to SGR 0
+    mIsDefaultColor = true;
+    mForeGroundColor = mpHost->mFgColor;
+    mForeGroundColorLight = mpHost->mFgColor;
+    mBackGroundColor = mpHost->mBgColor;
+    mBold = false;
+    mItalics = false;
+    mOverline = false;
+    mReverse = false;
+    mStrikeOut = false;
+    mUnderline = false;
+    mUnderlineWavy = false;
+    mUnderlineDotted = false;
+    mUnderlineDashed = false;
+    mBlink = false;
+    mFastBlink = false;
+    mConcealed = false;
+    mAltFont = 0;
+}
+
 bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 {
     if (CHAR_IS_COMMIT_CHAR(ch)) {

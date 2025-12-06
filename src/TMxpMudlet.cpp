@@ -322,6 +322,8 @@ void TMxpMudlet::clearMxpDestination()
 {
     if (mpHost && mpHost->mpConsole) {
         mpHost->mpConsole->buffer.flushPendingDestinationContent();
+        // Reset text formatting to prevent color bleeding from frame content to main console
+        mpHost->mpConsole->buffer.resetCurrentTextFormat();
         mpHost->mMxpFrameManager.clearDestination();
     }
 }
