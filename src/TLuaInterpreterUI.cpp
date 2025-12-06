@@ -921,7 +921,8 @@ int TLuaInterpreter::echoLink(lua_State* L)
                 text = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasText = true;
             } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
-                parseCommandOrFunction(L, __func__, -1, command, luaReference);
+                int valueIndex = -1;
+                parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
                 hasCommand = true;
             } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive)) {
                 hint = getVerifiedString(L, __func__, -1, qPrintable(key));
@@ -1835,7 +1836,8 @@ int TLuaInterpreter::insertLink(lua_State* L)
                 text = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasText = true;
             } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
-                parseCommandOrFunction(L, __func__, -1, command, luaReference);
+                int valueIndex = -1;
+                parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
                 hasCommand = true;
             } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("tooltip"), Qt::CaseInsensitive)) {
@@ -1957,10 +1959,12 @@ int TLuaInterpreter::insertPopup(lua_State* L)
                     text = getVerifiedString(L, __func__, -1, qPrintable(key));
                     hasText = true;
                 } else if (!key.compare(QLatin1String("commands"), Qt::CaseInsensitive)) {
-                    parseCommandsOrFunctionsTable(L, __func__, -1, commandList, luaReferences);
+                    int valueIndex = -1;
+                    parseCommandsOrFunctionsTable(L, __func__, valueIndex, commandList, luaReferences);
                     hasCommands = true;
                 } else if (!key.compare(QLatin1String("hints"), Qt::CaseInsensitive)) {
-                    parseHintsTable(L, __func__, -1, hintList);
+                    int valueIndex = -1;
+                    parseHintsTable(L, __func__, valueIndex, hintList);
                     hasHints = true;
                 } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
                     if (lua_isboolean(L, -1)) {

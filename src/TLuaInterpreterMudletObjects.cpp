@@ -1306,7 +1306,7 @@ int TLuaInterpreter::permKey(lua_State* L)
 
         Host& host = getHostFromLua(L);
         TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-        if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(luaFunction); !validationResult) {
+        if (auto [validationResult, validationMessage] = pLuaInterpreter->validLuaCode(luaFunction); !validationResult) {
             lua_pushfstring(L, "permKey: bad code argument (%s)", validationMessage.toUtf8().constData());
             return lua_error(L);
         }
