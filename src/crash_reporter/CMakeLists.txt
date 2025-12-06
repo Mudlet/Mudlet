@@ -5,6 +5,21 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+message(STATUS "=== Sentry Configuration ===")
+message(STATUS "WITH_SENTRY: ${WITH_SENTRY}")
+if(NOT SENTRY_DSN OR SENTRY_DSN STREQUAL "")
+    message(STATUS "SENTRY_DSN: NOT SET")
+else()
+    message(STATUS "SENTRY_DSN: SET")
+endif()
+
+if(NOT SENTRY_AUTH_TOKEN OR SENTRY_AUTH_TOKEN STREQUAL "")
+    message(STATUS "SENTRY_AUTH_TOKEN: NOT SET")
+else()
+    message(STATUS "SENTRY_AUTH_TOKEN: SET")
+endif()
+message(STATUS "============================")
+
 find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
 
 add_executable(MudletCrashReporter main.cpp)
