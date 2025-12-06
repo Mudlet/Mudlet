@@ -662,19 +662,19 @@ int main(int argc, char* argv[])
     mudlet::self()->init();
 
 #if defined(Q_OS_WIN)
-    // Associate mudlet with .mpackage files
-    QSettings settings("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
+    // Associate mudlet with .mpackage files using per-user registration (no admin needed)
+    QSettings settings("HKEY_CURRENT_USER\\Software\\Classes", QSettings::NativeFormat);
     settings.setValue(".mpackage", "MudletPackage");
     settings.setValue("MudletPackage/.", "Mudlet Package");
     settings.setValue("MudletPackage/shell/open/command/.", "mudlet %1");
     
-    // Register telnet:// protocol handler
+    // Register telnet:// protocol handler (per-user, no admin rights required)
     const QString mudletExe = QCoreApplication::applicationFilePath().replace('/', '\\');
     settings.setValue("telnet/.", "URL:Telnet Protocol");
-    settings.setValue("telnet/URL Protocol", QString());
+    settings.setValue("telnet/URL Protocol", "");
     settings.setValue("telnet/DefaultIcon/.", mudletExe + ",1");
-    settings.setValue("telnet/shell/open/command/.", qsl("\"%1\" \"%%1\"").arg(mudletExe));
-    qDebug() << "main: Registered Mudlet as telnet:// protocol handler";
+    settings.setValue("telnet/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
+    qDebug() << "main: Registered Mudlet as telnet:// protocol handler (per-user)";
 #endif
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.
