@@ -254,6 +254,7 @@
     "getRoomName": "getRoomName(roomID)",
     "getRooms": "rooms = getRooms()",
     "getRoomsByPosition": "roomTable = getRoomsByPosition(areaID, x,y,z)",
+    "getRoomsByPosition1": "roomTable = getRoomsByPosition1(areaID, x,y,z)",
     "getRoomUserData": "getRoomUserData(roomID, key)",
     "getRoomUserDataKeys": "getRoomUserDataKeys(roomID)",
     "getRoomWeight": "getRoomWeight(roomID)",

@@ -5313,6 +5313,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomUserData", TLuaInterpreter::setRoomUserData);
     lua_register(pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData);
     lua_register(pGlobalLua, "getRoomsByPosition", TLuaInterpreter::getRoomsByPosition);
+    lua_register(pGlobalLua, "getRoomsByPosition1", TLuaInterpreter::getRoomsByPosition1);
     lua_register(pGlobalLua, "clearRoomUserData", TLuaInterpreter::clearRoomUserData);
     lua_register(pGlobalLua, "clearRoomUserDataItem", TLuaInterpreter::clearRoomUserDataItem);
     lua_register(pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile);
