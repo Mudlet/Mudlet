@@ -135,26 +135,55 @@ QJsonValue TMCPLuaBridge::executeLuaCode(const QString& luaCode, const QString& 
         return QJsonValue(tr("Failed to setup Lua output capture"));
     }
 
-    // Execute the user's code
-    int result = luaL_dostring(L, luaCode.toUtf8().constData());
+    // Execute the user's code using luaL_loadstring + lua_pcall to capture return values
+    // (luaL_dostring uses lua_pcall with 0 return values, so we can't capture them)
+    int stackBefore = lua_gettop(L);
+    int loadResult = luaL_loadstring(L, luaCode.toUtf8().constData());
 
     QString resultStr;
-    if (result) {
-        // Handle Lua error
+    if (loadResult != 0) {
+        // Syntax error in Lua code
         if (lua_gettop(L) > 0) {
-            resultStr = tr("Lua Error: %1").arg(QString::fromUtf8(lua_tostring(L, -1)));
+            resultStr = tr("Lua Syntax Error: %1").arg(QString::fromUtf8(lua_tostring(L, -1)));
             lua_pop(L, 1);
         } else {
-            resultStr = tr("Unknown Lua error occurred");
+            resultStr = tr("Unknown Lua syntax error occurred");
         }
     } else {
-        // Get any return value
-        if (lua_gettop(L) > 0) {
-            QJsonValue returnValue = luaStackToJson(L, -1);
-            if (!returnValue.isNull()) {
-                resultStr += tr("Return value: %1\n").arg(QJsonDocument(QJsonArray{returnValue}).toJson(QJsonDocument::Compact));
+        // Execute the compiled chunk, requesting all return values
+        int execResult = lua_pcall(L, 0, LUA_MULTRET, 0);
+
+        if (execResult != 0) {
+            // Runtime error
+            if (lua_gettop(L) > 0) {
+                resultStr = tr("Lua Error: %1").arg(QString::fromUtf8(lua_tostring(L, -1)));
+                lua_pop(L, 1);
+            } else {
+                resultStr = tr("Unknown Lua error occurred");
             }
-            lua_pop(L, 1);
+        } else {
+            // Get all return values
+            int returnCount = lua_gettop(L) - stackBefore;
+            if (returnCount > 0) {
+                if (returnCount == 1) {
+                    QJsonValue returnValue = luaStackToJson(L, -1);
+                    if (!returnValue.isNull()) {
+                        if (returnValue.isString()) {
+                            resultStr = returnValue.toString();
+                        } else {
+                            resultStr = QJsonDocument(QJsonArray{returnValue}).toJson(QJsonDocument::Compact);
+                        }
+                    }
+                } else {
+                    // Multiple return values - return as array
+                    QJsonArray returnArray;
+                    for (int i = -returnCount; i <= -1; ++i) {
+                        returnArray.append(luaStackToJson(L, i));
+                    }
+                    resultStr = QJsonDocument(returnArray).toJson(QJsonDocument::Compact);
+                }
+                lua_pop(L, returnCount);
+            }
         }
     }
 
