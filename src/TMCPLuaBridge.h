@@ -20,9 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Host.h"
-#include "utils.h"
-
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -42,6 +39,8 @@ extern "C" {
 #include <lualib.h>
 #endif
 }
+
+class Host;
 
 struct LuaFunctionInfo {
     QString name;
