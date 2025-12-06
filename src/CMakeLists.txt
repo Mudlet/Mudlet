@@ -709,10 +709,6 @@ if(WIN32)
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)
-  # Add Windows application manifest with SquirrelAwareVersion for proper
-  # installer/update handling - prevents the double-run issue that can cause
-  # the app to delete itself during updates
-  target_sources(${EXE_MUDLET_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/mudlet.manifest")
 endif()
 
 if(APPLE)

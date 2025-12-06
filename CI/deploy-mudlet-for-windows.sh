@@ -266,6 +266,7 @@ else
     DBLSQD_VERSION_STRING="${VERSION}"
   fi
   ./Clowd.Squirrel/tools/Squirrel.exe pack \
+    --allowUnaware \
     --noDelta \
     --packId="${ID}" \
     --packVersion="${INSTALLER_VERSION}" \

@@ -61,7 +61,6 @@ void        initializeQRCResources();
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 bool runUpdate();
-bool handleSquirrelEvent(int argc, char* argv[]);
 #endif
 
 #if defined(INCLUDE_FONTS)
@@ -202,12 +201,6 @@ int main(int argc, char* argv[])
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
-    // Handle Squirrel events first - this must happen before any heavy initialization
-    // to ensure quick exit for install/uninstall/update events
-    if (handleSquirrelEvent(argc, argv)) {
-        return 0;
-    }
-
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
         return 0;
@@ -844,100 +837,6 @@ bool runUpdate()
             qDebug() << "Successfully cleaned up old installer after update";
         }
     }
-    return false;
-}
-
-// Handle Squirrel installer events (install, uninstall, update, etc.)
-// This makes Mudlet "Squirrel-aware" which can prevent the double-run issue
-// that causes the app to delete itself during updates.
-// Returns true if Mudlet should exit, false to continue normal startup.
-bool handleSquirrelEvent(int argc, char* argv[])
-{
-    // Check for Squirrel command-line arguments
-    QString squirrelEvent;
-    QString squirrelVersion;
-
-    for (int i = 1; i < argc; ++i) {
-        QString arg = QString::fromLocal8Bit(argv[i]);
-        if (arg.startsWith(qsl("--squirrel-"))) {
-            squirrelEvent = arg;
-            // Version follows the event argument
-            if (i + 1 < argc) {
-                squirrelVersion = QString::fromLocal8Bit(argv[i + 1]);
-            }
-            break;
-        }
-    }
-
-    if (squirrelEvent.isEmpty()) {
-        return false; // No Squirrel event, continue normal startup
-    }
-
-    qWarning() << "Squirrel event:" << squirrelEvent << "version:" << squirrelVersion;
-
-    // Get paths for shortcuts
-    QString startMenuPath = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
-    QString desktopPath = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
-    QString appPath = QCoreApplication::applicationFilePath();
-    QString appName = QCoreApplication::applicationName();
-
-    // Determine shortcut name based on app type (PTB vs Release)
-    QString shortcutName = appName.contains(qsl("Public Test Build")) ? qsl("Mudlet PTB.lnk") : qsl("Mudlet.lnk");
-
-    if (squirrelEvent == qsl("--squirrel-install") || squirrelEvent == qsl("--squirrel-updated")) {
-        // Create shortcuts on install and update
-        QString startMenuShortcut = startMenuPath + qsl("/") + shortcutName;
-        QString desktopShortcut = desktopPath + qsl("/") + shortcutName;
-
-        // Remove old shortcuts first (in case of update)
-        QFile::remove(startMenuShortcut);
-        QFile::remove(desktopShortcut);
-
-        // Create new shortcuts using Windows Shell
-        // We use PowerShell for simplicity since COM IShellLink is complex
-        auto createShortcut = [&](const QString& shortcutPath) {
-            QString psCommand = qsl(
-                "$ws = New-Object -ComObject WScript.Shell; "
-                "$s = $ws.CreateShortcut('%1'); "
-                "$s.TargetPath = '%2'; "
-                "$s.WorkingDirectory = '%3'; "
-                "$s.Save()"
-            ).arg(shortcutPath.replace(qsl("'"), qsl("''")),
-                  appPath.replace(qsl("'"), qsl("''")),
-                  QFileInfo(appPath).absolutePath().replace(qsl("'"), qsl("''")));
-
-            QProcess::execute(qsl("powershell"), QStringList() << qsl("-Command") << psCommand);
-        };
-
-        createShortcut(startMenuShortcut);
-        createShortcut(desktopShortcut);
-
-        qWarning() << "Created shortcuts for" << appName;
-        return true; // Exit after handling
-
-    } else if (squirrelEvent == qsl("--squirrel-uninstall")) {
-        // Remove shortcuts on uninstall
-        QString startMenuShortcut = startMenuPath + qsl("/") + shortcutName;
-        QString desktopShortcut = desktopPath + qsl("/") + shortcutName;
-
-        QFile::remove(startMenuShortcut);
-        QFile::remove(desktopShortcut);
-
-        qWarning() << "Removed shortcuts for" << appName;
-        return true; // Exit after handling
-
-    } else if (squirrelEvent == qsl("--squirrel-obsolete")) {
-        // Old version is being replaced - exit immediately
-        qWarning() << "Obsolete version, exiting immediately";
-        return true;
-
-    } else if (squirrelEvent == qsl("--squirrel-firstrun")) {
-        // First run after install - continue with normal startup
-        qWarning() << "First run after install";
-        return false;
-    }
-
-    // Unknown Squirrel event - continue normal startup
     return false;
 }
 #endif // defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
