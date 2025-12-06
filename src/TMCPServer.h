@@ -43,6 +43,10 @@ class TMCPServer : public QObject
 {
     Q_OBJECT
 
+#ifdef TMCPServer_Test
+    friend class TMCPServerTest;
+#endif
+
 public:
     explicit TMCPServer(Host* pHost, QObject* parent = nullptr);
     ~TMCPServer();

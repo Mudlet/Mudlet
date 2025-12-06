@@ -119,4 +119,24 @@ if(USE_OWN_QTKEYCHAIN)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
 
+# MCP Tests - conditionally compiled when HttpServer is available
+find_package(Qt6 OPTIONAL_COMPONENTS HttpServer)
+
+if(Qt6HttpServer_FOUND)
+    add_executable(TMCPLuaBridgeTest
+        TMCPLuaBridgeTest.cpp
+        ../src/TMCPLuaBridge.cpp)
+    target_compile_definitions(TMCPLuaBridgeTest PRIVATE INCLUDE_MCPSERVER TMCPLuaBridge_Test)
+    target_link_libraries(TMCPLuaBridgeTest Qt6::Test LUA51::LUA51)
+    add_test(NAME TMCPLuaBridgeTest COMMAND TMCPLuaBridgeTest)
+
+    add_executable(TMCPServerTest
+        TMCPServerTest.cpp
+        ../src/TMCPServer.cpp
+        ../src/TMCPLuaBridge.cpp)
+    target_compile_definitions(TMCPServerTest PRIVATE INCLUDE_MCPSERVER TMCPServer_Test TMCPLuaBridge_Test)
+    target_link_libraries(TMCPServerTest Qt6::Test Qt6::HttpServer LUA51::LUA51)
+    add_test(NAME TMCPServerTest COMMAND TMCPServerTest)
+endif()
+
 add_subdirectory(functional_tests)

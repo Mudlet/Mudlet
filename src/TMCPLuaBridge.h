@@ -62,6 +62,10 @@ class TMCPLuaBridge : public QObject
 {
     Q_OBJECT
 
+#ifdef TMCPLuaBridge_Test
+    friend class TMCPLuaBridgeTest;
+#endif
+
 public:
     explicit TMCPLuaBridge(Host* pHost, QObject* parent = nullptr);
     ~TMCPLuaBridge() = default;
