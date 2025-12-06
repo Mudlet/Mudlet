@@ -407,6 +407,14 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         if (frameHeight < minFrameSize) {
             frameHeight = minFrameSize;
         }
+        
+        // IMPORTANT: If this frame will have a tab header, add extra height
+        // to the character-based calculation so the final console area (after 
+        // subtracting tab widget overhead) matches the requested character count
+        if (willHaveTitle) {
+            // Tab widget overhead includes: tab bar (24px) + content margins/padding (~6px)
+            frameHeight += 30; // More accurate tab widget overhead
+        }
     }
     
     // Add small padding compensation for character-based frames to ensure full character visibility
@@ -501,7 +509,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     // Exception: character-based frames with explicit titles always show headers
     bool showHeader = !frame->floating && frame->hasExplicitTitle && 
                       (frameHeight >= 50 || (isCharacterHeight && willHaveTitle));
-    const int tabBarHeight = showHeader ? 24 : 0;
+    const int tabBarHeight = showHeader ? 30 : 0; // Tab widget overhead including margins
     
 #ifdef DEBUG_MXP_PROCESSING
     qDebug() << "TMxpFrameManager::layoutInternalFrame: Creating frame" << frame->name 
