@@ -123,19 +123,25 @@ add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
 find_package(Qt6 OPTIONAL_COMPONENTS HttpServer)
 
 if(Qt6HttpServer_FOUND)
-    add_executable(TMCPLuaBridgeTest
-        TMCPLuaBridgeTest.cpp
-        ../src/TMCPLuaBridge.cpp)
+    # MCP tests need to link against mudlet_core since TMCPLuaBridge uses mudlet singleton
+    # Inherit sanitizer flags from parent project if set
+    if(DEFINED CACHE{SANITIZER_COMPILE_OPTIONS_GLOBAL_CACHE})
+        set(MCP_TEST_COMPILE_OPTIONS ${SANITIZER_COMPILE_OPTIONS_GLOBAL_CACHE})
+        set(MCP_TEST_LINK_OPTIONS ${SANITIZER_COMPILE_OPTIONS_GLOBAL_CACHE})
+    endif()
+
+    add_executable(TMCPLuaBridgeTest TMCPLuaBridgeTest.cpp)
     target_compile_definitions(TMCPLuaBridgeTest PRIVATE INCLUDE_MCPSERVER TMCPLuaBridge_Test)
-    target_link_libraries(TMCPLuaBridgeTest Qt6::Test LUA51::LUA51)
+    target_compile_options(TMCPLuaBridgeTest PRIVATE ${MCP_TEST_COMPILE_OPTIONS})
+    target_link_options(TMCPLuaBridgeTest PRIVATE ${MCP_TEST_LINK_OPTIONS})
+    target_link_libraries(TMCPLuaBridgeTest Qt6::Test mudlet_core)
     add_test(NAME TMCPLuaBridgeTest COMMAND TMCPLuaBridgeTest)
 
-    add_executable(TMCPServerTest
-        TMCPServerTest.cpp
-        ../src/TMCPServer.cpp
-        ../src/TMCPLuaBridge.cpp)
+    add_executable(TMCPServerTest TMCPServerTest.cpp)
     target_compile_definitions(TMCPServerTest PRIVATE INCLUDE_MCPSERVER TMCPServer_Test TMCPLuaBridge_Test)
-    target_link_libraries(TMCPServerTest Qt6::Test Qt6::HttpServer LUA51::LUA51)
+    target_compile_options(TMCPServerTest PRIVATE ${MCP_TEST_COMPILE_OPTIONS})
+    target_link_options(TMCPServerTest PRIVATE ${MCP_TEST_LINK_OPTIONS})
+    target_link_libraries(TMCPServerTest Qt6::Test Qt6::HttpServer mudlet_core)
     add_test(NAME TMCPServerTest COMMAND TMCPServerTest)
 endif()
 
