@@ -501,26 +501,28 @@ private:
 
 
     // PLACEMARKER 3/3 save button texts need to be kept in sync
+    // Note: Shortcut values use Qt's portable format (Ctrl+S) which Qt maps correctly per-platform
+    // Keys use tr() to match translated action labels; values are not translated (they're key sequences)
     std::unordered_map<QString, QString> mButtonShortcuts = {
-        {qsl("Save Item"),    tr("Ctrl+S")},
-        {tr("Save Trigger"),  tr("Ctrl+S")},
-        {tr("Save Timer"),    tr("Ctrl+S")},
-        {tr("Save Alias"),    tr("Ctrl+S")},
-        {tr("Save Script"),   tr("Ctrl+S")},
-        {tr("Save Button"),   tr("Ctrl+S")},
-        {tr("Save Key"),      tr("Ctrl+S")},
-        {tr("Save Variable"), tr("Ctrl+S")},
-        {tr("Save Profile"),  tr("Ctrl+Shift+S")},
-        {tr("Triggers"),   tr("Ctrl+1")},
-        {tr("Aliases"),    tr("Ctrl+2")},
-        {tr("Scripts"),    tr("Ctrl+3")},
-        {tr("Timers"),     tr("Ctrl+4")},
-        {tr("Keys"),       tr("Ctrl+5")},
-        {tr("Variables"),  tr("Ctrl+6")},
-        {tr("Buttons"),    tr("Ctrl+7")},
-        {tr("Errors"),     tr("Ctrl+8")},
-        {tr("Statistics"), tr("Ctrl+9")},
-        {tr("Debug"),      tr("Ctrl+0")}
+        {qsl("Save Item"),    qsl("Ctrl+S")},
+        {tr("Save Trigger"),  qsl("Ctrl+S")},
+        {tr("Save Timer"),    qsl("Ctrl+S")},
+        {tr("Save Alias"),    qsl("Ctrl+S")},
+        {tr("Save Script"),   qsl("Ctrl+S")},
+        {tr("Save Button"),   qsl("Ctrl+S")},
+        {tr("Save Key"),      qsl("Ctrl+S")},
+        {tr("Save Variable"), qsl("Ctrl+S")},
+        {tr("Save Profile"),  qsl("Ctrl+Shift+S")},
+        {tr("Triggers"),   qsl("Ctrl+1")},
+        {tr("Aliases"),    qsl("Ctrl+2")},
+        {tr("Scripts"),    qsl("Ctrl+3")},
+        {tr("Timers"),     qsl("Ctrl+4")},
+        {tr("Keys"),       qsl("Ctrl+5")},
+        {tr("Variables"),  qsl("Ctrl+6")},
+        {tr("Buttons"),    qsl("Ctrl+7")},
+        {tr("Errors"),     qsl("Ctrl+8")},
+        {tr("Statistics"), qsl("Ctrl+9")},
+        {tr("Debug"),      qsl("Ctrl+0")}
     };
 
     std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;

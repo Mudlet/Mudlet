@@ -4553,7 +4553,7 @@ void Host::setFocusOnHostActiveCommandLine()
 
 void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
 {
-    if (!pCommandLine) {
+    if (!pCommandLine || mIsClosingDown) {
         return;
     }
     mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
@@ -4562,7 +4562,7 @@ void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
 
 void Host::forgetCommandLine(TCommandLine* pCommandLine)
 {
-    if (pCommandLine) {
+    if (pCommandLine && !mIsClosingDown) {
         mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
     }
 }
@@ -4571,7 +4571,7 @@ void Host::forgetCommandLine(TCommandLine* pCommandLine)
 TCommandLine* Host::activeCommandLine()
 {
     TCommandLine* pCommandLine = nullptr;
-    if (mpLastCommandLineUsed.isEmpty()) {
+    if (mIsClosingDown || mpLastCommandLineUsed.isEmpty()) {
         return nullptr;
     }
 
