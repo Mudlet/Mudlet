@@ -779,7 +779,9 @@ static bool tryFileOperationWithRetry(const std::function<bool()>& operation, co
 bool runUpdate()
 {
     QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
-    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
+    // Keep the installer in temp directory - placing it in the app directory causes the Squirrel
+    // installer to delete itself while running, as it updates/replaces the application directory
+    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
     QDir updateDir;
 
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
@@ -808,7 +810,7 @@ bool runUpdate()
         bool moved = tryFileOperationWithRetry([&]() {
             return isFileAccessible(updatedInstaller.absoluteFilePath()) &&
                    updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath());
-        }, qsl("Move installer to application directory"));
+        }, qsl("Rename installer to mark as ready"));
 
         if (!moved) {
             qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath()
