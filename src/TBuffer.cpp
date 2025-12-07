@@ -3029,15 +3029,22 @@ void TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
     // Parse delay (optional, in milliseconds)
     if (visibilityObj.contains(qsl("delay"))) {
         QJsonValue delayVal = visibilityObj[qsl("delay")];
+        qint64 parsedDelay = 0;
         if (delayVal.isDouble()) {
-            qint64 parsedDelay = static_cast<qint64>(delayVal.toDouble());
-            if (parsedDelay < 0) {
+            parsedDelay = static_cast<qint64>(delayVal.toDouble());
+        } else if (delayVal.isString()) {
+            bool ok;
+            parsedDelay = delayVal.toString().toLongLong(&ok);
+            if (!ok) {
                 parsedDelay = 0;
-            } else if (parsedDelay > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
-                parsedDelay = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
             }
-            delay = static_cast<quint32>(parsedDelay);
         }
+        if (parsedDelay < 0) {
+            parsedDelay = 0;
+        } else if (parsedDelay > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+            parsedDelay = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+        }
+        delay = static_cast<quint32>(parsedDelay);
     }
 
     // Parse prompt trigger (optional)

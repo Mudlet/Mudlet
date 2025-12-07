@@ -85,6 +85,16 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
                        << "isConcealed:" << tracked.isConcealed;
 #endif
 
+    // Handle reveal with zero delay - reveal immediately (don't start concealed)
+    if (tracked.action == TrackedHyperlink::Action::Reveal && tracked.delayMs == 0 && !tracked.onPrompt) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug().noquote() << "[OSC8-Visibility] Reveal link" << linkId << "has zero delay - will be visible immediately";
+#endif
+        // Don't start concealed - return false so text is NOT replaced with spaces
+        mTrackedLinks[linkId].isConcealed = false;
+        return false;
+    }
+
     if (tracked.delayMs > 0) {
         mHasTimerBasedLinks = true;
         startTimerIfNeeded();
@@ -96,20 +106,35 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
 
 void THyperlinkVisibilityManager::onLinkClicked(int linkId)
 {
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug().noquote() << "[OSC8-Visibility] onLinkClicked called with linkId:" << linkId 
+                       << "tracked links count:" << mTrackedLinks.size()
+                       << "contains linkId:" << mTrackedLinks.contains(linkId);
+#endif
     if (!mTrackedLinks.contains(linkId)) {
         return;
     }
 
     TrackedHyperlink& link = mTrackedLinks[linkId];
     
-    // For conceal actions with a delay, clicking activates the timer
-    if (link.action == TrackedHyperlink::Action::Conceal && link.delayMs > 0 && link.timerActivatedMs == 0) {
-        link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
+    // For conceal actions, clicking activates the concealment
+    if (link.action == TrackedHyperlink::Action::Conceal && !link.isConcealed) {
+        if (link.delayMs == 0) {
+            // Immediate concealment
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug().noquote() << "[OSC8-Visibility] Link" << linkId << "clicked - timer activated, will conceal in" << link.delayMs << "ms";
+            qDebug().noquote() << "[OSC8-Visibility] Link" << linkId << "clicked - concealing immediately (no delay)";
 #endif
-        mHasTimerBasedLinks = true;
-        startTimerIfNeeded();
+            performConcealment(link);
+            emit visibilityChanged();
+        } else if (link.timerActivatedMs == 0) {
+            // Delayed concealment - start timer
+            link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug().noquote() << "[OSC8-Visibility] Link" << linkId << "clicked - timer activated, will conceal in" << link.delayMs << "ms";
+#endif
+            mHasTimerBasedLinks = true;
+            startTimerIfNeeded();
+        }
     }
 }
 
