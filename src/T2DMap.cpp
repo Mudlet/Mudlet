@@ -141,6 +141,43 @@ std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, 
     return std::nullopt;
 }
 
+QSet<int> T2DMap::roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const
+{
+    QSet<int> result;
+
+    if (!mpMap || !mpMap->mpRoomDB || !area) {
+        return result;
+    }
+
+    const float fx = ((xspan / 2.0f) - mMapCenterX) * mRoomWidth;
+    const float fy = ((yspan / 2.0f) - mMapCenterY) * mRoomHeight;
+
+    const int mx = widgetPosition.x();
+    const int my = widgetPosition.y();
+    const int mz = mMapCenterZ;
+
+    QSetIterator<int> roomIterator(area->getAreaRooms());
+    while (roomIterator.hasNext()) {
+        const int roomId = roomIterator.next();
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+
+        const int rx = room->x() * mRoomWidth + fx;
+        const int ry = room->y() * -1 * mRoomHeight + fy;
+        const int rz = room->z();
+
+        if ((qAbs(mx - rx) < qRound(mRoomWidth * rSize / 2.0))
+            && (qAbs(my - ry) < qRound(mRoomHeight * rSize / 2.0))
+            && (mz == rz)) {
+            result.insert(roomId);
+        }
+    }
+
+    return result;
+}
+
 void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
 {
     mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
