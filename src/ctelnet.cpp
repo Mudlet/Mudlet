@@ -4603,6 +4603,7 @@ void cTelnet::slot_processReplayChunk()
 
             cleandata.push_back('\n');
             recvdGA = false;
+            emit signal_promptReceived();
             gotPrompt(cleandata);
             cleandata = "";
         }
@@ -4830,6 +4831,7 @@ Some data loss is likely - please mention this problem to the game admins.)", co
                     }
                     cleandata.push_back('\xff');
                     recvdGA = false;
+                    emit signal_promptReceived();
                     gotPrompt(cleandata);
                     cleandata = "";
                 } else {

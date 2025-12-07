@@ -47,14 +47,31 @@ struct TrackedHyperlink {
     enum class Action {
         None,
         Conceal,
-        Reveal
+        Reveal,
+        RevealThenConceal  // Combined: reveal first, then conceal after click
+    };
+    
+    // Phase tracking for RevealThenConceal
+    enum class Phase {
+        Initial,           // Waiting for reveal trigger
+        Revealed,          // Revealed, waiting for click to start conceal
+        WaitingToConceal,  // Click received, waiting for delay/trigger to conceal
+        Concealed          // Final concealed state
     };
 
     Action action = Action::None;
+    Phase phase = Phase::Initial;
     quint32 delayMs = 0;
-    bool onPrompt = false;
     bool deletesEntireLine = false;
     bool isConcealed = false;
+
+    // Expire triggers
+    bool expireOnInput = false;    // User types/submits something
+    bool expireOnPrompt = false;   // GA/EOR telnet signal received
+    bool expireOnOutput = false;   // New output after idle gap
+    quint32 outputDelayMs = 500;   // Idle gap for output trigger
+    bool skipFirstPrompt = false;  // Skip the immediate prompt after registration
+    bool skipFirstOutput = false;  // Skip the first output gap after registration
 };
 
 class THyperlinkVisibilityManager : public QObject
@@ -69,11 +86,14 @@ public:
     bool registerHyperlink(int linkId, int lineNumber, int startColumn, int length,
                           const QString& originalText, const Mudlet::HyperlinkStyling& styling);
     void onLinkClicked(int linkId);
-    void onCommandLineTextChanged();
-    void onCommandLineSubmitted();
+    
+    // Expire triggers
+    void onUserInput();         // Called when user types/submits input
+    void onPromptReceived();    // Called when GA/EOR telnet signal is received
+    void onDataReceived();      // Called when new data is received (for output gap detection)
+    
     void concealLink(int linkId);
     void revealLink(int linkId);
-    void processPromptTriggeredLinks();
     bool isLinkConcealed(int linkId) const;
     void removeLinksOnLine(int lineNumber);
     void adjustLineNumbers(int deletedLineStart, int deletedLineCount);
@@ -84,17 +104,21 @@ signals:
 
 private slots:
     void slot_checkTimers();
+    void slot_outputGapExpired();
 
 private:
     void startTimerIfNeeded();
     void stopTimerIfNotNeeded();
     void performConcealment(TrackedHyperlink& link);
     void performReveal(TrackedHyperlink& link);
+    void processExpireTriggeredLinks(bool input, bool prompt, bool output);
 
     QPointer<TConsole> mpConsole;
     QMap<int, TrackedHyperlink> mTrackedLinks;
     QTimer* mpTimer = nullptr;
+    QTimer* mpOutputGapTimer = nullptr;
     bool mHasTimerBasedLinks = false;
+    qint64 mLastDataReceivedMs = 0;
 };
 
 #endif // MUDLET_THYPERLINKVISIBILITYMANAGER_H

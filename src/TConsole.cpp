@@ -26,6 +26,7 @@
 #include "TConsole.h"
 
 
+#include "ctelnet.h"
 #include "Host.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
@@ -214,10 +215,17 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
         // Create visibility manager for hyperlink conceal/reveal functionality
         mpHyperlinkVisibilityManager = new THyperlinkVisibilityManager(this, this);
+        
+        // Connect user input triggers
         connect(mpCommandLine, &TCommandLine::commandLineTextChanged,
-                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onCommandLineTextChanged);
+                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
         connect(mpCommandLine, &TCommandLine::commandSubmitted,
-                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onCommandLineSubmitted);
+                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
+        
+        // Connect GA/EOR prompt signal from telnet
+        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived,
+                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onPromptReceived);
+        
         // Refresh display when hyperlink visibility changes
         connect(mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::visibilityChanged,
                 this, [this]() {

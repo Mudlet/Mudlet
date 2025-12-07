@@ -3010,18 +3010,47 @@ void TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
 
     Mudlet::HyperlinkStyling::VisibilitySettings::Action action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::None;
     quint32 delay = 0;
-    bool onPrompt = false;
     bool wholeLine = false;
+    bool expireOnInput = false;
+    bool expireOnPrompt = false;
+    bool expireOnOutput = false;
+    quint32 outputDelayMs = Mudlet::HyperlinkStyling::VisibilitySettings::DefaultOutputDelayMs;
 
-    // Parse action (required) - "conceal" or "reveal"
+    // Parse action (required) - "conceal", "reveal", or ["reveal", "conceal"]
     if (visibilityObj.contains(qsl("action"))) {
         QJsonValue actionVal = visibilityObj[qsl("action")];
+
         if (actionVal.isString()) {
             QString actionStr = actionVal.toString().toLower();
+
             if (actionStr == qsl("conceal")) {
                 action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
             } else if (actionStr == qsl("reveal")) {
                 action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
+            }
+        } else if (actionVal.isArray()) {
+            // Array format: ["reveal", "conceal"] or ["conceal", "reveal"]
+            QJsonArray actionArray = actionVal.toArray();
+            bool hasReveal = false;
+            bool hasConceal = false;
+            
+            for (const QJsonValue& item : actionArray) {
+                if (item.isString()) {
+                    QString actionStr = item.toString().toLower();
+                    if (actionStr == qsl("reveal")) {
+                        hasReveal = true;
+                    } else if (actionStr == qsl("conceal")) {
+                        hasConceal = true;
+                    }
+                }
+            }
+            
+            if (hasReveal && hasConceal) {
+                action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
+            } else if (hasReveal) {
+                action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
+            } else if (hasConceal) {
+                action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
             }
         }
     }
@@ -3030,6 +3059,7 @@ void TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
     if (visibilityObj.contains(qsl("delay"))) {
         QJsonValue delayVal = visibilityObj[qsl("delay")];
         qint64 parsedDelay = 0;
+
         if (delayVal.isDouble()) {
             parsedDelay = static_cast<qint64>(delayVal.toDouble());
         } else if (delayVal.isString()) {
@@ -3039,31 +3069,84 @@ void TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
                 parsedDelay = 0;
             }
         }
+
         if (parsedDelay < 0) {
             parsedDelay = 0;
         } else if (parsedDelay > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
             parsedDelay = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
         }
+
         delay = static_cast<quint32>(parsedDelay);
     }
 
-    // Parse prompt trigger (optional)
-    if (visibilityObj.contains(qsl("prompt"))) {
-        QJsonValue promptVal = visibilityObj[qsl("prompt")];
-        if (promptVal.isBool()) {
-            onPrompt = promptVal.toBool();
+    // Parse expire object (optional) - triggers for visibility action
+    if (visibilityObj.contains(qsl("expire"))) {
+        QJsonValue expireVal = visibilityObj[qsl("expire")];
+
+        if (expireVal.isObject()) {
+            QJsonObject expireObj = expireVal.toObject();
+            
+            // Parse input trigger
+            if (expireObj.contains(qsl("input"))) {
+                QJsonValue inputVal = expireObj[qsl("input")];
+                if (inputVal.isBool()) {
+                    expireOnInput = inputVal.toBool();
+                }
+            }
+            
+            // Parse prompt trigger (GA/EOR)
+            if (expireObj.contains(qsl("prompt"))) {
+                QJsonValue promptVal = expireObj[qsl("prompt")];
+                if (promptVal.isBool()) {
+                    expireOnPrompt = promptVal.toBool();
+                }
+            }
+            
+            // Parse output trigger (new data after gap)
+            if (expireObj.contains(qsl("output"))) {
+                QJsonValue outputVal = expireObj[qsl("output")];
+                if (outputVal.isBool()) {
+                    expireOnOutput = outputVal.toBool();
+                }
+            }
+            
+            // Parse outputDelay (optional, defaults to 500ms)
+            if (expireObj.contains(qsl("outputDelay"))) {
+                QJsonValue outputDelayVal = expireObj[qsl("outputDelay")];
+                qint64 parsedOutputDelay = Mudlet::HyperlinkStyling::VisibilitySettings::DefaultOutputDelayMs;
+
+                if (outputDelayVal.isDouble()) {
+                    parsedOutputDelay = static_cast<qint64>(outputDelayVal.toDouble());
+                } else if (outputDelayVal.isString()) {
+                    bool ok;
+                    parsedOutputDelay = outputDelayVal.toString().toLongLong(&ok);
+
+                    if (!ok) {
+                        parsedOutputDelay = Mudlet::HyperlinkStyling::VisibilitySettings::DefaultOutputDelayMs;
+                    }
+                }
+
+                if (parsedOutputDelay < 0) {
+                    parsedOutputDelay = 0;
+                } else if (parsedOutputDelay > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                    parsedOutputDelay = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+                }
+                outputDelayMs = static_cast<quint32>(parsedOutputDelay);
+            }
         }
     }
 
     // Parse wholeline/line (optional) - deletes entire line when concealing
     if (visibilityObj.contains(qsl("wholeline"))) {
         QJsonValue lineVal = visibilityObj[qsl("wholeline")];
+
         if (lineVal.isBool()) {
             wholeLine = lineVal.toBool();
         }
     } else if (visibilityObj.contains(qsl("line"))) {
         // Also accept "line" for backward compatibility
         QJsonValue lineVal = visibilityObj[qsl("line")];
+
         if (lineVal.isBool()) {
             wholeLine = lineVal.toBool();
         }
@@ -3073,19 +3156,47 @@ void TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
     if (action != Mudlet::HyperlinkStyling::VisibilitySettings::Action::None) {
         styling.visibility.action = action;
         styling.visibility.delayMs = delay;
-        styling.visibility.onPrompt = onPrompt;
+        styling.visibility.expireOnInput = expireOnInput;
+        styling.visibility.expireOnPrompt = expireOnPrompt;
+        styling.visibility.expireOnOutput = expireOnOutput;
+        styling.visibility.outputDelayMs = outputDelayMs;
+
         if (action == Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal) {
             styling.visibility.deletesEntireLine = wholeLine;
         }
+
+        // RevealThenConceal starts concealed (like Reveal), and deletesEntireLine applies to conceal phase
+        if (action == Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal) {
+            styling.visibility.isConcealed = true;
+            styling.visibility.deletesEntireLine = wholeLine;
+        }
+
         if (action == Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal) {
             styling.visibility.isConcealed = true;
         }
+
         styling.visibility.hasVisibilitySettings = true;
 
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Parsed visibility from JSON - action:"
-                 << (action == Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal ? "conceal" : "reveal")
-                 << "delay:" << delay << "onPrompt:" << onPrompt << "wholeLine:" << wholeLine;
+        QString actionStr;
+        switch (action) {
+        case Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal:
+            actionStr = qsl("conceal");
+            break;
+        case Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal:
+            actionStr = qsl("reveal");
+            break;
+        case Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal:
+            actionStr = qsl("reveal+conceal");
+            break;
+        default:
+            actionStr = qsl("none");
+            break;
+        }
+        qDebug() << "[OSC8] Parsed visibility from JSON - action:" << actionStr
+                 << "delay:" << delay << "wholeLine:" << wholeLine
+                 << "expireOnInput:" << expireOnInput << "expireOnPrompt:" << expireOnPrompt
+                 << "expireOnOutput:" << expireOnOutput << "outputDelayMs:" << outputDelayMs;
 #endif
     }
 }
@@ -3415,7 +3526,8 @@ void TBuffer::parseVisibilitySettings(const QString& jsonString, Mudlet::Hyperli
 #endif
 
     // Parse visibility settings as JSON object
-    // Format: {"action": "conceal"|"reveal", "delay": ms, "prompt": bool, "wholeline": bool}
+    // Format: {"action": "conceal"|"reveal", "delay": ms, "wholeline": bool, "expire": {...}}
+    // expire object: {"input": bool, "prompt": bool, "output": bool, "outputDelay": ms}
     QJsonParseError parseError;
     QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
 
@@ -5754,8 +5866,17 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "• \x1b]8;;send:hint?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Click me - I disappear 3 seconds after click\x1b]8;;\x1b\\\n";
     output += "• \x1b]8;;send:tip?config={\"style\":{\"color\":\"cyan\",\"italic\":true},\"visibility\":{\"action\":\"conceal\",\"delay\":5000}}\x1b\\Click me - I disappear 5 seconds after click\x1b]8;;\x1b\\\n\n";
 
-    output += "Hide When User Types:\n";
-    output += "• Type to dismiss: \x1b]8;;send:prompt-hint?config={\"style\":{\"color\":\"gray\"},\"visibility\":{\"action\":\"conceal\",\"prompt\":true}}\x1b\\Start typing to hide this hint...\x1b]8;;\x1b\\\n\n";
+    output += "Hide When User Types (expire on input):\n";
+    output += "• Type to dismiss: \x1b]8;;send:input-hint?config={\"style\":{\"color\":\"gray\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Start typing to hide this hint...\x1b]8;;\x1b\\\n\n";
+
+    output += "Hide On GA/EOR Prompt (expire on prompt):\n";
+    output += "• GA/EOR dismisses: \x1b]8;;send:prompt-hint?config={\"style\":{\"color\":\"lightblue\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"prompt\":true}}}\x1b\\Disappears on next server prompt...\x1b]8;;\x1b\\\n\n";
+
+    output += "Hide On New Output (expire after idle gap):\n";
+    output += "• New output dismisses: \x1b]8;;send:output-hint?config={\"style\":{\"color\":\"lightgreen\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":500}}}\x1b\\Disappears when new output arrives after 500ms gap...\x1b]8;;\x1b\\\n\n";
+
+    output += "Combined Expire Triggers (any trigger hides):\n";
+    output += "• \x1b]8;;send:any-hint?config={\"style\":{\"color\":\"orange\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true,\"prompt\":true,\"output\":true}}}\x1b\\Type, prompt, or new output hides me\x1b]8;;\x1b\\\n\n";
 
     output += "Delete Entire Line (click to start timer):\n";
     output += "• \x1b]8;;send:temp?config={\"style\":{\"color\":\"orange\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000,\"wholeline\":true}}\x1b\\Click me - entire line removed 3s after click\x1b]8;;\x1b\\\n\n";
@@ -5763,8 +5884,11 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "Combined Visibility and Styling (click to start timer):\n";
     output += "• \x1b]8;;send:fancy?config={\"style\":{\"color\":\"#ff6600\",\"bold\":true,\"hover\":{\"color\":\"#ff9900\"}},\"visibility\":{\"action\":\"conceal\",\"delay\":5000},\"tooltip\":\"Disappears 5 seconds after click\"}\x1b\\Fancy Disappearing Link\x1b]8;;\x1b\\\n\n";
 
-    output += "Auto-Reveal After Delay:\n";
-    output += "• \x1b]8;;send:secret?config={\"style\":{\"color\":\"#00ff00\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":10000,\"hidden\":true}}\x1b\\Secret link revealed after 10 seconds!\x1b]8;;\x1b\\\n\n";
+    output += "Auto-Reveal After Delay (starts hidden, appears after 10 seconds):\n";
+    output += "• Wait for it... \x1b]8;;send:secret?config={\"style\":{\"color\":\"#00ff00\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":10000}}\x1b\\SECRET LINK REVEALED!\x1b]8;;\x1b\\\n\n";
+
+    output += "Reveal Then Conceal (appears after 3s, click to dismiss):\n";
+    output += "• Watch this space... \x1b]8;;send:combo?config={\"style\":{\"color\":\"#ff00ff\",\"bold\":true},\"visibility\":{\"action\":[\"reveal\",\"conceal\"],\"delay\":3000}}\x1b\\CLICK ME TO DISMISS!\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
     // Summary

@@ -329,7 +329,8 @@ public:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
 
-    // Manages hyperlink visibility (conceal/reveal) based on time delays and prompt events
+    // Manages hyperlink visibility (conceal/reveal) based on time delays and expire triggers
+    // (user input, GA/EOR prompt, or new output after idle gap)
     THyperlinkVisibilityManager* mpHyperlinkVisibilityManager = nullptr;
 
     TBuffer buffer;

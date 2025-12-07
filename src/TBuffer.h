@@ -131,24 +131,34 @@ struct HyperlinkStyling {
     // Methods to get effective styling for current state
     StateStyle getEffectiveStyle() const;
 
-    // Visibility control: conceal (hide after delay/prompt) or reveal (show after delay/prompt)
-    // JSON: {"action": "conceal"|"reveal", "delay": ms, "prompt": bool, "wholeline": bool}
+    // Visibility control: conceal (hide after delay/expire) or reveal (show after delay/expire)
+    // JSON: {"action": "conceal"|"reveal"|["reveal","conceal"], "delay": ms, "wholeline": bool, "expire": {...}}
+    // expire object: {"input": bool, "prompt": bool, "output": bool, "outputDelay": ms}
+    // When action is ["reveal","conceal"]: starts hidden, reveals on trigger, then conceals on click
     struct VisibilitySettings {
         // Maximum allowed delay value (24 hours in milliseconds)
         static constexpr quint32 MaxDelayMs = 86400000;
+        // Default output delay for batch detection (500ms)
+        static constexpr quint32 DefaultOutputDelayMs = 500;
 
         enum class Action {
             None,
             Conceal,
-            Reveal
+            Reveal,
+            RevealThenConceal  // Combined: reveal first, then conceal after click
         };
 
         Action action = Action::None;
         quint32 delayMs = 0;
-        bool onPrompt = false;
         bool deletesEntireLine = false;
         bool isConcealed = false;
         bool hasVisibilitySettings = false;
+
+        // Expire triggers - when visibility action should occur
+        bool expireOnInput = false;    // User types/submits something
+        bool expireOnPrompt = false;   // GA/EOR telnet signal received
+        bool expireOnOutput = false;   // New output after idle gap
+        quint32 outputDelayMs = DefaultOutputDelayMs;  // Idle gap for output trigger
     };
 
     VisibilitySettings visibility;
