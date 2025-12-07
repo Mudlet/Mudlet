@@ -113,6 +113,9 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
 
+    // Forward textChanged signal for hyperlink visibility triggers
+    connect(this, &QPlainTextEdit::textChanged, this, &TCommandLine::commandLineTextChanged);
+
     if (mType == MainCommandLine) { // Limit to the main command line only
         connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
             this->setEchoSuppression(isRemoteEcho);
@@ -993,6 +996,9 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mTabCompletionTyped.clear();
     mLastCompletion.clear();
     mUserKeptOnTyping = false;
+
+    // Emit signal for hyperlink visibility triggers before processing the command
+    emit commandSubmitted();
 
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 

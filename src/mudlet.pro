@@ -763,6 +763,7 @@ SOURCES += \
     TLabel.cpp \
     TScrollBox.cpp \
     TLinkStore.cpp \
+    THyperlinkVisibilityManager.cpp \
     TLuaInterpreter.cpp \
     TLuaInterpreterAI.cpp \
     TLuaInterpreterDiscord.cpp \
@@ -916,6 +917,7 @@ HEADERS += \
     TKey.h \
     TLabel.h \
     TLinkStore.h \
+    THyperlinkVisibilityManager.h \
     TLuaInterpreter.h \
     TMainConsole.h \
     TMap.h \

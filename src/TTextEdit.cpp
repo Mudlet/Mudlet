@@ -30,6 +30,7 @@
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -1421,6 +1422,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         // Set active state for CSS pseudo-class support
                         mpBuffer->setActiveLink(linkIndex);
                         forceUpdate(); // Trigger re-render with active state
+
+                        // Notify visibility manager that link was clicked (activates timers)
+                        if (mpConsole->mpHyperlinkVisibilityManager) {
+                            mpConsole->mpHyperlinkVisibilityManager->onLinkClicked(linkIndex);
+                        }
 
                         if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);

@@ -27,6 +27,7 @@
 #include "TEvent.h"
 #include "TStringUtils.h"
 #include "TTextProperties.h"
+#include "THyperlinkVisibilityManager.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
@@ -2509,6 +2510,39 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug().noquote() << "[OSC8] Hyperlink terminator - closing active hyperlink";
 #endif
+            // Register with visibility manager if this link has visibility settings
+            if (mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mpConsole && mpConsole->mpHyperlinkVisibilityManager) {
+                // Calculate the link text from mMudLine since hyperlink started
+                int currentColumn = mMudLine.length();
+                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+                QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8-Visibility] Registering hyperlink" << mCurrentHyperlinkLinkId
+                         << "line:" << mCurrentHyperlinkStartLine
+                         << "col:" << mCurrentHyperlinkStartColumn
+                         << "length:" << linkLength
+                         << "text:" << linkText;
+#endif
+                bool shouldStartConcealed = mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
+                    mCurrentHyperlinkLinkId,
+                    mCurrentHyperlinkStartLine,
+                    mCurrentHyperlinkStartColumn,
+                    linkLength,
+                    linkText,
+                    mCurrentHyperlinkStyling);
+                
+                // If link should start concealed, replace its text with spaces in mMudLine
+                // before it gets committed to the buffer
+                if (shouldStartConcealed) {
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC8-Visibility] Link starts concealed - replacing text with spaces";
+#endif
+                    QString spaces(linkLength, ' ');
+                    mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                }
+            }
+
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
             mCurrentHyperlinkLinkId = 0;
@@ -2516,6 +2550,9 @@ void TBuffer::decodeOSC(const QString& sequence)
             // Reset enhanced styling
             mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
             mCurrentHyperlinkMenu.clear();
+            mCurrentHyperlinkStartLine = 0;
+            mCurrentHyperlinkStartColumn = 0;
+            mCurrentHyperlinkText.clear();
             break;
         }
 
@@ -2567,6 +2604,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                 customTooltip = queryParams.value(qsl("tooltip"));
             }
 
+            if (queryParams.contains(qsl("visibility"))) {
+                parseVisibilitySettings(queryParams.value(qsl("visibility")), mCurrentHyperlinkStyling);
+            }
+
             // Remove styling/menu/tooltip query parameters from URL for command processing
             QString baseUrl = rawUrl;
             QMap<QString, QString> allParams = parseUriQueryParameters(rawUrl);
@@ -2577,6 +2618,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 allParams.remove(qsl("style"));
                 allParams.remove(qsl("menu"));
                 allParams.remove(qsl("tooltip"));
+                allParams.remove(qsl("visibility"));
 
                 // Rebuild URL with only non-special parameters
                 int queryStart = baseUrl.indexOf('?');
@@ -2701,8 +2743,16 @@ void TBuffer::decodeOSC(const QString& sequence)
             // when the link styling doesn't specify a background
             mLinkOriginalBackgrounds[mCurrentHyperlinkLinkId] = mBackGroundColor;
 
+            // Record start position for visibility manager registration
+            // Use mMudLine.length() since that's where link text will be added
+            // (mMudLine is the current line being built, lineBuffer contains completed lines)
+            mCurrentHyperlinkStartLine = static_cast<int>(lineBuffer.size()) - 1;
+            mCurrentHyperlinkStartColumn = mMudLine.length();
+            mCurrentHyperlinkText.clear();
+
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug().noquote() << "[OSC8] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
+            qDebug() << "[OSC8] Hyperlink start position: line" << mCurrentHyperlinkStartLine << "column" << mCurrentHyperlinkStartColumn;
 #endif
             mHyperlinkActive = true;
         }
@@ -2826,6 +2876,14 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
         parameters.insert(qsl("tooltip"), root[qsl("tooltip")].toString());
     }
 
+    // Parse visibility object - unified format with "action" property
+    if (root.contains(qsl("visibility")) && root[qsl("visibility")].isObject()) {
+        QJsonObject visibilityObj = root[qsl("visibility")].toObject();
+        // Store the JSON object as a string for later parsing
+        QJsonDocument visibilityDoc(visibilityObj);
+        parameters.insert(qsl("visibility"), QString::fromUtf8(visibilityDoc.toJson(QJsonDocument::Compact)));
+    }
+
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] JSON converted to parameters:" << parameters;
 #endif
@@ -2942,6 +3000,87 @@ QString TBuffer::jsonMenuArrayToString(const QJsonArray& menuArray)
     }
 
     return menuItems.join(qsl("|"));
+}
+
+void TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling& styling)
+{
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] parseVisibilityFromJson called";
+#endif
+
+    Mudlet::HyperlinkStyling::VisibilitySettings::Action action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::None;
+    quint32 delay = 0;
+    bool onPrompt = false;
+    bool wholeLine = false;
+
+    // Parse action (required) - "conceal" or "reveal"
+    if (visibilityObj.contains(qsl("action"))) {
+        QJsonValue actionVal = visibilityObj[qsl("action")];
+        if (actionVal.isString()) {
+            QString actionStr = actionVal.toString().toLower();
+            if (actionStr == qsl("conceal")) {
+                action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
+            } else if (actionStr == qsl("reveal")) {
+                action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
+            }
+        }
+    }
+
+    // Parse delay (optional, in milliseconds)
+    if (visibilityObj.contains(qsl("delay"))) {
+        QJsonValue delayVal = visibilityObj[qsl("delay")];
+        if (delayVal.isDouble()) {
+            qint64 parsedDelay = static_cast<qint64>(delayVal.toDouble());
+            if (parsedDelay < 0) {
+                parsedDelay = 0;
+            } else if (parsedDelay > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                parsedDelay = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+            }
+            delay = static_cast<quint32>(parsedDelay);
+        }
+    }
+
+    // Parse prompt trigger (optional)
+    if (visibilityObj.contains(qsl("prompt"))) {
+        QJsonValue promptVal = visibilityObj[qsl("prompt")];
+        if (promptVal.isBool()) {
+            onPrompt = promptVal.toBool();
+        }
+    }
+
+    // Parse wholeline/line (optional) - deletes entire line when concealing
+    if (visibilityObj.contains(qsl("wholeline"))) {
+        QJsonValue lineVal = visibilityObj[qsl("wholeline")];
+        if (lineVal.isBool()) {
+            wholeLine = lineVal.toBool();
+        }
+    } else if (visibilityObj.contains(qsl("line"))) {
+        // Also accept "line" for backward compatibility
+        QJsonValue lineVal = visibilityObj[qsl("line")];
+        if (lineVal.isBool()) {
+            wholeLine = lineVal.toBool();
+        }
+    }
+
+    // Only apply settings if we have a valid action
+    if (action != Mudlet::HyperlinkStyling::VisibilitySettings::Action::None) {
+        styling.visibility.action = action;
+        styling.visibility.delayMs = delay;
+        styling.visibility.onPrompt = onPrompt;
+        if (action == Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal) {
+            styling.visibility.deletesEntireLine = wholeLine;
+        }
+        if (action == Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal) {
+            styling.visibility.isConcealed = true;
+        }
+        styling.visibility.hasVisibilitySettings = true;
+
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Parsed visibility from JSON - action:"
+                 << (action == Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal ? "conceal" : "reveal")
+                 << "delay:" << delay << "onPrompt:" << onPrompt << "wholeLine:" << wholeLine;
+#endif
+    }
 }
 
 void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling)
@@ -3260,6 +3399,34 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
             styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
         }
     }
+}
+
+void TBuffer::parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling& styling)
+{
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] parseVisibilitySettings called with jsonString:" << jsonString;
+#endif
+
+    // Parse visibility settings as JSON object
+    // Format: {"action": "conceal"|"reveal", "delay": ms, "prompt": bool, "wholeline": bool}
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
+
+    if (parseError.error != QJsonParseError::NoError) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Visibility JSON parse error:" << parseError.errorString();
+#endif
+        return;
+    }
+
+    if (!doc.isObject()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Visibility JSON root is not an object";
+#endif
+        return;
+    }
+
+    parseVisibilityFromJson(doc.object(), styling);
 }
 
 QColor TBuffer::parseColorValue(const QString& value)
@@ -4096,7 +4263,8 @@ bool TBuffer::deleteLines(int from, int to)
     if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to >= 0) && (to < static_cast<int>(buffer.size()))) {
         const int delta = to - from + 1;
 
-        for (int i = from, total = from + delta; i < total; ++i) {
+        // Remove from the end backwards to avoid index shifting issues
+        for (int i = to; i >= from; --i) {
             lineBuffer.removeAt(i);
             timeBuffer.removeAt(i);
             promptBuffer.removeAt(i);
@@ -5568,11 +5736,49 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "  \x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
+    // Hyperlink Visibility (moved to bottom for easier testing)
+    // ═══════════════════════════════════════════════════════════════════
+    output += "══════════════════════════════════════════════════════════════════════\n";
+    output += "HYPERLINK VISIBILITY\n";
+    output += "══════════════════════════════════════════════════════════════════════\n\n";
+
+    // Note: Timer-based conceal delays start when the link is clicked
+    output += "Auto-Hide After Delay (click to start timer):\n";
+    output += "• \x1b]8;;send:hint?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Click me - I disappear 3 seconds after click\x1b]8;;\x1b\\\n";
+    output += "• \x1b]8;;send:tip?config={\"style\":{\"color\":\"cyan\",\"italic\":true},\"visibility\":{\"action\":\"conceal\",\"delay\":5000}}\x1b\\Click me - I disappear 5 seconds after click\x1b]8;;\x1b\\\n\n";
+
+    output += "Hide When User Types:\n";
+    output += "• Type to dismiss: \x1b]8;;send:prompt-hint?config={\"style\":{\"color\":\"gray\"},\"visibility\":{\"action\":\"conceal\",\"prompt\":true}}\x1b\\Start typing to hide this hint...\x1b]8;;\x1b\\\n\n";
+
+    output += "Delete Entire Line (click to start timer):\n";
+    output += "• \x1b]8;;send:temp?config={\"style\":{\"color\":\"orange\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000,\"wholeline\":true}}\x1b\\Click me - entire line removed 3s after click\x1b]8;;\x1b\\\n\n";
+
+    output += "Combined Visibility and Styling (click to start timer):\n";
+    output += "• \x1b]8;;send:fancy?config={\"style\":{\"color\":\"#ff6600\",\"bold\":true,\"hover\":{\"color\":\"#ff9900\"}},\"visibility\":{\"action\":\"conceal\",\"delay\":5000},\"tooltip\":\"Disappears 5 seconds after click\"}\x1b\\Fancy Disappearing Link\x1b]8;;\x1b\\\n\n";
+
+    output += "Auto-Reveal After Delay:\n";
+    output += "• \x1b]8;;send:secret?config={\"style\":{\"color\":\"#00ff00\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":10000,\"hidden\":true}}\x1b\\Secret link revealed after 10 seconds!\x1b]8;;\x1b\\\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
     // Summary
     // ═══════════════════════════════════════════════════════════════════
     output += "══════════════════════════════════════════════════════════════════════\n\n";
     output += "Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8\n";
     output += "All examples above are clickable - try them!\n\n";
+
+    // translateToPlainText() is designed ONLY for the main console as it runs
+    // triggers with line numbers from this buffer. If this buffer is not the
+    // main console's buffer, redirect the output to the main console's buffer.
+    TBuffer* mainBuffer = &mpHost->mpConsole->buffer;
+    if (this != mainBuffer) {
+        // Redirect to main console's buffer
+        std::string outputBytes = output.toStdString();
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Redirecting documentation examples to main console buffer";
+#endif
+        mainBuffer->translateToPlainText(outputBytes, true);
+        return;
+    }
 
     // Process the output through the normal text processing pipeline
     std::string outputBytes = output.toStdString();
@@ -6039,6 +6245,38 @@ int TBuffer::getLinkIndexAt(int line, int column) const
 
     // Return the link index at this position
     return bufferLine.at(column).linkIndex();
+}
+
+void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int count)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+        return;
+    }
+
+    auto& bufferLine = buffer[lineNumber];
+    const int endColumn = startColumn + count;
+
+    for (int i = startColumn; i < endColumn && i < static_cast<int>(bufferLine.size()); ++i) {
+        if (i >= 0) {
+            bufferLine[i].mLinkIndex = 0;
+        }
+    }
+}
+
+void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+        return;
+    }
+
+    auto& bufferLine = buffer[lineNumber];
+    const int endColumn = startColumn + count;
+
+    for (int i = startColumn; i < endColumn && i < static_cast<int>(bufferLine.size()); ++i) {
+        if (i >= 0) {
+            bufferLine[i].mLinkIndex = linkIndex;
+        }
+    }
 }
 
 // Update all TChar objects in the buffer that have the specified linkIndex

@@ -307,6 +307,7 @@ private:
     QString getNewEnvironOSCHyperlinksStyleStates();
     QString getNewEnvironOSCHyperlinksTooltip();
     QString getNewEnvironOSCHyperlinksMenu();
+    QString getNewEnvironOSCHyperlinksVisibility();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();

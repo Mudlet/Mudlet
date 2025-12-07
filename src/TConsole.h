@@ -156,6 +156,7 @@ class Host;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
+class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
@@ -327,6 +328,9 @@ public:
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
+
+    // Manages hyperlink visibility (conceal/reveal) based on time delays and prompt events
+    THyperlinkVisibilityManager* mpHyperlinkVisibilityManager = nullptr;
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;

@@ -31,6 +31,7 @@
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -210,6 +211,23 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // Setting the focusProxy cannot be done here because things have not
         // been completed enough at this point - it has been defered to a
         // zero-timer at the end of this constructor
+
+        // Create visibility manager for hyperlink conceal/reveal functionality
+        mpHyperlinkVisibilityManager = new THyperlinkVisibilityManager(this, this);
+        connect(mpCommandLine, &TCommandLine::commandLineTextChanged,
+                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onCommandLineTextChanged);
+        connect(mpCommandLine, &TCommandLine::commandSubmitted,
+                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onCommandLineSubmitted);
+        // Refresh display when hyperlink visibility changes
+        connect(mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::visibilityChanged,
+                this, [this]() {
+                    if (mUpperPane) {
+                        mUpperPane->forceUpdate();
+                    }
+                    if (mLowerPane) {
+                        mLowerPane->forceUpdate();
+                    }
+                });
     }
 
     layer = new QWidget(mpMainDisplay);

@@ -130,6 +130,52 @@ struct HyperlinkStyling {
 
     // Methods to get effective styling for current state
     StateStyle getEffectiveStyle() const;
+
+    // Visibility control for conceal/reveal functionality
+    // Controls whether and when link text should be concealed (replaced with spaces)
+    // or revealed (restored to original), and whether the entire line should be affected.
+    //
+    // JSON structure:
+    //   "visibility": {
+    //     "action": "conceal" | "reveal",  // Required: the visibility action to perform
+    //     "delayMs": 5000,                 // Optional: delay in milliseconds before action
+    //     "onPrompt": true,                // Optional: trigger on command line activity
+    //     "deletesEntireLine": true        // Optional: for conceal only, delete whole line
+    //   }
+    //
+    // A link can only have ONE visibility action (conceal OR reveal), not both.
+    // This prevents the ambiguous case where a link would be concealed and revealed
+    // simultaneously on the same trigger event.
+    //
+    // For "conceal" action:
+    //   - Link starts visible, becomes hidden (text replaced with spaces or line deleted)
+    //   - If deletesEntireLine is true, the entire line is permanently removed
+    //
+    // For "reveal" action:
+    //   - Link starts concealed (text shown as spaces), becomes visible
+    //   - deletesEntireLine is ignored for reveal actions
+    //
+    // Valid delay range: 0 to 86400000 ms (24 hours). Values outside this range are clamped.
+    // A delay of 0 with onPrompt=false means the action triggers immediately on link creation.
+    struct VisibilitySettings {
+        // Maximum allowed delay value (24 hours in milliseconds)
+        static constexpr quint32 MaxDelayMs = 86400000;
+
+        enum class Action {
+            None,
+            Conceal,
+            Reveal
+        };
+
+        Action action = Action::None;
+        quint32 delayMs = 0;
+        bool onPrompt = false;
+        bool deletesEntireLine = false;
+        bool isConcealed = false;
+        bool hasVisibilitySettings = false;
+    };
+
+    VisibilitySettings visibility;
 };
 
 } // namespace Mudlet
@@ -484,10 +530,14 @@ private:
     // Helper functions for JSON to CSS conversion
     QString jsonStyleObjectToCss(const QJsonObject& styleObj);
     QString jsonMenuArrayToString(const QJsonArray& menuArray);
+    // Helper function for parsing visibility JSON object directly into styling
+    void parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling& styling);
     // Helper function for appending query parameters to URIs (handles existing params)
     QString appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters);
     // Helper function for parsing CSS-like style strings
     void parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling);
+    // Helper function for parsing visibility settings from JSON string
+    void parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing color values (hex, named, rgb)
     QColor parseColorValue(const QString& value);
     // CSS Link State parsing and management
@@ -576,6 +626,10 @@ private:
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    // Track hyperlink start position for visibility manager registration
+    int mCurrentHyperlinkStartLine = 0;
+    int mCurrentHyperlinkStartColumn = 0;
+    QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase {
         Phase1_Snapshot,
@@ -614,6 +668,8 @@ public:
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
     int getLinkIndexAt(int line, int column) const; // Get link index at specific position
+    void clearLinkIndices(int lineNumber, int startColumn, int count); // Clear link indices in a range
+    void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 
 private:
     // Update all TChar objects that belong to a specific link with effective styling

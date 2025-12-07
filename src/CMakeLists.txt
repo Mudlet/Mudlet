@@ -144,6 +144,7 @@ set(mudlet_SRCS
     TKey.cpp
     TLabel.cpp
     TLinkStore.cpp
+    THyperlinkVisibilityManager.cpp
 
     TLuaInterpreter.cpp
     TLuaInterpreterAI.cpp
@@ -343,6 +344,7 @@ set(mudlet_HDRS
     TKey.h
     TLabel.h
     TLinkStore.h
+    THyperlinkVisibilityManager.h
     TLuaInterpreter.h
     TMainConsole.h
     TMap.h
@@ -579,7 +581,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI OSC sequences:
-# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_OSC_PROCESSING)
+#   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_OSC_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI MXP sequences although
 #   there is not much against this item at present {only an announcement of the

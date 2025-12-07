@@ -90,6 +90,12 @@ public:
     bool mSaveCommands = true;
 
 
+signals:
+    // Emitted when a command is submitted (Enter pressed)
+    void commandSubmitted();
+    // Emitted when the command line text changes (for hyperlink visibility triggers)
+    void commandLineTextChanged();
+
 public slots:
     void slot_popupMenu();
     void slot_addWord();
