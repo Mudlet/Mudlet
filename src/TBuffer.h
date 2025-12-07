@@ -131,32 +131,8 @@ struct HyperlinkStyling {
     // Methods to get effective styling for current state
     StateStyle getEffectiveStyle() const;
 
-    // Visibility control for conceal/reveal functionality
-    // Controls whether and when link text should be concealed (replaced with spaces)
-    // or revealed (restored to original), and whether the entire line should be affected.
-    //
-    // JSON structure:
-    //   "visibility": {
-    //     "action": "conceal" | "reveal",  // Required: the visibility action to perform
-    //     "delayMs": 5000,                 // Optional: delay in milliseconds before action
-    //     "onPrompt": true,                // Optional: trigger on command line activity
-    //     "deletesEntireLine": true        // Optional: for conceal only, delete whole line
-    //   }
-    //
-    // A link can only have ONE visibility action (conceal OR reveal), not both.
-    // This prevents the ambiguous case where a link would be concealed and revealed
-    // simultaneously on the same trigger event.
-    //
-    // For "conceal" action:
-    //   - Link starts visible, becomes hidden (text replaced with spaces or line deleted)
-    //   - If deletesEntireLine is true, the entire line is permanently removed
-    //
-    // For "reveal" action:
-    //   - Link starts concealed (text shown as spaces), becomes visible
-    //   - deletesEntireLine is ignored for reveal actions
-    //
-    // Valid delay range: 0 to 86400000 ms (24 hours). Values outside this range are clamped.
-    // A delay of 0 with onPrompt=false means the action triggers immediately on link creation.
+    // Visibility control: conceal (hide after delay/prompt) or reveal (show after delay/prompt)
+    // JSON: {"action": "conceal"|"reveal", "delay": ms, "prompt": bool, "wholeline": bool}
     struct VisibilitySettings {
         // Maximum allowed delay value (24 hours in milliseconds)
         static constexpr quint32 MaxDelayMs = 86400000;
