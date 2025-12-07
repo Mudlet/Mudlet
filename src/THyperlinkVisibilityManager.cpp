@@ -228,7 +228,7 @@ void THyperlinkVisibilityManager::clear()
 {
     mTrackedLinks.clear();
     mHasTimerBasedLinks = false;
-    stopTimerIfNotNeeded();;
+    stopTimerIfNotNeeded();
 }
 
 void THyperlinkVisibilityManager::slot_checkTimers()
