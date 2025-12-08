@@ -242,10 +242,16 @@ void THyperlinkVisibilityManager::onDataReceived()
         return;
     }
     
-    // Check if this is new data after a gap
+    // Sammer's "batch" approach: expire links when new data arrives AFTER a gap
+    // This creates the "one batch at a time" effect - old links are hidden when
+    // a new batch of output begins, not during the idle period
     if (mLastDataReceivedMs > 0 && mpOutputGapTimer && !mpOutputGapTimer->isActive()) {
-        // Gap has passed - this is the first data after idle
-        // The slot_outputGapExpired will have already fired if there was a gap
+        // Gap timer has expired (not active) - this is new data after an idle gap
+        // Trigger output expiry now, at the start of the new batch
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug().noquote() << "[OSC8-Visibility] New data after gap - triggering output expire (batch transition)";
+#endif
+        processExpireTriggeredLinks(false, false, true);
     }
     
     mLastDataReceivedMs = currentTime;
@@ -260,10 +266,13 @@ void THyperlinkVisibilityManager::onDataReceived()
 
 void THyperlinkVisibilityManager::slot_outputGapExpired()
 {
+    // Gap timer expired - we are now "in gap state"
+    // The actual expiry will happen when new data arrives (in onDataReceived)
+    // This matches Sammer's "batch" approach: expire old links at the START of
+    // a new batch, not during the idle period
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().noquote() << "[OSC8-Visibility] Output gap expired - triggering output expire";
+    qDebug().noquote() << "[OSC8-Visibility] Output gap timer expired - waiting for new data to trigger batch transition";
 #endif
-    processExpireTriggeredLinks(false, false, true);
 }
 
 void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool prompt, bool output)
