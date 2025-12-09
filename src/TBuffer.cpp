@@ -2569,14 +2569,15 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             // Remove styling/menu/tooltip query parameters from URL for command processing
             QString baseUrl = rawUrl;
-            QMap<QString, QString> allParams = parseUriQueryParameters(rawUrl);
 
             // For web URLs, preserve original parameters except our special ones
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
+                // Create a copy of queryParams to modify (reuse cached parse result)
+                QMap<QString, QString> filteredParams = queryParams;
                 // Remove our special parameters
-                allParams.remove(qsl("style"));
-                allParams.remove(qsl("menu"));
-                allParams.remove(qsl("tooltip"));
+                filteredParams.remove(qsl("style"));
+                filteredParams.remove(qsl("menu"));
+                filteredParams.remove(qsl("tooltip"));
 
                 // Rebuild URL with only non-special parameters
                 int queryStart = baseUrl.indexOf('?');
@@ -2585,8 +2586,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 }
 
                 // Only append parameters if there are any left
-                if (!allParams.isEmpty()) {
-                    baseUrl = appendQueryParameters(baseUrl, allParams);
+                if (!filteredParams.isEmpty()) {
+                    baseUrl = appendQueryParameters(baseUrl, filteredParams);
                 }
             } else {
                 // For send: and prompt: commands, remove all query parameters
@@ -2694,8 +2695,10 @@ void TBuffer::decodeOSC(const QString& sequence)
             mCurrentHyperlinkHint = hint;
             mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
 
-            // Store the styling for this link so it can be retrieved later
-            mLinkStore.setStyling(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling);
+            // Only store styling if custom styling was actually provided (optimization)
+            if (mCurrentHyperlinkStyling.hasCustomStyling) {
+                mLinkStore.setStyling(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling);
+            }
 
             // Store the original background color for this link so we can restore it later
             // when the link styling doesn't specify a background
@@ -2778,11 +2781,27 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri)
     return parameters;
 }
 
+// Cache for parsed JSON hyperlink configs to avoid re-parsing identical configs
+// Key: JSON string, Value: parsed parameters
+// Limited to 100 entries to prevent unbounded memory growth
+static QHash<QString, QMap<QString, QString>> sJsonConfigCache;
+static constexpr int JSON_CONFIG_CACHE_MAX_SIZE = 100;
+
 bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters)
 {
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
 #endif
+
+    // Check cache first for performance with repeated identical configs
+    auto cacheIt = sJsonConfigCache.find(jsonString);
+    if (cacheIt != sJsonConfigCache.end()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Cache hit for JSON config";
+#endif
+        parameters = cacheIt.value();
+        return true;
+    }
 
     QJsonParseError parseError;
     QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
@@ -2829,6 +2848,16 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] JSON converted to parameters:" << parameters;
 #endif
+
+    // Cache the result for future lookups (limit cache size to prevent unbounded growth)
+    if (sJsonConfigCache.size() >= JSON_CONFIG_CACHE_MAX_SIZE) {
+        // Simple eviction: clear half the cache when full
+        auto it = sJsonConfigCache.begin();
+        for (int i = 0; i < JSON_CONFIG_CACHE_MAX_SIZE / 2 && it != sJsonConfigCache.end(); ++i) {
+            it = sJsonConfigCache.erase(it);
+        }
+    }
+    sJsonConfigCache.insert(jsonString, parameters);
 
     return true;
 }
@@ -2944,11 +2973,26 @@ QString TBuffer::jsonMenuArrayToString(const QJsonArray& menuArray)
     return menuItems.join(qsl("|"));
 }
 
+// Cache for parsed hyperlink styling to avoid re-parsing identical style strings
+// Key: CSS style string, Value: parsed styling
+static QHash<QString, Mudlet::HyperlinkStyling> sStylingCache;
+static constexpr int STYLING_CACHE_MAX_SIZE = 100;
+
 void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling)
 {
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] parseHyperlinkStyling called with styleString:" << styleString;
 #endif
+
+    // Check cache first for performance with repeated identical styles
+    auto cacheIt = sStylingCache.find(styleString);
+    if (cacheIt != sStylingCache.end()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Cache hit for styling";
+#endif
+        styling = cacheIt.value();
+        return;
+    }
 
     // Reset styling to defaults
     styling = Mudlet::HyperlinkStyling();
@@ -3091,6 +3135,15 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
 
         // Apply accessibility enhancements
         applyAccessibilityEnhancements(styling);
+
+        // Cache the result before returning (for pseudo-class style paths)
+        if (sStylingCache.size() >= STYLING_CACHE_MAX_SIZE) {
+            auto it = sStylingCache.begin();
+            for (int i = 0; i < STYLING_CACHE_MAX_SIZE / 2 && it != sStylingCache.end(); ++i) {
+                it = sStylingCache.erase(it);
+            }
+        }
+        sStylingCache.insert(styleString, styling);
         return;
     }
 
@@ -3260,6 +3313,16 @@ void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::Hyperlin
             styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
         }
     }
+
+    // Cache the result for future lookups (limit cache size to prevent unbounded growth)
+    if (sStylingCache.size() >= STYLING_CACHE_MAX_SIZE) {
+        // Simple eviction: clear half the cache when full
+        auto it = sStylingCache.begin();
+        for (int i = 0; i < STYLING_CACHE_MAX_SIZE / 2 && it != sStylingCache.end(); ++i) {
+            it = sStylingCache.erase(it);
+        }
+    }
+    sStylingCache.insert(styleString, styling);
 }
 
 QColor TBuffer::parseColorValue(const QString& value)
