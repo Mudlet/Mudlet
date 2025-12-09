@@ -5866,8 +5866,8 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "• \x1b]8;;send:hint?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Click me - I disappear 3 seconds after click\x1b]8;;\x1b\\\n";
     output += "• \x1b]8;;send:tip?config={\"style\":{\"color\":\"cyan\",\"italic\":true},\"visibility\":{\"action\":\"conceal\",\"delay\":5000}}\x1b\\Click me - I disappear 5 seconds after click\x1b]8;;\x1b\\\n\n";
 
-    output += "Hide When User Types (expire on input):\n";
-    output += "• Type to dismiss: \x1b]8;;send:input-hint?config={\"style\":{\"color\":\"gray\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Start typing to hide this hint...\x1b]8;;\x1b\\\n\n";
+    output += "Hide When User Sends Command (expire on input):\n";
+    output += "• Send command to dismiss: \x1b]8;;send:input-hint?config={\"style\":{\"color\":\"gray\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Press Enter to hide this hint...\x1b]8;;\x1b\\\n\n";
 
     output += "Hide On GA/EOR Prompt (expire on prompt):\n";
     output += "• GA/EOR dismisses: \x1b]8;;send:prompt-hint?config={\"style\":{\"color\":\"lightblue\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"prompt\":true}}}\x1b\\Disappears on next server prompt...\x1b]8;;\x1b\\\n\n";

@@ -216,9 +216,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // Create visibility manager for hyperlink conceal/reveal functionality
         mpHyperlinkVisibilityManager = new THyperlinkVisibilityManager(this, this);
         
-        // Connect user input triggers
-        connect(mpCommandLine, &TCommandLine::commandLineTextChanged,
-                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
+        // Connect user input trigger (command submission only, not typing)
         connect(mpCommandLine, &TCommandLine::commandSubmitted,
                 mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
         

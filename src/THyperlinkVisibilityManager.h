@@ -88,7 +88,7 @@ public:
     void onLinkClicked(int linkId);
     
     // Expire triggers
-    void onUserInput();         // Called when user types/submits input
+    void onUserInput();         // Called when user submits a command (Enter key)
     void onPromptReceived();    // Called when GA/EOR telnet signal is received
     void onDataReceived();      // Called when new data is received (for output gap detection)
     
