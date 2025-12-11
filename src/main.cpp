@@ -274,6 +274,9 @@ int main(int argc, char* argv[])
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
 
+    const QCommandLineOption runUndoTests(QStringList() << qsl("run-undo-tests"), qsl("Run internal undo/redo tests (requires 'Mudlet self-test' profile) and exit."));
+    parser.addOption(runUndoTests);
+
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
@@ -706,6 +709,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::smSteamMode = parser.isSet(steamMode);
+    const bool shouldRunUndoTests = parser.isSet(runUndoTests);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
@@ -717,8 +721,9 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri]() {
+    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri, shouldRunUndoTests]() {
         // ensure Mudlet singleton is initialised before calling profile loading
+
         if (!telnetUri.isEmpty()) {
             // Handle telnet URI if provided
             mudlet::self()->handleTelnetUri(telnetUri);
@@ -726,7 +731,44 @@ int main(int argc, char* argv[])
             // Normal profile auto-login
             mudlet::self()->startAutoLogin(cliProfiles);
         }
+
+        // If --run-undo-tests was specified, run tests after profile loads
+        if (shouldRunUndoTests) {
+            QTimer::singleShot(3000, qApp, []() {
+                // Find the first loaded host and run tests on its trigger editor
+                Host* firstHost = nullptr;
+                for (auto host : mudlet::self()->getHostManager()) {
+                    if (host) {
+                        firstHost = host.data();
+                        break;
+                    }
+                }
+
+                if (firstHost && firstHost->mpEditorDialog) {
+                    // Verify we're running in the test profile
+                    if (firstHost->getName() != qsl("Mudlet self-test")) {
+                        qDebug() << "ERROR: Undo/Redo tests can only be run in the 'Mudlet self-test' profile";
+                        qDebug() << "Current profile:" << firstHost->getName();
+                        QCoreApplication::exit(1);
+                        return;
+                    }
+
+                    qDebug() << "Running undo/redo tests via --run-undo-tests flag";
+                    firstHost->mpEditorDialog->slot_runUndoRedoTests();
+
+                    // Exit after tests complete
+                    QTimer::singleShot(1000, qApp, []() {
+                        qDebug() << "Tests complete, exiting...";
+                        QCoreApplication::exit(0);
+                    });
+                } else {
+                    qDebug() << "ERROR: No profile loaded or editor not available for undo tests";
+                    QCoreApplication::exit(1);
+                }
+            });
+        }
     });
+
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

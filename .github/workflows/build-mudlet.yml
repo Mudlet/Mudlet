@@ -239,13 +239,14 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          -DUSE_SANITIZER="${{ env.MUDLET_SANITIZERS }}"
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
-          -DUSE_SANITIZER=""
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
           -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+        MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
@@ -379,6 +380,7 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -389,6 +391,7 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'
@@ -396,5 +399,29 @@ jobs:
         if [ -e /tmp/busted-tests-failed ]
         then
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
+          exit 1
+        fi
+
+    - name: (Linux) Run C++ undo/redo tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      timeout-minutes: 5
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
+
+    - name: (macOS) Run C++ undo/redo tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      timeout-minutes: 5
+      shell: bash
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
+
+    - name: Passed C++ undo/redo tests
+      if: matrix.run_tests == 'true'
+      run: |
+        if [ -e /tmp/undo-tests-failed ]
+        then
+          echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
           exit 1
         fi

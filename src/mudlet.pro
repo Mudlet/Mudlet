@@ -344,9 +344,13 @@ DEFINES+=DEBUG_TELNET=1
 # transfers, profile switching, and detached window management:
 # DEFINES+=DEBUG_WINDOW_HANDLING
 #
-# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# * Enable player icon adjustment controls in the 3D mapper for debugging and
 # alignment purposes - these are normally hidden in production builds:
 # DEFINES+=DEBUG_PLAYER_ICON_CONTROLS
+#
+# * Produce qDebug() messages about undo/redo operations in the trigger editor,
+# including command execution, stack operations, and edbee text undo integration:
+# DEFINES+=DEBUG_UNDO_REDO
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -703,10 +707,12 @@ SOURCES += \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
     dlgTriggerEditor.cpp \
+    ../test/dlgTriggerEditorUndoRedoTest.cpp \
     dlgTriggerPatternEdit.cpp \
     dlgTriggersMainArea.cpp \
     dlgVarsMainArea.cpp \
     EAction.cpp \
+    EditorItemXMLHelpers.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
     FileOpenHandler.cpp \
@@ -723,6 +729,12 @@ SOURCES += \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
+    EditorAddItemCommand.cpp \
+    EditorDeleteItemCommand.cpp \
+    EditorModifyPropertyCommand.cpp \
+    EditorMoveItemCommand.cpp \
+    EditorToggleActiveCommand.cpp \
+    EditorUndoStack.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     SecureStringUtils.cpp \
@@ -860,6 +872,7 @@ HEADERS += \
     dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
     EAction.h \
+    EditorItemXMLHelpers.h \
     exitstreewidget.h \
     FileOpenHandler.h \
     GifTracker.h \
@@ -874,6 +887,13 @@ HEADERS += \
     mapInfoContributorManager.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
+    EditorCommand.h \
+    EditorAddItemCommand.h \
+    EditorDeleteItemCommand.h \
+    EditorModifyPropertyCommand.h \
+    EditorMoveItemCommand.h \
+    EditorToggleActiveCommand.h \
+    EditorUndoStack.h \
     MxpTag.h \
     ScriptUnit.h \
     SecureStringUtils.h \

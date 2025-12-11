@@ -85,9 +85,11 @@ set(mudlet_SRCS
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
+    ../test/dlgTriggerEditorUndoRedoTest.cpp
     dlgTriggerPatternEdit.cpp
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
+    EditorItemXMLHelpers.cpp
     EAction.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
@@ -104,7 +106,13 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    EditorUndoStack.cpp
     MxpTag.cpp
+    EditorAddItemCommand.cpp
+    EditorDeleteItemCommand.cpp
+    EditorModifyPropertyCommand.cpp
+    EditorMoveItemCommand.cpp
+    EditorToggleActiveCommand.cpp
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
@@ -288,6 +296,7 @@ set(mudlet_HDRS
     dlgTriggerPatternEdit.h
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
+    EditorItemXMLHelpers.h
     EAction.h
     exitstreewidget.h
     FileOpenHandler.h
@@ -302,8 +311,15 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    EditorCommand.h
     MudletInstanceCoordinator.h
+    EditorUndoStack.h
     MxpTag.h
+    EditorAddItemCommand.h
+    EditorDeleteItemCommand.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
@@ -596,6 +612,12 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #
 # * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
+# target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
+#
+# * Produce qDebug() messages about undo/redo operations in the trigger editor,
+#   including command execution, stack operations, and edbee text undo integration:
+target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
+
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")

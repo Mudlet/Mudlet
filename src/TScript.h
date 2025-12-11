@@ -37,6 +37,8 @@ class TScript : public Tree<TScript>
 {
     friend class XMLexport;
     friend class XMLimport;
+    friend class DeleteItemCommand;
+    friend class EditorDeleteItemCommand;
 
 public:
     virtual ~TScript();
@@ -72,9 +74,9 @@ private:
     QString mName;
     QString mScript;
     QString mFuncName;
-    QPointer<Host> mpHost;
     bool mNeedsToBeCompiled = true;
     QStringList mEventHandlerList;
+    QPointer<Host> mpHost;
     bool mModuleMember = false;
     std::optional<QString> mLoadingError;
 };
