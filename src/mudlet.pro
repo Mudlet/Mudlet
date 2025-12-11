@@ -615,7 +615,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
     }
 }
 
-WITH_SENTRY {
+equals(WITH_SENTRY, ON) {
     DEFINES += WITH_SENTRY
 
 
@@ -641,8 +641,33 @@ WITH_SENTRY {
         system(cmake --install $$SENTRY_PATH/build --prefix $$SENTRY_PATH/install)
     }
 
-    INCLUDEPATH += $$SENTRY_PATH/install/include
-    LIBS        += -L$$SENTRY_PATH/install/lib
+    # Without Transport Curl (used by Mudlet)
+    SENTRY_INSTALL_NO_TRANSPORT = $$SENTRY_PATH/install_without_transport
+    !exists($$SENTRY_INSTALL_NO_TRANSPORT) {
+        message("Building Sentry without transport")
+        system(cmake -S $$SENTRY_PATH -B $$SENTRY_PATH/build_without_transport \
+            -DCMAKE_INSTALL_PREFIX=$$SENTRY_INSTALL_NO_TRANSPORT \
+            -DSENTRY_TRANSPORT=none \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DSENTRY_BACKEND=crashpad -DSENTRY_BUILD_SHARED_LIBS=OFF --log-level=ERROR)
+        system(cmake --build $$SENTRY_PATH/build_without_transport --parallel)
+        system(cmake --install $$SENTRY_PATH/build_without_transport --prefix $$SENTRY_INSTALL_NO_TRANSPORT)
+    }
+
+    # With Transport Curl (used by crash reporter)
+    SENTRY_INSTALL_WITH_TRANSPORT = $$SENTRY_PATH/install_with_transport
+    !exists($$SENTRY_INSTALL_WITH_TRANSPORT) {
+        message("Building Sentry with transport")
+        system(cmake -S $$SENTRY_PATH -B $$SENTRY_PATH/build_with_transport \
+            -DCMAKE_INSTALL_PREFIX=$$SENTRY_INSTALL_WITH_TRANSPORT \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DSENTRY_BACKEND=crashpad -DSENTRY_BUILD_SHARED_LIBS=OFF --log-level=ERROR)
+        system(cmake --build $$SENTRY_PATH/build_with_transport --parallel)
+        system(cmake --install $$SENTRY_PATH/build_with_transport --prefix $$SENTRY_INSTALL_WITH_TRANSPORT)
+    }
+
+    INCLUDEPATH += $$SENTRY_INSTALL_NO_TRANSPORT/include
+    LIBS += -L$$SENTRY_INSTALL_NO_TRANSPORT/lib
     LIBS += -lsentry \
         -lcrashpad_client -lcrashpad_handler_lib -lcrashpad_minidump \
         -lcrashpad_mpack -lcrashpad_snapshot -lcrashpad_tools \
@@ -653,9 +678,7 @@ WITH_SENTRY {
     QMAKE_LFLAGS_RELEASE    += -g -gcodeview
     QMAKE_LFLAGS_RELEASE    -= -Wl,-s
 
-
-    QMAKE_POST_LINK += $$quote($$QMAKE_MOVE $$OUT_PWD/mudlet.pdb $$APP_DIR_PATH/) ;
-    QMAKE_POST_LINK += $$quote(cp -f $$SENTRY_PATH/install/bin/* $$APP_DIR_PATH/) ;
+    QMAKE_POST_LINK += $$quote(cp -f $$SENTRY_INSTALL_NO_TRANSPORT/bin/* $$APP_DIR_PATH/) ;
 
     system(cmake -S $$PWD/crash_reporter/ -B $$PWD/crash_reporter/build/ -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$$APP_DIR_PATH/)
     system(cmake --build $$PWD/crash_reporter/build/)

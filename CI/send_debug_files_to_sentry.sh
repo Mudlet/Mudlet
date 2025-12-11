@@ -90,9 +90,6 @@ if [[ "$OS" == "Linux" ]]; then
 elif [[ "$OS" == "Darwin" ]]; then
     DEBUG_FILE="${MUDLET_EXEC}.dSYM"
     [[ -d "$DEBUG_FILE" ]] && FILES_TO_UPLOAD+=("$DEBUG_FILE")
-elif [[ "$OS" == "MINGW"* || "$OS" == "MSYS"* ]]; then
-    PDB_FILE="${MUDLET_EXEC%.exe}.pdb"
-    [[ -f "$PDB_FILE" ]] && FILES_TO_UPLOAD+=("$PDB_FILE")
 fi
 
 for f in "${FILES_TO_UPLOAD[@]}"; do

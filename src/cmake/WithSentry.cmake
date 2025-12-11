@@ -118,6 +118,7 @@ add_custom_command(OUTPUT ${STAMP_FILE}
 
 add_custom_target(copy_sentry ALL DEPENDS ${STAMP_FILE})
 add_dependencies(copy_sentry sentry_without_transport)
+add_dependencies(copy_sentry sentry_with_transport)
 add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
@@ -154,6 +155,7 @@ else()
     )
 endif()
 
+
 if(SENTRY_SEND_DEBUG)
     if(NOT DEFINED ENV{SENTRY_AUTH_TOKEN} OR "$ENV{SENTRY_AUTH_TOKEN}" STREQUAL "")
         message(FATAL_ERROR
@@ -168,7 +170,7 @@ if(SENTRY_SEND_DEBUG)
     )
     endif()
 else()
-    if(WIN32)
+    if (WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Release")
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
             COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
         )

@@ -22,6 +22,8 @@
 #include "sentry.h"
 #endif
 
+#include <QtSystemDetection>
+
 #ifdef Q_OS_WIN
 #include <windows.h>
 #elif defined(Q_OS_MAC)
