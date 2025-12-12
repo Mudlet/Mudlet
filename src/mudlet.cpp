@@ -4375,8 +4375,8 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
     QDateTime latestTime;
     
     for (const auto& profileName : profileNames) {
-        QString profileHost = readProfileData(profileName, qsl("host_url"));
-        QString profilePort = readProfileData(profileName, qsl("port_number"));
+        QString profileHost = readProfileData(profileName, qsl("url"));
+        QString profilePort = readProfileData(profileName, qsl("port"));
         
         // Match based on host and port
         if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
@@ -4405,11 +4405,20 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
         return QString();
     }
     
-    // Generate profile name: "hostname" or "hostname_port" for non-standard ports
-    // Use underscore instead of colon for Windows filesystem compatibility
+    // Generate a clean profile name from the hostname
+    // Extract the first part of the hostname (e.g., "aardmud" from "aardmud.org")
+    // and capitalize it for a nice display name
     QString profileName = uriData.host;
-    if (uriData.port != 23) {
-        profileName += qsl("_%1").arg(uriData.port);
+    
+    // Remove common TLD suffixes to get a cleaner name
+    int dotIndex = profileName.indexOf('.');
+    if (dotIndex > 0) {
+        profileName = profileName.left(dotIndex);
+    }
+    
+    // Capitalize first letter for nice display (e.g., "aardmud" -> "Aardmud")
+    if (!profileName.isEmpty()) {
+        profileName[0] = profileName[0].toUpper();
     }
     
     // Handle name collisions by appending -2, -3, etc.
@@ -4427,18 +4436,29 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
         return QString();
     }
     
-    // Write profile settings
-    writeProfileData(profileName, qsl("host_url"), uriData.host);
-    writeProfileData(profileName, qsl("port_number"), QString::number(uriData.port));
+    // Set URL and port on the Host object directly so connection works immediately
+    Host* pHost = mHostManager.getHost(profileName);
+    if (pHost) {
+        pHost->setUrl(uriData.host);
+        pHost->setPort(uriData.port);
+    }
+    
+    // Write profile settings (use same keys as dlgConnectionProfiles)
+    // Server address is the full hostname (e.g., "aardmud.org")
+    writeProfileData(profileName, qsl("url"), uriData.host);
+    // Port is stored separately (e.g., "4000")
+    writeProfileData(profileName, qsl("port"), QString::number(uriData.port));
     
     // Optionally write username if provided (though rarely used)
     if (!uriData.username.isEmpty()) {
         writeProfileData(profileName, qsl("login"), uriData.username);
     }
     
-    qDebug() << "mudlet::createProfileForUri() - Profile created successfully:" << profileName;
+    qDebug() << "mudlet::createProfileForUri() - Profile created successfully:" << profileName
+             << "Server:" << uriData.host << "Port:" << uriData.port;
     return profileName;
 }
+
 
 // Main entry point for handling telnet:// URIs
 void mudlet::handleTelnetUri(const QString& uri)

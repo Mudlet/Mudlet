@@ -680,6 +680,32 @@ int main(int argc, char* argv[])
     qDebug() << "main: Registered Mudlet as telnet:// protocol handler (per-user)";
 #endif
 
+#if defined(Q_OS_LINUX)
+    // Register telnet:// protocol handler on Linux (per-user, no admin needed)
+    // The .desktop file must have x-scheme-handler/telnet in MimeType
+    // This runs xdg-mime to associate telnet:// URIs with Mudlet
+    QProcess::startDetached(qsl("xdg-mime"), 
+        QStringList() << qsl("default") << qsl("mudlet.desktop") << qsl("x-scheme-handler/telnet"));
+    qDebug() << "main: Registered Mudlet as telnet:// protocol handler (Linux)";
+#endif
+
+#if defined(Q_OS_MACOS)
+    // Register telnet:// protocol handler on macOS
+    // The Info.plist already declares the URL scheme, but we call LSSetDefaultHandlerForURLScheme
+    // to ensure Mudlet becomes the default handler immediately on first launch
+    // This uses the bundle identifier from Info.plist
+    CFStringRef bundleId = CFBundleGetIdentifier(CFBundleGetMainBundle());
+    if (bundleId) {
+        CFStringRef telnetScheme = CFSTR("telnet");
+        OSStatus result = LSSetDefaultHandlerForURLScheme(telnetScheme, bundleId);
+        if (result == noErr) {
+            qDebug() << "main: Registered Mudlet as telnet:// protocol handler (macOS)";
+        } else {
+            qDebug() << "main: Failed to register telnet:// handler on macOS, error:" << result;
+        }
+    }
+#endif
+
     // Pass ownership of MudletInstanceCoordinator to mudlet.
     mudlet::self()->takeOwnershipOfInstanceCoordinator(std::move(instanceCoordinator));
 
