@@ -703,7 +703,7 @@ int main(int argc, char* argv[])
     qDebug() << "main: Registered Mudlet as telnet:// protocol handler (Linux)";
 #endif
 
-#if defined(Q_OS_MACOS)
+#if defined(__APPLE__)
     // Register telnet:// protocol handler on macOS
     // The Info.plist already declares the URL scheme, but we call LSSetDefaultHandlerForURLScheme
     // to ensure Mudlet becomes the default handler immediately on first launch
