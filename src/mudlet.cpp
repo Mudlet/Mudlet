@@ -4499,7 +4499,8 @@ void mudlet::handleTelnetUri(const QString& uri)
     // Fix for issue where doAutoLogin skips connection if it thinks the profile is "already loaded"
     // (which happens because createProfileForUri adds the host to the manager)
     Host* pHost = mHostManager.getHost(profileName);
-    if (pHost && !pHost->mConnected) {
+    if (pHost && pHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && 
+        pHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectingState) {
         qDebug() << "mudlet::handleTelnetUri() - Forcing connection for profile:" << profileName;
         // Ensure the host is set up with the correct URL/port (redundant but safe)
         pHost->setUrl(uriData.host);
@@ -4512,6 +4513,7 @@ void mudlet::handleTelnetUri(const QString& uri)
         updateDetachedWindowToolbars();
         updateMainWindowTabIndicators();
     }
+
 }
 
 void mudlet::processEventLoopHack()

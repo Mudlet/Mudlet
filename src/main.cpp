@@ -42,7 +42,7 @@
 #include <CoreServices/CoreServices.h>
 #endif
 
-#include "app_utils.h"
+#include "utils.h"
 #include <QPointer>
 #include <QScreen>
 #include <QSettings>
