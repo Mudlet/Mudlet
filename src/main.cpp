@@ -22,7 +22,7 @@
  ***************************************************************************/
 
 
-#if defined(Q_OS_MACOS)
+#if defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
 #endif
