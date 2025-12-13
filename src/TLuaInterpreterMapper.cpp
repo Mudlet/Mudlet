@@ -2210,6 +2210,31 @@ int TLuaInterpreter::getRoomsByPosition(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition1
+int TLuaInterpreter::getRoomsByPosition1(lua_State* L)
+{
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    const int x = getVerifiedInt(L, __func__, 2, "x");
+    const int y = getVerifiedInt(L, __func__, 3, "y");
+    const int z = getVerifiedInt(L, __func__, 4, "z");
+
+    const Host& host = getHostFromLua(L);
+    TArea* pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    QList<int> rL = pA->getRoomsByPosition(x, y, z);
+    lua_newtable(L);
+    for (int i = 0; i < rL.size(); i++) {
+        lua_pushnumber(L, i + 1);
+        lua_pushnumber(L, rL[i]);
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomUserData
 int TLuaInterpreter::getRoomUserData(lua_State* L)
 {

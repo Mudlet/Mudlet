@@ -54,8 +54,8 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 
     pushButton_website->setIcon(QIcon(qsl(":/icons/applications-internet.png")));
     pushButton_website->hide();
-    pushButton_report->setIcon(QIcon(qsl(":/icons/flag-red.png")));    
-    pushButton_report->hide();    
+    pushButton_report->setIcon(QIcon(qsl(":/icons/flag-red.png")));
+    pushButton_report->hide();
 
     packageStatusList->setSortingEnabled(false);
     //: Package manager - status item showing installed packages
@@ -93,7 +93,7 @@ void dlgPackageManager::clearPackageDetails()
     pushButton_report->hide();
 }
 
-void dlgPackageManager::downloadIcon(const QString &packageName) 
+void dlgPackageManager::downloadIcon(const QString &packageName)
 {
     QString iconPath;
 
@@ -103,7 +103,7 @@ void dlgPackageManager::downloadIcon(const QString &packageName)
             iconPath = packageObj[qsl("icon")].toString();
         } else {
             iconPath = qsl(":/icons/package-manager.png");
-            QPixmap pixmap(iconPath);               
+            QPixmap pixmap(iconPath);
             label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             return;
         }
@@ -117,7 +117,7 @@ void dlgPackageManager::downloadIcon(const QString &packageName)
     connect(reply, &QNetworkReply::finished, this, [this, reply](){ slot_onIconDownloaded(reply); });
 }
 
-void dlgPackageManager::downloadRepositoryIndex() 
+void dlgPackageManager::downloadRepositoryIndex()
 {
     const QString outputPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
@@ -158,13 +158,13 @@ void dlgPackageManager::fillPackageDetails(const QString &name, const QString &t
     label_version->setText(tr("Version ") + version);
 }
 
-bool dlgPackageManager::readPackageRepositoryFile() 
+bool dlgPackageManager::readPackageRepositoryFile()
 {
     QFile file(mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json")));
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
-    
+
     const QByteArray data = file.readAll();
     if (data.isEmpty()) {
         qWarning() << "Repository file is empty";
@@ -183,12 +183,12 @@ bool dlgPackageManager::readPackageRepositoryFile()
         return false;
     }
 
-    repositoryPackages = obj[qsl("packages")].toArray(); 
+    repositoryPackages = obj[qsl("packages")].toArray();
     packageLookup.clear();
     for (const QJsonValue &val : repositoryPackages) {
         QJsonObject pkg = val.toObject();
         packageLookup.insert(pkg["mpackage"].toString(), pkg);
-    }     
+    }
     //: Package manager - status item showing number of available packages
     statusAvailable->setText(tr("Available") + QString(" (%1)").arg(repositoryPackages.size()));
     return true;
@@ -209,6 +209,10 @@ void dlgPackageManager::resetPackageList()
         item->setText(mpHost->mInstalledPackages.at(i));
 
         auto packageInfo{mpHost->mPackageInfo.value(item->text())};
+        const auto title = packageInfo.value(qsl("title"));
+        if (!title.isEmpty()) {
+            item->setData(Qt::UserRole, title);
+        }
         const auto iconName = packageInfo.value(qsl("icon"));
         if (!iconName.isEmpty()) {
             const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
@@ -217,14 +221,14 @@ void dlgPackageManager::resetPackageList()
             // for alignment purposes in the package list
             QPixmap emptyPixmap(16, 16);
             emptyPixmap.fill(Qt::transparent);
-            item->setIcon(QIcon(emptyPixmap));   
-        }     
+            item->setIcon(QIcon(emptyPixmap));
+        }
         packageList->addItem(item);
     }
 
     //: Package manager - status item showing number of installed packages
     statusInstalled->setText(tr("Installed") + QString(" (%1)").arg(mpHost->mInstalledPackages.size()));
-    packageList->setCurrentRow(0);    
+    packageList->setCurrentRow(0);
 }
 
 void dlgPackageManager::slot_installPackageFromFile()
@@ -302,7 +306,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
         if (foundObj.isEmpty()) {
             //: Package manager: package couldn't be downloaded
-            QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' not found in repository").arg(packageName));            
+            QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' not found in repository").arg(packageName));
             repoError = true;
             continue;
         }
@@ -311,7 +315,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
         remoteFileName = QFileInfo(remoteFileName).fileName();
         if (remoteFileName.isEmpty()) {
             //: Package manager: package couldn't be downloaded
-            QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' not found in repository").arg(packageName));            
+            QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' not found in repository").arg(packageName));
             repoError = true;
             continue;
         }
@@ -397,7 +401,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
     clearPackageDetails();
 
     const auto status = packageStatusList->currentItem();
-    QString packageName = pItem->text();   
+    QString packageName = pItem->text();
 
     if (status == statusInstalled) {
         auto packageInfo{mpHost->mPackageInfo.value(packageName)};
@@ -409,7 +413,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
         if (packageLookup.contains(packageName)) {
             pushButton_website->show();
             pushButton_report->show();
-        }          
+        }
 
         QString description = packageInfo.value(qsl("description"));
         if (!description.isEmpty()) {
@@ -423,7 +427,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
             const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
             label_icon->setPixmap(QPixmap(iconDir).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         } else {
-            QPixmap pixmap(":/icons/package-manager.png");               
+            QPixmap pixmap(":/icons/package-manager.png");
             label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         }
 
@@ -448,15 +452,15 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
     }
 }
 
-void dlgPackageManager::slot_onIconDownloaded(QNetworkReply *reply) 
+void dlgPackageManager::slot_onIconDownloaded(QNetworkReply *reply)
 {
     if (!reply) {
         return;
     }
-    
+
     const QString requestedPackage = reply->property("packageName").toString();
     const QListWidgetItem* currentItem = packageList->currentItem();
-    
+
     if (!currentItem || currentItem->text() != requestedPackage) {
         reply->deleteLater();
         reply->manager()->deleteLater();
@@ -469,7 +473,7 @@ void dlgPackageManager::slot_onIconDownloaded(QNetworkReply *reply)
         pixmap.loadFromData(imageData);
         label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     } else {
-        const QPixmap pixmap(qsl(":/icons/mudlet.png"));               
+        const QPixmap pixmap(qsl(":/icons/mudlet.png"));
         label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
     reply->deleteLater();
@@ -581,12 +585,12 @@ void dlgPackageManager::slot_setPackageList()
         slot_searchTextChanged(lineEdit_searchBar->text());
         return;
     }
-    
+
     packageList->clear();
     clearPackageDetails();
 
     const auto status = packageStatusList->currentItem();
-    
+
     if (status == statusInstalled) {
         for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
             auto item = new QListWidgetItem();
@@ -625,7 +629,7 @@ void dlgPackageManager::slot_setPackageList()
             packageList->addItem(item);
         }
     }
-    
+
     packageList->setCurrentRow(0);
 }
 

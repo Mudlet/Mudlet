@@ -59,7 +59,7 @@ extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void        initializeQRCResources();
 
-#if defined(Q_OS_WINDOWS)
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 bool runUpdate();
 #endif
 
@@ -273,6 +273,9 @@ int main(int argc, char* argv[])
 
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
+
+    const QCommandLineOption runUndoTests(QStringList() << qsl("run-undo-tests"), qsl("Run internal undo/redo tests (requires 'Mudlet self-test' profile) and exit."));
+    parser.addOption(runUndoTests);
 
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
@@ -675,6 +678,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::smSteamMode = parser.isSet(steamMode);
+    const bool shouldRunUndoTests = parser.isSet(runUndoTests);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
@@ -686,9 +690,45 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles]() {
+    QTimer::singleShot(0, qApp, [cliProfiles, shouldRunUndoTests]() {
         // ensure Mudlet singleton is initialised before calling profile loading
         mudlet::self()->startAutoLogin(cliProfiles);
+
+        // If --run-undo-tests was specified, run tests after profile loads
+        if (shouldRunUndoTests) {
+            QTimer::singleShot(3000, qApp, []() {
+                // Find the first loaded host and run tests on its trigger editor
+                Host* firstHost = nullptr;
+                for (auto host : mudlet::self()->getHostManager()) {
+                    if (host) {
+                        firstHost = host.data();
+                        break;
+                    }
+                }
+
+                if (firstHost && firstHost->mpEditorDialog) {
+                    // Verify we're running in the test profile
+                    if (firstHost->getName() != qsl("Mudlet self-test")) {
+                        qDebug() << "ERROR: Undo/Redo tests can only be run in the 'Mudlet self-test' profile";
+                        qDebug() << "Current profile:" << firstHost->getName();
+                        QCoreApplication::exit(1);
+                        return;
+                    }
+
+                    qDebug() << "Running undo/redo tests via --run-undo-tests flag";
+                    firstHost->mpEditorDialog->slot_runUndoRedoTests();
+
+                    // Exit after tests complete
+                    QTimer::singleShot(1000, qApp, []() {
+                        qDebug() << "Tests complete, exiting...";
+                        QCoreApplication::exit(0);
+                    });
+                } else {
+                    qDebug() << "ERROR: No profile loaded or editor not available for undo tests";
+                    QCoreApplication::exit(1);
+                }
+            });
+        }
     });
 
 #if defined(INCLUDE_UPDATER)
@@ -779,7 +819,9 @@ static bool tryFileOperationWithRetry(const std::function<bool()>& operation, co
 bool runUpdate()
 {
     QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
-    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
+    // Keep the installer in temp directory - placing it in the app directory causes the Squirrel
+    // installer to delete itself while running, as it updates/replaces the application directory
+    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
     QDir updateDir;
 
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
@@ -808,7 +850,7 @@ bool runUpdate()
         bool moved = tryFileOperationWithRetry([&]() {
             return isFileAccessible(updatedInstaller.absoluteFilePath()) &&
                    updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath());
-        }, qsl("Move installer to application directory"));
+        }, qsl("Rename installer to mark as ready"));
 
         if (!moved) {
             qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath()

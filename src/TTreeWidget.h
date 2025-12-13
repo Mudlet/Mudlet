@@ -28,7 +28,6 @@
 
 class Host;
 
-
 class TTreeWidget : public QTreeWidget
 {
     Q_OBJECT
@@ -38,6 +37,7 @@ public:
     explicit TTreeWidget(QWidget* pW);
     Qt::DropActions supportedDropActions() const override;
     void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;
     void startDrag(Qt::DropActions supportedActions) override;
@@ -59,11 +59,25 @@ public:
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
 
+signals:
+    void itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition);
+    void batchMoveStarted();
+    void batchMoveEnded();
+
 private:
+    // Structure to hold information about items being moved
+    struct MoveInfo {
+        int childID;
+        int oldParentID;
+        int oldPosition;
+    };
+
     bool mIsDropAction;
     QPointer<Host> mpHost;
-    int mOldParentID;
-    int mChildID;
+    QList<MoveInfo> mPendingMoves;  // Stores info for all items being moved
+    int mOldParentID;  // Deprecated: kept for compatibility, will be removed
+    int mOldPosition;  // Deprecated: kept for compatibility, will be removed
+    int mChildID;      // Deprecated: kept for compatibility, will be removed
     // TODO: replace these seven booleans with a single enum:
     bool mIsTriggerTree;
     bool mIsAliasTree;
