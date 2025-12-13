@@ -22,6 +22,11 @@
  ***************************************************************************/
 
 
+#if defined(Q_OS_MACOS)
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreServices/CoreServices.h>
+#endif
+
 #include "HostManager.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
@@ -37,10 +42,7 @@
 #include <memory>
 #include <vector>
 
-#if defined(Q_OS_MACOS)
-#include <CoreFoundation/CoreFoundation.h>
-#include <CoreServices/CoreServices.h>
-#endif
+
 
 #include "utils.h"
 #include <QPointer>
