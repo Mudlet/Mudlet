@@ -155,7 +155,6 @@ else()
     )
 endif()
 
-
 if(SENTRY_SEND_DEBUG)
     if(NOT DEFINED ENV{SENTRY_AUTH_TOKEN} OR "$ENV{SENTRY_AUTH_TOKEN}" STREQUAL "")
         message(FATAL_ERROR

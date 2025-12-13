@@ -723,7 +723,6 @@ set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
 
 if (WITH_SENTRY)
   include(cmake/WithSentry.cmake)
-  #add_dependencies(MudletCrashReporter sentry_with_transport)
   add_subdirectory(crash_reporter)
 endif()
 
