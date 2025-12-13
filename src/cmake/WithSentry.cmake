@@ -118,7 +118,6 @@ add_custom_command(OUTPUT ${STAMP_FILE}
 
 add_custom_target(copy_sentry ALL DEPENDS ${STAMP_FILE})
 add_dependencies(copy_sentry sentry_without_transport)
-add_dependencies(copy_sentry sentry_with_transport)
 add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
