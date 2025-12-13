@@ -633,14 +633,6 @@ equals(WITH_SENTRY, ON) {
 
     SENTRY_PATH = $$PWD/../3rdparty/sentry-native
 
-    !exists($$SENTRY_PATH/install) {
-        message("Sentry install missing, building sentry-native from sources")
-
-        system(cmake -S $$SENTRY_PATH -B $$SENTRY_PATH/build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DSENTRY_BACKEND=crashpad -D SENTRY_BUILD_SHARED_LIBS=OFF --log-level=ERROR)
-        system(cmake --build $$SENTRY_PATH/build --parallel)
-        system(cmake --install $$SENTRY_PATH/build --prefix $$SENTRY_PATH/install)
-    }
-
     # Without Transport Curl (used by Mudlet)
     SENTRY_INSTALL_NO_TRANSPORT = $$SENTRY_PATH/install_without_transport
     !exists($$SENTRY_INSTALL_NO_TRANSPORT) {
