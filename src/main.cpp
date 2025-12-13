@@ -33,6 +33,16 @@
 #endif // defined(Q_OS_WINDOWS) && !defined(INCLUDE_UPDATER)
 #include <QCommandLineOption>
 #include <QPainter>
+#include <iostream>
+#include <memory>
+#include <vector>
+
+#if defined(Q_OS_MACOS)
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreServices/CoreServices.h>
+#endif
+
+#include "app_utils.h"
 #include <QPointer>
 #include <QScreen>
 #include <QSettings>
