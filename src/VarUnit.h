@@ -28,8 +28,6 @@
 #include <QSet>
 #include <QStringList>
 
-#include "utils.h"
-
 
 class TVar;
 

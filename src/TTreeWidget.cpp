@@ -199,20 +199,28 @@ void TTreeWidget::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int
     // so end is always the same as start (?)
     Q_UNUSED(end)
 
-    if (parent.isValid()) {
-        mOldParentID = parent.data(Qt::UserRole).toInt();
-    } else {
-        mOldParentID = 0;
+    if (!mIsDropAction) {
+        return;
     }
 
-    if (!mOldParentID) {
-        mOldParentID = parent.sibling(start, 0).data(Qt::UserRole).toInt();
+    // Store information about this item being moved
+    MoveInfo moveInfo;
+    moveInfo.oldPosition = start;
+
+    if (parent.isValid()) {
+        moveInfo.oldParentID = parent.data(Qt::UserRole).toInt();
+    } else {
+        moveInfo.oldParentID = 0;
+    }
+
+    if (!moveInfo.oldParentID) {
+        moveInfo.oldParentID = parent.sibling(start, 0).data(Qt::UserRole).toInt();
     }
 
     if (parent.isValid()) {
         QModelIndex child = parent.model()->index(start, 0, parent);
-        mChildID = child.data(Qt::UserRole).toInt();
-        if (!mChildID) {
+        moveInfo.childID = child.data(Qt::UserRole).toInt();
+        if (!moveInfo.childID) {
             if (parent.isValid()) {
                 // This if seems redundant - as it has already been done once
                 // and "parent" hasn't changed - so it will always be true:
@@ -220,12 +228,20 @@ void TTreeWidget::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int
             }
 
             if (child.isValid()) {
-                mChildID = child.data(Qt::UserRole).toInt();
+                moveInfo.childID = child.data(Qt::UserRole).toInt();
             } else {
-                mChildID = 0;
+                moveInfo.childID = 0;
             }
         }
     }
+
+    // Add to the list of pending moves
+    mPendingMoves.append(moveInfo);
+
+    // Keep backward compatibility by setting the old member variables to the last item
+    mChildID = moveInfo.childID;
+    mOldParentID = moveInfo.oldParentID;
+    mOldPosition = moveInfo.oldPosition;
 }
 
 
@@ -233,7 +249,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
 {
     // determine position in parent list
 
-    if (mIsDropAction) {
+    if (mIsDropAction && !mPendingMoves.isEmpty()) {
         // If parent.isValid() is false for the item being considered then that
         // item is a top-level item. The obsolete parent.child(start, 0) that we
         // used to use would return a null "QModelIndex" directly but now,
@@ -243,75 +259,95 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
         QModelIndex child = parent.isValid() ? parent.model()->index(start, 0, parent) : QModelIndex();
         int parentPosition = parent.row();
         int childPosition = child.row();
-        if (!mChildID) {
-            if (!parent.model()) {
-                QTreeWidget::rowsInserted(parent, start, end);
-                return;
-            }
-            if (!mpHost) {
-                QTreeWidget::rowsInserted(parent, start, end);
-                return;
-            }
-            mChildID = parent.model()->index(start, 0).data(Qt::UserRole).toInt();
-        }
 
         int newParentID = parent.data(Qt::UserRole).toInt();
-        if (mIsTriggerTree) {
-            mpHost->getTriggerUnit()->reParentTrigger(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-        } else if (mIsAliasTree) {
-            mpHost->getAliasUnit()->reParentAlias(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-        } else if (mIsKeyTree) {
-            mpHost->getKeyUnit()->reParentKey(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-        } else if (mIsTimerTree) {
-            mpHost->getTimerUnit()->reParentTimer(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-            TTimer* pTChild = mpHost->getTimerUnit()->getTimer(mChildID);
-            if (pTChild) {
-                QIcon icon;
-                if (pTChild->isOffsetTimer()) {
-                    if (pTChild->shouldBeActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
-                    }
-                } else {
-                    if (pTChild->shouldBeActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    }
-                }
-                QTreeWidgetItem* pParent = itemFromIndex(parent);
-                if (!pParent) {
-                    QTreeWidget::rowsInserted(parent, start, end);
-                    return;
-                }
 
-                for (int i = 0; i < pParent->childCount(); i++) {
-                    QTreeWidgetItem* pItem = pParent->child(i);
-                    if (!pItem) {
-                        QTreeWidget::rowsInserted(parent, start, end);
-                        return;
-                    }
-                    int id = pItem->data(0, Qt::UserRole).toInt();
-                    if (id == mChildID) {
-                        pItem->setIcon(0, icon);
-                    }
-                }
-            }
-        } else if (mIsScriptTree) {
-            mpHost->getScriptUnit()->reParentScript(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-        } else if (mIsActionTree) {
-            mpHost->getActionUnit()->reParentAction(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-            mpHost->getActionUnit()->updateToolbar();
-        } else {
-            qWarning().nospace().noquote() << "TTreeWidget::rowsInserted(...) WARNING - a TTreeWidget item which has not been classified as a mudlet type detected.";
-            // Consider marking this:
-            // Q_UNREACHABLE();
+        // If moving multiple items, signal start of batch operation for undo system
+        if (mPendingMoves.size() > 1) {
+            emit batchMoveStarted();
         }
 
-        // CHECK: These things are NOT hit if we have "return"-ed early, is this okay?
+        // Make a copy to avoid iterator invalidation if signals cause re-entry or container reallocation
+        const QList<MoveInfo> pendingMovesCopy = mPendingMoves;
+
+        // Process all pending moves
+        for (const MoveInfo& moveInfo : pendingMovesCopy) {
+            int childID = moveInfo.childID;
+
+            if (!childID) {
+                if (!parent.model()) {
+                    continue;
+                }
+                if (!mpHost) {
+                    continue;
+                }
+                childID = parent.model()->index(start, 0).data(Qt::UserRole).toInt();
+            }
+
+            // Emit signal for undo system before performing the move
+            emit itemMoved(childID, moveInfo.oldParentID, newParentID, moveInfo.oldPosition, childPosition);
+
+            if (mIsTriggerTree) {
+                mpHost->getTriggerUnit()->reParentTrigger(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
+            } else if (mIsAliasTree) {
+                mpHost->getAliasUnit()->reParentAlias(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
+            } else if (mIsKeyTree) {
+                mpHost->getKeyUnit()->reParentKey(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
+            } else if (mIsTimerTree) {
+                mpHost->getTimerUnit()->reParentTimer(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
+                TTimer* pTChild = mpHost->getTimerUnit()->getTimer(childID);
+                if (pTChild) {
+                    QIcon icon;
+                    if (pTChild->isOffsetTimer()) {
+                        if (pTChild->shouldBeActive()) {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                        } else {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                        }
+                    } else {
+                        if (pTChild->shouldBeActive()) {
+                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        } else {
+                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        }
+                    }
+                    QTreeWidgetItem* pParent = itemFromIndex(parent);
+                    if (pParent) {
+                        for (int i = 0; i < pParent->childCount(); i++) {
+                            QTreeWidgetItem* pItem = pParent->child(i);
+                            if (pItem) {
+                                int id = pItem->data(0, Qt::UserRole).toInt();
+                                if (id == childID) {
+                                    pItem->setIcon(0, icon);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (mIsScriptTree) {
+                mpHost->getScriptUnit()->reParentScript(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
+            } else if (mIsActionTree) {
+                mpHost->getActionUnit()->reParentAction(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
+                mpHost->getActionUnit()->updateToolbar();
+            } else {
+                qWarning().nospace().noquote() << "TTreeWidget::rowsInserted(...) WARNING - a TTreeWidget item which has not been classified as a mudlet type detected.";
+                // Consider marking this:
+                // Q_UNREACHABLE();
+            }
+        }
+
+        // If moving multiple items, signal end of batch operation for undo system
+        if (pendingMovesCopy.size() > 1) {
+            emit batchMoveEnded();
+        }
+
+        // Clear the pending moves list
+        mPendingMoves.clear();
+
+        // Reset backward compatibility variables
         mChildID = 0;
         mOldParentID = 0;
+        mOldPosition = 0;
         mIsDropAction = false;
     }
 
@@ -328,6 +364,13 @@ void TTreeWidget::dragEnterEvent(QDragEnterEvent* event)
 {
     mIsDropAction = true;
     QTreeWidget::dragEnterEvent(event);
+}
+
+void TTreeWidget::dragLeaveEvent(QDragLeaveEvent* event)
+{
+    // Reset flag when drag is cancelled (user presses Esc, drags outside, etc.)
+    mIsDropAction = false;
+    QTreeWidget::dragLeaveEvent(event);
 }
 
 void TTreeWidget::dropEvent(QDropEvent* event)
@@ -349,6 +392,9 @@ void TTreeWidget::dropEvent(QDropEvent* event)
     }
     mIsDropAction = true;
     QTreeWidget::dropEvent(event);
+
+    // Reset flag after drop completes
+    mIsDropAction = false;
 }
 
 void TTreeWidget::beginInsertRows(const QModelIndex& parent, int first, int last)
