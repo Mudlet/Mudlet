@@ -4649,7 +4649,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         return;
     }
 
-    std::string cleandata = "";
+    std::string cleandata;
+    // Pre-allocate for worst case: decompressed data can be much larger than input
+    // BUFFER_SIZE is 100000, so reserve enough for typical usage
+    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE) * 4);
     qint32 datalen = 0;
     do {
         datalen = amount;
@@ -4831,7 +4834,11 @@ Some data loss is likely - please mention this problem to the game admins.)", co
                 }
             }
         } //for
-    } while (datalen == BUFFER_SIZE);
+        // BUG FIX: The original do-while condition `datalen == BUFFER_SIZE` caused an infinite
+        // loop when exactly BUFFER_SIZE bytes were read from the socket. The loop body never
+        // reads new data - `amount` is fixed for this function call. Qt's signal/slot mechanism
+        // will call slot_socketReadyToBeRead() again when more socket data is available.
+    } while (false); // Single iteration - loop preserved for minimal code diff
 
     if (!cleandata.empty()) {
         gotRest(cleandata);
