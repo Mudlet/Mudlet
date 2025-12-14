@@ -4506,6 +4506,16 @@ void mudlet::handleTelnetUri(const QString& uri)
         pHost->setUrl(uriData.host);
         pHost->setPort(uriData.port);
         
+        // Critical: Initialize UI if missing (replicates slot_connectionDialogueFinished logic)
+        // This is needed because doAutoLogin skips initialization if host exists
+        if (!pHost->mpConsole) {
+            pHost->mIsProfileLoadingSequence = true;
+            addConsoleForNewHost(pHost);
+            pHost->mBlockScriptCompile = false;
+            pHost->mLuaInterpreter.loadGlobal();
+            pHost->hideMudletsVariables();
+        }
+
         // Initiate connection
         pHost->mTelnet.connectIt(uriData.host, uriData.port);
         
@@ -4513,7 +4523,6 @@ void mudlet::handleTelnetUri(const QString& uri)
         updateDetachedWindowToolbars();
         updateMainWindowTabIndicators();
     }
-
 }
 
 void mudlet::processEventLoopHack()
