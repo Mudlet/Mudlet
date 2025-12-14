@@ -664,9 +664,7 @@ WITH_SENTRY {
     equals(SENTRY_SEND_DEBUG, 1) {
         SENTRY_AUTH_TOKEN = $$getenv(SENTRY_AUTH_TOKEN)
         isEmpty(SENTRY_AUTH_TOKEN) {
-            error([Option SENTRY_SEND_DEBUG enabled] The environment variable SENTRY_AUTH_TOKEN is missing.
-                    SENTRY_AUTH_TOKEN is required to authenticate with Sentry before uploading debug files.
-                    Fix: try exporting SENTRY_AUTH_TOKEN="...")
+            error("[Option SENTRY_SEND_DEBUG enabled] The environment variable SENTRY_AUTH_TOKEN is missing. SENTRY_AUTH_TOKEN is required to authenticate with Sentry before uploading debug files. Fix: try exporting SENTRY_AUTH_TOKEN=\"...\"")
         }
         QMAKE_POST_LINK += $$quote(bash "$$PWD/../CI/send_debug_files_to_sentry.sh" "$$APP_DIR_PATH/mudlet.exe") ;
     }
