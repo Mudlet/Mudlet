@@ -1026,7 +1026,6 @@ COMMIT_LINE:
 #endif
             }
 
-            // Apply enhanced hyperlink styling
             if (mCurrentHyperlinkStyling.hasForegroundColor) {
                 c.mFgColor = mCurrentHyperlinkStyling.foregroundColor;
             }
@@ -1035,11 +1034,9 @@ COMMIT_LINE:
                 c.mBgColor = mCurrentHyperlinkStyling.backgroundColor;
             }
 
-            // Apply text decorations
             if (mCurrentHyperlinkStyling.isUnderlined) {
                 c.mFlags |= TChar::Underline;
 
-                // Apply specific underline style based on underlineStyle enum
                 switch (mCurrentHyperlinkStyling.underlineStyle) {
                     case Mudlet::HyperlinkStyling::UnderlineWavy:
                         c.mFlags |= TChar::UnderlineWavy;
@@ -1053,7 +1050,6 @@ COMMIT_LINE:
                     case Mudlet::HyperlinkStyling::UnderlineSolid:
                     case Mudlet::HyperlinkStyling::UnderlineNone:
                     default:
-                        // Standard solid underline (no additional flags needed)
                         break;
                 }
             }
@@ -1066,7 +1062,6 @@ COMMIT_LINE:
                 c.mFlags |= TChar::StrikeOut;
             }
 
-            // Apply decoration colors - only for active decorations
             if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
                 c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
             }
@@ -2805,7 +2800,6 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 
     QJsonObject root = doc.object();
 
-    // Parse style object directly into HyperlinkStyling
     if (root.contains(qsl("style")) && root[qsl("style")].isObject()) {
         QJsonObject styleObj = root[qsl("style")].toObject();
         parseJsonStyleToHyperlinkStyling(styleObj, styling);
@@ -2814,7 +2808,6 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #endif
     }
 
-    // Parse menu array
     if (root.contains(qsl("menu")) && root[qsl("menu")].isArray()) {
         QJsonArray menuArray = root[qsl("menu")].toArray();
         QString menuString = jsonMenuArrayToString(menuArray);
@@ -2823,7 +2816,6 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
         }
     }
 
-    // Parse tooltip string
     if (root.contains(qsl("tooltip")) && root[qsl("tooltip")].isString()) {
         parameters.insert(qsl("tooltip"), root[qsl("tooltip")].toString());
     }
@@ -2861,7 +2853,6 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
 {
     bool hasAnyCustomStyling = false;
 
-    // Color
     if (stateObj.contains(qsl("color")) && stateObj[qsl("color")].isString()) {
         QColor color = parseColorValue(stateObj[qsl("color")].toString());
         if (color.isValid()) {
@@ -2871,7 +2862,6 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
         }
     }
 
-    // Background color
     if (stateObj.contains(qsl("bg")) && stateObj[qsl("bg")].isString()) {
         QColor color = parseColorValue(stateObj[qsl("bg")].toString());
         if (color.isValid()) {
@@ -2881,19 +2871,16 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
         }
     }
 
-    // Bold
     if (stateObj.contains(qsl("bold")) && stateObj[qsl("bold")].isBool()) {
         stateStyle.isBold = stateObj[qsl("bold")].toBool();
         hasAnyCustomStyling = true;
     }
 
-    // Italic
     if (stateObj.contains(qsl("italic")) && stateObj[qsl("italic")].isBool()) {
         stateStyle.isItalic = stateObj[qsl("italic")].toBool();
         hasAnyCustomStyling = true;
     }
 
-    // Underline
     if (stateObj.contains(qsl("underline"))) {
         QJsonValue underlineVal = stateObj[qsl("underline")];
         if (underlineVal.isBool()) {
@@ -2918,7 +2905,6 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
         }
     }
 
-    // Overline
     if (stateObj.contains(qsl("overline"))) {
         QJsonValue overlineVal = stateObj[qsl("overline")];
         if (overlineVal.isBool()) {
@@ -2930,7 +2916,6 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
         }
     }
 
-    // Strikethrough
     if (stateObj.contains(qsl("strikethrough"))) {
         QJsonValue strikeVal = stateObj[qsl("strikethrough")];
         if (strikeVal.isBool()) {
@@ -2942,7 +2927,6 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
         }
     }
 
-    // Text decoration color
     if (stateObj.contains(qsl("text-decoration-color")) && stateObj[qsl("text-decoration-color")].isString()) {
         QColor decorationColor = parseColorValue(stateObj[qsl("text-decoration-color")].toString());
         if (decorationColor.isValid()) {
@@ -3183,7 +3167,6 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         return;
     }
 
-    // Check for OSC 8 documentation examples trigger phrase
     // Use a 1-second debounce to prevent duplicate injection from echo + server response
     if (text.contains("!osc8-docs")) {
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
