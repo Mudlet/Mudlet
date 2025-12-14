@@ -510,9 +510,9 @@ private:
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
-    QMap<QString, QString> parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling);
+    bool parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling, QMap<QString, QString>& parameters);
     // Helper function for parsing JSON format hyperlink configuration
-    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling);
+    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling, QString* errorDetails = nullptr);
     // Helper function for directly parsing JSON style object to HyperlinkStyling
     void parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing JSON state style to StateStyle

@@ -2523,32 +2523,41 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Calculate the link text from mMudLine since hyperlink started
                 int currentColumn = mMudLine.length();
                 int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
-                QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
-                
+
+                if (linkLength > 0) {
+                    // Only register if we have a valid link range
+                    QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                    
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8-Visibility] Registering hyperlink" << mCurrentHyperlinkLinkId
-                         << "line:" << mCurrentHyperlinkStartLine
-                         << "col:" << mCurrentHyperlinkStartColumn
-                         << "length:" << linkLength
-                         << "text:" << linkText;
+                    qDebug() << "[OSC8-Visibility] Registering hyperlink" << mCurrentHyperlinkLinkId
+                             << "line:" << mCurrentHyperlinkStartLine
+                             << "col:" << mCurrentHyperlinkStartColumn
+                             << "length:" << linkLength
+                             << "text:" << linkText;
 #endif
-                bool shouldStartConcealed = mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
-                    mCurrentHyperlinkLinkId,
-                    mCurrentHyperlinkStartLine,
-                    mCurrentHyperlinkStartColumn,
-                    linkLength,
-                    linkText,
-                    mCurrentHyperlinkStyling);
-                
-                // If link should start concealed, replace its text with spaces in mMudLine
-                // before it gets committed to the buffer
-                if (shouldStartConcealed) {
+                    bool shouldStartConcealed = mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
+                        mCurrentHyperlinkLinkId,
+                        mCurrentHyperlinkStartLine,
+                        mCurrentHyperlinkStartColumn,
+                        linkLength,
+                        linkText,
+                        mCurrentHyperlinkStyling);
+                    
+                    // If link should start concealed, replace its text with spaces in mMudLine
+                    // before it gets committed to the buffer
+                    if (shouldStartConcealed) {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8-Visibility] Link starts concealed - replacing text with spaces";
+                        qDebug() << "[OSC8-Visibility] Link starts concealed - replacing text with spaces";
 #endif
-                    QString spaces(linkLength, ' ');
-                    mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                        QString spaces(linkLength, ' ');
+                        mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                    }
                 }
+#if defined(DEBUG_OSC_PROCESSING)
+                else {
+                    qDebug() << "[OSC8-Visibility] Skipping registration for hyperlink with invalid length:" << linkLength;
+                }
+#endif
             }
 
             mCurrentHyperlinkCommand.clear();
@@ -2576,11 +2585,19 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
             // Reset styling to defaults before parsing
             mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
-            QMap<QString, QString> queryParams = parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling);
+            QMap<QString, QString> queryParams;
+            const bool parsedQueryParams = parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
 
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC8] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
 #endif
+
+            if (!parsedQueryParams) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Skipping hyperlink parameter processing due to invalid JSON config";
+#endif
+                queryParams.clear();
+            }
 
             // Extract menu parameters
             if (queryParams.contains(qsl("menu"))) {
@@ -2616,7 +2633,8 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             // For web URLs, preserve original parameters except our special ones
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
-                // Remove our special parameters
+                // Remove our special parameters (these come from the config JSON)
+                allParams.remove(qsl("config"));
                 allParams.remove(qsl("style"));
                 allParams.remove(qsl("menu"));
                 allParams.remove(qsl("tooltip"));
@@ -2789,9 +2807,9 @@ QString TBuffer::appendQueryParameters(const QString& uri, const QMap<QString, Q
     return result;
 }
 
-QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling)
+bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling, QMap<QString, QString>& parameters)
 {
-    QMap<QString, QString> parameters;
+    parameters.clear();
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] parseUriQueryParameters called with uri:" << uri;
@@ -2803,7 +2821,7 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC8] No query parameters found in URI";
 #endif
-        return parameters; // No query parameters
+        return true; // No query parameters
     }
 
     QString queryString = uri.mid(queryStart + 1);
@@ -2817,24 +2835,77 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
     qDebug() << "[OSC8] Decoded query string:" << decodedQueryString;
 #endif
 
-    // Only process JSON config parameters - no legacy CSS support
-    if (decodedQueryString.startsWith(qsl("config={"))) {
-        QString jsonString = decodedQueryString.mid(7); // Remove "config="
-        parseJsonHyperlinkConfig(jsonString, parameters, styling);
+    // Parse all query parameters into the map
+    // Split by '&' to get individual parameters
+    QStringList paramPairs = decodedQueryString.split('&', Qt::SkipEmptyParts);
+    for (const QString& pair : paramPairs) {
+        int equalsPos = pair.indexOf('=');
+        if (equalsPos == -1) {
+            // Parameter with no value (e.g., "?flag") - store with empty value
+            if (!pair.isEmpty()) {
+                QString key = QUrl::fromPercentEncoding(pair.toUtf8());
+                // For duplicate keys, keep the first occurrence
+                if (!parameters.contains(key)) {
+                    parameters.insert(key, QString());
+                }
+            }
+        } else {
+            QString key = pair.left(equalsPos);
+            QString value = pair.mid(equalsPos + 1);
+            // Decode both key and value
+            key = QUrl::fromPercentEncoding(key.toUtf8());
+            value = QUrl::fromPercentEncoding(value.toUtf8());
+            // For duplicate keys, keep the first occurrence
+            if (!parameters.contains(key)) {
+                parameters.insert(key, value);
+            }
+        }
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Parsed JSON parameters:" << parameters;
+    qDebug() << "[OSC8] All parsed query parameters:" << parameters;
 #endif
 
-    return parameters;
+    // Process special config parameter if present
+    if (parameters.contains(qsl("config"))) {
+        QString configValue = parameters.value(qsl("config"));
+        // Check if it looks like JSON (starts with '{')
+        if (configValue.startsWith('{')) {
+            QMap<QString, QString> parsedParameters;
+            Mudlet::HyperlinkStyling parsedStyling = styling;
+            QString errorDetails;
+            const bool parsed = parseJsonHyperlinkConfig(configValue, parsedParameters, parsedStyling, &errorDetails);
+
+            if (!parsed) {
+                const QString errorMessage = errorDetails.isEmpty() ? qsl("Unknown parse error") : errorDetails;
+                qDebug() << "[OSC8] Failed to parse hyperlink JSON config. jsonString:" << configValue << "error:" << errorMessage;
+                return false;
+            }
+
+            // Merge JSON-parsed parameters into the main parameter map
+            for (auto it = parsedParameters.constBegin(); it != parsedParameters.constEnd(); ++it) {
+                parameters.insert(it.key(), it.value());
+            }
+            styling = parsedStyling;
+        }
+    }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Final parsed parameters:" << parameters;
+#endif
+
+    return true;
 }
 
-bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling)
+bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling, QString* errorDetails)
 {
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
 #endif
+
+    if (errorDetails) {
+        errorDetails->clear();
+    }
 
     QJsonParseError parseError;
     QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
@@ -2843,6 +2914,10 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC8] JSON parse error:" << parseError.errorString();
 #endif
+        if (errorDetails) {
+            *errorDetails = qsl("%1 (offset %2)").arg(parseError.errorString()).arg(parseError.offset);
+        }
+
         return false;
     }
 
@@ -2850,6 +2925,10 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC8] JSON root is not an object";
 #endif
+        if (errorDetails) {
+            *errorDetails = qsl("JSON root is not an object");
+        }
+
         return false;
     }
 
@@ -2868,6 +2947,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     if (root.contains(qsl("menu")) && root[qsl("menu")].isArray()) {
         QJsonArray menuArray = root[qsl("menu")].toArray();
         QString menuString = jsonMenuArrayToString(menuArray);
+
         if (!menuString.isEmpty()) {
             parameters.insert(qsl("menu"), menuString);
         }
@@ -5687,23 +5767,29 @@ void TBuffer::injectOSC8DocumentationExamples()
     TBuffer* mainBuffer = &mpHost->mpConsole->buffer;
     if (this != mainBuffer) {
         // Redirect to main console's buffer
-        std::string outputBytes = output.toStdString();
+        const QByteArray outputUtf8 = output.toUtf8();
+        std::string outputBytes(outputUtf8.constData(), outputUtf8.size());
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC8] Redirecting documentation examples to main console buffer";
 #endif
+        const bool previousSkipTriggers = mainBuffer->mSkipTriggerProcessing;
+        mainBuffer->mSkipTriggerProcessing = true;
         mainBuffer->translateToPlainText(outputBytes, true);
+        mainBuffer->mSkipTriggerProcessing = previousSkipTriggers;
         return;
     }
 
     // Process the output through the normal text processing pipeline
     // Skip trigger processing to avoid re-entrancy issues during injection
-    std::string outputBytes = output.toStdString();
+    const QByteArray outputUtf8 = output.toUtf8();
+    std::string outputBytes(outputUtf8.constData(), outputUtf8.size());
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] About to process documentation examples through translateToPlainText, length:" << outputBytes.length();
 #endif
+    const bool previousSkipTriggers = mSkipTriggerProcessing;
     mSkipTriggerProcessing = true;
     translateToPlainText(outputBytes, true); // Mark as from server
-    mSkipTriggerProcessing = false;
+    mSkipTriggerProcessing = previousSkipTriggers;
 }
 
 // ============================================================================
