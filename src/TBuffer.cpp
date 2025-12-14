@@ -2552,12 +2552,11 @@ void TBuffer::decodeOSC(const QString& sequence)
                         QString spaces(linkLength, ' ');
                         mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
                     }
-                }
+                } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                else {
                     qDebug() << "[OSC8-Visibility] Skipping registration for hyperlink with invalid length:" << linkLength;
-                }
 #endif
+                }
             }
 
             mCurrentHyperlinkCommand.clear();
