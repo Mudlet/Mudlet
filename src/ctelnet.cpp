@@ -4853,11 +4853,6 @@ Some data loss is likely - please mention this problem to the game admins.)", co
             }
         }
     } //for
-    // BUG FIX: The original do-while condition `datalen == BUFFER_SIZE` caused an infinite
-    // loop when exactly BUFFER_SIZE bytes were read from the socket. The loop body never
-    // reads new data - `amount` is fixed for this function call. Qt's signal/slot mechanism
-    // will call slot_socketReadyToBeRead() again when more socket data is available.
-    } while (false); // Single iteration - loop preserved for minimal code diff
 
     if (!cleandata.empty()) {
         gotRest(cleandata);
