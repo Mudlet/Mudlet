@@ -3853,11 +3853,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const QString qHangingIndent(hangingIndent, QChar::Space);
         for (WrapInfo w : lineBreaks) {
             // skip TChars as needed
-            while (newBufferCharPosition < w.firstChar) {
+            while (newBufferCharPosition < w.firstChar && !buffer[i].empty()) {
                 buffer[i].pop_front();
                 newBufferCharPosition++;
             }
-            if (w.needsIndent) {
+            if (w.needsIndent && !buffer[i].empty()) {
                 // background color of indentation spaces should match first char in the line
                 const TChar indentSpace = buffer[i].front();
                 // add indentation to TChar buffer and newLineText
@@ -3874,7 +3874,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 }
             }
             // append TChars of the wrapped lineText to TChar buffer
-            while (newBufferCharPosition < w.lastChar) {
+            while (newBufferCharPosition < w.lastChar && !buffer[i].empty()) {
                 newBufferLine.push_back(buffer[i].front());
                 buffer[i].pop_front();
                 newBufferCharPosition++;
