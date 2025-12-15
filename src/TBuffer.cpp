@@ -3970,6 +3970,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
     const int indent = (indentSize < maxWidth) ? indentSize : 0;
     const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         lineCount++;
         std::deque<TChar> newBufferLine;
@@ -3991,6 +3992,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         // a blank timestamp indicates a wrapped line
         const bool isNewline = (time != mudlet::smBlankTimeStamp);
         QList<WrapInfo> lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
+
         if (lineBreaks.isEmpty()) {
             tempList.append(lineText);
             queue.push(buffer[i]);
@@ -3998,15 +4000,18 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             promptList.append(isPrompt);
             continue;
         }
+
         const QString qIndent(indent, QChar::Space);
         const QString qHangingIndent(hangingIndent, QChar::Space);
+
         for (WrapInfo w : lineBreaks) {
             // skip TChars as needed
-            while (newBufferCharPosition < w.firstChar) {
+            while (newBufferCharPosition < w.firstChar && !buffer[i].empty()) {
                 buffer[i].pop_front();
                 newBufferCharPosition++;
             }
-            if (w.needsIndent) {
+
+            if (w.needsIndent && !buffer[i].empty()) {
                 // background color of indentation spaces should match first char in the line
                 const TChar indentSpace = buffer[i].front();
                 // add indentation to TChar buffer and newLineText
@@ -4014,34 +4019,40 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                     for (int i = 0; i < indent; ++i) {
                         newBufferLine.push_front(indentSpace);
                     }
+
                     newLineText.append(qIndent);
                 } else {
                     for (int i = 0; i < hangingIndent; ++i) {
                         newBufferLine.push_front(indentSpace);
                     }
+
                     newLineText.append(qHangingIndent);
                 }
             }
             // append TChars of the wrapped lineText to TChar buffer
-            while (newBufferCharPosition < w.lastChar) {
+            while (newBufferCharPosition < w.lastChar && !buffer[i].empty()) {
                 newBufferLine.push_back(buffer[i].front());
                 buffer[i].pop_front();
                 newBufferCharPosition++;
             }
+
             // everything else
             newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
             tempList.append(newLineText);
+
             if (w.isNewline) {
                 timeList.append(time);
             } else {
                 timeList.append(mudlet::smBlankTimeStamp);
             }
+
             queue.push(newBufferLine);
             promptList.append(isPrompt);
             newBufferLine.clear();
             newLineText = QString();
         }
     }
+
     for (int i = 0; i < lineCount; ++i) {
         buffer.pop_back();
         lineBuffer.pop_back();
@@ -4050,6 +4061,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     }
 
     const int insertedLines = queue.size() - 1;
+
     for (int i = 0; i <= insertedLines; ++i) {
         if (tempList[i].size() < 1) {
             queue.pop();
@@ -4068,6 +4080,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         log(startLine, startLine + insertedLines - 1);
         return insertedLines;
     }
+
     return 0;
 }
 
