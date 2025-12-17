@@ -148,6 +148,7 @@ set(mudlet_SRCS
     TEntityResolver.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
+    THyperlinkSelectionManager.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp

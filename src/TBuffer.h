@@ -92,7 +92,9 @@ struct HyperlinkStyling {
         StateHover,         // Mouse hover (:hover)
         StateActive,        // Mouse down/active (:active)
         StateFocus,         // Keyboard focus (:focus)
-        StateFocusVisible   // Visible keyboard focus (:focus-visible)
+        StateFocusVisible,  // Visible keyboard focus (:focus-visible)
+        StateSelected,      // Selected state (from selection object)
+        StateDisabled       // Disabled state (from selection object)
     };
 
     // State-specific styling containers
@@ -124,12 +126,30 @@ struct HyperlinkStyling {
     StateStyle focusStyle;          // :focus
     StateStyle focusVisibleStyle;   // :focus-visible
     StateStyle anyLinkStyle;        // :any-link (applies to both :link and :visited)
+    StateStyle selectedStyle;       // :selected (from selection object)
+    StateStyle disabledStyle;       // :disabled (from selection object)
 
     // State tracking
     LinkState currentState = StateDefault;
 
     // Methods to get effective styling for current state
     StateStyle getEffectiveStyle() const;
+
+    // Selection control: toggleable, stateful links (radio/checkbox behavior)
+    // JSON: {"group": "string", "value": "string", "toggle": bool, "selected": bool, "exclusive": bool, "disabled": bool}
+    // When exclusive=true: radio button behavior (only one selected per group)
+    // When exclusive=false: checkbox behavior (multiple selections per group)
+    struct SelectionSettings {
+        QString group;              // Group identifier for related selections
+        QString value;              // Unique value within the group
+        bool toggle = true;         // Allow deselecting when already selected
+        bool selected = false;      // Initial selection state
+        bool exclusive = true;      // Radio (true) vs checkbox (false) mode
+        bool disabled = false;      // Cannot be clicked when disabled
+        bool hasSelectionSettings = false;
+    };
+
+    SelectionSettings selection;
 };
 
 } // namespace Mudlet
