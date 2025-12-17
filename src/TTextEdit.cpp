@@ -1422,6 +1422,48 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         mpBuffer->setActiveLink(linkIndex);
                         forceUpdate(); // Trigger re-render with active state
 
+                        // Handle hyperlink selection if selection settings are present
+                        Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+                        if (hyperlinkStyling.selection.hasSelectionSettings) {
+                            // Check if link is disabled
+                            if (hyperlinkStyling.selection.disabled) {
+                                // Don't execute disabled links, just set state and return
+                                mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+                                forceUpdate();
+                                return;
+                            }
+
+                            const QString& group = hyperlinkStyling.selection.group;
+                            const QString& value = hyperlinkStyling.selection.value;
+                            bool currentlySelected = mpConsole->mpSelectionManager->isSelected(group, value);
+
+                            // Update selection state based on toggle and exclusive settings
+                            if (hyperlinkStyling.selection.exclusive) {
+                                // Radio button mode: always select this, deselect others in group
+                                mpConsole->mpSelectionManager->setSelected(group, value, true, hyperlinkStyling.selection.exclusive);
+                            } else if (hyperlinkStyling.selection.toggle) {
+                                // Checkbox mode: toggle selection state
+                                mpConsole->mpSelectionManager->toggleSelection(group, value, hyperlinkStyling.selection.exclusive);
+                            } else {
+                                // Non-toggle mode: just set to selected
+                                mpConsole->mpSelectionManager->setSelected(group, value, true, hyperlinkStyling.selection.exclusive);
+                            }
+
+                            // Get updated selection state
+                            bool newSelected = mpConsole->mpSelectionManager->isSelected(group, value);
+
+                            // Modify URI to include selection state before execution
+                            func = mpConsole->mpSelectionManager->modifyUriForSelection(func, newSelected);
+
+                            // Update link visual state to reflect selection
+                            if (newSelected) {
+                                mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateSelected);
+                            } else {
+                                mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+                            }
+                            forceUpdate(); // Re-render with new selection state
+                        }
+
                         if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
                         } else {

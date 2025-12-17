@@ -2820,6 +2820,14 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
         parameters.insert(qsl("tooltip"), root[qsl("tooltip")].toString());
     }
 
+    if (root.contains(qsl("selection")) && root[qsl("selection")].isObject()) {
+        QJsonObject selectionObj = root[qsl("selection")].toObject();
+        parseJsonSelectionConfig(selectionObj, styling.selection);
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Selection config parsed from JSON";
+#endif
+    }
+
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] JSON converted to parameters:" << parameters;
 #endif
@@ -2941,6 +2949,34 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
     }
 
     stateStyle.hasCustomStyling = hasAnyCustomStyling;
+}
+
+void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings)
+{
+    if (selectionObj.contains(qsl("group")) && selectionObj[qsl("group")].isString()) {
+        settings.group = selectionObj[qsl("group")].toString();
+        settings.hasSelectionSettings = true;
+    }
+
+    if (selectionObj.contains(qsl("value")) && selectionObj[qsl("value")].isString()) {
+        settings.value = selectionObj[qsl("value")].toString();
+    }
+
+    if (selectionObj.contains(qsl("toggle")) && selectionObj[qsl("toggle")].isBool()) {
+        settings.toggle = selectionObj[qsl("toggle")].toBool();
+    }
+
+    if (selectionObj.contains(qsl("selected")) && selectionObj[qsl("selected")].isBool()) {
+        settings.selected = selectionObj[qsl("selected")].toBool();
+    }
+
+    if (selectionObj.contains(qsl("exclusive")) && selectionObj[qsl("exclusive")].isBool()) {
+        settings.exclusive = selectionObj[qsl("exclusive")].toBool();
+    }
+
+    if (selectionObj.contains(qsl("disabled")) && selectionObj[qsl("disabled")].isBool()) {
+        settings.disabled = selectionObj[qsl("disabled")].toBool();
+    }
 }
 
 void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling)
@@ -5335,6 +5371,54 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "  \x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
+    // Hyperlink Selection (Radio & Checkbox Modes)
+    // ═══════════════════════════════════════════════════════════════════
+    output += "══════════════════════════════════════════════════════════════════════\n";
+    output += "HYPERLINK SELECTION (RADIO & CHECKBOX MODES)\n";
+    output += "══════════════════════════════════════════════════════════════════════\n\n";
+
+    output += "Radio Button Mode (Exclusive Selection):\n";
+    output += "Choose difficulty: ";
+    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"easy\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"green\",\"selected\":{\"bg\":\"green\",\"color\":\"white\",\"bold\":true}}}\x1b\\Easy\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:normal?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"normal\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"yellow\",\"selected\":{\"bg\":\"yellow\",\"color\":\"black\",\"bold\":true}}}\x1b\\Normal\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"hard\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"red\",\"selected\":{\"bg\":\"red\",\"color\":\"white\",\"bold\":true}}}\x1b\\Hard\x1b]8;;\x1b\\\n\n";
+
+    output += "Checkbox Mode (Multi-Select):\n";
+    output += "Enable buffs: ";
+    output += "\x1b]8;;send:buff-strength?config={\"selection\":{\"group\":\"buffs\",\"value\":\"strength\",\"toggle\":true},\"style\":{\"color\":\"#cc6600\",\"selected\":{\"color\":\"#ff9900\",\"bold\":true,\"underline\":true}}}\x1b\\💪 Strength\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:buff-speed?config={\"selection\":{\"group\":\"buffs\",\"value\":\"speed\",\"toggle\":true},\"style\":{\"color\":\"#0066cc\",\"selected\":{\"color\":\"#3399ff\",\"bold\":true,\"underline\":true}}}\x1b\\⚡ Speed\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:buff-defense?config={\"selection\":{\"group\":\"buffs\",\"value\":\"defense\",\"toggle\":true},\"style\":{\"color\":\"#006600\",\"selected\":{\"color\":\"#00cc00\",\"bold\":true,\"underline\":true}}}\x1b\\🛡️ Defense\x1b]8;;\x1b\\\n\n";
+
+    output += "Pre-Selected Options:\n";
+    output += "Combat style: ";
+    output += "\x1b]8;;send:aggressive?config={\"selection\":{\"group\":\"combat\",\"value\":\"aggressive\",\"toggle\":true,\"exclusive\":true,\"selected\":true},\"style\":{\"color\":\"red\",\"selected\":{\"bg\":\"darkred\",\"color\":\"white\"}}}\x1b\\Aggressive\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:balanced?config={\"selection\":{\"group\":\"combat\",\"value\":\"balanced\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"yellow\",\"selected\":{\"bg\":\"olive\",\"color\":\"white\"}}}\x1b\\Balanced\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:defensive?config={\"selection\":{\"group\":\"combat\",\"value\":\"defensive\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"green\",\"selected\":{\"bg\":\"darkgreen\",\"color\":\"white\"}}}\x1b\\Defensive\x1b]8;;\x1b\\\n\n";
+
+    output += "Disabled Options:\n";
+    output += "Choose class: ";
+    output += "\x1b]8;;send:warrior?config={\"selection\":{\"group\":\"class\",\"value\":\"warrior\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#cc6600\",\"selected\":{\"bg\":\"#cc6600\",\"color\":\"white\"}}}\x1b\\⚔️ Warrior\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:mage?config={\"selection\":{\"group\":\"class\",\"value\":\"mage\",\"toggle\":true,\"exclusive\":true,\"disabled\":true},\"style\":{\"color\":\"#6600cc\",\"selected\":{\"bg\":\"#6600cc\",\"color\":\"white\"},\"disabled\":{\"color\":\"#666666\",\"strikethrough\":true}}}\x1b\\🔮 Mage (Locked)\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:rogue?config={\"selection\":{\"group\":\"class\",\"value\":\"rogue\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#006600\",\"selected\":{\"bg\":\"#006600\",\"color\":\"white\"}}}\x1b\\🗡️ Rogue\x1b]8;;\x1b\\\n\n";
+
+    output += "Interactive Selection with Hover:\n";
+    output += "Select weapon: ";
+    output += "\x1b]8;;send:sword?config={\"selection\":{\"group\":\"weapon\",\"value\":\"sword\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"blue\",\"hover\":{\"bg\":\"lightblue\",\"color\":\"black\"},\"selected\":{\"bg\":\"darkblue\",\"color\":\"white\",\"bold\":true}}}\x1b\\⚔️ Sword\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:axe?config={\"selection\":{\"group\":\"weapon\",\"value\":\"axe\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"orange\",\"hover\":{\"bg\":\"lightyellow\",\"color\":\"black\"},\"selected\":{\"bg\":\"darkorange\",\"color\":\"white\",\"bold\":true}}}\x1b\\🪓 Axe\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:bow?config={\"selection\":{\"group\":\"weapon\",\"value\":\"bow\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"green\",\"hover\":{\"bg\":\"lightgreen\",\"color\":\"black\"},\"selected\":{\"bg\":\"darkgreen\",\"color\":\"white\",\"bold\":true}}}\x1b\\🏹 Bow\x1b]8;;\x1b\\\n\n";
+
+    output += "Toggle Switches:\n";
+    output += "Settings: ";
+    output += "\x1b]8;;send:auto-loot?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-loot\",\"toggle\":true},\"style\":{\"color\":\"#666666\",\"selected\":{\"color\":\"#00cc00\",\"bold\":true}}}\x1b\\[Auto-Loot]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:auto-heal?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-heal\",\"toggle\":true,\"selected\":true},\"style\":{\"color\":\"#666666\",\"selected\":{\"color\":\"#00cc00\",\"bold\":true}}}\x1b\\[Auto-Heal]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:sound?config={\"selection\":{\"group\":\"settings\",\"value\":\"sound\",\"toggle\":true},\"style\":{\"color\":\"#666666\",\"selected\":{\"color\":\"#00cc00\",\"bold\":true}}}\x1b\\[Sound]\x1b]8;;\x1b\\\n\n";
+
+    output += "Server Callback Example:\n";
+    output += "When clicked, selection state is sent to server via &selected=true/false\n";
+    output += "Server receives: send:easy&selected=true (for radio buttons)\n";
+    output += "Server receives: send:buff-strength&selected=true/false (for checkboxes)\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
     // Summary
     // ═══════════════════════════════════════════════════════════════════
     output += "══════════════════════════════════════════════════════════════════════\n\n";
@@ -5394,9 +5478,16 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     }
 
     // Apply state-specific styles with proper cascade order
+    // Priority: disabled > selected > active > focus-visible > focus > hover > visited > link > default
     const StateStyle* stateStyle = nullptr;
 
     switch (currentState) {
+        case StateDisabled:
+            if (disabledStyle.hasCustomStyling) stateStyle = &disabledStyle;
+            break;
+        case StateSelected:
+            if (selectedStyle.hasCustomStyling) stateStyle = &selectedStyle;
+            break;
         case StateVisited:
             if (visitedStyle.hasCustomStyling) stateStyle = &visitedStyle;
             break;
@@ -5457,7 +5548,8 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
         if (linkStyle.hasCustomStyling || visitedStyle.hasCustomStyling ||
             hoverStyle.hasCustomStyling || activeStyle.hasCustomStyling ||
             focusStyle.hasCustomStyling || focusVisibleStyle.hasCustomStyling ||
-            anyLinkStyle.hasCustomStyling) {
+            anyLinkStyle.hasCustomStyling || selectedStyle.hasCustomStyling ||
+            disabledStyle.hasCustomStyling) {
             effective.hasCustomStyling = true;
         }
     }

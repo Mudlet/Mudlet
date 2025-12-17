@@ -505,6 +505,8 @@ private:
     void parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing JSON state style to StateStyle
     void parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::HyperlinkStyling::StateStyle& stateStyle);
+    // Helper function for parsing JSON selection config to SelectionSettings
+    void parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings);
     // Helper function for JSON menu array conversion
     QString jsonMenuArrayToString(const QJsonArray& menuArray);
     // Helper function for appending query parameters to URIs (handles existing params)
