@@ -1237,9 +1237,13 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
 
                 // Update hover state for CSS pseudo-class support
+                // Don't set hover state for disabled links - they should stay disabled
                 if (mpBuffer->getHoveredLink() != linkIndex) {
-                    mpBuffer->setHoveredLink(linkIndex);
-                    forceUpdate(); // Trigger re-render with new hover state
+                    auto currentState = mpBuffer->getLinkState(linkIndex);
+                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled) {
+                        mpBuffer->setHoveredLink(linkIndex);
+                        forceUpdate(); // Trigger re-render with new hover state
+                    }
                 }
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -1417,6 +1421,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QString func;
                     if (!command.empty() && mpHost) {
                         func = command.at(0);
+                        qDebug() << "TTextEdit::mousePressEvent - Link clicked, func:" << func << "luaReference:" << luaReference;
 
                         // Set active state for CSS pseudo-class support
                         mpBuffer->setActiveLink(linkIndex);
@@ -1438,27 +1443,38 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                             bool currentlySelected = mpConsole->mpSelectionManager->isSelected(group, value);
 
                             // Update selection state based on toggle and exclusive settings
-                            if (hyperlinkStyling.selection.exclusive) {
-                                // Radio button mode: always select this, deselect others in group
-                                mpConsole->mpSelectionManager->setSelected(group, value, true, hyperlinkStyling.selection.exclusive);
-                            } else if (hyperlinkStyling.selection.toggle) {
-                                // Checkbox mode: toggle selection state
+                            if (hyperlinkStyling.selection.toggle) {
+                                // Toggle mode: toggle selection state (works for both radio and checkbox)
                                 mpConsole->mpSelectionManager->toggleSelection(group, value, hyperlinkStyling.selection.exclusive);
                             } else {
                                 // Non-toggle mode: just set to selected
                                 mpConsole->mpSelectionManager->setSelected(group, value, true, hyperlinkStyling.selection.exclusive);
                             }
 
-                            // Get updated selection state
+                            // Get updated selection state after selection manager operations
                             bool newSelected = mpConsole->mpSelectionManager->isSelected(group, value);
+
+                            // Handle visual state updates for exclusive selection
+                            if (hyperlinkStyling.selection.exclusive && newSelected) {
+                                // Clear visual selection for other links in this group
+                                mpBuffer->clearGroupSelection(group, value);
+                                forceUpdate(); // Ensure visual updates are applied immediately
+#if defined(DEBUG_OSC_PROCESSING)
+                                qDebug() << "[OSC8] Exclusive selection: Cleared other selections in group" << group << "except" << value;
+#endif
+                            }
 
                             // Modify URI to include selection state before execution
                             func = mpConsole->mpSelectionManager->modifyUriForSelection(func, newSelected);
 
-                            // Update link visual state to reflect selection
+                            // Update link visual state and selection tracking to reflect selection
+                            qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "selected=" << newSelected;
+                            mpBuffer->setLinkSelected(linkIndex, newSelected);
                             if (newSelected) {
+                                qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateSelected";
                                 mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateSelected);
                             } else {
+                                qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateDefault";
                                 mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
                             }
                             forceUpdate(); // Re-render with new selection state

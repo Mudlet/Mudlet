@@ -82,27 +82,37 @@ void THyperlinkSelectionManager::clearAllSelections()
 // Modify URI to append &selected=true or &selected=false for server callback
 QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri, bool isSelected) const
 {
-    // Extract base URI without ?config= parameter
-    // The URI structure is: SCHEME:COMMAND?config=JSON
-    // We need to append &selected=true/false to COMMAND (before ?config=)
+    // The baseUri is already in Lua format: send([[command]]) or sendCmdLine([[command]])
+    // We need to extract the command, append &selected=true/false, and reconstruct
     
-    int configPos = baseUri.indexOf(qsl("?config="));
-    QString command;
-    QString configPart;
+    qDebug() << "modifyUriForSelection called with baseUri:" << baseUri << "isSelected:" << isSelected;
     
-    if (configPos != -1) {
-        command = baseUri.left(configPos);
-        configPart = baseUri.mid(configPos);
-    } else {
-        command = baseUri;
+    // Check if it's a send() or sendCmdLine() call
+    if (baseUri.startsWith(qsl("send([[")) && baseUri.endsWith(qsl("]])"))) {
+        // Extract: send([[command]]) -> command
+        QString command = baseUri.mid(7, baseUri.length() - 10);
+        // Append selection state to command
+        QString separator = command.contains('?') ? qsl("&") : qsl("?");
+        command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
+        // Reconstruct: send([[command&selected=true]])
+        QString result = qsl("send([[%1]])").arg(command);
+        qDebug() << "Modified to:" << result;
+        return result;
+    } else if (baseUri.startsWith(qsl("sendCmdLine([[")) && baseUri.endsWith(qsl("]])"))) {
+        // Extract: sendCmdLine([[command]]) -> command
+        QString command = baseUri.mid(14, baseUri.length() - 17);
+        // Append selection state to command
+        QString separator = command.contains('?') ? qsl("&") : qsl("?");
+        command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
+        // Reconstruct: sendCmdLine([[command&selected=true]])
+        QString result = qsl("sendCmdLine([[%1]])").arg(command);
+        qDebug() << "Modified to:" << result;
+        return result;
     }
     
-    // Append selection state
-    QString separator = command.contains('?') ? qsl("&") : qsl("?");
-    command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
-    
-    // Re-append config if it existed
-    return command + configPart;
+    // For other URI formats (like openUrl), return as-is
+    qDebug() << "No modification - returning as-is";
+    return baseUri;
 }
 
 // Register a value as a member of a group

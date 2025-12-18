@@ -2698,6 +2698,31 @@ void TBuffer::decodeOSC(const QString& sequence)
             // when the link styling doesn't specify a background
             mLinkOriginalBackgrounds[mCurrentHyperlinkLinkId] = mBackGroundColor;
 
+            // Initialize selection state if this link has selection settings
+            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpConsole && mpConsole->mpSelectionManager) {
+                const QString& group = mCurrentHyperlinkStyling.selection.group;
+                const QString& value = mCurrentHyperlinkStyling.selection.value;
+                
+                // Register the link with the selection manager
+                mpConsole->mpSelectionManager->setSelected(group, value, 
+                    mCurrentHyperlinkStyling.selection.selected, 
+                    mCurrentHyperlinkStyling.selection.exclusive);
+                
+                // Update link visual state to match initial selection
+                setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
+                if (mCurrentHyperlinkStyling.selection.selected) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
+                } else if (mCurrentHyperlinkStyling.selection.disabled) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+                }
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:"
+                         << "group=" << group << "value=" << value 
+                         << "selected=" << mCurrentHyperlinkStyling.selection.selected 
+                         << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
+#endif
+            }
+
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug().noquote() << "[OSC8] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
 #endif
@@ -3049,6 +3074,14 @@ void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudl
 
     if (styleObj.contains(qsl("any-link")) && styleObj[qsl("any-link")].isObject()) {
         parseJsonStateStyle(styleObj[qsl("any-link")].toObject(), styling.anyLinkStyle);
+    }
+
+    if (styleObj.contains(qsl("selected")) && styleObj[qsl("selected")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("selected")].toObject(), styling.selectedStyle);
+    }
+
+    if (styleObj.contains(qsl("disabled")) && styleObj[qsl("disabled")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("disabled")].toObject(), styling.disabledStyle);
     }
 
     applyAccessibilityEnhancements(styling);
@@ -5379,39 +5412,44 @@ void TBuffer::injectOSC8DocumentationExamples()
 
     output += "Radio Button Mode (Exclusive Selection):\n";
     output += "Choose difficulty: ";
-    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"easy\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"green\",\"selected\":{\"bg\":\"green\",\"color\":\"white\",\"bold\":true}}}\x1b\\Easy\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:normal?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"normal\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"yellow\",\"selected\":{\"bg\":\"yellow\",\"color\":\"black\",\"bold\":true}}}\x1b\\Normal\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"hard\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"red\",\"selected\":{\"bg\":\"red\",\"color\":\"white\",\"bold\":true}}}\x1b\\Hard\x1b]8;;\x1b\\\n\n";
+    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"easy\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#88ff88\",\"underline\":true,\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffffff\",\"bold\":true,\"underline\":false}}}\x1b\\[ Easy ]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:normal?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"normal\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ffff88\",\"underline\":true,\"selected\":{\"bg\":\"#cccc00\",\"color\":\"#000000\",\"bold\":true,\"underline\":false}}}\x1b\\[ Normal ]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"hard\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff8888\",\"underline\":true,\"selected\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true,\"underline\":false}}}\x1b\\[ Hard ]\x1b]8;;\x1b\\\n\n";
 
     output += "Checkbox Mode (Multi-Select):\n";
     output += "Enable buffs: ";
-    output += "\x1b]8;;send:buff-strength?config={\"selection\":{\"group\":\"buffs\",\"value\":\"strength\",\"toggle\":true},\"style\":{\"color\":\"#cc6600\",\"selected\":{\"color\":\"#ff9900\",\"bold\":true,\"underline\":true}}}\x1b\\💪 Strength\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:buff-speed?config={\"selection\":{\"group\":\"buffs\",\"value\":\"speed\",\"toggle\":true},\"style\":{\"color\":\"#0066cc\",\"selected\":{\"color\":\"#3399ff\",\"bold\":true,\"underline\":true}}}\x1b\\⚡ Speed\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:buff-defense?config={\"selection\":{\"group\":\"buffs\",\"value\":\"defense\",\"toggle\":true},\"style\":{\"color\":\"#006600\",\"selected\":{\"color\":\"#00cc00\",\"bold\":true,\"underline\":true}}}\x1b\\🛡️ Defense\x1b]8;;\x1b\\\n\n";
+    output += "\x1b]8;;send:buff-strength?config={\"selection\":{\"group\":\"buffs\",\"value\":\"strength\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#ff9944\",\"selected\":{\"bg\":\"#ff6600\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Strength\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:buff-speed?config={\"selection\":{\"group\":\"buffs\",\"value\":\"speed\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#66ccff\",\"selected\":{\"bg\":\"#0088ff\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Speed\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:buff-defense?config={\"selection\":{\"group\":\"buffs\",\"value\":\"defense\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Defense\x1b]8;;\x1b\\\n";
+    output += "  (Click to toggle, multiple can be selected)\n\n";
 
     output += "Pre-Selected Options:\n";
     output += "Combat style: ";
-    output += "\x1b]8;;send:aggressive?config={\"selection\":{\"group\":\"combat\",\"value\":\"aggressive\",\"toggle\":true,\"exclusive\":true,\"selected\":true},\"style\":{\"color\":\"red\",\"selected\":{\"bg\":\"darkred\",\"color\":\"white\"}}}\x1b\\Aggressive\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:balanced?config={\"selection\":{\"group\":\"combat\",\"value\":\"balanced\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"yellow\",\"selected\":{\"bg\":\"olive\",\"color\":\"white\"}}}\x1b\\Balanced\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:defensive?config={\"selection\":{\"group\":\"combat\",\"value\":\"defensive\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"green\",\"selected\":{\"bg\":\"darkgreen\",\"color\":\"white\"}}}\x1b\\Defensive\x1b]8;;\x1b\\\n\n";
+    output += "\x1b]8;;send:aggressive?config={\"selection\":{\"group\":\"combat\",\"value\":\"aggressive\",\"toggle\":true,\"exclusive\":true,\"selected\":true},\"style\":{\"color\":\"#ff6666\",\"selected\":{\"bg\":\"#990000\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\⚔️ Aggressive\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:balanced?config={\"selection\":{\"group\":\"combat\",\"value\":\"balanced\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ffcc66\",\"selected\":{\"bg\":\"#996600\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\⚖️ Balanced\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:defensive?config={\"selection\":{\"group\":\"combat\",\"value\":\"defensive\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#009900\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🛡️ Defensive\x1b]8;;\x1b\\\n";
+    output += "  (Aggressive is pre-selected)\n\n";
 
     output += "Disabled Options:\n";
     output += "Choose class: ";
-    output += "\x1b]8;;send:warrior?config={\"selection\":{\"group\":\"class\",\"value\":\"warrior\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#cc6600\",\"selected\":{\"bg\":\"#cc6600\",\"color\":\"white\"}}}\x1b\\⚔️ Warrior\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:mage?config={\"selection\":{\"group\":\"class\",\"value\":\"mage\",\"toggle\":true,\"exclusive\":true,\"disabled\":true},\"style\":{\"color\":\"#6600cc\",\"selected\":{\"bg\":\"#6600cc\",\"color\":\"white\"},\"disabled\":{\"color\":\"#666666\",\"strikethrough\":true}}}\x1b\\🔮 Mage (Locked)\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:rogue?config={\"selection\":{\"group\":\"class\",\"value\":\"rogue\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#006600\",\"selected\":{\"bg\":\"#006600\",\"color\":\"white\"}}}\x1b\\🗡️ Rogue\x1b]8;;\x1b\\\n\n";
+    output += "\x1b]8;;send:warrior?config={\"selection\":{\"group\":\"class\",\"value\":\"warrior\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"hover\":{\"color\":\"#ffaa66\"},\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\⚔️ Warrior\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:mage?config={\"selection\":{\"group\":\"class\",\"value\":\"mage\",\"toggle\":true,\"exclusive\":true,\"disabled\":true},\"style\":{\"color\":\"#9966ff\",\"selected\":{\"bg\":\"#6600cc\",\"color\":\"#000000\",\"bold\":true},\"disabled\":{\"color\":\"#444444\",\"strikethrough\":true}}}\x1b\\🔮 Mage\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:rogue?config={\"selection\":{\"group\":\"class\",\"value\":\"rogue\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"hover\":{\"color\":\"#88ff88\"},\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\🗡️ Rogue\x1b]8;;\x1b\\\n";
+    output += "  (Mage is locked/disabled)\n\n";
 
     output += "Interactive Selection with Hover:\n";
     output += "Select weapon: ";
-    output += "\x1b]8;;send:sword?config={\"selection\":{\"group\":\"weapon\",\"value\":\"sword\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"blue\",\"hover\":{\"bg\":\"lightblue\",\"color\":\"black\"},\"selected\":{\"bg\":\"darkblue\",\"color\":\"white\",\"bold\":true}}}\x1b\\⚔️ Sword\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:axe?config={\"selection\":{\"group\":\"weapon\",\"value\":\"axe\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"orange\",\"hover\":{\"bg\":\"lightyellow\",\"color\":\"black\"},\"selected\":{\"bg\":\"darkorange\",\"color\":\"white\",\"bold\":true}}}\x1b\\🪓 Axe\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:bow?config={\"selection\":{\"group\":\"weapon\",\"value\":\"bow\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"green\",\"hover\":{\"bg\":\"lightgreen\",\"color\":\"black\"},\"selected\":{\"bg\":\"darkgreen\",\"color\":\"white\",\"bold\":true}}}\x1b\\🏹 Bow\x1b]8;;\x1b\\\n\n";
+    output += "\x1b]8;;send:sword?config={\"selection\":{\"group\":\"weapon\",\"value\":\"sword\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#6699ff\",\"hover\":{\"color\":\"#99ccff\",\"bold\":true},\"selected\":{\"bg\":\"#0066cc\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\⚔️ Sword\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:axe?config={\"selection\":{\"group\":\"weapon\",\"value\":\"axe\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"hover\":{\"color\":\"#ffbb66\",\"bold\":true},\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🪓 Axe\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:bow?config={\"selection\":{\"group\":\"weapon\",\"value\":\"bow\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"hover\":{\"color\":\"#88ff88\",\"bold\":true},\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🏹 Bow\x1b]8;;\x1b\\\n";
+    output += "  (Hover to see preview, click to select)\n\n";
 
     output += "Toggle Switches:\n";
     output += "Settings: ";
-    output += "\x1b]8;;send:auto-loot?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-loot\",\"toggle\":true},\"style\":{\"color\":\"#666666\",\"selected\":{\"color\":\"#00cc00\",\"bold\":true}}}\x1b\\[Auto-Loot]\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:auto-heal?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-heal\",\"toggle\":true,\"selected\":true},\"style\":{\"color\":\"#666666\",\"selected\":{\"color\":\"#00cc00\",\"bold\":true}}}\x1b\\[Auto-Heal]\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:sound?config={\"selection\":{\"group\":\"settings\",\"value\":\"sound\",\"toggle\":true},\"style\":{\"color\":\"#666666\",\"selected\":{\"color\":\"#00cc00\",\"bold\":true}}}\x1b\\[Sound]\x1b]8;;\x1b\\\n\n";
+    output += "\x1b]8;;send:auto-loot?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-loot\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\[OFF] Auto-Loot\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:auto-heal?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-heal\",\"toggle\":true,\"exclusive\":false,\"selected\":true},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\[OFF] Auto-Heal\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:sound?config={\"selection\":{\"group\":\"settings\",\"value\":\"sound\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\[OFF] Sound\x1b]8;;\x1b\\\n";
+    output += "  (Toggle each setting on/off)\n\n";
 
     output += "Server Callback Example:\n";
     output += "When clicked, selection state is sent to server via &selected=true/false\n";
@@ -5483,10 +5521,39 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
 
     switch (currentState) {
         case StateDisabled:
-            if (disabledStyle.hasCustomStyling) stateStyle = &disabledStyle;
+            if (disabledStyle.hasCustomStyling) {
+                stateStyle = &disabledStyle;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Using disabled style - hasCustomStyling:" << disabledStyle.hasCustomStyling
+                         << "hasForegroundColor:" << disabledStyle.hasForegroundColor 
+                         << "foregroundColor:" << (disabledStyle.hasForegroundColor ? disabledStyle.foregroundColor.name() : "none")
+                         << "hasBackgroundColor:" << disabledStyle.hasBackgroundColor 
+                         << "backgroundColor:" << (disabledStyle.hasBackgroundColor ? disabledStyle.backgroundColor.name() : "none")
+                         << "isBold:" << disabledStyle.isBold
+                         << "isStrikeOut:" << disabledStyle.isStrikeOut;
+#endif
+            } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Disabled style has no custom styling - hasCustomStyling:" << disabledStyle.hasCustomStyling;
+#endif
+            }
             break;
         case StateSelected:
-            if (selectedStyle.hasCustomStyling) stateStyle = &selectedStyle;
+            if (selectedStyle.hasCustomStyling) {
+                stateStyle = &selectedStyle;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Using selected style - hasCustomStyling:" << selectedStyle.hasCustomStyling
+                         << "hasForegroundColor:" << selectedStyle.hasForegroundColor 
+                         << "foregroundColor:" << (selectedStyle.hasForegroundColor ? selectedStyle.foregroundColor.name() : "none")
+                         << "hasBackgroundColor:" << selectedStyle.hasBackgroundColor 
+                         << "backgroundColor:" << (selectedStyle.hasBackgroundColor ? selectedStyle.backgroundColor.name() : "none")
+                         << "isBold:" << selectedStyle.isBold;
+#endif
+            } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Selected style has no custom styling - hasCustomStyling:" << selectedStyle.hasCustomStyling;
+#endif
+            }
             break;
         case StateVisited:
             if (visitedStyle.hasCustomStyling) stateStyle = &visitedStyle;
@@ -5590,6 +5657,8 @@ void TBuffer::setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState st
         case Mudlet::HyperlinkStyling::StateActive: stateName = "Active"; break;
         case Mudlet::HyperlinkStyling::StateFocus: stateName = "Focus"; break;
         case Mudlet::HyperlinkStyling::StateFocusVisible: stateName = "FocusVisible"; break;
+        case Mudlet::HyperlinkStyling::StateSelected: stateName = "Selected"; break;
+        case Mudlet::HyperlinkStyling::StateDisabled: stateName = "Disabled"; break;
     }
     qDebug() << "[OSC8] Link" << linkIndex << "state changed to:" << stateName;
 #endif
@@ -5621,6 +5690,16 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
 
         auto effective = styling.getEffectiveStyle();
 
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] getEffectiveHyperlinkStyling for link" << linkIndex
+                 << "state:" << styling.currentState
+                 << "hasForegroundColor:" << effective.hasForegroundColor 
+                 << "foregroundColor:" << (effective.hasForegroundColor ? effective.foregroundColor.name() : "none")
+                 << "hasBackgroundColor:" << effective.hasBackgroundColor 
+                 << "backgroundColor:" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
+                 << "isBold:" << effective.isBold;
+#endif
+
         // Copy effective state back to base properties for rendering
         styling.foregroundColor = effective.foregroundColor;
         styling.backgroundColor = effective.backgroundColor;
@@ -5649,13 +5728,20 @@ void TBuffer::setHoveredLink(int linkIndex)
     int previousHoveredLink = mCurrentHoveredLinkIndex;
     mCurrentHoveredLinkIndex = linkIndex;
 
-    // Reset previous hovered link to its base state (default or visited)
+    // Reset previous hovered link to its base state (default, visited, or selected)
     if (previousHoveredLink > 0 && previousHoveredLink != linkIndex) {
         auto currentState = getLinkState(previousHoveredLink);
 
         if (currentState == Mudlet::HyperlinkStyling::StateHover) {
-            // Return to visited state if it was visited, otherwise to default
-            if (isLinkVisited(previousHoveredLink)) {
+            // Return to the appropriate base state:
+            // Priority: disabled > selected > visited > default
+            // Disabled links should stay disabled
+            Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousHoveredLink);
+            if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDisabled);
+            } else if (isLinkSelected(previousHoveredLink)) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateSelected);
+            } else if (isLinkVisited(previousHoveredLink)) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateVisited);
             } else {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDefault);
@@ -5668,9 +5754,10 @@ void TBuffer::setHoveredLink(int linkIndex)
     // Set new link to hover state
     if (linkIndex > 0) {
         auto currentState = getLinkState(linkIndex);
-        // Don't override active state with hover
-        // But we can hover over visited links to show hover styling
-        if (currentState != Mudlet::HyperlinkStyling::StateActive) {
+        // Don't override active or disabled states with hover
+        // Disabled links should stay disabled and show their disabled styling
+        if (currentState != Mudlet::HyperlinkStyling::StateActive && 
+            currentState != Mudlet::HyperlinkStyling::StateDisabled) {
             setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateHover);
             updateLinkCharacters(linkIndex); // Update displayed characters
         }
@@ -5685,12 +5772,17 @@ void TBuffer::setActiveLink(int linkIndex)
     // Reset previous active link
     if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
 
-        // Return to hover if it's still hovered
-        if (previousActiveLink == mCurrentHoveredLinkIndex) {
+        // Return to appropriate state based on priority: disabled > hover > selected > visited > default
+        Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
+        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDisabled);
+        } else if (previousActiveLink == mCurrentHoveredLinkIndex) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
-        } else if (isLinkVisited(previousActiveLink)) {  // Check base state: visited or default
+        } else if (isLinkSelected(previousActiveLink)) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateSelected);
+        } else if (isLinkVisited(previousActiveLink)) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateVisited);
-        } else {  // Otherwise return to default
+        } else {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDefault);
         }
 
@@ -5709,9 +5801,19 @@ void TBuffer::setFocusedLink(int linkIndex)
     int previousFocusedLink = mCurrentFocusedLinkIndex;
     mCurrentFocusedLinkIndex = linkIndex;
 
-    // Reset previous focused link
+    // Reset previous focused link to appropriate base state
     if (previousFocusedLink > 0 && previousFocusedLink != linkIndex) {
-        setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDefault);
+        // Preserve disabled state, otherwise return to base state
+        Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousFocusedLink);
+        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDisabled);
+        } else if (isLinkSelected(previousFocusedLink)) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateSelected);
+        } else if (isLinkVisited(previousFocusedLink)) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateVisited);
+        } else {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDefault);
+        }
     }
 
     // Set new link to focus state
@@ -5745,6 +5847,58 @@ void TBuffer::markLinkAsVisited(int linkIndex)
 bool TBuffer::isLinkVisited(int linkIndex) const
 {
     return mVisitedLinks.value(linkIndex, false);
+}
+
+void TBuffer::setLinkSelected(int linkIndex, bool selected)
+{
+    mLinkSelectionState[linkIndex] = selected;
+}
+
+bool TBuffer::isLinkSelected(int linkIndex) const
+{
+    return mLinkSelectionState.value(linkIndex, false);
+}
+
+void TBuffer::clearGroupSelection(const QString& group, const QString& exceptValue)
+{
+    // Update visual states for all links that belong to this group (except the specified value)
+    // Iterate through reasonable range of link IDs up to current max
+    int maxLinkId = mLinkStore.getCurrentLinkID();
+    int clearedCount = 0;
+    
+    for (int linkIndex = 0; linkIndex <= maxLinkId; ++linkIndex) {
+        auto styling = mLinkStore.getStyling(linkIndex);
+        if (styling.selection.hasSelectionSettings && 
+            styling.selection.group == group && 
+            styling.selection.value != exceptValue) {
+            
+            // Update selection manager state first
+            if (mpHost && mpHost->mpConsole && mpHost->mpConsole->mpSelectionManager) {
+                mpHost->mpConsole->mpSelectionManager->setSelected(styling.selection.group, styling.selection.value, false, false);
+            }
+            
+            // Set visual state to unselected (preserve disabled state)
+            setLinkSelected(linkIndex, false);
+            if (styling.selection.disabled) {
+                setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+            } else {
+                setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+            }
+            
+            // CRITICAL: Update visual characters to reflect the state change
+            updateLinkCharacters(linkIndex);
+            clearedCount++;
+            
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC8] clearGroupSelection: Deselected link" << linkIndex 
+                     << "group:" << group << "value:" << styling.selection.value;
+#endif
+        }
+    }
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] clearGroupSelection: Cleared" << clearedCount << "links in group" << group;
+#endif
 }
 
 int TBuffer::getLinkIndexAt(int line, int column) const
@@ -5788,7 +5942,8 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     // Check if we should use ANSI base with pseudo-class overlays:
     // - Has pseudo-class styling (hasCustomStyling = true)
     // - But NO base styling (hasBaseCustomStyling = false)
-    // - And we're in default/visited state (not hover/active/focus)
+    // - And we're in a state that should preserve original ANSI as base (default/visited only)
+    // NOTE: Selected and disabled states should always use custom styling, not ANSI base
     bool useAnsiBase = !effectiveStyling.hasBaseCustomStyling &&
                        (effectiveStyling.currentState == Mudlet::HyperlinkStyling::StateDefault ||
                         effectiveStyling.currentState == Mudlet::HyperlinkStyling::StateVisited);

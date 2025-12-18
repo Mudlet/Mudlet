@@ -614,6 +614,7 @@ private:
     // Link state tracking for interactive pseudo-classes
     QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
     QMap<int, bool> mVisitedLinks; // Track which links have been visited (base state)
+    QMap<int, bool> mLinkSelectionState; // Track which links are selected (base state)
     QMap<int, QColor> mLinkOriginalBackgrounds; // Track original background color per link
     QMap<int, TChar> mLinkOriginalCharacters; // Track original ANSI formatting per link
     int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
@@ -636,6 +637,9 @@ public:
     void setFocusedLink(int linkIndex);
     void markLinkAsVisited(int linkIndex); // Mark a link as visited (base state)
     bool isLinkVisited(int linkIndex) const; // Check if link has been visited
+    void setLinkSelected(int linkIndex, bool selected); // Set link selected state
+    bool isLinkSelected(int linkIndex) const; // Check if link is selected
+    void clearGroupSelection(const QString& group, const QString& exceptValue); // Clear selection for group except specified value
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
