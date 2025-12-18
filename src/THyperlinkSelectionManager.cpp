@@ -85,7 +85,9 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
     // The baseUri is already in Lua format: send([[command]]) or sendCmdLine([[command]])
     // We need to extract the command, append &selected=true/false, and reconstruct
     
+#if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "modifyUriForSelection called with baseUri:" << baseUri << "isSelected:" << isSelected;
+#endif
     
     // Check if it's a send() or sendCmdLine() call
     if (baseUri.startsWith(qsl("send([[")) && baseUri.endsWith(qsl("]])"))) {
@@ -96,7 +98,9 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
         command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
         // Reconstruct: send([[command&selected=true]])
         QString result = qsl("send([[%1]])").arg(command);
+#if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "Modified to:" << result;
+#endif
         return result;
     } else if (baseUri.startsWith(qsl("sendCmdLine([[")) && baseUri.endsWith(qsl("]])"))) {
         // Extract: sendCmdLine([[command]]) -> command
@@ -106,7 +110,9 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
         command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
         // Reconstruct: sendCmdLine([[command&selected=true]])
         QString result = qsl("sendCmdLine([[%1]])").arg(command);
+#if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "Modified to:" << result;
+#endif
         return result;
     }
     

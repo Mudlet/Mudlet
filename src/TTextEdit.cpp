@@ -1421,7 +1421,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QString func;
                     if (!command.empty() && mpHost) {
                         func = command.at(0);
+#if defined(DEBUG_OSC_PROCESSING)
                         qDebug() << "TTextEdit::mousePressEvent - Link clicked, func:" << func << "luaReference:" << luaReference;
+#endif
 
                         // Set active state for CSS pseudo-class support
                         mpBuffer->setActiveLink(linkIndex);
@@ -1468,13 +1470,19 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                             func = mpConsole->mpSelectionManager->modifyUriForSelection(func, newSelected);
 
                             // Update link visual state and selection tracking to reflect selection
+#if defined(DEBUG_OSC_PROCESSING)
                             qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "selected=" << newSelected;
+#endif
                             mpBuffer->setLinkSelected(linkIndex, newSelected);
                             if (newSelected) {
+#if defined(DEBUG_OSC_PROCESSING)
                                 qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateSelected";
+#endif
                                 mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateSelected);
                             } else {
+#if defined(DEBUG_OSC_PROCESSING)
                                 qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateDefault";
+#endif
                                 mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
                             }
                             forceUpdate(); // Re-render with new selection state

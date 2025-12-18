@@ -627,6 +627,9 @@ private:
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;
 
+    // Track links that need selection styling applied after buffer commit
+    QSet<int> mPendingSelectionStyling;
+
 public:
     // Methods for link state management (used by TTextEdit event handlers)
     void setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState state);

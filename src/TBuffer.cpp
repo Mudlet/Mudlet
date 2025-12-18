@@ -26,6 +26,7 @@
 #include "mudlet.h"
 #include "TEvent.h"
 #include "TStringUtils.h"
+#include "TTextEdit.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
@@ -37,6 +38,7 @@
 #include <QJsonParseError>
 #include <QJsonValue>
 #include <QTextBoundaryFinder>
+#include <QTimer>
 #include <QRegularExpression>
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
@@ -2512,6 +2514,26 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug().noquote() << "[OSC8] Hyperlink terminator - closing active hyperlink";
 #endif
+            
+            // Apply initial selection styling now that the link text has been fully rendered
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId
+                         << "selected:" << mCurrentHyperlinkStyling.selection.selected
+                         << "disabled:" << mCurrentHyperlinkStyling.selection.disabled
+                         << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
+#endif
+                if (mCurrentHyperlinkStyling.selection.selected) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
+                    // Queue for styling after buffer commit
+                    mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+                } else if (mCurrentHyperlinkStyling.selection.disabled) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+                    // Queue for styling after buffer commit
+                    mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+                }
+            }
+            
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
             mCurrentHyperlinkLinkId = 0;
@@ -2708,7 +2730,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     mCurrentHyperlinkStyling.selection.selected, 
                     mCurrentHyperlinkStyling.selection.exclusive);
                 
-                // Update link visual state to match initial selection
+                // Update link selection state (visual styling will be applied when link closes)
                 setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
                 if (mCurrentHyperlinkStyling.selection.selected) {
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
@@ -5411,10 +5433,14 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "══════════════════════════════════════════════════════════════════════\n\n";
 
     output += "Radio Button Mode (Exclusive Selection):\n";
-    output += "Choose difficulty: ";
-    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"easy\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#88ff88\",\"underline\":true,\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffffff\",\"bold\":true,\"underline\":false}}}\x1b\\[ Easy ]\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:normal?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"normal\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ffff88\",\"underline\":true,\"selected\":{\"bg\":\"#cccc00\",\"color\":\"#000000\",\"bold\":true,\"underline\":false}}}\x1b\\[ Normal ]\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"difficulty\",\"value\":\"hard\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff8888\",\"underline\":true,\"selected\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true,\"underline\":false}}}\x1b\\[ Hard ]\x1b]8;;\x1b\\\n\n";
+    output += "React: ";
+    output += "\x1b]8;;send:like?config={\"selection\":{\"group\":\"reaction\",\"value\":\"like\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#0066cc\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\👍 Like\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:love?config={\"selection\":{\"group\":\"reaction\",\"value\":\"love\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#ff0066\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\❤️ Love\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:care?config={\"selection\":{\"group\":\"reaction\",\"value\":\"care\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#ff9900\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\🤗 Care\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:laugh?config={\"selection\":{\"group\":\"reaction\",\"value\":\"laugh\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\😂 Laugh\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:wow?config={\"selection\":{\"group\":\"reaction\",\"value\":\"wow\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#9933ff\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\😮 Wow\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:sad?config={\"selection\":{\"group\":\"reaction\",\"value\":\"sad\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#3366cc\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\😢 Sad\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:angry?config={\"selection\":{\"group\":\"reaction\",\"value\":\"angry\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\😠 Angry\x1b]8;;\x1b\\\n\n";
 
     output += "Checkbox Mode (Multi-Select):\n";
     output += "Enable buffs: ";
@@ -5446,9 +5472,9 @@ void TBuffer::injectOSC8DocumentationExamples()
 
     output += "Toggle Switches:\n";
     output += "Settings: ";
-    output += "\x1b]8;;send:auto-loot?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-loot\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\[OFF] Auto-Loot\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:auto-heal?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-heal\",\"toggle\":true,\"exclusive\":false,\"selected\":true},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\[OFF] Auto-Heal\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:sound?config={\"selection\":{\"group\":\"settings\",\"value\":\"sound\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\[OFF] Sound\x1b]8;;\x1b\\\n";
+    output += "\x1b]8;;send:auto-loot?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-loot\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\Auto-Loot\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:auto-heal?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-heal\",\"toggle\":true,\"exclusive\":false,\"selected\":true},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\Auto-Heal\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:sound?config={\"selection\":{\"group\":\"settings\",\"value\":\"sound\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\Sound\x1b]8;;\x1b\\\n";
     output += "  (Toggle each setting on/off)\n\n";
 
     output += "Server Callback Example:\n";
@@ -5472,6 +5498,25 @@ void TBuffer::injectOSC8DocumentationExamples()
     mSkipTriggerProcessing = true;
     translateToPlainText(outputBytes, true); // Mark as from server
     mSkipTriggerProcessing = false;
+
+    // Apply pending selection styling now that characters are committed to buffer
+    if (!mPendingSelectionStyling.isEmpty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
+#endif
+        for (int linkId : mPendingSelectionStyling) {
+            updateLinkCharacters(linkId);
+        }
+        mPendingSelectionStyling.clear();
+        
+        // Force display refresh after applying selection styling
+        if (mpConsole) {
+            mpConsole->mUpperPane->updateScreenView();
+            mpConsole->mUpperPane->repaint();
+            mpConsole->mLowerPane->updateScreenView();
+            mpConsole->mLowerPane->repaint();
+        }
+    }
 }
 
 // ============================================================================
@@ -5953,12 +5998,29 @@ void TBuffer::updateLinkCharacters(int linkIndex)
              << "currentState:" << effectiveStyling.currentState << "useAnsiBase:" << useAnsiBase;
 #endif
 
+    // Debug: Count how many characters we're checking and how many match
+#if defined(DEBUG_OSC_PROCESSING)
+    int totalCharacters = 0;
+    int matchingCharacters = 0;
+#endif
+
     // Iterate through all lines in the buffer
     for (auto& line : buffer) {
         // Iterate through all characters in the line
         for (auto& tchar : line) {
+#if defined(DEBUG_OSC_PROCESSING)
+            totalCharacters++;
+#endif
             // Check if this character belongs to the link we're updating
             if (tchar.linkIndex() == linkIndex) {
+#if defined(DEBUG_OSC_PROCESSING)
+                matchingCharacters++;
+                qDebug() << "[OSC8] Found character for link" << linkIndex 
+                         << "- Current FgColor:" << tchar.mFgColor.name()
+                         << "Current Bold:" << bool(tchar.mFlags & TChar::Bold)
+                         << "Will apply FgColor:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none")
+                         << "Will apply Bold:" << effectiveStyling.isBold;
+#endif
                 // Apply the effective styling to this character
 
                 // If we should use ANSI base (no base styling but in default/visited state),
@@ -6067,5 +6129,21 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                 }
             }
         }
+    }
+
+    // Debug: Report search results
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Character search completed for link" << linkIndex 
+             << "- Total characters searched:" << totalCharacters
+             << "- Matching characters found:" << matchingCharacters;
+#endif
+
+    // Refresh the display to show the updated character styling
+    // Use updateScreenView and repaint for immediate Qt rendering
+    if (mpConsole) {
+        mpConsole->mUpperPane->updateScreenView();
+        mpConsole->mUpperPane->repaint();
+        mpConsole->mLowerPane->updateScreenView();
+        mpConsole->mLowerPane->repaint();
     }
 }
