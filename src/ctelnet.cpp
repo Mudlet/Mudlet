@@ -2675,11 +2675,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     // to network issues or bugs, while not affecting legitimate
                     // password prompts later in the session (e.g., admin commands).
                     // Skip this if the user has disabled password masking entirely.
-                    constexpr qint64 LOGIN_PHASE_MS = 5 * 60 * 1000;  // 5 minutes
-                    constexpr int PASSWORD_TIMEOUT_MS = 60 * 1000;    // 60 seconds
+                    constexpr auto LOGIN_PHASE_MS = 5min;
+                    constexpr auto PASSWORD_TIMEOUT_MS = 60s;
                     if (!mpHost->mDisablePasswordMasking
                         && mConnectionTimer.isValid()
-                        && mConnectionTimer.elapsed() < LOGIN_PHASE_MS) {
+                        && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
                         if (!mTimerPasswordModeTimeout) {
                             mTimerPasswordModeTimeout = new QTimer(this);
                             mTimerPasswordModeTimeout->setSingleShot(true);
@@ -2690,7 +2690,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                 }
                             });
                         }
-                        mTimerPasswordModeTimeout->start(PASSWORD_TIMEOUT_MS);
+                        mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                     }
                 } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
                     sendTelnetOption(TN_DO, option);
