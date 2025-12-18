@@ -643,6 +643,7 @@ public:
     void setLinkSelected(int linkIndex, bool selected); // Set link selected state
     bool isLinkSelected(int linkIndex) const; // Check if link is selected
     void clearGroupSelection(const QString& group, const QString& exceptValue); // Clear selection for group except specified value
+    void applyPendingSelectionStyling(); // Apply queued selection styling after buffer commit
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }

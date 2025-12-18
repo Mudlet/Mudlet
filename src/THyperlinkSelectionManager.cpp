@@ -24,6 +24,9 @@ THyperlinkSelectionManager::THyperlinkSelectionManager(TConsole* pConsole)
 : QObject(pConsole)
 , mpConsole(pConsole)
 {
+    if (!pConsole) {
+        qFatal("THyperlinkSelectionManager: pConsole parameter cannot be null");
+    }
 }
 
 THyperlinkSelectionManager::~THyperlinkSelectionManager() = default;
@@ -40,16 +43,19 @@ bool THyperlinkSelectionManager::isSelected(const QString& group, const QString&
 // Set selection state for a value in a group
 void THyperlinkSelectionManager::setSelected(const QString& group, const QString& value, bool selected, bool exclusive)
 {
-    // Register this value in the group if not already registered
     registerGroupMember(group, value);
     
-    // Handle exclusive selection (radio button behavior)
+    bool previousState = isSelected(group, value);
+    
     if (selected && exclusive) {
         handleExclusiveSelection(group, value);
     }
     
-    // Set the selection state
     mSelectionState[group][value] = selected;
+    
+    if (previousState != selected) {
+        emit selectionChanged(group, value, selected);
+    }
 }
 
 // Toggle selection state for a value in a group
@@ -70,6 +76,7 @@ void THyperlinkSelectionManager::clearGroup(const QString& group)
 {
     if (mSelectionState.contains(group)) {
         mSelectionState[group].clear();
+        emit groupCleared(group);
     }
 }
 
@@ -77,6 +84,7 @@ void THyperlinkSelectionManager::clearGroup(const QString& group)
 void THyperlinkSelectionManager::clearAllSelections()
 {
     mSelectionState.clear();
+    emit allSelectionsCleared();
 }
 
 // Modify URI to append &selected=true or &selected=false for server callback
@@ -117,7 +125,9 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
     }
     
     // For other URI formats (like openUrl), return as-is
+#if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "No modification - returning as-is";
+#endif
     return baseUri;
 }
 

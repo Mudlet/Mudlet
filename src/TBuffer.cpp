@@ -1214,6 +1214,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
             // (translateToPlainText(...)) method is ONLY for that one:
             shrinkBuffer();
         }
+        
+        applyPendingSelectionStyling();
+        
         return true;
     }
     return false;
@@ -2515,7 +2518,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             qDebug().noquote() << "[OSC8] Hyperlink terminator - closing active hyperlink";
 #endif
             
-            // Apply initial selection styling now that the link text has been fully rendered
+            // Apply initial selection/disabled state styling when link closes
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId
@@ -2525,11 +2528,9 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
                 if (mCurrentHyperlinkStyling.selection.selected) {
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
-                    // Queue for styling after buffer commit
                     mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
                 } else if (mCurrentHyperlinkStyling.selection.disabled) {
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
-                    // Queue for styling after buffer commit
                     mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
                 }
             }
@@ -5458,17 +5459,17 @@ void TBuffer::injectOSC8DocumentationExamples()
 
     output += "Disabled Options:\n";
     output += "Choose class: ";
-    output += "\x1b]8;;send:warrior?config={\"selection\":{\"group\":\"class\",\"value\":\"warrior\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"hover\":{\"color\":\"#ffaa66\"},\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\⚔️ Warrior\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:warrior?config={\"selection\":{\"group\":\"class\",\"value\":\"warrior\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\⚔️ Warrior\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:mage?config={\"selection\":{\"group\":\"class\",\"value\":\"mage\",\"toggle\":true,\"exclusive\":true,\"disabled\":true},\"style\":{\"color\":\"#9966ff\",\"selected\":{\"bg\":\"#6600cc\",\"color\":\"#000000\",\"bold\":true},\"disabled\":{\"color\":\"#444444\",\"strikethrough\":true}}}\x1b\\🔮 Mage\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:rogue?config={\"selection\":{\"group\":\"class\",\"value\":\"rogue\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"hover\":{\"color\":\"#88ff88\"},\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\🗡️ Rogue\x1b]8;;\x1b\\\n";
+    output += "\x1b]8;;send:rogue?config={\"selection\":{\"group\":\"class\",\"value\":\"rogue\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\🗡️ Rogue\x1b]8;;\x1b\\\n";
     output += "  (Mage is locked/disabled)\n\n";
 
     output += "Interactive Selection with Hover:\n";
     output += "Select weapon: ";
-    output += "\x1b]8;;send:sword?config={\"selection\":{\"group\":\"weapon\",\"value\":\"sword\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#6699ff\",\"hover\":{\"color\":\"#99ccff\",\"bold\":true},\"selected\":{\"bg\":\"#0066cc\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\⚔️ Sword\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:axe?config={\"selection\":{\"group\":\"weapon\",\"value\":\"axe\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"hover\":{\"color\":\"#ffbb66\",\"bold\":true},\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🪓 Axe\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:bow?config={\"selection\":{\"group\":\"weapon\",\"value\":\"bow\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"hover\":{\"color\":\"#88ff88\",\"bold\":true},\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🏹 Bow\x1b]8;;\x1b\\\n";
-    output += "  (Hover to see preview, click to select)\n\n";
+    output += "\x1b]8;;send:sword?config={\"selection\":{\"group\":\"weapon\",\"value\":\"sword\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#6699ff\",\"selected\":{\"bg\":\"#0066cc\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\⚔️ Sword\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:axe?config={\"selection\":{\"group\":\"weapon\",\"value\":\"axe\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🪓 Axe\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:bow?config={\"selection\":{\"group\":\"weapon\",\"value\":\"bow\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🏹 Bow\x1b]8;;\x1b\\\n";
+    output += "  (Click to select)\n\n";
 
     output += "Toggle Switches:\n";
     output += "Settings: ";
@@ -5498,25 +5499,6 @@ void TBuffer::injectOSC8DocumentationExamples()
     mSkipTriggerProcessing = true;
     translateToPlainText(outputBytes, true); // Mark as from server
     mSkipTriggerProcessing = false;
-
-    // Apply pending selection styling now that characters are committed to buffer
-    if (!mPendingSelectionStyling.isEmpty()) {
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
-#endif
-        for (int linkId : mPendingSelectionStyling) {
-            updateLinkCharacters(linkId);
-        }
-        mPendingSelectionStyling.clear();
-        
-        // Force display refresh after applying selection styling
-        if (mpConsole) {
-            mpConsole->mUpperPane->updateScreenView();
-            mpConsole->mUpperPane->repaint();
-            mpConsole->mLowerPane->updateScreenView();
-            mpConsole->mLowerPane->repaint();
-        }
-    }
 }
 
 // ============================================================================
@@ -5906,8 +5888,6 @@ bool TBuffer::isLinkSelected(int linkIndex) const
 
 void TBuffer::clearGroupSelection(const QString& group, const QString& exceptValue)
 {
-    // Update visual states for all links that belong to this group (except the specified value)
-    // Iterate through reasonable range of link IDs up to current max
     int maxLinkId = mLinkStore.getCurrentLinkID();
     int clearedCount = 0;
     
@@ -5917,12 +5897,10 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
             styling.selection.group == group && 
             styling.selection.value != exceptValue) {
             
-            // Update selection manager state first
-            if (mpHost && mpHost->mpConsole && mpHost->mpConsole->mpSelectionManager) {
-                mpHost->mpConsole->mpSelectionManager->setSelected(styling.selection.group, styling.selection.value, false, false);
+            if (mpConsole && mpConsole->mpSelectionManager) {
+                mpConsole->mpSelectionManager->setSelected(styling.selection.group, styling.selection.value, false, false);
             }
             
-            // Set visual state to unselected (preserve disabled state)
             setLinkSelected(linkIndex, false);
             if (styling.selection.disabled) {
                 setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
@@ -5930,7 +5908,6 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
                 setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
             }
             
-            // CRITICAL: Update visual characters to reflect the state change
             updateLinkCharacters(linkIndex);
             clearedCount++;
             
@@ -5944,6 +5921,19 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] clearGroupSelection: Cleared" << clearedCount << "links in group" << group;
 #endif
+}
+
+void TBuffer::applyPendingSelectionStyling()
+{
+    if (!mPendingSelectionStyling.isEmpty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
+#endif
+        for (int linkId : mPendingSelectionStyling) {
+            updateLinkCharacters(linkId);
+        }
+        mPendingSelectionStyling.clear();
+    }
 }
 
 int TBuffer::getLinkIndexAt(int line, int column) const

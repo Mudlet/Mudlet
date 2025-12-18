@@ -326,7 +326,7 @@ public:
     TFontAttributes mDisplayFontDetails;
 
     // Manager for OSC 8 hyperlink selection state (radio/checkbox behavior)
-    class THyperlinkSelectionManager* mpSelectionManager = nullptr;
+    THyperlinkSelectionManager* mpSelectionManager = nullptr;
 
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;

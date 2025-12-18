@@ -1425,68 +1425,65 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         qDebug() << "TTextEdit::mousePressEvent - Link clicked, func:" << func << "luaReference:" << luaReference;
 #endif
 
-                        // Set active state for CSS pseudo-class support
                         mpBuffer->setActiveLink(linkIndex);
-                        forceUpdate(); // Trigger re-render with active state
 
-                        // Handle hyperlink selection if selection settings are present
                         Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
                         if (hyperlinkStyling.selection.hasSelectionSettings) {
-                            // Check if link is disabled
                             if (hyperlinkStyling.selection.disabled) {
-                                // Don't execute disabled links, just set state and return
+                                // Disabled links only update visual state, don't execute
                                 mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
                                 forceUpdate();
                                 return;
                             }
 
-                            const QString& group = hyperlinkStyling.selection.group;
-                            const QString& value = hyperlinkStyling.selection.value;
-                            bool currentlySelected = mpConsole->mpSelectionManager->isSelected(group, value);
-
-                            // Update selection state based on toggle and exclusive settings
-                            if (hyperlinkStyling.selection.toggle) {
-                                // Toggle mode: toggle selection state (works for both radio and checkbox)
-                                mpConsole->mpSelectionManager->toggleSelection(group, value, hyperlinkStyling.selection.exclusive);
+                            auto mgr = mpConsole ? mpConsole->mpSelectionManager : nullptr;
+                            if (!mgr) {
+                                qWarning() << "TTextEdit::mousePressEvent - Selection manager is null, skipping selection handling for link" << linkIndex;
                             } else {
-                                // Non-toggle mode: just set to selected
-                                mpConsole->mpSelectionManager->setSelected(group, value, true, hyperlinkStyling.selection.exclusive);
+                                const QString& group = hyperlinkStyling.selection.group;
+                                const QString& value = hyperlinkStyling.selection.value;
+                                bool currentlySelected = mgr->isSelected(group, value);
+
+                                if (hyperlinkStyling.selection.toggle) {
+                                    mgr->toggleSelection(group, value, hyperlinkStyling.selection.exclusive);
+                                } else {
+                                    mgr->setSelected(group, value, true, hyperlinkStyling.selection.exclusive);
+                                }
+
+                                bool newSelected = mgr->isSelected(group, value);
+
+                                if (hyperlinkStyling.selection.exclusive && newSelected) {
+                                    // Exclusive selection clears other group members
+                                    mpBuffer->clearGroupSelection(group, value);
+#if defined(DEBUG_OSC_PROCESSING)
+                                    qDebug() << "[OSC8] Exclusive selection: Cleared other selections in group" << group << "except" << value;
+#endif
+                                }
+
+                                func = mgr->modifyUriForSelection(func, newSelected);
+
+#if defined(DEBUG_OSC_PROCESSING)
+                                qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "selected=" << newSelected;
+#endif
+                                mpBuffer->setLinkSelected(linkIndex, newSelected);
+                                if (newSelected) {
+#if defined(DEBUG_OSC_PROCESSING)
+                                    qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateSelected";
+#endif
+                                    mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateSelected);
+                                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                                    qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateDefault";
+#endif
+                                    mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+                                }
                             }
-
-                            // Get updated selection state after selection manager operations
-                            bool newSelected = mpConsole->mpSelectionManager->isSelected(group, value);
-
-                            // Handle visual state updates for exclusive selection
-                            if (hyperlinkStyling.selection.exclusive && newSelected) {
-                                // Clear visual selection for other links in this group
-                                mpBuffer->clearGroupSelection(group, value);
-                                forceUpdate(); // Ensure visual updates are applied immediately
-#if defined(DEBUG_OSC_PROCESSING)
-                                qDebug() << "[OSC8] Exclusive selection: Cleared other selections in group" << group << "except" << value;
-#endif
-                            }
-
-                            // Modify URI to include selection state before execution
-                            func = mpConsole->mpSelectionManager->modifyUriForSelection(func, newSelected);
-
-                            // Update link visual state and selection tracking to reflect selection
-#if defined(DEBUG_OSC_PROCESSING)
-                            qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "selected=" << newSelected;
-#endif
-                            mpBuffer->setLinkSelected(linkIndex, newSelected);
-                            if (newSelected) {
-#if defined(DEBUG_OSC_PROCESSING)
-                                qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateSelected";
-#endif
-                                mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateSelected);
-                            } else {
-#if defined(DEBUG_OSC_PROCESSING)
-                                qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateDefault";
-#endif
-                                mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
-                            }
-                            forceUpdate(); // Re-render with new selection state
                         }
+                        
+                        // Clear hover to show selection immediately; mouse move will restore it
+                        mpBuffer->setHoveredLink(0);
+                        
+                        forceUpdate();
 
                         if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);

@@ -22,7 +22,6 @@
 
 #include <QHash>
 #include <QObject>
-#include <QPair>
 #include <QString>
 
 class TConsole;
@@ -33,6 +32,7 @@ class TConsole;
 class THyperlinkSelectionManager : public QObject
 {
     Q_OBJECT
+    Q_DISABLE_COPY(THyperlinkSelectionManager)
 
 public:
     explicit THyperlinkSelectionManager(TConsole* pConsole);
@@ -50,6 +50,16 @@ public:
 
     // URI modification before execution
     QString modifyUriForSelection(const QString& baseUri, bool isSelected) const;
+
+signals:
+    // Emitted when a selection state changes
+    void selectionChanged(const QString& group, const QString& value, bool selected);
+    
+    // Emitted when all selections in a group are cleared
+    void groupCleared(const QString& group);
+    
+    // Emitted when all selections across all groups are cleared
+    void allSelectionsCleared();
 
 private:
     TConsole* mpConsole;
