@@ -66,13 +66,25 @@ QT_QPA_PLATFORM=offscreen ctest -R TelnetBenchmark -V
 
 ### Baseline Results (December 2025)
 
-Measured on the full `cTelnet::loopbackTest()` → `processSocketData()` → `TBuffer::translateToPlainText()` pipeline:
+Measured on the full `cTelnet::loopbackTest()` → `processSocketData()` → `TBuffer::translateToPlainText()` pipeline.
+
+**Release build (no sanitizers):**
+
+| Data Size | Bytes | Time/Iteration | Throughput |
+|-----------|-------|----------------|------------|
+| Small | 780 B | 0.28 ms | ~2.7 MB/s |
+| Medium | 7,800 B | 2.8 ms | ~2.7 MB/s |
+| Large | 78,000 B | 28 ms | ~2.7 MB/s |
+
+**Debug build with AddressSanitizer (for reference):**
 
 | Data Size | Bytes | Time/Iteration | Throughput |
 |-----------|-------|----------------|------------|
 | Small | 780 B | 3.8 ms | ~200 KB/s |
 | Medium | 7,800 B | 38 ms | ~200 KB/s |
 | Large | 78,000 B | 363 ms | ~210 KB/s |
+
+Note: ASan adds ~13x overhead. Always benchmark in Release mode for accurate performance measurements.
 
 ### Test Data Characteristics
 
