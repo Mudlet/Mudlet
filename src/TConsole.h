@@ -449,6 +449,9 @@ private:
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
+    void initializeOSC8StyleFeature();
+    void initializeOSC8MenuFeature();
+    void initializeOSC8TooltipFeature();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
