@@ -1,0 +1,116 @@
+/***************************************************************************
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#ifndef MUDLET_THYPERLINKCOMPACTMANAGER_H
+#define MUDLET_THYPERLINKCOMPACTMANAGER_H
+
+#include <QHash>
+#include <QJsonObject>
+#include <QMap>
+#include <QObject>
+#include <QPair>
+#include <QPointer>
+#include <QString>
+
+class TConsole;
+
+// Pure plugin framework for OSC 8 hyperlink compact syntax
+// Features (style, menu, tooltip, visibility, selection, etc.) register themselves
+// Provides shorthand expansion and preset management with deep merge support
+class THyperlinkCompactManager : public QObject
+{
+    Q_OBJECT
+    Q_DISABLE_COPY(THyperlinkCompactManager)
+
+public:
+    explicit THyperlinkCompactManager(TConsole* pConsole, QObject* parent = nullptr);
+    ~THyperlinkCompactManager();
+
+    // ═══════════════════════════════════════════════════════════
+    // Shorthand Registration (Phase 1)
+    // ═══════════════════════════════════════════════════════════
+
+    // Register a shorthand expansion (e.g., "s" → "style")
+    // Owner parameter enables automatic cleanup when feature is destroyed
+    void registerShorthand(const QString& shorthand, const QString& fullName, QObject* owner = nullptr);
+
+    // Unregister all shortcuts owned by a specific object
+    void unregisterOwner(QObject* owner);
+
+    // Expand shorthand properties to full names
+    QMap<QString, QString> expandShorthand(const QMap<QString, QString>& params);
+
+    // Query registered shortcuts (for debugging/introspection)
+    int getShorthandCount() const { return mShorthandRegistry.size(); }
+    QStringList getRegisteredShorthands() const { return mShorthandRegistry.keys(); }
+
+    // ═══════════════════════════════════════════════════════════
+    // Preset System (Phase 2)
+    // ═══════════════════════════════════════════════════════════
+
+    // Register a property as preset-aware (allows it to be included in presets)
+    void registerPresetProperty(const QString& propertyName, QObject* owner = nullptr);
+
+    // Check if a property can be used in presets
+    bool isPresetProperty(const QString& propertyName) const;
+
+    // Query registered preset properties (for debugging/introspection)
+    int getPresetPropertyCount() const { return mPresetPropertyRegistry.size(); }
+    QStringList getRegisteredPresetProperties() const { return mPresetPropertyRegistry.keys(); }
+
+    // Preset storage and retrieval (session-scoped, cleared on disconnect)
+    void registerPreset(const QString& name, const QJsonObject& config);
+    QJsonObject getPreset(const QString& name) const;
+    bool hasPreset(const QString& name) const;
+    void clearPresets();
+
+    // Deep merge for config overrides (preset as base, override on top)
+    // Returns merged JSON object following CSS cascade rules:
+    // - Nested objects: properties combine, overlay wins on conflicts
+    // - Arrays: overlay completely replaces base array
+    // - Primitives: overlay value wins
+    QJsonObject mergeConfigs(const QJsonObject& base, const QJsonObject& overlay) const;
+
+signals:
+    void shorthandRegistered(const QString& shorthand, const QString& fullName);
+    void presetPropertyRegistered(const QString& propertyName);
+    void presetRegistered(const QString& name);
+    void presetsCleared();
+
+private:
+    QPointer<TConsole> mpConsole;
+
+    // Shorthand registry: shorthand → (fullName, owner)
+    // Owner is nullptr for core shortcuts (always available)
+    // Owner is QPointer for feature shortcuts (auto-cleanup when feature destroyed)
+    QHash<QString, QPair<QString, QPointer<QObject>>> mShorthandRegistry;
+
+    // Preset property registry: propertyName → owner
+    // Same ownership model as shorthand registry
+    QHash<QString, QPointer<QObject>> mPresetPropertyRegistry;
+
+    // Preset storage: name → config JSON
+    // Session-scoped: cleared when connection closes
+    QHash<QString, QJsonObject> mPresets;
+
+    // Helper for deep merge algorithm (recursive)
+    QJsonObject deepMerge(const QJsonObject& base, const QJsonObject& overlay) const;
+};
+
+#endif // MUDLET_THYPERLINKCOMPACTMANAGER_H

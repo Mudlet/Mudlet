@@ -768,6 +768,7 @@ SOURCES += \
     TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
+    THyperlinkCompactManager.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
@@ -930,6 +931,7 @@ HEADERS += \
     TFlipButton.h \
     TForkedProcess.h \
     TGameDetails.h \
+    THyperlinkCompactManager.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
