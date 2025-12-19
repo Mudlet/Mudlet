@@ -501,6 +501,8 @@ private:
     QMap<QString, QString> parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing JSON format hyperlink configuration
     bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling);
+    // Helper function for expanding shorthands in JSON object (recursive)
+    QJsonObject expandJsonShorthands(const QJsonObject& obj);
     // Helper function for directly parsing JSON style object to HyperlinkStyling
     void parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing JSON state style to StateStyle
