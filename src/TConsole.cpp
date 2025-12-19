@@ -28,6 +28,7 @@
 
 #include "Host.h"
 #include "TCommandLine.h"
+#include "THyperlinkCompactManager.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -77,9 +78,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
+    // Initialize compact syntax framework FIRST (pure utility, no features)
+    mpCompactSyntaxManager = new THyperlinkCompactManager(this, this);
     // Initialize hyperlink selection manager
     mpSelectionManager = new THyperlinkSelectionManager(this);
-    
+
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
     quitShortcut->setContext(Qt::WidgetShortcut);

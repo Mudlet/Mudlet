@@ -157,6 +157,7 @@ class Host;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
+class THyperlinkCompactManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
@@ -325,6 +326,9 @@ public:
     // Initialised in the constructor:
     TFontAttributes mDisplayFontDetails;
 
+    // Compact syntax framework (shorthand + presets)
+    // Features plugin to this system when they initialize
+    QPointer<THyperlinkCompactManager> mpCompactSyntaxManager;
     // Manager for OSC 8 hyperlink selection state (radio/checkbox behavior)
     THyperlinkSelectionManager* mpSelectionManager = nullptr;
 
