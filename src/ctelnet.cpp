@@ -4305,7 +4305,7 @@ void cTelnet::gotRest(std::string& mud_data)
         size_t i = mud_data.rfind('\n');
 
         if (i != std::string::npos) {
-            mMudData.append(mud_data.data(), i + 1);
+            mMudData += mud_data.substr(0, i + 1);
             postData();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
@@ -4316,9 +4316,9 @@ void cTelnet::gotRest(std::string& mud_data)
             mIsTimerPosting = true;
 
             if (i + 1 < mud_data.size()) {
-                mMudData.assign(mud_data.data() + i + 1, mud_data.size() - i - 1);
+                mMudData = mud_data.substr(i + 1, mud_data.size());
             } else {
-                mMudData.clear();
+                mMudData = "";
             }
         } else {
             mMudData += mud_data;
@@ -4649,8 +4649,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         return;
     }
 
-    std::string cleandata;
-    cleandata.reserve(static_cast<size_t>(amount));
+    std::string cleandata = "";
     qint32 datalen = 0;
     do {
         datalen = amount;
