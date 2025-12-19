@@ -2812,10 +2812,65 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
     qDebug() << "[OSC8] Decoded query string:" << decodedQueryString;
 #endif
 
-    // Only process JSON config parameters - no legacy CSS support
-    if (decodedQueryString.startsWith(qsl("config={"))) {
-        QString jsonString = decodedQueryString.mid(7); // Remove "config="
-        parseJsonHyperlinkConfig(jsonString, parameters, styling);
+    // Parse query parameters
+    QStringList paramPairs = decodedQueryString.split('&');
+    QString presetName;
+    QString configJson;
+
+    for (const QString& pair : paramPairs) {
+        int eqPos = pair.indexOf('=');
+        if (eqPos == -1) {
+            continue;
+        }
+
+        QString key = pair.left(eqPos);
+        QString value = pair.mid(eqPos + 1);
+
+        if (key == qsl("p") || key == qsl("preset")) {
+            presetName = value;
+        } else if (key == qsl("config")) {
+            configJson = value;
+        }
+    }
+
+    // Start with preset config if specified
+    QJsonObject baseConfig;
+
+    if (!presetName.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
+        baseConfig = mpConsole->mpCompactSyntaxManager->getPreset(presetName);
+#if defined(DEBUG_OSC_PROCESSING)
+        if (!baseConfig.isEmpty()) {
+            qDebug() << "[OSC8] Resolved preset" << presetName;
+        }
+#endif
+    }
+
+    // Merge with override config if present
+    if (!configJson.isEmpty()) {
+        QJsonParseError parseError;
+        QJsonDocument overrideDoc = QJsonDocument::fromJson(configJson.toUtf8(), &parseError);
+        
+        if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
+            QJsonObject overrideConfig = overrideDoc.object();
+            
+            if (!baseConfig.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
+                // Deep merge: override takes precedence
+                baseConfig = mpConsole->mpCompactSyntaxManager->mergeConfigs(baseConfig, overrideConfig);
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Merged preset with override config";
+#endif
+            } else {
+                baseConfig = overrideConfig;
+            }
+        }
+    }
+
+    // Parse the final merged config
+    if (!baseConfig.isEmpty()) {
+        // Convert back to JSON string for parseJsonHyperlinkConfig
+        QJsonDocument finalDoc(baseConfig);
+        QString finalJson = QString::fromUtf8(finalDoc.toJson(QJsonDocument::Compact));
+        parseJsonHyperlinkConfig(finalJson, parameters, styling);
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
