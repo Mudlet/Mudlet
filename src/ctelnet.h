@@ -409,6 +409,7 @@ private:
     bool mIsTimerPosting = false;
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    QTimer* mTimerPasswordModeTimeout = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
