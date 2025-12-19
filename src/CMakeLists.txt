@@ -22,7 +22,6 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-set(LIB_MUDLET_TARGET "mudlet_core")
 set(EXE_MUDLET_NAME "mudlet")
 set(EXE_MUDLET_TARGET "mudlet_executable")
 
@@ -86,9 +85,11 @@ set(mudlet_SRCS
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
+    ../test/dlgTriggerEditorUndoRedoTest.cpp
     dlgTriggerPatternEdit.cpp
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
+    EditorItemXMLHelpers.cpp
     EAction.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
@@ -105,10 +106,17 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    EditorUndoStack.cpp
     MxpTag.cpp
+    EditorAddItemCommand.cpp
+    EditorDeleteItemCommand.cpp
+    EditorModifyPropertyCommand.cpp
+    EditorMoveItemCommand.cpp
+    EditorToggleActiveCommand.cpp
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
+    SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
@@ -118,6 +126,7 @@ set(mudlet_SRCS
     CustomLineEditHandler.cpp
     CustomLineSession.cpp
     LabelInteractionHandler.cpp
+    MiddleMousePanHandler.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -164,6 +173,7 @@ set(mudlet_SRCS
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
+    TMxpHRTagHandler.cpp
     TMxpColorTagHandler.cpp
     TMxpCustomElementTagHandler.cpp
     TMxpElementDefinitionHandler.cpp
@@ -198,6 +208,7 @@ set(mudlet_SRCS
     TTabBar.cpp
     TDetachedWindow.cpp
     TTextCodec.cpp
+    TEncodingHelper.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -287,6 +298,7 @@ set(mudlet_HDRS
     dlgTriggerPatternEdit.h
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
+    EditorItemXMLHelpers.h
     EAction.h
     exitstreewidget.h
     FileOpenHandler.h
@@ -301,8 +313,15 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    EditorCommand.h
     MudletInstanceCoordinator.h
+    EditorUndoStack.h
     MxpTag.h
+    EditorAddItemCommand.h
+    EditorDeleteItemCommand.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
@@ -319,6 +338,7 @@ set(mudlet_HDRS
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
     SelectionRectangleHandler.h
+    SentryWrapper.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h
@@ -349,6 +369,7 @@ set(mudlet_HDRS
     TMedia.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h
+    TMxpHRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
     TMxpContext.h
@@ -494,10 +515,11 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(PCRE REQUIRED)
+find_package(PCRE2 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
-find_package(Boost 1.44)
+find_package(Boost 1.44 CONFIG REQUIRED)
+message(STATUS "Found Boost: ${Boost_DIR} (found version \"${Boost_VERSION}\")")
 
 
 # FreeBSD's sysinfo() call is done in a package, libsysinfo.
@@ -594,8 +616,14 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   transfers, profile switching, and detached window management:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_WINDOW_HANDLING)
 #
-# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
+# target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
+#
+# * Produce qDebug() messages about undo/redo operations in the trigger editor,
+#   including command execution, stack operations, and edbee text undo integration:
+target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
+
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 #
 # * Produce qDebug() messages about spatial audio operations including source
@@ -628,6 +656,7 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+    target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
 endif()
 
 # Define shader hot-reloading if enabled
@@ -654,7 +683,7 @@ target_link_libraries(
         Boost::boost
         HUNSPELL::HUNSPELL
         LUA51::LUA51
-        PCRE::PCRE
+        PCRE2::PCRE2
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
@@ -701,6 +730,11 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
 # will fail to load with "undefined symbol" errors.
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
+
+if (WITH_SENTRY)
+  include(cmake/WithSentry.cmake)
+  add_subdirectory(crash_reporter)
+endif()
 
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
@@ -790,10 +824,6 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
-   install(
-    FILES "../mudlet.desktop"
-    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-      WORLD_READ)
 
   install(
     FILES "../mudlet.desktop"
@@ -805,7 +835,7 @@ if(UNIX AND NOT APPLE)
     WORLD_READ)
   install(
     FILES "../mudlet.png"
-    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    DESTINATION "share/icons/hicolor/512x512/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
     WORLD_READ)
 
   install(

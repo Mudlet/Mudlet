@@ -83,9 +83,11 @@ TMainConsole::~TMainConsole()
     if (mpHunspell_profile) {
         Hunspell_destroy(mpHunspell_profile);
         mpHunspell_profile = nullptr;
-        // Need to commit any changes to personal dictionary
-        qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
-        mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+        if (mudlet::self()) {
+            // Need to commit any changes to personal dictionary
+            qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
+            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+        }
     }
 }
 
@@ -411,7 +413,7 @@ void TMainConsole::luaWrapLine(QString& buf, int line)
     }
 }
 
-QString TMainConsole::getCurrentLine(std::string& buf)
+QString TMainConsole::getCurrentLine(const std::string& buf)
 {
     const QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
@@ -513,9 +515,8 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         pC->show();
 
         return pC;
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 // This is a scrollBox overlaid on to the main console
@@ -851,9 +852,8 @@ bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
         const QPixmap bgPixmap(path);
         pL->setPixmap(bgPixmap);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 // Does NOT act on the TMainConsole itself:
@@ -876,14 +876,14 @@ bool TMainConsole::setBackgroundColor(const QString& name, int r, int g, int b, 
             pC->mLowerPane->forceUpdate();
         }
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         QPalette mainPalette;
         mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
         pL->setPalette(mainPalette);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TMainConsole::raiseWindow(const QString& name)
@@ -966,12 +966,12 @@ bool TMainConsole::showWindow(const QString& name)
         pC->mLowerPane->updateScreenView();
         pC->mLowerPane->forceUpdate();
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->show();
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TMainConsole::hideWindow(const QString& name)
@@ -981,12 +981,12 @@ bool TMainConsole::hideWindow(const QString& name)
     if (pC) {
         pC->hide();
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->hide();
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TMainConsole::printWindow(const QString& name, const QString& text)
@@ -999,9 +999,8 @@ bool TMainConsole::printWindow(const QString& name, const QString& text)
     } else if (pL) {
         pL->setText(text);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 //getUserWindowSize for resizing in Geyser
@@ -1122,7 +1121,6 @@ void TMainConsole::setSystemSpellDictionary(const QString& newDict)
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
         qDebug().noquote().nospace() << "TMainConsole::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
-        mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
     }
 }
 
@@ -1166,9 +1164,8 @@ QSet<QString> TMainConsole::getWordSet() const
 
     if (!mUseSharedDictionary) {
         return mWordSet_profile;
-    } else {
-        return mudlet::self()->getWordSet();
     }
+    return mudlet::self()->getWordSet();
 }
 
 void TMainConsole::setProfileName(const QString& newName)
@@ -1636,6 +1633,15 @@ void TMainConsole::showStatistics()
 
 void TMainConsole::closeEvent(QCloseEvent* event)
 {
+    // Guard against duplicate close events during widget destruction.
+    // The first close comes from explicit close(), the second can come
+    // from Qt during widget deletion. Processing the event twice can
+    // cause crashes in TBuffer destruction.
+    if (mEnableClose) {
+        event->accept();
+        return;
+    }
+
     qDebug().nospace().noquote() << "TMainConsole::closeEvent(...) INFO - received by \"" << mpHost->getName() << "\".";
     TEvent conCloseEvent{};
     conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
@@ -1670,6 +1676,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
             }
         }
         mpHost->waitForProfileSave();
+        mEnableClose = true;
         event->accept();
         return;
     }

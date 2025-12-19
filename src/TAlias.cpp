@@ -84,7 +84,7 @@ bool TAlias::match(const QString& haystack)
         return false;
     }
 
-    QSharedPointer<pcre> re = mpRegex;
+    QSharedPointer<pcre2_code> re = mpRegex;
     if (re == nullptr) {
         return false; //regex compile error
     }
@@ -100,40 +100,39 @@ bool TAlias::match(const QString& haystack)
 
     // These must be initialised before any goto so the latter does not jump
     // over them:
-    int namecount = 0;
-    char* tabptr = nullptr;
+    uint32_t namecount = 0;
+    PCRE2_SPTR tabptr = nullptr;
     NameGroupMatches nameGroups;
     QMap<QString, QPair<int, int>> namePositions;
     std::list<std::string> captureList;
     std::list<int> posList;
-    int name_entry_size = 0;
+    uint32_t name_entry_size = 0;
     int haystackCLength = strlen(haystackC);
     int rc = 0;
     int i = 0;
-    int ovector[MAX_CAPTURE_GROUPS * 3] = {0};
+    pcre2_match_data* match_data = nullptr;
+    PCRE2_SIZE* ovector = nullptr;
 
     if (mRegexCode.isEmpty()) {
         goto MUD_ERROR;
     }
 
-    rc = pcre_exec(re.data(), nullptr, haystackC, haystackCLength, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
-
-    if (rc < 0) {
+    match_data = pcre2_match_data_create_from_pattern(re.data(), nullptr);
+    if (!match_data) {
         goto MUD_ERROR;
     }
 
-    if (rc == 0) {
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(
-                qsl("%1\n").arg(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
-                QColor(255, 128, 0),
-                QColor(Qt::black));
-        }
-        qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
-    } else {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::cyan, Qt::black) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
-        }
+    rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
+
+    if (rc < 0) {
+        pcre2_match_data_free(match_data);
+        goto MUD_ERROR;
+    }
+
+    ovector = pcre2_get_ovector_pointer(match_data);
+
+    if (mudlet::smDebugMode) {
+        TDebug(Qt::cyan, Qt::black) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
     }
 
     matchCondition = true; // alias has matched
@@ -157,37 +156,37 @@ bool TAlias::match(const QString& haystack)
         }
     }
 
-    pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
+    pcre2_pattern_info(re.data(), PCRE2_INFO_NAMECOUNT, &namecount);
 
     if (namecount > 0) {
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &tabptr);
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-        for (i = 0; i < namecount; ++i) {
+        pcre2_pattern_info(re.data(), PCRE2_INFO_NAMETABLE, &tabptr);
+        pcre2_pattern_info(re.data(), PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+        for (uint32_t j = 0; j < namecount; ++j) {
             const int n = (tabptr[0] << 8) | tabptr[1];
-            auto name = QString::fromUtf8(&tabptr[2]).trimmed();
+            auto name = QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed();
             auto* substring_start = haystackC + ovector[2*n];
             auto substring_length = ovector[2*n+1] - ovector[2*n];
             auto utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
-            namePositions.insert(name, qMakePair(utf16_pos, substring_length));
+            namePositions.insert(name, qMakePair(utf16_pos, static_cast<int>(substring_length)));
         }
     }
 
     for (;;) {
-        int options = 0;
-        int start_offset = ovector[1];
+        uint32_t options = 0;
+        PCRE2_SIZE start_offset = ovector[1];
 
         if (ovector[0] == ovector[1]) {
-            if (ovector[0] >= haystackCLength) {
+            if (ovector[0] >= static_cast<PCRE2_SIZE>(haystackCLength)) {
                 goto END;
             }
-            options = PCRE_NOTEMPTY | PCRE_ANCHORED;
+            options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), nullptr, haystackC, haystackCLength, start_offset, options, ovector, MAX_CAPTURE_GROUPS * 3);
-        if (rc == PCRE_ERROR_NOMATCH) {
+        rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, start_offset, options, match_data, nullptr);
+        if (rc == PCRE2_ERROR_NOMATCH) {
             if (options == 0) {
                 break;
             }
@@ -195,14 +194,6 @@ bool TAlias::match(const QString& haystack)
             continue;
         } else if (rc < 0) {
             goto END;
-        } else if (rc == 0) {
-            if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->mpErrorConsole->print(
-                    qsl("%1\n").arg(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
-                    QColor(255, 128, 0),
-                    QColor(Qt::black));
-            }
-            qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
         }
 
         for (i = 0; i < rc; i++) {
@@ -233,6 +224,10 @@ END : {
         pL->clearCaptureGroups();
     }
 
+    if (match_data) {
+        pcre2_match_data_free(match_data);
+    }
+
 MUD_ERROR:
     for (auto childAlias : *mpMyChildrenList) {
         if (childAlias->match(haystack)) {
@@ -244,9 +239,9 @@ MUD_ERROR:
     return matchCondition;
 }
 
-static void pcre_deleter(pcre* pointer)
+static void pcre2_code_deleter(pcre2_code* pointer)
 {
-    pcre_free(pointer);
+    pcre2_code_free(pointer);
 }
 
 void TAlias::setRegexCode(const QString& code)
@@ -257,15 +252,24 @@ void TAlias::setRegexCode(const QString& code)
 
 void TAlias::compileRegex()
 {
-    const char* error;
-    int erroffset;
+    int errorcode;
+    PCRE2_SIZE erroffset;
 
-    // PCRE_UTF8 needed to run compile in UTF-8 mode
-    // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
-    QSharedPointer<pcre> re(pcre_compile(mRegexCode.toUtf8().constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
+    // PCRE2_UTF needed to run compile in UTF-8 mode
+    // PCRE2_UCP needed for \d, \w etc. to use Unicode properties:
+    QSharedPointer<pcre2_code> re(pcre2_compile(
+        reinterpret_cast<PCRE2_SPTR>(mRegexCode.toUtf8().constData()),
+        PCRE2_ZERO_TERMINATED,
+        PCRE2_UTF | PCRE2_UCP,
+        &errorcode,
+        &erroffset,
+        nullptr), pcre2_code_deleter);
 
     if (re == nullptr) {
         mOK_init = false;
+        PCRE2_UCHAR errorBuffer[256];
+        pcre2_get_error_message(errorcode, errorBuffer, sizeof(errorBuffer));
+        const char* error = reinterpret_cast<const char*>(errorBuffer);
         if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
             TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;

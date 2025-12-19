@@ -18,6 +18,8 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    env:
+      LUA_VERSION: '5.1.5'
     strategy:
       fail-fast: false
       matrix:
@@ -28,7 +30,6 @@ jobs:
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests'
-            triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
             qt: '6.9.0'
@@ -37,26 +38,22 @@ jobs:
           - os: ubuntu-22.04
             # Another try to use GCC12
             buildname: 'ubuntu (x86_64)'
-            triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 12
             qt: '6.9.0'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
-            triplet: x64-linux
             compiler: clang_64
             gcc_compiler_version: 10
             qt: '6.9.0'
           - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
-            triplet: x64-osx
             compiler: clang_64
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
-            triplet: arm64-osx
             compiler: clang_64
             qt: '6.9.0'
             deploy: 'deploy'
@@ -64,9 +61,9 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
 
     - name: Install Qt
@@ -84,7 +81,7 @@ jobs:
       if: runner.os == 'macOS'
       uses: leafo/gh-actions-lua@v12
       with:
-        luaVersion: "5.1.5"
+        luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
 
     - name: (macOS) Install Luarocks via GitHub Actions
@@ -100,17 +97,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # Install all required dependencies
-        BREWS=("libzzip" "libzip" "ccache" "expect" "assimp" "hunspell" "pcre" "pugixml" "sqlite" "yajl" "boost")
-
-        # Loop through each brew package
-        for brew in "${BREWS[@]}"; do
-          if ! brew list --formula "${brew}" &>/dev/null; then
-            echo "Installing ${brew}..."
-            brew install "$brew"
-          else
-           echo "${brew} is already installed."
-         fi
-        done
+        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -118,21 +105,23 @@ jobs:
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
         echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
 
+        # Detect Homebrew prefix once (differs between x86_64 and ARM64)
+        if [ "$(uname -m)" = "arm64" ]; then
+          HOMEBREW_PREFIX=/opt/homebrew
+        else
+          HOMEBREW_PREFIX=/usr/local
+        fi
+        echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
+
         # Help CMake find Lua installed by gh-actions-lua
         # The action installs to .lua/ and .luarocks/ in the runner home
         echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
 
-        # Help CMake find keg-only Homebrew packages (PCRE is keg-only on macOS)
-        echo "PKG_CONFIG_PATH=/usr/local/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        # Help CMake find keg-only Homebrew packages (PCRE2 is keg-only on macOS)
+        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        # Detect Homebrew prefix (differs between x86_64 and ARM64)
-        if [ "$(uname -m)" = "arm64" ]; then
-          YAJL_PREFIX=/opt/homebrew/opt/yajl
-        else
-          YAJL_PREFIX=/usr/local/opt/yajl
-        fi
-        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=$YAJL_PREFIX
+        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -143,7 +132,7 @@ jobs:
       uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
       with:
-        luaVersion: "5.1.5"
+        luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
 
     - name: (Linux) Install Luarocks via GitHub Actions
@@ -158,8 +147,31 @@ jobs:
         # Install all required dependencies
         # imagemagick is for the desktop screenshot
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
-        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
-          libxkbcommon-x11-0 imagemagick libassimp-dev libpcre3-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
+        sudo apt-get install \
+          ccache \
+          expect \
+          g++-${{matrix.gcc_compiler_version}} \
+          imagemagick \
+          libassimp-dev \
+          libboost-dev \
+          libcurl4-openssl-dev \
+          libglu1-mesa-dev \
+          libhunspell-dev \
+          liblua5.1-0-dev \
+          libpcre2-dev \
+          libpulse-dev \
+          libpugixml-dev \
+          libsecret-1-dev \
+          libsqlite3-dev \
+          libxkbcommon-x11-0 \
+          libyajl-dev \
+          libzip-dev \
+          pcre2-utils \
+          pkg-config \
+          libssl-dev \
+          openssl \
+          ca-certificates \
+          -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -170,7 +182,7 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        luarocks install --local lua-yajl
+        luarocks --lua-version 5.1 install --local lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -188,7 +200,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
@@ -199,7 +211,7 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        sudo apt-get -y install pcregrep
+        sudo apt-get -y install pcre2-utils
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
 
@@ -208,7 +220,7 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        brew install pcre
+        brew install pcre2
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
@@ -227,14 +239,19 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          -DUSE_SANITIZER="${{ env.MUDLET_SANITIZERS }}"
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
-          -DUSE_SANITIZER=""
+          -DWITH_SENTRY=ON
+          -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+          -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+        MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
@@ -247,38 +264,35 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
+    - name: Run QTest
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
+
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
-        luarocks --lua-version 5.1 install --local LuaFileSystem
-        luarocks --lua-version 5.1 install --local luautf8
+        LUAROCKS="luarocks --lua-version 5.1 install --local"
 
-        # Detect paths for dependencies that need DIR hints on macOS
+        $LUAROCKS LuaFileSystem
+        $LUAROCKS luautf8
+
         if [ "$RUNNER_OS" = "macOS" ]; then
-          if [ "$(uname -m)" = "arm64" ]; then
-            ZIP_PREFIX=/opt/homebrew/opt/libzip
-            SQLITE_PREFIX=/opt/homebrew/opt/sqlite
-            PCRE_PREFIX=/opt/homebrew/opt/pcre
-          else
-            ZIP_PREFIX=/usr/local/opt/libzip
-            SQLITE_PREFIX=/usr/local/opt/sqlite
-            PCRE_PREFIX=/usr/local/opt/pcre
-          fi
-          luarocks --lua-version 5.1 install --local lua-zip ZIP_DIR=$ZIP_PREFIX
-          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1 SQLITE_DIR=$SQLITE_PREFIX
-          luarocks --lua-version 5.1 install --local lrexlib-pcre PCRE_DIR=$PCRE_PREFIX
+          $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
+          $LUAROCKS lrexlib-pcre2 PCRE2_DIR=${HOMEBREW_PREFIX}/opt/pcre2
         else
-          luarocks --lua-version 5.1 install --local lua-zip
-          luarocks --lua-version 5.1 install --local LuaSQL-SQLite3 2.6.1
-          luarocks --lua-version 5.1 install --local lrexlib-pcre
+          $LUAROCKS lua-zip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1
+          $LUAROCKS lrexlib-pcre2
         fi
 
         # CI changelog generation dependencies
-        luarocks --lua-version 5.1 install --local argparse
-        luarocks --lua-version 5.1 install --local lunajson
+        $LUAROCKS argparse
+        $LUAROCKS lunajson
 
         # Lua-based tests
-        luarocks --lua-version 5.1 install --local busted
+        $LUAROCKS busted
 
         # necessary for Qt multimedia and modern Qt
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
@@ -323,7 +337,7 @@ jobs:
         APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
         APPLE_PASSWORD: ${{secrets.APPLE_PASSWORD}}
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
-        TRIPLET: ${{matrix.triplet}}
+        WITH_SENTRY: "ON"
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v5
@@ -366,6 +380,7 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -376,6 +391,7 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'
@@ -383,5 +399,29 @@ jobs:
         if [ -e /tmp/busted-tests-failed ]
         then
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
+          exit 1
+        fi
+
+    - name: (Linux) Run C++ undo/redo tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      timeout-minutes: 5
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
+
+    - name: (macOS) Run C++ undo/redo tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      timeout-minutes: 5
+      shell: bash
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
+
+    - name: Passed C++ undo/redo tests
+      if: matrix.run_tests == 'true'
+      run: |
+        if [ -e /tmp/undo-tests-failed ]
+        then
+          echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
           exit 1
         fi

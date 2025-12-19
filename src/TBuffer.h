@@ -45,10 +45,10 @@
 #include "TMxpProcessor.h"
 
 #include <deque>
+#include <memory>
 #include <string>
 
 class Host;
-class QTextCodec;
 class TConsole;
 
 // Enhanced OSC 8 hyperlink styling support with CSS link states
@@ -382,6 +382,8 @@ class TBuffer
 public:
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
     ~TBuffer();
+    TBuffer(const TBuffer& other);
+    TBuffer& operator=(const TBuffer& other);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -476,23 +478,21 @@ private:
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
-    QMap<QString, QString> parseUriQueryParameters(const QString& uri);
+    QMap<QString, QString> parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing JSON format hyperlink configuration
-    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters);
-    // Helper functions for JSON to CSS conversion
-    QString jsonStyleObjectToCss(const QJsonObject& styleObj);
+    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling);
+    // Helper function for directly parsing JSON style object to HyperlinkStyling
+    void parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling);
+    // Helper function for parsing JSON state style to StateStyle
+    void parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::HyperlinkStyling::StateStyle& stateStyle);
+    // Helper function for JSON menu array conversion
     QString jsonMenuArrayToString(const QJsonArray& menuArray);
     // Helper function for appending query parameters to URIs (handles existing params)
     QString appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters);
-    // Helper function for parsing CSS-like style strings
-    void parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing color values (hex, named, rgb)
     QColor parseColorValue(const QString& value);
-    // CSS Link State parsing and management
-    void parseHyperlinkStateStyle(const QString& pseudoClass, const QString& styleString, Mudlet::HyperlinkStyling& styling);
-    void parseStateStyleProperties(const QString& styleString, Mudlet::HyperlinkStyling::StateStyle& stateStyle);
+    // Accessibility enhancements for hyperlink styling
     void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
-
 
     QPointer<TConsole> mpConsole;
 
@@ -568,7 +568,6 @@ private:
     QString lastTextToLog;
 
     QByteArray mEncoding;
-    QTextCodec* mMainIncomingCodec = nullptr;
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;
@@ -583,7 +582,7 @@ private:
     };
     static constexpr int    MAX_TAG_TIMEOUT_MS = 1300;
     WatchdogPhase           mWatchdogPhase = WatchdogPhase::None;
-    QTimer*                 mTagWatchdog;
+    std::unique_ptr<QTimer> mTagWatchdog;
     std::string             mWatchdogTagSnapshot;
 
     // Enhanced OSC 8 hyperlink styling and menu support
@@ -598,6 +597,12 @@ private:
     int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
     int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
     int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
+
+    // Flag to skip trigger processing during documentation injection
+    bool mSkipTriggerProcessing = false;
+
+    // Timestamp to prevent duplicate OSC 8 documentation injection
+    qint64 mLastOSC8DocsInjectionTime = 0;
 
 public:
     // Methods for link state management (used by TTextEdit event handlers)

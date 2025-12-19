@@ -178,15 +178,31 @@ void Updater::checkUpdatesOnStart()
 
     mDailyCheck->setInterval(12h);
     connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
-          auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-          qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
-          if (updates.isEmpty()) {
-              return;
-          } else if (!updateAutomatically()) {
-              emit signal_updateAvailable(updates.size());
-          } else {
-              feed->downloadRelease(updates.first());
-          }
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, this, [this]() {
+            auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+            qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
+            if (updates.isEmpty()) {
+                return;
+            }
+
+            if (!updateAutomatically()) {
+                emit signal_updateAvailable(updates.size());
+                return;
+            }
+
+            const auto& release = updates.first();
+            const QUrl downloadUrl = release.getDownloadUrl();
+            if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+                qWarning() << "Bi-daily update check: invalid download URL for release" << release.getVersion();
+                return;
+            }
+
+            feed->downloadRelease(release);
+        });
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::loadError, this, [](const QString& error) {
+            qWarning() << "Bi-daily update check: failed to load feed:" << error;
+        });
+        feed->load();
     });
     mDailyCheck->start();
 }
@@ -481,6 +497,35 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             updateDialog->done(0);
         });
 
+#if defined(Q_OS_WINDOWS)
+        // On Windows, launch the installer directly with a delay to ensure Mudlet
+        // has fully exited. This prevents "file in use" errors during the update.
+        // The installer will relaunch Mudlet after the update completes.
+        QString installerPath = qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+        QString launchPath = qsl("%1/mudlet-update-pending.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+
+        if (QFile::exists(installerPath)) {
+            // Rename the installer so runUpdate() doesn't try to launch it again on next startup
+            QFile::remove(launchPath); // Remove any old pending installer
+            if (!QFile::rename(installerPath, launchPath)) {
+                qWarning() << "Failed to rename installer, using original path";
+                launchPath = installerPath;
+            }
+
+            // Use timeout command for a 3 second delay, then run the installer
+            // /t 3 = wait 3 seconds, /nobreak = ignore keypresses
+            QProcess::startDetached(qsl("cmd"), QStringList() << qsl("/c") << qsl("timeout /t 3 /nobreak > nul && \"%1\"").arg(launchPath));
+            qWarning() << "Launching installer with delay:" << launchPath;
+        } else {
+            qWarning() << "Installer not found at:" << installerPath << "- will try on next restart";
+        }
+
+        if (mudlet::self()) {
+            mudlet::self()->forceClose();
+        }
+        // Don't restart Mudlet - the installer will do it after the update
+        return;
+#else
         // if the updater is launched manually instead of when Mudlet is quit,
         // close Mudlet ourselves
         if (mudlet::self()) {
@@ -488,6 +533,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         }
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
         return;
+#endif
     }
 
 // otherwise the button says 'Install', so install the update

@@ -34,6 +34,13 @@
 
 using TEnterEvent = QEnterEvent;
 
+// Common enum for specifying insertion mode for tree items
+// Used across all editor item types (triggers, aliases, timers, scripts, actions, keys)
+enum class TreeItemInsertMode {
+    Append,      // Add to end of parent's child list
+    AtPosition   // Insert at specific position
+};
+
 class utils
 {
 public:
@@ -55,9 +62,8 @@ public:
                                                                  .arg(offset >= 0 ? QLatin1Char('+') : QLatin1Char('-'))
                                                                  .arg(hoursOff, 2, 10, QLatin1Char('0'))
                                                                  .arg(minutesOff, 2, 10, QLatin1Char('0')));
-        } else {
-            return localNow.toString(Qt::ISODate).append(qsl("+00:00"));
         }
+        return localNow.toString(Qt::ISODate).append(qsl("+00:00"));
 #else
         auto localNow = QDateTime::currentDateTime();
         const int offset = localNow.offsetFromUtc();

@@ -26,7 +26,9 @@
  ***************************************************************************/
 
 
+#include "EditorCommand.h"
 #include "ui_trigger_editor.h"
+
 #include <QPointer>
 #include <unordered_map>
 
@@ -45,8 +47,10 @@
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
 #include "SingleLineTextEdit.h"
+#include "EditorUndoStack.h"
 
 #include <QDialog>
+#include <QDockWidget>
 #include <QFlag>
 #include <QIcon>
 #include <QListWidgetItem>
@@ -56,7 +60,6 @@
 #include <QSet>
 #include <QStringList>
 #include <QVector>
-#include "post_guard.h"
 
 // Edbee editor includes
 #include "edbee/edbee.h"
@@ -100,6 +103,9 @@ class QShortcut;
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
+
+    // Allow external test suite to access private members
+    friend void runUndoRedoTestSuite(dlgTriggerEditor* editor);
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -169,18 +175,6 @@ public:
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
 
-    enum class EditorViewType {
-        cmUnknownView = 0,
-        cmTriggerView = 0x01,
-        cmTimerView = 0x02,
-        cmAliasView = 0x03,
-        cmScriptView = 0x04,
-        cmActionView = 0x05,
-        cmKeysView = 0x06,
-        cmVarsView = 0x07
-    };
-    Q_ENUM(EditorViewType)
-
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
@@ -224,6 +218,9 @@ public:
     void activeToggle_script();
     void activeToggle_timer();
     void activeToggle_trigger();
+    void slot_itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition);
+    void slot_batchMoveStarted();
+    void slot_batchMoveEnded();
     void delete_action();
     void delete_alias();
     void delete_key();
@@ -252,7 +249,7 @@ public slots:
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
     void slot_colorizeTriggerSetFgColor();
-    void slot_saveSelectedItem(QTreeWidgetItem* pItem);
+    void slot_saveSelectedItem();
     void slot_export();
     void slot_import();
     void slot_createModule();
@@ -308,6 +305,10 @@ public slots:
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
     void slot_editorThemeChanged();
+    void slot_smartUndo();
+    void slot_smartRedo();
+    void slot_updateUndoRedoButtonStates();
+    void slot_runUndoRedoTests();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -331,6 +332,49 @@ private slots:
     void slot_clickedMessageBox(const QString&);
     void slot_addPattern();
     void slot_bannerDismissClicked();
+    void slot_itemsChanged(::EditorViewType viewType, QList<int> affectedItemIDs);
+
+    // Per-property immediate save slots for triggers (create individual undo entries)
+    void slot_saveProperty_TriggerName();
+    void slot_saveProperty_TriggerCommand();
+    void slot_saveProperty_TriggerStayOpen();
+    void slot_saveProperty_TriggerLineMargin();
+    void slot_saveProperty_TriggerFilterTrigger();
+    void slot_saveProperty_TriggerPerlSlashG();
+    void slot_saveProperty_TriggerSoundEnabled();
+    void slot_saveProperty_TriggerSoundFile();
+    void slot_saveProperty_TriggerColorizer();
+    void slot_saveProperty_TriggerPattern(int patternIndex);
+    void slot_saveProperty_TriggerPatternType(int patternIndex);
+
+    // Per-property immediate save slots for aliases
+    void slot_saveProperty_AliasName();
+    void slot_saveProperty_AliasPattern();
+    void slot_saveProperty_AliasCommand();
+
+    // Per-property immediate save slots for timers
+    void slot_saveProperty_TimerName();
+    void slot_saveProperty_TimerCommand();
+    void slot_saveProperty_TimerTime();
+
+    // Per-property immediate save slots for scripts
+    void slot_saveProperty_ScriptName();
+    void slot_saveProperty_ScriptEventHandlers();
+
+    // Per-property immediate save slots for keys
+    void slot_saveProperty_KeyName();
+    void slot_saveProperty_KeyCommand();
+
+    // Per-property immediate save slots for actions (buttons)
+    void slot_saveProperty_ActionName();
+    void slot_saveProperty_ActionCommandDown();
+    void slot_saveProperty_ActionCommandUp();
+    void slot_saveProperty_ActionIsPushDown();
+    void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarOrientation();
+    void slot_saveProperty_ActionBarLocation();
+    void slot_saveProperty_ActionButtonRotation();
+    void slot_saveProperty_ActionCSS();
 
 public:
     TConsole* mpErrorConsole = nullptr;
@@ -482,7 +526,6 @@ private:
     void setShortcuts(const bool active = true);
     void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
-    bool showDeleteConfirmation(const QString& title, const QString& message);
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
     void checkForMoreThanOneTriggerItem();
@@ -499,30 +542,31 @@ private:
 
     bool focusPatternItem(const int row, const Qt::FocusReason reason = Qt::TabFocusReason);
     void setupPatternNavigationShortcuts();
-    void updatePatternNavigationHint();
 
 
     // PLACEMARKER 3/3 save button texts need to be kept in sync
+    // Note: Shortcut values use Qt's portable format (Ctrl+S) which Qt maps correctly per-platform
+    // Keys use tr() to match translated action labels; values are not translated (they're key sequences)
     std::unordered_map<QString, QString> mButtonShortcuts = {
-        {qsl("Save Item"),    tr("Ctrl+S")},
-        {tr("Save Trigger"),  tr("Ctrl+S")},
-        {tr("Save Timer"),    tr("Ctrl+S")},
-        {tr("Save Alias"),    tr("Ctrl+S")},
-        {tr("Save Script"),   tr("Ctrl+S")},
-        {tr("Save Button"),   tr("Ctrl+S")},
-        {tr("Save Key"),      tr("Ctrl+S")},
-        {tr("Save Variable"), tr("Ctrl+S")},
-        {tr("Save Profile"),  tr("Ctrl+Shift+S")},
-        {tr("Triggers"),   tr("Ctrl+1")},
-        {tr("Aliases"),    tr("Ctrl+2")},
-        {tr("Scripts"),    tr("Ctrl+3")},
-        {tr("Timers"),     tr("Ctrl+4")},
-        {tr("Keys"),       tr("Ctrl+5")},
-        {tr("Variables"),  tr("Ctrl+6")},
-        {tr("Buttons"),    tr("Ctrl+7")},
-        {tr("Errors"),     tr("Ctrl+8")},
-        {tr("Statistics"), tr("Ctrl+9")},
-        {tr("Debug"),      tr("Ctrl+0")}
+        {qsl("Save Item"),    qsl("Ctrl+S")},
+        {tr("Save Trigger"),  qsl("Ctrl+S")},
+        {tr("Save Timer"),    qsl("Ctrl+S")},
+        {tr("Save Alias"),    qsl("Ctrl+S")},
+        {tr("Save Script"),   qsl("Ctrl+S")},
+        {tr("Save Button"),   qsl("Ctrl+S")},
+        {tr("Save Key"),      qsl("Ctrl+S")},
+        {tr("Save Variable"), qsl("Ctrl+S")},
+        {tr("Save Profile"),  qsl("Ctrl+Shift+S")},
+        {tr("Triggers"),   qsl("Ctrl+1")},
+        {tr("Aliases"),    qsl("Ctrl+2")},
+        {tr("Scripts"),    qsl("Ctrl+3")},
+        {tr("Timers"),     qsl("Ctrl+4")},
+        {tr("Keys"),       qsl("Ctrl+5")},
+        {tr("Variables"),  qsl("Ctrl+6")},
+        {tr("Buttons"),    qsl("Ctrl+7")},
+        {tr("Errors"),     qsl("Ctrl+8")},
+        {tr("Statistics"), qsl("Ctrl+9")},
+        {tr("Debug"),      qsl("Ctrl+0")}
     };
 
     std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
@@ -551,14 +595,6 @@ private:
 
     QScrollArea* mpScrollArea = nullptr;
     QWidget* mpWidget_triggerItems = nullptr;
-    QFrame* mPatternNavigationHintBanner = nullptr;
-    QLabel* mPatternNavigationHintLabel = nullptr;
-    QToolButton* mPatternNavigationHintCloseButton = nullptr;
-    bool mPatternNavigationHintHidden = false;
-    void handlePatternNavigationHintDismiss();
-    void showPatternNavigationHintUndoToast();
-    void undoPatternNavigationHintDismiss();
-    void handlePatternNavigationHintPermanentDismiss();
     // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
     // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
     QWidget *mpNonCodeWidgets = nullptr;
@@ -625,12 +661,30 @@ private:
     QAction* mpExportAction = nullptr;
     QAction* mpCreateModuleAction = nullptr;
 
+    // Smart undo/redo actions (route based on focus):
+    QAction* mpUndoAction = nullptr;
+    QAction* mpRedoAction = nullptr;
+    QAction* mpRunUndoRedoTestsAction = nullptr;
+
+    // Undo system for item-level operations (using Qt's QUndoStack framework):
+    EditorUndoStack* mpUndoStack = nullptr;
+
+    // Guarded pointer to text editor's undo stack (for safe signal connections):
+    QPointer<edbee::TextUndoStack> mpTextUndoStack;
+
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
     bool mSavingAs = false;
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+
+    // tracks whether the initial profile load has completed (to avoid clearing undo stack on refreshes)
+    bool mInitialLoadDone = false;
+
+    // Blocks property saves during UI updates (e.g., when loading a selected item or during undo/redo)
+    // to prevent recursive saves and duplicate undo entries
+    bool mBlockPropertySave = false;
 
     // profile autosave interval in minutes
     int mAutosaveInterval = 2;
@@ -671,7 +725,6 @@ private:
     [[nodiscard]] QString bannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
     [[nodiscard]] QString legacyBannerSettingsKey(EditorViewType viewType, const QString& bannerKey) const;
     [[nodiscard]] QString profileSettingsPrefix() const;
-    [[nodiscard]] QString patternNavigationHintSettingsKey() const;
 
     // Banner state tracking
     QTimer* mpBannerUndoTimer = nullptr;

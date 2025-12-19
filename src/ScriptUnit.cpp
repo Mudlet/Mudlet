@@ -115,6 +115,16 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
     }
 }
 
+void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentScript(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentScript(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void ScriptUnit::removeScriptRootNode(TScript* pT)
 {
     if (!pT) {
@@ -127,18 +137,16 @@ TScript* ScriptUnit::getScript(int id)
 {
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TScript* ScriptUnit::getScriptPrivate(int id)
 {
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool ScriptUnit::registerScript(TScript* pT)

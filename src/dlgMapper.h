@@ -68,6 +68,7 @@ public slots:
     void slot_roomSize(int size);
     void slot_exitSize(int size);
     void slot_setShowRoomIds(bool showRoomIds);
+    void slot_setShowGrid(bool showGrid);
     void slot_updateInfoContributors();
     void slot_switchArea(const int);
     void slot_setupMapperMenu();
@@ -85,7 +86,7 @@ public slots:
 private:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
-    QMenu* mpInfoMenu = nullptr;
+    QPointer<QMenu> mpInfoMenu;
     bool mIs3DMode = false;
 };
 
