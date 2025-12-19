@@ -331,7 +331,7 @@ public:
 
     // Manages hyperlink visibility (conceal/reveal) based on time delays and expire triggers
     // (user input, GA/EOR prompt, or new output after idle gap)
-    THyperlinkVisibilityManager* mpHyperlinkVisibilityManager = nullptr;
+    QPointer<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;

@@ -41,6 +41,7 @@
 #include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TTextEdit.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
@@ -4240,6 +4241,12 @@ void cTelnet::gotPrompt(std::string& mud_data)
     }
 
     postData();
+
+    // Notify hyperlink visibility manager about GA/EOR prompt
+    if (mpHost && mpHost->mpConsole && mpHost->mpConsole->mpHyperlinkVisibilityManager) {
+        mpHost->mpConsole->mpHyperlinkVisibilityManager->onPromptReceived();
+    }
+
     mMudData = "";
     mIsTimerPosting = false;
 }

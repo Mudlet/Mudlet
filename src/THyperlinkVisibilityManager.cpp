@@ -41,12 +41,8 @@ THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole, QOb
 
 THyperlinkVisibilityManager::~THyperlinkVisibilityManager()
 {
-    if (mpTimer) {
-        mpTimer->stop();
-    }
-    if (mpOutputGapTimer) {
-        mpOutputGapTimer->stop();
-    }
+    mpTimer->stop();
+    mpOutputGapTimer->stop();
 }
 
 bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, int startColumn, int length,
@@ -200,6 +196,27 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
 #endif
             mHasTimerBasedLinks = true;
             startTimerIfNeeded();
+        }
+    }
+}
+
+void THyperlinkVisibilityManager::unregisterHyperlink(int linkId)
+{
+    if (mTrackedLinks.remove(linkId) > 0) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug().noquote() << "[OSC8-Visibility] Unregistered hyperlink" << linkId << "(link removed from buffer)";
+#endif
+        // If this was the last link with timer-based actions, update the flag
+        bool hasTimers = false;
+        for (const auto& link : mTrackedLinks) {
+            if (link.delayMs > 0 || link.expireOnOutput) {
+                hasTimers = true;
+                break;
+            }
+        }
+        if (!hasTimers && mHasTimerBasedLinks) {
+            mHasTimerBasedLinks = false;
+            mpTimer->stop();
         }
     }
 }
@@ -443,6 +460,11 @@ void THyperlinkVisibilityManager::slot_checkTimers()
     qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
     bool changed = false;
     bool stillHasTimerLinks = false;
+    
+    // Collect link IDs that need action to avoid iterator invalidation
+    QVector<int> linksToReveal;
+    QVector<int> linksToConceal;
+    QVector<int> linksToTransition;  // For RevealThenConceal phase transitions
 
     for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
         TrackedHyperlink& link = it.value();
@@ -465,8 +487,7 @@ void THyperlinkVisibilityManager::slot_checkTimers()
                 continue;
             }
             
-            performConcealment(link);
-            changed = true;
+            linksToConceal.append(it.key());
         } else if (link.action == TrackedHyperlink::Action::Reveal && link.isConcealed) {
             // For reveal actions, timer starts immediately from creation
             qint64 elapsed = currentTime - link.creationTimeMs;
@@ -479,8 +500,7 @@ void THyperlinkVisibilityManager::slot_checkTimers()
                 continue;
             }
             
-            performReveal(link);
-            changed = true;
+            linksToReveal.append(it.key());
         } else if (link.action == TrackedHyperlink::Action::RevealThenConceal) {
             // Handle RevealThenConceal based on phase
             if (link.phase == TrackedHyperlink::Phase::Initial && link.isConcealed) {
@@ -494,9 +514,7 @@ void THyperlinkVisibilityManager::slot_checkTimers()
                 qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << it.key() 
                                    << "- timer revealing (phase: Initial -> Revealed)";
 #endif
-                performReveal(link);
-                link.phase = TrackedHyperlink::Phase::Revealed;
-                changed = true;
+                linksToTransition.append(it.key());
             } else if (link.phase == TrackedHyperlink::Phase::WaitingToConceal) {
                 // Waiting to conceal after click - timer starts from click
                 if (link.timerActivatedMs == 0) {
@@ -512,13 +530,38 @@ void THyperlinkVisibilityManager::slot_checkTimers()
                 qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << it.key() 
                                    << "- timer concealing (phase: WaitingToConceal -> Concealed)";
 #endif
-                link.phase = TrackedHyperlink::Phase::Concealed;
-                performConcealment(link);
-                changed = true;
+                linksToConceal.append(it.key());
             } else if (link.phase == TrackedHyperlink::Phase::Revealed) {
                 // Revealed and waiting for click - keep timer active
                 stillHasTimerLinks = true;
             }
+        }
+    }
+    
+    // Now process the collected links (safe because we're not iterating)
+    for (int linkId : linksToReveal) {
+        if (mTrackedLinks.contains(linkId)) {
+            performReveal(mTrackedLinks[linkId]);
+            changed = true;
+        }
+    }
+    
+    for (int linkId : linksToConceal) {
+        if (mTrackedLinks.contains(linkId)) {
+            // For RevealThenConceal, mark phase as Concealed
+            if (mTrackedLinks[linkId].action == TrackedHyperlink::Action::RevealThenConceal) {
+                mTrackedLinks[linkId].phase = TrackedHyperlink::Phase::Concealed;
+            }
+            performConcealment(mTrackedLinks[linkId]);
+            changed = true;
+        }
+    }
+    
+    for (int linkId : linksToTransition) {
+        if (mTrackedLinks.contains(linkId)) {
+            performReveal(mTrackedLinks[linkId]);
+            mTrackedLinks[linkId].phase = TrackedHyperlink::Phase::Revealed;
+            changed = true;
         }
     }
 
@@ -588,14 +631,30 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
     TBuffer& buffer = mpConsole->buffer;
 
     if (link.deletesEntireLine) {
-        if (link.lineNumber >= 0 && link.lineNumber < buffer.size()) {
-            buffer.deleteLine(link.lineNumber);
+        if (link.lineNumber >= 0 && link.lineNumber < buffer.lineBuffer.size()) {
+            const int linkIdToRemove = link.linkId;
+            const int deletedLineNumber = link.lineNumber;
             
+            // buffer.deleteLine() will trigger unregisterHyperlink() which removes
+            // the link from mTrackedLinks, invalidating the 'link' reference.
+            // So we must not access 'link' after this point!
+            buffer.deleteLine(deletedLineNumber);
+            
+            // Adjust line numbers for links below the deleted line
             for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
-                if (it.key() != link.linkId && it.value().lineNumber > link.lineNumber) {
+                if (it.key() != linkIdToRemove && it.value().lineNumber > deletedLineNumber) {
                     it.value().lineNumber--;
                 }
             }
+            
+            // Update display
+            if (mpConsole->mUpperPane) {
+                mpConsole->mUpperPane->update();
+            }
+            if (mpConsole->mLowerPane) {
+                mpConsole->mLowerPane->update();
+            }
+            return;  // Early return - 'link' reference is now invalid
         }
     } else {
         if (link.lineNumber >= 0 && link.lineNumber < buffer.lineBuffer.size()) {

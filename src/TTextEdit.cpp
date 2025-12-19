@@ -3182,6 +3182,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 // Get the link commands and execute them
                 QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
                 if (!commands.isEmpty()) {
+                    // Notify visibility manager that link was clicked (activates timers)
+                    if (mpConsole->mpHyperlinkVisibilityManager) {
+                        mpConsole->mpHyperlinkVisibilityManager->onLinkClicked(focusedLink);
+                    }
+
                     // Mark the link as visited
                     mpBuffer->markLinkAsVisited(focusedLink);
 

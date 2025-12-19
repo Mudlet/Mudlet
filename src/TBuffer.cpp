@@ -32,6 +32,7 @@
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
 
+#include <QDateTime>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -2520,41 +2521,54 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
             // Register with visibility manager if this link has visibility settings
             if (mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mpConsole && mpConsole->mpHyperlinkVisibilityManager) {
-                // Calculate the link text from mMudLine since hyperlink started
-                int currentColumn = mMudLine.length();
-                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+                // Current line number is lineBuffer.size() - 1 (same as where we started)
+                int currentLineNumber = static_cast<int>(lineBuffer.size()) - 1;
+                
+                // Visibility currently only supports single-line hyperlinks
+                // Multi-line links will not have visibility management applied
+                if (mCurrentHyperlinkStartLine == currentLineNumber) {
+                    int currentColumn = mMudLine.length();
+                    int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
 
-                if (linkLength > 0) {
-                    // Only register if we have a valid link range
-                    QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
-                    
+                    if (linkLength > 0) {
+                        // Only register if we have a valid link range
+                        QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                        
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8-Visibility] Registering hyperlink" << mCurrentHyperlinkLinkId
-                             << "line:" << mCurrentHyperlinkStartLine
-                             << "col:" << mCurrentHyperlinkStartColumn
-                             << "length:" << linkLength
-                             << "text:" << linkText;
+                        qDebug() << "[OSC8-Visibility] Registering hyperlink" << mCurrentHyperlinkLinkId
+                                 << "line:" << mCurrentHyperlinkStartLine
+                                 << "col:" << mCurrentHyperlinkStartColumn
+                                 << "length:" << linkLength
+                                 << "text:" << linkText;
 #endif
-                    bool shouldStartConcealed = mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
-                        mCurrentHyperlinkLinkId,
-                        mCurrentHyperlinkStartLine,
-                        mCurrentHyperlinkStartColumn,
-                        linkLength,
-                        linkText,
-                        mCurrentHyperlinkStyling);
-                    
-                    // If link should start concealed, replace its text with spaces in mMudLine
-                    // before it gets committed to the buffer
-                    if (shouldStartConcealed) {
+                        bool shouldStartConcealed = mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
+                            mCurrentHyperlinkLinkId,
+                            mCurrentHyperlinkStartLine,
+                            mCurrentHyperlinkStartColumn,
+                            linkLength,
+                            linkText,
+                            mCurrentHyperlinkStyling);
+                        
+                        // If link should start concealed, replace its text with spaces in mMudLine
+                        // before it gets committed to the buffer
+                        if (shouldStartConcealed) {
 #if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "[OSC8-Visibility] Link starts concealed - replacing text with spaces";
+                            qDebug() << "[OSC8-Visibility] Link starts concealed - replacing text with spaces";
 #endif
-                        QString spaces(linkLength, ' ');
-                        mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                            QString spaces(linkLength, ' ');
+                            mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                        }
+                    } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC8-Visibility] Skipping registration for hyperlink with invalid length:" << linkLength;
+#endif
                     }
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8-Visibility] Skipping registration for hyperlink with invalid length:" << linkLength;
+                    qDebug() << "[OSC8-Visibility] Skipping visibility registration for multi-line hyperlink"
+                             << "(visibility only applies to single-line links)"
+                             << "- started on line" << mCurrentHyperlinkStartLine
+                             << "ending on line" << currentLineNumber;
 #endif
                 }
             }
@@ -3551,6 +3565,9 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     // Check for OSC 8 documentation examples trigger phrase
     // Use a 1-second debounce to prevent duplicate injection from echo + server response
     if (text.contains("!osc8-docs")) {
+        if (!mpHost || !mpHost->mpConsole) {
+            return;
+        }
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
         TBuffer& mainBuffer = mpHost->mpConsole->buffer;
 
@@ -4258,6 +4275,17 @@ bool TBuffer::deleteLines(int from, int to)
     if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to >= 0) && (to < static_cast<int>(buffer.size()))) {
         const int delta = to - from + 1;
 
+        // Collect all link IDs in the lines being deleted
+        QSet<int> linksToCheck;
+        for (int i = from; i <= to; ++i) {
+            for (const auto& tchar : buffer.at(i)) {
+                int linkId = tchar.linkIndex();
+                if (linkId > 0) {
+                    linksToCheck.insert(linkId);
+                }
+            }
+        }
+
         // Remove from the end backwards to avoid index shifting issues
         for (int i = to; i >= from; --i) {
             lineBuffer.removeAt(i);
@@ -4266,6 +4294,37 @@ bool TBuffer::deleteLines(int from, int to)
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
+
+        // Clean up link metadata for links that no longer have any characters
+        for (int linkId : linksToCheck) {
+            bool linkStillExists = false;
+            // Check if this link ID still appears in any remaining line
+            for (const auto& line : buffer) {
+                for (const auto& tchar : line) {
+                    if (tchar.linkIndex() == linkId) {
+                        linkStillExists = true;
+                        break;
+                    }
+                }
+                if (linkStillExists) {
+                    break;
+                }
+            }
+
+            // If link no longer exists anywhere, clean up all associated metadata
+            if (!linkStillExists) {
+                mLinkStates.remove(linkId);
+                mVisitedLinks.remove(linkId);
+                mLinkOriginalBackgrounds.remove(linkId);
+                mLinkOriginalCharacters.remove(linkId);
+                
+                // Notify visibility manager to clean up its internal tracking
+                if (mpConsole && mpConsole->mpHyperlinkVisibilityManager) {
+                    mpConsole->mpHyperlinkVisibilityManager->unregisterHyperlink(linkId);
+                }
+            }
+        }
+
         return true;
     }
     return false;

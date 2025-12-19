@@ -51,7 +51,11 @@ struct TrackedHyperlink {
         RevealThenConceal  // Combined: reveal first, then conceal after click
     };
     
-    // Phase tracking for RevealThenConceal
+    // Phase tracking for RevealThenConceal workflow
+    // State transitions: Initial → Revealed → WaitingToConceal → Concealed
+    // - Initial → Revealed: triggered by reveal trigger (prompt/output/input)
+    // - Revealed → WaitingToConceal: triggered by link click
+    // - WaitingToConceal → Concealed: triggered by delay timeout or expire trigger (prompt/output/input)
     enum class Phase {
         Initial,           // Waiting for reveal trigger
         Revealed,          // Revealed, waiting for click to start conceal
@@ -85,6 +89,7 @@ public:
     // Returns true if the link should start concealed (text should be replaced with spaces)
     bool registerHyperlink(int linkId, int lineNumber, int startColumn, int length,
                           const QString& originalText, const Mudlet::HyperlinkStyling& styling);
+    void unregisterHyperlink(int linkId);
     void onLinkClicked(int linkId);
     
     // Expire triggers
