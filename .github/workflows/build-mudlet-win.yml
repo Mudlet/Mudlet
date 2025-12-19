@@ -150,7 +150,7 @@ jobs:
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
 
     - name: Create intermediate artifact for debugging
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       if: env.INTERMEDIATE_ARTIFACT_NAME
       with:
         name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
@@ -162,7 +162,7 @@ jobs:
       # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
       # the given name - the Environmental variables are created by the
       # deploy-mudlet-for-windows.sh script:
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       if: env.ARTIFACT_NAME
       with:
         name: ${{env.ARTIFACT_NAME}}
