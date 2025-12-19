@@ -24,7 +24,9 @@
 #include "TBuffer.h"
 
 #include "mudlet.h"
+#include "TConsole.h"
 #include "TEvent.h"
+#include "THyperlinkCompactManager.h"
 #include "TStringUtils.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
@@ -2775,6 +2777,55 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
     return parameters;
 }
 
+QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
+{
+    if (!mpConsole || !mpConsole->mpCompactSyntaxManager) {
+        return obj;
+    }
+
+    QJsonObject expanded;
+
+    for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
+        QString key = it.key();
+        QJsonValue value = it.value();
+
+        // Expand the key if it's a shorthand
+        QMap<QString, QString> keyMap;
+        keyMap.insert(key, QString());
+        QMap<QString, QString> expandedKeys = mpConsole->mpCompactSyntaxManager->expandShorthand(keyMap);
+        QString expandedKey = expandedKeys.value(key, key);
+
+        // Recursively expand nested objects
+        if (value.isObject()) {
+            expanded[expandedKey] = expandJsonShorthands(value.toObject());
+        } else if (value.isArray()) {
+            // For arrays, expand each object element
+            QJsonArray array = value.toArray();
+            QJsonArray expandedArray;
+
+            for (const QJsonValue& item : array) {
+                if (item.isObject()) {
+                    expandedArray.append(expandJsonShorthands(item.toObject()));
+                } else {
+                    expandedArray.append(item);
+                }
+            }
+
+            expanded[expandedKey] = expandedArray;
+        } else {
+            expanded[expandedKey] = value;
+        }
+    }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    if (expanded != obj) {
+        qDebug() << "[OSC8] Expanded shorthands in JSON";
+    }
+#endif
+
+    return expanded;
+}
+
 bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling)
 {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -2799,6 +2850,9 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     }
 
     QJsonObject root = doc.object();
+
+    // Expand shorthands in the JSON object (recursive)
+    root = expandJsonShorthands(root);
 
     if (root.contains(qsl("style")) && root[qsl("style")].isObject()) {
         QJsonObject styleObj = root[qsl("style")].toObject();
