@@ -2508,6 +2508,13 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
         QString rawUrl = rest.mid(secondSemi + 1).toString();
 
+#if defined(DEBUG_OSC_PROCESSING)
+        if (!rawUrl.isEmpty()) {
+            qDebug().noquote().nospace() << "[OSC8] Received OSC 8 sequence with URL (length=" << rawUrl.length() << "): " 
+                                         << (rawUrl.length() > 80 ? rawUrl.left(80) + "..." : rawUrl);
+        }
+#endif
+
         // OSC 8 ;; closes the hyperlink
         if ((param.isEmpty() && rawUrl.isEmpty())) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -2530,9 +2537,25 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
 
             if (rawUrl.startsWith(qsl("preset:"))) {
-                QUrl presetUrl(rawUrl);
-                QString presetName = presetUrl.path();
-                QString configParam = presetUrl.hasQuery() ? QUrlQuery(presetUrl).queryItemValue("config") : QString();
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Detected preset: URL:" << rawUrl;
+#endif
+                // Extract preset name (between "preset:" and "?")
+                int queryStart = rawUrl.indexOf('?');
+                QString presetName = (queryStart > 7) ? rawUrl.mid(7, queryStart - 7) : rawUrl.mid(7);
+                
+                // Extract config parameter manually to avoid QUrl parsing issues with custom schemes
+                QString configParam;
+                if (queryStart != -1) {
+                    QString queryString = rawUrl.mid(queryStart + 1);
+                    QUrlQuery query(queryString);
+                    configParam = query.queryItemValue(qsl("config"), QUrl::FullyDecoded);
+                }
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Preset name extracted:" << presetName;
+                qDebug() << "[OSC8] Config param length:" << configParam.length();
+                qDebug() << "[OSC8] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
+#endif
                 
                 if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
                     // Parse the JSON configuration
@@ -2542,11 +2565,21 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
                         mpConsole->mpCompactSyntaxManager->registerPreset(presetName, doc.object());
 #if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "[OSC8] Registered preset:" << presetName << "with config:" << configParam;
+                        qDebug() << "[OSC8] Successfully registered preset:" << presetName;
 #endif
                     } else {
-                        qWarning() << "TBuffer::decodeOSC(...) - Failed to parse preset JSON:" << parseError.errorString();
+                        qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Failed to parse preset JSON for \"" << presetName << "\": " << parseError.errorString();
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC8] Failed JSON:" << configParam;
+#endif
                     }
+                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC8] Preset registration skipped - presetName empty:" << presetName.isEmpty() 
+                             << "configParam empty:" << configParam.isEmpty()
+                             << "mpConsole:" << (mpConsole != nullptr)
+                             << "mpCompactSyntaxManager:" << (mpConsole && mpConsole->mpCompactSyntaxManager != nullptr);
+#endif
                 }
                 // Preset definitions don't create visible hyperlinks
                 return;
