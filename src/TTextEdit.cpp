@@ -1954,9 +1954,9 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
                     QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
-                    if (command.size() > 1) {
+                    if (command.size() > 1 || hint.size() > command.size()) {
                         // This is a popup menu rather than a link as it has
-                        // more than one item.
+                        // more than one item, or has menu hints indicating menu items.
 
                         // Skip a special tooltip hint (at the start of the
                         // hints), if one was given, i.e. there is (at least)

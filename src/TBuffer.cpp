@@ -2490,7 +2490,7 @@ void TBuffer::decodeOSC(const QString& sequence)
     case static_cast<quint8>('8'): {
         // Handle OSC 8 hyperlinks in the form: "8;params;URI"
 
-        QStringView rest = QStringView(sequence).mid(1);  // skip selector "8;"
+        QStringView rest = QStringView(sequence).mid(1);  // skip selector "8"
         int firstSemi = rest.indexOf(';');
 
         if (firstSemi == -1) {
@@ -2507,6 +2507,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
         QString param = rest.left(firstSemi).toString();
 
+        // Parameters are available but not used by Mudlet currently
 #if defined(DEBUG_OSC_PROCESSING)
         if (!param.isEmpty()) {
             qDebug().noquote().nospace() << "[OSC 8] Params provided (not used by Mudlet but shown for debugging): \"" << param << "\"";
@@ -2550,6 +2551,30 @@ void TBuffer::decodeOSC(const QString& sequence)
         if (!rawUrl.isEmpty()) {
             if (rawUrl.length() > 8192) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
+                return;
+            }
+
+            // Handle preset: URI scheme for preset definitions
+            if (rawUrl.startsWith(qsl("preset:"))) {
+                QUrl presetUrl(rawUrl);
+                QString presetName = presetUrl.path();
+                QString configParam = presetUrl.hasQuery() ? QUrlQuery(presetUrl).queryItemValue("config") : QString();
+                
+                if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
+                    // Parse the JSON configuration
+                    QJsonParseError parseError;
+                    QJsonDocument doc = QJsonDocument::fromJson(configParam.toUtf8(), &parseError);
+                    
+                    if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
+                        mpConsole->mpCompactSyntaxManager->registerPreset(presetName, doc.object());
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC8] Registered preset:" << presetName << "with config:" << configParam;
+#endif
+                    } else {
+                        qWarning() << "TBuffer::decodeOSC(...) - Failed to parse preset JSON:" << parseError.errorString();
+                    }
+                }
+                // Preset definitions don't create visible hyperlinks
                 return;
             }
 
@@ -2652,7 +2677,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
 
             // Handle menu functionality by extending commands and hints
-            if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 2) {
+            if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 1) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
 #endif
@@ -2812,7 +2837,18 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
     qDebug() << "[OSC8] Decoded query string:" << decodedQueryString;
 #endif
 
-    // Parse query parameters
+    // Check for standard format: ?config={...} (entire query string is the config JSON)
+    // The JSON may have escaped quotes: config={\"style\":{...}} or unescaped: config={"style":{...}}
+    if (decodedQueryString.startsWith(qsl("config="))) {
+        QString configJson = decodedQueryString.mid(7); // Remove "config="
+        parseJsonHyperlinkConfig(configJson, parameters, styling);
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Parsed config={...} format";
+#endif
+        return parameters;
+    }
+
+    // Parse query parameters for new format: ?p=preset&config={...}
     QStringList paramPairs = decodedQueryString.split('&');
     QString presetName;
     QString configJson;
@@ -2833,44 +2869,58 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
         }
     }
 
-    // Start with preset config if specified
-    QJsonObject baseConfig;
+    // Handle preset and config parameters
+    // Priority: preset as base, config as override
+    
+    if (!presetName.isEmpty() || !configJson.isEmpty()) {
+        QJsonObject baseConfig;
 
-    if (!presetName.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
-        baseConfig = mpConsole->mpCompactSyntaxManager->getPreset(presetName);
+        // Start with preset config if specified
+        if (!presetName.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
+            baseConfig = mpConsole->mpCompactSyntaxManager->getPreset(presetName);
 #if defined(DEBUG_OSC_PROCESSING)
-        if (!baseConfig.isEmpty()) {
-            qDebug() << "[OSC8] Resolved preset" << presetName;
-        }
-#endif
-    }
-
-    // Merge with override config if present
-    if (!configJson.isEmpty()) {
-        QJsonParseError parseError;
-        QJsonDocument overrideDoc = QJsonDocument::fromJson(configJson.toUtf8(), &parseError);
-        
-        if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
-            QJsonObject overrideConfig = overrideDoc.object();
-            
-            if (!baseConfig.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
-                // Deep merge: override takes precedence
-                baseConfig = mpConsole->mpCompactSyntaxManager->mergeConfigs(baseConfig, overrideConfig);
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Merged preset with override config";
-#endif
+            if (!baseConfig.isEmpty()) {
+                qDebug() << "[OSC8] Resolved preset" << presetName;
             } else {
-                baseConfig = overrideConfig;
+                qDebug() << "[OSC8] Preset" << presetName << "not found or empty";
+            }
+#endif
+        } else {
+#if defined(DEBUG_OSC_PROCESSING)
+            if (!presetName.isEmpty()) {
+                qDebug() << "[OSC8] Cannot resolve preset - missing console or manager";
+            }
+#endif
+        }
+
+        // Merge with override config if present
+        if (!configJson.isEmpty()) {
+            QJsonParseError parseError;
+            QJsonDocument overrideDoc = QJsonDocument::fromJson(configJson.toUtf8(), &parseError);
+            
+            if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
+                QJsonObject overrideConfig = overrideDoc.object();
+                
+                if (!baseConfig.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
+                    // Deep merge: override takes precedence
+                    baseConfig = mpConsole->mpCompactSyntaxManager->mergeConfigs(baseConfig, overrideConfig);
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC8] Merged preset with override config";
+#endif
+                } else {
+                    // No preset, just use the config directly
+                    baseConfig = overrideConfig;
+                }
             }
         }
-    }
 
-    // Parse the final merged config
-    if (!baseConfig.isEmpty()) {
-        // Convert back to JSON string for parseJsonHyperlinkConfig
-        QJsonDocument finalDoc(baseConfig);
-        QString finalJson = QString::fromUtf8(finalDoc.toJson(QJsonDocument::Compact));
-        parseJsonHyperlinkConfig(finalJson, parameters, styling);
+        // Parse the final merged config
+        if (!baseConfig.isEmpty()) {
+            // Convert back to JSON string for parseJsonHyperlinkConfig
+            QJsonDocument finalDoc(baseConfig);
+            QString finalJson = QString::fromUtf8(finalDoc.toJson(QJsonDocument::Compact));
+            parseJsonHyperlinkConfig(finalJson, parameters, styling);
+        }
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
@@ -2882,51 +2932,44 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
 
 QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
 {
+    // Use the compact syntax manager for consistent shorthand expansion
     if (!mpConsole || !mpConsole->mpCompactSyntaxManager) {
-        return obj;
+        return obj; // No manager available, return unchanged
     }
-
-    QJsonObject expanded;
-
-    for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
-        QString key = it.key();
+    
+    QJsonObject result;
+    
+    for (auto it = obj.begin(); it != obj.end(); ++it) {
+        QString originalKey = it.key();
         QJsonValue value = it.value();
-
-        // Expand the key if it's a shorthand
-        QMap<QString, QString> keyMap;
-        keyMap.insert(key, QString());
-        QMap<QString, QString> expandedKeys = mpConsole->mpCompactSyntaxManager->expandShorthand(keyMap);
-        QString expandedKey = expandedKeys.value(key, key);
-
+        
+        // Check if this key is a registered shorthand using the manager
+        QMap<QString, QString> singleKeyMap;
+        singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
+        QMap<QString, QString> expandedMap = mpConsole->mpCompactSyntaxManager->expandShorthand(singleKeyMap);
+        
+        // The expanded map will have either the original key or the expanded key
+        QString resultKey = expandedMap.firstKey();
+        
         // Recursively expand nested objects
-        if (value.isObject()) {
-            expanded[expandedKey] = expandJsonShorthands(value.toObject());
-        } else if (value.isArray()) {
-            // For arrays, expand each object element
-            QJsonArray array = value.toArray();
-            QJsonArray expandedArray;
-
-            for (const QJsonValue& item : array) {
-                if (item.isObject()) {
-                    expandedArray.append(expandJsonShorthands(item.toObject()));
-                } else {
-                    expandedArray.append(item);
-                }
-            }
-
-            expanded[expandedKey] = expandedArray;
+        QJsonValue resultValue = value.isObject() ? expandJsonShorthands(value.toObject()) : value;
+        
+        // Handle duplicate keys by merging objects (e.g., both "style" and "s" -> "style")
+        if (result.contains(resultKey) && result[resultKey].isObject() && resultValue.isObject()) {
+            // Merge the objects using the compact manager's deep merge functionality
+            QJsonObject existing = result[resultKey].toObject();
+            QJsonObject toAdd = resultValue.toObject();
+            
+            // Important: when both shorthand and full names exist, shorthand should take precedence
+            // The "existing" value comes from a shorthand expansion and should be the overlay
+            // The "toAdd" value is the full name and should be the base
+            result[resultKey] = mpConsole->mpCompactSyntaxManager->mergeConfigs(toAdd, existing);
         } else {
-            expanded[expandedKey] = value;
+            result[resultKey] = resultValue;
         }
     }
-
-#if defined(DEBUG_OSC_PROCESSING)
-    if (expanded != obj) {
-        qDebug() << "[OSC8] Expanded shorthands in JSON";
-    }
-#endif
-
-    return expanded;
+    
+    return result;
 }
 
 bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling)
@@ -2957,6 +3000,12 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     // Expand shorthands in the JSON object (recursive)
     root = expandJsonShorthands(root);
 
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] After expansion, root contains:" << root.keys();
+    qDebug() << "[OSC8] Has 'menu':" << root.contains(qsl("menu"));
+    qDebug() << "[OSC8] Has 'tooltip':" << root.contains(qsl("tooltip"));
+#endif
+
     if (root.contains(qsl("style")) && root[qsl("style")].isObject()) {
         QJsonObject styleObj = root[qsl("style")].toObject();
         parseJsonStyleToHyperlinkStyling(styleObj, styling);
@@ -2970,11 +3019,21 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
         QString menuString = jsonMenuArrayToString(menuArray);
         if (!menuString.isEmpty()) {
             parameters.insert(qsl("menu"), menuString);
+            // Enable custom styling for links with menus
+            styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC8] Menu parameter added:" << menuString;
+#endif
         }
     }
 
     if (root.contains(qsl("tooltip")) && root[qsl("tooltip")].isString()) {
         parameters.insert(qsl("tooltip"), root[qsl("tooltip")].toString());
+        // Enable custom styling for links with tooltips
+        styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Tooltip parameter added:" << root[qsl("tooltip")].toString();
+#endif
     }
 
     if (root.contains(qsl("selection")) && root[qsl("selection")].isObject()) {
@@ -3029,6 +3088,16 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
 
     if (stateObj.contains(qsl("bg")) && stateObj[qsl("bg")].isString()) {
         QColor color = parseColorValue(stateObj[qsl("bg")].toString());
+        if (color.isValid()) {
+            stateStyle.backgroundColor = color;
+            stateStyle.hasBackgroundColor = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    // Also support full CSS property name
+    if (stateObj.contains(qsl("background-color")) && stateObj[qsl("background-color")].isString()) {
+        QColor color = parseColorValue(stateObj[qsl("background-color")].toString());
         if (color.isValid()) {
             stateStyle.backgroundColor = color;
             stateStyle.hasBackgroundColor = true;
@@ -3162,6 +3231,12 @@ void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudl
     styling.isUnderlined = baseStyle.isUnderlined;
     styling.underlineStyle = baseStyle.underlineStyle;
     styling.isOverlined = baseStyle.isOverlined;
+
+    // CRITICAL: Set custom styling flags if any base properties were found
+    if (baseStyle.hasCustomStyling) {
+        styling.hasCustomStyling = true;
+        styling.hasBaseCustomStyling = true;
+    }
     styling.isStrikeOut = baseStyle.isStrikeOut;
 
     if (baseStyle.hasUnderlineColor) {
@@ -3214,6 +3289,15 @@ void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudl
 
     if (styleObj.contains(qsl("disabled")) && styleObj[qsl("disabled")].isObject()) {
         parseJsonStateStyle(styleObj[qsl("disabled")].toObject(), styling.disabledStyle);
+    }
+
+    // Update hasCustomStyling flag if any pseudo-class states have custom styling
+    if (styling.linkStyle.hasCustomStyling || styling.visitedStyle.hasCustomStyling ||
+        styling.hoverStyle.hasCustomStyling || styling.activeStyle.hasCustomStyling ||
+        styling.focusStyle.hasCustomStyling || styling.focusVisibleStyle.hasCustomStyling ||
+        styling.anyLinkStyle.hasCustomStyling || styling.selectedStyle.hasCustomStyling ||
+        styling.disabledStyle.hasCustomStyling) {
+        styling.hasCustomStyling = true;
     }
 
     applyAccessibilityEnhancements(styling);
@@ -5507,6 +5591,47 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "• RGB: \x1b]8;;send:rgb?config={\"style\":{\"color\":\"rgb(255,0,0)\"}}\x1b\\Red (RGB)\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
+    // Shorthand Syntax & Presets
+    // ═══════════════════════════════════════════════════════════════════
+    output += "══════════════════════════════════════════════════════════════════════\n";
+    output += "SHORTHAND SYNTAX & PRESETS\n";
+    output += "══════════════════════════════════════════════════════════════════════\n\n";
+
+    output += "Shorthand Syntax (compact JSON keys):\n";
+    output += "• Short style: \x1b]8;;send:short?config={\"s\":{\"c\":\"red\",\"b\":true}}\x1b\\Shorthand Style\x1b]8;;\x1b\\ (s=style, c=color, b=bold)\n";
+    output += "• Short menu: \x1b]8;;send:menu?config={\"m\":[{\"Attack\":\"send:attack\"},{\"Defend\":\"send:defend\"}]}\x1b\\Shorthand Menu\x1b]8;;\x1b\\ (m=menu)\n";
+    output += "• Short tooltip: \x1b]8;;send:tip?config={\"t\":\"Click for info\",\"s\":{\"c\":\"blue\"}}\x1b\\Shorthand Tooltip\x1b]8;;\x1b\\ (t=tooltip)\n";
+    output += "• Mixed syntax: \x1b]8;;send:mixed?config={\"s\":{\"c\":\"green\",\"b\":true},\"menu\":[{\"Go\":\"send:go\"}]}\x1b\\Mixed Short/Full\x1b]8;;\x1b\\\n";
+    output += "• Full syntax test: \x1b]8;;send:fulltest?config={\"style\":{\"color\":\"blue\"},\"menu\":[{\"Test\":\"send:test\"}]}\x1b\\Full Syntax Menu\x1b]8;;\x1b\\\n";
+    output += "• Single menu test: \x1b]8;;send:single?config={\"menu\":[{\"Defend\":\"send:defend\"}]}\x1b\\Single Item Menu\x1b]8;;\x1b\\\n";
+    output += "• Simple test: \x1b]8;;send:simple\x1b\\Simple Link\x1b]8;;\x1b\\\n\n";
+
+    output += "Style shortcuts inside 's' object:\n";
+    output += "• Color shortcuts: \x1b]8;;send:colors?config={\"s\":{\"c\":\"red\",\"bg\":\"yellow\"}}\x1b\\Color Shorts\x1b]8;;\x1b\\ (c=color, bg=background-color)\n";
+    output += "• Text shortcuts: \x1b]8;;send:text?config={\"s\":{\"b\":true,\"i\":true,\"u\":true}}\x1b\\Text Shorts\x1b]8;;\x1b\\ (b=bold, i=italic, u=underline)\n";
+    output += "• Decoration shortcuts: \x1b]8;;send:deco?config={\"s\":{\"u\":\"wavy\",\"st\":true,\"o\":true}}\x1b\\Deco Shorts\x1b]8;;\x1b\\ (st=strikethrough, o=overline)\n\n";
+
+    output += "Define a preset (invisible - defines 'btn' preset):\n";
+    output += "\x1b]8;;preset:btn?config={\"style\":{\"bg\":\"blue\",\"color\":\"white\",\"bold\":true},\"menu\":[{\"Click\":\"send:click\"}]}\x1b\\\x1b]8;;\x1b\\";
+    
+    output += "Use presets:\n";
+    output += "• Basic preset: \x1b]8;;send:action?p=btn\x1b\\Button Style\x1b]8;;\x1b\\ (uses preset 'btn')\n";
+    output += "• Preset + override: \x1b]8;;send:custom?p=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Custom Button\x1b]8;;\x1b\\ (btn preset + yellow text)\n\n";
+
+    output += "Define multiple presets:\n";
+    output += "\x1b]8;;preset:warn?config={\"style\":{\"bg\":\"orange\",\"color\":\"black\",\"bold\":true}}\x1b\\\x1b]8;;\x1b\\";
+    output += "\x1b]8;;preset:success?config={\"style\":{\"bg\":\"green\",\"color\":\"white\",\"bold\":true}}\x1b\\\x1b]8;;\x1b\\";
+    output += "\x1b]8;;preset:danger?config={\"style\":{\"bg\":\"red\",\"color\":\"white\",\"bold\":true}}\x1b\\\x1b]8;;\x1b\\";
+    
+    output += "Use different presets:\n";
+    output += "• \x1b]8;;send:warning?p=warn\x1b\\Warning\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:ok?p=success\x1b\\Success\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:error?p=danger\x1b\\Danger\x1b]8;;\x1b\\\n\n";
+
+    output += "Combine presets with shorthand overrides:\n";
+    output += "• \x1b]8;;send:special?p=btn&config={\"s\":{\"c\":\"gold\",\"u\":\"wavy\"},\"t\":\"Special action\"}\x1b\\Special Button\x1b]8;;\x1b\\\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
     // Real World Examples
     // ═══════════════════════════════════════════════════════════════════
     output += "══════════════════════════════════════════════════════════════════════\n";
@@ -5521,7 +5646,7 @@ void TBuffer::injectOSC8DocumentationExamples()
 
     output += "Combat:\n";
     output += "  \x1b]8;;send:attack?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true,\"hover\":{\"bg\":\"#ffcccc\",\"color\":\"#000000\"}},\"menu\":[{\"Quick Strike\":\"send:quick\"},{\"Power Attack\":\"send:power\"},\"-\",{\"Feint\":\"send:feint\"}]}\x1b\\⚔️ Attack\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:defend?config={\"style\":{\"color\":\"#006600\",\"bold\":true,\"hover\":{\"bg\":\"#ccffcc\",\"color\":\"#000000\"}},\"tooltip\":\"Defensive stance - reduces damage by 50%\"}\x1b\\🛡️ Defend\x1b]8;;\x1b\\\n\n";
+    output += "\x1b]8;;send:defend?config={\"style\":{\"color\":\"#006600\",\"bold\":true,\"hover\":{\"bg\":\"#ccffcc\",\"color\":\"#000000\"}},\"tooltip\":\"Defensive stance - reduces damage by 50 percent\"}\x1b\\🛡️ Defend\x1b]8;;\x1b\\\n\n";
 
     output += "RPG Items:\n";
     output += "  \x1b]8;;send:examine?config={\"style\":{\"color\":\"#cc6600\",\"italic\":true,\"hover\":{\"bg\":\"#ffe6cc\",\"color\":\"#000000\"}},\"tooltip\":\"Magic sword with fire enchantment\"}\x1b\\🗡️ Flaming Blade\x1b]8;;\x1b\\ ";
