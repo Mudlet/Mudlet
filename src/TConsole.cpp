@@ -2722,7 +2722,7 @@ void TConsole::initializeOSC8StyleFeature()
     mpCompactSyntaxManager->registerShorthand(qsl("al"), qsl("any-link"), this);
 
     // Register preset-allowed properties
-    mpCompactSyntaxManager->registerPresetProperty(qsl("style"), this);
+    mpCompactSyntaxManager->registerPresetProperty(qsl("style"), this, true);
 }
 
 void TConsole::initializeOSC8MenuFeature()
@@ -2735,7 +2735,7 @@ void TConsole::initializeOSC8MenuFeature()
     mpCompactSyntaxManager->registerShorthand(qsl("m"), qsl("menu"), this);
 
     // Register preset-allowed property
-    mpCompactSyntaxManager->registerPresetProperty(qsl("menu"), this);
+    mpCompactSyntaxManager->registerPresetProperty(qsl("menu"), this, true);
 }
 
 void TConsole::initializeOSC8TooltipFeature()
@@ -2748,5 +2748,5 @@ void TConsole::initializeOSC8TooltipFeature()
     mpCompactSyntaxManager->registerShorthand(qsl("t"), qsl("tooltip"), this);
 
     // Register preset-allowed property
-    mpCompactSyntaxManager->registerPresetProperty(qsl("tooltip"), this);
+    mpCompactSyntaxManager->registerPresetProperty(qsl("tooltip"), this, true);
 }
