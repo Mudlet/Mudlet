@@ -37,10 +37,6 @@ THyperlinkCompactManager::THyperlinkCompactManager(TConsole* pConsole, QObject* 
 
 THyperlinkCompactManager::~THyperlinkCompactManager() = default;
 
-// ═══════════════════════════════════════════════════════════
-// Shorthand Registration (Phase 1)
-// ═══════════════════════════════════════════════════════════
-
 void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const QString& fullName, QObject* owner)
 {
     if (shorthand.isEmpty() || fullName.isEmpty()) {
@@ -63,7 +59,6 @@ void THyperlinkCompactManager::unregisterOwner(QObject* owner)
         return;
     }
 
-    // Remove all shortcuts owned by this object
     auto it = mShorthandRegistry.begin();
     while (it != mShorthandRegistry.end()) {
         if (it.value().second == owner) {
@@ -95,12 +90,10 @@ QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QStr
     for (auto it = params.constBegin(); it != params.constEnd(); ++it) {
         const QString& key = it.key();
 
-        // Check if this key is a registered shorthand
         if (mShorthandRegistry.contains(key)) {
             const auto& registration = mShorthandRegistry[key];
             const QPointer<QObject>& owner = registration.second;
 
-            // Only expand if owner is still valid (or nullptr = core shortcut)
             if (owner.isNull() || !owner.isNull()) {
                 expanded.insert(registration.first, it.value());
 #if defined(DEBUG_OSC_PROCESSING)
@@ -109,17 +102,11 @@ QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QStr
                 continue;
             }
         }
-
-        // Not a shorthand or owner destroyed - keep original key
         expanded.insert(key, it.value());
     }
 
     return expanded;
 }
-
-// ═══════════════════════════════════════════════════════════
-// Preset System (Phase 2)
-// ═══════════════════════════════════════════════════════════
 
 void THyperlinkCompactManager::registerPresetProperty(const QString& propertyName, QObject* owner, bool isCore)
 {
