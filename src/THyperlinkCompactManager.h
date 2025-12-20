@@ -30,6 +30,15 @@
 
 class TConsole;
 
+// Registry entry for preset properties
+struct PresetPropertyEntry {
+    QPointer<QObject> owner;
+    bool isCore;
+    
+    PresetPropertyEntry() : owner(nullptr), isCore(false) {}
+    PresetPropertyEntry(QObject* o, bool core) : owner(o), isCore(core) {}
+};
+
 // Pure plugin framework for OSC 8 hyperlink compact syntax
 // Features (style, menu, tooltip, visibility, selection, etc.) register themselves
 // Provides shorthand expansion and preset management with deep merge support
@@ -65,7 +74,7 @@ public:
     // ═══════════════════════════════════════════════════════════
 
     // Register a property as preset-aware (allows it to be included in presets)
-    void registerPresetProperty(const QString& propertyName, QObject* owner = nullptr);
+    void registerPresetProperty(const QString& propertyName, QObject* owner = nullptr, bool isCore = false);
 
     // Check if a property can be used in presets
     bool isPresetProperty(const QString& propertyName) const;
@@ -101,9 +110,9 @@ private:
     // Owner is QPointer for feature shortcuts (auto-cleanup when feature destroyed)
     QHash<QString, QPair<QString, QPointer<QObject>>> mShorthandRegistry;
 
-    // Preset property registry: propertyName → owner
-    // Same ownership model as shorthand registry
-    QHash<QString, QPointer<QObject>> mPresetPropertyRegistry;
+    // Preset property registry: propertyName → {owner, isCore}
+    // Core properties are always valid, non-core depend on owner validity
+    QHash<QString, PresetPropertyEntry> mPresetPropertyRegistry;
 
     // Preset storage: name → config JSON
     // Session-scoped: cleared when connection closes

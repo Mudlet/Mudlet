@@ -76,7 +76,7 @@ void THyperlinkCompactManager::unregisterOwner(QObject* owner)
     // Remove all preset properties owned by this object
     auto it2 = mPresetPropertyRegistry.begin();
     while (it2 != mPresetPropertyRegistry.end()) {
-        if (it2.value() == owner) {
+        if (it2.value().owner == owner) {
             it2 = mPresetPropertyRegistry.erase(it2);
         } else {
             ++it2;
@@ -121,19 +121,20 @@ QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QStr
 // Preset System (Phase 2)
 // ═══════════════════════════════════════════════════════════
 
-void THyperlinkCompactManager::registerPresetProperty(const QString& propertyName, QObject* owner)
+void THyperlinkCompactManager::registerPresetProperty(const QString& propertyName, QObject* owner, bool isCore)
 {
     if (propertyName.isEmpty()) {
         qWarning() << "THyperlinkCompactManager::registerPresetProperty: empty propertyName";
         return;
     }
 
-    mPresetPropertyRegistry.insert(propertyName, QPointer<QObject>(owner));
+    mPresetPropertyRegistry.insert(propertyName, PresetPropertyEntry(owner, isCore));
     emit presetPropertyRegistered(propertyName);
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[CompactSyntax] Registered preset property:" << propertyName
-             << "(owner:" << (owner ? owner->objectName() : "core") << ")";
+             << "(owner:" << (owner ? owner->objectName() : "none")
+             << ", isCore:" << isCore << ")";
 #endif
 }
 
@@ -143,9 +144,9 @@ bool THyperlinkCompactManager::isPresetProperty(const QString& propertyName) con
         return false;
     }
 
-    // Check if owner is still valid
-    const QPointer<QObject>& owner = mPresetPropertyRegistry[propertyName];
-    return owner.isNull() || !owner.isNull(); // null = core property (always valid)
+    const PresetPropertyEntry& entry = mPresetPropertyRegistry[propertyName];
+    // Valid if core property OR owner still exists
+    return entry.isCore || !entry.owner.isNull();
 }
 
 void THyperlinkCompactManager::registerPreset(const QString& name, const QJsonObject& config)
