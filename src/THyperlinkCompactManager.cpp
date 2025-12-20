@@ -80,7 +80,7 @@ void THyperlinkCompactManager::unregisterOwner(QObject* owner)
 #endif
 }
 
-QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QString, QString>& params)
+QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QString, QString>& params) const
 {
     QMap<QString, QString> expanded;
 

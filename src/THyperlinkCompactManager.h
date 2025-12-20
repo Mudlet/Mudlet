@@ -73,7 +73,7 @@ public:
     void unregisterOwner(QObject* owner);
 
     // Expand shorthand properties to full names
-    QMap<QString, QString> expandShorthand(const QMap<QString, QString>& params);
+    QMap<QString, QString> expandShorthand(const QMap<QString, QString>& params) const;
 
     // Query registered shortcuts (for debugging/introspection)
     int getShorthandCount() const { return mShorthandRegistry.size(); }
