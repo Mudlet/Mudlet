@@ -924,6 +924,12 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                     "<a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a></h2>"
                                     "<h3>Copyright © 2019 Egor-Skriptunoff</h3>"));
 
+#if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
+    QString SentryHeader(tr("<h2><u>Sentry Native - Crash reporting SDK</u></h2>"
+                            "<h3>Copyright © 2019 Sentry (https://sentry.io) and individual contributors.<br>"
+                            "All rights reserved.</h3>"));
+#endif
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(qsl("<html>%1<body>%2<hr>")
@@ -1023,6 +1029,12 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     license_3rdParty_texts.append(qsl("<hr>%41%42")
                                   .arg(Utf8_filenamesHeader,                   // 41 - utf8_filename header - translatable
                                        MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
+
+#if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
+    license_3rdParty_texts.append(qsl("<hr>%1%2")
+                                  .arg(SentryHeader,                           // Sentry header - translatable
+                                       MIT_Body));                             // Sentry body MIT - not translatable
+#endif
 
     QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
                                "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
