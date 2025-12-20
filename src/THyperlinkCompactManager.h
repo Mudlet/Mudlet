@@ -61,10 +61,6 @@ public:
     explicit THyperlinkCompactManager(QObject* parent = nullptr);
     ~THyperlinkCompactManager();
 
-    // ═══════════════════════════════════════════════════════════
-    // Shorthand Registration (Phase 1)
-    // ═══════════════════════════════════════════════════════════
-
     // Register a shorthand expansion (e.g., "s" → "style")
     // Owner parameter enables automatic cleanup when feature is destroyed
     void registerShorthand(const QString& shorthand, const QString& fullName, QObject* owner = nullptr);
@@ -78,10 +74,6 @@ public:
     // Query registered shortcuts (for debugging/introspection)
     int getShorthandCount() const { return mShorthandRegistry.size(); }
     QStringList getRegisteredShorthands() const { return mShorthandRegistry.keys(); }
-
-    // ═══════════════════════════════════════════════════════════
-    // Preset System (Phase 2)
-    // ═══════════════════════════════════════════════════════════
 
     // Register a property as preset-aware (allows it to be included in presets)
     void registerPresetProperty(const QString& propertyName, QObject* owner = nullptr, bool isCore = false);
