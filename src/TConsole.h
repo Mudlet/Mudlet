@@ -329,7 +329,7 @@ public:
     TFontAttributes mDisplayFontDetails;
 
     // Compact syntax framework (shorthand + presets)
-    // Features plugin to this system when they initialize
+    // Features plug into this system when they initialize
     std::unique_ptr<THyperlinkCompactManager> mpCompactSyntaxManager;
     // Manager for OSC 8 hyperlink selection state (radio/checkbox behavior)
     std::unique_ptr<THyperlinkSelectionManager> mpSelectionManager;

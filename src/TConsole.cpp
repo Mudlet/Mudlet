@@ -78,9 +78,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
-    mpCompactSyntaxManager = std::make_unique<THyperlinkCompactManager>(this, this);
-    mpSelectionManager = std::make_unique<THyperlinkSelectionManager>(this);
-
+    mpCompactSyntaxManager = std::make_unique<THyperlinkCompactManager>(this);
     initializeOSC8StyleFeature();
     initializeOSC8MenuFeature();
     initializeOSC8TooltipFeature();
@@ -658,7 +656,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // main console to a width of zero - but that is not useful from a NAWS
         // or event handling system point of view - so abort doing anything
         // with the event:
-        QWidget::resizeEvent(event);
         return;
     }
 

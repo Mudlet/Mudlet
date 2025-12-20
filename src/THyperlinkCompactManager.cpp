@@ -24,15 +24,11 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 
-THyperlinkCompactManager::THyperlinkCompactManager(TConsole* pConsole, QObject* parent)
+THyperlinkCompactManager::THyperlinkCompactManager(QObject* parent)
 : QObject(parent)
-, mpConsole(pConsole)
 {
     // Pure framework - no feature knowledge!
     // Features register themselves when they initialize
-    if (!pConsole) {
-        qWarning() << "THyperlinkCompactManager: pConsole parameter is null";
-    }
 }
 
 THyperlinkCompactManager::~THyperlinkCompactManager() = default;
