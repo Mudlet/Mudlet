@@ -2488,8 +2488,6 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
         break;
     case static_cast<quint8>('8'): {
-        // Handle OSC 8 hyperlinks in the form: "8;params;URI"
-
         QStringView rest = QStringView(sequence).mid(1);  // skip selector "8"
         int firstSemi = rest.indexOf(';');
 
@@ -2554,7 +2552,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                 return;
             }
 
-            // Handle preset: URI scheme for preset definitions
             if (rawUrl.startsWith(qsl("preset:"))) {
                 QUrl presetUrl(rawUrl);
                 QString presetName = presetUrl.path();
@@ -2848,7 +2845,6 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
         return parameters;
     }
 
-    // Parse query parameters for new format: ?preset=NAME&config={...}
     QStringList paramPairs = decodedQueryString.split('&');
     QString presetName;
     QString configJson;
@@ -2869,13 +2865,9 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
         }
     }
 
-    // Handle preset and config parameters
-    // Priority: preset as base, config as override
-    
     if (!presetName.isEmpty() || !configJson.isEmpty()) {
         QJsonObject baseConfig;
 
-        // Start with preset config if specified
         if (!presetName.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
             baseConfig = mpConsole->mpCompactSyntaxManager->getPreset(presetName);
 #if defined(DEBUG_OSC_PROCESSING)
@@ -2908,7 +2900,6 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
                     qDebug() << "[OSC8] Merged preset with override config";
 #endif
                 } else {
-                    // No preset, just use the config directly
                     baseConfig = overrideConfig;
                 }
             }
@@ -2916,7 +2907,6 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
 
         // Parse the final merged config
         if (!baseConfig.isEmpty()) {
-            // Convert back to JSON string for parseJsonHyperlinkConfig
             QJsonDocument finalDoc(baseConfig);
             QString finalJson = QString::fromUtf8(finalDoc.toJson(QJsonDocument::Compact));
             parseJsonHyperlinkConfig(finalJson, parameters, styling);
@@ -2932,7 +2922,6 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
 
 QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
 {
-    // Use the compact syntax manager for consistent shorthand expansion
     if (!mpConsole || !mpConsole->mpCompactSyntaxManager) {
         return obj; // No manager available, return unchanged
     }
@@ -2943,7 +2932,6 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
         QString originalKey = it.key();
         QJsonValue value = it.value();
         
-        // Check if this key is a registered shorthand using the manager
         QMap<QString, QString> singleKeyMap;
         singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
         QMap<QString, QString> expandedMap = mpConsole->mpCompactSyntaxManager->expandShorthand(singleKeyMap);
@@ -2960,9 +2948,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
             QJsonObject existing = result[resultKey].toObject();
             QJsonObject toAdd = resultValue.toObject();
             
-            // Important: when both shorthand and full names exist, shorthand should take precedence
-            // The "existing" value comes from a shorthand expansion and should be the overlay
-            // The "toAdd" value is the full name and should be the base
+            // When both shorthand and full names exist, shorthand takes precedence
             result[resultKey] = mpConsole->mpCompactSyntaxManager->mergeConfigs(toAdd, existing);
         } else {
             result[resultKey] = resultValue;

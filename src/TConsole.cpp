@@ -78,12 +78,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
-    // Initialize compact syntax framework FIRST (pure utility, no features)
     mpCompactSyntaxManager = new THyperlinkCompactManager(this, this);
-    // Initialize hyperlink selection manager
     mpSelectionManager = new THyperlinkSelectionManager(this);
 
-    // Register existing OSC 8 features with the framework
     initializeOSC8StyleFeature();
     initializeOSC8MenuFeature();
     initializeOSC8TooltipFeature();
@@ -2724,7 +2721,6 @@ void TConsole::initializeOSC8StyleFeature()
     mpCompactSyntaxManager->registerShorthand(qsl("l"), qsl("link"), this);
     mpCompactSyntaxManager->registerShorthand(qsl("al"), qsl("any-link"), this);
 
-    // Register preset-allowed properties
     mpCompactSyntaxManager->registerPresetProperty(qsl("style"), this, true);
 }
 
@@ -2737,7 +2733,6 @@ void TConsole::initializeOSC8MenuFeature()
     // Register shorthand for menu property
     mpCompactSyntaxManager->registerShorthand(qsl("m"), qsl("menu"), this);
 
-    // Register preset-allowed property
     mpCompactSyntaxManager->registerPresetProperty(qsl("menu"), this, true);
 }
 
@@ -2750,6 +2745,5 @@ void TConsole::initializeOSC8TooltipFeature()
     // Register shorthand for tooltip property
     mpCompactSyntaxManager->registerShorthand(qsl("t"), qsl("tooltip"), this);
 
-    // Register preset-allowed property
     mpCompactSyntaxManager->registerPresetProperty(qsl("tooltip"), this, true);
 }
