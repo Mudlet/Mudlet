@@ -78,7 +78,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
-    mpCompactSyntaxManager = std::make_unique<THyperlinkCompactManager>(this, this);
+    mpCompactSyntaxManager = std::make_unique<THyperlinkCompactManager>(this);
     initializeOSC8StyleFeature();
     initializeOSC8MenuFeature();
     initializeOSC8TooltipFeature();

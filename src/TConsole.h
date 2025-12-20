@@ -328,7 +328,7 @@ public:
     TFontAttributes mDisplayFontDetails;
 
     // Compact syntax framework (shorthand + presets)
-    // Features plugin to this system when they initialize
+    // Features plug into this system when they initialize
     std::unique_ptr<THyperlinkCompactManager> mpCompactSyntaxManager;
 
     // Only assigned a value for user windows:

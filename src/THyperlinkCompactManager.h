@@ -58,7 +58,7 @@ class THyperlinkCompactManager : public QObject
     Q_DISABLE_COPY(THyperlinkCompactManager)
 
 public:
-    explicit THyperlinkCompactManager(TConsole* pConsole, QObject* parent = nullptr);
+    explicit THyperlinkCompactManager(QObject* parent = nullptr);
     ~THyperlinkCompactManager();
 
     // ═══════════════════════════════════════════════════════════
@@ -113,8 +113,6 @@ signals:
     void presetsCleared();
 
 private:
-    QPointer<TConsole> mpConsole;
-
     // Shorthand registry: shorthand → (fullName, owner)
     // Owner is nullptr for core shortcuts (always available)
     // Owner is QPointer for feature shortcuts (auto-cleanup when feature destroyed)
