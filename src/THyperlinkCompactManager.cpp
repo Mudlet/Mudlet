@@ -44,7 +44,8 @@ void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const
         return;
     }
 
-    mShorthandRegistry.insert(shorthand, qMakePair(fullName, QPointer<QObject>(owner)));
+    bool isCore = (owner == nullptr);
+    mShorthandRegistry.insert(shorthand, ShorthandEntry(fullName, owner, isCore));
     emit shorthandRegistered(shorthand, fullName);
 
 #if defined(DEBUG_OSC_PROCESSING)
@@ -61,7 +62,7 @@ void THyperlinkCompactManager::unregisterOwner(QObject* owner)
 
     auto it = mShorthandRegistry.begin();
     while (it != mShorthandRegistry.end()) {
-        if (it.value().second == owner) {
+        if (it.value().owner == owner) {
             it = mShorthandRegistry.erase(it);
         } else {
             ++it;
@@ -92,12 +93,11 @@ QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QStr
 
         if (mShorthandRegistry.contains(key)) {
             const auto& registration = mShorthandRegistry[key];
-            const QPointer<QObject>& owner = registration.second;
 
-            if (owner.isNull() || !owner.isNull()) {
-                expanded.insert(registration.first, it.value());
+            if (registration.isCore || !registration.owner.isNull()) {
+                expanded.insert(registration.fullName, it.value());
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[CompactSyntax] Expanded shorthand:" << key << "→" << registration.first;
+                qDebug() << "[CompactSyntax] Expanded shorthand:" << key << "→" << registration.fullName;
 #endif
                 continue;
             }

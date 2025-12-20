@@ -39,6 +39,16 @@ struct PresetPropertyEntry {
     PresetPropertyEntry(QObject* o, bool core) : owner(o), isCore(core) {}
 };
 
+// Registry entry for shorthand mappings
+struct ShorthandEntry {
+    QString fullName;
+    QPointer<QObject> owner;
+    bool isCore;
+    
+    ShorthandEntry() : owner(nullptr), isCore(false) {}
+    ShorthandEntry(const QString& full, QObject* o, bool core) : fullName(full), owner(o), isCore(core) {}
+};
+
 // Pure plugin framework for OSC 8 hyperlink compact syntax
 // Features (style, menu, tooltip, visibility, selection, etc.) register themselves
 // Provides shorthand expansion and preset management with deep merge support
@@ -108,7 +118,7 @@ private:
     // Shorthand registry: shorthand → (fullName, owner)
     // Owner is nullptr for core shortcuts (always available)
     // Owner is QPointer for feature shortcuts (auto-cleanup when feature destroyed)
-    QHash<QString, QPair<QString, QPointer<QObject>>> mShorthandRegistry;
+    QHash<QString, ShorthandEntry> mShorthandRegistry;
 
     // Preset property registry: propertyName → {owner, isCore}
     // Core properties are always valid, non-core depend on owner validity

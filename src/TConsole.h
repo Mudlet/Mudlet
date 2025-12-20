@@ -23,6 +23,8 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program; if not, write to the                         *
  *   Free Software Foundation, Inc.,                                       *
+
+#include <memory>
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
@@ -328,9 +330,9 @@ public:
 
     // Compact syntax framework (shorthand + presets)
     // Features plugin to this system when they initialize
-    QPointer<THyperlinkCompactManager> mpCompactSyntaxManager;
+    std::unique_ptr<THyperlinkCompactManager> mpCompactSyntaxManager;
     // Manager for OSC 8 hyperlink selection state (radio/checkbox behavior)
-    THyperlinkSelectionManager* mpSelectionManager = nullptr;
+    std::unique_ptr<THyperlinkSelectionManager> mpSelectionManager;
 
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
