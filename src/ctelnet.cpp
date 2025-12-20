@@ -136,6 +136,10 @@ void cTelnet::reset()
     iac = false;
     iac2 = false;
     insb = false;
+    // Stop any pending password mode timeout
+    if (mTimerPasswordModeTimeout) {
+        mTimerPasswordModeTimeout->stop();
+    }
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
     mGA_Driver = false;
@@ -154,6 +158,9 @@ cTelnet::~cTelnet()
     }
     if (mTimerPass) {
         mTimerPass->stop();
+    }
+    if (mTimerPasswordModeTimeout) {
+        mTimerPasswordModeTimeout->stop();
     }
     if (mpPostingTimer) {
         mpPostingTimer->stop();
@@ -2661,6 +2668,30 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     hisOptionState[idxOption] = true;
                     mpHost->setRemoteEchoingActive(true);
                     qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+
+                    // Start a safety timeout for password mode, but only during
+                    // the first 5 minutes of a connection (login phase). This
+                    // protects against servers that fail to send WONT ECHO due
+                    // to network issues or bugs, while not affecting legitimate
+                    // password prompts later in the session (e.g., admin commands).
+                    // Skip this if the user has disabled password masking entirely.
+                    constexpr auto LOGIN_PHASE_MS = 5min;
+                    constexpr auto PASSWORD_TIMEOUT_MS = 60s;
+                    if (!mpHost->mDisablePasswordMasking
+                        && mConnectionTimer.isValid()
+                        && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
+                        if (!mTimerPasswordModeTimeout) {
+                            mTimerPasswordModeTimeout = new QTimer(this);
+                            mTimerPasswordModeTimeout->setSingleShot(true);
+                            connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
+                                if (mpHost && mpHost->isRemoteEchoingActive()) {
+                                    qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
+                                    mpHost->setRemoteEchoingActive(false);
+                                }
+                            });
+                        }
+                        mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
+                    }
                 } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
@@ -2781,6 +2812,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState[idxOption] = false;
 
                 if (option == OPT_ECHO) {
+                    // Cancel any pending password mode timeout since we got the proper WONT ECHO
+                    if (mTimerPasswordModeTimeout) {
+                        mTimerPasswordModeTimeout->stop();
+                    }
                     mpHost->setRemoteEchoingActive(false);
                     qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
