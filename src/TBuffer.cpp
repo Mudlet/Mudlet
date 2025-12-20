@@ -2800,7 +2800,7 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
         return parameters;
     }
 
-    // Parse query parameters for new format: ?p=preset&config={...}
+    // Parse query parameters for new format: ?preset=NAME&config={...}
     QStringList paramPairs = decodedQueryString.split('&');
     QString presetName;
     QString configJson;
@@ -2814,7 +2814,7 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
         QString key = pair.left(eqPos);
         QString value = pair.mid(eqPos + 1);
 
-        if (key == qsl("p") || key == qsl("preset")) {
+        if (key == qsl("preset")) {
             presetName = value;
         } else if (key == qsl("config")) {
             configJson = value;
@@ -5522,8 +5522,8 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;preset:btn?config={\"style\":{\"bg\":\"blue\",\"color\":\"white\",\"bold\":true},\"menu\":[{\"Click\":\"send:click\"}]}\x1b\\\x1b]8;;\x1b\\";
     
     output += "Use presets:\n";
-    output += "• Basic preset: \x1b]8;;send:action?p=btn\x1b\\Button Style\x1b]8;;\x1b\\ (uses preset 'btn')\n";
-    output += "• Preset + override: \x1b]8;;send:custom?p=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Custom Button\x1b]8;;\x1b\\ (btn preset + yellow text)\n\n";
+    output += "• Basic preset: \x1b]8;;send:action?preset=btn\x1b\\Button Style\x1b]8;;\x1b\\ (uses preset 'btn')\n";
+    output += "• Preset + override: \x1b]8;;send:custom?preset=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Custom Button\x1b]8;;\x1b\\ (btn preset + yellow text)\n\n";
 
     output += "Define multiple presets:\n";
     output += "\x1b]8;;preset:warn?config={\"style\":{\"bg\":\"orange\",\"color\":\"black\",\"bold\":true}}\x1b\\\x1b]8;;\x1b\\";
@@ -5531,12 +5531,12 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;preset:danger?config={\"style\":{\"bg\":\"red\",\"color\":\"white\",\"bold\":true}}\x1b\\\x1b]8;;\x1b\\";
     
     output += "Use different presets:\n";
-    output += "• \x1b]8;;send:warning?p=warn\x1b\\Warning\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:ok?p=success\x1b\\Success\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:error?p=danger\x1b\\Danger\x1b]8;;\x1b\\\n\n";
+    output += "• \x1b]8;;send:warning?preset=warn\x1b\\Warning\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:ok?preset=success\x1b\\Success\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:error?preset=danger\x1b\\Danger\x1b]8;;\x1b\\\n\n";
 
     output += "Combine presets with shorthand overrides:\n";
-    output += "• \x1b]8;;send:special?p=btn&config={\"s\":{\"c\":\"gold\",\"u\":\"wavy\"},\"t\":\"Special action\"}\x1b\\Special Button\x1b]8;;\x1b\\\n\n";
+    output += "• \x1b]8;;send:special?preset=btn&config={\"s\":{\"c\":\"gold\",\"u\":\"wavy\"},\"t\":\"Special action\"}\x1b\\Special Button\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
     // Real World Examples
