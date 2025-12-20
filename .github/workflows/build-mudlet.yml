@@ -340,7 +340,7 @@ jobs:
         WITH_SENTRY: "ON"
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
