@@ -512,10 +512,23 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                 launchPath = installerPath;
             }
 
-            // Use timeout command for a 3 second delay, then run the installer
-            // /t 3 = wait 3 seconds, /nobreak = ignore keypresses
-            QProcess::startDetached(qsl("cmd"), QStringList() << qsl("/c") << qsl("timeout /t 3 /nobreak > nul && \"%1\"").arg(launchPath));
-            qWarning() << "Launching installer with delay:" << launchPath;
+            // Create a batch file to handle delayed launch - this avoids shell quoting issues
+            // that occur when passing complex commands through QProcess::startDetached
+            QString batchPath = qsl("%1/mudlet-update.bat").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+            QFile batchFile(batchPath);
+            if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                // Use full path to Windows timeout to avoid MSYS2/Cygwin conflicts
+                // /t 3 = wait 3 seconds, /nobreak = ignore keypresses
+                QString batchContent = qsl("@echo off\r\nC:\\Windows\\System32\\timeout.exe /t 3 /nobreak > nul\r\n\"%1\"\r\n").arg(QDir::toNativeSeparators(launchPath));
+                batchFile.write(batchContent.toLocal8Bit());
+                batchFile.close();
+
+                QProcess::startDetached(batchPath, QStringList());
+                qWarning() << "Launching installer via batch file:" << launchPath;
+            } else {
+                qWarning() << "Failed to create batch file, attempting direct launch";
+                QProcess::startDetached(launchPath, QStringList());
+            }
         } else {
             qWarning() << "Installer not found at:" << installerPath << "- will try on next restart";
         }
