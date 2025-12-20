@@ -951,8 +951,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         }
 
         popup->addSeparator();
-        foreach(auto label, contextMenuItems.keys()) {
-            auto eventName = contextMenuItems.value(label);
+        for (const auto& [label, eventName] : contextMenuItems.asKeyValueRange()) {
             auto action = new QAction(label, this);
             connect(action, &QAction::triggered, this, [=, this]() {
                 TEvent mudletEvent = {};
