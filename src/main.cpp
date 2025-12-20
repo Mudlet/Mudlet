@@ -44,6 +44,12 @@
 #include <memory>
 #include <vector>
 
+#if defined(Q_OS_LINUX)
+#include <QStandardPaths>
+#include <QFile>
+#include <QTextStream>
+#endif
+
 
 
 #include "utils.h"
@@ -695,6 +701,39 @@ int main(int argc, char* argv[])
 #endif
 
 #if defined(Q_OS_LINUX)
+    // Register telnet:// protocol handler on Linux (per-user, no admin needed)
+    // First, check if mudlet.desktop exists in any standard location
+    if (QStandardPaths::locate(QStandardPaths::ApplicationsLocation, "mudlet.desktop").isEmpty()) {
+        QString appsLocation = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
+        QDir appsDir(appsLocation);
+        if (appsDir.exists() || appsDir.mkpath(".")) {
+            QString desktopFilePath = appsDir.absoluteFilePath("mudlet.desktop");
+            QFile desktopFile(desktopFilePath);
+            if (desktopFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                // Determine executable path (handle AppImage case)
+                QString exePath = QCoreApplication::applicationFilePath();
+                QByteArray appImageEnv = qgetenv("APPIMAGE");
+                if (!appImageEnv.isEmpty()) {
+                    exePath = QString::fromLocal8Bit(appImageEnv);
+                }
+
+                QTextStream out(&desktopFile);
+                out << "[Desktop Entry]\n";
+                out << "Name=Mudlet\n";
+                out << "Exec=\"" << exePath << "\" %u\n";
+                out << "Type=Application\n";
+                out << "MimeType=x-scheme-handler/telnet;\n";
+                out << "Icon=mudlet\n";
+                out << "NoDisplay=false\n"; // Ensure it's visible so it can be picked up
+                desktopFile.close();
+                qDebug() << "main: Created user-local desktop file at" << desktopFilePath;
+
+                // Update desktop database to ensure the new file is noticed
+                QProcess::startDetached(qsl("update-desktop-database"), QStringList() << appsLocation);
+            }
+        }
+    }
+
     // Register telnet:// protocol handler on Linux (per-user, no admin needed)
     // The .desktop file must have x-scheme-handler/telnet in MimeType
     // This runs xdg-mime to associate telnet:// URIs with Mudlet
