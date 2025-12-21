@@ -532,8 +532,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                     "echo Mudlet updater: %1 exited, launching installer...\r\n"
                     "echo Mudlet updater: running %2\r\n"
                     "\"%2\"\r\n"
-                    "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n"
-                ).arg(exeName, QDir::toNativeSeparators(launchPath));
+                    "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n").arg(exeName, QDir::toNativeSeparators(launchPath));
                 batchFile.write(batchContent.toLocal8Bit());
                 batchFile.close();
 
