@@ -21,7 +21,8 @@
 
 set -x
 
-# Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
+# Version: 2.2.0    Skip commit date check when build is manually forced
+#          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 
 # Exit codes:
@@ -150,16 +151,21 @@ else
   # Check if it's a Public Test Build
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
 
-    # Get the commit date of the last commit
-    COMMIT_DATE=$(git show -s --format="%cs")
-    # Get yesterday's date in the same format
-    YESTERDAY_DATE=$(date --date="yesterday" +%Y-%m-%d)
-
-    if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
-      echo "=== No new commits, aborting public test build generation ==="
-      exit 0
+    # Skip commit check if this is a manually forced build
+    if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
+      echo "=== Forced build requested, skipping commit date check ==="
     else
-      echo "=== New commits, continuing to create a public test build ==="
+      # Get the commit date of the last commit
+      COMMIT_DATE=$(git show -s --format="%cs")
+      # Get yesterday's date in the same format
+      YESTERDAY_DATE=$(date --date="yesterday" +%Y-%m-%d)
+
+      if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
+        echo "=== No new commits, aborting public test build generation ==="
+        exit 0
+      else
+        echo "=== New commits, continuing to create a public test build ==="
+      fi
     fi
 
     # Squirrel uses the name of the binary for the Start menu, so need to rename
