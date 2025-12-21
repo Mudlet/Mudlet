@@ -173,11 +173,8 @@ bool TCommandLine::event(QEvent* event)
     if (event->type() == QEvent::KeyPress) {
         auto* ke = dynamic_cast<QKeyEvent*>(event);
         if (!ke) {
-            // Something is wrong -
             qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynamically castable to the latter - so the processing of this event "
                                      "has been aborted - please report this to Mudlet Makers.";
-            // Indicate that we don't want to touch this event with a barge-pole!
-            event->ignore();
             return false;
         }
 
