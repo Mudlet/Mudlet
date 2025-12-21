@@ -118,8 +118,11 @@ private:
     // Session-scoped: cleared when connection closes
     QHash<QString, QJsonObject> mPresets;
 
+    // Maximum recursion depth for deepMerge to prevent stack overflow
+    static constexpr int MAX_MERGE_DEPTH = 32;
+
     // Helper for deep merge algorithm (recursive)
-    QJsonObject deepMerge(const QJsonObject& base, const QJsonObject& overlay) const;
+    QJsonObject deepMerge(const QJsonObject& base, const QJsonObject& overlay, int depth = 0) const;
 };
 
 #endif // MUDLET_THYPERLINKCOMPACTMANAGER_H

@@ -23,6 +23,7 @@
 #include <QHash>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 class TConsole;
 

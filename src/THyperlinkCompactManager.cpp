@@ -18,7 +18,6 @@
  ***************************************************************************/
 
 #include "THyperlinkCompactManager.h"
-#include "TConsole.h"
 
 #include <QDebug>
 #include <QJsonArray>
@@ -38,6 +37,16 @@ void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const
     if (shorthand.isEmpty() || fullName.isEmpty()) {
         qWarning() << "THyperlinkCompactManager::registerShorthand: empty shorthand or fullName";
         return;
+    }
+
+    // Check for existing entry and warn about collision
+    if (mShorthandRegistry.contains(shorthand)) {
+        const ShorthandEntry& existing = mShorthandRegistry.value(shorthand);
+        qWarning() << "THyperlinkCompactManager::registerShorthand: Replacing existing shorthand"
+                   << shorthand << "→" << existing.fullName
+                   << "(owner:" << (existing.owner ? existing.owner->objectName() : "core") << ")"
+                   << "with new mapping:" << shorthand << "→" << fullName
+                   << "(owner:" << (owner ? owner->objectName() : "core") << ")";
     }
 
     bool isCore = (owner == nullptr);
@@ -88,7 +97,7 @@ QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QStr
         const QString& key = it.key();
 
         if (mShorthandRegistry.contains(key)) {
-            const auto& registration = mShorthandRegistry[key];
+            const auto& registration = mShorthandRegistry.value(key);
 
             if (registration.isCore || !registration.owner.isNull()) {
                 expanded.insert(registration.fullName, it.value());
@@ -108,6 +117,13 @@ void THyperlinkCompactManager::registerPresetProperty(const QString& propertyNam
 {
     if (propertyName.isEmpty()) {
         qWarning() << "THyperlinkCompactManager::registerPresetProperty: empty propertyName";
+        return;
+    }
+
+    // Non-core properties require a valid owner
+    if (!isCore && !owner) {
+        qWarning() << "THyperlinkCompactManager::registerPresetProperty: non-core property"
+                   << propertyName << "requires a valid owner (owner is null)";
         return;
     }
 
@@ -170,11 +186,18 @@ void THyperlinkCompactManager::clearPresets()
 
 QJsonObject THyperlinkCompactManager::mergeConfigs(const QJsonObject& base, const QJsonObject& overlay) const
 {
-    return deepMerge(base, overlay);
+    return deepMerge(base, overlay, 0);
 }
 
-QJsonObject THyperlinkCompactManager::deepMerge(const QJsonObject& base, const QJsonObject& overlay) const
+QJsonObject THyperlinkCompactManager::deepMerge(const QJsonObject& base, const QJsonObject& overlay, int depth) const
 {
+    // Check recursion depth limit to prevent stack overflow
+    if (depth >= MAX_MERGE_DEPTH) {
+        qWarning() << "THyperlinkCompactManager::deepMerge: Maximum recursion depth"
+                   << MAX_MERGE_DEPTH << "reached. Stopping recursion and using overlay.";
+        return overlay;
+    }
+
     QJsonObject result = base;
 
     // Iterate through all keys in overlay
@@ -193,7 +216,7 @@ QJsonObject THyperlinkCompactManager::deepMerge(const QJsonObject& base, const Q
         // Both values exist - determine merge strategy
         if (overlayValue.isObject() && baseValue.isObject()) {
             // Both are objects - recursive merge
-            result.insert(key, deepMerge(baseValue.toObject(), overlayValue.toObject()));
+            result.insert(key, deepMerge(baseValue.toObject(), overlayValue.toObject(), depth + 1));
         } else if (overlayValue.isArray() && baseValue.isArray()) {
             // Both are arrays - overlay completely replaces base (CSS behavior)
             result.insert(key, overlayValue);

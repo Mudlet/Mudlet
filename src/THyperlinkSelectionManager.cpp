@@ -34,10 +34,7 @@ THyperlinkSelectionManager::~THyperlinkSelectionManager() = default;
 // Check if a value in a group is currently selected
 bool THyperlinkSelectionManager::isSelected(const QString& group, const QString& value) const
 {
-    if (!mSelectionState.contains(group)) {
-        return false;
-    }
-    return mSelectionState[group].value(value, false);
+    return mSelectionState.value(group).value(value, false);
 }
 
 // Set selection state for a value in a group
@@ -150,7 +147,11 @@ void THyperlinkSelectionManager::handleExclusiveSelection(const QString& group, 
     const QStringList members = getGroupMembers(group);
     for (const QString& member : members) {
         if (member != value) {
+            bool previousState = isSelected(group, member);
             mSelectionState[group][member] = false;
+            if (previousState) {
+                emit selectionChanged(group, member, false);
+            }
         }
     }
 }
