@@ -512,14 +512,27 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                 launchPath = installerPath;
             }
 
-            // Create a batch file to handle delayed launch - this avoids shell quoting issues
-            // that occur when passing complex commands through QProcess::startDetached
+            // Create a batch file that waits for Mudlet to exit before launching the installer
             QString batchPath = qsl("%1/mudlet-update.bat").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
             QFile batchFile(batchPath);
             if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                // Use full path to Windows timeout to avoid MSYS2/Cygwin conflicts
-                // /t 3 = wait 3 seconds, /nobreak = ignore keypresses
-                QString batchContent = qsl("@echo off\r\nC:\\Windows\\System32\\timeout.exe /t 3 /nobreak > nul\r\n\"%1\"\r\n").arg(QDir::toNativeSeparators(launchPath));
+                QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+                // Wait for Mudlet process to exit before running installer, with debug output
+                QString batchContent = qsl(
+                    "@echo off\r\n"
+                    "echo Mudlet updater: waiting for %1 to exit...\r\n"
+                    ":wait\r\n"
+                    "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | find /I \"%1\" >NUL\r\n"
+                    "if %%ERRORLEVEL%%==0 (\r\n"
+                    "    echo Mudlet updater: %1 still running, waiting...\r\n"
+                    "    C:\\Windows\\System32\\timeout.exe /t 1 /nobreak > nul\r\n"
+                    "    goto wait\r\n"
+                    ")\r\n"
+                    "echo Mudlet updater: %1 exited, launching installer...\r\n"
+                    "echo Mudlet updater: running %2\r\n"
+                    "\"%2\"\r\n"
+                    "echo Mudlet updater: installer finished with exit code %%ERRORLEVEL%%\r\n"
+                ).arg(exeName, QDir::toNativeSeparators(launchPath));
                 batchFile.write(batchContent.toLocal8Bit());
                 batchFile.close();
 
