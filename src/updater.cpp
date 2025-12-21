@@ -32,60 +32,6 @@
 using namespace std::chrono_literals;
 
 #if defined(Q_OS_WINDOWS)
-// Helper function to check if a file is accessible (not locked by another process)
-static bool isFileAccessible(const QString& filePath)
-{
-    // Try opening file with exclusive write access
-    HANDLE hFile = CreateFileW(
-        reinterpret_cast<const wchar_t*>(filePath.utf16()),
-        GENERIC_WRITE,
-        0, // No sharing - exclusive access
-        nullptr,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr);
-
-    if (hFile == INVALID_HANDLE_VALUE) {
-        DWORD error = GetLastError();
-        if (error == ERROR_SHARING_VIOLATION || error == ERROR_LOCK_VIOLATION) {
-            qWarning() << "File is locked:" << filePath << "- error code:" << error;
-            return false; // File is locked
-        }
-        // File doesn't exist or other error - consider it accessible
-        return true;
-    }
-
-    CloseHandle(hFile);
-    return true;
-}
-
-// Helper function to try a file operation with retry logic
-// Returns true if operation succeeded, false if all retries failed
-static bool tryFileOperationWithRetry(const std::function<bool()>& operation, const QString& operationName, int maxAttempts = 3)
-{
-    const std::chrono::milliseconds retryDelays[] = {5000ms, 15000ms, 30000ms};
-
-    for (int attempt = 0; attempt < maxAttempts; ++attempt) {
-        if (attempt > 0) {
-            qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts
-                      << "after" << retryDelays[attempt - 1].count() << "ms delay";
-            QThread::msleep(retryDelays[attempt - 1].count());
-        }
-
-        if (operation()) {
-            if (attempt > 0) {
-                qWarning() << operationName << "- Succeeded on attempt" << (attempt + 1);
-            }
-            return true;
-        }
-
-        qWarning() << operationName << "- Failed on attempt" << (attempt + 1);
-    }
-
-    qWarning() << operationName << "- All" << maxAttempts << "attempts failed";
-    return false;
-}
-
 // Helper function to clean up .nupkg files from SquirrelTemp directory
 // This prevents cross-contamination with other Squirrel-based apps
 static void cleanupSquirrelTempFiles()
@@ -339,45 +285,11 @@ void Updater::setupOnWindows()
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
-// moved the new updater to the same directory as mudlet.exe so it is run on the next
-// launch. Don't run it ourselves right now since it insists on launching Mudlet when it's done
+// Store the path to the downloaded installer for use when user clicks "Restart to update"
 void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 {
-    QDir dir;
-    auto newPath = qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
-    QFileInfo newPathFileInfo(newPath);
-
-    // Check if file is accessible before attempting operations
-    if (newPathFileInfo.exists() && !isFileAccessible(newPath)) {
-        qWarning() << "Old installer exists but is locked:" << newPath;
-        // Try to delete with retry logic
-        bool removed = tryFileOperationWithRetry([&]() {
-            return isFileAccessible(newPath) && dir.remove(newPathFileInfo.absoluteFilePath());
-        }, qsl("Delete old installer"));
-
-        if (!removed) {
-            qWarning() << "Couldn't delete the old installer after retries:" << newPath;
-            // Continue anyway - the rename might still work
-        }
-    } else if (newPathFileInfo.exists() && !dir.remove(newPathFileInfo.absoluteFilePath())) {
-        qDebug() << "Couldn't delete the old installer";
-    }
-
-    // Verify source file is accessible before attempting to move
-    if (!isFileAccessible(downloadedSetupName)) {
-        qWarning() << "Downloaded installer is locked and cannot be moved:" << downloadedSetupName;
-    }
-
-    // dir.rename actually moves a file - try with retry logic
-    bool moved = tryFileOperationWithRetry([&]() {
-        return isFileAccessible(downloadedSetupName) && dir.rename(downloadedSetupName, newPath);
-    }, qsl("Move installer to temp location"));
-
-    if (!moved) {
-        qWarning() << "Moving new installer into" << newPath << "failed after all retries";
-        qWarning() << "Please try downloading the update manually from https://www.mudlet.org/download/";
-        return;
-    }
+    mDownloadedInstallerPath = downloadedSetupName;
+    qWarning() << "Installer ready at:" << mDownloadedInstallerPath;
 }
 #endif // Q_OS_WIN
 
@@ -501,17 +413,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         // On Windows, launch the installer directly with a delay to ensure Mudlet
         // has fully exited. This prevents "file in use" errors during the update.
         // The installer will relaunch Mudlet after the update completes.
-        QString installerPath = qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
-        QString launchPath = qsl("%1/mudlet-update-pending.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
-
-        if (QFile::exists(installerPath)) {
-            // Rename the installer so runUpdate() doesn't try to launch it again on next startup
-            QFile::remove(launchPath); // Remove any old pending installer
-            if (!QFile::rename(installerPath, launchPath)) {
-                qWarning() << "Failed to rename installer, using original path";
-                launchPath = installerPath;
-            }
-
+        if (!mDownloadedInstallerPath.isEmpty() && QFile::exists(mDownloadedInstallerPath)) {
             // Create a batch file that waits for Mudlet to exit before launching the installer
             // this avoids shell quoting issues that happen with QProcess::startDetached
             QString batchPath = qsl("%1/mudlet-update.bat").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
@@ -532,18 +434,18 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                     "echo Mudlet updater: %1 exited, launching installer...\r\n"
                     "echo Mudlet updater: running %2\r\n"
                     "\"%2\"\r\n"
-                    "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n").arg(exeName, QDir::toNativeSeparators(launchPath));
+                    "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n").arg(exeName, QDir::toNativeSeparators(mDownloadedInstallerPath));
                 batchFile.write(batchContent.toLocal8Bit());
                 batchFile.close();
 
                 QProcess::startDetached(batchPath, QStringList());
-                qWarning() << "Launching installer via batch file:" << launchPath;
+                qWarning() << "Launching installer via batch file:" << mDownloadedInstallerPath;
             } else {
                 qWarning() << "Failed to create batch file, attempting direct launch";
-                QProcess::startDetached(launchPath, QStringList());
+                QProcess::startDetached(mDownloadedInstallerPath, QStringList());
             }
         } else {
-            qWarning() << "Installer not found at:" << installerPath << "- will try on next restart";
+            qWarning() << "Installer not found at:" << mDownloadedInstallerPath << "- will try on next restart";
         }
 
         if (mudlet::self()) {
