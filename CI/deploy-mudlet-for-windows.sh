@@ -108,13 +108,13 @@ if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]] && [[ -n "${BUILD_COMMIT}" ]]; then
   # Query the dblsqd feed for existing versions with this commit
   EXISTING_VERSIONS=$(curl --silent "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86_64" | \
     jq --raw-output ".releases[].version" | \
-    grep -E "${BUILD_COMMIT}(\.[0-9]+)?$" || true)
+    grep -E "${BUILD_COMMIT}(rebuild[0-9]+)?$" || true)
 
   if [[ -n "${EXISTING_VERSIONS}" ]]; then
     # Count existing versions and find the highest build number
     HIGHEST_BUILD=1
     while IFS= read -r ver; do
-      if [[ "${ver}" =~ \.([0-9]+)$ ]]; then
+      if [[ "${ver}" =~ rebuild([0-9]+)$ ]]; then
         NUM="${BASH_REMATCH[1]}"
         if [[ "${NUM}" -gt "${HIGHEST_BUILD}" ]]; then
           HIGHEST_BUILD="${NUM}"
@@ -124,7 +124,7 @@ if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]] && [[ -n "${BUILD_COMMIT}" ]]; then
 
     # Next build number
     NEXT_BUILD=$((HIGHEST_BUILD + 1))
-    BUILD_COUNTER_SUFFIX=".${NEXT_BUILD}"
+    BUILD_COUNTER_SUFFIX="rebuild${NEXT_BUILD}"
     echo "=== Found existing PTB builds for commit ${BUILD_COMMIT}, using build counter: ${NEXT_BUILD} ==="
   fi
 fi
@@ -138,7 +138,7 @@ else
   # Include Git SHA1 in the build information
   # Probably a PTB - so typical output could be:
   #    "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678
-  # Or with build counter: "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678.2
+  # Or with build counter: "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678rebuild2
   echo "BUILDING MUDLET ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}"
 fi
 
@@ -289,7 +289,7 @@ else
     INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The name we want to use for the installer;
     # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
-    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678.2-windows-64.exe'
+    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
     INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
     DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The name that has to be passed as the artifact so that the Mudlet website
