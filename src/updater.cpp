@@ -513,6 +513,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             }
 
             // Create a batch file that waits for Mudlet to exit before launching the installer
+            // this avoids shell quoting issues that happen with QProcess::startDetached
             QString batchPath = qsl("%1/mudlet-update.bat").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
             QFile batchFile(batchPath);
             if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
