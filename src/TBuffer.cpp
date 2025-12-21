@@ -1030,12 +1030,64 @@ COMMIT_LINE:
 #endif
             }
 
+            // Apply base styling first (if any)
             if (mCurrentHyperlinkStyling.hasForegroundColor) {
                 c.mFgColor = mCurrentHyperlinkStyling.foregroundColor;
             }
 
             if (mCurrentHyperlinkStyling.hasBackgroundColor) {
                 c.mBgColor = mCurrentHyperlinkStyling.backgroundColor;
+            }
+            
+            // For preset-only links, base styling may be empty but pseudo-class styling exists
+            // Apply effective styling with :link pseudo-class to ensure preset colors show
+            Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(mCurrentHyperlinkLinkId);
+            if (effectiveStyling.hasCustomStyling) {
+                if (effectiveStyling.hasForegroundColor) {
+                    c.mFgColor = effectiveStyling.foregroundColor;
+                }
+                if (effectiveStyling.hasBackgroundColor) {
+                    c.mBgColor = effectiveStyling.backgroundColor;
+                }
+                if (effectiveStyling.isBold) {
+                    c.mFlags |= TChar::Bold;
+                }
+                if (effectiveStyling.isItalic) {
+                    c.mFlags |= TChar::Italic;
+                }
+                if (effectiveStyling.isUnderlined) {
+                    c.mFlags |= TChar::Underline;
+                    switch (effectiveStyling.underlineStyle) {
+                        case Mudlet::HyperlinkStyling::UnderlineWavy:
+                            c.mFlags |= TChar::UnderlineWavy;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDotted:
+                            c.mFlags |= TChar::UnderlineDotted;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDashed:
+                            c.mFlags |= TChar::UnderlineDashed;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineSolid:
+                        case Mudlet::HyperlinkStyling::UnderlineNone:
+                        default:
+                            break;
+                    }
+                }
+                if (effectiveStyling.isOverlined) {
+                    c.mFlags |= TChar::Overline;
+                }
+                if (effectiveStyling.isStrikeOut) {
+                    c.mFlags |= TChar::StrikeOut;
+                }
+                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
+                    c.setUnderlineColor(effectiveStyling.underlineColor);
+                }
+                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
+                    c.setOverlineColor(effectiveStyling.overlineColor);
+                }
+                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
+                    c.setStrikeoutColor(effectiveStyling.strikeoutColor);
+                }
             }
 
             if (mCurrentHyperlinkStyling.isUnderlined) {
@@ -2526,7 +2578,8 @@ void TBuffer::decodeOSC(const QString& sequence)
             qDebug().noquote() << "[OSC8] Hyperlink terminator - closing active hyperlink";
 #endif
             
-            // Apply initial selection/disabled state styling when link closes
+            // Apply initial selection/disabled state styling when link closes (from selection branch)
+            // OR apply :link pseudo-class styling for preset-only links (from compact branch)
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC8] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId
@@ -2541,6 +2594,11 @@ void TBuffer::decodeOSC(const QString& sequence)
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
                     mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
                 }
+            } else if (mCurrentHyperlinkLinkId > 0) {
+                // Set initial :link pseudo-class state for regular links
+                setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDefault);
+                // Update any characters already in buffer with :link styling
+                updateLinkCharacters(mCurrentHyperlinkLinkId);
             }
             
             mCurrentHyperlinkCommand.clear();
@@ -6218,6 +6276,16 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     // Get the effective styling for this link's current state
     Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
 
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Link" << linkIndex << "effective styling:"
+             << "hasFg:" << effectiveStyling.hasForegroundColor
+             << "fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none")
+             << "hasBg:" << effectiveStyling.hasBackgroundColor
+             << "bold:" << effectiveStyling.isBold
+             << "underline:" << effectiveStyling.isUnderlined
+             << "hasCustom:" << effectiveStyling.hasCustomStyling;
+#endif
+
     // IMPORTANT: If this link has no custom styling at all (neither base nor pseudo-class),
     // don't modify the characters. This preserves ANSI formatting for links without styling.
     if (!effectiveStyling.hasCustomStyling) {
@@ -6227,14 +6295,11 @@ void TBuffer::updateLinkCharacters(int linkIndex)
         return; // Don't modify characters - preserve original ANSI formatting
     }
 
-    // Check if we should use ANSI base with pseudo-class overlays:
-    // - Has pseudo-class styling (hasCustomStyling = true)
-    // - But NO base styling (hasBaseCustomStyling = false)
-    // - And we're in a state that should preserve original ANSI as base (default/visited only)
-    // NOTE: Selected and disabled states should always use custom styling, not ANSI base
-    bool useAnsiBase = !effectiveStyling.hasBaseCustomStyling &&
-                       (effectiveStyling.currentState == Mudlet::HyperlinkStyling::StateDefault ||
-                        effectiveStyling.currentState == Mudlet::HyperlinkStyling::StateVisited);
+    // Never restore ANSI base when effective styling has custom properties.
+    // This includes both base-level styling AND pseudo-class styling.
+    // If the cascade resolved custom colors/formatting from :link, :hover, etc.,
+    // use those instead of reverting to ANSI.
+    bool useAnsiBase = false;
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling
@@ -6258,11 +6323,13 @@ void TBuffer::updateLinkCharacters(int linkIndex)
             if (tchar.linkIndex() == linkIndex) {
 #if defined(DEBUG_OSC_PROCESSING)
                 matchingCharacters++;
-                qDebug() << "[OSC8] Found character for link" << linkIndex 
-                         << "- Current FgColor:" << tchar.mFgColor.name()
-                         << "Current Bold:" << bool(tchar.mFlags & TChar::Bold)
-                         << "Will apply FgColor:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none")
-                         << "Will apply Bold:" << effectiveStyling.isBold;
+                static int charUpdateCount = 0;
+                if (charUpdateCount++ < 2) { // Only log first 2 characters to avoid spam
+                    qDebug() << "[OSC8] Before update - char with linkIndex" << linkIndex
+                             << "- FgColor:" << tchar.mFgColor.name()
+                             << "hasFg:" << effectiveStyling.hasForegroundColor
+                             << "new fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none");
+                }
 #endif
                 // Apply the effective styling to this character
 
@@ -6299,6 +6366,13 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                 // Update foreground color
                 if (effectiveStyling.hasForegroundColor) {
                     tchar.mFgColor = effectiveStyling.foregroundColor;
+#if defined(DEBUG_OSC_PROCESSING)
+                    static int fgUpdateCount = 0;
+                    if (fgUpdateCount++ < 2) {
+                        qDebug() << "[OSC8] Applied FG color to link" << linkIndex
+                                 << "- New FgColor:" << tchar.mFgColor.name();
+                    }
+#endif
                 }
 
                 // Update background color - restore original if not specified in styling
