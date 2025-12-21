@@ -517,7 +517,8 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             QFile batchFile(batchPath);
             if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
                 QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
-                // Wait for Mudlet process to exit before running installer, with debug output
+                // Wait for Mudlet process to exit before running installer, with debug output.
+                // Uses ping for delay instead of timeout.exe because timeout doesn't work when stdin is redirected.
                 QString batchContent = qsl(
                     "@echo off\r\n"
                     "echo Mudlet updater: waiting for %1 to exit...\r\n"
@@ -525,7 +526,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                     "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | C:\\Windows\\System32\\find.exe /I \"%1\" >NUL\r\n"
                     "if %ERRORLEVEL%==0 (\r\n"
                     "    echo Mudlet updater: %1 still running, waiting...\r\n"
-                    "    C:\\Windows\\System32\\timeout.exe /t 1 /nobreak > nul\r\n"
+                    "    ping -n 2 127.0.0.1 > nul\r\n"
                     "    goto wait\r\n"
                     ")\r\n"
                     "echo Mudlet updater: %1 exited, launching installer...\r\n"
