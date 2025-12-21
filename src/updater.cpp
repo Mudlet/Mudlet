@@ -523,7 +523,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                     "echo Mudlet updater: waiting for %1 to exit...\r\n"
                     ":wait\r\n"
                     "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | find /I \"%1\" >NUL\r\n"
-                    "if %%ERRORLEVEL%%==0 (\r\n"
+                    "if %ERRORLEVEL%==0 (\r\n"
                     "    echo Mudlet updater: %1 still running, waiting...\r\n"
                     "    C:\\Windows\\System32\\timeout.exe /t 1 /nobreak > nul\r\n"
                     "    goto wait\r\n"
@@ -531,7 +531,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                     "echo Mudlet updater: %1 exited, launching installer...\r\n"
                     "echo Mudlet updater: running %2\r\n"
                     "\"%2\"\r\n"
-                    "echo Mudlet updater: installer finished with exit code %%ERRORLEVEL%%\r\n"
+                    "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n"
                 ).arg(exeName, QDir::toNativeSeparators(launchPath));
                 batchFile.write(batchContent.toLocal8Bit());
                 batchFile.close();
