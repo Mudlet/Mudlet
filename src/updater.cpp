@@ -522,7 +522,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                     "@echo off\r\n"
                     "echo Mudlet updater: waiting for %1 to exit...\r\n"
                     ":wait\r\n"
-                    "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | find /I \"%1\" >NUL\r\n"
+                    "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | C:\\Windows\\System32\\find.exe /I \"%1\" >NUL\r\n"
                     "if %ERRORLEVEL%==0 (\r\n"
                     "    echo Mudlet updater: %1 still running, waiting...\r\n"
                     "    C:\\Windows\\System32\\timeout.exe /t 1 /nobreak > nul\r\n"
