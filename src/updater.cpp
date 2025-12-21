@@ -518,7 +518,6 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             QFile batchFile(batchPath);
             if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
                 QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
-                // Wait for Mudlet process to exit before running installer, with debug output.
                 // Uses ping for delay instead of timeout.exe because timeout doesn't work when stdin is redirected.
                 QString batchContent = qsl(
                     "@echo off\r\n"
