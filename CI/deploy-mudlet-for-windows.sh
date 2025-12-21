@@ -172,6 +172,11 @@ else
 
   echo "Renaming mudlet.exe to ${PACKAGE_EXE}"
   mv "${PACKAGE_PATH}/mudlet.exe" "${PACKAGE_PATH}/${PACKAGE_EXE}"
+
+  # Create squirrel sidecar file to mark only the main exe for Start Menu shortcut
+  # This prevents crashpad_handler.exe from getting its own Start Menu entry
+  echo "1" > "${PACKAGE_PATH}/${PACKAGE_EXE}.squirrel"
+
   PACKAGE_EXE_PATHFILE="$(cygpath -au "${PACKAGE_PATH}/${PACKAGE_EXE}")"
   PACKAGE_EXE_WINPATHFILE="$(cygpath -aw "${PACKAGE_EXE_PATHFILE}")"
 
