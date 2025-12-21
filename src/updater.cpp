@@ -414,6 +414,16 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         // has fully exited. This prevents "file in use" errors during the update.
         // The installer will relaunch Mudlet after the update completes.
         if (!mDownloadedInstallerPath.isEmpty() && QFile::exists(mDownloadedInstallerPath)) {
+            // Copy the installer to a permanent location - the source is a QTemporaryFile
+            // that will be deleted when Mudlet exits. We copy (not move) because AV
+            // may still have a lock on the file, and copy only needs read access.
+            QString installerPath = qsl("%1/mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+            QFile::remove(installerPath); // Remove any old installer
+            if (!QFile::copy(mDownloadedInstallerPath, installerPath)) {
+                qWarning() << "Failed to copy installer from" << mDownloadedInstallerPath << "to" << installerPath;
+                installerPath = mDownloadedInstallerPath; // Try using original path as fallback
+            }
+
             // Create a batch file that waits for Mudlet to exit before launching the installer
             // this avoids shell quoting issues that happen with QProcess::startDetached
             QString batchPath = qsl("%1/mudlet-update.bat").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
@@ -434,15 +444,15 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                     "echo Mudlet updater: %1 exited, launching installer...\r\n"
                     "echo Mudlet updater: running %2\r\n"
                     "\"%2\"\r\n"
-                    "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n").arg(exeName, QDir::toNativeSeparators(mDownloadedInstallerPath));
+                    "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n").arg(exeName, QDir::toNativeSeparators(installerPath));
                 batchFile.write(batchContent.toLocal8Bit());
                 batchFile.close();
 
                 QProcess::startDetached(batchPath, QStringList());
-                qWarning() << "Launching installer via batch file:" << mDownloadedInstallerPath;
+                qWarning() << "Launching installer via batch file:" << installerPath;
             } else {
                 qWarning() << "Failed to create batch file, attempting direct launch";
-                QProcess::startDetached(mDownloadedInstallerPath, QStringList());
+                QProcess::startDetached(installerPath, QStringList());
             }
         } else {
             qWarning() << "Installer not found at:" << mDownloadedInstallerPath << "- will try on next restart";
