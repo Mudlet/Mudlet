@@ -162,11 +162,6 @@ int main(int argc, char* argv[])
 {
     initializeQRCResources();
 
-    #ifdef WITH_SENTRY
-        initSentry();
-        auto sentryClose = qScopeGuard([] { sentry_close(); });
-    #endif
-
 #ifdef Q_OS_WINDOWS
     // Handle Squirrel installer commands - must exit quickly for install/update/uninstall
     // https://github.com/clowd/Clowd.Squirrel/blob/master/docs/using/custom-squirrel-events-non-cs.md
@@ -176,7 +171,14 @@ int main(int argc, char* argv[])
             return 0;
         }
     }
+#endif
 
+    #ifdef WITH_SENTRY
+        initSentry();
+        auto sentryClose = qScopeGuard([] { sentry_close(); });
+    #endif
+
+#ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {
             // print stdout to console if Mudlet is started in a console in Windows
