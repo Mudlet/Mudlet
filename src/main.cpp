@@ -38,6 +38,7 @@
 #if defined(Q_OS_WINDOWS) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
 #endif // defined(Q_OS_WINDOWS) && !defined(INCLUDE_UPDATER)
+#include <QMessageBox>
 #include <QCommandLineOption>
 #include <QPainter>
 #include <iostream>
@@ -711,74 +712,111 @@ int main(int argc, char* argv[])
     settings.setValue(".mpackage", "MudletPackage");
     settings.setValue("MudletPackage/.", "Mudlet Package");
     settings.setValue("MudletPackage/shell/open/command/.", "mudlet %1");
+#endif
+
+    // Check if we should register Mudlet as the telnet:// protocol handler
+    // We only ask the user once and remember their choice
+    QSettings* appSettings = mudlet::getQSettings();
+    bool shouldRegisterTelnet = false;
     
-    // Register telnet:// protocol handler (per-user, no admin rights required)
-    const QString mudletExe = QCoreApplication::applicationFilePath().replace('/', '\\');
-    settings.setValue("telnet/.", "URL:Telnet Protocol");
-    settings.setValue("telnet/URL Protocol", "");
-    settings.setValue("telnet/DefaultIcon/.", mudletExe + ",1");
-    settings.setValue("telnet/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
-    qDebug() << "main: Registered Mudlet as telnet:// protocol handler (per-user)";
+    if (!appSettings->contains("telnetHandlerAsked")) {
+        // First time - ask the user
+        QMessageBox msgBox;
+        msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
+        msgBox.setText(QObject::tr("Would you like Mudlet to handle telnet:// links?"));
+        msgBox.setInformativeText(QObject::tr(
+            "This will allow you to click on telnet:// links in your browser or other applications "
+            "to automatically open them in Mudlet.\n\n"
+            "You can change this later in Settings > General."));
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::Yes);
+        
+        int result = msgBox.exec();
+        bool userChoice = (result == QMessageBox::Yes);
+        
+        appSettings->setValue("telnetHandlerAsked", true);
+        appSettings->setValue("telnetHandlerEnabled", userChoice);
+        appSettings->sync();
+        
+        shouldRegisterTelnet = userChoice;
+        
+        if (userChoice) {
+            qDebug() << "main: User accepted telnet:// protocol handler registration";
+        } else {
+            qDebug() << "main: User declined telnet:// protocol handler registration";
+        }
+    } else {
+        // Already asked - use saved preference
+        shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
+    }
+    
+    if (shouldRegisterTelnet) {
+#if defined(Q_OS_WIN)
+        // Register telnet:// protocol handler (per-user, no admin rights required)
+        const QString mudletExe = QCoreApplication::applicationFilePath().replace('/', '\\');
+        settings.setValue("telnet/.", "URL:Telnet Protocol");
+        settings.setValue("telnet/URL Protocol", "");
+        settings.setValue("telnet/DefaultIcon/.", mudletExe + ",1");
+        settings.setValue("telnet/shell/open/command/.", QString("\"%1\" \"%2\"").arg(mudletExe, "%1"));
+        qDebug() << "main: Registered Mudlet as telnet:// protocol handler (per-user)";
 #endif
 
 #if defined(Q_OS_LINUX)
-    // Register telnet:// protocol handler on Linux (per-user, no admin needed)
-    // First, check if mudlet.desktop exists in any standard location
-    if (QStandardPaths::locate(QStandardPaths::ApplicationsLocation, "mudlet.desktop").isEmpty()) {
-        QString appsLocation = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
-        QDir appsDir(appsLocation);
-        if (appsDir.exists() || appsDir.mkpath(".")) {
-            QString desktopFilePath = appsDir.absoluteFilePath("mudlet.desktop");
-            QFile desktopFile(desktopFilePath);
-            if (desktopFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                // Determine executable path (handle AppImage case)
-                QString exePath = QCoreApplication::applicationFilePath();
-                QByteArray appImageEnv = qgetenv("APPIMAGE");
-                if (!appImageEnv.isEmpty()) {
-                    exePath = QString::fromLocal8Bit(appImageEnv);
+        // Register telnet:// protocol handler on Linux (per-user, no admin needed)
+        // First, check if mudlet.desktop exists in any standard location
+        if (QStandardPaths::locate(QStandardPaths::ApplicationsLocation, "mudlet.desktop").isEmpty()) {
+            QString appsLocation = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
+            QDir appsDir(appsLocation);
+            if (appsDir.exists() || appsDir.mkpath(".")) {
+                QString desktopFilePath = appsDir.absoluteFilePath("mudlet.desktop");
+                QFile desktopFile(desktopFilePath);
+                if (desktopFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                    // Determine executable path (handle AppImage case)
+                    QString exePath = QCoreApplication::applicationFilePath();
+                    QByteArray appImageEnv = qgetenv("APPIMAGE");
+                    if (!appImageEnv.isEmpty()) {
+                        exePath = QString::fromLocal8Bit(appImageEnv);
+                    }
+
+                    QTextStream out(&desktopFile);
+                    out << "[Desktop Entry]\n";
+                    out << "Name=Mudlet\n";
+                    out << "Exec=\"" << exePath << "\" %u\n";
+                    out << "Type=Application\n";
+                    out << "MimeType=x-scheme-handler/telnet;\n";
+                    out << "Icon=mudlet\n";
+                    out << "NoDisplay=false\n";
+                    desktopFile.close();
+                    qDebug() << "main: Created user-local desktop file at" << desktopFilePath;
+
+                    // Update desktop database to ensure the new file is noticed
+                    QProcess::startDetached(qsl("update-desktop-database"), QStringList() << appsLocation);
                 }
-
-                QTextStream out(&desktopFile);
-                out << "[Desktop Entry]\n";
-                out << "Name=Mudlet\n";
-                out << "Exec=\"" << exePath << "\" %u\n";
-                out << "Type=Application\n";
-                out << "MimeType=x-scheme-handler/telnet;\n";
-                out << "Icon=mudlet\n";
-                out << "NoDisplay=false\n"; // Ensure it's visible so it can be picked up
-                desktopFile.close();
-                qDebug() << "main: Created user-local desktop file at" << desktopFilePath;
-
-                // Update desktop database to ensure the new file is noticed
-                QProcess::startDetached(qsl("update-desktop-database"), QStringList() << appsLocation);
             }
         }
-    }
 
-    // Register telnet:// protocol handler on Linux (per-user, no admin needed)
-    // The .desktop file must have x-scheme-handler/telnet in MimeType
-    // This runs xdg-mime to associate telnet:// URIs with Mudlet
-    QProcess::startDetached(qsl("xdg-mime"), 
-        QStringList() << qsl("default") << qsl("mudlet.desktop") << qsl("x-scheme-handler/telnet"));
-    qDebug() << "main: Registered Mudlet as telnet:// protocol handler (Linux)";
+        // Register telnet:// protocol handler on Linux (per-user, no admin needed)
+        QProcess::startDetached(qsl("xdg-mime"), 
+            QStringList() << qsl("default") << qsl("mudlet.desktop") << qsl("x-scheme-handler/telnet"));
+        qDebug() << "main: Registered Mudlet as telnet:// protocol handler (Linux)";
 #endif
 
 #if defined(__APPLE__)
-    // Register telnet:// protocol handler on macOS
-    // The Info.plist already declares the URL scheme, but we call LSSetDefaultHandlerForURLScheme
-    // to ensure Mudlet becomes the default handler immediately on first launch
-    // This uses the bundle identifier from Info.plist
-    CFStringRef bundleId = CFBundleGetIdentifier(CFBundleGetMainBundle());
-    if (bundleId) {
-        CFStringRef telnetScheme = CFSTR("telnet");
-        OSStatus result = LSSetDefaultHandlerForURLScheme(telnetScheme, bundleId);
-        if (result == noErr) {
-            qDebug() << "main: Registered Mudlet as telnet:// protocol handler (macOS)";
-        } else {
-            qDebug() << "main: Failed to register telnet:// handler on macOS, error:" << result;
+        // Register telnet:// protocol handler on macOS
+        CFStringRef bundleId = CFBundleGetIdentifier(CFBundleGetMainBundle());
+        if (bundleId) {
+            CFStringRef telnetScheme = CFSTR("telnet");
+            OSStatus result = LSSetDefaultHandlerForURLScheme(telnetScheme, bundleId);
+            if (result == noErr) {
+                qDebug() << "main: Registered Mudlet as telnet:// protocol handler (macOS)";
+            } else {
+                qDebug() << "main: Failed to register telnet:// handler on macOS, error:" << result;
+            }
         }
-    }
 #endif
+    }
+
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.
     mudlet::self()->takeOwnershipOfInstanceCoordinator(std::move(instanceCoordinator));
