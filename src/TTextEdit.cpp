@@ -1436,7 +1436,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                                 return;
                             }
 
-                            auto mgr = mpConsole ? mpConsole->mpSelectionManager : nullptr;
+                            auto mgr = mpConsole ? mpConsole->mpSelectionManager.get() : nullptr;
                             if (!mgr) {
                                 qWarning() << "TTextEdit::mousePressEvent - Selection manager is null, skipping selection handling for link" << linkIndex;
                             } else {
