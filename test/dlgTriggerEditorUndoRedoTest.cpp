@@ -87,12 +87,12 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
     // Helper to clean up all items and reset undo stack for a given item type
     auto CLEANUP_ALL = [&](const auto& itemType) {
         // Clear any stale selections first to avoid references to deleted items
-        itemType.treeWidget->clearSelection();
-        itemType.treeWidget->setCurrentItem(nullptr);
+        itemType.treeWidget()->clearSelection();
+        itemType.treeWidget()->setCurrentItem(nullptr);
         QCoreApplication::processEvents();
 
-        while (itemType.baseItem->childCount() > 0) {
-            itemType.treeWidget->setCurrentItem(itemType.baseItem->child(0));
+        while (itemType.baseItem()->childCount() > 0) {
+            itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
             editor->slot_deleteItemOrGroup();
         }
         editor->mpUndoStack->clear();
@@ -110,31 +110,41 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         std::function<void()> showView;
         std::function<void()> addItem;
         std::function<void()> addFolder;
-        QTreeWidgetItem* baseItem;
-        TTreeWidget* treeWidget;
+        std::function<QTreeWidgetItem*()> getBaseItem;
+        std::function<TTreeWidget*()> getTreeWidget;
         QString newItemText;
         QString newFolderText;
+
+        // Convenience accessors
+        QTreeWidgetItem* baseItem() const { return getBaseItem(); }
+        TTreeWidget* treeWidget() const { return getTreeWidget(); }
     };
 
     std::vector<ItemTypeInfo> itemTypes = {
         {"Trigger", EditorViewType::cmTriggerView, [editor]() { editor->slot_showTriggers(); },
          [editor]() { editor->addTrigger(false); }, [editor]() { editor->addTrigger(true); },
-         editor->mpTriggerBaseItem, editor->treeWidget_triggers, "New trigger", "New trigger group"},
+         [editor]() { return editor->mpTriggerBaseItem; }, [editor]() { return editor->treeWidget_triggers; },
+         "New trigger", "New trigger group"},
         {"Timer", EditorViewType::cmTimerView, [editor]() { editor->slot_showTimers(); },
          [editor]() { editor->addTimer(false); }, [editor]() { editor->addTimer(true); },
-         editor->mpTimerBaseItem, editor->treeWidget_timers, "New timer", "New timer group"},
+         [editor]() { return editor->mpTimerBaseItem; }, [editor]() { return editor->treeWidget_timers; },
+         "New timer", "New timer group"},
         {"Alias", EditorViewType::cmAliasView, [editor]() { editor->slot_showAliases(); },
          [editor]() { editor->addAlias(false); }, [editor]() { editor->addAlias(true); },
-         editor->mpAliasBaseItem, editor->treeWidget_aliases, "New alias", "New alias group"},
+         [editor]() { return editor->mpAliasBaseItem; }, [editor]() { return editor->treeWidget_aliases; },
+         "New alias", "New alias group"},
         {"Script", EditorViewType::cmScriptView, [editor]() { editor->slot_showScripts(); },
          [editor]() { editor->addScript(false); }, [editor]() { editor->addScript(true); },
-         editor->mpScriptsBaseItem, editor->treeWidget_scripts, "New script", "New script group"},
+         [editor]() { return editor->mpScriptsBaseItem; }, [editor]() { return editor->treeWidget_scripts; },
+         "New script", "New script group"},
         {"Key", EditorViewType::cmKeysView, [editor]() { editor->slot_showKeys(); },
          [editor]() { editor->addKey(false); }, [editor]() { editor->addKey(true); },
-         editor->mpKeyBaseItem, editor->treeWidget_keys, "New key", "New key group"},
+         [editor]() { return editor->mpKeyBaseItem; }, [editor]() { return editor->treeWidget_keys; },
+         "New key", "New key group"},
         {"Action", EditorViewType::cmActionView, [editor]() { editor->slot_showActions(); },
          [editor]() { editor->addAction(false); }, [editor]() { editor->addAction(true); },
-         editor->mpActionBaseItem, editor->treeWidget_actions, "New button", "New button group"}
+         [editor]() { return editor->mpActionBaseItem; }, [editor]() { return editor->treeWidget_actions; },
+         "New button", "New button group"}
     };
 
     for (const auto& itemType : itemTypes) {
@@ -143,20 +153,20 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
         // Test: Add item → undo → redo
         {
-            int initialCount = itemType.baseItem->childCount();
+            int initialCount = itemType.baseItem()->childCount();
             int initialIndex = editor->mpUndoStack->index();
 
             itemType.addItem();
 
-            if (itemType.baseItem->childCount() > initialCount) {
+            if (itemType.baseItem()->childCount() > initialCount) {
                 TEST_PASS(itemType.name + ": Item added");
 
                 editor->mpUndoStack->undo();
-                if (itemType.baseItem->childCount() == initialCount) {
+                if (itemType.baseItem()->childCount() == initialCount) {
                     TEST_PASS(itemType.name + ": Item undo works");
 
                     editor->mpUndoStack->redo();
-                    if (itemType.baseItem->childCount() > initialCount) {
+                    if (itemType.baseItem()->childCount() > initialCount) {
                         TEST_PASS(itemType.name + ": Item redo works");
                         editor->mpUndoStack->undo(); // Clean up
                     } else {
@@ -172,19 +182,19 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
         // Test: Add folder → undo → redo
         {
-            int initialCount = itemType.baseItem->childCount();
+            int initialCount = itemType.baseItem()->childCount();
 
             itemType.addFolder();
 
-            if (itemType.baseItem->childCount() > initialCount) {
+            if (itemType.baseItem()->childCount() > initialCount) {
                 TEST_PASS(itemType.name + ": Folder added");
 
                 editor->mpUndoStack->undo();
-                if (itemType.baseItem->childCount() == initialCount) {
+                if (itemType.baseItem()->childCount() == initialCount) {
                     TEST_PASS(itemType.name + ": Folder undo works");
 
                     editor->mpUndoStack->redo();
-                    if (itemType.baseItem->childCount() > initialCount) {
+                    if (itemType.baseItem()->childCount() > initialCount) {
                         TEST_PASS(itemType.name + ": Folder redo works");
                         editor->mpUndoStack->undo(); // Clean up
                     } else {
@@ -202,22 +212,22 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         {
             // Add item first
             itemType.addItem();
-            QTreeWidgetItem* item = itemType.baseItem->child(0);
+            QTreeWidgetItem* item = itemType.baseItem()->child(0);
             if (item) {
-                itemType.treeWidget->setCurrentItem(item);
-                int countBeforeDelete = itemType.baseItem->childCount();
+                itemType.treeWidget()->setCurrentItem(item);
+                int countBeforeDelete = itemType.baseItem()->childCount();
 
                 editor->slot_deleteItemOrGroup();
 
-                if (itemType.baseItem->childCount() < countBeforeDelete) {
+                if (itemType.baseItem()->childCount() < countBeforeDelete) {
                     TEST_PASS(itemType.name + ": Item deleted");
 
                     editor->mpUndoStack->undo();
-                    if (itemType.baseItem->childCount() == countBeforeDelete) {
+                    if (itemType.baseItem()->childCount() == countBeforeDelete) {
                         TEST_PASS(itemType.name + ": Delete undo works");
 
                         editor->mpUndoStack->redo();
-                        if (itemType.baseItem->childCount() < countBeforeDelete) {
+                        if (itemType.baseItem()->childCount() < countBeforeDelete) {
                             TEST_PASS(itemType.name + ": Delete redo works");
                             // Item is deleted, no cleanup needed
                         } else {
@@ -241,22 +251,22 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         {
             // Add folder first
             itemType.addFolder();
-            QTreeWidgetItem* folder = itemType.baseItem->child(0);
+            QTreeWidgetItem* folder = itemType.baseItem()->child(0);
             if (folder) {
-                itemType.treeWidget->setCurrentItem(folder);
-                int countBeforeDelete = itemType.baseItem->childCount();
+                itemType.treeWidget()->setCurrentItem(folder);
+                int countBeforeDelete = itemType.baseItem()->childCount();
 
                 editor->slot_deleteItemOrGroup();
 
-                if (itemType.baseItem->childCount() < countBeforeDelete) {
+                if (itemType.baseItem()->childCount() < countBeforeDelete) {
                     TEST_PASS(itemType.name + ": Empty folder deleted");
 
                     editor->mpUndoStack->undo();
-                    if (itemType.baseItem->childCount() == countBeforeDelete) {
+                    if (itemType.baseItem()->childCount() == countBeforeDelete) {
                         TEST_PASS(itemType.name + ": Empty folder undo works");
 
                         editor->mpUndoStack->redo();
-                        if (itemType.baseItem->childCount() < countBeforeDelete) {
+                        if (itemType.baseItem()->childCount() < countBeforeDelete) {
                             TEST_PASS(itemType.name + ": Empty folder redo works");
                         } else {
                             TEST_FAIL(itemType.name + ": Empty folder redo failed");
@@ -301,10 +311,10 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 QThread::msleep(10);  // Extra delay for folder registration
             }
 
-            int totalItems = itemType.baseItem->childCount();
+            int totalItems = itemType.baseItem()->childCount();
 
             // Get the most recently added item (inserted at position 0)
-            QTreeWidgetItem* folder = totalItems > 0 ? itemType.baseItem->child(0) : nullptr;
+            QTreeWidgetItem* folder = totalItems > 0 ? itemType.baseItem()->child(0) : nullptr;
 
             // But if there are leftovers from previous tests, the new item might not be first
             // Check if child(0) is actually a folder, otherwise scan for it
@@ -315,7 +325,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     // Not a folder, scan for the actual folder
                     folder = nullptr;
                     for (int i = 0; i < totalItems; i++) {
-                        QTreeWidgetItem* item = itemType.baseItem->child(i);
+                        QTreeWidgetItem* item = itemType.baseItem()->child(i);
                         int id = item->data(0, Qt::UserRole).toInt();
                         TKey* key = editor->mpHost->getKeyUnit()->getKey(id);
                         if (key && key->isFolder() && key->getName() == "New key group") {
@@ -328,7 +338,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
             if (folder) {
                 // Add 2 children to the folder (re-select folder between adds)
-                itemType.treeWidget->setCurrentItem(folder);
+                itemType.treeWidget()->setCurrentItem(folder);
                 itemType.addItem();
 
                 // For Keys/Actions, ensure event processing completes
@@ -337,7 +347,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     QCoreApplication::processEvents();
                 }
 
-                itemType.treeWidget->setCurrentItem(folder);  // Re-select for second child
+                itemType.treeWidget()->setCurrentItem(folder);  // Re-select for second child
                 itemType.addItem();
 
                 // For Keys/Actions, ensure event processing completes
@@ -350,26 +360,26 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
                 if (childCount == 2) {
                     // Select only the parent
-                    itemType.treeWidget->setCurrentItem(folder);
-                    int totalCountBefore = itemType.baseItem->childCount();
+                    itemType.treeWidget()->setCurrentItem(folder);
+                    int totalCountBefore = itemType.baseItem()->childCount();
 
                     editor->slot_deleteItemOrGroup();
 
                     // Parent and all children should be deleted
-                    if (itemType.baseItem->childCount() < totalCountBefore) {
+                    if (itemType.baseItem()->childCount() < totalCountBefore) {
                         TEST_PASS(itemType.name + ": Parent with children deleted");
 
                         editor->mpUndoStack->undo();
 
                         // Check if parent and children restored
                         // After undo, the folder might not be at child(0) if there are leftovers
-                        int totalAfterUndo = itemType.baseItem->childCount();
+                        int totalAfterUndo = itemType.baseItem()->childCount();
 
                         QTreeWidgetItem* restoredFolder = nullptr;
 
                         // Scan for a folder with 2 children
                         for (int i = 0; i < totalAfterUndo; i++) {
-                            QTreeWidgetItem* item = itemType.baseItem->child(i);
+                            QTreeWidgetItem* item = itemType.baseItem()->child(i);
                             if (item->childCount() == 2) {
                                 restoredFolder = item;
                                 break;
@@ -379,7 +389,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                         if (restoredFolder && restoredFolder->childCount() == 2) {
                             TEST_PASS(itemType.name + ": Parent and children restored");
                             // Clean up
-                            itemType.treeWidget->setCurrentItem(restoredFolder);
+                            itemType.treeWidget()->setCurrentItem(restoredFolder);
                             editor->slot_deleteItemOrGroup();
                         } else {
                             TEST_FAIL(itemType.name + ": Children not restored correctly");
@@ -395,7 +405,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 } else {
                     TEST_FAIL(itemType.name + ": Failed to add children to folder");
                     // Clean up
-                    itemType.treeWidget->setCurrentItem(folder);
+                    itemType.treeWidget()->setCurrentItem(folder);
                     editor->slot_deleteItemOrGroup();
                 }
             } else {
@@ -416,8 +426,8 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 QThread::msleep(10);  // Extra delay for folder registration
             }
 
-            int totalItems = itemType.baseItem->childCount();
-            QTreeWidgetItem* folder = totalItems > 0 ? itemType.baseItem->child(0) : nullptr;
+            int totalItems = itemType.baseItem()->childCount();
+            QTreeWidgetItem* folder = totalItems > 0 ? itemType.baseItem()->child(0) : nullptr;
 
             // If there are leftovers, scan for the actual folder
             if (folder && itemType.viewType == EditorViewType::cmKeysView) {
@@ -426,7 +436,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 if (pKey && !pKey->isFolder()) {
                     folder = nullptr;
                     for (int i = 0; i < totalItems; i++) {
-                        QTreeWidgetItem* item = itemType.baseItem->child(i);
+                        QTreeWidgetItem* item = itemType.baseItem()->child(i);
                         int id = item->data(0, Qt::UserRole).toInt();
                         TKey* key = editor->mpHost->getKeyUnit()->getKey(id);
                         if (key && key->isFolder() && key->getName() == "New key group") {
@@ -439,7 +449,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
             if (folder) {
                 // Add child
-                itemType.treeWidget->setCurrentItem(folder);
+                itemType.treeWidget()->setCurrentItem(folder);
                 itemType.addItem();
 
                 // For Keys/Actions, ensure event processing completes
@@ -454,26 +464,31 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     QTreeWidgetItem* child = folder->child(0);
 
                     // Make sure parent and child are active
-                    itemType.treeWidget->setCurrentItem(folder);
+                    itemType.treeWidget()->setCurrentItem(folder);
                     editor->slot_toggleItemOrGroupActiveFlag();
-                    itemType.treeWidget->setCurrentItem(child);
+                    itemType.treeWidget()->setCurrentItem(child);
                     editor->slot_toggleItemOrGroupActiveFlag();
 
                     // Now toggle parent off
-                    itemType.treeWidget->setCurrentItem(folder);
+                    itemType.treeWidget()->setCurrentItem(folder);
                     editor->slot_toggleItemOrGroupActiveFlag();
 
                     // Undo toggle
                     editor->mpUndoStack->undo();
                     TEST_PASS(itemType.name + ": Toggle undo works");
 
-                    // Clean up
-                    itemType.treeWidget->setCurrentItem(folder);
-                    editor->slot_deleteItemOrGroup();
+                    // Clean up - must get fresh pointer after undo since tree was rebuilt
+                    if (itemType.baseItem()->childCount() > 0) {
+                        itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
+                        editor->slot_deleteItemOrGroup();
+                    }
                 } else {
                     TEST_FAIL(itemType.name + ": Failed to add child for toggle test");
-                    itemType.treeWidget->setCurrentItem(folder);
-                    editor->slot_deleteItemOrGroup();
+                    // Get fresh pointer since folder may have been invalidated
+                    if (itemType.baseItem()->childCount() > 0) {
+                        itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
+                        editor->slot_deleteItemOrGroup();
+                    }
                 }
             } else {
                 TEST_FAIL(itemType.name + ": Failed to create folder for toggle test");
@@ -484,10 +499,10 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         // Test: Multi-level hierarchy delete
         {
             CLEANUP_ALL(itemType); // Ensure clean state
-            int initialCount = itemType.baseItem->childCount();
+            int initialCount = itemType.baseItem()->childCount();
 
             // Create grandparent folder at root
-            itemType.treeWidget->setCurrentItem(itemType.baseItem);
+            itemType.treeWidget()->setCurrentItem(itemType.baseItem());
             itemType.addFolder();
 
             // For Keys/Actions, ensure folder registration completes
@@ -499,9 +514,9 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
             // Scan for the newly created folder (might not be at child(0) due to leftovers)
             QTreeWidgetItem* grandparent = nullptr;
-            int total = itemType.baseItem->childCount();
+            int total = itemType.baseItem()->childCount();
             for (int i = 0; i < total; i++) {
-                QTreeWidgetItem* item = itemType.baseItem->child(i);
+                QTreeWidgetItem* item = itemType.baseItem()->child(i);
                 if (itemType.viewType == EditorViewType::cmKeysView) {
                     int id = item->data(0, Qt::UserRole).toInt();
                     TKey* key = editor->mpHost->getKeyUnit()->getKey(id);
@@ -527,7 +542,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
             if (grandparent) {
                 // Add parent folder under grandparent
-                itemType.treeWidget->setCurrentItem(grandparent);
+                itemType.treeWidget()->setCurrentItem(grandparent);
                 itemType.addFolder();
 
                 // For Keys/Actions, ensure event processing completes
@@ -541,7 +556,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
                 if (parent) {
                     // Add child under parent
-                    itemType.treeWidget->setCurrentItem(parent);
+                    itemType.treeWidget()->setCurrentItem(parent);
                     itemType.addItem();
 
                     // For Keys/Actions, ensure event processing completes
@@ -552,10 +567,10 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
                     if (parent->childCount() == 1) {
                         // Delete grandparent (should delete 2 levels of children)
-                        itemType.treeWidget->setCurrentItem(grandparent);
+                        itemType.treeWidget()->setCurrentItem(grandparent);
                         editor->slot_deleteItemOrGroup();
 
-                        int countAfterDelete = itemType.baseItem->childCount();
+                        int countAfterDelete = itemType.baseItem()->childCount();
                         // After delete, should be back to initial count
                         if (countAfterDelete == initialCount) {
                             TEST_PASS(itemType.name + ": Multi-level hierarchy deleted");
@@ -563,7 +578,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                             editor->mpUndoStack->undo();
 
                             // Check if entire hierarchy restored
-                            QTreeWidgetItem* restoredGP = itemType.baseItem->child(0);
+                            QTreeWidgetItem* restoredGP = itemType.baseItem()->child(0);
 
                             if (restoredGP && restoredGP->childCount() == 1) {
                                 QTreeWidgetItem* restoredP = restoredGP->child(0);
@@ -571,12 +586,12 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                                 if (restoredP && restoredP->childCount() == 1) {
                                     TEST_PASS(itemType.name + ": Multi-level hierarchy restored");
                                     // Clean up
-                                    itemType.treeWidget->setCurrentItem(restoredGP);
+                                    itemType.treeWidget()->setCurrentItem(restoredGP);
                                     editor->slot_deleteItemOrGroup();
                                 } else {
                                     TEST_FAIL(itemType.name + ": Grandchild not restored");
                                     // Clean up
-                                    itemType.treeWidget->setCurrentItem(restoredGP);
+                                    itemType.treeWidget()->setCurrentItem(restoredGP);
                                     editor->slot_deleteItemOrGroup();
                                 }
                             } else {
@@ -592,12 +607,12 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                         }
                     } else {
                         TEST_FAIL(itemType.name + ": Failed to add grandchild");
-                        itemType.treeWidget->setCurrentItem(grandparent);
+                        itemType.treeWidget()->setCurrentItem(grandparent);
                         editor->slot_deleteItemOrGroup();
                     }
                 } else {
                     TEST_FAIL(itemType.name + ": Failed to add parent folder");
-                    itemType.treeWidget->setCurrentItem(grandparent);
+                    itemType.treeWidget()->setCurrentItem(grandparent);
                     editor->slot_deleteItemOrGroup();
                 }
             } else {
@@ -622,15 +637,15 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         {
             CLEANUP_ALL(itemType); // Ensure clean state
             // Create parent folder with children at root
-            itemType.treeWidget->setCurrentItem(itemType.baseItem);
+            itemType.treeWidget()->setCurrentItem(itemType.baseItem());
             itemType.addFolder();
-            QTreeWidgetItem* folder = itemType.baseItem->child(0);
+            QTreeWidgetItem* folder = itemType.baseItem()->child(0);
             if (folder) {
                 // Add children (re-select folder between adds)
-                itemType.treeWidget->setCurrentItem(folder);
+                itemType.treeWidget()->setCurrentItem(folder);
                 itemType.addItem();
 
-                itemType.treeWidget->setCurrentItem(folder);  // Re-select for second child
+                itemType.treeWidget()->setCurrentItem(folder);  // Re-select for second child
                 itemType.addItem();
 
                 // After both adds: child at position 0 is the SECOND (most recent)
@@ -642,11 +657,11 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     // Select all items (parent and children)
                     QList<QTreeWidgetItem*> items;
                     items << folder << child1 << child2;
-                    itemType.treeWidget->clearSelection();
+                    itemType.treeWidget()->clearSelection();
                     for (auto* item : items) {
                         item->setSelected(true);
                     }
-                    itemType.treeWidget->setCurrentItem(folder);
+                    itemType.treeWidget()->setCurrentItem(folder);
 
                     int stackCountBefore = editor->mpUndoStack->count();
                     editor->slot_deleteItemOrGroup();
@@ -659,10 +674,10 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                         editor->mpUndoStack->undo();
 
                         // Verify restored
-                        QTreeWidgetItem* restored = itemType.baseItem->child(0);
+                        QTreeWidgetItem* restored = itemType.baseItem()->child(0);
                         if (restored && restored->childCount() == 2) {
                             TEST_PASS(itemType.name + ": Single undo restores all");
-                            itemType.treeWidget->setCurrentItem(restored);
+                            itemType.treeWidget()->setCurrentItem(restored);
                             editor->slot_deleteItemOrGroup();
                         } else {
                             TEST_FAIL(itemType.name + ": Not all items restored");
@@ -674,14 +689,14 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                         while (editor->mpUndoStack->canUndo() && editor->mpUndoStack->count() > stackCountBefore) {
                             editor->mpUndoStack->undo();
                         }
-                        if (itemType.baseItem->childCount() > 0) {
-                            itemType.treeWidget->setCurrentItem(itemType.baseItem->child(0));
+                        if (itemType.baseItem()->childCount() > 0) {
+                            itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
                             editor->slot_deleteItemOrGroup();
                         }
                     }
                 } else {
                     TEST_FAIL(itemType.name + ": Failed to create children for batch test");
-                    itemType.treeWidget->setCurrentItem(folder);
+                    itemType.treeWidget()->setCurrentItem(folder);
                     editor->slot_deleteItemOrGroup();
                 }
             } else {
@@ -694,20 +709,20 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
             CLEANUP_ALL(itemType); // Ensure clean state
             // Create parent folder with children
             itemType.addFolder();
-            QTreeWidgetItem* folder = itemType.baseItem->child(0);
+            QTreeWidgetItem* folder = itemType.baseItem()->child(0);
             if (folder) {
-                itemType.treeWidget->setCurrentItem(folder);
+                itemType.treeWidget()->setCurrentItem(folder);
                 itemType.addItem();
 
                 if (folder->childCount() == 1) {
                     // Select all
                     QList<QTreeWidgetItem*> items;
                     items << folder << folder->child(0);
-                    itemType.treeWidget->clearSelection();
+                    itemType.treeWidget()->clearSelection();
                     for (auto* item : items) {
                         item->setSelected(true);
                     }
-                    itemType.treeWidget->setCurrentItem(folder);
+                    itemType.treeWidget()->setCurrentItem(folder);
 
                     int stackCountBefore = editor->mpUndoStack->count();
                     editor->slot_toggleItemOrGroupActiveFlag();
@@ -726,12 +741,15 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                         }
                     }
 
-                    // Clean up
-                    itemType.treeWidget->setCurrentItem(folder);
-                    editor->slot_deleteItemOrGroup();
+                    // Clean up - get fresh pointer after undo since tree was rebuilt
+                    if (itemType.baseItem()->childCount() > 0) {
+                        itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
+                        editor->slot_deleteItemOrGroup();
+                    }
                 } else {
                     TEST_FAIL(itemType.name + ": Failed to create child for toggle batch test");
-                    itemType.treeWidget->setCurrentItem(folder);
+                    // folder is still valid here (no undo called)
+                    itemType.treeWidget()->setCurrentItem(folder);
                     editor->slot_deleteItemOrGroup();
                 }
             } else {
@@ -755,16 +773,16 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         // Test: Delete → undo (verify new ID assigned)
         {
             itemType.addItem();
-            QTreeWidgetItem* item = itemType.baseItem->child(0);
+            QTreeWidgetItem* item = itemType.baseItem()->child(0);
             if (item) {
                 int originalID = item->data(0, Qt::UserRole).toInt();
 
-                itemType.treeWidget->setCurrentItem(item);
+                itemType.treeWidget()->setCurrentItem(item);
                 editor->slot_deleteItemOrGroup();
 
                 editor->mpUndoStack->undo();
 
-                QTreeWidgetItem* restoredItem = itemType.baseItem->child(0);
+                QTreeWidgetItem* restoredItem = itemType.baseItem()->child(0);
                 if (restoredItem) {
                     int newID = restoredItem->data(0, Qt::UserRole).toInt();
 
@@ -776,7 +794,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     }
 
                     // Clean up
-                    itemType.treeWidget->setCurrentItem(restoredItem);
+                    itemType.treeWidget()->setCurrentItem(restoredItem);
                     editor->slot_deleteItemOrGroup();
                 } else {
                     TEST_FAIL(itemType.name + ": Item not restored for ID remap test");
@@ -789,18 +807,18 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         // Test: Delete → undo → redo → undo chain
         {
             itemType.addItem();
-            QTreeWidgetItem* item = itemType.baseItem->child(0);
+            QTreeWidgetItem* item = itemType.baseItem()->child(0);
             if (item) {
-                itemType.treeWidget->setCurrentItem(item);
+                itemType.treeWidget()->setCurrentItem(item);
                 editor->slot_deleteItemOrGroup();
 
                 editor->mpUndoStack->undo(); // Restore
                 editor->mpUndoStack->redo(); // Delete again
                 editor->mpUndoStack->undo(); // Restore again
 
-                if (itemType.baseItem->childCount() > 0) {
+                if (itemType.baseItem()->childCount() > 0) {
                     TEST_PASS(itemType.name + ": Undo/redo chain works with ID remapping");
-                    itemType.treeWidget->setCurrentItem(itemType.baseItem->child(0));
+                    itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
                     editor->slot_deleteItemOrGroup();
                 } else {
                     TEST_FAIL(itemType.name + ": Undo/redo chain failed");
@@ -813,24 +831,24 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         // Test: Delete parent with children → verify all IDs remapped
         {
             itemType.addFolder();
-            QTreeWidgetItem* folder = itemType.baseItem->child(0);
+            QTreeWidgetItem* folder = itemType.baseItem()->child(0);
             if (folder) {
                 // Add children (re-select folder between adds to keep children under folder)
-                itemType.treeWidget->setCurrentItem(folder);
+                itemType.treeWidget()->setCurrentItem(folder);
                 itemType.addItem();
-                itemType.treeWidget->setCurrentItem(folder);  // Re-select folder for second child
+                itemType.treeWidget()->setCurrentItem(folder);  // Re-select folder for second child
                 itemType.addItem();
 
                 if (folder->childCount() == 2) {
-                    itemType.treeWidget->setCurrentItem(folder);
+                    itemType.treeWidget()->setCurrentItem(folder);
                     editor->slot_deleteItemOrGroup();
 
                     editor->mpUndoStack->undo();
 
-                    QTreeWidgetItem* restoredFolder = itemType.baseItem->child(0);
+                    QTreeWidgetItem* restoredFolder = itemType.baseItem()->child(0);
                     if (restoredFolder && restoredFolder->childCount() == 2) {
                         TEST_PASS(itemType.name + ": Parent and children IDs remapped");
-                        itemType.treeWidget->setCurrentItem(restoredFolder);
+                        itemType.treeWidget()->setCurrentItem(restoredFolder);
                         editor->slot_deleteItemOrGroup();
                     } else {
                         TEST_FAIL(itemType.name + ": Parent/children not fully restored for ID remap");
@@ -838,7 +856,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     }
                 } else {
                     TEST_FAIL(itemType.name + ": Failed to create children for ID remap test");
-                    itemType.treeWidget->setCurrentItem(folder);
+                    itemType.treeWidget()->setCurrentItem(folder);
                     editor->slot_deleteItemOrGroup();
                 }
             } else {
@@ -850,38 +868,38 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         {
             // This is hard to test without internal access, so just verify operations work
             // Add two items as siblings at root (select baseItem between adds)
-            itemType.treeWidget->setCurrentItem(itemType.baseItem);
+            itemType.treeWidget()->setCurrentItem(itemType.baseItem());
             itemType.addItem();
-            QTreeWidgetItem* item1 = itemType.baseItem->child(0);  // Save reference immediately
+            QTreeWidgetItem* item1 = itemType.baseItem()->child(0);  // Save reference immediately
 
-            itemType.treeWidget->setCurrentItem(itemType.baseItem);  // Select root for second item
+            itemType.treeWidget()->setCurrentItem(itemType.baseItem());  // Select root for second item
             itemType.addItem();
             // item2 is now at child(0), item1 is at child(1)
 
-            if (itemType.baseItem->childCount() >= 2 && item1) {
-                itemType.treeWidget->setCurrentItem(item1);
+            if (itemType.baseItem()->childCount() >= 2 && item1) {
+                itemType.treeWidget()->setCurrentItem(item1);
                 editor->slot_deleteItemOrGroup();
 
                 editor->mpUndoStack->undo(); // Restore
 
                 // Now undo the second add (may take multiple undos due to Modify commands)
                 // Keep undoing until we get back to 1 item
-                for (int i = 0; i < 10 && itemType.baseItem->childCount() > 1 && editor->mpUndoStack->canUndo(); i++) {
+                for (int i = 0; i < 10 && itemType.baseItem()->childCount() > 1 && editor->mpUndoStack->canUndo(); i++) {
                     editor->mpUndoStack->undo();
                 }
 
-                if (itemType.baseItem->childCount() == 1) {
+                if (itemType.baseItem()->childCount() == 1) {
                     TEST_PASS(itemType.name + ": Stack handles ID remapping correctly");
 
                     // Clean up remaining item (may also take multiple undos)
-                    for (int i = 0; i < 10 && itemType.baseItem->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
+                    for (int i = 0; i < 10 && itemType.baseItem()->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
                         editor->mpUndoStack->undo();
                     }
                 } else {
                     TEST_FAIL(itemType.name + ": Stack ID remapping issue");
                     for (int i = 0; i < 20 && editor->mpUndoStack->canUndo(); i++) {
                         editor->mpUndoStack->undo();
-                        if (itemType.baseItem->childCount() == 0) break;
+                        if (itemType.baseItem()->childCount() == 0) break;
                     }
                 }
             } else {
@@ -894,15 +912,15 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         {
             // Create hierarchy: parent folder with 2 child folders, one child folder has a grandchild
             itemType.addFolder();
-            QTreeWidgetItem* parent = itemType.baseItem->child(0);
+            QTreeWidgetItem* parent = itemType.baseItem()->child(0);
             if (parent) {
                 // Add first child folder
-                itemType.treeWidget->setCurrentItem(parent);
+                itemType.treeWidget()->setCurrentItem(parent);
                 itemType.addFolder();
                 QCoreApplication::processEvents();
 
                 // Add second child folder that will have a grandchild
-                itemType.treeWidget->setCurrentItem(parent);
+                itemType.treeWidget()->setCurrentItem(parent);
                 itemType.addFolder();
                 QCoreApplication::processEvents();
 
@@ -910,7 +928,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     QTreeWidgetItem* childWithGrandchild = parent->child(0); // Most recent folder
 
                     // Add grandchild item under the child folder
-                    itemType.treeWidget->setCurrentItem(childWithGrandchild);
+                    itemType.treeWidget()->setCurrentItem(childWithGrandchild);
                     itemType.addItem();
                     QCoreApplication::processEvents();
 
@@ -937,11 +955,11 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
                             for (int cycle = 0; cycle < 3; cycle++) {
                                 // Undo all operations (parent folder + 2 child folders + 1 grandchild + move)
-                                for (int i = 0; i < 10 && editor->mpUndoStack->canUndo() && itemType.baseItem->childCount() > 0; i++) {
+                                for (int i = 0; i < 10 && editor->mpUndoStack->canUndo() && itemType.baseItem()->childCount() > 0; i++) {
                                     editor->mpUndoStack->undo();
                                 }
 
-                                if (itemType.baseItem->childCount() != 0) {
+                                if (itemType.baseItem()->childCount() != 0) {
                                     allCyclesPassed = false;
                                     break;
                                 }
@@ -952,7 +970,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                                 }
 
                                 // Verify structure restored with move
-                                QTreeWidgetItem* restoredParent = itemType.baseItem->child(0);
+                                QTreeWidgetItem* restoredParent = itemType.baseItem()->child(0);
                                 if (!restoredParent || restoredParent->childCount() != 3) {
                                     allCyclesPassed = false;
                                     break;
@@ -1003,7 +1021,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
         // Test: 5 operations → undo all → redo all
         {
-            int initialCount = itemType.baseItem->childCount();
+            int initialCount = itemType.baseItem()->childCount();
             int stackIndexStart = editor->mpUndoStack->index();
 
             // Do 5 add operations
@@ -1011,25 +1029,25 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 itemType.addItem();
             }
 
-            if (itemType.baseItem->childCount() == initialCount + 5) {
+            if (itemType.baseItem()->childCount() == initialCount + 5) {
                 // Undo all items (may take more than 5 undos due to Modify commands)
-                for (int i = 0; i < 50 && itemType.baseItem->childCount() > initialCount && editor->mpUndoStack->canUndo(); i++) {
+                for (int i = 0; i < 50 && itemType.baseItem()->childCount() > initialCount && editor->mpUndoStack->canUndo(); i++) {
                     editor->mpUndoStack->undo();
                 }
 
-                if (itemType.baseItem->childCount() == initialCount) {
+                if (itemType.baseItem()->childCount() == initialCount) {
                     TEST_PASS(itemType.name + ": Undo all 5 operations works");
 
                     // Redo all to restore 5 items
-                    for (int i = 0; i < 50 && editor->mpUndoStack->canRedo() && itemType.baseItem->childCount() < initialCount + 5; i++) {
+                    for (int i = 0; i < 50 && editor->mpUndoStack->canRedo() && itemType.baseItem()->childCount() < initialCount + 5; i++) {
                         editor->mpUndoStack->redo();
                     }
 
-                    if (itemType.baseItem->childCount() == initialCount + 5) {
+                    if (itemType.baseItem()->childCount() == initialCount + 5) {
                         TEST_PASS(itemType.name + ": Redo all 5 operations works");
 
                         // Clean up - undo back to initial state
-                        for (int i = 0; i < 50 && itemType.baseItem->childCount() > initialCount && editor->mpUndoStack->canUndo(); i++) {
+                        for (int i = 0; i < 50 && itemType.baseItem()->childCount() > initialCount && editor->mpUndoStack->canUndo(); i++) {
                             editor->mpUndoStack->undo();
                         }
                     } else {
@@ -1121,9 +1139,9 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
             // Add → delete → add → undo → redo → undo
             itemType.addItem();
-            QTreeWidgetItem* item1 = itemType.baseItem->child(0);
+            QTreeWidgetItem* item1 = itemType.baseItem()->child(0);
             if (item1) {
-                itemType.treeWidget->setCurrentItem(item1);
+                itemType.treeWidget()->setCurrentItem(item1);
                 editor->slot_deleteItemOrGroup();
 
                 itemType.addItem();
@@ -1186,7 +1204,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         {
             itemType.addItem();
             itemType.addItem();
-            int itemsAdded = itemType.baseItem->childCount();
+            int itemsAdded = itemType.baseItem()->childCount();
 
             editor->mpUndoStack->clear();
 
@@ -1203,7 +1221,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         {
             itemType.addItem();
 
-            if (itemType.baseItem->childCount() == 1) {
+            if (itemType.baseItem()->childCount() == 1) {
                 TEST_PASS(itemType.name + ": Operations work after stack clear");
 
                 editor->mpUndoStack->undo();
@@ -1215,21 +1233,21 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
         // Test: Deep nesting (10 levels)
         {
-            QTreeWidgetItem* currentParent = itemType.baseItem;
+            QTreeWidgetItem* currentParent = itemType.baseItem();
 
             // Create 10 levels of nested folders
             for (int i = 0; i < 10; i++) {
-                itemType.treeWidget->setCurrentItem(currentParent);
+                itemType.treeWidget()->setCurrentItem(currentParent);
                 itemType.addFolder();
-                if (currentParent == itemType.baseItem) {
-                    currentParent = itemType.baseItem->child(0);
+                if (currentParent == itemType.baseItem()) {
+                    currentParent = itemType.baseItem()->child(0);
                 } else {
                     currentParent = currentParent->child(0);
                 }
             }
 
             // Verify we created 10 levels
-            QTreeWidgetItem* deepest = itemType.baseItem;
+            QTreeWidgetItem* deepest = itemType.baseItem();
             int depth = 0;
             while (deepest && deepest->childCount() > 0) {
                 deepest = deepest->child(0);
@@ -1240,14 +1258,14 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 TEST_PASS(itemType.name + ": Deep nesting (10 levels) created successfully");
 
                 // Delete the top-level folder (should delete all nested items)
-                itemType.treeWidget->setCurrentItem(itemType.baseItem->child(0));
+                itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
                 editor->slot_deleteItemOrGroup();
 
                 // Undo the delete
                 editor->mpUndoStack->undo();
 
                 // Verify restoration
-                QTreeWidgetItem* restored = itemType.baseItem;
+                QTreeWidgetItem* restored = itemType.baseItem();
                 int restoredDepth = 0;
                 while (restored && restored->childCount() > 0) {
                     restored = restored->child(0);
@@ -1261,7 +1279,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 }
 
                 // Clean up
-                itemType.treeWidget->setCurrentItem(itemType.baseItem->child(0));
+                itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
                 editor->slot_deleteItemOrGroup();
             } else {
                 TEST_FAIL(itemType.name + ": Failed to create deep nesting");
@@ -1292,7 +1310,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
             // Add items to THIS type
             itemType.showView();
             itemType.addItem();
-            int itemCountAfterAdd = itemType.baseItem->childCount();
+            int itemCountAfterAdd = itemType.baseItem()->childCount();
 
             // Add items to ANOTHER type (use the first different type)
             for (const auto& otherType : itemTypes) {
@@ -1301,13 +1319,13 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     otherType.addItem();
 
                     // Undo both operations (may take multiple undos due to Modify commands)
-                    for (int i = 0; i < 20 && (itemType.baseItem->childCount() > 0 || otherType.baseItem->childCount() > 0)
+                    for (int i = 0; i < 20 && (itemType.baseItem()->childCount() > 0 || otherType.baseItem()->childCount() > 0)
                          && editor->mpUndoStack->canUndo(); i++) {
                         editor->mpUndoStack->undo();
                     }
 
                     // Verify both undone
-                    if (itemType.baseItem->childCount() == 0 && otherType.baseItem->childCount() == 0) {
+                    if (itemType.baseItem()->childCount() == 0 && otherType.baseItem()->childCount() == 0) {
                         TEST_PASS(itemType.name + ": Mixed operations undo correctly");
                     } else {
                         TEST_FAIL(itemType.name + ": Mixed operations undo failed");
@@ -1331,19 +1349,19 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     otherType.addItem();
 
                     // Undo the other type's item (may take multiple undos due to Modify commands)
-                    for (int i = 0; i < 10 && otherType.baseItem->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
+                    for (int i = 0; i < 10 && otherType.baseItem()->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
                         editor->mpUndoStack->undo();
                     }
 
-                    if (otherType.baseItem->childCount() == 0 && itemType.baseItem->childCount() == 1) {
+                    if (otherType.baseItem()->childCount() == 0 && itemType.baseItem()->childCount() == 1) {
                         TEST_PASS(itemType.name + ": Cross-type undo ordering correct");
 
                         // Redo to restore the other type's item
-                        for (int i = 0; i < 10 && otherType.baseItem->childCount() == 0 && editor->mpUndoStack->canRedo(); i++) {
+                        for (int i = 0; i < 10 && otherType.baseItem()->childCount() == 0 && editor->mpUndoStack->canRedo(); i++) {
                             editor->mpUndoStack->redo();
                         }
 
-                        if (otherType.baseItem->childCount() == 1) {
+                        if (otherType.baseItem()->childCount() == 1) {
                             TEST_PASS(itemType.name + ": Cross-type redo ordering correct");
                         } else {
                             TEST_FAIL(itemType.name + ": Cross-type redo failed");
@@ -1373,12 +1391,12 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     otherType.showView();
 
                     // Undo the operation from previous view (may take multiple undos)
-                    for (int i = 0; i < 10 && itemType.baseItem->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
+                    for (int i = 0; i < 10 && itemType.baseItem()->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
                         editor->mpUndoStack->undo();
                     }
 
                     // Verify it was undone
-                    if (itemType.baseItem->childCount() == 0) {
+                    if (itemType.baseItem()->childCount() == 0) {
                         TEST_PASS(itemType.name + ": Undo works after view switch");
                     } else {
                         TEST_FAIL(itemType.name + ": Undo failed after view switch");
@@ -1401,7 +1419,7 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
             // Check another type's item count
             bool isolated = true;
             for (const auto& otherType : itemTypes) {
-                if (otherType.viewType != itemType.viewType && otherType.baseItem->childCount() > 0) {
+                if (otherType.viewType != itemType.viewType && otherType.baseItem()->childCount() > 0) {
                     isolated = false;
                     break;
                 }
@@ -1437,50 +1455,50 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         // Add one item to each type
         scripts.showView();
         scripts.addItem();
-        int scriptsCountAfterAdd = scripts.baseItem->childCount();
+        int scriptsCountAfterAdd = scripts.baseItem()->childCount();
 
         aliases.showView();
         aliases.addItem();
-        int aliasesCountAfterAdd = aliases.baseItem->childCount();
+        int aliasesCountAfterAdd = aliases.baseItem()->childCount();
 
         triggers.showView();
         triggers.addItem();
-        int triggersCountAfterAdd = triggers.baseItem->childCount();
+        int triggersCountAfterAdd = triggers.baseItem()->childCount();
 
         if (scriptsCountAfterAdd == 1 && aliasesCountAfterAdd == 1 && triggersCountAfterAdd == 1) {
             // Delete scripts first
             scripts.showView();
-            scripts.treeWidget->setCurrentItem(scripts.baseItem->child(0));
+            scripts.treeWidget()->setCurrentItem(scripts.baseItem()->child(0));
             editor->slot_deleteItemOrGroup();
 
             // Delete aliases second
             aliases.showView();
-            aliases.treeWidget->setCurrentItem(aliases.baseItem->child(0));
+            aliases.treeWidget()->setCurrentItem(aliases.baseItem()->child(0));
             editor->slot_deleteItemOrGroup();
 
             // Delete triggers third
             triggers.showView();
-            triggers.treeWidget->setCurrentItem(triggers.baseItem->child(0));
+            triggers.treeWidget()->setCurrentItem(triggers.baseItem()->child(0));
             editor->slot_deleteItemOrGroup();
 
             // Now all three should be deleted
-            if (scripts.baseItem->childCount() == 0 && aliases.baseItem->childCount() == 0 && triggers.baseItem->childCount() == 0) {
+            if (scripts.baseItem()->childCount() == 0 && aliases.baseItem()->childCount() == 0 && triggers.baseItem()->childCount() == 0) {
                 // First undo should restore ONLY triggers (most recent delete)
                 editor->mpUndoStack->undo();
 
-                if (triggers.baseItem->childCount() == 1 && aliases.baseItem->childCount() == 0 && scripts.baseItem->childCount() == 0) {
+                if (triggers.baseItem()->childCount() == 1 && aliases.baseItem()->childCount() == 0 && scripts.baseItem()->childCount() == 0) {
                     TEST_PASS("Sequential delete: First undo restores only triggers");
 
                     // Second undo should restore ONLY aliases
                     editor->mpUndoStack->undo();
 
-                    if (triggers.baseItem->childCount() == 1 && aliases.baseItem->childCount() == 1 && scripts.baseItem->childCount() == 0) {
+                    if (triggers.baseItem()->childCount() == 1 && aliases.baseItem()->childCount() == 1 && scripts.baseItem()->childCount() == 0) {
                         TEST_PASS("Sequential delete: Second undo restores only aliases");
 
                         // Third undo should restore ONLY scripts
                         editor->mpUndoStack->undo();
 
-                        if (triggers.baseItem->childCount() == 1 && aliases.baseItem->childCount() == 1 && scripts.baseItem->childCount() == 1) {
+                        if (triggers.baseItem()->childCount() == 1 && aliases.baseItem()->childCount() == 1 && scripts.baseItem()->childCount() == 1) {
                             TEST_PASS("Sequential delete: Third undo restores only scripts");
                         } else {
                             TEST_FAIL("Sequential delete: Third undo did not restore scripts correctly");
@@ -1516,8 +1534,8 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
 
         // Clean up - manually delete any remaining items, then clear the undo stack
         int cleanupAttempts = 0;
-        while (itemType.baseItem->childCount() > 0 && cleanupAttempts < 100) {
-            itemType.treeWidget->setCurrentItem(itemType.baseItem->child(0));
+        while (itemType.baseItem()->childCount() > 0 && cleanupAttempts < 100) {
+            itemType.treeWidget()->setCurrentItem(itemType.baseItem()->child(0));
             editor->slot_deleteItemOrGroup();
             cleanupAttempts++;
         }
@@ -1531,23 +1549,23 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
             int originalLimit = editor->mpUndoStack->undoLimit();
             editor->mpUndoStack->setUndoLimit(200);
 
-            int initialCount = itemType.baseItem->childCount();
+            int initialCount = itemType.baseItem()->childCount();
 
             // Add 50 items
             for (int i = 0; i < 50; i++) {
                 itemType.addItem();
             }
 
-            if (itemType.baseItem->childCount() == initialCount + 50) {
+            if (itemType.baseItem()->childCount() == initialCount + 50) {
                 TEST_PASS(itemType.name + ": Large batch add (50 items) successful");
 
                 // Undo all (with Keys/Actions, each selection change creates Modify commands)
                 // 50 items could create 100+ commands, so use generous safety limit
-                for (int i = 0; i < 500 && itemType.baseItem->childCount() > initialCount && editor->mpUndoStack->canUndo(); i++) {
+                for (int i = 0; i < 500 && itemType.baseItem()->childCount() > initialCount && editor->mpUndoStack->canUndo(); i++) {
                     editor->mpUndoStack->undo();
                 }
 
-                if (itemType.baseItem->childCount() == initialCount) {
+                if (itemType.baseItem()->childCount() == initialCount) {
                     TEST_PASS(itemType.name + ": Large batch undo successful");
                 } else {
                     TEST_FAIL(itemType.name + ": Large batch undo incomplete");
@@ -1579,8 +1597,8 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
             itemType.addItem();
 
             bool allValid = true;
-            for (int i = 0; i < itemType.baseItem->childCount(); i++) {
-                QTreeWidgetItem* item = itemType.baseItem->child(i);
+            for (int i = 0; i < itemType.baseItem()->childCount(); i++) {
+                QTreeWidgetItem* item = itemType.baseItem()->child(i);
                 int id = item->data(0, Qt::UserRole).toInt();
                 if (id <= 0) {
                     allValid = false;
@@ -1588,14 +1606,14 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                 }
             }
 
-            if (allValid && itemType.baseItem->childCount() == 2) {
+            if (allValid && itemType.baseItem()->childCount() == 2) {
                 TEST_PASS(itemType.name + ": All items have valid IDs");
             } else {
                 TEST_FAIL(itemType.name + ": Some items have invalid IDs");
             }
 
             // Clean up
-            for (int i = 0; i < 20 && itemType.baseItem->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
+            for (int i = 0; i < 20 && itemType.baseItem()->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
                 editor->mpUndoStack->undo();
             }
             editor->mpUndoStack->clear();
@@ -1604,21 +1622,21 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         // Test: Parent-child relationships intact after undo/redo
         {
             itemType.addFolder();
-            QTreeWidgetItem* folder = itemType.baseItem->child(0);
+            QTreeWidgetItem* folder = itemType.baseItem()->child(0);
             if (folder) {
-                itemType.treeWidget->setCurrentItem(folder);
+                itemType.treeWidget()->setCurrentItem(folder);
                 itemType.addItem();
-                itemType.treeWidget->setCurrentItem(folder);
+                itemType.treeWidget()->setCurrentItem(folder);
                 itemType.addItem();
 
                 int childCountBefore = folder->childCount();
 
                 // Delete and restore
-                itemType.treeWidget->setCurrentItem(folder);
+                itemType.treeWidget()->setCurrentItem(folder);
                 editor->slot_deleteItemOrGroup();
                 editor->mpUndoStack->undo();
 
-                QTreeWidgetItem* restored = itemType.baseItem->child(0);
+                QTreeWidgetItem* restored = itemType.baseItem()->child(0);
                 if (restored && restored->childCount() == childCountBefore) {
                     TEST_PASS(itemType.name + ": Parent-child relationships intact");
                 } else {
@@ -1635,16 +1653,16 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
         {
             // Create a 3-level nested structure with multiple children at level 3
             itemType.addFolder(); // Grandparent
-            QTreeWidgetItem* grandparent = itemType.baseItem->child(0);
+            QTreeWidgetItem* grandparent = itemType.baseItem()->child(0);
 
             if (grandparent) {
-                itemType.treeWidget->setCurrentItem(grandparent);
+                itemType.treeWidget()->setCurrentItem(grandparent);
                 itemType.addFolder(); // Parent
                 QTreeWidgetItem* parent = grandparent->child(0);
 
                 if (parent) {
                     // Add 5 children to the parent
-                    itemType.treeWidget->setCurrentItem(parent);
+                    itemType.treeWidget()->setCurrentItem(parent);
                     for (int i = 0; i < 5; i++) {
                         itemType.addItem();
                     }
@@ -1652,16 +1670,16 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
                     int childrenCount = parent->childCount();
 
                     // Delete the grandparent (should delete entire tree)
-                    itemType.treeWidget->setCurrentItem(grandparent);
-                    int baseCountBefore = itemType.baseItem->childCount();
+                    itemType.treeWidget()->setCurrentItem(grandparent);
+                    int baseCountBefore = itemType.baseItem()->childCount();
                     editor->slot_deleteItemOrGroup();
 
-                    if (itemType.baseItem->childCount() < baseCountBefore) {
+                    if (itemType.baseItem()->childCount() < baseCountBefore) {
                         // Undo to restore the entire hierarchy
                         editor->mpUndoStack->undo();
 
                         // Verify hierarchy is fully restored
-                        QTreeWidgetItem* restoredGP = itemType.baseItem->child(0);
+                        QTreeWidgetItem* restoredGP = itemType.baseItem()->child(0);
                         bool hierarchyPreserved = false;
 
                         if (restoredGP && restoredGP->childCount() == 1) {
@@ -1744,11 +1762,11 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
             itemType.addItem();
 
             // Undo the item (may take multiple undos due to Modify commands)
-            for (int i = 0; i < 10 && itemType.baseItem->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
+            for (int i = 0; i < 10 && itemType.baseItem()->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
                 editor->mpUndoStack->undo();
             }
 
-            if (itemType.baseItem->childCount() == 0) {
+            if (itemType.baseItem()->childCount() == 0) {
                 TEST_PASS(itemType.name + ": Stack integrity maintained");
             } else {
                 TEST_FAIL(itemType.name + ": Stack integrity compromised");
@@ -1765,12 +1783,12 @@ void runUndoRedoTestSuite(dlgTriggerEditor* editor)
             }
 
             // Undo all (may take more than 5 undos due to Modify commands)
-            for (int i = 0; i < 50 && itemType.baseItem->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
+            for (int i = 0; i < 50 && itemType.baseItem()->childCount() > 0 && editor->mpUndoStack->canUndo(); i++) {
                 editor->mpUndoStack->undo();
             }
 
             // Verify complete cleanup
-            if (itemType.baseItem->childCount() == 0) {
+            if (itemType.baseItem()->childCount() == 0) {
                 TEST_PASS(itemType.name + ": Complete cleanup verified");
             } else {
                 TEST_FAIL(itemType.name + ": Cleanup incomplete");

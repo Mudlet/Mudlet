@@ -182,6 +182,27 @@ int main(int argc, char* argv[])
 {
     initializeQRCResources();
 
+#ifdef Q_OS_WINDOWS
+    // Handle Squirrel installer commands - must exit quickly for install/update/uninstall
+    // https://github.com/clowd/Clowd.Squirrel/blob/master/docs/using/custom-squirrel-events-non-cs.md
+    for (int i = 1; i < argc; ++i) {
+        const QString arg = QString::fromLocal8Bit(argv[i]);
+        if (arg.startsWith(qsl("--squirrel-")) && arg != qsl("--squirrel-firstrun")) {
+            const QString appDir = QCoreApplication::applicationDirPath();
+            const QString updateExe = QDir(appDir).filePath(qsl("../Update.exe"));
+            const QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+
+            if (arg.startsWith(qsl("--squirrel-install")) || arg.startsWith(qsl("--squirrel-updated"))) {
+                QProcess::execute(updateExe, {qsl("--createShortcut"), exeName, qsl("--shortcut-locations"), qsl("StartMenu")});
+            } else if (arg.startsWith(qsl("--squirrel-uninstall"))) {
+                QProcess::execute(updateExe, {qsl("--removeShortcut"), exeName});
+            }
+            return 0;
+        }
+    }
+#endif
+
+
     #ifdef WITH_SENTRY
         initSentry();
         auto sentryClose = qScopeGuard([] { sentry_close(); });
