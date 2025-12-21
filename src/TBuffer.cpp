@@ -2597,8 +2597,11 @@ void TBuffer::decodeOSC(const QString& sequence)
             } else if (mCurrentHyperlinkLinkId > 0) {
                 // Set initial :link pseudo-class state for regular links
                 setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDefault);
-                // Update any characters already in buffer with :link styling
-                updateLinkCharacters(mCurrentHyperlinkLinkId);
+                // DON'T call updateLinkCharacters() here - the link text hasn't been added to
+                // the buffer yet! It gets added later during COMMIT_LINE. Calling it now would
+                // scan the entire buffer looking for characters that don't exist yet, causing
+                // severe performance degradation with many links.
+                // The :link styling will be applied when characters are created in COMMIT_LINE.
             }
             
             mCurrentHyperlinkCommand.clear();
