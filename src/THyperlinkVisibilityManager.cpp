@@ -131,12 +131,26 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
         return false;
     }
 
+    // Handle RevealThenConceal with zero delay - start in Revealed phase so clicking works
+    if (tracked.action == TrackedHyperlink::Action::RevealThenConceal && tracked.delayMs == 0) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << linkId << "has zero delay - starting in Revealed phase";
+#endif
+        mTrackedLinks[linkId].phase = TrackedHyperlink::Phase::Revealed;
+        mTrackedLinks[linkId].isConcealed = false;
+        // Still need timer active for the conceal-after-click behavior
+        mHasTimerBasedLinks = true;
+        startTimerIfNeeded();
+        return false;
+    }
+
     if (tracked.delayMs > 0) {
         mHasTimerBasedLinks = true;
         startTimerIfNeeded();
     }
     
     // Return true if this link should start concealed (caller should replace text with spaces)
+    qWarning() << "[REVEAL-DEBUG] registerHyperlink returning isConcealed=" << tracked.isConcealed << "for linkId" << linkId;
     return tracked.isConcealed;
 }
 
@@ -631,21 +645,54 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
     TBuffer& buffer = mpConsole->buffer;
 
     if (link.deletesEntireLine) {
-        if (link.lineNumber >= 0 && link.lineNumber < buffer.lineBuffer.size()) {
-            const int linkIdToRemove = link.linkId;
-            const int deletedLineNumber = link.lineNumber;
-            
-            // buffer.deleteLine() will trigger unregisterHyperlink() which removes
-            // the link from mTrackedLinks, invalidating the 'link' reference.
-            // So we must not access 'link' after this point!
-            buffer.deleteLine(deletedLineNumber);
-            
-            // Adjust line numbers for links below the deleted line
+        // CRITICAL BUG FIX: Prevent cascade deletion by unregistering ALL links on the target line
+        // before deleting it. This prevents other links from being adjusted to the wrong line
+        // and accidentally triggering on content they shouldn't affect.
+        
+        const int targetLine = link.lineNumber;
+        if (targetLine >= 0 && targetLine < buffer.lineBuffer.size()) {
+            // First, collect all link IDs that are on the same line as the one being deleted
+            QList<int> linksOnTargetLine;
             for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
-                if (it.key() != linkIdToRemove && it.value().lineNumber > deletedLineNumber) {
-                    it.value().lineNumber--;
+                if (it.value().lineNumber == targetLine) {
+                    linksOnTargetLine.append(it.key());
                 }
             }
+            
+            // Unregister all links on the target line to prevent interference
+            for (int linkId : linksOnTargetLine) {
+                if (linkId != link.linkId) { // Don't remove the current link yet
+                    mTrackedLinks.remove(linkId);
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug().noquote() << "[OSC8-Visibility] Pre-emptively unregistered co-located link" << linkId;
+#endif
+                }
+            }
+            
+            // Now delete the line
+            buffer.deleteLine(targetLine);
+            
+            // Remove the current link (it's now invalid)
+            mTrackedLinks.remove(link.linkId);
+            
+            // SAFE line number adjustment: Only adjust links that are on lines > targetLine
+            // and do this atomically to prevent cascading issues
+            QMap<int, TrackedHyperlink> adjustedLinks;
+            for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
+                TrackedHyperlink adjustedLink = it.value();
+                if (adjustedLink.lineNumber > targetLine) {
+                    adjustedLink.lineNumber--;
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug().noquote() << "[OSC8-Visibility] Adjusted link" << it.key() 
+                                       << "from line" << (adjustedLink.lineNumber + 1) 
+                                       << "to line" << adjustedLink.lineNumber;
+#endif
+                }
+                adjustedLinks.insert(it.key(), adjustedLink);
+            }
+            
+            // Replace the tracked links with the adjusted versions
+            mTrackedLinks = adjustedLinks;
             
             // Update display
             if (mpConsole->mUpperPane) {
@@ -654,9 +701,24 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             if (mpConsole->mLowerPane) {
                 mpConsole->mLowerPane->update();
             }
-            return;  // Early return - 'link' reference is now invalid
+            
+            // Stop timer if no more timer-based links exist
+            bool hasTimers = false;
+            for (const auto& remainingLink : mTrackedLinks) {
+                if (remainingLink.delayMs > 0 || remainingLink.expireOnOutput) {
+                    hasTimers = true;
+                    break;
+                }
+            }
+            if (!hasTimers && mHasTimerBasedLinks) {
+                mHasTimerBasedLinks = false;
+                mpTimer->stop();
+            }
+            
+            return; // Early return - all cleanup done
         }
     } else {
+        // Non-destructive concealment (replace text with spaces)
         if (link.lineNumber >= 0 && link.lineNumber < buffer.lineBuffer.size()) {
             QString& lineText = buffer.lineBuffer[link.lineNumber];
             
@@ -666,15 +728,15 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
                 buffer.clearLinkIndices(link.lineNumber, link.startColumn, link.length);
             }
         }
-    }
 
-    link.isConcealed = true;
+        link.isConcealed = true;
 
-    if (mpConsole->mUpperPane) {
-        mpConsole->mUpperPane->update();
-    }
-    if (mpConsole->mLowerPane) {
-        mpConsole->mLowerPane->update();
+        if (mpConsole->mUpperPane) {
+            mpConsole->mUpperPane->update();
+        }
+        if (mpConsole->mLowerPane) {
+            mpConsole->mLowerPane->update();
+        }
     }
 }
 

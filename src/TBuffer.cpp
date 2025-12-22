@@ -1161,12 +1161,20 @@ COMMIT_LINE:
             mMudBuffer.push_back(c);
             mMudBuffer.push_back(c);
             if (mHyperlinkActive) {
+                // Capture the column position when the first character of the hyperlink is added
+                if (mCurrentHyperlinkText.isEmpty()) {
+                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 2;  // -2 because we just added 2 chars
+                }
                 mCurrentHyperlinkText += QString(QChar(ch));
                 mCurrentHyperlinkText += QString(QChar(ch));
             }
         } else {
             mMudBuffer.push_back(c);
             if (mHyperlinkActive) {
+                // Capture the column position when the first character of the hyperlink is added
+                if (mCurrentHyperlinkText.isEmpty()) {
+                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1;  // -1 because we just added 1 char
+                }
                 mCurrentHyperlinkText += QString(QChar(ch));
             }
         }
@@ -2613,21 +2621,55 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
             
             // Register with visibility manager if visibility settings exist
+            // Visibility currently only supports single-line hyperlinks
+            // Multi-line links will not have visibility management applied
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings 
-                && mpConsole && mpConsole->mpHyperlinkVisibilityManager) {
-                mpConsole->mpHyperlinkVisibilityManager.get()->registerHyperlink(
-                    mCurrentHyperlinkLinkId,
-                    mCurrentHyperlinkStartLine,
-                    mCurrentHyperlinkStartColumn,
-                    mCurrentHyperlinkText.length(),
-                    mCurrentHyperlinkText,
-                    mCurrentHyperlinkStyling
-                );
+                && mpConsole && mpConsole->mpHyperlinkVisibilityManager
+                && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
+                
+                int currentColumn = mMudLine.length();
+                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+
+                if (linkLength > 0) {
+                    // Only register if we have a valid link range
+                    QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                    
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Registered link" << mCurrentHyperlinkLinkId 
-                         << "with visibility manager at line" << mCurrentHyperlinkStartLine
-                         << "column" << mCurrentHyperlinkStartColumn
-                         << "length" << mCurrentHyperlinkText.length();
+                    qDebug() << "[OSC8-Visibility] Registering hyperlink" << mCurrentHyperlinkLinkId
+                             << "line:" << mCurrentHyperlinkStartLine
+                             << "col:" << mCurrentHyperlinkStartColumn
+                             << "length:" << linkLength
+                             << "text:" << linkText;
+#endif
+                    bool shouldStartConcealed = mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
+                        mCurrentHyperlinkLinkId,
+                        mCurrentHyperlinkStartLine,
+                        mCurrentHyperlinkStartColumn,
+                        linkLength,
+                        linkText,
+                        mCurrentHyperlinkStyling);
+                    
+                    // If link should start concealed, replace its text with spaces in mMudLine
+                    // before it gets committed to the buffer
+                    if (shouldStartConcealed) {
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC8-Visibility] Link starts concealed - replacing text with spaces";
+#endif
+                        QString spaces(linkLength, ' ');
+                        mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                    }
+                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC8-Visibility] Skipping registration for hyperlink with invalid length:" << linkLength;
+#endif
+                }
+            } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings
+                       && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8-Visibility] Skipping visibility registration for multi-line hyperlink"
+                         << "(visibility only applies to single-line links)"
+                         << "- started on line" << mCurrentHyperlinkStartLine
+                         << "ending on line" << static_cast<int>(lineBuffer.size()) - 1;
 #endif
             }
             
@@ -2901,10 +2943,16 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
             mHyperlinkActive = true;
             
-            // Track the starting position for visibility manager registration
-            mCurrentHyperlinkStartLine = static_cast<int>(buffer.size()) - 1;  // Current line index
-            mCurrentHyperlinkStartColumn = static_cast<int>(buffer.back().size());  // Current column position
+            // Record start position for visibility manager registration
+            // Use mMudLine.length() since that's where link text will be added
+            // (mMudLine is the current line being built, lineBuffer contains completed lines)
+            mCurrentHyperlinkStartLine = static_cast<int>(lineBuffer.size()) - 1;
+            mCurrentHyperlinkStartColumn = mMudLine.length();
             mCurrentHyperlinkText.clear();
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC8] Hyperlink start position: line" << mCurrentHyperlinkStartLine << "column" << mCurrentHyperlinkStartColumn;
+#endif
         }
         break;
     }
@@ -3341,12 +3389,21 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
 
     // Parse action field (can be string or array of strings)
     QJsonValue actionValue = visibilityObj[qsl("action")];
+    qWarning() << "[REVEAL-DEBUG] Visibility action value:" << actionValue << "isString:" << actionValue.isString();
     if (actionValue.isString()) {
         QString actionStr = actionValue.toString().toLower();
+        qWarning() << "[REVEAL-DEBUG] Action string:" << actionStr;
         if (actionStr == qsl("conceal")) {
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
+            settings.isConcealed = false; // Start visible, will be concealed later
         } else if (actionStr == qsl("reveal")) {
+            qWarning() << "[REVEAL-DEBUG] FOUND REVEAL ACTION - setting isConcealed=true";
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
+            settings.isConcealed = true;  // Start concealed, will be revealed later
+            qWarning() << "[REVEAL-DEBUG] Setting reveal action: isConcealed=true, action=Reveal";
+        } else if (actionStr == qsl("revealthenconceal") || actionStr == qsl("reveal-then-conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
+            settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
         } else {
             qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action string:" << actionStr;
             return false;
@@ -3357,6 +3414,7 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
             && actionArray[0].isString() && actionArray[0].toString().toLower() == qsl("reveal")
             && actionArray[1].isString() && actionArray[1].toString().toLower() == qsl("conceal")) {
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
+            settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
         } else {
             qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action array (expected [\"reveal\", \"conceal\"])";
             return false;
@@ -3471,14 +3529,32 @@ bool TBuffer::parseVisibilitySettings(const QString& jsonString, Mudlet::Hyperli
 void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
 {
     if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] clearLinkIndices: invalid line number" << lineNumber << "buffer size:" << buffer.size();
+#endif
         return;
     }
 
     std::deque<TChar>& line = buffer[lineNumber];
     int endColumn = startColumn + length;
     
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] clearLinkIndices: line" << lineNumber << "startCol" << startColumn << "length" << length 
+             << "endCol" << endColumn << "lineSize" << line.size();
+#endif
+    
+    QSet<int> clearedLinkIds;
     for (int col = startColumn; col < endColumn && col < static_cast<int>(line.size()); ++col) {
+        int oldLinkIndex = line[col].mLinkIndex;
+        if (oldLinkIndex > 0) {
+            clearedLinkIds.insert(oldLinkIndex);
+        }
         line[col].mLinkIndex = 0;
+#if defined(DEBUG_OSC_PROCESSING)
+        if (oldLinkIndex != 0) {
+            qDebug() << "[OSC8] clearLinkIndices: cleared column" << col << "from linkIndex" << oldLinkIndex << "to 0";
+        }
+#endif
     }
 }
 
@@ -3494,6 +3570,10 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
     for (int col = startColumn; col < endColumn && col < static_cast<int>(line.size()); ++col) {
         line[col].mLinkIndex = linkId;
     }
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC8] Link" << linkId << "restored";
+#endif
 }
 
 void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling)
@@ -5989,36 +6069,40 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "Server receives selection state via &selected=true/false query parameter\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Hyperlink Visibility (Conceal/Reveal Features)  
+    // Hyperlink Visibility (moved to bottom for easier testing)
     // ═══════════════════════════════════════════════════════════════════
     output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "HYPERLINK VISIBILITY (CONCEAL/REVEAL FEATURES)\n";
+    output += "HYPERLINK VISIBILITY\n";
     output += "══════════════════════════════════════════════════════════════════════\n\n";
 
-    output += "Timed Concealment:\n";
-    output += "• \x1b]8;;send:secret?config={\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Secret (hides in 3s)\x1b]8;;\x1b\\\n";
-    output += "• \x1b]8;;send:reveal?config={\"visibility\":{\"action\":\"reveal\",\"delay\":2000}}\x1b\\Hidden (reveals in 2s)\x1b]8;;\x1b\\\n";
-    output += "• \x1b]8;;send:flash?config={\"visibility\":{\"action\":\"revealthenConceal\",\"delay\":1000}}\x1b\\Flash (shows 1s then hides)\x1b]8;;\x1b\\\n\n";
+    // Note: Timer-based conceal delays start when the link is clicked
+    output += "Auto-Hide After Delay (click to start timer):\n";
+    output += "• \x1b]8;;send:hint?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Click me - I disappear 3 seconds after click\x1b]8;;\x1b\\\n";
+    output += "• \x1b]8;;send:tip?config={\"style\":{\"color\":\"cyan\",\"italic\":true},\"visibility\":{\"action\":\"conceal\",\"delay\":5000}}\x1b\\Click me - I disappear 5 seconds after click\x1b]8;;\x1b\\\n\n";
 
-    output += "Trigger-Based Concealment:\n";
-    output += "• \x1b]8;;send:command?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"onInput\":true}}}\x1b\\Hide on Command\x1b]8;;\x1b\\ (conceals when you send a command)\n";
-    output += "• \x1b]8;;send:prompt?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"onPrompt\":true}}}\x1b\\Hide on Prompt\x1b]8;;\x1b\\ (conceals when server sends GA/EOR)\n";
-    output += "• \x1b]8;;send:output?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"onOutput\":500}}}\x1b\\Hide on Output\x1b]8;;\x1b\\ (conceals 500ms after new text)\n\n";
+    output += "Hide When User Sends Command (expire on input):\n";
+    output += "• Send command to dismiss: \x1b]8;;send:input-hint?config={\"style\":{\"color\":\"gray\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Press Enter to hide this hint...\x1b]8;;\x1b\\\n\n";
 
-    output += "Combined Visibility & Styling:\n";
-    output += "• \x1b]8;;send:fading?config={\"style\":{\"color\":\"gold\",\"bold\":true},\"visibility\":{\"action\":\"conceal\",\"delay\":5000}}\x1b\\💰 Golden Secret\x1b]8;;\x1b\\ (styled + timed)\n";
-    output += "• \x1b]8;;send:warning?config={\"style\":{\"bg\":\"red\",\"color\":\"white\"},\"visibility\":{\"action\":\"revealthenConceal\",\"delay\":3000,\"expire\":{\"onInput\":true}}}\x1b\\⚠️ Alert\x1b]8;;\x1b\\ (urgent message)\n\n";
+    output += "Hide On GA/EOR Prompt (expire on prompt):\n";
+    output += "• GA/EOR dismisses: \x1b]8;;send:prompt-hint?config={\"style\":{\"color\":\"lightblue\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"prompt\":true}}}\x1b\\Disappears on next server prompt...\x1b]8;;\x1b\\\n\n";
 
-    output += "Whole Line Deletion:\n";
-    output += "• \x1b]8;;send:vanish?config={\"visibility\":{\"action\":\"conceal\",\"delay\":4000,\"wholeline\":true}}\x1b\\This entire line will vanish\x1b]8;;\x1b\\ (deletes whole line)\n\n";
+    output += "Hide On New Output (expire after idle gap):\n";
+    output += "• New output dismisses: \x1b]8;;send:output-hint?config={\"style\":{\"color\":\"lightgreen\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":500}}}\x1b\\Disappears when new output arrives after 500ms gap...\x1b]8;;\x1b\\\n\n";
 
-    output += "Using Registry Shorthand (v = visibility):\n";
-    output += "• \x1b]8;;send:short?config={\"v\":{\"action\":\"conceal\",\"delay\":2500}}\x1b\\Shorthand Conceal\x1b]8;;\x1b\\\n";
-    output += "• \x1b]8;;send:combined?config={\"s\":{\"c\":\"blue\",\"b\":true},\"v\":{\"action\":\"revealthenConceal\",\"delay\":1500}}\x1b\\Combined Short\x1b]8;;\x1b\\\n\n";
+    output += "Combined Expire Triggers (any trigger hides):\n";
+    output += "• \x1b]8;;send:any-hint?config={\"style\":{\"color\":\"orange\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true,\"prompt\":true,\"output\":true}}}\x1b\\Type, prompt, or new output hides me\x1b]8;;\x1b\\\n\n";
 
-    output += "Multiple Expire Conditions:\n";
-    output += "• \x1b]8;;send:multi?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"onInput\":true,\"onPrompt\":true,\"onOutput\":1000}}}\x1b\\Multi-Trigger Hide\x1b]8;;\x1b\\\n";
-    output += "  (Hides on command OR prompt OR 1s after output)\n\n";
+    output += "Delete Entire Line (click to start timer):\n";
+    output += "• \x1b]8;;send:temp?config={\"style\":{\"color\":\"orange\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000,\"wholeline\":true}}\x1b\\Click me - entire line removed 3s after click\x1b]8;;\x1b\\\n\n";
+
+    output += "Combined Visibility and Styling (click to start timer):\n";
+    output += "• \x1b]8;;send:fancy?config={\"style\":{\"color\":\"#ff6600\",\"bold\":true,\"hover\":{\"color\":\"#ff9900\"}},\"visibility\":{\"action\":\"conceal\",\"delay\":5000},\"tooltip\":\"Disappears 5 seconds after click\"}\x1b\\Fancy Disappearing Link\x1b]8;;\x1b\\\n\n";
+
+    output += "Auto-Reveal After Delay (starts hidden, appears after 10 seconds):\n";
+    output += "• Wait for it... \x1b]8;;send:secret?config={\"style\":{\"color\":\"#00ff00\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":10000}}\x1b\\SECRET LINK REVEALED!\x1b]8;;\x1b\\\n\n";
+
+    output += "Reveal Then Conceal (appears after 3s, click to dismiss):\n";
+    output += "• Watch this space... \x1b]8;;send:combo?config={\"style\":{\"color\":\"#ff00ff\",\"bold\":true},\"visibility\":{\"action\":[\"reveal\",\"conceal\"],\"delay\":3000}}\x1b\\CLICK ME TO DISMISS!\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
     // Summary

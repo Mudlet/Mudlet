@@ -643,6 +643,8 @@ private:
     int mCurrentHyperlinkStartLine = 0;
     int mCurrentHyperlinkStartColumn = 0;
     QString mCurrentHyperlinkText;
+    
+    // Track links that should start concealed and need concealment after character creation
 
     enum class WatchdogPhase {
         Phase1_Snapshot,
