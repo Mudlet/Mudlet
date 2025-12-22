@@ -443,8 +443,10 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
             // Uses ping for delay instead of timeout.exe because timeout doesn't work when stdin is redirected.
+            // Change to temp directory immediately to release handle on Mudlet's app folder.
             QString batchContent = qsl(
                 "@echo off\r\n"
+                "cd /d %TEMP%\r\n"
                 "echo Mudlet updater: waiting for %1 to exit...\r\n"
                 ":wait_mudlet\r\n"
                 "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | C:\\Windows\\System32\\find.exe /I \"%1\" >NUL\r\n"
@@ -453,15 +455,9 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
                 "    ping -n 2 127.0.0.1 > nul\r\n"
                 "    goto wait_mudlet\r\n"
                 ")\r\n"
-                "echo Mudlet updater: %1 exited, waiting for crashpad_handler.exe...\r\n"
-                ":wait_crashpad\r\n"
-                "tasklist /FI \"IMAGENAME eq crashpad_handler.exe\" 2>NUL | C:\\Windows\\System32\\find.exe /I \"crashpad_handler.exe\" >NUL\r\n"
-                "if %ERRORLEVEL%==0 (\r\n"
-                "    echo Mudlet updater: crashpad_handler.exe still running, waiting...\r\n"
-                "    ping -n 2 127.0.0.1 > nul\r\n"
-                "    goto wait_crashpad\r\n"
-                ")\r\n"
-                "echo Mudlet updater: all processes exited, launching installer...\r\n"
+                "echo Mudlet updater: %1 exited, waiting for cleanup...\r\n"
+                "ping -n 4 127.0.0.1 > nul\r\n"
+                "echo Mudlet updater: launching installer...\r\n"
                 "echo Mudlet updater: running %2\r\n"
                 "\"%2\"\r\n"
                 "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n").arg(exeName, QDir::toNativeSeparators(installerPath));

@@ -55,6 +55,12 @@ jobs:
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
 
+    - name: check ccache stats prior to build
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+      run: ccache --zero-stats --show-stats
+
     - name: (Windows) Build
       shell: msys2 {0}
       env:
@@ -68,6 +74,12 @@ jobs:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         WITH_SENTRY: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+
+    - name: check ccache stats post build
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+      run: ccache --show-stats
 
     - name: (Windows) Run QTest
       shell: msys2 {0}
