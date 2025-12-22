@@ -82,11 +82,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 {
     mpCompactSyntaxManager = std::make_unique<THyperlinkCompactManager>(this);
     mpSelectionManager = std::make_unique<THyperlinkSelectionManager>(this);
-    mpHyperlinkVisibilityManager = new THyperlinkVisibilityManager(this);
+    mpHyperlinkVisibilityManager = std::make_unique<THyperlinkVisibilityManager>(this);
     
     initializeOSC8StyleFeature();
     initializeOSC8MenuFeature();
     initializeOSC8TooltipFeature();
+    initializeOSC8VisibilityFeature();
 
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
@@ -224,14 +225,14 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
         // Connect user input trigger (command submission only, not typing)
         connect(mpCommandLine, &TCommandLine::commandSubmitted,
-                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
+                mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onUserInput);
         
         // Connect GA/EOR prompt signal from telnet
         connect(&(pH->mTelnet), &cTelnet::signal_promptReceived,
-                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onPromptReceived);
+                mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onPromptReceived);
         
         // Refresh display when hyperlink visibility changes
-        connect(mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::visibilityChanged,
+        connect(mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::visibilityChanged,
                 this, [this]() {
                     if (mUpperPane) {
                         mUpperPane->forceUpdate();
@@ -2767,4 +2768,16 @@ void TConsole::initializeOSC8TooltipFeature()
     mpCompactSyntaxManager->registerShorthand(qsl("t"), qsl("tooltip"), this);
 
     mpCompactSyntaxManager->registerPresetProperty(qsl("tooltip"), this, true);
+}
+
+void TConsole::initializeOSC8VisibilityFeature()
+{
+    if (!mpCompactSyntaxManager) {
+        return;
+    }
+
+    // Register shorthand for visibility property
+    mpCompactSyntaxManager->registerShorthand(qsl("v"), qsl("visibility"), this);
+
+    mpCompactSyntaxManager->registerPresetProperty(qsl("visibility"), this, true);
 }

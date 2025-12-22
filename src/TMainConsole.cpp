@@ -1237,7 +1237,7 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
 
     // Notify visibility manager of incoming data (for output gap detection)
     if (isFromServer && mpHyperlinkVisibilityManager) {
-        mpHyperlinkVisibilityManager->onDataReceived();
+        mpHyperlinkVisibilityManager.get()->onDataReceived();
     }
 
     mTriggerEngineMode = true;

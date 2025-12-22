@@ -2615,7 +2615,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             // Register with visibility manager if visibility settings exist
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings 
                 && mpConsole && mpConsole->mpHyperlinkVisibilityManager) {
-                mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
+                mpConsole->mpHyperlinkVisibilityManager.get()->registerHyperlink(
                     mCurrentHyperlinkLinkId,
                     mCurrentHyperlinkStartLine,
                     mCurrentHyperlinkStartColumn,

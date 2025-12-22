@@ -336,7 +336,7 @@ public:
 
     // Manages hyperlink visibility (conceal/reveal) based on time delays and expire triggers
     // (user input, GA/EOR prompt, or new output after idle gap)
-    QPointer<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
+    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
@@ -461,6 +461,7 @@ private:
     void initializeOSC8StyleFeature();
     void initializeOSC8MenuFeature();
     void initializeOSC8TooltipFeature();
+    void initializeOSC8VisibilityFeature();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;

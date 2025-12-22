@@ -1499,7 +1499,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
                         // Notify visibility manager that link was clicked (activates timers)
                         if (mpConsole->mpHyperlinkVisibilityManager) {
-                            mpConsole->mpHyperlinkVisibilityManager->onLinkClicked(linkIndex);
+                            mpConsole->mpHyperlinkVisibilityManager.get()->onLinkClicked(linkIndex);
                         }
 
                         if (!luaReference) {
@@ -3258,7 +3258,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 if (!commands.isEmpty()) {
                     // Notify visibility manager that link was clicked (activates timers)
                     if (mpConsole->mpHyperlinkVisibilityManager) {
-                        mpConsole->mpHyperlinkVisibilityManager->onLinkClicked(focusedLink);
+                        mpConsole->mpHyperlinkVisibilityManager.get()->onLinkClicked(focusedLink);
                     }
 
                     // Mark the link as visited
