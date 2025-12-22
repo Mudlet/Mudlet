@@ -462,6 +462,7 @@ private:
     void initializeOSC8MenuFeature();
     void initializeOSC8TooltipFeature();
     void initializeOSC8VisibilityFeature();
+    void initializeOSC8SelectionFeature();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;

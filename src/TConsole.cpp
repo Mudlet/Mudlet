@@ -89,6 +89,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     initializeOSC8MenuFeature();
     initializeOSC8TooltipFeature();
     initializeOSC8VisibilityFeature();
+    initializeOSC8SelectionFeature();
 
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
@@ -2781,4 +2782,16 @@ void TConsole::initializeOSC8VisibilityFeature()
     mpCompactSyntaxManager->registerShorthand(qsl("v"), qsl("visibility"), this);
 
     mpCompactSyntaxManager->registerPresetProperty(qsl("visibility"), this, true);
+}
+
+void TConsole::initializeOSC8SelectionFeature()
+{
+    if (!mpCompactSyntaxManager) {
+        return;
+    }
+
+    // Register shorthand for selection property
+    mpCompactSyntaxManager->registerShorthand(qsl("sel"), qsl("selection"), this);
+
+    mpCompactSyntaxManager->registerPresetProperty(qsl("selection"), this, true);
 }
