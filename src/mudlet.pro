@@ -770,11 +770,11 @@ SOURCES += \
     TForkedProcess.cpp \
     THyperlinkCompactManager.cpp \
     THyperlinkSelectionManager.cpp \
+    THyperlinkVisibilityManager.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
     TScrollBox.cpp \
-    THyperlinkVisibilityManager.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TLuaInterpreterAI.cpp \
@@ -935,10 +935,10 @@ HEADERS += \
     TGameDetails.h \
     THyperlinkCompactManager.h \
     THyperlinkSelectionManager.h \
+    THyperlinkVisibilityManager.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
-    THyperlinkVisibilityManager.h \
     TLinkStore.h \
     TLuaInterpreter.h \
     TMainConsole.h \

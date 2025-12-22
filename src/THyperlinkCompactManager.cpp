@@ -127,6 +127,16 @@ void THyperlinkCompactManager::registerPresetProperty(const QString& propertyNam
         return;
     }
 
+    // Check for existing entry and warn about collision
+    if (mPresetPropertyRegistry.contains(propertyName)) {
+        const PresetPropertyEntry& existing = mPresetPropertyRegistry.value(propertyName);
+        qWarning() << "THyperlinkCompactManager::registerPresetProperty: Replacing existing preset property"
+                   << propertyName
+                   << "(owner:" << (existing.owner ? existing.owner->objectName() : "core") << ")"
+                   << "with new registration"
+                   << "(owner:" << (owner ? owner->objectName() : "core") << ")";
+    }
+
     mPresetPropertyRegistry.insert(propertyName, PresetPropertyEntry(owner, isCore));
     emit presetPropertyRegistered(propertyName);
 
@@ -143,7 +153,7 @@ bool THyperlinkCompactManager::isPresetProperty(const QString& propertyName) con
         return false;
     }
 
-    const PresetPropertyEntry& entry = mPresetPropertyRegistry[propertyName];
+    const PresetPropertyEntry& entry = mPresetPropertyRegistry.value(propertyName);
     // Valid if core property OR owner still exists
     return entry.isCore || !entry.owner.isNull();
 }

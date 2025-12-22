@@ -24,7 +24,6 @@
 #include <QJsonObject>
 #include <QMap>
 #include <QObject>
-#include <QPair>
 #include <QPointer>
 #include <QString>
 

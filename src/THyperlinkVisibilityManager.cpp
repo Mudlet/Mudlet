@@ -621,8 +621,19 @@ void THyperlinkVisibilityManager::stopTimerIfNotNeeded()
     if (mpTimer && mpTimer->isActive()) {
         bool hasTimerLinks = false;
         for (const auto& link : mTrackedLinks) {
+            // Only skip zero-delay links if they don't require the timer
+            // RevealThenConceal links in certain phases still need the timer even with zero delay
             if (link.delayMs == 0) {
-                continue;
+                // Don't skip RevealThenConceal links that are in phases requiring the timer
+                if (link.action == TrackedHyperlink::Action::RevealThenConceal && 
+                    link.phase != TrackedHyperlink::Phase::Concealed) {
+                    // These phases need the timer even with zero delay
+                    hasTimerLinks = true;
+                    break;
+                } else {
+                    // Other zero-delay links can be skipped
+                    continue;
+                }
             }
 
             if (link.action == TrackedHyperlink::Action::Conceal && !link.isConcealed) {
@@ -695,23 +706,18 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             mTrackedLinks.remove(link.linkId);
             
             // SAFE line number adjustment: Only adjust links that are on lines > targetLine
-            // and do this atomically to prevent cascading issues
-            QMap<int, TrackedHyperlink> adjustedLinks;
+            // Update in-place to avoid copying the entire map
             for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
-                TrackedHyperlink adjustedLink = it.value();
-                if (adjustedLink.lineNumber > targetLine) {
-                    adjustedLink.lineNumber--;
+                if (it.value().lineNumber > targetLine) {
+                    int originalLine = it.value().lineNumber;
+                    it.value().lineNumber--;
 #if defined(DEBUG_OSC_PROCESSING)
                     qDebug().noquote() << "[OSC] Adjusted link" << it.key() 
-                                       << "from line" << (adjustedLink.lineNumber + 1) 
-                                       << "to line" << adjustedLink.lineNumber;
+                                       << "from line" << originalLine 
+                                       << "to line" << it.value().lineNumber;
 #endif
                 }
-                adjustedLinks.insert(it.key(), adjustedLink);
             }
-            
-            // Replace the tracked links with the adjusted versions
-            mTrackedLinks = adjustedLinks;
             
             // Update display
             if (mpConsole->mUpperPane) {

@@ -1451,23 +1451,19 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                             } else {
                                 const QString& group = hyperlinkStyling.selection.group;
                                 const QString& value = hyperlinkStyling.selection.value;
+                                
+                                // Configure group exclusivity mode if needed
+                                mgr->setGroupExclusive(group, hyperlinkStyling.selection.exclusive);
+                                
                                 bool currentlySelected = mgr->isSelected(group, value);
 
                                 if (hyperlinkStyling.selection.toggle) {
-                                    mgr->toggleSelection(group, value, hyperlinkStyling.selection.exclusive);
+                                    mgr->toggleSelection(group, value);
                                 } else {
-                                    mgr->setSelected(group, value, true, hyperlinkStyling.selection.exclusive);
+                                    mgr->setSelected(group, value, true);
                                 }
 
                                 bool newSelected = mgr->isSelected(group, value);
-
-                                if (hyperlinkStyling.selection.exclusive && newSelected) {
-                                    // Exclusive selection clears other group members
-                                    mpBuffer->clearGroupSelection(group, value);
-#if defined(DEBUG_OSC_PROCESSING)
-                                    qDebug() << "[OSC] Exclusive selection: Cleared other selections in group" << group << "except" << value;
-#endif
-                                }
 
                                 func = mgr->modifyUriForSelection(func, group, value);
 
@@ -1487,6 +1483,34 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                                     mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
                                 }
                                 mpBuffer->updateLinkCharacters(linkIndex);
+                                
+                                // For exclusive groups, update visual state of all other members that may have been deselected
+                                if (mgr->isGroupExclusive(group)) {
+                                    QStringList groupMembers = mgr->getGroupMembers(group);
+                                    for (const QString& member : groupMembers) {
+                                        if (member != value) {
+                                            // Find all links with this group/value combination and update their visual state
+                                            bool memberSelected = mgr->isSelected(group, member);
+                                            // Iterate through all link IDs to find matching links
+                                            // Note: This is not the most efficient approach, but without direct access to mStylingStore
+                                            // we need to check each potential link ID
+                                            for (int otherLinkId = 1; otherLinkId <= mpBuffer->mLinkStore.getCurrentLinkID(); ++otherLinkId) {
+                                                Mudlet::HyperlinkStyling otherLinkStyling = mpBuffer->mLinkStore.getStyling(otherLinkId);
+                                                if (otherLinkStyling.selection.hasSelectionSettings &&
+                                                    otherLinkStyling.selection.group == group &&
+                                                    otherLinkStyling.selection.value == member) {
+                                                    mpBuffer->setLinkSelected(otherLinkId, memberSelected);
+                                                    mpBuffer->setLinkState(otherLinkId, memberSelected ? 
+                                                        Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+                                                    mpBuffer->updateLinkCharacters(otherLinkId);
+#if defined(DEBUG_OSC_PROCESSING)
+                                                    qDebug() << "TTextEdit::mousePressEvent - Updated exclusive group member link" << otherLinkId << "to selected=" << memberSelected;
+#endif
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                         

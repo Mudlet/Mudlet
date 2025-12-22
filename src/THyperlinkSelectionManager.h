@@ -22,34 +22,68 @@
 
 #include <QHash>
 #include <QObject>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 
 class TConsole;
 
 // Manages selection state for OSC 8 hyperlinks with selection support
-// Handles group exclusivity (radio button behavior) and multi-select (checkbox behavior)
+// Handles group exclusivity (radio button behavior) and multi-select (checkbox behavior)  
 // Maintains per-console selection state and group membership tracking
+//
+// Ownership and lifetime:
+// - The manager does not take ownership of the TConsole
+// - Caller must ensure the TConsole outlives this manager instance
+// - TConsole reference must be valid throughout the manager's lifetime
 class THyperlinkSelectionManager : public QObject
 {
     Q_OBJECT
     Q_DISABLE_COPY(THyperlinkSelectionManager)
 
 public:
-    explicit THyperlinkSelectionManager(TConsole* pConsole);
+    // Constructor: Associates this manager with a specific console instance
+    // @param console: TConsole reference that must outlive this manager (not null)
+    explicit THyperlinkSelectionManager(TConsole& console);
     ~THyperlinkSelectionManager();
 
     // Core selection operations
     bool isSelected(const QString& group, const QString& value) const;
-    void setSelected(const QString& group, const QString& value, bool selected, bool exclusive);
-    void toggleSelection(const QString& group, const QString& value, bool exclusive);
+    void setSelected(const QString& group, const QString& value, bool selected);
+    void toggleSelection(const QString& group, const QString& value);
     
     // Group management
     QStringList getGroupMembers(const QString& group) const;
     void clearGroup(const QString& group);
     void clearAllSelections();
+    
+    // Group exclusivity configuration
+    // Sets whether a group should enforce exclusive (radio button) or multi-select (checkbox) behavior
+    void setGroupExclusive(const QString& group, bool exclusive);
+    bool isGroupExclusive(const QString& group) const;
 
     // URI modification before execution
+    // Transforms a hyperlink URI to include selection state metadata
+    //
+    // When invoked:
+    // - Call before executing a hyperlink (e.g., when user clicks on a selectable link)
+    // - Typically used in hyperlink click handlers to inject runtime selection state
+    //
+    // Transformations applied:
+    // - For send([[command]]) format: Appends "?selected=true|false" or "&selected=true|false"
+    //   (uses '?' if no query params exist, '&' if already present)
+    // - For sendCmdLine([[command]]) format: Same query parameter injection as send()
+    // - For other URI formats (e.g., openUrl): Returns unchanged
+    //
+    // Why necessary:
+    // - Allows commands to behave differently based on whether link is selected/unselected
+    // - Supports checkbox/radio button semantics in terminal hyperlinks
+    //
+    // @param baseUri: Original URI string from the hyperlink definition
+    // @param group: Selection group identifier
+    // @param value: Selection value identifier
+    // @return Modified URI with selection state appended (for send/sendCmdLine formats),
+    //         or unchanged baseUri (for other formats). Empty input returns empty output.
     QString modifyUriForSelection(const QString& baseUri, const QString& group, const QString& value) const;
 
 signals:
@@ -68,8 +102,11 @@ private:
     // Selection state tracking: group -> (value -> selected)
     QHash<QString, QHash<QString, bool>> mSelectionState;
     
-    // Group membership tracking: group -> list of values
-    QHash<QString, QStringList> mGroupMembers;
+    // Group membership tracking: group -> set of values (O(1) membership checks)
+    QHash<QString, QSet<QString>> mGroupMembers;
+    
+    // Group exclusivity settings: group -> exclusive mode (true = radio, false = checkbox)
+    QHash<QString, bool> mGroupExclusivity;
     
     // Register a value in a group (called when link is created)
     void registerGroupMember(const QString& group, const QString& value);

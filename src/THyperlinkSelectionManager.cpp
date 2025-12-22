@@ -20,13 +20,11 @@
 #include "THyperlinkSelectionManager.h"
 #include "TConsole.h"
 
-THyperlinkSelectionManager::THyperlinkSelectionManager(TConsole* pConsole)
-: QObject(pConsole)
-, mpConsole(pConsole)
+THyperlinkSelectionManager::THyperlinkSelectionManager(TConsole& console)
+: QObject(&console)
+, mpConsole(&console)
 {
-    if (!pConsole) {
-        qFatal("THyperlinkSelectionManager: pConsole parameter cannot be null");
-    }
+    // No null check needed - reference cannot be null
 }
 
 THyperlinkSelectionManager::~THyperlinkSelectionManager() = default;
@@ -36,13 +34,14 @@ bool THyperlinkSelectionManager::isSelected(const QString& group, const QString&
     return mSelectionState.value(group).value(value, false);
 }
 
-void THyperlinkSelectionManager::setSelected(const QString& group, const QString& value, bool selected, bool exclusive)
+void THyperlinkSelectionManager::setSelected(const QString& group, const QString& value, bool selected)
 {
     registerGroupMember(group, value);
     
     bool previousState = isSelected(group, value);
     
-    if (selected && exclusive) {
+    // If selecting and group is exclusive, clear other selections
+    if (selected && isGroupExclusive(group)) {
         handleExclusiveSelection(group, value);
     }
     
@@ -53,15 +52,16 @@ void THyperlinkSelectionManager::setSelected(const QString& group, const QString
     }
 }
 
-void THyperlinkSelectionManager::toggleSelection(const QString& group, const QString& value, bool exclusive)
+void THyperlinkSelectionManager::toggleSelection(const QString& group, const QString& value)
 {
     bool currentState = isSelected(group, value);
-    setSelected(group, value, !currentState, exclusive);
+    setSelected(group, value, !currentState);
 }
 
 QStringList THyperlinkSelectionManager::getGroupMembers(const QString& group) const
 {
-    return mGroupMembers.value(group, QStringList());
+    const QSet<QString>& groupSet = mGroupMembers.value(group, QSet<QString>());
+    return QStringList(groupSet.begin(), groupSet.end());
 }
 
 void THyperlinkSelectionManager::clearGroup(const QString& group)
@@ -127,12 +127,37 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
 void THyperlinkSelectionManager::registerGroupMember(const QString& group, const QString& value)
 {
     if (!mGroupMembers.contains(group)) {
-        mGroupMembers[group] = QStringList();
+        mGroupMembers[group] = QSet<QString>();
     }
     
-    if (!mGroupMembers[group].contains(value)) {
-        mGroupMembers[group].append(value);
+    mGroupMembers[group].insert(value);
+}
+
+void THyperlinkSelectionManager::setGroupExclusive(const QString& group, bool exclusive)
+{
+    mGroupExclusivity[group] = exclusive;
+    
+    // If switching to exclusive mode and multiple items are selected, keep only the first
+    if (exclusive && mSelectionState.contains(group)) {
+        bool foundFirst = false;
+        const QStringList members = getGroupMembers(group);
+        for (const QString& member : members) {
+            if (isSelected(group, member)) {
+                if (!foundFirst) {
+                    foundFirst = true;
+                } else {
+                    mSelectionState[group][member] = false;
+                    emit selectionChanged(group, member, false);
+                }
+            }
+        }
     }
+}
+
+bool THyperlinkSelectionManager::isGroupExclusive(const QString& group) const
+{
+    // Default to non-exclusive (checkbox behavior) if not explicitly set
+    return mGroupExclusivity.value(group, false);
 }
 
 void THyperlinkSelectionManager::handleExclusiveSelection(const QString& group, const QString& value)

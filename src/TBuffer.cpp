@@ -1092,52 +1092,56 @@ COMMIT_LINE:
                 }
             }
 
-            if (mCurrentHyperlinkStyling.isUnderlined) {
-                c.mFlags |= TChar::Underline;
+            // Only re-apply base styling if effective pseudo-class styling is not present
+            // This prevents base decoration flags from overriding pseudo-class cascade decisions
+            if (!effectiveStyling.hasCustomStyling) {
+                if (mCurrentHyperlinkStyling.isUnderlined) {
+                    c.mFlags |= TChar::Underline;
 
-                switch (mCurrentHyperlinkStyling.underlineStyle) {
-                    case Mudlet::HyperlinkStyling::UnderlineWavy:
-                        c.mFlags |= TChar::UnderlineWavy;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineDotted:
-                        c.mFlags |= TChar::UnderlineDotted;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineDashed:
-                        c.mFlags |= TChar::UnderlineDashed;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineSolid:
-                    case Mudlet::HyperlinkStyling::UnderlineNone:
-                    default:
-                        break;
+                    switch (mCurrentHyperlinkStyling.underlineStyle) {
+                        case Mudlet::HyperlinkStyling::UnderlineWavy:
+                            c.mFlags |= TChar::UnderlineWavy;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDotted:
+                            c.mFlags |= TChar::UnderlineDotted;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDashed:
+                            c.mFlags |= TChar::UnderlineDashed;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineSolid:
+                        case Mudlet::HyperlinkStyling::UnderlineNone:
+                        default:
+                            break;
+                    }
                 }
-            }
 
-            if (mCurrentHyperlinkStyling.isOverlined) {
-                c.mFlags |= TChar::Overline;
-            }
+                if (mCurrentHyperlinkStyling.isOverlined) {
+                    c.mFlags |= TChar::Overline;
+                }
 
-            if (mCurrentHyperlinkStyling.isStrikeOut) {
-                c.mFlags |= TChar::StrikeOut;
-            }
+                if (mCurrentHyperlinkStyling.isStrikeOut) {
+                    c.mFlags |= TChar::StrikeOut;
+                }
 
-            if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
-                c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
-            }
+                if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
+                    c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
+                }
 
-            if (mCurrentHyperlinkStyling.hasOverlineColor && mCurrentHyperlinkStyling.isOverlined) {
-                c.setOverlineColor(mCurrentHyperlinkStyling.overlineColor);
-            }
+                if (mCurrentHyperlinkStyling.hasOverlineColor && mCurrentHyperlinkStyling.isOverlined) {
+                    c.setOverlineColor(mCurrentHyperlinkStyling.overlineColor);
+                }
 
-            if (mCurrentHyperlinkStyling.hasStrikeoutColor && mCurrentHyperlinkStyling.isStrikeOut) {
-                c.setStrikeoutColor(mCurrentHyperlinkStyling.strikeoutColor);
-            }
+                if (mCurrentHyperlinkStyling.hasStrikeoutColor && mCurrentHyperlinkStyling.isStrikeOut) {
+                    c.setStrikeoutColor(mCurrentHyperlinkStyling.strikeoutColor);
+                }
 
-            if (mCurrentHyperlinkStyling.isBold) {
-                c.mFlags |= TChar::Bold;
-            }
+                if (mCurrentHyperlinkStyling.isBold) {
+                    c.mFlags |= TChar::Bold;
+                }
 
-            if (mCurrentHyperlinkStyling.isItalic) {
-                c.mFlags |= TChar::Italic;
+                if (mCurrentHyperlinkStyling.isItalic) {
+                    c.mFlags |= TChar::Italic;
+                }
             }
 
             // Only apply underline if explicitly set in styling (respects OSC 8 default of no underline)
@@ -2922,10 +2926,12 @@ void TBuffer::decodeOSC(const QString& sequence)
                 const QString& group = mCurrentHyperlinkStyling.selection.group;
                 const QString& value = mCurrentHyperlinkStyling.selection.value;
                 
+                // Configure group exclusivity mode
+                mpConsole->mpSelectionManager->setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
+                
                 // Register the link with the selection manager
                 mpConsole->mpSelectionManager->setSelected(group, value, 
-                    mCurrentHyperlinkStyling.selection.selected, 
-                    mCurrentHyperlinkStyling.selection.exclusive);
+                    mCurrentHyperlinkStyling.selection.selected);
                 
                 // Update link selection state (visual styling will be applied when link closes)
                 setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
@@ -3019,7 +3025,8 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
 
     // Check for standard format: ?config={...} (entire query string is the config JSON)
     // The JSON may have escaped quotes: config={\"style\":{...}} or unescaped: config={"style":{...}}
-    if (decodedQueryString.startsWith(qsl("config="))) {
+    // Only treat as full-config JSON if there are no additional parameters (no '&' present)
+    if (decodedQueryString.startsWith(qsl("config=")) && decodedQueryString.indexOf('&') == -1) {
         QString configJson = decodedQueryString.mid(7); // Remove "config="
         bool success = parseJsonHyperlinkConfig(configJson, parameters, styling);
 #if defined(DEBUG_OSC_PROCESSING)
@@ -3230,8 +3237,8 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     if (root.contains(qsl("visibility")) && root[qsl("visibility")].isObject()) {
         QJsonObject visibilityObj = root[qsl("visibility")].toObject();
         if (!parseVisibilityFromJson(visibilityObj, styling.visibility)) {
-            qWarning() << "TBuffer::parseJsonHyperlinkConfig: Failed to parse visibility settings";
-            return false;
+            qWarning() << "TBuffer::parseJsonHyperlinkConfig: Failed to parse visibility settings (continuing with other config)";
+            // Non-fatal: visibility settings ignored but other config parts still apply
         }
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Visibility config parsed from JSON";
@@ -3431,8 +3438,9 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
             settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
         } else {
-            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action string:" << actionStr;
-            return false;
+            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action string:" << actionStr << "(ignoring visibility settings)";
+            settings.hasVisibilitySettings = false;
+            return true; // Non-fatal: allow other config parts to apply
         }
     } else if (actionValue.isArray()) {
         QJsonArray actionArray = actionValue.toArray();
@@ -3442,12 +3450,14 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
             settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
         } else {
-            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action array (expected [\"reveal\", \"conceal\"])";
-            return false;
+            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action array (expected [\"reveal\", \"conceal\"]) (ignoring visibility settings)";
+            settings.hasVisibilitySettings = false;
+            return true; // Non-fatal: allow other config parts to apply
         }
     } else {
-        qWarning() << "TBuffer::parseVisibilityFromJson: Action must be string or array";
-        return false;
+        qWarning() << "TBuffer::parseVisibilityFromJson: Action must be string or array (ignoring visibility settings)";
+        settings.hasVisibilitySettings = false;
+        return true; // Non-fatal: allow other config parts to apply
     }
 
     settings.hasVisibilitySettings = true;
@@ -3458,15 +3468,15 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
         if (delayValue.isDouble()) {
             double delayDouble = delayValue.toDouble();
             if (delayDouble < 0) {
-                qWarning() << "TBuffer::parseVisibilityFromJson: Delay cannot be negative:" << delayDouble;
-                return false;
-            }
-            if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                qWarning() << "TBuffer::parseVisibilityFromJson: Delay cannot be negative:" << delayDouble << "(using 0)";
+                settings.delayMs = 0;
+            } else if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
                 qWarning() << "TBuffer::parseVisibilityFromJson: Delay exceeds maximum ("
-                           << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble;
-                return false;
+                           << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble << "(clamping to maximum)";
+                settings.delayMs = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+            } else {
+                settings.delayMs = static_cast<quint32>(delayDouble);
             }
-            settings.delayMs = static_cast<quint32>(delayDouble);
         }
     }
 
@@ -3496,15 +3506,15 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
             if (outputDelayValue.isDouble()) {
                 double delayDouble = outputDelayValue.toDouble();
                 if (delayDouble < 0) {
-                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay cannot be negative:" << delayDouble;
-                    return false;
-                }
-                if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay cannot be negative:" << delayDouble << "(using 0)";
+                    settings.outputDelayMs = 0;
+                } else if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
                     qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay exceeds maximum ("
-                               << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble;
-                    return false;
+                               << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble << "(clamping to maximum)";
+                    settings.outputDelayMs = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+                } else {
+                    settings.outputDelayMs = static_cast<quint32>(delayDouble);
                 }
-                settings.outputDelayMs = static_cast<quint32>(delayDouble);
             }
         }
     }
@@ -3545,8 +3555,14 @@ bool TBuffer::parseVisibilitySettings(const QString& jsonString, Mudlet::Hyperli
     }
 
     bool success = parseVisibilityFromJson(root[qsl("visibility")].toObject(), settings);
-    if (!success && errorDetails && errorDetails->isEmpty()) {
-        *errorDetails = qsl("Failed to parse visibility settings");
+    if (!success) {
+        if (errorDetails) {
+            if (errorDetails->isEmpty()) {
+                *errorDetails = qsl("Failed to parse visibility settings (non-fatal)");
+            }
+            // When errorDetails is provided, treat as warning only
+            return true;
+        }
     }
 
     return success;
@@ -3587,16 +3603,12 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
              << "endCol" << endColumn << "lineSize" << line.size();
 #endif
     
-    QSet<int> clearedLinkIds;
     for (int col = startColumn; col < endColumn; ++col) {
         // Additional bounds check inside the loop
         if (col >= static_cast<int>(line.size())) {
             break;
         }
         int oldLinkIndex = line[col].mLinkIndex;
-        if (oldLinkIndex > 0) {
-            clearedLinkIds.insert(oldLinkIndex);
-        }
         line[col].mLinkIndex = 0;
 #if defined(DEBUG_OSC_PROCESSING)
         if (oldLinkIndex != 0) {
@@ -6594,7 +6606,7 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
             styling.selection.value != exceptValue) {
             
             if (mpConsole && mpConsole->mpSelectionManager) {
-                mpConsole->mpSelectionManager->setSelected(styling.selection.group, styling.selection.value, false, false);
+                mpConsole->mpSelectionManager->setSelected(styling.selection.group, styling.selection.value, false);
             }
             
             setLinkSelected(linkIndex, false);

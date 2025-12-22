@@ -150,10 +150,10 @@ set(mudlet_SRCS
     TForkedProcess.cpp
     THyperlinkCompactManager.cpp
     THyperlinkSelectionManager.cpp
+    THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
-    THyperlinkVisibilityManager.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TLuaInterpreterAI.cpp
