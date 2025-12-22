@@ -443,8 +443,10 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
             // Uses ping for delay instead of timeout.exe because timeout doesn't work when stdin is redirected.
+            // Change to temp directory immediately to release handle on Mudlet's app folder.
             QString batchContent = qsl(
                 "@echo off\r\n"
+                "cd /d %TEMP%\r\n"
                 "echo Mudlet updater: waiting for %1 to exit...\r\n"
                 ":wait_mudlet\r\n"
                 "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | C:\\Windows\\System32\\find.exe /I \"%1\" >NUL\r\n"
