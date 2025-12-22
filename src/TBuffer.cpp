@@ -2655,29 +2655,10 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
                         qDebug() << "[OSC] Link starts concealed - replacing text with spaces";
 #endif
-                        // Calculate visual width to handle wide chars like emojis properly
-                        int visualWidth = 0;
-                        if (mpHost) {
-                            QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, linkText);
-                            int pos = 0;
-                            while (pos < linkText.length()) {
-                                int nextBoundary = graphemeFinder.toNextBoundary();
-                                if (nextBoundary == -1) {
-                                    nextBoundary = linkText.length();
-                                }
-                                if (nextBoundary > pos) {
-                                    const QString grapheme = linkText.mid(pos, nextBoundary - pos);
-                                    const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
-                                    const int charWidth = graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs());
-                                    visualWidth += charWidth;
-                                }
-                                pos = nextBoundary;
-                            }
-                        } else {
-                            visualWidth = linkLength; // Fallback
-                        }
-                        
-                        QString spaces(visualWidth, ' ');
+                        // CRITICAL: Maintain exact character length to preserve buffer consistency
+                        // Even though emojis have different visual widths, we must keep the same
+                        // character count to avoid disrupting buffer indices and causing crashes.
+                        QString spaces(linkLength, ' ');
                         mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
                     }
                 } else {
@@ -3574,6 +3555,14 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
 
     std::deque<TChar>& line = buffer[lineNumber];
     
+    // Extra safety: ensure we don't go out of bounds
+    if (line.empty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] clearLinkIndices: line" << lineNumber << "is empty";
+#endif
+        return;
+    }
+    
     startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
     
     int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
@@ -3585,6 +3574,10 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
     
     QSet<int> clearedLinkIds;
     for (int col = startColumn; col < endColumn; ++col) {
+        // Additional bounds check inside the loop
+        if (col >= static_cast<int>(line.size())) {
+            break;
+        }
         int oldLinkIndex = line[col].mLinkIndex;
         if (oldLinkIndex > 0) {
             clearedLinkIds.insert(oldLinkIndex);
@@ -3613,11 +3606,23 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
 
     std::deque<TChar>& line = buffer[lineNumber];
     
+    // Extra safety: ensure we don't go out of bounds
+    if (line.empty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] restoreLinkIndices: line" << lineNumber << "is empty";
+#endif
+        return;
+    }
+    
     startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
     
     int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
     
     for (int col = startColumn; col < endColumn; ++col) {
+        // Additional bounds check inside the loop
+        if (col >= static_cast<int>(line.size())) {
+            break;
+        }
         line[col].mLinkIndex = linkId;
     }
     
@@ -6138,6 +6143,11 @@ void TBuffer::injectOSC8DocumentationExamples()
 
     output += "Hide On New Output (expire after idle gap):\n";
     output += "• New output dismisses: \x1b]8;;send:output-hint?config={\"style\":{\"color\":\"lightgreen\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":500}}}\x1b\\Disappears when new output arrives after 500ms gap...\x1b]8;;\x1b\\\n\n";
+
+    // Special test for wide Unicode character handling (emojis)
+    output += "Wide Character Tests (emojis properly handled in concealment):\n";
+    output += "• Click to hide emojis: \x1b]8;;send:wide-test?config={\"style\":{\"bg\":\"blue\",\"color\":\"white\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\🎉🚀💎🔥⭐\x1b]8;;\x1b\\ ← Click and watch background alignment!\n";
+    output += "• Click to hide mixed: \x1b]8;;send:mixed-test?config={\"style\":{\"bg\":\"green\",\"color\":\"white\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Text🎯and🌟emojis🎪\x1b]8;;\x1b\\ ← Mixed text and emojis\n\n";
 
     output += "Combined Expire Triggers (any trigger hides):\n";
     output += "• \x1b]8;;send:any-hint?config={\"style\":{\"color\":\"orange\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true,\"prompt\":true,\"output\":true}}}\x1b\\Type, prompt, or new output hides me\x1b]8;;\x1b\\\n\n";

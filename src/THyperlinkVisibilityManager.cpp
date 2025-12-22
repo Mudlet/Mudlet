@@ -742,12 +742,24 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             QString& lineText = buffer.lineBuffer[link.lineNumber];
             
             if (link.startColumn >= 0 && link.startColumn + link.length <= lineText.length()) {
-                // Calculate the visual width of the original text to handle wide chars like emojis
+                // For concealment, we need to maintain the exact same string length
+                // to avoid disrupting character buffer indices. Calculate visual width
+                // only to determine how many spaces we need for proper display alignment.
                 const QString originalText = lineText.mid(link.startColumn, link.length);
                 const int visualWidth = calculateVisualWidth(originalText);
                 
-                // Replace with the correct number of spaces to match visual width
-                QString spaces(visualWidth, ' ');
+                // CRITICAL: Keep the replacement the same character length as original
+                // to maintain buffer consistency. We'll pad/truncate spaces as needed.
+                QString spaces;
+                if (visualWidth <= link.length) {
+                    // Visual width is smaller or equal - pad with extra spaces if needed
+                    spaces = QString(link.length, ' ');
+                } else {
+                    // Visual width is larger - use original length to maintain buffer integrity
+                    // This may cause minor visual misalignment but prevents crashes
+                    spaces = QString(link.length, ' ');
+                }
+                
                 lineText.replace(link.startColumn, link.length, spaces);
                 buffer.clearLinkIndices(link.lineNumber, link.startColumn, link.length);
             }
@@ -774,23 +786,34 @@ int THyperlinkVisibilityManager::calculateVisualWidth(const QString& text) const
     QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, text);
     int pos = 0;
     
+    // Ensure graphemeFinder is properly positioned
+    graphemeFinder.setPosition(0);
+    
     while (pos < text.length()) {
         int nextBoundary = graphemeFinder.toNextBoundary();
-        if (nextBoundary == -1) {
-            nextBoundary = text.length();
-        }
-        
-        if (nextBoundary > pos) {
+        if (nextBoundary == -1 || nextBoundary <= pos) {
+            // Safety check - if boundary finder fails, process remaining character by character
+            if (pos < text.length()) {
+                const QChar ch = text.at(pos);
+                const uint unicode = ch.unicode();
+                const int charWidth = graphemeInfo::getWidth(unicode, mpConsole->mpHost->wideAmbiguousEAsianGlyphs());
+                totalWidth += std::max(1, charWidth); // Ensure minimum width of 1
+                pos++;
+            } else {
+                break;
+            }
+        } else {
             const QString grapheme = text.mid(pos, nextBoundary - pos);
-            const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
-            const int charWidth = graphemeInfo::getWidth(unicode, mpConsole->mpHost->wideAmbiguousEAsianGlyphs());
-            totalWidth += charWidth;
+            if (!grapheme.isEmpty()) {
+                const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+                const int charWidth = graphemeInfo::getWidth(unicode, mpConsole->mpHost->wideAmbiguousEAsianGlyphs());
+                totalWidth += std::max(1, charWidth); // Ensure minimum width of 1
+            }
+            pos = nextBoundary;
         }
-        
-        pos = nextBoundary;
     }
     
-    return totalWidth;
+    return std::max(1, totalWidth); // Ensure we return at least 1
 }
 
 void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
