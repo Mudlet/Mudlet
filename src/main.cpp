@@ -716,11 +716,22 @@ int main(int argc, char* argv[])
 
     // Check if we should register Mudlet as the telnet:// protocol handler
     // We only ask the user once and remember their choice
+    // Skip in CI/headless environments to avoid blocking tests
     QSettings* appSettings = mudlet::getQSettings();
     bool shouldRegisterTelnet = false;
     
-    if (!appSettings->contains("telnetHandlerAsked")) {
-        // First time - ask the user
+    // Detect CI/headless mode: CI environment variable or --profile argument (automated mode)
+    bool isHeadlessMode = qEnvironmentVariableIsSet("CI") 
+                          || qEnvironmentVariableIsSet("GITHUB_ACTIONS")
+                          || QCoreApplication::arguments().contains("--profile")
+                          || QCoreApplication::arguments().contains("--mirror");
+    
+    if (isHeadlessMode) {
+        // In CI/headless mode, skip the dialog and use saved preference or default to false
+        shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
+        qDebug() << "main: Headless mode detected, skipping telnet handler dialog";
+    } else if (!appSettings->contains("telnetHandlerAsked")) {
+        // First time in interactive mode - ask the user
         QMessageBox msgBox;
         msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
         msgBox.setText(QObject::tr("Would you like Mudlet to handle telnet:// links?"));
