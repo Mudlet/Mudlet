@@ -650,6 +650,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // main console to a width of zero - but that is not useful from a NAWS
         // or event handling system point of view - so abort doing anything
         // with the event:
+        QWidget::resizeEvent(event);
         return;
     }
 
