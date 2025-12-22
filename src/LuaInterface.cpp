@@ -84,10 +84,14 @@ QStringList LuaInterface::varName(TVar* var)
     return names;
 }
 
-bool LuaInterface::validMove(QTreeWidgetItem* pWidget)
+bool LuaInterface::validMove(QTreeWidgetItem* pWidget, QString* reasonMsg)
 {
     TVar* pNewParent = varUnit->getWVar(pWidget);
     if (pNewParent && pNewParent->getValueType() != LUA_TTABLE) {
+        if (reasonMsg) {
+            //: Error message shown when user tries to drag a variable onto a non-table variable
+            *reasonMsg = QObject::tr("Cannot move variable here - the target is not a table");
+        }
         return false;
     }
     return true;

@@ -29,6 +29,7 @@
 
 #include <QtEvents>
 #include <QHeaderView>
+#include <QToolTip>
 
 TTreeWidget::TTreeWidget(QWidget* pW)
 : QTreeWidget(pW)
@@ -384,9 +385,13 @@ void TTreeWidget::dropEvent(QDropEvent* event)
 
     if (mIsVarTree) {
         LuaInterface* lI = mpHost->getLuaInterface();
-        if (!lI->validMove(pItem)) {
+        QString errorMsg;
+        if (!lI->validMove(pItem, &errorMsg)) {
             event->setDropAction(Qt::IgnoreAction);
             event->ignore();
+            if (!errorMsg.isEmpty()) {
+                QToolTip::showText(QCursor::pos(), errorMsg, this);
+            }
             return;
         }
     }

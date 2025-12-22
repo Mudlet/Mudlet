@@ -66,7 +66,7 @@ public:
     bool loadVar(TVar* var);
     bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
     bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
-    bool validMove(QTreeWidgetItem*);
+    bool validMove(QTreeWidgetItem*, QString* reasonMsg = nullptr);
     void getAllChildren(TVar* var, QList<TVar*>* list);
     lua_State* getState();
     static int onPanic(lua_State*);
