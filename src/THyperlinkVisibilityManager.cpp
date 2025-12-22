@@ -21,9 +21,13 @@
 #include "TBuffer.h"
 #include "TConsole.h"
 #include "TTextEdit.h"
+#include "Host.h"
+#include "TTextProperties.h"
+#include "widechar_width.h"
 
 #include <QDateTime>
 #include <QDebug>
+#include <QTextBoundaryFinder>
 #include <limits>
 
 THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole, QObject* parent)
@@ -738,7 +742,12 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             QString& lineText = buffer.lineBuffer[link.lineNumber];
             
             if (link.startColumn >= 0 && link.startColumn + link.length <= lineText.length()) {
-                QString spaces(link.length, ' ');
+                // Calculate the visual width of the original text to handle wide chars like emojis
+                const QString originalText = lineText.mid(link.startColumn, link.length);
+                const int visualWidth = calculateVisualWidth(originalText);
+                
+                // Replace with the correct number of spaces to match visual width
+                QString spaces(visualWidth, ' ');
                 lineText.replace(link.startColumn, link.length, spaces);
                 buffer.clearLinkIndices(link.lineNumber, link.startColumn, link.length);
             }
@@ -753,6 +762,35 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             mpConsole->mLowerPane->update();
         }
     }
+}
+
+int THyperlinkVisibilityManager::calculateVisualWidth(const QString& text) const
+{
+    if (text.isEmpty() || !mpConsole || !mpConsole->mpHost) {
+        return text.length(); // Fallback to character count
+    }
+    
+    int totalWidth = 0;
+    QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, text);
+    int pos = 0;
+    
+    while (pos < text.length()) {
+        int nextBoundary = graphemeFinder.toNextBoundary();
+        if (nextBoundary == -1) {
+            nextBoundary = text.length();
+        }
+        
+        if (nextBoundary > pos) {
+            const QString grapheme = text.mid(pos, nextBoundary - pos);
+            const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+            const int charWidth = graphemeInfo::getWidth(unicode, mpConsole->mpHost->wideAmbiguousEAsianGlyphs());
+            totalWidth += charWidth;
+        }
+        
+        pos = nextBoundary;
+    }
+    
+    return totalWidth;
 }
 
 void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)

@@ -114,6 +114,9 @@ private:
     void stopTimerIfNotNeeded();
     void performConcealment(TrackedHyperlink& link);
     void performReveal(TrackedHyperlink& link);
+    
+    // Helper method for calculating visual width of text (accounting for wide chars like emojis)
+    int calculateVisualWidth(const QString& text) const;
     void processExpireTriggeredLinks(bool input, bool prompt, bool output);
 
     QPointer<TConsole> mpConsole;

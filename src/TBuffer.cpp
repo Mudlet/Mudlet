@@ -2655,7 +2655,29 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
                         qDebug() << "[OSC] Link starts concealed - replacing text with spaces";
 #endif
-                        QString spaces(linkLength, ' ');
+                        // Calculate visual width to handle wide chars like emojis properly
+                        int visualWidth = 0;
+                        if (mpHost) {
+                            QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, linkText);
+                            int pos = 0;
+                            while (pos < linkText.length()) {
+                                int nextBoundary = graphemeFinder.toNextBoundary();
+                                if (nextBoundary == -1) {
+                                    nextBoundary = linkText.length();
+                                }
+                                if (nextBoundary > pos) {
+                                    const QString grapheme = linkText.mid(pos, nextBoundary - pos);
+                                    const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+                                    const int charWidth = graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs());
+                                    visualWidth += charWidth;
+                                }
+                                pos = nextBoundary;
+                            }
+                        } else {
+                            visualWidth = linkLength; // Fallback
+                        }
+                        
+                        QString spaces(visualWidth, ' ');
                         mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
                     }
                 } else {
