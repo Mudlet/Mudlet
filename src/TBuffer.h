@@ -150,6 +150,38 @@ struct HyperlinkStyling {
     };
 
     SelectionSettings selection;
+
+    // Visibility control: conceal (hide after delay/expire) or reveal (show after delay/expire)
+    // JSON: {"action": "conceal"|"reveal"|["reveal","conceal"], "delay": ms, "wholeline": bool, "expire": {...}}
+    // expire object: {" input": bool, "prompt": bool, "output": bool, "outputDelay": ms}
+    // When action is ["reveal","conceal"]: starts hidden, reveals on trigger, then conceals on click
+    struct VisibilitySettings {
+        // Maximum allowed delay value (24 hours in milliseconds)
+        static constexpr quint32 MaxDelayMs = 86400000;
+        // Default output delay for batch detection (500ms)
+        static constexpr quint32 DefaultOutputDelayMs = 500;
+
+        enum class Action {
+            None,
+            Conceal,
+            Reveal,
+            RevealThenConceal  // Combined: reveal first, then conceal after click
+        };
+
+        Action action = Action::None;
+        quint32 delayMs = 0;
+        bool deletesEntireLine = false;
+        bool isConcealed = false;
+        bool hasVisibilitySettings = false;
+
+        // Expire triggers - when visibility action should occur
+        bool expireOnInput = false;    // User types/submits something
+        bool expireOnPrompt = false;   // GA/EOR telnet signal received
+        bool expireOnOutput = false;   // New output after idle gap
+        quint32 outputDelayMs = DefaultOutputDelayMs;  // Idle gap for output trigger
+    };
+
+    VisibilitySettings visibility;
 };
 
 } // namespace Mudlet
@@ -446,6 +478,11 @@ public:
     void paste(QPoint&, const TBuffer&);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
+    
+    // Getters and setters for link state tracking
+    int getLastClickedLinkIndex() const { return mLastClickedLinkIndex; }
+    void setLastClickedLinkIndex(int index) { mLastClickedLinkIndex = index; }
+    void clearLastClickedLinkIndex() { mLastClickedLinkIndex = 0; }
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
     void appendLog(const QString &text);
@@ -498,9 +535,9 @@ private:
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
-    QMap<QString, QString> parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling);
+    bool parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling, QMap<QString, QString>& parameters);
     // Helper function for parsing JSON format hyperlink configuration
-    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling);
+    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling, QString* errorDetails = nullptr);
     // Helper function for expanding shorthands in JSON object (recursive)
     QJsonObject expandJsonShorthands(const QJsonObject& obj);
     // Helper function for directly parsing JSON style object to HyperlinkStyling
@@ -511,8 +548,12 @@ private:
     void parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings);
     // Helper function for JSON menu array conversion
     QString jsonMenuArrayToString(const QJsonArray& menuArray);
+    // Helper function for parsing visibility JSON object into VisibilitySettings
+    bool parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling::VisibilitySettings& settings);
     // Helper function for appending query parameters to URIs (handles existing params)
     QString appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters);
+    // Helper function for parsing visibility settings from JSON string
+    bool parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling::VisibilitySettings& settings, QString* errorDetails = nullptr);
     // Helper function for parsing color values (hex, named, rgb)
     QColor parseColorValue(const QString& value);
     // Accessibility enhancements for hyperlink styling
@@ -598,6 +639,10 @@ private:
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    // Track hyperlink start position for visibility manager registration
+    int mCurrentHyperlinkStartLine = 0;
+    int mCurrentHyperlinkStartColumn = 0;
+    QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase {
         Phase1_Snapshot,
@@ -652,6 +697,8 @@ public:
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
     int getLinkIndexAt(int line, int column) const; // Get link index at specific position
+    void clearLinkIndices(int lineNumber, int startColumn, int count); // Clear link indices in a range
+    void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 
 private:
 };

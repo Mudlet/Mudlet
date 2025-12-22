@@ -30,6 +30,7 @@
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -1242,7 +1243,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 if (mpBuffer->getHoveredLink() != linkIndex) {
                     auto currentState = mpBuffer->getLinkState(linkIndex);
                     if (currentState != Mudlet::HyperlinkStyling::StateDisabled 
-                        && linkIndex != mpBuffer->mLastClickedLinkIndex) {
+                        && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
                         mpBuffer->setHoveredLink(linkIndex);
                         forceUpdate(); // Trigger re-render with new hover state
                     }
@@ -1258,8 +1259,8 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 }
                 
                 // Clear last clicked link when mouse leaves - allows hover to work again
-                if (mpBuffer->mLastClickedLinkIndex != 0) {
-                    mpBuffer->mLastClickedLinkIndex = 0;
+                if (mpBuffer->getLastClickedLinkIndex() != 0) {
+                    mpBuffer->clearLastClickedLinkIndex();
                 }
             }
         }
@@ -1492,9 +1493,14 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         mpBuffer->setHoveredLink(0);
                         
                         // Remember this link was just clicked - suppress hover until mouse leaves
-                        mpBuffer->mLastClickedLinkIndex = linkIndex;
+                        mpBuffer->setLastClickedLinkIndex(linkIndex);
                         
                         forceUpdate();
+
+                        // Notify visibility manager that link was clicked (activates timers)
+                        if (mpConsole->mpHyperlinkVisibilityManager) {
+                            mpConsole->mpHyperlinkVisibilityManager->onLinkClicked(linkIndex);
+                        }
 
                         if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
@@ -3250,6 +3256,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 // Get the link commands and execute them
                 QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
                 if (!commands.isEmpty()) {
+                    // Notify visibility manager that link was clicked (activates timers)
+                    if (mpConsole->mpHyperlinkVisibilityManager) {
+                        mpConsole->mpHyperlinkVisibilityManager->onLinkClicked(focusedLink);
+                    }
+
                     // Mark the link as visited
                     mpBuffer->markLinkAsVisited(focusedLink);
 

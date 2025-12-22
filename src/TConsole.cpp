@@ -26,12 +26,14 @@
 #include "TConsole.h"
 
 
+#include "ctelnet.h"
 #include "Host.h"
 #include "TCommandLine.h"
 #include "THyperlinkCompactManager.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -80,6 +82,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 {
     mpCompactSyntaxManager = std::make_unique<THyperlinkCompactManager>(this);
     mpSelectionManager = std::make_unique<THyperlinkSelectionManager>(this);
+    mpHyperlinkVisibilityManager = new THyperlinkVisibilityManager(this);
+    
     initializeOSC8StyleFeature();
     initializeOSC8MenuFeature();
     initializeOSC8TooltipFeature();
@@ -217,6 +221,25 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // Setting the focusProxy cannot be done here because things have not
         // been completed enough at this point - it has been defered to a
         // zero-timer at the end of this constructor
+
+        // Connect user input trigger (command submission only, not typing)
+        connect(mpCommandLine, &TCommandLine::commandSubmitted,
+                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
+        
+        // Connect GA/EOR prompt signal from telnet
+        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived,
+                mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onPromptReceived);
+        
+        // Refresh display when hyperlink visibility changes
+        connect(mpHyperlinkVisibilityManager, &THyperlinkVisibilityManager::visibilityChanged,
+                this, [this]() {
+                    if (mUpperPane) {
+                        mUpperPane->forceUpdate();
+                    }
+                    if (mLowerPane) {
+                        mLowerPane->forceUpdate();
+                    }
+                });
     }
 
     layer = new QWidget(mpMainDisplay);

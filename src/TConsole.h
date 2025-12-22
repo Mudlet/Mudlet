@@ -159,6 +159,7 @@ class TTextEdit;
 class TCommandLine;
 class TDockWidget;
 class THyperlinkCompactManager;
+class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
@@ -332,6 +333,10 @@ public:
     std::unique_ptr<THyperlinkCompactManager> mpCompactSyntaxManager;
     // Manager for OSC 8 hyperlink selection state (radio/checkbox behavior)
     std::unique_ptr<THyperlinkSelectionManager> mpSelectionManager;
+
+    // Manages hyperlink visibility (conceal/reveal) based on time delays and expire triggers
+    // (user input, GA/EOR prompt, or new output after idle gap)
+    QPointer<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;

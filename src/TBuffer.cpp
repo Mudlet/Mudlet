@@ -27,6 +27,7 @@
 #include "TConsole.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TStringUtils.h"
 #include "TTextEdit.h"
 #include "TTextProperties.h"
@@ -1159,8 +1160,15 @@ COMMIT_LINE:
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE - yes I think we do:
             mMudBuffer.push_back(c);
             mMudBuffer.push_back(c);
+            if (mHyperlinkActive) {
+                mCurrentHyperlinkText += QString(QChar(ch));
+                mCurrentHyperlinkText += QString(QChar(ch));
+            }
         } else {
             mMudBuffer.push_back(c);
+            if (mHyperlinkActive) {
+                mCurrentHyperlinkText += QString(QChar(ch));
+            }
         }
 
         ++localBufferPosition;
@@ -2604,6 +2612,25 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // The :link styling will be applied when characters are created in COMMIT_LINE.
             }
             
+            // Register with visibility manager if visibility settings exist
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings 
+                && mpConsole && mpConsole->mpHyperlinkVisibilityManager) {
+                mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
+                    mCurrentHyperlinkLinkId,
+                    mCurrentHyperlinkStartLine,
+                    mCurrentHyperlinkStartColumn,
+                    mCurrentHyperlinkText.length(),
+                    mCurrentHyperlinkText,
+                    mCurrentHyperlinkStyling
+                );
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC8] Registered link" << mCurrentHyperlinkLinkId 
+                         << "with visibility manager at line" << mCurrentHyperlinkStartLine
+                         << "column" << mCurrentHyperlinkStartColumn
+                         << "length" << mCurrentHyperlinkText.length();
+#endif
+            }
+            
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
             mCurrentHyperlinkLinkId = 0;
@@ -2611,6 +2638,10 @@ void TBuffer::decodeOSC(const QString& sequence)
             // Reset enhanced styling
             mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
             mCurrentHyperlinkMenu.clear();
+            // Reset visibility tracking
+            mCurrentHyperlinkStartLine = 0;
+            mCurrentHyperlinkStartColumn = 0;
+            mCurrentHyperlinkText.clear();
             break;
         }
 
@@ -2675,7 +2706,8 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
             // Reset styling to defaults before parsing
             mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
-            QMap<QString, QString> queryParams = parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling);
+            QMap<QString, QString> queryParams;
+            parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
 
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC8] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
@@ -2868,6 +2900,11 @@ void TBuffer::decodeOSC(const QString& sequence)
             qDebug().noquote() << "[OSC8] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
 #endif
             mHyperlinkActive = true;
+            
+            // Track the starting position for visibility manager registration
+            mCurrentHyperlinkStartLine = static_cast<int>(buffer.size()) - 1;  // Current line index
+            mCurrentHyperlinkStartColumn = static_cast<int>(buffer.back().size());  // Current column position
+            mCurrentHyperlinkText.clear();
         }
         break;
     }
@@ -2900,9 +2937,9 @@ QString TBuffer::appendQueryParameters(const QString& uri, const QMap<QString, Q
     return result;
 }
 
-QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling)
+bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling, QMap<QString, QString>& parameters)
 {
-    QMap<QString, QString> parameters;
+    parameters.clear();
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] parseUriQueryParameters called with uri:" << uri;
@@ -2914,7 +2951,7 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC8] No query parameters found in URI";
 #endif
-        return parameters; // No query parameters
+        return true; // No query parameters is not an error
     }
 
     QString queryString = uri.mid(queryStart + 1);
@@ -2932,11 +2969,11 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
     // The JSON may have escaped quotes: config={\"style\":{...}} or unescaped: config={"style":{...}}
     if (decodedQueryString.startsWith(qsl("config="))) {
         QString configJson = decodedQueryString.mid(7); // Remove "config="
-        parseJsonHyperlinkConfig(configJson, parameters, styling);
+        bool success = parseJsonHyperlinkConfig(configJson, parameters, styling);
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Parsed config={...} format";
+        qDebug() << "[OSC8] Parsed config={...} format, success:" << success;
 #endif
-        return parameters;
+        return success;
     }
 
     QStringList paramPairs = decodedQueryString.split('&');
@@ -3003,7 +3040,7 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
         if (!baseConfig.isEmpty()) {
             QJsonDocument finalDoc(baseConfig);
             QString finalJson = QString::fromUtf8(finalDoc.toJson(QJsonDocument::Compact));
-            parseJsonHyperlinkConfig(finalJson, parameters, styling);
+            return parseJsonHyperlinkConfig(finalJson, parameters, styling);
         }
     }
 
@@ -3011,7 +3048,7 @@ QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri, Mudl
     qDebug() << "[OSC8] Parsed JSON parameters:" << parameters;
 #endif
 
-    return parameters;
+    return true;
 }
 
 QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
@@ -3052,7 +3089,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
     return result;
 }
 
-bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling)
+bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling, QString* errorDetails)
 {
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC8] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
@@ -3121,6 +3158,17 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
         parseJsonSelectionConfig(selectionObj, styling.selection);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC8] Selection config parsed from JSON";
+#endif
+    }
+
+    if (root.contains(qsl("visibility")) && root[qsl("visibility")].isObject()) {
+        QJsonObject visibilityObj = root[qsl("visibility")].toObject();
+        if (!parseVisibilityFromJson(visibilityObj, styling.visibility)) {
+            qWarning() << "TBuffer::parseJsonHyperlinkConfig: Failed to parse visibility settings";
+            return false;
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC8] Visibility config parsed from JSON";
 #endif
     }
 
@@ -3282,6 +3330,169 @@ void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::
 
     if (selectionObj.contains(qsl("disabled")) && selectionObj[qsl("disabled")].isBool()) {
         settings.disabled = selectionObj[qsl("disabled")].toBool();
+    }
+}
+
+bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling::VisibilitySettings& settings)
+{
+    if (!visibilityObj.contains(qsl("action"))) {
+        return true; // No action specified = no visibility settings
+    }
+
+    // Parse action field (can be string or array of strings)
+    QJsonValue actionValue = visibilityObj[qsl("action")];
+    if (actionValue.isString()) {
+        QString actionStr = actionValue.toString().toLower();
+        if (actionStr == qsl("conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
+        } else if (actionStr == qsl("reveal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
+        } else {
+            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action string:" << actionStr;
+            return false;
+        }
+    } else if (actionValue.isArray()) {
+        QJsonArray actionArray = actionValue.toArray();
+        if (actionArray.size() == 2 
+            && actionArray[0].isString() && actionArray[0].toString().toLower() == qsl("reveal")
+            && actionArray[1].isString() && actionArray[1].toString().toLower() == qsl("conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
+        } else {
+            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action array (expected [\"reveal\", \"conceal\"])";
+            return false;
+        }
+    } else {
+        qWarning() << "TBuffer::parseVisibilityFromJson: Action must be string or array";
+        return false;
+    }
+
+    settings.hasVisibilitySettings = true;
+
+    // Parse delay (optional)
+    if (visibilityObj.contains(qsl("delay"))) {
+        QJsonValue delayValue = visibilityObj[qsl("delay")];
+        if (delayValue.isDouble()) {
+            double delayDouble = delayValue.toDouble();
+            if (delayDouble < 0) {
+                qWarning() << "TBuffer::parseVisibilityFromJson: Delay cannot be negative:" << delayDouble;
+                return false;
+            }
+            if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                qWarning() << "TBuffer::parseVisibilityFromJson: Delay exceeds maximum ("
+                           << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble;
+                return false;
+            }
+            settings.delayMs = static_cast<quint32>(delayDouble);
+        }
+    }
+
+    // Parse wholeline (optional)
+    if (visibilityObj.contains(qsl("wholeline")) && visibilityObj[qsl("wholeline")].isBool()) {
+        settings.deletesEntireLine = visibilityObj[qsl("wholeline")].toBool();
+    }
+
+    // Parse expire triggers (optional)
+    if (visibilityObj.contains(qsl("expire")) && visibilityObj[qsl("expire")].isObject()) {
+        QJsonObject expireObj = visibilityObj[qsl("expire")].toObject();
+        
+        if (expireObj.contains(qsl("input")) && expireObj[qsl("input")].isBool()) {
+            settings.expireOnInput = expireObj[qsl("input")].toBool();
+        }
+        
+        if (expireObj.contains(qsl("prompt")) && expireObj[qsl("prompt")].isBool()) {
+            settings.expireOnPrompt = expireObj[qsl("prompt")].toBool();
+        }
+        
+        if (expireObj.contains(qsl("output")) && expireObj[qsl("output")].isBool()) {
+            settings.expireOnOutput = expireObj[qsl("output")].toBool();
+        }
+        
+        if (expireObj.contains(qsl("outputDelay"))) {
+            QJsonValue outputDelayValue = expireObj[qsl("outputDelay")];
+            if (outputDelayValue.isDouble()) {
+                double delayDouble = outputDelayValue.toDouble();
+                if (delayDouble < 0) {
+                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay cannot be negative:" << delayDouble;
+                    return false;
+                }
+                if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay exceeds maximum ("
+                               << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble;
+                    return false;
+                }
+                settings.outputDelayMs = static_cast<quint32>(delayDouble);
+            }
+        }
+    }
+
+    return true;
+}
+
+bool TBuffer::parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling::VisibilitySettings& settings, QString* errorDetails)
+{
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
+
+    if (parseError.error != QJsonParseError::NoError) {
+        if (errorDetails) {
+            *errorDetails = qsl("JSON parse error: %1").arg(parseError.errorString());
+        }
+        return false;
+    }
+
+    if (!doc.isObject()) {
+        if (errorDetails) {
+            *errorDetails = qsl("Root must be a JSON object");
+        }
+        return false;
+    }
+
+    QJsonObject root = doc.object();
+    if (!root.contains(qsl("visibility"))) {
+        // No visibility settings = success
+        return true;
+    }
+
+    if (!root[qsl("visibility")].isObject()) {
+        if (errorDetails) {
+            *errorDetails = qsl("'visibility' field must be an object");
+        }
+        return false;
+    }
+
+    bool success = parseVisibilityFromJson(root[qsl("visibility")].toObject(), settings);
+    if (!success && errorDetails && errorDetails->isEmpty()) {
+        *errorDetails = qsl("Failed to parse visibility settings");
+    }
+
+    return success;
+}
+
+void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+        return;
+    }
+
+    std::deque<TChar>& line = buffer[lineNumber];
+    int endColumn = startColumn + length;
+    
+    for (int col = startColumn; col < endColumn && col < static_cast<int>(line.size()); ++col) {
+        line[col].mLinkIndex = 0;
+    }
+}
+
+void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, int linkId)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+        return;
+    }
+
+    std::deque<TChar>& line = buffer[lineNumber];
+    int endColumn = startColumn + length;
+    
+    for (int col = startColumn; col < endColumn && col < static_cast<int>(line.size()); ++col) {
+        line[col].mLinkIndex = linkId;
     }
 }
 
