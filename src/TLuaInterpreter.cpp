@@ -1205,6 +1205,14 @@ std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
 // Documentation: none - internal helper for getStopWatchBrokenDownTime()/getStopWatches()
 void TLuaInterpreter::generateElapsedTimeTable(lua_State* L, const QStringList& elapsedTimeSplitString, const bool includeDecimalSeconds, const qint64 elapsedTimeMilliSeconds)
 {
+    constexpr int expectedElements = 6;
+    if (elapsedTimeSplitString.size() < expectedElements) {
+        qWarning() << "TLuaInterpreter::generateElapsedTimeTable() ERROR: expected" << expectedElements
+                   << "elements in time string but got" << elapsedTimeSplitString.size();
+        lua_newtable(L);
+        return;
+    }
+
     lua_newtable(L);
     lua_pushstring(L, "negative");
     // Qt 5.7 seemed to not like comparing a QString with a QLatin1Char so
@@ -4601,7 +4609,12 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     // Lua is limited to ~50 arguments on a function
-    auto maxArguments = std::min<qsizetype>(pE.mArgumentList.size(), LUA_FUNCTION_MAX_ARGS);
+    // Use minimum of argument list size and type list size to avoid out-of-bounds access
+    auto maxArguments = std::min({pE.mArgumentList.size(), pE.mArgumentTypeList.size(), static_cast<qsizetype>(LUA_FUNCTION_MAX_ARGS)});
+    if (pE.mArgumentList.size() != pE.mArgumentTypeList.size()) {
+        qWarning() << "TLuaInterpreter::callEventHandler() WARNING: argument list size" << pE.mArgumentList.size()
+                   << "does not match type list size" << pE.mArgumentTypeList.size() << "for function:" << function;
+    }
     for (int i = 0; i < maxArguments; i++) {
         switch (pE.mArgumentTypeList.at(i)) {
         case ARGUMENT_TYPE_NUMBER:
