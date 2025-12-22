@@ -338,9 +338,10 @@ jobs:
         APPLE_PASSWORD: ${{secrets.APPLE_PASSWORD}}
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
         WITH_SENTRY: "ON"
+        GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}

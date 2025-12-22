@@ -130,7 +130,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.22.2
+      uses: ZedThree/clang-tidy-review@v0.22.3
       id: static_analysis
       with:
         pr: ${{ inputs.pr_number || github.event.pull_request.number }}
@@ -144,4 +144,4 @@ jobs:
         split_workflow: true
 
     - name: Upload check results
-      uses: ZedThree/clang-tidy-review/upload@v0.22.2
+      uses: ZedThree/clang-tidy-review/upload@v0.22.3
