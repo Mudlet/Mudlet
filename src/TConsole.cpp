@@ -81,7 +81,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
-    mpCompactSyntaxManager = std::make_unique<THyperlinkCompactManager>(this);
+    // Manager objects use unique_ptr ownership (not QObject parenting)
+    // to avoid double-delete. They store TConsole pointer/reference for access only.
+    mpCompactSyntaxManager = std::make_unique<THyperlinkCompactManager>();
     mpSelectionManager = std::make_unique<THyperlinkSelectionManager>(*this);
     mpHyperlinkVisibilityManager = std::make_unique<THyperlinkVisibilityManager>(this);
     

@@ -23,11 +23,12 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 
-THyperlinkCompactManager::THyperlinkCompactManager(QObject* parent)
-: QObject(parent)
+THyperlinkCompactManager::THyperlinkCompactManager()
+: QObject(nullptr)
 {
     // Pure framework - no feature knowledge!
     // Features register themselves when they initialize
+    // Note: No QObject parent - ownership managed by unique_ptr in TConsole
 }
 
 THyperlinkCompactManager::~THyperlinkCompactManager() = default;
@@ -52,6 +53,13 @@ void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const
     bool isCore = (owner == nullptr);
     mShorthandRegistry.insert(shorthand, ShorthandEntry(fullName, owner, isCore));
     emit shorthandRegistered(shorthand, fullName);
+
+    // Automatic cleanup: when a non-null owner is destroyed, unregister all its entries
+    if (owner) {
+        connect(owner, &QObject::destroyed, this, [this, owner]() {
+            unregisterOwner(owner);
+        });
+    }
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[CompactSyntax] Registered shorthand:" << shorthand << "→" << fullName
@@ -139,6 +147,13 @@ void THyperlinkCompactManager::registerPresetProperty(const QString& propertyNam
 
     mPresetPropertyRegistry.insert(propertyName, PresetPropertyEntry(owner, isCore));
     emit presetPropertyRegistered(propertyName);
+
+    // Automatic cleanup: when a non-null owner is destroyed, unregister all its entries
+    if (owner) {
+        connect(owner, &QObject::destroyed, this, [this, owner]() {
+            unregisterOwner(owner);
+        });
+    }
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[CompactSyntax] Registered preset property:" << propertyName

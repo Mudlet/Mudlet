@@ -81,7 +81,8 @@ class THyperlinkVisibilityManager : public QObject
     Q_OBJECT
 
 public:
-    explicit THyperlinkVisibilityManager(TConsole* pConsole, QObject* parent = nullptr);
+    // Constructor: pConsole for access only (not ownership), parent=nullptr for unique_ptr ownership
+    explicit THyperlinkVisibilityManager(TConsole* pConsole);
     ~THyperlinkVisibilityManager() override;
 
     // Returns true if the link should start concealed (text should be replaced with spaces)

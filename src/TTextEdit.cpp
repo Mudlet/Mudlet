@@ -1489,24 +1489,18 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                                     QStringList groupMembers = mgr->getGroupMembers(group);
                                     for (const QString& member : groupMembers) {
                                         if (member != value) {
-                                            // Find all links with this group/value combination and update their visual state
+                                            // Get all link IDs with this group/value combination using the reverse index
                                             bool memberSelected = mgr->isSelected(group, member);
-                                            // Iterate through all link IDs to find matching links
-                                            // Note: This is not the most efficient approach, but without direct access to mStylingStore
-                                            // we need to check each potential link ID
-                                            for (int otherLinkId = 1; otherLinkId <= mpBuffer->mLinkStore.getCurrentLinkID(); ++otherLinkId) {
-                                                Mudlet::HyperlinkStyling otherLinkStyling = mpBuffer->mLinkStore.getStyling(otherLinkId);
-                                                if (otherLinkStyling.selection.hasSelectionSettings &&
-                                                    otherLinkStyling.selection.group == group &&
-                                                    otherLinkStyling.selection.value == member) {
-                                                    mpBuffer->setLinkSelected(otherLinkId, memberSelected);
-                                                    mpBuffer->setLinkState(otherLinkId, memberSelected ? 
-                                                        Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-                                                    mpBuffer->updateLinkCharacters(otherLinkId);
+                                            QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
+                                            
+                                            for (int otherLinkId : matchingLinkIds) {
+                                                mpBuffer->setLinkSelected(otherLinkId, memberSelected);
+                                                mpBuffer->setLinkState(otherLinkId, memberSelected ? 
+                                                    Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+                                                mpBuffer->updateLinkCharacters(otherLinkId);
 #if defined(DEBUG_OSC_PROCESSING)
-                                                    qDebug() << "TTextEdit::mousePressEvent - Updated exclusive group member link" << otherLinkId << "to selected=" << memberSelected;
+                                                qDebug() << "TTextEdit::mousePressEvent - Updated exclusive group member link" << otherLinkId << "to selected=" << memberSelected;
 #endif
-                                                }
                                             }
                                         }
                                     }

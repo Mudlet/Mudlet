@@ -57,7 +57,8 @@ class THyperlinkCompactManager : public QObject
     Q_DISABLE_COPY(THyperlinkCompactManager)
 
 public:
-    explicit THyperlinkCompactManager(QObject* parent = nullptr);
+    // Constructor: No QObject parent - ownership managed by unique_ptr in TConsole
+    THyperlinkCompactManager();
     ~THyperlinkCompactManager();
 
     // Register a shorthand expansion (e.g., "s" → "style")

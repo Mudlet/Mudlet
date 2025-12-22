@@ -22,6 +22,7 @@
 #if !defined(LinkStore_Test)
 #include "TBuffer.h"  // For Mudlet::HyperlinkStyling definition
 #include "Host.h"
+#include "utils.h"    // For qsl() macro
 #endif
 
 int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference, const QString& expireName)
@@ -80,6 +81,17 @@ void TLinkStore::expireLinks(const QString& expireName, Host* pH)
         // Free Lua references
         freeReference(pH, mReferenceStore.value(linkId));
 
+#if !defined(LinkStore_Test)
+        // Remove from selection group index if applicable
+        if (mStylingStore.contains(linkId)) {
+            const Mudlet::HyperlinkStyling& styling = mStylingStore[linkId];
+            if (styling.selection.hasSelectionSettings) {
+                QString key = styling.selection.group + qsl(":") + styling.selection.value;
+                mSelectionGroupIndex.remove(key, linkId);
+            }
+        }
+#endif
+
         // Remove from all stores
         mLinkStore.remove(linkId);
         mHintStore.remove(linkId);
@@ -97,11 +109,32 @@ void TLinkStore::expireLinks(const QString& expireName, Host* pH)
 #if !defined(LinkStore_Test)
 void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
 {
+    // Remove old selection group index entry if it exists
+    if (mStylingStore.contains(id)) {
+        const Mudlet::HyperlinkStyling& oldStyling = mStylingStore[id];
+        if (oldStyling.selection.hasSelectionSettings) {
+            QString oldKey = oldStyling.selection.group + qsl(":") + oldStyling.selection.value;
+            mSelectionGroupIndex.remove(oldKey, id);
+        }
+    }
+    
     mStylingStore[id] = styling;
+    
+    // Add new selection group index entry if applicable
+    if (styling.selection.hasSelectionSettings) {
+        QString key = styling.selection.group + qsl(":") + styling.selection.value;
+        mSelectionGroupIndex.insert(key, id);
+    }
 }
 
 Mudlet::HyperlinkStyling TLinkStore::getStyling(int id) const
 {
     return mStylingStore.value(id, Mudlet::HyperlinkStyling());
+}
+
+QList<int> TLinkStore::getLinkIdsByGroupValue(const QString& group, const QString& value) const
+{
+    QString key = group + qsl(":") + value;
+    return mSelectionGroupIndex.values(key);
 }
 #endif

@@ -28,10 +28,11 @@
 #include <QDebug>
 #include <limits>
 
-THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole, QObject* parent)
-: QObject(parent)
+THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole)
+: QObject(nullptr)
 , mpConsole(pConsole)
 {
+    // Note: No QObject parent - ownership managed by unique_ptr in TConsole
     mpTimer = new QTimer(this);
     mpTimer->setInterval(100); // Check every 100ms for timer-based concealments
     connect(mpTimer, &QTimer::timeout, this, &THyperlinkVisibilityManager::slot_checkTimers);
