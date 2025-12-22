@@ -5989,6 +5989,38 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "Server receives selection state via &selected=true/false query parameter\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
+    // Hyperlink Visibility (Conceal/Reveal Features)  
+    // ═══════════════════════════════════════════════════════════════════
+    output += "══════════════════════════════════════════════════════════════════════\n";
+    output += "HYPERLINK VISIBILITY (CONCEAL/REVEAL FEATURES)\n";
+    output += "══════════════════════════════════════════════════════════════════════\n\n";
+
+    output += "Timed Concealment:\n";
+    output += "• \x1b]8;;send:secret?config={\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Secret (hides in 3s)\x1b]8;;\x1b\\\n";
+    output += "• \x1b]8;;send:reveal?config={\"visibility\":{\"action\":\"reveal\",\"delay\":2000}}\x1b\\Hidden (reveals in 2s)\x1b]8;;\x1b\\\n";
+    output += "• \x1b]8;;send:flash?config={\"visibility\":{\"action\":\"revealthenConceal\",\"delay\":1000}}\x1b\\Flash (shows 1s then hides)\x1b]8;;\x1b\\\n\n";
+
+    output += "Trigger-Based Concealment:\n";
+    output += "• \x1b]8;;send:command?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"onInput\":true}}}\x1b\\Hide on Command\x1b]8;;\x1b\\ (conceals when you send a command)\n";
+    output += "• \x1b]8;;send:prompt?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"onPrompt\":true}}}\x1b\\Hide on Prompt\x1b]8;;\x1b\\ (conceals when server sends GA/EOR)\n";
+    output += "• \x1b]8;;send:output?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"onOutput\":500}}}\x1b\\Hide on Output\x1b]8;;\x1b\\ (conceals 500ms after new text)\n\n";
+
+    output += "Combined Visibility & Styling:\n";
+    output += "• \x1b]8;;send:fading?config={\"style\":{\"color\":\"gold\",\"bold\":true},\"visibility\":{\"action\":\"conceal\",\"delay\":5000}}\x1b\\💰 Golden Secret\x1b]8;;\x1b\\ (styled + timed)\n";
+    output += "• \x1b]8;;send:warning?config={\"style\":{\"bg\":\"red\",\"color\":\"white\"},\"visibility\":{\"action\":\"revealthenConceal\",\"delay\":3000,\"expire\":{\"onInput\":true}}}\x1b\\⚠️ Alert\x1b]8;;\x1b\\ (urgent message)\n\n";
+
+    output += "Whole Line Deletion:\n";
+    output += "• \x1b]8;;send:vanish?config={\"visibility\":{\"action\":\"conceal\",\"delay\":4000,\"wholeline\":true}}\x1b\\This entire line will vanish\x1b]8;;\x1b\\ (deletes whole line)\n\n";
+
+    output += "Using Registry Shorthand (v = visibility):\n";
+    output += "• \x1b]8;;send:short?config={\"v\":{\"action\":\"conceal\",\"delay\":2500}}\x1b\\Shorthand Conceal\x1b]8;;\x1b\\\n";
+    output += "• \x1b]8;;send:combined?config={\"s\":{\"c\":\"blue\",\"b\":true},\"v\":{\"action\":\"revealthenConceal\",\"delay\":1500}}\x1b\\Combined Short\x1b]8;;\x1b\\\n\n";
+
+    output += "Multiple Expire Conditions:\n";
+    output += "• \x1b]8;;send:multi?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"onInput\":true,\"onPrompt\":true,\"onOutput\":1000}}}\x1b\\Multi-Trigger Hide\x1b]8;;\x1b\\\n";
+    output += "  (Hides on command OR prompt OR 1s after output)\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
     // Summary
     // ═══════════════════════════════════════════════════════════════════
     output += "══════════════════════════════════════════════════════════════════════\n\n";
