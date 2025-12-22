@@ -715,8 +715,9 @@ int main(int argc, char* argv[])
 #endif
 
     // Check if we should register Mudlet as the telnet:// protocol handler
-    // We only ask the user once and remember their choice
-    // Skip in CI/headless environments to avoid blocking tests
+    // Only ask user if there's already another handler registered.
+    // If no handler exists, register silently (better UX for less technical users).
+    // Skip in CI/headless environments to avoid blocking tests.
     QSettings* appSettings = mudlet::getQSettings();
     bool shouldRegisterTelnet = false;
     
@@ -727,39 +728,80 @@ int main(int argc, char* argv[])
                           || QCoreApplication::arguments().contains("--mirror");
     
     if (isHeadlessMode) {
-        // In CI/headless mode, skip the dialog and use saved preference or default to false
+        // In CI/headless mode, skip registration entirely
         shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
-        qDebug() << "main: Headless mode detected, skipping telnet handler dialog";
-    } else if (!appSettings->contains("telnetHandlerAsked")) {
-        // First time in interactive mode - ask the user
-        QMessageBox msgBox;
-        msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
-        msgBox.setText(QObject::tr("Would you like Mudlet to handle telnet:// links?"));
-        msgBox.setInformativeText(QObject::tr(
-            "This will allow you to click on telnet:// links in your browser or other applications "
-            "to automatically open them in Mudlet.\n\n"
-            "You can change this later in Settings > General."));
-        msgBox.setIcon(QMessageBox::Question);
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        msgBox.setDefaultButton(QMessageBox::Yes);
-        
-        int result = msgBox.exec();
-        bool userChoice = (result == QMessageBox::Yes);
-        
-        appSettings->setValue("telnetHandlerAsked", true);
-        appSettings->setValue("telnetHandlerEnabled", userChoice);
-        appSettings->sync();
-        
-        shouldRegisterTelnet = userChoice;
-        
-        if (userChoice) {
-            qDebug() << "main: User accepted telnet:// protocol handler registration";
-        } else {
-            qDebug() << "main: User declined telnet:// protocol handler registration";
-        }
+        qDebug() << "main: Headless mode detected, skipping telnet handler registration";
+    } else if (appSettings->contains("telnetHandlerAsked")) {
+        // Already asked previously - use saved preference
+        shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
     } else {
-        // Already asked - use saved preference
-        shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
+        // First time - check if there's an existing handler
+        bool existingHandlerFound = false;
+        
+#if defined(Q_OS_WIN)
+        // Check Windows registry for existing telnet handler
+        QSettings checkSettings("HKEY_CLASSES_ROOT\\telnet\\shell\\open\\command", QSettings::NativeFormat);
+        QString existingHandler = checkSettings.value(".").toString();
+        existingHandlerFound = !existingHandler.isEmpty() && !existingHandler.toLower().contains("mudlet");
+        qDebug() << "main: Windows telnet handler check:" << (existingHandlerFound ? "found existing" : "none/mudlet");
+#endif
+
+#if defined(Q_OS_LINUX)
+        // Check Linux xdg-mime for existing handler
+        QProcess xdgQuery;
+        xdgQuery.start(qsl("xdg-mime"), QStringList() << qsl("query") << qsl("default") << qsl("x-scheme-handler/telnet"));
+        xdgQuery.waitForFinished(3000);
+        QString existingHandler = QString::fromUtf8(xdgQuery.readAllStandardOutput()).trimmed();
+        existingHandlerFound = !existingHandler.isEmpty() && !existingHandler.toLower().contains("mudlet");
+        qDebug() << "main: Linux telnet handler check:" << existingHandler << (existingHandlerFound ? "(existing)" : "(none/mudlet)");
+#endif
+
+#if defined(__APPLE__)
+        // Check macOS for existing handler
+        CFStringRef telnetScheme = CFSTR("telnet");
+        CFStringRef existingHandler = LSCopyDefaultHandlerForURLScheme(telnetScheme);
+        if (existingHandler) {
+            QString handlerStr = QString::fromCFString(existingHandler);
+            existingHandlerFound = !handlerStr.isEmpty() && !handlerStr.toLower().contains("mudlet");
+            CFRelease(existingHandler);
+            qDebug() << "main: macOS telnet handler check:" << handlerStr << (existingHandlerFound ? "(existing)" : "(mudlet)");
+        } else {
+            qDebug() << "main: macOS telnet handler check: none";
+        }
+#endif
+
+        if (existingHandlerFound) {
+            // Another handler exists - ask user if they want to override
+            QMessageBox msgBox;
+            msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
+            msgBox.setText(QObject::tr("Another application is set to handle telnet:// links."));
+            msgBox.setInformativeText(QObject::tr(
+                "Would you like Mudlet to handle telnet:// links instead?\n\n"
+                "This will allow you to click on telnet:// links in your browser "
+                "to automatically open them in Mudlet.\n\n"
+                "You can change this later in Settings > General."));
+            msgBox.setIcon(QMessageBox::Question);
+            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+            msgBox.setDefaultButton(QMessageBox::No); // Default to No since user has existing preference
+            
+            int result = msgBox.exec();
+            bool userChoice = (result == QMessageBox::Yes);
+            
+            appSettings->setValue("telnetHandlerAsked", true);
+            appSettings->setValue("telnetHandlerEnabled", userChoice);
+            appSettings->sync();
+            
+            shouldRegisterTelnet = userChoice;
+            qDebug() << "main: User" << (userChoice ? "accepted" : "declined") << "telnet handler override";
+        } else {
+            // No existing handler - register silently
+            appSettings->setValue("telnetHandlerAsked", true);
+            appSettings->setValue("telnetHandlerEnabled", true);
+            appSettings->sync();
+            
+            shouldRegisterTelnet = true;
+            qDebug() << "main: No existing telnet handler, registering Mudlet silently";
+        }
     }
     
     if (shouldRegisterTelnet) {
