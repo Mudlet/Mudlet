@@ -22,12 +22,10 @@
 
 #include <QObject>
 #include <QMap>
-#include <QPoint>
 #include <QTimer>
 #include <QPointer>
 #include <QString>
 
-class TBuffer;
 class TConsole;
 
 // Forward declaration for visibility settings

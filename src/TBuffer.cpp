@@ -2583,7 +2583,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
 #if defined(DEBUG_OSC_PROCESSING)
         if (!rawUrl.isEmpty()) {
-            qDebug().noquote().nospace() << "[OSC8] Received OSC 8 sequence with URL (length=" << rawUrl.length() << "): " 
+            qDebug().noquote().nospace() << "[OSC] Received OSC 8 sequence with URL (length=" << rawUrl.length() << "): " 
                                          << (rawUrl.length() > 80 ? rawUrl.left(80) + "..." : rawUrl);
         }
 #endif
@@ -2591,14 +2591,14 @@ void TBuffer::decodeOSC(const QString& sequence)
         // OSC 8 ;; closes the hyperlink
         if ((param.isEmpty() && rawUrl.isEmpty())) {
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8] Hyperlink terminator - closing active hyperlink";
+            qDebug().noquote() << "[OSC] Hyperlink terminator - closing active hyperlink";
 #endif
             
             // Apply initial selection/disabled state styling when link closes (from selection branch)
             // OR apply :link pseudo-class styling for preset-only links (from compact branch)
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId
+                qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId
                          << "selected:" << mCurrentHyperlinkStyling.selection.selected
                          << "disabled:" << mCurrentHyperlinkStyling.selection.disabled
                          << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
@@ -2635,7 +2635,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
                     
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8-Visibility] Registering hyperlink" << mCurrentHyperlinkLinkId
+                    qDebug() << "[OSC] Registering hyperlink" << mCurrentHyperlinkLinkId
                              << "line:" << mCurrentHyperlinkStartLine
                              << "col:" << mCurrentHyperlinkStartColumn
                              << "length:" << linkLength
@@ -2653,20 +2653,20 @@ void TBuffer::decodeOSC(const QString& sequence)
                     // before it gets committed to the buffer
                     if (shouldStartConcealed) {
 #if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "[OSC8-Visibility] Link starts concealed - replacing text with spaces";
+                        qDebug() << "[OSC] Link starts concealed - replacing text with spaces";
 #endif
                         QString spaces(linkLength, ' ');
                         mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
                     }
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8-Visibility] Skipping registration for hyperlink with invalid length:" << linkLength;
+                    qDebug() << "[OSC] Skipping registration for hyperlink with invalid length:" << linkLength;
 #endif
                 }
             } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings
                        && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8-Visibility] Skipping visibility registration for multi-line hyperlink"
+                qDebug() << "[OSC] Skipping visibility registration for multi-line hyperlink"
                          << "(visibility only applies to single-line links)"
                          << "- started on line" << mCurrentHyperlinkStartLine
                          << "ending on line" << static_cast<int>(lineBuffer.size()) - 1;
@@ -2695,7 +2695,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (rawUrl.startsWith(qsl("preset:"))) {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Detected preset: URL:" << rawUrl;
+                qDebug() << "[OSC] Detected preset: URL:" << rawUrl;
 #endif
                 // Extract preset name (between "preset:" and "?")
                 int queryStart = rawUrl.indexOf('?');
@@ -2709,9 +2709,9 @@ void TBuffer::decodeOSC(const QString& sequence)
                     configParam = query.queryItemValue(qsl("config"), QUrl::FullyDecoded);
                 }
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Preset name extracted:" << presetName;
-                qDebug() << "[OSC8] Config param length:" << configParam.length();
-                qDebug() << "[OSC8] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
+                qDebug() << "[OSC] Preset name extracted:" << presetName;
+                qDebug() << "[OSC] Config param length:" << configParam.length();
+                qDebug() << "[OSC] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
 #endif
                 
                 if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
@@ -2722,17 +2722,17 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
                         mpConsole->mpCompactSyntaxManager->registerPreset(presetName, doc.object());
 #if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "[OSC8] Successfully registered preset:" << presetName;
+                        qDebug() << "[OSC] Successfully registered preset:" << presetName;
 #endif
                     } else {
                         qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Failed to parse preset JSON for \"" << presetName << "\": " << parseError.errorString();
 #if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "[OSC8] Failed JSON:" << configParam;
+                        qDebug() << "[OSC] Failed JSON:" << configParam;
 #endif
                     }
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8] Preset registration skipped - presetName empty:" << presetName.isEmpty() 
+                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() 
                              << "configParam empty:" << configParam.isEmpty()
                              << "mpConsole:" << (mpConsole != nullptr)
                              << "mpCompactSyntaxManager:" << (mpConsole && mpConsole->mpCompactSyntaxManager != nullptr);
@@ -2744,7 +2744,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             // Parse query parameters for enhanced functionality
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] Raw URL for parameter parsing:" << rawUrl;
+            qDebug() << "[OSC] Raw URL for parameter parsing:" << rawUrl;
 #endif
             // Reset styling to defaults before parsing
             mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
@@ -2752,7 +2752,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
 
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
+            qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
 #endif
 
             // Extract menu parameters
@@ -2760,14 +2760,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QString menuString = queryParams.value(qsl("menu"));
                 mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Menu parameter found:" << menuString;
-                qDebug() << "[OSC8] Menu items parsed:" << mCurrentHyperlinkMenu;
-                qDebug() << "[OSC8] Menu items count:" << mCurrentHyperlinkMenu.size();
+                qDebug() << "[OSC] Menu parameter found:" << menuString;
+                qDebug() << "[OSC] Menu items parsed:" << mCurrentHyperlinkMenu;
+                qDebug() << "[OSC] Menu items count:" << mCurrentHyperlinkMenu.size();
 #endif
             } else {
                 mCurrentHyperlinkMenu.clear();
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] No menu parameter found";
+                qDebug() << "[OSC] No menu parameter found";
 #endif
             }
 
@@ -2837,14 +2837,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Replace the default hint with the custom tooltip
                 hint = { customTooltip };
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Added standalone tooltip:" << customTooltip;
+                qDebug() << "[OSC] Added standalone tooltip:" << customTooltip;
 #endif
             }
 
             // Handle menu functionality by extending commands and hints
             if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 1) {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
+                qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
 #endif
                 QStringList menuCommands;
                 QStringList menuHints;
@@ -2897,8 +2897,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 command = menuCommands;
                 hint = finalHints;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Final menu commands:" << command;
-                qDebug() << "[OSC8] Final menu hints:" << hint;
+                qDebug() << "[OSC] Final menu commands:" << command;
+                qDebug() << "[OSC] Final menu hints:" << hint;
 #endif
             }
 
@@ -2931,7 +2931,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
                 }
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:"
+                qDebug() << "[OSC] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:"
                          << "group=" << group << "value=" << value 
                          << "selected=" << mCurrentHyperlinkStyling.selection.selected 
                          << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
@@ -2939,7 +2939,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
 
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
+            qDebug().noquote() << "[OSC] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
 #endif
             mHyperlinkActive = true;
             
@@ -2951,7 +2951,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             mCurrentHyperlinkText.clear();
 
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] Hyperlink start position: line" << mCurrentHyperlinkStartLine << "column" << mCurrentHyperlinkStartColumn;
+            qDebug() << "[OSC] Hyperlink start position: line" << mCurrentHyperlinkStartLine << "column" << mCurrentHyperlinkStartColumn;
 #endif
         }
         break;
@@ -2990,27 +2990,27 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     parameters.clear();
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] parseUriQueryParameters called with uri:" << uri;
+    qDebug() << "[OSC] parseUriQueryParameters called with uri:" << uri;
 #endif
 
     // Find the query string part after '?'
     int queryStart = uri.indexOf('?');
     if (queryStart == -1) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] No query parameters found in URI";
+        qDebug() << "[OSC] No query parameters found in URI";
 #endif
         return true; // No query parameters is not an error
     }
 
     QString queryString = uri.mid(queryStart + 1);
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Query string:" << queryString;
+    qDebug() << "[OSC] Query string:" << queryString;
 #endif
 
     // Decode the query string first, since the server percent-encodes the entire URL
     QString decodedQueryString = QUrl::fromPercentEncoding(queryString.toUtf8());
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Decoded query string:" << decodedQueryString;
+    qDebug() << "[OSC] Decoded query string:" << decodedQueryString;
 #endif
 
     // Check for standard format: ?config={...} (entire query string is the config JSON)
@@ -3019,7 +3019,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
         QString configJson = decodedQueryString.mid(7); // Remove "config="
         bool success = parseJsonHyperlinkConfig(configJson, parameters, styling);
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Parsed config={...} format, success:" << success;
+        qDebug() << "[OSC] Parsed config={...} format, success:" << success;
 #endif
         return success;
     }
@@ -3051,15 +3051,15 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
             baseConfig = mpConsole->mpCompactSyntaxManager->getPreset(presetName);
 #if defined(DEBUG_OSC_PROCESSING)
             if (!baseConfig.isEmpty()) {
-                qDebug() << "[OSC8] Resolved preset" << presetName;
+                qDebug() << "[OSC] Resolved preset" << presetName;
             } else {
-                qDebug() << "[OSC8] Preset" << presetName << "not found or empty";
+                qDebug() << "[OSC] Preset" << presetName << "not found or empty";
             }
 #endif
         } else {
 #if defined(DEBUG_OSC_PROCESSING)
             if (!presetName.isEmpty()) {
-                qDebug() << "[OSC8] Cannot resolve preset - missing console or manager";
+                qDebug() << "[OSC] Cannot resolve preset - missing console or manager";
             }
 #endif
         }
@@ -3076,7 +3076,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
                     // Deep merge: override takes precedence
                     baseConfig = mpConsole->mpCompactSyntaxManager->mergeConfigs(baseConfig, overrideConfig);
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8] Merged preset with override config";
+                    qDebug() << "[OSC] Merged preset with override config";
 #endif
                 } else {
                     baseConfig = overrideConfig;
@@ -3093,7 +3093,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Parsed JSON parameters:" << parameters;
+    qDebug() << "[OSC] Parsed JSON parameters:" << parameters;
 #endif
 
     return true;
@@ -3140,7 +3140,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
 bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling, QString* errorDetails)
 {
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
+    qDebug() << "[OSC] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
 #endif
 
     QJsonParseError parseError;
@@ -3148,14 +3148,14 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 
     if (parseError.error != QJsonParseError::NoError) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] JSON parse error:" << parseError.errorString();
+        qDebug() << "[OSC] JSON parse error:" << parseError.errorString();
 #endif
         return false;
     }
 
     if (!doc.isObject()) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] JSON root is not an object";
+        qDebug() << "[OSC] JSON root is not an object";
 #endif
         return false;
     }
@@ -3166,16 +3166,16 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     root = expandJsonShorthands(root);
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] After expansion, root contains:" << root.keys();
-    qDebug() << "[OSC8] Has 'menu':" << root.contains(qsl("menu"));
-    qDebug() << "[OSC8] Has 'tooltip':" << root.contains(qsl("tooltip"));
+    qDebug() << "[OSC] After expansion, root contains:" << root.keys();
+    qDebug() << "[OSC] Has 'menu':" << root.contains(qsl("menu"));
+    qDebug() << "[OSC] Has 'tooltip':" << root.contains(qsl("tooltip"));
 #endif
 
     if (root.contains(qsl("style")) && root[qsl("style")].isObject()) {
         QJsonObject styleObj = root[qsl("style")].toObject();
         parseJsonStyleToHyperlinkStyling(styleObj, styling);
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Style parsed directly from JSON";
+        qDebug() << "[OSC] Style parsed directly from JSON";
 #endif
     }
 
@@ -3187,7 +3187,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
             // Enable custom styling for links with menus
             styling.hasCustomStyling = true;
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] Menu parameter added:" << menuString;
+            qDebug() << "[OSC] Menu parameter added:" << menuString;
 #endif
         }
     }
@@ -3197,7 +3197,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
         // Enable custom styling for links with tooltips
         styling.hasCustomStyling = true;
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Tooltip parameter added:" << root[qsl("tooltip")].toString();
+        qDebug() << "[OSC] Tooltip parameter added:" << root[qsl("tooltip")].toString();
 #endif
     }
 
@@ -3205,7 +3205,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
         QJsonObject selectionObj = root[qsl("selection")].toObject();
         parseJsonSelectionConfig(selectionObj, styling.selection);
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Selection config parsed from JSON";
+        qDebug() << "[OSC] Selection config parsed from JSON";
 #endif
     }
 
@@ -3216,12 +3216,12 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
             return false;
         }
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Visibility config parsed from JSON";
+        qDebug() << "[OSC] Visibility config parsed from JSON";
 #endif
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] JSON converted to parameters:" << parameters;
+    qDebug() << "[OSC] JSON converted to parameters:" << parameters;
 #endif
 
     return true;
@@ -3389,18 +3389,26 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
 
     // Parse action field (can be string or array of strings)
     QJsonValue actionValue = visibilityObj[qsl("action")];
-    qWarning() << "[REVEAL-DEBUG] Visibility action value:" << actionValue << "isString:" << actionValue.isString();
+#if defined(DEBUG_OSC_PROCESSING)
+    qWarning() << "[OSC] Visibility action value:" << actionValue << "isString:" << actionValue.isString();
+#endif
     if (actionValue.isString()) {
         QString actionStr = actionValue.toString().toLower();
-        qWarning() << "[REVEAL-DEBUG] Action string:" << actionStr;
+#if defined(DEBUG_OSC_PROCESSING)
+        qWarning() << "[OSC] Action string:" << actionStr;
+#endif
         if (actionStr == qsl("conceal")) {
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
             settings.isConcealed = false; // Start visible, will be concealed later
         } else if (actionStr == qsl("reveal")) {
-            qWarning() << "[REVEAL-DEBUG] FOUND REVEAL ACTION - setting isConcealed=true";
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] FOUND REVEAL ACTION - setting isConcealed=true";
+#endif
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
             settings.isConcealed = true;  // Start concealed, will be revealed later
-            qWarning() << "[REVEAL-DEBUG] Setting reveal action: isConcealed=true, action=Reveal";
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] Setting reveal action: isConcealed=true, action=Reveal";
+#endif
         } else if (actionStr == qsl("revealthenconceal") || actionStr == qsl("reveal-then-conceal")) {
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
             settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
@@ -3530,21 +3538,31 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
 {
     if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] clearLinkIndices: invalid line number" << lineNumber << "buffer size:" << buffer.size();
+        qDebug() << "[OSC] clearLinkIndices: invalid line number" << lineNumber << "buffer size:" << buffer.size();
+#endif
+        return;
+    }
+
+    if (length <= 0) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] clearLinkIndices: non-positive length" << length << "- returning early";
 #endif
         return;
     }
 
     std::deque<TChar>& line = buffer[lineNumber];
-    int endColumn = startColumn + length;
+    
+    startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
+    
+    int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
     
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] clearLinkIndices: line" << lineNumber << "startCol" << startColumn << "length" << length 
+    qDebug() << "[OSC] clearLinkIndices: line" << lineNumber << "startCol" << startColumn << "length" << length 
              << "endCol" << endColumn << "lineSize" << line.size();
 #endif
     
     QSet<int> clearedLinkIds;
-    for (int col = startColumn; col < endColumn && col < static_cast<int>(line.size()); ++col) {
+    for (int col = startColumn; col < endColumn; ++col) {
         int oldLinkIndex = line[col].mLinkIndex;
         if (oldLinkIndex > 0) {
             clearedLinkIds.insert(oldLinkIndex);
@@ -3552,7 +3570,7 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
         line[col].mLinkIndex = 0;
 #if defined(DEBUG_OSC_PROCESSING)
         if (oldLinkIndex != 0) {
-            qDebug() << "[OSC8] clearLinkIndices: cleared column" << col << "from linkIndex" << oldLinkIndex << "to 0";
+            qDebug() << "[OSC] clearLinkIndices: cleared column" << col << "from linkIndex" << oldLinkIndex << "to 0";
         }
 #endif
     }
@@ -3564,22 +3582,32 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
         return;
     }
 
+    if (length <= 0) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] restoreLinkIndices: non-positive length" << length << "- returning early";
+#endif
+        return;
+    }
+
     std::deque<TChar>& line = buffer[lineNumber];
-    int endColumn = startColumn + length;
     
-    for (int col = startColumn; col < endColumn && col < static_cast<int>(line.size()); ++col) {
+    startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
+    
+    int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
+    
+    for (int col = startColumn; col < endColumn; ++col) {
         line[col].mLinkIndex = linkId;
     }
     
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Link" << linkId << "restored";
+    qDebug() << "[OSC] Link" << linkId << "restored";
 #endif
 }
 
 void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling)
 {
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] parseJsonStyleToHyperlinkStyling called with JSON object";
+    qDebug() << "[OSC] parseJsonStyleToHyperlinkStyling called with JSON object";
 #endif
 
     // Parse base style properties directly into the default state
@@ -3830,7 +3858,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
         if (now - mainBuffer.mLastOSC8DocsInjectionTime > 1000) {
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] Documentation examples trigger phrase detected";
+            qDebug() << "[OSC] Documentation examples trigger phrase detected";
 #endif
             mainBuffer.mLastOSC8DocsInjectionTime = now;
             mainBuffer.injectOSC8DocumentationExamples();
@@ -5827,7 +5855,7 @@ void TBuffer::injectOSC8DocumentationExamples()
 {
     // Inject OSC 8 hyperlink examples matching the documentation structure
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] injectOSC8DocumentationExamples() called";
+    qDebug() << "[OSC] injectOSC8DocumentationExamples() called";
 #endif
 
     QString output = "\n╔════════════════════════════════════════════════════════════════════╗\n";
@@ -6115,7 +6143,7 @@ void TBuffer::injectOSC8DocumentationExamples()
     // Skip trigger processing to avoid re-entrancy issues during injection
     std::string outputBytes = output.toStdString();
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] About to process documentation examples through translateToPlainText, length:" << outputBytes.length();
+    qDebug() << "[OSC] About to process documentation examples through translateToPlainText, length:" << outputBytes.length();
 #endif
     mSkipTriggerProcessing = true;
     translateToPlainText(outputBytes, true); // Mark as from server
@@ -6172,7 +6200,7 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
             if (disabledStyle.hasCustomStyling) {
                 stateStyle = &disabledStyle;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Using disabled style - hasCustomStyling:" << disabledStyle.hasCustomStyling
+                qDebug() << "[OSC] Using disabled style - hasCustomStyling:" << disabledStyle.hasCustomStyling
                          << "hasForegroundColor:" << disabledStyle.hasForegroundColor 
                          << "foregroundColor:" << (disabledStyle.hasForegroundColor ? disabledStyle.foregroundColor.name() : "none")
                          << "hasBackgroundColor:" << disabledStyle.hasBackgroundColor 
@@ -6182,7 +6210,7 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
 #endif
             } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Disabled style has no custom styling - hasCustomStyling:" << disabledStyle.hasCustomStyling;
+                qDebug() << "[OSC] Disabled style has no custom styling - hasCustomStyling:" << disabledStyle.hasCustomStyling;
 #endif
             }
             break;
@@ -6190,7 +6218,7 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
             if (selectedStyle.hasCustomStyling) {
                 stateStyle = &selectedStyle;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Using selected style - hasCustomStyling:" << selectedStyle.hasCustomStyling
+                qDebug() << "[OSC] Using selected style - hasCustomStyling:" << selectedStyle.hasCustomStyling
                          << "hasForegroundColor:" << selectedStyle.hasForegroundColor 
                          << "foregroundColor:" << (selectedStyle.hasForegroundColor ? selectedStyle.foregroundColor.name() : "none")
                          << "hasBackgroundColor:" << selectedStyle.hasBackgroundColor 
@@ -6199,7 +6227,7 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
 #endif
             } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Selected style has no custom styling - hasCustomStyling:" << selectedStyle.hasCustomStyling;
+                qDebug() << "[OSC] Selected style has no custom styling - hasCustomStyling:" << selectedStyle.hasCustomStyling;
 #endif
             }
             break;
@@ -6308,7 +6336,7 @@ void TBuffer::setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState st
         case Mudlet::HyperlinkStyling::StateSelected: stateName = "Selected"; break;
         case Mudlet::HyperlinkStyling::StateDisabled: stateName = "Disabled"; break;
     }
-    qDebug() << "[OSC8] Link" << linkIndex << "state changed to:" << stateName;
+    qDebug() << "[OSC] Link" << linkIndex << "state changed to:" << stateName;
 #endif
 }
 
@@ -6339,7 +6367,7 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
         auto effective = styling.getEffectiveStyle();
 
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] getEffectiveHyperlinkStyling for link" << linkIndex
+        qDebug() << "[OSC] getEffectiveHyperlinkStyling for link" << linkIndex
                  << "state:" << styling.currentState
                  << "hasForegroundColor:" << effective.hasForegroundColor 
                  << "foregroundColor:" << (effective.hasForegroundColor ? effective.foregroundColor.name() : "none")
@@ -6487,7 +6515,7 @@ void TBuffer::markLinkAsVisited(int linkIndex)
         }
 
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Link" << linkIndex << "marked as visited";
+        qDebug() << "[OSC] Link" << linkIndex << "marked as visited";
 #endif
     }
 }
@@ -6533,14 +6561,14 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
             clearedCount++;
             
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] clearGroupSelection: Deselected link" << linkIndex 
+            qDebug() << "[OSC] clearGroupSelection: Deselected link" << linkIndex 
                      << "group:" << group << "value:" << styling.selection.value;
 #endif
         }
     }
     
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] clearGroupSelection: Cleared" << clearedCount << "links in group" << group;
+    qDebug() << "[OSC] clearGroupSelection: Cleared" << clearedCount << "links in group" << group;
 #endif
 }
 
@@ -6548,7 +6576,7 @@ void TBuffer::applyPendingSelectionStyling()
 {
     if (!mPendingSelectionStyling.isEmpty()) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
+        qDebug() << "[OSC] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
 #endif
         for (int linkId : mPendingSelectionStyling) {
             updateLinkCharacters(linkId);
@@ -6587,7 +6615,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Link" << linkIndex << "effective styling:"
+    qDebug() << "[OSC] Link" << linkIndex << "effective styling:"
              << "hasFg:" << effectiveStyling.hasForegroundColor
              << "fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none")
              << "hasBg:" << effectiveStyling.hasBackgroundColor
@@ -6600,7 +6628,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     // don't modify the characters. This preserves ANSI formatting for links without styling.
     if (!effectiveStyling.hasCustomStyling) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Link" << linkIndex << "has no custom styling - preserving ANSI formatting";
+        qDebug() << "[OSC] Link" << linkIndex << "has no custom styling - preserving ANSI formatting";
 #endif
         return; // Don't modify characters - preserve original ANSI formatting
     }
@@ -6612,7 +6640,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     bool useAnsiBase = false;
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling
+    qDebug() << "[OSC] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling
              << "currentState:" << effectiveStyling.currentState << "useAnsiBase:" << useAnsiBase;
 #endif
 
@@ -6635,7 +6663,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                 matchingCharacters++;
                 static int charUpdateCount = 0;
                 if (charUpdateCount++ < 2) { // Only log first 2 characters to avoid spam
-                    qDebug() << "[OSC8] Before update - char with linkIndex" << linkIndex
+                    qDebug() << "[OSC] Before update - char with linkIndex" << linkIndex
                              << "- FgColor:" << tchar.mFgColor.name()
                              << "hasFg:" << effectiveStyling.hasForegroundColor
                              << "new fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none");
@@ -6649,7 +6677,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                 if (useAnsiBase && mLinkOriginalCharacters.contains(linkIndex)) {
                     TChar originalChar = mLinkOriginalCharacters.value(linkIndex);
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8] Restoring ANSI base for link" << linkIndex
+                    qDebug() << "[OSC] Restoring ANSI base for link" << linkIndex
                              << "- Original FgColor:" << originalChar.mFgColor.name()
                              << "Original BgColor:" << originalChar.mBgColor.name()
                              << "Original Bold:" << bool(originalChar.mFlags & TChar::Bold)
@@ -6679,7 +6707,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 #if defined(DEBUG_OSC_PROCESSING)
                     static int fgUpdateCount = 0;
                     if (fgUpdateCount++ < 2) {
-                        qDebug() << "[OSC8] Applied FG color to link" << linkIndex
+                        qDebug() << "[OSC] Applied FG color to link" << linkIndex
                                  << "- New FgColor:" << tchar.mFgColor.name();
                     }
 #endif
@@ -6760,7 +6788,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 
     // Debug: Report search results
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Character search completed for link" << linkIndex 
+    qDebug() << "[OSC] Character search completed for link" << linkIndex 
              << "- Total characters searched:" << totalCharacters
              << "- Matching characters found:" << matchingCharacters;
 #endif

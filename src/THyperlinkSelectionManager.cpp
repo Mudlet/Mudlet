@@ -31,13 +31,11 @@ THyperlinkSelectionManager::THyperlinkSelectionManager(TConsole* pConsole)
 
 THyperlinkSelectionManager::~THyperlinkSelectionManager() = default;
 
-// Check if a value in a group is currently selected
 bool THyperlinkSelectionManager::isSelected(const QString& group, const QString& value) const
 {
     return mSelectionState.value(group).value(value, false);
 }
 
-// Set selection state for a value in a group
 void THyperlinkSelectionManager::setSelected(const QString& group, const QString& value, bool selected, bool exclusive)
 {
     registerGroupMember(group, value);
@@ -55,20 +53,17 @@ void THyperlinkSelectionManager::setSelected(const QString& group, const QString
     }
 }
 
-// Toggle selection state for a value in a group
 void THyperlinkSelectionManager::toggleSelection(const QString& group, const QString& value, bool exclusive)
 {
     bool currentState = isSelected(group, value);
     setSelected(group, value, !currentState, exclusive);
 }
 
-// Get all values registered in a group
 QStringList THyperlinkSelectionManager::getGroupMembers(const QString& group) const
 {
     return mGroupMembers.value(group, QStringList());
 }
 
-// Clear all selections in a group
 void THyperlinkSelectionManager::clearGroup(const QString& group)
 {
     if (mSelectionState.contains(group)) {
@@ -77,43 +72,41 @@ void THyperlinkSelectionManager::clearGroup(const QString& group)
     }
 }
 
-// Clear all selections across all groups
 void THyperlinkSelectionManager::clearAllSelections()
 {
     mSelectionState.clear();
     emit allSelectionsCleared();
 }
 
-// Modify URI to append &selected=true or &selected=false for server callback
 QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri, bool isSelected) const
 {
-    // The baseUri is already in Lua format: send([[command]]) or sendCmdLine([[command]])
-    // We need to extract the command, append &selected=true/false, and reconstruct
-    
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "modifyUriForSelection called with baseUri:" << baseUri << "isSelected:" << isSelected;
 #endif
     
     // Check if it's a send() or sendCmdLine() call
-    if (baseUri.startsWith(qsl("send([[")) && baseUri.endsWith(qsl("]])"))) {
-        // Extract: send([[command]]) -> command
-        QString command = baseUri.mid(7, baseUri.length() - 10);
-        // Append selection state to command
+    const QString sendPrefix = qsl("send([[");
+    const QString sendSuffix = qsl("]])");
+    const QString sendCmdLinePrefix = qsl("sendCmdLine([[");
+    const QString sendCmdLineSuffix = qsl("]])");
+    
+    if (baseUri.startsWith(sendPrefix) && baseUri.endsWith(sendSuffix)) {
+        const int prefixLength = sendPrefix.length();
+        const int suffixLength = sendSuffix.length();
+        QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
         QString separator = command.contains('?') ? qsl("&") : qsl("?");
         command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
-        // Reconstruct: send([[command&selected=true]])
         QString result = qsl("send([[%1]])").arg(command);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "Modified to:" << result;
 #endif
         return result;
-    } else if (baseUri.startsWith(qsl("sendCmdLine([[")) && baseUri.endsWith(qsl("]])"))) {
-        // Extract: sendCmdLine([[command]]) -> command
-        QString command = baseUri.mid(14, baseUri.length() - 17);
-        // Append selection state to command
+    } else if (baseUri.startsWith(sendCmdLinePrefix) && baseUri.endsWith(sendCmdLineSuffix)) {
+        const int prefixLength = sendCmdLinePrefix.length();
+        const int suffixLength = sendCmdLineSuffix.length();
+        QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
         QString separator = command.contains('?') ? qsl("&") : qsl("?");
         command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
-        // Reconstruct: sendCmdLine([[command&selected=true]])
         QString result = qsl("sendCmdLine([[%1]])").arg(command);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "Modified to:" << result;
@@ -128,7 +121,6 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
     return baseUri;
 }
 
-// Register a value as a member of a group
 void THyperlinkSelectionManager::registerGroupMember(const QString& group, const QString& value)
 {
     if (!mGroupMembers.contains(group)) {
@@ -140,10 +132,8 @@ void THyperlinkSelectionManager::registerGroupMember(const QString& group, const
     }
 }
 
-// Handle exclusive selection: deselect all other values in the group (radio button behavior)
 void THyperlinkSelectionManager::handleExclusiveSelection(const QString& group, const QString& value)
 {
-    // Deselect all other members of this group
     const QStringList members = getGroupMembers(group);
     for (const QString& member : members) {
         if (member != value) {

@@ -107,7 +107,7 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
         actionStr = qsl("none");
         break;
     }
-    qDebug().noquote() << "[OSC8-Visibility] Registered hyperlink" << linkId 
+    qDebug().noquote() << "[OSC] Registered hyperlink" << linkId 
                        << "at line" << lineNumber << "col" << startColumn
                        << "length" << length
                        << "action:" << actionStr
@@ -124,7 +124,7 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
     if (tracked.action == TrackedHyperlink::Action::Reveal && tracked.delayMs == 0 
         && !tracked.expireOnInput && !tracked.expireOnPrompt && !tracked.expireOnOutput) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug().noquote() << "[OSC8-Visibility] Reveal link" << linkId << "has zero delay and no expire triggers - will be visible immediately";
+        qDebug().noquote() << "[OSC] Reveal link" << linkId << "has zero delay and no expire triggers - will be visible immediately";
 #endif
         // Don't start concealed - return false so text is NOT replaced with spaces
         mTrackedLinks[linkId].isConcealed = false;
@@ -134,7 +134,7 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
     // Handle RevealThenConceal with zero delay - start in Revealed phase so clicking works
     if (tracked.action == TrackedHyperlink::Action::RevealThenConceal && tracked.delayMs == 0) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << linkId << "has zero delay - starting in Revealed phase";
+        qDebug().noquote() << "[OSC] RevealThenConceal link" << linkId << "has zero delay - starting in Revealed phase";
 #endif
         mTrackedLinks[linkId].phase = TrackedHyperlink::Phase::Revealed;
         mTrackedLinks[linkId].isConcealed = false;
@@ -150,14 +150,16 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
     }
     
     // Return true if this link should start concealed (caller should replace text with spaces)
-    qWarning() << "[REVEAL-DEBUG] registerHyperlink returning isConcealed=" << tracked.isConcealed << "for linkId" << linkId;
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug().noquote() << "[OSC] registerHyperlink returning isConcealed=" << tracked.isConcealed << "for linkId" << linkId;
+#endif
     return tracked.isConcealed;
 }
 
 void THyperlinkVisibilityManager::onLinkClicked(int linkId)
 {
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().noquote() << "[OSC8-Visibility] onLinkClicked called with linkId:" << linkId 
+    qDebug().noquote() << "[OSC] onLinkClicked called with linkId:" << linkId 
                        << "tracked links count:" << mTrackedLinks.size()
                        << "contains linkId:" << mTrackedLinks.contains(linkId);
 #endif
@@ -174,7 +176,7 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
         if (link.delayMs == 0 && !hasExpireTriggers) {
             // Immediate concealment (no delay and no expire triggers)
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] Link" << linkId << "clicked - concealing immediately (no delay, no expire triggers)";
+            qDebug().noquote() << "[OSC] Link" << linkId << "clicked - concealing immediately (no delay, no expire triggers)";
 #endif
             performConcealment(link);
             emit visibilityChanged();
@@ -182,7 +184,7 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
             // Delayed concealment - start timer
             link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] Link" << linkId << "clicked - timer activated, will conceal in" << link.delayMs << "ms";
+            qDebug().noquote() << "[OSC] Link" << linkId << "clicked - timer activated, will conceal in" << link.delayMs << "ms";
 #endif
             mHasTimerBasedLinks = true;
             startTimerIfNeeded();
@@ -196,7 +198,7 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
         if (link.delayMs == 0) {
             // Immediate concealment after click
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << linkId << "clicked - concealing immediately";
+            qDebug().noquote() << "[OSC] RevealThenConceal link" << linkId << "clicked - concealing immediately";
 #endif
             link.phase = TrackedHyperlink::Phase::Concealed;
             performConcealment(link);
@@ -206,7 +208,7 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
             link.phase = TrackedHyperlink::Phase::WaitingToConceal;
             link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << linkId << "clicked - will conceal in" << link.delayMs << "ms";
+            qDebug().noquote() << "[OSC] RevealThenConceal link" << linkId << "clicked - will conceal in" << link.delayMs << "ms";
 #endif
             mHasTimerBasedLinks = true;
             startTimerIfNeeded();
@@ -218,7 +220,7 @@ void THyperlinkVisibilityManager::unregisterHyperlink(int linkId)
 {
     if (mTrackedLinks.remove(linkId) > 0) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug().noquote() << "[OSC8-Visibility] Unregistered hyperlink" << linkId << "(link removed from buffer)";
+        qDebug().noquote() << "[OSC] Unregistered hyperlink" << linkId << "(link removed from buffer)";
 #endif
         // If this was the last link with timer-based actions, update the flag
         bool hasTimers = false;
@@ -238,7 +240,7 @@ void THyperlinkVisibilityManager::unregisterHyperlink(int linkId)
 void THyperlinkVisibilityManager::onUserInput()
 {
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().noquote() << "[OSC8-Visibility] onUserInput called";
+    qDebug().noquote() << "[OSC] onUserInput called";
 #endif
     processExpireTriggeredLinks(true, false, false);
 }
@@ -246,7 +248,7 @@ void THyperlinkVisibilityManager::onUserInput()
 void THyperlinkVisibilityManager::onPromptReceived()
 {
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().noquote() << "[OSC8-Visibility] onPromptReceived called (GA/EOR)";
+    qDebug().noquote() << "[OSC] onPromptReceived called (GA/EOR)";
 #endif
     processExpireTriggeredLinks(false, true, false);
 }
@@ -280,7 +282,7 @@ void THyperlinkVisibilityManager::onDataReceived()
         // Gap timer has expired (not active) - this is new data after an idle gap
         // Trigger output expiry now, at the start of the new batch
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug().noquote() << "[OSC8-Visibility] New data after gap - triggering output expire (batch transition)";
+        qDebug().noquote() << "[OSC] New data after gap - triggering output expire (batch transition)";
 #endif
         processExpireTriggeredLinks(false, false, true);
     }
@@ -302,13 +304,16 @@ void THyperlinkVisibilityManager::slot_outputGapExpired()
     // This matches Sammer's "batch" approach: expire old links at the START of
     // a new batch, not during the idle period
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().noquote() << "[OSC8-Visibility] Output gap timer expired - waiting for new data to trigger batch transition";
+    qDebug().noquote() << "[OSC] Output gap timer expired - waiting for new data to trigger batch transition";
 #endif
 }
 
 void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool prompt, bool output)
 {
     bool changed = false;
+    
+    // First pass: collect IDs of links that should be processed for this expire trigger
+    QVector<int> linksToProcess;
     
     for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
         TrackedHyperlink& link = it.value();
@@ -317,7 +322,7 @@ void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool p
         if (prompt && link.skipFirstPrompt) {
             link.skipFirstPrompt = false;
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] Link" << link.linkId << "skipping first prompt trigger";
+            qDebug().noquote() << "[OSC] Link" << link.linkId << "skipping first prompt trigger";
 #endif
             continue;
         }
@@ -326,7 +331,7 @@ void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool p
         if (output && link.skipFirstOutput) {
             link.skipFirstOutput = false;
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] Link" << link.linkId << "skipping first output trigger";
+            qDebug().noquote() << "[OSC] Link" << link.linkId << "skipping first output trigger";
 #endif
             continue;
         }
@@ -336,20 +341,30 @@ void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool p
                             (prompt && link.expireOnPrompt) ||
                             (output && link.expireOnOutput);
         
-        if (!shouldTrigger) {
+        if (shouldTrigger) {
+            linksToProcess.append(it.key());
+        }
+    }
+    
+    // Second pass: process each link by ID (safe from iterator invalidation)
+    for (int linkId : linksToProcess) {
+        // Look up the link - it might have been removed by previous operations
+        if (!mTrackedLinks.contains(linkId)) {
             continue;
         }
+        
+        TrackedHyperlink& link = mTrackedLinks[linkId];
 
         if (link.action == TrackedHyperlink::Action::Conceal && !link.isConcealed) {
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] Expire trigger concealing link" << link.linkId
+            qDebug().noquote() << "[OSC] Expire trigger concealing link" << link.linkId
                                << "input:" << input << "prompt:" << prompt << "output:" << output;
 #endif
             performConcealment(link);
             changed = true;
         } else if (link.action == TrackedHyperlink::Action::Reveal && link.isConcealed) {
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] Expire trigger revealing link" << link.linkId
+            qDebug().noquote() << "[OSC] Expire trigger revealing link" << link.linkId
                                << "input:" << input << "prompt:" << prompt << "output:" << output;
 #endif
             performReveal(link);
@@ -359,7 +374,7 @@ void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool p
             if (link.phase == TrackedHyperlink::Phase::Initial && link.isConcealed) {
                 // Phase 1: Reveal the link
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << link.linkId 
+                qDebug().noquote() << "[OSC] RevealThenConceal link" << link.linkId 
                                    << "- expire trigger revealing (phase: Initial -> Revealed)";
 #endif
                 performReveal(link);
@@ -506,7 +521,7 @@ void THyperlinkVisibilityManager::slot_checkTimers()
             // For reveal actions, timer starts immediately from creation
             qint64 elapsed = currentTime - link.creationTimeMs;
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8-Visibility] Checking reveal link" << it.key() 
+            qDebug().noquote() << "[OSC] Checking reveal link" << it.key() 
                                << "elapsed:" << elapsed << "delayMs:" << link.delayMs;
 #endif
             if (elapsed < link.delayMs) {
@@ -525,7 +540,7 @@ void THyperlinkVisibilityManager::slot_checkTimers()
                     continue;
                 }
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << it.key() 
+                qDebug().noquote() << "[OSC] RevealThenConceal link" << it.key() 
                                    << "- timer revealing (phase: Initial -> Revealed)";
 #endif
                 linksToTransition.append(it.key());
@@ -541,7 +556,7 @@ void THyperlinkVisibilityManager::slot_checkTimers()
                     continue;
                 }
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug().noquote() << "[OSC8-Visibility] RevealThenConceal link" << it.key() 
+                qDebug().noquote() << "[OSC] RevealThenConceal link" << it.key() 
                                    << "- timer concealing (phase: WaitingToConceal -> Concealed)";
 #endif
                 linksToConceal.append(it.key());
@@ -638,7 +653,7 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().noquote() << "[OSC8-Visibility] Concealing link" << link.linkId
+    qDebug().noquote() << "[OSC] Concealing link" << link.linkId
                        << "deletesEntireLine:" << link.deletesEntireLine;
 #endif
 
@@ -664,7 +679,7 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
                 if (linkId != link.linkId) { // Don't remove the current link yet
                     mTrackedLinks.remove(linkId);
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote() << "[OSC8-Visibility] Pre-emptively unregistered co-located link" << linkId;
+                    qDebug().noquote() << "[OSC] Pre-emptively unregistered co-located link" << linkId;
 #endif
                 }
             }
@@ -683,7 +698,7 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
                 if (adjustedLink.lineNumber > targetLine) {
                     adjustedLink.lineNumber--;
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote() << "[OSC8-Visibility] Adjusted link" << it.key() 
+                    qDebug().noquote() << "[OSC] Adjusted link" << it.key() 
                                        << "from line" << (adjustedLink.lineNumber + 1) 
                                        << "to line" << adjustedLink.lineNumber;
 #endif
@@ -747,11 +762,11 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().noquote() << "[OSC8-Visibility] Revealing link" << link.linkId;
+    qDebug().noquote() << "[OSC] Revealing link" << link.linkId;
 #endif
 
     if (link.deletesEntireLine) {
-        qWarning() << "[OSC8-Visibility] Cannot reveal link" << link.linkId << "- line was permanently deleted";
+        qWarning() << "[OSC] Cannot reveal link" << link.linkId << "- line was permanently deleted";
         return;
     }
 

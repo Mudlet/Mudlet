@@ -1464,7 +1464,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                                     // Exclusive selection clears other group members
                                     mpBuffer->clearGroupSelection(group, value);
 #if defined(DEBUG_OSC_PROCESSING)
-                                    qDebug() << "[OSC8] Exclusive selection: Cleared other selections in group" << group << "except" << value;
+                                    qDebug() << "[OSC] Exclusive selection: Cleared other selections in group" << group << "except" << value;
 #endif
                                 }
 
