@@ -4537,14 +4537,70 @@ void mudlet::handleTelnetUri(const QString& uri)
             pHost->mBlockScriptCompile = false;
             pHost->mLuaInterpreter.loadGlobal();
             pHost->hideMudletsVariables();
+            
+            // Load modules (matching slot_connectionDialogueFinished)
+            QMapIterator<QString, int> it(pHost->mModulePriorities);
+            QMap<int, QStringList> moduleOrder;
+            while (it.hasNext()) {
+                it.next();
+                QStringList moduleEntry = moduleOrder[it.value()];
+                moduleEntry << it.key();
+                moduleOrder[it.value()] = moduleEntry;
+            }
+            
+            // First load modules with negative priority
+            QMapIterator<int, QStringList> it2(moduleOrder);
+            while (it2.hasNext() && it2.peekNext().key() < 0) {
+                it2.next();
+                installModulesList(pHost, it2.value());
+            }
+            
+            // Enable stopwatch creation and compile scripts
+            pHost->mBlockStopWatchCreation = false;
+            pHost->getScriptUnit()->compileAll(true);
+            pHost->updateAnsi16ColorsInTable();
+            pHost->updateExtendedAnsiColorsInTable();
+            
+            // Load remaining modules
+            while (it2.hasNext()) {
+                it2.next();
+                installModulesList(pHost, it2.value());
+            }
+            
+            // Install default packages
+            for (const auto& package : mPackagesToInstallList) {
+                pHost->installPackage(package, enums::PackageModuleType::Package);
+            }
+            mPackagesToInstallList.clear();
+            
+            // Load map
+            pHost->loadMap();
         }
 
         // Initiate connection
         pHost->mTelnet.connectIt(uriData.host, uriData.port);
         
+        // Raise sysLoadEvent
+        TEvent event {};
+        event.mArgumentList.append(QLatin1String("sysLoadEvent"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(QString::number(1));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+        pHost->raiseEvent(event);
+        
+        // CRITICAL: Mark profile loading sequence as complete
+        // Without this, Close Profile will not work!
+        pHost->mIsProfileLoadingSequence = false;
+        emit signal_profileLoaded();
+        
         // Update UI to reflect connection status
         updateDetachedWindowToolbars();
         updateMainWindowTabIndicators();
+        
+        // Bring window to focus
+        show();
+        raise();
+        activateWindow();
     }
 }
 
