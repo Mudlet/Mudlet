@@ -153,7 +153,7 @@ struct HyperlinkStyling {
 
     // Visibility control: conceal (hide after delay/expire) or reveal (show after delay/expire)
     // JSON: {"action": "conceal"|"reveal"|["reveal","conceal"], "delay": ms, "wholeline": bool, "expire": {...}}
-    // expire object: {" input": bool, "prompt": bool, "output": bool, "outputDelay": ms}
+    // expire object: {"input": bool, "prompt": bool, "output": bool, "outputDelay": ms}
     // When action is ["reveal","conceal"]: starts hidden, reveals on trigger, then conceals on click
     struct VisibilitySettings {
         // Maximum allowed delay value (24 hours in milliseconds)

@@ -545,6 +545,8 @@ void THyperlinkVisibilityManager::slot_checkTimers()
                 qDebug().noquote() << "[OSC] RevealThenConceal link" << it.key() 
                                    << "- timer revealing (phase: Initial -> Revealed)";
 #endif
+                // Keep timer running as link transitions to Revealed phase waiting for click
+                stillHasTimerLinks = true;
                 linksToTransition.append(it.key());
             } else if (link.phase == TrackedHyperlink::Phase::WaitingToConceal) {
                 // Waiting to conceal after click - timer starts from click
@@ -745,16 +747,17 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
                 
                 lineText.replace(link.startColumn, link.length, spaces);
                 buffer.clearLinkIndices(link.lineNumber, link.startColumn, link.length);
+                
+                // Only mark as concealed and update panes after successful text replacement
+                link.isConcealed = true;
+
+                if (mpConsole->mUpperPane) {
+                    mpConsole->mUpperPane->update();
+                }
+                if (mpConsole->mLowerPane) {
+                    mpConsole->mLowerPane->update();
+                }
             }
-        }
-
-        link.isConcealed = true;
-
-        if (mpConsole->mUpperPane) {
-            mpConsole->mUpperPane->update();
-        }
-        if (mpConsole->mLowerPane) {
-            mpConsole->mLowerPane->update();
         }
     }
 }
@@ -783,10 +786,10 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
             lineText.replace(link.startColumn, link.length, link.originalText);
             // Restore the link indices so the text is clickable again
             buffer.restoreLinkIndices(link.lineNumber, link.startColumn, link.length, link.linkId);
+            // Only mark as not concealed after successful text restoration
+            link.isConcealed = false;
         }
     }
-
-    link.isConcealed = false;
 
     if (mpConsole->mUpperPane) {
         mpConsole->mUpperPane->update();
