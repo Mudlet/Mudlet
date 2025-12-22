@@ -622,6 +622,7 @@ private:
     int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
     int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
     int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
+    int mLastClickedLinkIndex = 0;     // Last clicked link - suppresses hover until mouse leaves
 
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;
@@ -646,14 +647,13 @@ public:
     bool isLinkSelected(int linkIndex) const; // Check if link is selected
     void clearGroupSelection(const QString& group, const QString& exceptValue); // Clear selection for group except specified value
     void applyPendingSelectionStyling(); // Apply queued selection styling after buffer commit
+    void updateLinkCharacters(int linkIndex); // Update all TChar objects that belong to a specific link with effective styling
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
     int getLinkIndexAt(int line, int column) const; // Get link index at specific position
 
 private:
-    // Update all TChar objects that belong to a specific link with effective styling
-    void updateLinkCharacters(int linkIndex);
 };
 
 #ifndef QT_NO_DEBUG_STREAM

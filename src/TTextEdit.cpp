@@ -1238,9 +1238,11 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
 
                 // Update hover state for CSS pseudo-class support
                 // Don't set hover state for disabled links - they should stay disabled
+                // Also don't set hover if this link was just clicked - wait for mouse to leave first
                 if (mpBuffer->getHoveredLink() != linkIndex) {
                     auto currentState = mpBuffer->getLinkState(linkIndex);
-                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled) {
+                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled 
+                        && linkIndex != mpBuffer->mLastClickedLinkIndex) {
                         mpBuffer->setHoveredLink(linkIndex);
                         forceUpdate(); // Trigger re-render with new hover state
                     }
@@ -1253,6 +1255,11 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 if (mpBuffer->getHoveredLink() != 0) {
                     mpBuffer->setHoveredLink(0);
                     forceUpdate(); // Trigger re-render
+                }
+                
+                // Clear last clicked link when mouse leaves - allows hover to work again
+                if (mpBuffer->mLastClickedLinkIndex != 0) {
+                    mpBuffer->mLastClickedLinkIndex = 0;
                 }
             }
         }
@@ -1477,11 +1484,15 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 #endif
                                     mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
                                 }
+                                mpBuffer->updateLinkCharacters(linkIndex);
                             }
                         }
                         
                         // Clear hover to show selection immediately; mouse move will restore it
                         mpBuffer->setHoveredLink(0);
+                        
+                        // Remember this link was just clicked - suppress hover until mouse leaves
+                        mpBuffer->mLastClickedLinkIndex = linkIndex;
                         
                         forceUpdate();
 

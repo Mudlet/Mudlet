@@ -5733,8 +5733,7 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:bag?config={\"style\":{\"color\":\"#6600cc\",\"hover\":{\"color\":\"#9933ff\",\"underline\":true}},\"menu\":[{\"Open\":\"send:open\"},{\"Sort\":\"send:sort\"},\"-\",{\"Drop\":\"send:drop\"}]}\x1b\\🎒 Backpack\x1b]8;;\x1b\\\n\n";
 
     output += "Status Indicators:\n";
-    output += "  \x1b]8;;send:warning?config={\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\x1b\\⚠️ Warning\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:error?config={\"style\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\❌ Error\x1b]8;;\x1b\\ ";
+    output += "  \x1b]8;;send:error?config={\"style\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\❌ Error\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:success?config={\"style\":{\"bg\":\"#006600\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\✅ Success\x1b]8;;\x1b\\\n\n";
 
     output += "Complete Example (All Features):\n";
@@ -5751,18 +5750,16 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "React: ";
     output += "\x1b]8;;send:like?config={\"selection\":{\"group\":\"reaction\",\"value\":\"like\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#0066cc\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\👍 Like\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:love?config={\"selection\":{\"group\":\"reaction\",\"value\":\"love\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#ff0066\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\❤️ Love\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:care?config={\"selection\":{\"group\":\"reaction\",\"value\":\"care\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#ff9900\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\🤗 Care\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:laugh?config={\"selection\":{\"group\":\"reaction\",\"value\":\"laugh\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\😂 Laugh\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:wow?config={\"selection\":{\"group\":\"reaction\",\"value\":\"wow\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#9933ff\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\😮 Wow\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:sad?config={\"selection\":{\"group\":\"reaction\",\"value\":\"sad\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#3366cc\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\😢 Sad\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:angry?config={\"selection\":{\"group\":\"reaction\",\"value\":\"angry\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\😠 Angry\x1b]8;;\x1b\\\n\n";
+    output += "\x1b]8;;send:sad?config={\"selection\":{\"group\":\"reaction\",\"value\":\"sad\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#3366cc\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\😢 Sad\x1b]8;;\x1b\\\n";
+    output += "  (Only one can be selected at a time)\n\n";
 
     output += "Checkbox Mode (Multi-Select):\n";
     output += "Enable buffs: ";
     output += "\x1b]8;;send:buff-strength?config={\"selection\":{\"group\":\"buffs\",\"value\":\"strength\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#ff9944\",\"selected\":{\"bg\":\"#ff6600\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Strength\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:buff-speed?config={\"selection\":{\"group\":\"buffs\",\"value\":\"speed\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#66ccff\",\"selected\":{\"bg\":\"#0088ff\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Speed\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:buff-defense?config={\"selection\":{\"group\":\"buffs\",\"value\":\"defense\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Defense\x1b]8;;\x1b\\\n";
-    output += "  (Click to toggle, multiple can be selected)\n\n";
+    output += "  (Multiple can be selected)\n\n";
 
     output += "Pre-Selected Options:\n";
     output += "Combat style: ";
@@ -5776,26 +5773,9 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:warrior?config={\"selection\":{\"group\":\"class\",\"value\":\"warrior\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\⚔️ Warrior\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:mage?config={\"selection\":{\"group\":\"class\",\"value\":\"mage\",\"toggle\":true,\"exclusive\":true,\"disabled\":true},\"style\":{\"color\":\"#9966ff\",\"selected\":{\"bg\":\"#6600cc\",\"color\":\"#000000\",\"bold\":true},\"disabled\":{\"color\":\"#444444\",\"strikethrough\":true}}}\x1b\\🔮 Mage\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:rogue?config={\"selection\":{\"group\":\"class\",\"value\":\"rogue\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\🗡️ Rogue\x1b]8;;\x1b\\\n";
-    output += "  (Mage is locked/disabled)\n\n";
+    output += "  (Mage is locked)\n\n";
 
-    output += "Interactive Selection with Hover:\n";
-    output += "Select weapon: ";
-    output += "\x1b]8;;send:sword?config={\"selection\":{\"group\":\"weapon\",\"value\":\"sword\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#6699ff\",\"selected\":{\"bg\":\"#0066cc\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\⚔️ Sword\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:axe?config={\"selection\":{\"group\":\"weapon\",\"value\":\"axe\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🪓 Axe\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:bow?config={\"selection\":{\"group\":\"weapon\",\"value\":\"bow\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🏹 Bow\x1b]8;;\x1b\\\n";
-    output += "  (Click to select)\n\n";
-
-    output += "Toggle Switches:\n";
-    output += "Settings: ";
-    output += "\x1b]8;;send:auto-loot?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-loot\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\Auto-Loot\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:auto-heal?config={\"selection\":{\"group\":\"settings\",\"value\":\"auto-heal\",\"toggle\":true,\"exclusive\":false,\"selected\":true},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\Auto-Heal\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:sound?config={\"selection\":{\"group\":\"settings\",\"value\":\"sound\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#888888\",\"selected\":{\"color\":\"#00ff00\",\"bold\":true}}}\x1b\\Sound\x1b]8;;\x1b\\\n";
-    output += "  (Toggle each setting on/off)\n\n";
-
-    output += "Server Callback Example:\n";
-    output += "When clicked, selection state is sent to server via &selected=true/false\n";
-    output += "Server receives: send:easy&selected=true (for radio buttons)\n";
-    output += "Server receives: send:buff-strength&selected=true/false (for checkboxes)\n\n";
+    output += "Server receives selection state via &selected=true/false query parameter\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
     // Summary
