@@ -436,7 +436,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             return;
         }
 
-        // Create a batch file that waits for Mudlet to exit before launching the installer
+        // Create a batch file that waits for Mudlet and crashpad_handler to exit before launching installer
         // this avoids shell quoting issues that happen with QProcess::startDetached
         QString batchPath = qsl("%1/mudlet-update.bat").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
         QFile batchFile(batchPath);
@@ -446,14 +446,22 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             QString batchContent = qsl(
                 "@echo off\r\n"
                 "echo Mudlet updater: waiting for %1 to exit...\r\n"
-                ":wait\r\n"
+                ":wait_mudlet\r\n"
                 "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | C:\\Windows\\System32\\find.exe /I \"%1\" >NUL\r\n"
                 "if %ERRORLEVEL%==0 (\r\n"
                 "    echo Mudlet updater: %1 still running, waiting...\r\n"
                 "    ping -n 2 127.0.0.1 > nul\r\n"
-                "    goto wait\r\n"
+                "    goto wait_mudlet\r\n"
                 ")\r\n"
-                "echo Mudlet updater: %1 exited, launching installer...\r\n"
+                "echo Mudlet updater: %1 exited, waiting for crashpad_handler.exe...\r\n"
+                ":wait_crashpad\r\n"
+                "tasklist /FI \"IMAGENAME eq crashpad_handler.exe\" 2>NUL | C:\\Windows\\System32\\find.exe /I \"crashpad_handler.exe\" >NUL\r\n"
+                "if %ERRORLEVEL%==0 (\r\n"
+                "    echo Mudlet updater: crashpad_handler.exe still running, waiting...\r\n"
+                "    ping -n 2 127.0.0.1 > nul\r\n"
+                "    goto wait_crashpad\r\n"
+                ")\r\n"
+                "echo Mudlet updater: all processes exited, launching installer...\r\n"
                 "echo Mudlet updater: running %2\r\n"
                 "\"%2\"\r\n"
                 "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n").arg(exeName, QDir::toNativeSeparators(installerPath));
