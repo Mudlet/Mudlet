@@ -28,7 +28,6 @@
 
 
 #include "TBuffer.h"
-#include "THyperlinkSelectionManager.h"
 
 
 #include "TTextCodec.h"
@@ -159,6 +158,7 @@ class TTextEdit;
 class TCommandLine;
 class TDockWidget;
 class THyperlinkCompactManager;
+class THyperlinkSelectionManager;
 class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;

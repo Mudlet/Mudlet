@@ -28,6 +28,7 @@
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkVisibilityManager.h"
+#include "THyperlinkSelectionManager.h"
 #include "TStringUtils.h"
 #include "TTextEdit.h"
 #include "TTextProperties.h"
@@ -3118,8 +3119,22 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
         singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
         QMap<QString, QString> expandedMap = mpConsole->mpCompactSyntaxManager->expandShorthand(singleKeyMap);
         
-        // The expanded map will have either the original key or the expanded key
-        QString resultKey = expandedMap.firstKey();
+        // Guard against empty or multi-key expanded maps to prevent assertion/UB
+        QString resultKey;
+        if (expandedMap.isEmpty()) {
+            // No expansion occurred - use original key
+            resultKey = originalKey;
+        } else if (expandedMap.size() == 1) {
+            // Normal case - single expanded key
+            resultKey = expandedMap.firstKey();
+        } else {
+            // Unexpected: multiple keys from single input - use first deterministically and log
+            resultKey = expandedMap.firstKey();
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] expandShorthand returned multiple keys for single input:" << originalKey 
+                       << "-> expanded to:" << expandedMap.keys() << "using first key:" << resultKey;
+#endif
+        }
         
         // Recursively expand nested objects
         QJsonValue resultValue = value.isObject() ? expandJsonShorthands(value.toObject()) : value;

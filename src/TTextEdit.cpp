@@ -30,6 +30,7 @@
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
 #include "widechar_width.h"
@@ -1468,7 +1469,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 #endif
                                 }
 
-                                func = mgr->modifyUriForSelection(func, newSelected);
+                                func = mgr->modifyUriForSelection(func, group, value);
 
 #if defined(DEBUG_OSC_PROCESSING)
                                 qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "selected=" << newSelected;

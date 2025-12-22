@@ -78,10 +78,13 @@ void THyperlinkSelectionManager::clearAllSelections()
     emit allSelectionsCleared();
 }
 
-QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri, bool isSelected) const
+QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri, const QString& group, const QString& value) const
 {
+    // Query the current selection state from our internal state
+    bool isSelected = this->isSelected(group, value);
+    
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "modifyUriForSelection called with baseUri:" << baseUri << "isSelected:" << isSelected;
+    qDebug() << "modifyUriForSelection called with baseUri:" << baseUri << "group:" << group << "value:" << value << "isSelected:" << isSelected;
 #endif
     
     // Check if it's a send() or sendCmdLine() call

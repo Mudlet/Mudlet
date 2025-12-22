@@ -50,7 +50,7 @@ public:
     void clearAllSelections();
 
     // URI modification before execution
-    QString modifyUriForSelection(const QString& baseUri, bool isSelected) const;
+    QString modifyUriForSelection(const QString& baseUri, const QString& group, const QString& value) const;
 
 signals:
     // Emitted when a selection state changes
