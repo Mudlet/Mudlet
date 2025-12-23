@@ -1445,7 +1445,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                                 return;
                             }
 
-                            auto mgr = mpConsole ? mpConsole->getHyperlinkSelectionManager() : nullptr;
+                            auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
                             if (!mgr) {
                                 qWarning() << "TTextEdit::mousePressEvent - Selection manager is null, skipping selection handling for link" << linkIndex;
                             } else {
@@ -1517,8 +1517,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         forceUpdate();
 
                         // Notify visibility manager that link was clicked (activates timers)
-                        if (mpConsole->getHyperlinkVisibilityManager()) {
-                            mpConsole->getHyperlinkVisibilityManager()->onLinkClicked(linkIndex);
+                        if (mpConsole) {
+                            mpConsole->getHyperlinkVisibilityManager().onLinkClicked(linkIndex);
                         }
 
                         if (!luaReference) {
@@ -3276,8 +3276,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
                 if (!commands.isEmpty()) {
                     // Notify visibility manager that link was clicked (activates timers)
-                    if (mpConsole->getHyperlinkVisibilityManager()) {
-                        mpConsole->getHyperlinkVisibilityManager()->onLinkClicked(focusedLink);
+                    if (mpConsole) {
+                        mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
                     }
 
                     // Mark the link as visited
