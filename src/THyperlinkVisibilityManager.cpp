@@ -226,18 +226,7 @@ void THyperlinkVisibilityManager::unregisterHyperlink(int linkId)
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug().noquote() << "[OSC] Unregistered hyperlink" << linkId << "(link removed from buffer)";
 #endif
-        // If this was the last link with timer-based actions, update the flag
-        bool hasTimers = false;
-        for (const auto& link : mTrackedLinks) {
-            if (link.delayMs > 0 || link.expireOnOutput) {
-                hasTimers = true;
-                break;
-            }
-        }
-        if (!hasTimers && mHasTimerBasedLinks) {
-            mHasTimerBasedLinks = false;
-            mpTimer->stop();
-        }
+        stopTimerIfNotNeeded();
     }
 }
 

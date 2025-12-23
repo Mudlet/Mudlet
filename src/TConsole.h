@@ -261,9 +261,9 @@ public:
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
     
-    THyperlinkCompactManager& getHyperlinkCompactManager() const { Q_ASSERT(mpHyperlinkCompactManager); return *mpHyperlinkCompactManager; }
-    THyperlinkSelectionManager& getHyperlinkSelectionManager() const { Q_ASSERT(mpHyperlinkSelectionManager); return *mpHyperlinkSelectionManager; }
-    THyperlinkVisibilityManager& getHyperlinkVisibilityManager() const { Q_ASSERT(mpHyperlinkVisibilityManager); return *mpHyperlinkVisibilityManager; }
+    THyperlinkCompactManager& getHyperlinkCompactManager() { Q_ASSERT(mpHyperlinkCompactManager); return *mpHyperlinkCompactManager; }
+    THyperlinkSelectionManager& getHyperlinkSelectionManager() { Q_ASSERT(mpHyperlinkSelectionManager); return *mpHyperlinkSelectionManager; }
+    THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { Q_ASSERT(mpHyperlinkVisibilityManager); return *mpHyperlinkVisibilityManager; }
     
     void setCmdVisible(bool);
     void changeColors();
