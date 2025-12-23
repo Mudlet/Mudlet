@@ -2626,6 +2626,26 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // The :link styling will be applied when characters are created in COMMIT_LINE.
             }
             
+            // For spoilers, capture original text BEFORE any visibility concealment
+            // This ensures spoiler reveal works even when combined with visibility actions
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+                int currentColumn = mMudLine.length();
+                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+                
+                if (linkLength > 0) {
+                    // Store the original text before any replacements
+                    QString originalText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                    mLinkOriginalText[mCurrentHyperlinkLinkId] = originalText;
+                    
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Spoiler link" << mCurrentHyperlinkLinkId << "- storing original text:" << originalText << "and replacing with spaces, length:" << linkLength;
+#endif
+                    // Replace spoiler text with spaces to hide it
+                    QString spaces(linkLength, ' ');
+                    mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                }
+            }
+            
             // Register with visibility manager if visibility settings exist
             // Visibility currently only supports single-line hyperlinks
             // Multi-line links will not have visibility management applied
@@ -2656,8 +2676,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         mCurrentHyperlinkStyling);
                     
                     // If link should start concealed, replace its text with spaces in mMudLine
-                    // before it gets committed to the buffer
-                    if (shouldStartConcealed) {
+                    // Skip if spoiler already did this to avoid double-replacement
+                    if (shouldStartConcealed && !mCurrentHyperlinkStyling.isSpoiler) {
 #if defined(DEBUG_OSC_PROCESSING)
                         qDebug() << "[OSC] Link starts concealed - replacing text with spaces";
 #endif
@@ -2680,25 +2700,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                          << "- started on line" << mCurrentHyperlinkStartLine
                          << "ending on line" << static_cast<int>(lineBuffer.size()) - 1;
 #endif
-            }
-            
-            // Replace spoiler text with spaces while preserving original for later reveal
-            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
-                int currentColumn = mMudLine.length();
-                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
-                
-                if (linkLength > 0) {
-                    // Store the original text before replacing with spaces
-                    QString originalText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
-                    mLinkOriginalText[mCurrentHyperlinkLinkId] = originalText;
-                    
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Spoiler link" << mCurrentHyperlinkLinkId << "- storing original text:" << originalText << "and replacing with spaces, length:" << linkLength;
-#endif
-                    // Replace spoiler text with spaces to hide it
-                    QString spaces(linkLength, ' ');
-                    mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
-                }
             }
             
             mCurrentHyperlinkCommand.clear();
