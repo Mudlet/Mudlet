@@ -360,6 +360,8 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    THyperlinkCompactManager.h
+    THyperlinkSelectionManager.h
     THyperlinkVisibilityManager.h
     TLinkStore.h
     TLuaInterpreter.h
