@@ -86,7 +86,7 @@ void TLinkStore::expireLinks(const QString& expireName, Host* pH)
         if (mStylingStore.contains(linkId)) {
             const Mudlet::HyperlinkStyling& styling = mStylingStore[linkId];
             if (styling.selection.hasSelectionSettings) {
-                QString key = styling.selection.group + qsl(":") + styling.selection.value;
+                QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
                 mSelectionGroupIndex.remove(key, linkId);
             }
         }
@@ -113,7 +113,7 @@ void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
     if (mStylingStore.contains(id)) {
         const Mudlet::HyperlinkStyling& oldStyling = mStylingStore[id];
         if (oldStyling.selection.hasSelectionSettings) {
-            QString oldKey = oldStyling.selection.group + qsl(":") + oldStyling.selection.value;
+            QPair<QString, QString> oldKey = qMakePair(oldStyling.selection.group, oldStyling.selection.value);
             mSelectionGroupIndex.remove(oldKey, id);
         }
     }
@@ -122,7 +122,7 @@ void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
     
     // Add new selection group index entry if applicable
     if (styling.selection.hasSelectionSettings) {
-        QString key = styling.selection.group + qsl(":") + styling.selection.value;
+        QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
         mSelectionGroupIndex.insert(key, id);
     }
 }
@@ -139,7 +139,7 @@ bool TLinkStore::hasStyling(int id) const
 
 QList<int> TLinkStore::getLinkIdsByGroupValue(const QString& group, const QString& value) const
 {
-    QString key = group + qsl(":") + value;
+    QPair<QString, QString> key = qMakePair(group, value);
     return mSelectionGroupIndex.values(key);
 }
 #endif

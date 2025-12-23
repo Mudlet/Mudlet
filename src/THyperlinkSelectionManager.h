@@ -59,7 +59,9 @@ signals:
     void allSelectionsCleared();
 
 private:
-    TConsole* mpConsole;
+    QString addSelectedParameter(const QString& command, bool isSelected) const;
+    
+    TConsole& mpConsole;
     
     // Selection state tracking: group -> (value -> selected)
     QHash<QString, QHash<QString, bool>> mSelectionState;

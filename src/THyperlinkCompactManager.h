@@ -25,6 +25,7 @@
 #include <QMap>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 class TConsole;
 
@@ -56,6 +57,12 @@ public:
 
     // Register a shorthand expansion (e.g., "s" → "style")
     void registerShorthand(const QString& shorthand, const QString& fullName);
+    
+    // Unregister a shorthand expansion
+    void unregisterShorthand(const QString& shorthand);
+    
+    // Clear all shorthands
+    void clearShorthands();
 
     // Expand shorthand properties to full names
     QMap<QString, QString> expandShorthand(const QMap<QString, QString>& params) const;
@@ -66,6 +73,12 @@ public:
 
     // Register a property as preset-aware (allows it to be included in presets)
     void registerPresetProperty(const QString& propertyName);
+    
+    // Unregister a preset property
+    void unregisterPresetProperty(const QString& propertyName);
+    
+    // Clear all preset properties
+    void clearPresetProperties();
 
     // Check if a property can be used in presets
     bool isPresetProperty(const QString& propertyName) const;
@@ -85,7 +98,13 @@ public:
 
 signals:
     void shorthandRegistered(const QString& shorthand, const QString& fullName);
+    void shorthandUnregistered(const QString& shorthand);
+    void shorthandsCleared();
+    
     void presetPropertyRegistered(const QString& propertyName);
+    void presetPropertyUnregistered(const QString& propertyName);
+    void presetPropertiesCleared();
+    
     void presetRegistered(const QString& name);
     void presetsCleared();
 

@@ -88,7 +88,7 @@ private:
     QMap<int, QString> mExpireStore;
     QMultiHash<QString, int> mExpireToLinks;
     
-    QMultiHash<QString, int> mSelectionGroupIndex;
+    QMultiHash<QPair<QString, QString>, int> mSelectionGroupIndex;
 };
 
 #endif //MUDLET_TLINKSTORE_H

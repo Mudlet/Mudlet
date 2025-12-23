@@ -55,6 +55,36 @@ void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const
 #endif
 }
 
+void THyperlinkCompactManager::unregisterShorthand(const QString& shorthand)
+{
+    if (shorthand.isEmpty()) {
+        qWarning() << "THyperlinkCompactManager::unregisterShorthand: empty shorthand";
+        return;
+    }
+
+    if (!mShorthandRegistry.contains(shorthand)) {
+        qWarning() << "THyperlinkCompactManager::unregisterShorthand: shorthand not found:" << shorthand;
+        return;
+    }
+
+    mShorthandRegistry.remove(shorthand);
+    emit shorthandUnregistered(shorthand);
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[CompactSyntax] Unregistered shorthand:" << shorthand;
+#endif
+}
+
+void THyperlinkCompactManager::clearShorthands()
+{
+    mShorthandRegistry.clear();
+    emit shorthandsCleared();
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[CompactSyntax] Cleared all shorthands";
+#endif
+}
+
 QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QString, QString>& params) const
 {
     QMap<QString, QString> expanded;
@@ -93,6 +123,36 @@ void THyperlinkCompactManager::registerPresetProperty(const QString& propertyNam
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[CompactSyntax] Registered preset property:" << propertyName;
+#endif
+}
+
+void THyperlinkCompactManager::unregisterPresetProperty(const QString& propertyName)
+{
+    if (propertyName.isEmpty()) {
+        qWarning() << "THyperlinkCompactManager::unregisterPresetProperty: empty propertyName";
+        return;
+    }
+
+    if (!mPresetPropertyRegistry.contains(propertyName)) {
+        qWarning() << "THyperlinkCompactManager::unregisterPresetProperty: property not found:" << propertyName;
+        return;
+    }
+
+    mPresetPropertyRegistry.remove(propertyName);
+    emit presetPropertyUnregistered(propertyName);
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[CompactSyntax] Unregistered preset property:" << propertyName;
+#endif
+}
+
+void THyperlinkCompactManager::clearPresetProperties()
+{
+    mPresetPropertyRegistry.clear();
+    emit presetPropertiesCleared();
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[CompactSyntax] Cleared all preset properties";
 #endif
 }
 

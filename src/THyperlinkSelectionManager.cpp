@@ -20,11 +20,13 @@
 #include "THyperlinkSelectionManager.h"
 #include "TConsole.h"
 
+#include <QUrl>
+#include <QUrlQuery>
+
 THyperlinkSelectionManager::THyperlinkSelectionManager(TConsole& console)
 : QObject(&console)
-, mpConsole(&console)
+, mpConsole(console)
 {
-    // No null check needed - reference cannot be null
 }
 
 THyperlinkSelectionManager::~THyperlinkSelectionManager() = default;
@@ -78,6 +80,20 @@ void THyperlinkSelectionManager::clearAllSelections()
     emit allSelectionsCleared();
 }
 
+QString THyperlinkSelectionManager::addSelectedParameter(const QString& command, bool isSelected) const
+{
+    QUrl url(command);
+    QUrlQuery query(url);
+    query.removeQueryItem(qsl("selected"));
+    query.addQueryItem(qsl("selected"), isSelected ? qsl("true") : qsl("false"));
+    
+    QString cleanCommand = url.path();
+    if (!query.isEmpty()) {
+        cleanCommand += qsl("?") + query.query(QUrl::FullyEncoded);
+    }
+    return cleanCommand;
+}
+
 QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri, const QString& group, const QString& value) const
 {
     // Query the current selection state from our internal state
@@ -97,9 +113,8 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
         const int prefixLength = sendPrefix.length();
         const int suffixLength = sendSuffix.length();
         QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
-        QString separator = command.contains('?') ? qsl("&") : qsl("?");
-        command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
-        QString result = qsl("send([[%1]])").arg(command);
+        QString cleanCommand = addSelectedParameter(command, isSelected);
+        QString result = qsl("send([[%1]])").arg(cleanCommand);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "Modified to:" << result;
 #endif
@@ -108,12 +123,8 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
         const int prefixLength = sendCmdLinePrefix.length();
         const int suffixLength = sendCmdLineSuffix.length();
         QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
-        QString separator = command.contains('?') ? qsl("&") : qsl("?");
-        // Remove existing selected parameter if present
-        QRegularExpression selectedParam(QStringLiteral("[?&]selected=(true|false)"));
-        command.remove(selectedParam);
-        command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
-        QString result = qsl("sendCmdLine([[%1]])").arg(command);
+        QString cleanCommand = addSelectedParameter(command, isSelected);
+        QString result = qsl("sendCmdLine([[%1]])").arg(cleanCommand);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "Modified to:" << result;
 #endif

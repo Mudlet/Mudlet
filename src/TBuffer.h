@@ -478,8 +478,6 @@ public:
     void paste(QPoint&, const TBuffer&);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
-    
-    // Getters and setters for link state tracking
     int getLastClickedLinkIndex() const { return mLastClickedLinkIndex; }
     void setLastClickedLinkIndex(int index) { mLastClickedLinkIndex = index; }
     void clearLastClickedLinkIndex() { mLastClickedLinkIndex = 0; }
