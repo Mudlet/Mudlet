@@ -6057,7 +6057,7 @@ void TBuffer::injectOSC8DocumentationExamples()
     // ═══════════════════════════════════════════════════════════════════
     output += "── SPOILERS (click-to-reveal) ─────────────────────────────────────────\n";
     output += "The answer is: \x1b]8;;send:sp1?config={\"spoiler\":true,\"disabled\":true}\x1b\\42\x1b]8;;\x1b\\  ";
-    output += "Secret code: \x1b]8;;send:sp2?config={\"spoiler\":true,\"disabled\":true}\x1b\\XYZZY\x1b]8;;\x1b\\  ";
+    output += "Secret code: \x1b]8;;https://www.mudlet.org?config={\"spoiler\":true,\"style\":{\"color\":\"yellow\"}}\x1b\\XYZZY\x1b]8;;\x1b\\  ";
     output += "Emoji secret: \x1b]8;;send:sp3?config={\"spoiler\":true,\"disabled\":true}\x1b\\🔮💀🗝️\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
