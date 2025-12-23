@@ -2747,7 +2747,6 @@ void TConsole::initializeOSC8StyleFeature()
     mpHyperlinkCompactManager->registerShorthand(qsl("l"), qsl("link"));
     mpHyperlinkCompactManager->registerShorthand(qsl("al"), qsl("any-link"));
     mpHyperlinkCompactManager->registerShorthand(qsl("sl"), qsl("selected"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("ds"), qsl("disabled"));
 
     mpHyperlinkCompactManager->registerPresetProperty(qsl("style"));
 }
