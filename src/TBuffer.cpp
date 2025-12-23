@@ -44,6 +44,7 @@
 #include <QTextBoundaryFinder>
 #include <QTimer>
 #include <QRegularExpression>
+#include <QUrlQuery>
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
 : mFgColor(foreground)
