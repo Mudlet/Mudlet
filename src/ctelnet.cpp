@@ -1832,6 +1832,21 @@ QString cTelnet::getNewEnvironOSCHyperlinksVisibility()
     return qsl("1");
 }
 
+QString cTelnet::getNewEnvironOSCHyperlinksSelection()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksSpoiler()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
+{
+    return qsl("1");
+}
+
 QString cTelnet::getNewEnvironScreenReader()
 {
     return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
@@ -1900,6 +1915,9 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_COMPACT"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksCompact()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_PRESETS"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksPresets()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_VISIBILITY"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksVisibility()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SELECTION"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSelection()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SPOILER"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSpoiler()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_DISABLED"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksDisabled()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));

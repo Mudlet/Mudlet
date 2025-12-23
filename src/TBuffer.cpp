@@ -2682,6 +2682,25 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
             }
             
+            // Replace spoiler text with spaces while preserving original for later reveal
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+                int currentColumn = mMudLine.length();
+                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+                
+                if (linkLength > 0) {
+                    // Store the original text before replacing with spaces
+                    QString originalText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                    mLinkOriginalText[mCurrentHyperlinkLinkId] = originalText;
+                    
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Spoiler link" << mCurrentHyperlinkLinkId << "- storing original text:" << originalText << "and replacing with spaces, length:" << linkLength;
+#endif
+                    // Replace spoiler text with spaces to hide it
+                    QString spaces(linkLength, ' ');
+                    mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                }
+            }
+            
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
             mCurrentHyperlinkLinkId = 0;
@@ -3246,6 +3265,70 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #endif
     }
 
+    if (root.contains(qsl("spoiler")) && root[qsl("spoiler")].isBool()) {
+        styling.isSpoiler = root[qsl("spoiler")].toBool();
+        if (styling.isSpoiler) {
+            styling.hasCustomStyling = true;
+            
+            if (!styling.hasBackgroundColor) {
+                QColor spoilerBackground = mBackGroundColor;
+                
+                qreal luminance = 0.2126 * spoilerBackground.redF() + 
+                                 0.7152 * spoilerBackground.greenF() + 
+                                 0.0722 * spoilerBackground.blueF();
+                
+                QColor originalBackground = spoilerBackground;
+                
+                if (luminance < 0.5) {
+                    if (luminance < 0.1) {
+                        spoilerBackground = QColor(40, 40, 40);
+                    } else {
+                        spoilerBackground = spoilerBackground.lighter(140);
+                    }
+                } else {
+                    spoilerBackground = spoilerBackground.darker(140);
+                }
+                
+                styling.backgroundColor = spoilerBackground;
+                styling.hasBackgroundColor = true;
+                
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] EARLY SPOILER BACKGROUND: Generated" << spoilerBackground.name()
+                         << "from original" << originalBackground.name()
+                         << "luminance:" << luminance;
+#endif
+            }
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Spoiler config parsed from JSON:" << styling.isSpoiler;
+#endif
+    }
+
+    if (root.contains(qsl("disabled")) && root[qsl("disabled")].isBool()) {
+        styling.selection.disabled = root[qsl("disabled")].toBool();
+        if (styling.selection.disabled) {
+            styling.hasCustomStyling = true;
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Disabled config parsed from JSON:" << styling.selection.disabled;
+#endif
+    }
+
+    if (styling.isSpoiler) {
+        if (!parameters.contains(qsl("tooltip"))) {
+            parameters.insert(qsl("tooltip"), QObject::tr("Click to reveal"));
+            styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Auto-generated spoiler tooltip: Click to reveal for link - disabled:" << styling.selection.disabled;
+#endif
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        else {
+            qDebug() << "[OSC] Spoiler link has explicit tooltip:" << parameters.value(qsl("tooltip"));
+        }
+#endif
+    }
+
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] JSON converted to parameters:" << parameters;
 #endif
@@ -3400,10 +3483,6 @@ void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::
 
     if (selectionObj.contains(qsl("exclusive")) && selectionObj[qsl("exclusive")].isBool()) {
         settings.exclusive = selectionObj[qsl("exclusive")].toBool();
-    }
-
-    if (selectionObj.contains(qsl("disabled")) && selectionObj[qsl("disabled")].isBool()) {
-        settings.disabled = selectionObj[qsl("disabled")].toBool();
     }
 }
 
@@ -5908,296 +5987,137 @@ void TBuffer::clearSearchHighlights()
 
 void TBuffer::injectOSC8DocumentationExamples()
 {
-    // Inject OSC 8 hyperlink examples matching the documentation structure
+    // Inject OSC 8 hyperlink examples - concise, progressive, matching wiki docs
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] injectOSC8DocumentationExamples() called";
 #endif
 
-    QString output = "\n╔════════════════════════════════════════════════════════════════════╗\n";
-    output += "║         OSC 8 Hyperlink Documentation Examples                     ║\n";
-    output += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    QString output = "\n";
+    output += "╔══════════════════════════════════════════════════════════════════════╗\n";
+    output += "║              OSC 8 Hyperlink Examples - Try them all!                ║\n";
+    output += "╚══════════════════════════════════════════════════════════════════════╝\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Getting Started: Simple Links
+    // 1. FUNDAMENTALS - Basic links with color
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "GETTING STARTED: SIMPLE LINKS\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "1. Sending Commands:\n";
-    output += "   \x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\\n\n";
-
-    output += "2. Pre-filling Commands:\n";
-    output += "   \x1b]8;;prompt:cast%20fireball\x1b\\Cast Fireball\x1b]8;;\x1b\\\n\n";
-
-    output += "3. Opening Web Pages:\n";
-    output += "   \x1b]8;;https://www.mudlet.org\x1b\\Visit Mudlet\x1b]8;;\x1b\\\n\n";
+    output += "── FUNDAMENTALS ───────────────────────────────────────────────────────\n";
+    output += "Basic: ";
+    output += "\x1b]8;;send:look\x1b\\\x1b[34mLook\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;prompt:cast%20fireball\x1b\\\x1b[33mCast Spell\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;https://mudlet.org\x1b\\\x1b[36mWebsite\x1b[0m\x1b]8;;\x1b\\\n";
+    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Adding Custom Styling
+    // 2. JSON CONFIGURATION - Show the structure early
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "ADDING CUSTOM STYLING\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Basic Styling:\n";
-    output += "• Red text: \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\"}}\x1b\\Attack\x1b]8;;\x1b\\\n";
-    output += "• Bold red: \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"bold\":true}}\x1b\\Attack\x1b]8;;\x1b\\\n";
-    output += "• Blue background: \x1b]8;;send:action?config={\"style\":{\"color\":\"white\",\"bg\":\"blue\"}}\x1b\\Action\x1b]8;;\x1b\\\n\n";
-
-    output += "Text Decorations:\n";
-    output += "• Underlined: \x1b]8;;send:cast?config={\"style\":{\"underline\":true}}\x1b\\Underlined\x1b]8;;\x1b\\\n";
-    output += "• Overlined: \x1b]8;;send:heal?config={\"style\":{\"overline\":true}}\x1b\\Overlined\x1b]8;;\x1b\\\n";
-    output += "• Strikethrough: \x1b]8;;send:flee?config={\"style\":{\"strikethrough\":true}}\x1b\\Strikethrough\x1b]8;;\x1b\\\n";
-    output += "• Wavy underline: \x1b]8;;send:spell?config={\"style\":{\"underline\":\"wavy\"}}\x1b\\Wavy Underline\x1b]8;;\x1b\\\n";
-    output += "• Dotted overline: \x1b]8;;send:magic?config={\"style\":{\"overline\":\"dotted\"}}\x1b\\Dotted Overline\x1b]8;;\x1b\\\n\n";
-
-    output += "Decoration Colors:\n";
-    output += "• Red underline: \x1b]8;;send:redline?config={\"style\":{\"underline\":true,\"text-decoration-color\":\"red\"}}\x1b\\Red Underline\x1b]8;;\x1b\\\n";
-    output += "• Blue overline: \x1b]8;;send:blueover?config={\"style\":{\"overline\":true,\"text-decoration-color\":\"#0066ff\"}}\x1b\\Blue Overline\x1b]8;;\x1b\\\n";
-    output += "• Green wavy: \x1b]8;;send:greenwave?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"green\"}}\x1b\\Green Wavy\x1b]8;;\x1b\\\n";
-    output += "• Purple strike: \x1b]8;;send:purplestrike?config={\"style\":{\"strikethrough\":true,\"text-decoration-color\":\"purple\"}}\x1b\\Purple Strike\x1b]8;;\x1b\\\n\n";
+    output += "── JSON CONFIG (append ?config={...} to URI) ───────────────────────────\n";
+    output += "Structure: send:cmd?config={\"style\":{...},\"menu\":[...],\"tooltip\":\"...\"}\n";
+    output += "Example:   \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"bold\":true}}\x1b\\Attack\x1b]8;;\x1b\\ ← ";
+    output += "{\"style\":{\"color\":\"red\",\"bold\":true}}\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Interactive States
+    // 3. STYLING - Colors, decorations, states
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "INTERACTIVE STATES\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Hover Effects:\n";
-    output += "• Hover color change: \x1b]8;;send:look?config={\"style\":{\"color\":\"blue\",\"hover\":{\"color\":\"red\"}}}\x1b\\Hover Me\x1b]8;;\x1b\\\n";
-    output += "• Hover bold: \x1b]8;;send:defend?config={\"style\":{\"color\":\"blue\",\"bold\":true,\"hover\":{\"color\":\"yellow\"}}}\x1b\\Defend\x1b]8;;\x1b\\\n\n";
-
-    output += "Link vs Visited States:\n";
-    output += "• \x1b]8;;send:explore?config={\"style\":{\"link\":{\"color\":\"blue\",\"underline\":true},\"visited\":{\"color\":\"purple\",\"strikethrough\":true}}}\x1b\\Visit Me\x1b]8;;\x1b\\\n\n";
-
-    output += "Button-Style Link:\n";
-    output += "• \x1b]8;;send:attack?config={\"style\":{\"bg\":\"green\",\"color\":\"white\",\"bold\":true,\"hover\":{\"bg\":\"lightgreen\"},\"active\":{\"bg\":\"darkgreen\"}}}\x1b\\Attack\x1b]8;;\x1b\\\n\n";
-
-    output += "Multi-State Button:\n";
-    output += "• \x1b]8;;send:action?config={\"style\":{\"bg\":\"green\",\"hover\":{\"bg\":\"lightgreen\"},\"active\":{\"bg\":\"darkgreen\"},\"focus-visible\":{\"bg\":\"lightblue\"}}}\x1b\\Multi-State\x1b]8;;\x1b\\\n\n";
-
-    output += "Any-Link Styling:\n";
-    output += "• \x1b]8;;send:universal?config={\"style\":{\"any-link\":{\"bold\":true},\"hover\":{\"color\":\"orange\"}}}\x1b\\Universal Link\x1b]8;;\x1b\\\n\n";
+    output += "── STYLING ────────────────────────────────────────────────────────────\n";
+    output += "Colors: ";
+    output += "\x1b]8;;send:c1?config={\"style\":{\"color\":\"red\"}}\x1b\\red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c2?config={\"style\":{\"color\":\"#0066ff\"}}\x1b\\#0066ff\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c3?config={\"style\":{\"color\":\"rgb(0,200,100)\"}}\x1b\\rgb()\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c4?config={\"style\":{\"bg\":\"yellow\",\"color\":\"black\"}}\x1b\\bg:yellow\x1b]8;;\x1b\\\n";
+    output += "Text:   ";
+    output += "\x1b]8;;send:t1?config={\"style\":{\"bold\":true}}\x1b\\bold\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t2?config={\"style\":{\"italic\":true}}\x1b\\italic\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t3?config={\"style\":{\"underline\":true}}\x1b\\underline\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t4?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"red\"}}\x1b\\wavy-red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t5?config={\"style\":{\"strikethrough\":true}}\x1b\\strike\x1b]8;;\x1b\\\n";
+    output += "States: ";
+    output += "\x1b]8;;send:s1?config={\"style\":{\"color\":\"blue\",\"hover\":{\"color\":\"red\"}}}\x1b\\hover:red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:s2?config={\"style\":{\"bg\":\"green\",\"active\":{\"bg\":\"darkgreen\"}}}\x1b\\active:dark\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:s3?config={\"style\":{\"link\":{\"color\":\"blue\"},\"visited\":{\"color\":\"purple\"}}}\x1b\\visited:purple\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Context Menus and Tooltips
+    // 4. MENUS & TOOLTIPS
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "CONTEXT MENUS AND TOOLTIPS\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Basic Menu:\n";
-    output += "• \x1b]8;;send:combat?config={\"menu\":[{\"Attack\":\"send:attack\"},{\"Defend\":\"send:defend\"}]}\x1b\\Combat Menu\x1b]8;;\x1b\\ (right-click for menu)\n\n";
-
-    output += "Menu with Tooltip:\n";
-    output += "• \x1b]8;;send:magic?config={\"menu\":[{\"Cast\":\"send:cast fireball\"},{\"Heal\":\"send:heal\"}],\"tooltip\":\"Magic actions\"}\x1b\\Magic Menu\x1b]8;;\x1b\\\n\n";
-
-    output += "Menu with Separators:\n";
-    output += "• \x1b]8;;send:spells?config={\"menu\":[{\"Fireball\":\"send:cast fireball\"},{\"Ice Bolt\":\"send:cast ice bolt\"},\"-\",{\"Heal\":\"send:cast heal\"}]}\x1b\\Spell Menu\x1b]8;;\x1b\\\n\n";
-
-    output += "Primary vs Secondary Actions:\n";
-    output += "• \x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Examine\":\"send:examine\"},\"-\",{\"Go North\":\"send:north\"}]}\x1b\\Look Around\x1b]8;;\x1b\\\n";
-    output += "  (Left-click executes 'look', right-click shows menu)\n\n";
-
-    output += "Combined Styling and Menus:\n";
-    output += "• \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"bold\":true},\"menu\":[{\"Attack\":\"send:attack\"},{\"Defend\":\"send:defend\"},{\"Heal\":\"send:heal\"}],\"tooltip\":\"Combat Actions\"}\x1b\\Combat Menu\x1b]8;;\x1b\\\n\n";
+    output += "── MENUS & TOOLTIPS ───────────────────────────────────────────────────\n";
+    output += "Menu: \x1b]8;;send:attack?config={\"menu\":[{\"Strike\":\"send:strike\"},{\"Power\":\"send:power\"},\"-\",{\"Flee\":\"send:flee\"}]}\x1b\\⚔️ Combat\x1b]8;;\x1b\\ ← right-click (left=primary, \"-\"=separator)\n";
+    output += "Tip:  \x1b]8;;send:item?config={\"tooltip\":\"Legendary sword +5 damage\",\"style\":{\"color\":\"orange\"}}\x1b\\🗡️ Flaming Blade\x1b]8;;\x1b\\ ← hover for tooltip\n";
+    output += "Both: \x1b]8;;send:spell?config={\"menu\":[{\"Fire\":\"send:fireball\"},{\"Ice\":\"send:icebolt\"}],\"tooltip\":\"Magic spells\",\"style\":{\"color\":\"#9966ff\"}}\x1b\\✨ Magic\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Practical Examples
+    // 5. VISIBILITY - Hide/reveal
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "PRACTICAL EXAMPLES\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Simple Styled Links:\n";
-    output += "• Red attack link: \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\"}}\x1b\\Attack\x1b]8;;\x1b\\\n";
-    output += "• Bold blue with hover: \x1b]8;;send:defend?config={\"style\":{\"color\":\"blue\",\"bold\":true,\"hover\":{\"color\":\"yellow\"}}}\x1b\\Defend\x1b]8;;\x1b\\\n";
-    output += "• Green wavy underline: \x1b]8;;send:spell?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"green\"}}\x1b\\Spell Link\x1b]8;;\x1b\\\n\n";
-
-    output += "Interactive Menu Examples:\n";
-    output += "• Basic combat menu: \x1b]8;;send:combat?config={\"menu\":[{\"Attack\":\"send:attack\"},{\"Defend\":\"send:defend\"}]}\x1b\\Combat\x1b]8;;\x1b\\\n";
-    output += "• Menu with separators: \x1b]8;;send:spells?config={\"menu\":[{\"Fireball\":\"send:cast fireball\"},{\"Ice Bolt\":\"send:cast ice bolt\"},\"-\",{\"Heal\":\"send:cast heal\"}]}\x1b\\Spells\x1b]8;;\x1b\\\n";
-    output += "• Menu with tooltip: \x1b]8;;send:magic?config={\"menu\":[{\"Cast\":\"send:cast fireball\"},{\"Heal\":\"send:heal\"}],\"tooltip\":\"Magic actions\"}\x1b\\Magic\x1b]8;;\x1b\\\n\n";
-
-    output += "Button-Style Links:\n";
-    output += "• \x1b]8;;send:attack?config={\"style\":{\"bg\":\"green\",\"color\":\"white\",\"bold\":true,\"hover\":{\"bg\":\"lightgreen\"},\"active\":{\"bg\":\"darkgreen\"}}}\x1b\\Attack Button\x1b]8;;\x1b\\\n\n";
+    output += "── VISIBILITY (auto-hide/reveal) ──────────────────────────────────────\n";
+    output += "Click-hide: \x1b]8;;send:h1?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\I vanish 2s after click\x1b]8;;\x1b\\\n";
+    output += "Expire:     \x1b]8;;send:h2?config={\"style\":{\"color\":\"cyan\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Send any command to hide\x1b]8;;\x1b\\\n";
+    output += "Reveal:     Wait... \x1b]8;;send:h3?config={\"style\":{\"color\":\"lime\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":5000}}\x1b\\I APPEAR!\x1b]8;;\x1b\\ (5 seconds)\n";
+    output += "Wide chars: \x1b]8;;send:h4?config={\"style\":{\"bg\":\"blue\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\🎉🚀💎\x1b]8;;\x1b\\ ← emojis handled correctly\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Advanced Features
+    // 6. SPOILERS - Click to reveal
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "ADVANCED FEATURES\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "ANSI + JSON Hybrid Styling:\n";
-    output += "• \x1b[1m\x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"hover\":{\"color\":\"yellow\",\"underline\":true}}}\x1b\\Bold Red Attack\x1b]8;;\x1b\\\x1b[0m\n";
-    output += "• \x1b[38;5;196m\x1b]8;;send:fire?config={\"style\":{\"hover\":{\"bg\":\"black\"},\"active\":{\"color\":\"orange\"}}}\x1b\\Fire Magic\x1b]8;;\x1b\\\x1b[0m\n\n";
-
-    output += "Comprehensive Multi-State Example:\n";
-    output += "• \x1b]8;;send:comprehensive?config={\"style\":{\"any-link\":{\"underline\":true},\"link\":{\"color\":\"blue\"},\"visited\":{\"color\":\"purple\"},\"hover\":{\"color\":\"red\"},\"active\":{\"color\":\"darkred\"},\"focus-visible\":{\"bg\":\"orange\",\"color\":\"white\"}}}\x1b\\Comprehensive Link\x1b]8;;\x1b\\\n\n";
-
-    output += "Color Format Examples:\n";
-    output += "• Hex: \x1b]8;;send:hex?config={\"style\":{\"color\":\"#ff0000\"}}\x1b\\Red (#ff0000)\x1b]8;;\x1b\\\n";
-    output += "• Shorthand: \x1b]8;;send:short?config={\"style\":{\"color\":\"#f00\"}}\x1b\\Red (#f00)\x1b]8;;\x1b\\\n";
-    output += "• Named: \x1b]8;;send:named?config={\"style\":{\"color\":\"red\"}}\x1b\\Red (named)\x1b]8;;\x1b\\\n";
-    output += "• RGB: \x1b]8;;send:rgb?config={\"style\":{\"color\":\"rgb(255,0,0)\"}}\x1b\\Red (RGB)\x1b]8;;\x1b\\\n\n";
+    output += "── SPOILERS (click-to-reveal) ─────────────────────────────────────────\n";
+    output += "The answer is: \x1b]8;;send:sp1?config={\"spoiler\":true,\"disabled\":true}\x1b\\42\x1b]8;;\x1b\\  ";
+    output += "Secret code: \x1b]8;;send:sp2?config={\"spoiler\":true,\"disabled\":true}\x1b\\XYZZY\x1b]8;;\x1b\\  ";
+    output += "Emoji secret: \x1b]8;;send:sp3?config={\"spoiler\":true,\"disabled\":true}\x1b\\🔮💀🗝️\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Shorthand Syntax & Presets
+    // 7. DISABLED - Non-clickable
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "SHORTHAND SYNTAX & PRESETS\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Shorthand Syntax (compact JSON keys):\n";
-    output += "• Short style: \x1b]8;;send:short?config={\"s\":{\"c\":\"red\",\"b\":true}}\x1b\\Shorthand Style\x1b]8;;\x1b\\ (s=style, c=color, b=bold)\n";
-    output += "• Short menu: \x1b]8;;send:menu?config={\"m\":[{\"Attack\":\"send:attack\"},{\"Defend\":\"send:defend\"}]}\x1b\\Shorthand Menu\x1b]8;;\x1b\\ (m=menu)\n";
-    output += "• Short tooltip: \x1b]8;;send:tip?config={\"t\":\"Click for info\",\"s\":{\"c\":\"blue\"}}\x1b\\Shorthand Tooltip\x1b]8;;\x1b\\ (t=tooltip)\n";
-    output += "• Mixed syntax: \x1b]8;;send:mixed?config={\"s\":{\"c\":\"green\",\"b\":true},\"menu\":[{\"Go\":\"send:go\"}]}\x1b\\Mixed Short/Full\x1b]8;;\x1b\\\n";
-    output += "• Full syntax test: \x1b]8;;send:fulltest?config={\"style\":{\"color\":\"blue\"},\"menu\":[{\"Test\":\"send:test\"}]}\x1b\\Full Syntax Menu\x1b]8;;\x1b\\\n";
-    output += "• Single menu test: \x1b]8;;send:single?config={\"menu\":[{\"Defend\":\"send:defend\"}]}\x1b\\Single Item Menu\x1b]8;;\x1b\\\n";
-    output += "• Simple test: \x1b]8;;send:simple\x1b\\Simple Link\x1b]8;;\x1b\\\n\n";
-
-    output += "Style shortcuts inside 's' object:\n";
-    output += "• Color shortcuts: \x1b]8;;send:colors?config={\"s\":{\"c\":\"red\",\"bg\":\"yellow\"}}\x1b\\Color Shorts\x1b]8;;\x1b\\ (c=color, bg=background-color)\n";
-    output += "• Text shortcuts: \x1b]8;;send:text?config={\"s\":{\"b\":true,\"i\":true,\"u\":true}}\x1b\\Text Shorts\x1b]8;;\x1b\\ (b=bold, i=italic, u=underline)\n";
-    output += "• Decoration shortcuts: \x1b]8;;send:deco?config={\"s\":{\"u\":\"wavy\",\"st\":true,\"o\":true}}\x1b\\Deco Shorts\x1b]8;;\x1b\\ (st=strikethrough, o=overline)\n\n";
-
-    output += "Define a preset (invisible - defines 'btn' preset):\n";
-    output += "\x1b]8;;preset:btn?config={\"style\":{\"bg\":\"blue\",\"color\":\"white\",\"bold\":true},\"menu\":[{\"Click\":\"send:click\"}]}\x1b\\\x1b]8;;\x1b\\";
-    
-    output += "Use presets:\n";
-    output += "• Basic preset: \x1b]8;;send:action?preset=btn\x1b\\Button Style\x1b]8;;\x1b\\ (uses preset 'btn')\n";
-    output += "• Preset + override: \x1b]8;;send:custom?preset=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Custom Button\x1b]8;;\x1b\\ (btn preset + yellow text)\n\n";
-
-    output += "Define multiple presets:\n";
-    output += "\x1b]8;;preset:warn?config={\"style\":{\"bg\":\"orange\",\"color\":\"black\",\"bold\":true}}\x1b\\\x1b]8;;\x1b\\";
-    output += "\x1b]8;;preset:success?config={\"style\":{\"bg\":\"green\",\"color\":\"white\",\"bold\":true}}\x1b\\\x1b]8;;\x1b\\";
-    output += "\x1b]8;;preset:danger?config={\"style\":{\"bg\":\"red\",\"color\":\"white\",\"bold\":true}}\x1b\\\x1b]8;;\x1b\\";
-    
-    output += "Use different presets:\n";
-    output += "• \x1b]8;;send:warning?preset=warn\x1b\\Warning\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:ok?preset=success\x1b\\Success\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:error?preset=danger\x1b\\Danger\x1b]8;;\x1b\\\n\n";
-
-    output += "Combine presets with shorthand overrides:\n";
-    output += "• \x1b]8;;send:special?preset=btn&config={\"s\":{\"c\":\"gold\",\"u\":\"wavy\"},\"t\":\"Special action\"}\x1b\\Special Button\x1b]8;;\x1b\\\n\n";
+    output += "── DISABLED LINKS ─────────────────────────────────────────────────────\n";
+    output += "\x1b]8;;send:d1?config={\"disabled\":true,\"style\":{\"color\":\"gray\",\"strikethrough\":true}}\x1b\\Locked\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:d2?config={\"disabled\":true,\"style\":{\"color\":\"#666\"},\"tooltip\":\"Requires level 10\"}\x1b\\Premium\x1b]8;;\x1b\\ ";
+    output += "← click/right-click blocked, tooltip works\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Real World Examples
+    // 8. SELECTION - Toggle states
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "REAL WORLD EXAMPLES\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Navigation:\n";
-    output += "  \x1b]8;;send:north?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\North\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:south?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\South\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:east?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\East\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:west?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\West\x1b]8;;\x1b\\\n\n";
-
-    output += "Combat:\n";
-    output += "  \x1b]8;;send:attack?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true,\"hover\":{\"bg\":\"#ffcccc\",\"color\":\"#000000\"}},\"menu\":[{\"Quick Strike\":\"send:quick\"},{\"Power Attack\":\"send:power\"},\"-\",{\"Feint\":\"send:feint\"}]}\x1b\\⚔️ Attack\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:defend?config={\"style\":{\"color\":\"#006600\",\"bold\":true,\"hover\":{\"bg\":\"#ccffcc\",\"color\":\"#000000\"}},\"tooltip\":\"Defensive stance - reduces damage by 50 percent\"}\x1b\\🛡️ Defend\x1b]8;;\x1b\\\n\n";
-
-    output += "RPG Items:\n";
-    output += "  \x1b]8;;send:examine?config={\"style\":{\"color\":\"#cc6600\",\"italic\":true,\"hover\":{\"bg\":\"#ffe6cc\",\"color\":\"#000000\"}},\"tooltip\":\"Magic sword with fire enchantment\"}\x1b\\🗡️ Flaming Blade\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:bag?config={\"style\":{\"color\":\"#6600cc\",\"hover\":{\"color\":\"#9933ff\",\"underline\":true}},\"menu\":[{\"Open\":\"send:open\"},{\"Sort\":\"send:sort\"},\"-\",{\"Drop\":\"send:drop\"}]}\x1b\\🎒 Backpack\x1b]8;;\x1b\\\n\n";
-
-    output += "Status Indicators:\n";
-    output += "  \x1b]8;;send:error?config={\"style\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\❌ Error\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:success?config={\"style\":{\"bg\":\"#006600\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\✅ Success\x1b]8;;\x1b\\\n\n";
-
-    output += "Complete Example (All Features):\n";
-    output += "  \x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
+    output += "── SELECTION (stateful toggles) ───────────────────────────────────────\n";
+    output += "Radio:    ";
+    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"diff\",\"value\":\"easy\",\"exclusive\":true},\"style\":{\"color\":\"#8f8\",\"selected\":{\"bg\":\"green\",\"bold\":true}}}\x1b\\Easy\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"diff\",\"value\":\"hard\",\"exclusive\":true},\"style\":{\"color\":\"#f88\",\"selected\":{\"bg\":\"red\",\"bold\":true}}}\x1b\\Hard\x1b]8;;\x1b\\ (one at a time)\n";
+    output += "Checkbox: ";
+    output += "\x1b]8;;send:b1?config={\"selection\":{\"group\":\"buffs\",\"value\":\"str\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#f60\",\"bold\":true}}}\x1b\\[STR]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:b2?config={\"selection\":{\"group\":\"buffs\",\"value\":\"dex\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#08f\",\"bold\":true}}}\x1b\\[DEX]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:b3?config={\"selection\":{\"group\":\"buffs\",\"value\":\"int\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#a0f\",\"bold\":true}}}\x1b\\[INT]\x1b]8;;\x1b\\ (multi-select)\n";
+    output += "Server receives: &selected=true/false in callback\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Hyperlink Selection (Radio & Checkbox Modes)
+    // 9. COMPACT SYNTAX - Shorthand keys
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "HYPERLINK SELECTION (RADIO & CHECKBOX MODES)\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Radio Button Mode (Exclusive Selection):\n";
-    output += "React: ";
-    output += "\x1b]8;;send:like?config={\"selection\":{\"group\":\"reaction\",\"value\":\"like\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#0066cc\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\👍 Like\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:love?config={\"selection\":{\"group\":\"reaction\",\"value\":\"love\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#ff0066\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\❤️ Love\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:laugh?config={\"selection\":{\"group\":\"reaction\",\"value\":\"laugh\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\😂 Laugh\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:sad?config={\"selection\":{\"group\":\"reaction\",\"value\":\"sad\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#8899ff\",\"selected\":{\"bg\":\"#3366cc\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\😢 Sad\x1b]8;;\x1b\\\n";
-    output += "  (Only one can be selected at a time)\n\n";
-
-    output += "Checkbox Mode (Multi-Select):\n";
-    output += "Enable buffs: ";
-    output += "\x1b]8;;send:buff-strength?config={\"selection\":{\"group\":\"buffs\",\"value\":\"strength\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#ff9944\",\"selected\":{\"bg\":\"#ff6600\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Strength\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:buff-speed?config={\"selection\":{\"group\":\"buffs\",\"value\":\"speed\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#66ccff\",\"selected\":{\"bg\":\"#0088ff\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Speed\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:buff-defense?config={\"selection\":{\"group\":\"buffs\",\"value\":\"defense\",\"toggle\":true,\"exclusive\":false},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#ffffff\",\"bold\":true}}}\x1b\\[ ] Defense\x1b]8;;\x1b\\\n";
-    output += "  (Multiple can be selected)\n\n";
-
-    output += "Pre-Selected Options:\n";
-    output += "Combat style: ";
-    output += "\x1b]8;;send:aggressive?config={\"selection\":{\"group\":\"combat\",\"value\":\"aggressive\",\"toggle\":true,\"exclusive\":true,\"selected\":true},\"style\":{\"color\":\"#ff6666\",\"selected\":{\"bg\":\"#990000\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\⚔️ Aggressive\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:balanced?config={\"selection\":{\"group\":\"combat\",\"value\":\"balanced\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ffcc66\",\"selected\":{\"bg\":\"#996600\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\⚖️ Balanced\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:defensive?config={\"selection\":{\"group\":\"combat\",\"value\":\"defensive\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#009900\",\"color\":\"#ffff00\",\"bold\":true}}}\x1b\\🛡️ Defensive\x1b]8;;\x1b\\\n";
-    output += "  (Aggressive is pre-selected)\n\n";
-
-    output += "Disabled Options:\n";
-    output += "Choose class: ";
-    output += "\x1b]8;;send:warrior?config={\"selection\":{\"group\":\"class\",\"value\":\"warrior\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#ff9944\",\"selected\":{\"bg\":\"#cc6600\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\⚔️ Warrior\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:mage?config={\"selection\":{\"group\":\"class\",\"value\":\"mage\",\"toggle\":true,\"exclusive\":true,\"disabled\":true},\"style\":{\"color\":\"#9966ff\",\"selected\":{\"bg\":\"#6600cc\",\"color\":\"#000000\",\"bold\":true},\"disabled\":{\"color\":\"#444444\",\"strikethrough\":true}}}\x1b\\🔮 Mage\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:rogue?config={\"selection\":{\"group\":\"class\",\"value\":\"rogue\",\"toggle\":true,\"exclusive\":true},\"style\":{\"color\":\"#66ff66\",\"selected\":{\"bg\":\"#00aa00\",\"color\":\"#000000\",\"bold\":true}}}\x1b\\🗡️ Rogue\x1b]8;;\x1b\\\n";
-    output += "  (Mage is locked)\n\n";
-
-    output += "Server receives selection state via &selected=true/false query parameter\n\n";
+    output += "── COMPACT SYNTAX (shorthand) ─────────────────────────────────────────\n";
+    output += "Full:  {\"style\":{\"color\":\"red\",\"bold\":true},\"tooltip\":\"info\"}\n";
+    output += "Short: {\"s\":{\"c\":\"red\",\"b\":true},\"t\":\"info\"}  ";
+    output += "\x1b]8;;send:sh1?config={\"s\":{\"c\":\"red\",\"b\":true},\"t\":\"Shorthand!\"}\x1b\\Try me\x1b]8;;\x1b\\\n";
+    output += "Keys: s=style c=color bg=bg b=bold i=italic u=underline t=tooltip m=menu\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Hyperlink Visibility (moved to bottom for easier testing)
+    // 10. PRESETS - Reusable styles
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "HYPERLINK VISIBILITY\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    // Note: Timer-based conceal delays start when the link is clicked
-    output += "Auto-Hide After Delay (click to start timer):\n";
-    output += "• \x1b]8;;send:hint?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Click me - I disappear 3 seconds after click\x1b]8;;\x1b\\\n";
-    output += "• \x1b]8;;send:tip?config={\"style\":{\"color\":\"cyan\",\"italic\":true},\"visibility\":{\"action\":\"conceal\",\"delay\":5000}}\x1b\\Click me - I disappear 5 seconds after click\x1b]8;;\x1b\\\n\n";
-
-    output += "Hide When User Sends Command (expire on input):\n";
-    output += "• Send command to dismiss: \x1b]8;;send:input-hint?config={\"style\":{\"color\":\"gray\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Press Enter to hide this hint...\x1b]8;;\x1b\\\n\n";
-
-    output += "Hide On GA/EOR Prompt (expire on prompt):\n";
-    output += "• GA/EOR dismisses: \x1b]8;;send:prompt-hint?config={\"style\":{\"color\":\"lightblue\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"prompt\":true}}}\x1b\\Disappears on next server prompt...\x1b]8;;\x1b\\\n\n";
-
-    output += "Hide On New Output (expire after idle gap):\n";
-    output += "• New output dismisses: \x1b]8;;send:output-hint?config={\"style\":{\"color\":\"lightgreen\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":500}}}\x1b\\Disappears when new output arrives after 500ms gap...\x1b]8;;\x1b\\\n\n";
-
-    // Special test for wide Unicode character handling (emojis)
-    output += "Wide Character Tests (emojis properly handled in concealment):\n";
-    output += "• Click to hide emojis: \x1b]8;;send:wide-test?config={\"style\":{\"bg\":\"blue\",\"color\":\"white\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\🎉🚀💎🔥⭐\x1b]8;;\x1b\\ ← Click and watch background alignment!\n";
-    output += "• Click to hide mixed: \x1b]8;;send:mixed-test?config={\"style\":{\"bg\":\"green\",\"color\":\"white\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000}}\x1b\\Text🎯and🌟emojis🎪\x1b]8;;\x1b\\ ← Mixed text and emojis\n\n";
-
-    output += "Combined Expire Triggers (any trigger hides):\n";
-    output += "• \x1b]8;;send:any-hint?config={\"style\":{\"color\":\"orange\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true,\"prompt\":true,\"output\":true}}}\x1b\\Type, prompt, or new output hides me\x1b]8;;\x1b\\\n\n";
-
-    output += "Delete Entire Line (click to start timer):\n";
-    output += "• \x1b]8;;send:temp?config={\"style\":{\"color\":\"orange\"},\"visibility\":{\"action\":\"conceal\",\"delay\":3000,\"wholeline\":true}}\x1b\\Click me - entire line removed 3s after click\x1b]8;;\x1b\\\n\n";
-
-    output += "Combined Visibility and Styling (click to start timer):\n";
-    output += "• \x1b]8;;send:fancy?config={\"style\":{\"color\":\"#ff6600\",\"bold\":true,\"hover\":{\"color\":\"#ff9900\"}},\"visibility\":{\"action\":\"conceal\",\"delay\":5000},\"tooltip\":\"Disappears 5 seconds after click\"}\x1b\\Fancy Disappearing Link\x1b]8;;\x1b\\\n\n";
-
-    output += "Auto-Reveal After Delay (starts hidden, appears after 10 seconds):\n";
-    output += "• Wait for it... \x1b]8;;send:secret?config={\"style\":{\"color\":\"#00ff00\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":10000}}\x1b\\SECRET LINK REVEALED!\x1b]8;;\x1b\\\n\n";
-
-    output += "Reveal Then Conceal (appears after 3s, click to dismiss):\n";
-    output += "• Watch this space... \x1b]8;;send:combo?config={\"style\":{\"color\":\"#ff00ff\",\"bold\":true},\"visibility\":{\"action\":[\"reveal\",\"conceal\"],\"delay\":3000}}\x1b\\CLICK ME TO DISMISS!\x1b]8;;\x1b\\\n\n";
+    output += "── PRESETS (define once, reuse) ───────────────────────────────────────\n";
+    // Define presets (invisible)
+    output += "\x1b]8;;preset:btn?config={\"s\":{\"bg\":\"#07f\",\"c\":\"white\",\"b\":true},\"t\":\"Button preset\"}\x1b\\\x1b]8;;\x1b\\";
+    output += "\x1b]8;;preset:warn?config={\"s\":{\"bg\":\"orange\",\"c\":\"black\",\"b\":true}}\x1b\\\x1b]8;;\x1b\\";
+    output += "\x1b]8;;preset:danger?config={\"s\":{\"bg\":\"red\",\"c\":\"white\",\"b\":true}}\x1b\\\x1b]8;;\x1b\\";
+    output += "Define: preset:NAME?config={...}  Use: ?preset=NAME\n";
+    output += "Usage:  ";
+    output += "\x1b]8;;send:p1?preset=btn\x1b\\Button\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p2?preset=warn\x1b\\Warning\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p3?preset=danger\x1b\\Danger\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p4?preset=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Override\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Summary
+    // REAL-WORLD SHOWCASE
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-    output += "Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8\n";
-    output += "All examples above are clickable - try them!\n\n";
+    output += "── REAL-WORLD EXAMPLE ─────────────────────────────────────────────────\n";
+    output += "Nav: ";
+    output += "\x1b]8;;send:north?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\North\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:south?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\South\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:east?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\East\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:west?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\West\x1b]8;;\x1b\\\n";
+    output += "Item: \x1b]8;;send:sword?config={\"style\":{\"color\":\"#f80\",\"bold\":true,\"hover\":{\"bg\":\"#fc9\",\"color\":\"black\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:exam\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"+5 Fire Damage\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
+
+    output += "───────────────────────────────────────────────────────────────────────\n";
+    output += "Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol\n";
 
     // Process the output through the normal text processing pipeline
     // Skip trigger processing to avoid re-entrancy issues during injection
@@ -6429,11 +6349,14 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] getEffectiveHyperlinkStyling for link" << linkIndex
                  << "state:" << styling.currentState
-                 << "hasForegroundColor:" << effective.hasForegroundColor 
-                 << "foregroundColor:" << (effective.hasForegroundColor ? effective.foregroundColor.name() : "none")
-                 << "hasBackgroundColor:" << effective.hasBackgroundColor 
-                 << "backgroundColor:" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
-                 << "isBold:" << effective.isBold;
+                 << "isSpoiler:" << styling.isSpoiler
+                 << "base hasBackgroundColor:" << styling.hasBackgroundColor
+                 << "base backgroundColor:" << (styling.hasBackgroundColor ? styling.backgroundColor.name() : "none")
+                 << "effective hasForegroundColor:" << effective.hasForegroundColor 
+                 << "effective foregroundColor:" << (effective.hasForegroundColor ? effective.foregroundColor.name() : "none")
+                 << "effective hasBackgroundColor:" << effective.hasBackgroundColor 
+                 << "effective backgroundColor:" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
+                 << "effective isBold:" << effective.isBold;
 #endif
 
         // Copy effective state back to base properties for rendering
@@ -6454,6 +6377,25 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
         styling.isOverlined = effective.isOverlined;
         styling.underlineStyle = effective.underlineStyle;
         styling.hasCustomStyling = effective.hasCustomStyling; // CRITICAL: Copy hasCustomStyling flag
+
+        // SPOILER FIX: Ensure spoiler backgrounds are always applied regardless of pseudo-class cascade
+        // This fixes the issue where spoilers show background on hover but not on initial display
+        if (styling.isSpoiler) {
+            // Get the base styling directly from link store to ensure spoiler background is preserved
+            Mudlet::HyperlinkStyling baseStyling = mLinkStore.getStyling(linkIndex);
+            if (baseStyling.hasBackgroundColor) {
+                // For spoilers, ALWAYS use the base background that was auto-generated
+                // Ignore whatever the pseudo-class cascade decided
+                styling.backgroundColor = baseStyling.backgroundColor;
+                styling.hasBackgroundColor = true;
+                styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] SPOILER FIX: Forced spoiler background" << baseStyling.backgroundColor.name() 
+                         << "over effective background" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
+                         << "for link" << linkIndex;
+#endif
+            }
+        }
 
         return styling;
     }
@@ -6593,6 +6535,79 @@ void TBuffer::setLinkSelected(int linkIndex, bool selected)
 bool TBuffer::isLinkSelected(int linkIndex) const
 {
     return mLinkSelectionState.value(linkIndex, false);
+}
+
+void TBuffer::revealSpoilerLink(int linkIndex)
+{
+    if (!mLinkOriginalText.contains(linkIndex)) {
+        return;
+    }
+
+    QString originalText = mLinkOriginalText[linkIndex];
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Revealing spoiler link" << linkIndex << "with text:" << originalText;
+#endif
+
+    if (!mLinkStore.hasStyling(linkIndex)) {
+        return;
+    }
+
+    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+    
+    if (styling.isSpoiler) {
+        QStringList hints = mLinkStore.getHintsConst(linkIndex);
+        if (!hints.isEmpty() && hints.first() == QObject::tr("Click to reveal")) {
+            mLinkStore.getHints(linkIndex).clear();
+            
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Cleared auto-generated 'Click to reveal' tooltip for spoiler link" << linkIndex;
+#endif
+        }
+
+        if (styling.hasBackgroundColor && mLinkOriginalBackgrounds.contains(linkIndex)) {
+            QColor originalBackground = mLinkOriginalBackgrounds[linkIndex];
+            styling.backgroundColor = originalBackground;
+            
+            mLinkStore.setStyling(linkIndex, styling);
+            
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Restored original background color for spoiler link" << linkIndex;
+#endif
+        }
+    }
+
+    // Find all characters with this link index and restore their original text
+    int charIndex = 0;
+    for (size_t lineNum = 0; lineNum < buffer.size(); ++lineNum) {
+        auto& line = buffer[lineNum];
+        QString lineText = lineBuffer.at(static_cast<int>(lineNum));
+        bool lineModified = false;
+        
+        for (size_t charPos = 0; charPos < line.size(); ++charPos) {
+            if (line[charPos].linkIndex() == linkIndex && charIndex < originalText.length()) {
+                // Replace the space character with the original character
+                QChar originalChar = originalText[charIndex];
+                if (charPos < static_cast<size_t>(lineText.length())) {
+                    lineText[static_cast<int>(charPos)] = originalChar;
+                    lineModified = true;
+                }
+                charIndex++;
+            }
+        }
+        
+        if (lineModified) {
+            lineBuffer[static_cast<int>(lineNum)] = lineText;
+        }
+    }
+
+    updateLinkCharacters(linkIndex);
+
+    mLinkOriginalText.remove(linkIndex);
+    
+    if (mpConsole) {
+        mpConsole->update();
+    }
 }
 
 void TBuffer::clearGroupSelection(const QString& group, const QString& exceptValue)

@@ -458,6 +458,8 @@ private:
     void initializeOSC8TooltipFeature();
     void initializeOSC8VisibilityFeature();
     void initializeOSC8SelectionFeature();
+    void initializeOSC8SpoilerFeature();
+    void initializeOSC8DisabledFeature();
 
     // OSC 8 hyperlink managers
     std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;

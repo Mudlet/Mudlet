@@ -182,6 +182,8 @@ struct HyperlinkStyling {
     };
 
     VisibilitySettings visibility;
+
+    bool isSpoiler = false;
 };
 
 } // namespace Mudlet
@@ -658,10 +660,11 @@ private:
 
     // Link state tracking for interactive pseudo-classes
     QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
-    QMap<int, bool> mVisitedLinks; // Track which links have been visited (base state)
-    QMap<int, bool> mLinkSelectionState; // Track which links are selected (base state)
-    QMap<int, QColor> mLinkOriginalBackgrounds; // Track original background color per link
-    QMap<int, TChar> mLinkOriginalCharacters; // Track original ANSI formatting per link
+    QMap<int, bool> mVisitedLinks;
+    QMap<int, bool> mLinkSelectionState;
+    QMap<int, QColor> mLinkOriginalBackgrounds;
+    QMap<int, TChar> mLinkOriginalCharacters;
+    QMap<int, QString> mLinkOriginalText;
     int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
     int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
     int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
@@ -684,13 +687,15 @@ public:
     void setHoveredLink(int linkIndex);
     void setActiveLink(int linkIndex);
     void setFocusedLink(int linkIndex);
-    void markLinkAsVisited(int linkIndex); // Mark a link as visited (base state)
-    bool isLinkVisited(int linkIndex) const; // Check if link has been visited
-    void setLinkSelected(int linkIndex, bool selected); // Set link selected state
-    bool isLinkSelected(int linkIndex) const; // Check if link is selected
-    void clearGroupSelection(const QString& group, const QString& exceptValue); // Clear selection for group except specified value
-    void applyPendingSelectionStyling(); // Apply queued selection styling after buffer commit
-    void updateLinkCharacters(int linkIndex); // Update all TChar objects that belong to a specific link with effective styling
+    void markLinkAsVisited(int linkIndex);
+    bool isLinkVisited(int linkIndex) const;
+    void setLinkSelected(int linkIndex, bool selected);
+    bool isLinkSelected(int linkIndex) const;
+    void revealSpoilerLink(int linkIndex);
+    bool isSpoilerUnrevealed(int linkIndex) const { return mLinkOriginalText.contains(linkIndex); }
+    void clearGroupSelection(const QString& group, const QString& exceptValue);
+    void applyPendingSelectionStyling();
+    void updateLinkCharacters(int linkIndex);
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
