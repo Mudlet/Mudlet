@@ -25,6 +25,7 @@
 #include <QMap>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 
 class TConsole;
@@ -66,7 +67,7 @@ public:
     void registerShorthand(const QString& shorthand, const QString& fullName, QObject* owner = nullptr);
 
     // Unregister all shortcuts owned by a specific object
-    void unregisterOwner(QObject* owner);
+    void unregisterOwner(QObject* owner, const QString& ownerName = QString());
 
     // Expand shorthand properties to full names
     QMap<QString, QString> expandShorthand(const QMap<QString, QString>& params) const;
@@ -91,11 +92,7 @@ public:
     bool hasPreset(const QString& name) const;
     void clearPresets();
 
-    // Deep merge for config overrides (preset as base, override on top)
-    // Returns merged JSON object following CSS cascade rules:
-    // - Nested objects: properties combine, overlay wins on conflicts
-    // - Arrays: overlay completely replaces base array
-    // - Primitives: overlay value wins
+    // Combine two configurations with override taking precedence
     QJsonObject mergeConfigs(const QJsonObject& base, const QJsonObject& overlay) const;
 
 signals:
@@ -105,23 +102,15 @@ signals:
     void presetsCleared();
 
 private:
-    // Shorthand registry: shorthand → (fullName, owner)
-    // Owner is nullptr for core shortcuts (always available)
-    // Owner is QPointer for feature shortcuts (auto-cleanup when feature destroyed)
     QHash<QString, ShorthandEntry> mShorthandRegistry;
 
-    // Preset property registry: propertyName → {owner, isCore}
-    // Core properties are always valid, non-core depend on owner validity
     QHash<QString, PresetPropertyEntry> mPresetPropertyRegistry;
 
-    // Preset storage: name → config JSON
-    // Session-scoped: cleared when connection closes
     QHash<QString, QJsonObject> mPresets;
 
-    // Maximum recursion depth for deepMerge to prevent stack overflow
-    static constexpr int MAX_MERGE_DEPTH = 32;
+    QSet<QObject*> mConnectedOwners;
 
-    // Helper for deep merge algorithm (recursive)
+    static constexpr int MAX_MERGE_DEPTH = 32;
     QJsonObject deepMerge(const QJsonObject& base, const QJsonObject& overlay, int depth = 0) const;
 };
 

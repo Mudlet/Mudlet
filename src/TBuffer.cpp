@@ -2629,7 +2629,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             // Visibility currently only supports single-line hyperlinks
             // Multi-line links will not have visibility management applied
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings 
-                && mpConsole && mpConsole->mpHyperlinkVisibilityManager
+                && mpConsole && mpConsole->getHyperlinkVisibilityManager()
                 && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
                 
                 int currentColumn = mMudLine.length();
@@ -2646,7 +2646,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                              << "length:" << linkLength
                              << "text:" << linkText;
 #endif
-                    bool shouldStartConcealed = mpConsole->mpHyperlinkVisibilityManager->registerHyperlink(
+                    bool shouldStartConcealed = mpConsole->getHyperlinkVisibilityManager()->registerHyperlink(
                         mCurrentHyperlinkLinkId,
                         mCurrentHyperlinkStartLine,
                         mCurrentHyperlinkStartColumn,
@@ -2722,13 +2722,13 @@ void TBuffer::decodeOSC(const QString& sequence)
                 qDebug() << "[OSC] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
 #endif
                 
-                if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
+                if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole && mpConsole->getHyperlinkCompactManager()) {
                     // Parse the JSON configuration
                     QJsonParseError parseError;
                     QJsonDocument doc = QJsonDocument::fromJson(configParam.toUtf8(), &parseError);
                     
                     if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
-                        mpConsole->mpCompactSyntaxManager->registerPreset(presetName, doc.object());
+                        mpConsole->getHyperlinkCompactManager()->registerPreset(presetName, doc.object());
 #if defined(DEBUG_OSC_PROCESSING)
                         qDebug() << "[OSC] Successfully registered preset:" << presetName;
 #endif
@@ -2743,7 +2743,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() 
                              << "configParam empty:" << configParam.isEmpty()
                              << "mpConsole:" << (mpConsole != nullptr)
-                             << "mpCompactSyntaxManager:" << (mpConsole && mpConsole->mpCompactSyntaxManager != nullptr);
+                             << "mpHyperlinkCompactManager:" << (mpConsole && mpConsole->getHyperlinkCompactManager() != nullptr);
 #endif
                 }
                 // Preset definitions don't create visible hyperlinks
@@ -2922,15 +2922,15 @@ void TBuffer::decodeOSC(const QString& sequence)
             mLinkOriginalBackgrounds[mCurrentHyperlinkLinkId] = mBackGroundColor;
 
             // Initialize selection state if this link has selection settings
-            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpConsole && mpConsole->mpSelectionManager) {
+            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpConsole && mpConsole->getHyperlinkSelectionManager()) {
                 const QString& group = mCurrentHyperlinkStyling.selection.group;
                 const QString& value = mCurrentHyperlinkStyling.selection.value;
                 
                 // Configure group exclusivity mode
-                mpConsole->mpSelectionManager->setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
+                mpConsole->getHyperlinkSelectionManager()->setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
                 
                 // Register the link with the selection manager
-                mpConsole->mpSelectionManager->setSelected(group, value, 
+                mpConsole->getHyperlinkSelectionManager()->setSelected(group, value, 
                     mCurrentHyperlinkStyling.selection.selected);
                 
                 // Update link selection state (visual styling will be applied when link closes)
@@ -3058,8 +3058,8 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     if (!presetName.isEmpty() || !configJson.isEmpty()) {
         QJsonObject baseConfig;
 
-        if (!presetName.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
-            baseConfig = mpConsole->mpCompactSyntaxManager->getPreset(presetName);
+        if (!presetName.isEmpty() && mpConsole && mpConsole->getHyperlinkCompactManager()) {
+            baseConfig = mpConsole->getHyperlinkCompactManager()->getPreset(presetName);
 #if defined(DEBUG_OSC_PROCESSING)
             if (!baseConfig.isEmpty()) {
                 qDebug() << "[OSC] Resolved preset" << presetName;
@@ -3083,9 +3083,9 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
             if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
                 QJsonObject overrideConfig = overrideDoc.object();
                 
-                if (!baseConfig.isEmpty() && mpConsole && mpConsole->mpCompactSyntaxManager) {
+                if (!baseConfig.isEmpty() && mpConsole && mpConsole->getHyperlinkCompactManager()) {
                     // Deep merge: override takes precedence
-                    baseConfig = mpConsole->mpCompactSyntaxManager->mergeConfigs(baseConfig, overrideConfig);
+                    baseConfig = mpConsole->getHyperlinkCompactManager()->mergeConfigs(baseConfig, overrideConfig);
 #if defined(DEBUG_OSC_PROCESSING)
                     qDebug() << "[OSC] Merged preset with override config";
 #endif
@@ -3112,7 +3112,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
 
 QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
 {
-    if (!mpConsole || !mpConsole->mpCompactSyntaxManager) {
+    if (!mpConsole || !mpConsole->getHyperlinkCompactManager()) {
         return obj; // No manager available, return unchanged
     }
     
@@ -3124,7 +3124,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
         
         QMap<QString, QString> singleKeyMap;
         singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
-        QMap<QString, QString> expandedMap = mpConsole->mpCompactSyntaxManager->expandShorthand(singleKeyMap);
+        QMap<QString, QString> expandedMap = mpConsole->getHyperlinkCompactManager()->expandShorthand(singleKeyMap);
         
         // Guard against empty or multi-key expanded maps to prevent assertion/UB
         QString resultKey;
@@ -3153,7 +3153,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
             QJsonObject toAdd = resultValue.toObject();
             
             // When both shorthand and full names exist, shorthand takes precedence
-            result[resultKey] = mpConsole->mpCompactSyntaxManager->mergeConfigs(toAdd, existing);
+            result[resultKey] = mpConsole->getHyperlinkCompactManager()->mergeConfigs(toAdd, existing);
         } else {
             result[resultKey] = resultValue;
         }
@@ -6599,14 +6599,18 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
     int maxLinkId = mLinkStore.getCurrentLinkID();
     int clearedCount = 0;
     
-    for (int linkIndex = 0; linkIndex <= maxLinkId; ++linkIndex) {
+    for (int linkIndex = 1; linkIndex <= maxLinkId; ++linkIndex) {
+        if (!mLinkStore.hasStyling(linkIndex)) {
+            continue;
+        }
+        
         auto styling = mLinkStore.getStyling(linkIndex);
         if (styling.selection.hasSelectionSettings && 
             styling.selection.group == group && 
             styling.selection.value != exceptValue) {
             
-            if (mpConsole && mpConsole->mpSelectionManager) {
-                mpConsole->mpSelectionManager->setSelected(styling.selection.group, styling.selection.value, false);
+            if (mpConsole && mpConsole->getHyperlinkSelectionManager()) {
+                mpConsole->getHyperlinkSelectionManager()->setSelected(styling.selection.group, styling.selection.value, false);
             }
             
             setLinkSelected(linkIndex, false);

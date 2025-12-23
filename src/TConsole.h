@@ -260,6 +260,11 @@ public:
     void setHorizontalScrollBar(bool);
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
+    
+    THyperlinkCompactManager* getHyperlinkCompactManager() const { return mpHyperlinkCompactManager.get(); }
+    THyperlinkSelectionManager* getHyperlinkSelectionManager() const { return mpHyperlinkSelectionManager.get(); }
+    THyperlinkVisibilityManager* getHyperlinkVisibilityManager() const { return mpHyperlinkVisibilityManager.get(); }
+    
     void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
@@ -327,16 +332,6 @@ public:
 
     // Initialised in the constructor:
     TFontAttributes mDisplayFontDetails;
-
-    // Compact syntax framework (shorthand + presets)
-    // Features plug into this system when they initialize
-    std::unique_ptr<THyperlinkCompactManager> mpCompactSyntaxManager;
-    // Manager for OSC 8 hyperlink selection state (radio/checkbox behavior)
-    std::unique_ptr<THyperlinkSelectionManager> mpSelectionManager;
-
-    // Manages hyperlink visibility (conceal/reveal) based on time delays and expire triggers
-    // (user input, GA/EOR prompt, or new output after idle gap)
-    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
@@ -463,6 +458,11 @@ private:
     void initializeOSC8TooltipFeature();
     void initializeOSC8VisibilityFeature();
     void initializeOSC8SelectionFeature();
+
+    // OSC 8 hyperlink managers
+    std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;
+    std::unique_ptr<THyperlinkSelectionManager> mpHyperlinkSelectionManager;
+    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;

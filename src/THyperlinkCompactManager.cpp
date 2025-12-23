@@ -55,10 +55,15 @@ void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const
     emit shorthandRegistered(shorthand, fullName);
 
     // Automatic cleanup: when a non-null owner is destroyed, unregister all its entries
-    if (owner) {
-        connect(owner, &QObject::destroyed, this, [this, owner]() {
-            unregisterOwner(owner);
+    // Only connect once per owner to avoid duplicate unregisterOwner() calls
+    if (owner && !mConnectedOwners.contains(owner)) {
+        // Save owner name before connecting to avoid UAF when destroyed
+        QString ownerName = owner->objectName();
+        connect(owner, &QObject::destroyed, this, [this, owner, ownerName]() {
+            mConnectedOwners.remove(owner);
+            unregisterOwner(owner, ownerName);
         });
+        mConnectedOwners.insert(owner);
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
@@ -67,7 +72,7 @@ void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const
 #endif
 }
 
-void THyperlinkCompactManager::unregisterOwner(QObject* owner)
+void THyperlinkCompactManager::unregisterOwner(QObject* owner, const QString& ownerName)
 {
     if (!owner) {
         return;
@@ -93,7 +98,9 @@ void THyperlinkCompactManager::unregisterOwner(QObject* owner)
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[CompactSyntax] Unregistered all entries for owner:" << owner->objectName();
+    // Use ownerName parameter if provided, otherwise try to safely access objectName
+    QString debugName = !ownerName.isEmpty() ? ownerName : (owner ? owner->objectName() : QStringLiteral("unknown"));
+    qDebug() << "[CompactSyntax] Unregistered all entries for owner:" << debugName;
 #endif
 }
 
@@ -149,10 +156,15 @@ void THyperlinkCompactManager::registerPresetProperty(const QString& propertyNam
     emit presetPropertyRegistered(propertyName);
 
     // Automatic cleanup: when a non-null owner is destroyed, unregister all its entries
-    if (owner) {
-        connect(owner, &QObject::destroyed, this, [this, owner]() {
-            unregisterOwner(owner);
+    // Only connect once per owner to avoid duplicate unregisterOwner() calls
+    if (owner && !mConnectedOwners.contains(owner)) {
+        // Save owner name before connecting to avoid UAF when destroyed
+        QString ownerName = owner->objectName();
+        connect(owner, &QObject::destroyed, this, [this, owner, ownerName]() {
+            mConnectedOwners.remove(owner);
+            unregisterOwner(owner, ownerName);
         });
+        mConnectedOwners.insert(owner);
     }
 
 #if defined(DEBUG_OSC_PROCESSING)

@@ -132,6 +132,11 @@ Mudlet::HyperlinkStyling TLinkStore::getStyling(int id) const
     return mStylingStore.value(id, Mudlet::HyperlinkStyling());
 }
 
+bool TLinkStore::hasStyling(int id) const
+{
+    return mStylingStore.contains(id);
+}
+
 QList<int> TLinkStore::getLinkIdsByGroupValue(const QString& group, const QString& value) const
 {
     QString key = group + qsl(":") + value;

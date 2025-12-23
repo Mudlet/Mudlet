@@ -49,16 +49,11 @@ struct TrackedHyperlink {
         RevealThenConceal  // Combined: reveal first, then conceal after click
     };
     
-    // Phase tracking for RevealThenConceal workflow
-    // State transitions: Initial → Revealed → WaitingToConceal → Concealed
-    // - Initial → Revealed: triggered by reveal trigger (prompt/output/input)
-    // - Revealed → WaitingToConceal: triggered by link click
-    // - WaitingToConceal → Concealed: triggered by delay timeout or expire trigger (prompt/output/input)
     enum class Phase {
-        Initial,           // Waiting for reveal trigger
-        Revealed,          // Revealed, waiting for click to start conceal
-        WaitingToConceal,  // Click received, waiting for delay/trigger to conceal
-        Concealed          // Final concealed state
+        Initial,
+        Revealed,
+        WaitingToConceal,
+        Concealed
     };
 
     Action action = Action::None;
@@ -81,20 +76,18 @@ class THyperlinkVisibilityManager : public QObject
     Q_OBJECT
 
 public:
-    // Constructor: pConsole for access only (not ownership), parent=nullptr for unique_ptr ownership
     explicit THyperlinkVisibilityManager(TConsole* pConsole);
     ~THyperlinkVisibilityManager() override;
 
-    // Returns true if the link should start concealed (text should be replaced with spaces)
+    // Returns true if link should start hidden
     bool registerHyperlink(int linkId, int lineNumber, int startColumn, int length,
                           const QString& originalText, const Mudlet::HyperlinkStyling& styling);
     void unregisterHyperlink(int linkId);
     void onLinkClicked(int linkId);
     
-    // Expire triggers
-    void onUserInput();         // Called when user submits a command (Enter key)
-    void onPromptReceived();    // Called when GA/EOR telnet signal is received
-    void onDataReceived();      // Called when new data is received (for output gap detection)
+    void onUserInput();
+    void onPromptReceived();
+    void onDataReceived();
     
     void concealLink(int linkId);
     void revealLink(int linkId);

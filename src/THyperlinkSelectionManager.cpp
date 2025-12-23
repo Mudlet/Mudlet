@@ -109,6 +109,9 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
         const int suffixLength = sendCmdLineSuffix.length();
         QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
         QString separator = command.contains('?') ? qsl("&") : qsl("?");
+        // Remove existing selected parameter if present
+        QRegularExpression selectedParam(QStringLiteral("[?&]selected=(true|false)"));
+        command.remove(selectedParam);
         command += separator + qsl("selected=") + (isSelected ? qsl("true") : qsl("false"));
         QString result = qsl("sendCmdLine([[%1]])").arg(command);
 #if defined(DEBUG_OSC_PROCESSING)
@@ -137,10 +140,11 @@ void THyperlinkSelectionManager::setGroupExclusive(const QString& group, bool ex
 {
     mGroupExclusivity[group] = exclusive;
     
-    // If switching to exclusive mode and multiple items are selected, keep only the first
     if (exclusive && mSelectionState.contains(group)) {
+        QStringList members = getGroupMembers(group);
+        members.sort();
+        
         bool foundFirst = false;
-        const QStringList members = getGroupMembers(group);
         for (const QString& member : members) {
             if (isSelected(group, member)) {
                 if (!foundFirst) {

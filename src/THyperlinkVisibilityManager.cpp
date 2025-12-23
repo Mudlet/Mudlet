@@ -680,7 +680,10 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
         // before deleting it. This prevents other links from being adjusted to the wrong line
         // and accidentally triggering on content they shouldn't affect.
         
+        // Capture fields from link before removal to avoid dangling reference
         const int targetLine = link.lineNumber;
+        const int currentLinkId = link.linkId;
+        
         if (targetLine >= 0 && targetLine < buffer.lineBuffer.size()) {
             // First, collect all link IDs that are on the same line as the one being deleted
             QList<int> linksOnTargetLine;
@@ -692,7 +695,7 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             
             // Unregister all links on the target line to prevent interference
             for (int linkId : linksOnTargetLine) {
-                if (linkId != link.linkId) { // Don't remove the current link yet
+                if (linkId != currentLinkId) { // Don't remove the current link yet
                     mTrackedLinks.remove(linkId);
 #if defined(DEBUG_OSC_PROCESSING)
                     qDebug().noquote() << "[OSC] Pre-emptively unregistered co-located link" << linkId;
@@ -703,8 +706,7 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             // Now delete the line
             buffer.deleteLine(targetLine);
             
-            // Remove the current link (it's now invalid)
-            mTrackedLinks.remove(link.linkId);
+            mTrackedLinks.remove(currentLinkId);
             
             // SAFE line number adjustment: Only adjust links that are on lines > targetLine
             // Update in-place to avoid copying the entire map
@@ -793,15 +795,14 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
             lineText.replace(link.startColumn, link.length, link.originalText);
             // Restore the link indices so the text is clickable again
             buffer.restoreLinkIndices(link.lineNumber, link.startColumn, link.length, link.linkId);
-            // Only mark as not concealed after successful text restoration
             link.isConcealed = false;
+            
+            if (mpConsole->mUpperPane) {
+                mpConsole->mUpperPane->update();
+            }
+            if (mpConsole->mLowerPane) {
+                mpConsole->mLowerPane->update();
+            }
         }
-    }
-
-    if (mpConsole->mUpperPane) {
-        mpConsole->mUpperPane->update();
-    }
-    if (mpConsole->mLowerPane) {
-        mpConsole->mLowerPane->update();
     }
 }
