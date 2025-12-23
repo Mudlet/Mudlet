@@ -33,74 +33,25 @@ THyperlinkCompactManager::THyperlinkCompactManager()
 
 THyperlinkCompactManager::~THyperlinkCompactManager() = default;
 
-void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const QString& fullName, QObject* owner)
+void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const QString& fullName)
 {
     if (shorthand.isEmpty() || fullName.isEmpty()) {
         qWarning() << "THyperlinkCompactManager::registerShorthand: empty shorthand or fullName";
         return;
     }
 
-    // Check for existing entry and warn about collision
     if (mShorthandRegistry.contains(shorthand)) {
         const ShorthandEntry& existing = mShorthandRegistry.value(shorthand);
         qWarning() << "THyperlinkCompactManager::registerShorthand: Replacing existing shorthand"
                    << shorthand << "→" << existing.fullName
-                   << "(owner:" << (existing.owner ? existing.owner->objectName() : "core") << ")"
-                   << "with new mapping:" << shorthand << "→" << fullName
-                   << "(owner:" << (owner ? owner->objectName() : "core") << ")";
+                   << "with new mapping:" << shorthand << "→" << fullName;
     }
 
-    bool isCore = (owner == nullptr);
-    mShorthandRegistry.insert(shorthand, ShorthandEntry(fullName, owner, isCore));
+    mShorthandRegistry.insert(shorthand, ShorthandEntry(fullName));
     emit shorthandRegistered(shorthand, fullName);
 
-    // Automatic cleanup: when a non-null owner is destroyed, unregister all its entries
-    // Only connect once per owner to avoid duplicate unregisterOwner() calls
-    if (owner && !mConnectedOwners.contains(owner)) {
-        // Save owner name before connecting to avoid UAF when destroyed
-        QString ownerName = owner->objectName();
-        connect(owner, &QObject::destroyed, this, [this, owner, ownerName]() {
-            mConnectedOwners.remove(owner);
-            unregisterOwner(owner, ownerName);
-        });
-        mConnectedOwners.insert(owner);
-    }
-
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[CompactSyntax] Registered shorthand:" << shorthand << "→" << fullName
-             << "(owner:" << (owner ? owner->objectName() : "core") << ")";
-#endif
-}
-
-void THyperlinkCompactManager::unregisterOwner(QObject* owner, const QString& ownerName)
-{
-    if (!owner) {
-        return;
-    }
-
-    auto it = mShorthandRegistry.begin();
-    while (it != mShorthandRegistry.end()) {
-        if (it.value().owner == owner) {
-            it = mShorthandRegistry.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
-    // Remove all preset properties owned by this object
-    auto it2 = mPresetPropertyRegistry.begin();
-    while (it2 != mPresetPropertyRegistry.end()) {
-        if (it2.value().owner == owner) {
-            it2 = mPresetPropertyRegistry.erase(it2);
-        } else {
-            ++it2;
-        }
-    }
-
-#if defined(DEBUG_OSC_PROCESSING)
-    // Use ownerName parameter if provided, otherwise try to safely access objectName
-    QString debugName = !ownerName.isEmpty() ? ownerName : (owner ? owner->objectName() : QStringLiteral("unknown"));
-    qDebug() << "[CompactSyntax] Unregistered all entries for owner:" << debugName;
+    qDebug() << "[CompactSyntax] Registered shorthand:" << shorthand << "→" << fullName;
 #endif
 }
 
@@ -112,77 +63,42 @@ QMap<QString, QString> THyperlinkCompactManager::expandShorthand(const QMap<QStr
         const QString& key = it.key();
 
         if (mShorthandRegistry.contains(key)) {
-            const auto& registration = mShorthandRegistry.value(key);
-
-            if (registration.isCore || !registration.owner.isNull()) {
-                expanded.insert(registration.fullName, it.value());
+            const QString& fullName = mShorthandRegistry.value(key).fullName;
+            expanded.insert(fullName, it.value());
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[CompactSyntax] Expanded shorthand:" << key << "→" << registration.fullName;
+            qDebug() << "[CompactSyntax] Expanded shorthand:" << key << "→" << fullName;
 #endif
-                continue;
-            }
+        } else {
+            expanded.insert(key, it.value());
         }
-        expanded.insert(key, it.value());
     }
 
     return expanded;
 }
 
-void THyperlinkCompactManager::registerPresetProperty(const QString& propertyName, QObject* owner, bool isCore)
+void THyperlinkCompactManager::registerPresetProperty(const QString& propertyName)
 {
     if (propertyName.isEmpty()) {
         qWarning() << "THyperlinkCompactManager::registerPresetProperty: empty propertyName";
         return;
     }
 
-    // Non-core properties require a valid owner
-    if (!isCore && !owner) {
-        qWarning() << "THyperlinkCompactManager::registerPresetProperty: non-core property"
-                   << propertyName << "requires a valid owner (owner is null)";
-        return;
-    }
-
-    // Check for existing entry and warn about collision
     if (mPresetPropertyRegistry.contains(propertyName)) {
-        const PresetPropertyEntry& existing = mPresetPropertyRegistry.value(propertyName);
         qWarning() << "THyperlinkCompactManager::registerPresetProperty: Replacing existing preset property"
-                   << propertyName
-                   << "(owner:" << (existing.owner ? existing.owner->objectName() : "core") << ")"
-                   << "with new registration"
-                   << "(owner:" << (owner ? owner->objectName() : "core") << ")";
+                   << propertyName;
     }
 
-    mPresetPropertyRegistry.insert(propertyName, PresetPropertyEntry(owner, isCore));
+    mPresetPropertyRegistry.insert(propertyName, PresetPropertyEntry());
     emit presetPropertyRegistered(propertyName);
 
-    // Automatic cleanup: when a non-null owner is destroyed, unregister all its entries
-    // Only connect once per owner to avoid duplicate unregisterOwner() calls
-    if (owner && !mConnectedOwners.contains(owner)) {
-        // Save owner name before connecting to avoid UAF when destroyed
-        QString ownerName = owner->objectName();
-        connect(owner, &QObject::destroyed, this, [this, owner, ownerName]() {
-            mConnectedOwners.remove(owner);
-            unregisterOwner(owner, ownerName);
-        });
-        mConnectedOwners.insert(owner);
-    }
-
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[CompactSyntax] Registered preset property:" << propertyName
-             << "(owner:" << (owner ? owner->objectName() : "none")
-             << ", isCore:" << isCore << ")";
+    qDebug() << "[CompactSyntax] Registered preset property:" << propertyName;
 #endif
 }
 
 bool THyperlinkCompactManager::isPresetProperty(const QString& propertyName) const
 {
-    if (!mPresetPropertyRegistry.contains(propertyName)) {
-        return false;
-    }
-
-    const PresetPropertyEntry& entry = mPresetPropertyRegistry.value(propertyName);
-    // Valid if core property OR owner still exists
-    return entry.isCore || !entry.owner.isNull();
+    return mPresetPropertyRegistry.contains(propertyName);
 }
 
 void THyperlinkCompactManager::registerPreset(const QString& name, const QJsonObject& config)

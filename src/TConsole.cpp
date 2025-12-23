@@ -2728,24 +2728,24 @@ void TConsole::initializeOSC8StyleFeature()
     }
 
     // Register shorthands for style property names
-    mpHyperlinkCompactManager->registerShorthand(qsl("s"), qsl("style"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("c"), qsl("color"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("bg"), qsl("bg"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("b"), qsl("bold"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("i"), qsl("italic"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("u"), qsl("underline"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("o"), qsl("overline"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("st"), qsl("strikethrough"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("tdc"), qsl("text-decoration-color"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("h"), qsl("hover"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("a"), qsl("active"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("f"), qsl("focus"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("fv"), qsl("focus-visible"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("vi"), qsl("visited"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("l"), qsl("link"), this);
-    mpHyperlinkCompactManager->registerShorthand(qsl("al"), qsl("any-link"), this);
+    mpHyperlinkCompactManager->registerShorthand(qsl("s"), qsl("style"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("c"), qsl("color"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("bg"), qsl("bg"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("b"), qsl("bold"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("i"), qsl("italic"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("u"), qsl("underline"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("o"), qsl("overline"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("st"), qsl("strikethrough"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("tdc"), qsl("text-decoration-color"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("h"), qsl("hover"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("a"), qsl("active"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("f"), qsl("focus"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("fv"), qsl("focus-visible"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("vi"), qsl("visited"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("l"), qsl("link"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("al"), qsl("any-link"));
 
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("style"), this, true);
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("style"));
 }
 
 void TConsole::initializeOSC8MenuFeature()
@@ -2755,9 +2755,9 @@ void TConsole::initializeOSC8MenuFeature()
     }
 
     // Register shorthand for menu property
-    mpHyperlinkCompactManager->registerShorthand(qsl("m"), qsl("menu"), this);
+    mpHyperlinkCompactManager->registerShorthand(qsl("m"), qsl("menu"));
 
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("menu"), this, true);
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("menu"));
 }
 
 void TConsole::initializeOSC8TooltipFeature()
@@ -2767,9 +2767,9 @@ void TConsole::initializeOSC8TooltipFeature()
     }
 
     // Register shorthand for tooltip property
-    mpHyperlinkCompactManager->registerShorthand(qsl("t"), qsl("tooltip"), this);
+    mpHyperlinkCompactManager->registerShorthand(qsl("t"), qsl("tooltip"));
 
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("tooltip"), this, true);
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("tooltip"));
 }
 
 void TConsole::initializeOSC8VisibilityFeature()
@@ -2779,9 +2779,9 @@ void TConsole::initializeOSC8VisibilityFeature()
     }
 
     // Register shorthand for visibility property
-    mpHyperlinkCompactManager->registerShorthand(qsl("v"), qsl("visibility"), this);
+    mpHyperlinkCompactManager->registerShorthand(qsl("v"), qsl("visibility"));
 
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("visibility"), this, true);
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("visibility"));
 }
 
 void TConsole::initializeOSC8SelectionFeature()
@@ -2791,7 +2791,7 @@ void TConsole::initializeOSC8SelectionFeature()
     }
 
     // Register shorthand for selection property
-    mpHyperlinkCompactManager->registerShorthand(qsl("sel"), qsl("selection"), this);
+    mpHyperlinkCompactManager->registerShorthand(qsl("sel"), qsl("selection"));
 
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("selection"), this, true);
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("selection"));
 }

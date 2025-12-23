@@ -24,29 +24,21 @@
 #include <QJsonObject>
 #include <QMap>
 #include <QObject>
-#include <QPointer>
-#include <QSet>
 #include <QString>
 
 class TConsole;
 
 // Registry entry for preset properties
 struct PresetPropertyEntry {
-    QPointer<QObject> owner;
-    bool isCore;
-    
-    PresetPropertyEntry() : owner(nullptr), isCore(false) {}
-    PresetPropertyEntry(QObject* o, bool core) : owner(o), isCore(core) {}
+    PresetPropertyEntry() {}
 };
 
 // Registry entry for shorthand mappings
 struct ShorthandEntry {
     QString fullName;
-    QPointer<QObject> owner;
-    bool isCore;
     
-    ShorthandEntry() : owner(nullptr), isCore(false) {}
-    ShorthandEntry(const QString& full, QObject* o, bool core) : fullName(full), owner(o), isCore(core) {}
+    ShorthandEntry() {}
+    ShorthandEntry(const QString& full) : fullName(full) {}
 };
 
 // Pure plugin framework for OSC 8 hyperlink compact syntax
@@ -63,11 +55,7 @@ public:
     ~THyperlinkCompactManager();
 
     // Register a shorthand expansion (e.g., "s" → "style")
-    // Owner parameter enables automatic cleanup when feature is destroyed
-    void registerShorthand(const QString& shorthand, const QString& fullName, QObject* owner = nullptr);
-
-    // Unregister all shortcuts owned by a specific object
-    void unregisterOwner(QObject* owner, const QString& ownerName = QString());
+    void registerShorthand(const QString& shorthand, const QString& fullName);
 
     // Expand shorthand properties to full names
     QMap<QString, QString> expandShorthand(const QMap<QString, QString>& params) const;
@@ -77,7 +65,7 @@ public:
     QStringList getRegisteredShorthands() const { return mShorthandRegistry.keys(); }
 
     // Register a property as preset-aware (allows it to be included in presets)
-    void registerPresetProperty(const QString& propertyName, QObject* owner = nullptr, bool isCore = false);
+    void registerPresetProperty(const QString& propertyName);
 
     // Check if a property can be used in presets
     bool isPresetProperty(const QString& propertyName) const;
@@ -107,8 +95,6 @@ private:
     QHash<QString, PresetPropertyEntry> mPresetPropertyRegistry;
 
     QHash<QString, QJsonObject> mPresets;
-
-    QSet<QObject*> mConnectedOwners;
 
     static constexpr int MAX_MERGE_DEPTH = 32;
     QJsonObject deepMerge(const QJsonObject& base, const QJsonObject& overlay, int depth = 0) const;
