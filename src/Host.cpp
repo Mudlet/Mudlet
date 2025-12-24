@@ -538,7 +538,9 @@ void Host::autoSaveMap()
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
             if (!mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
-                postMessage(tr("[ ALERT ] - Map autosave failed. Please save your map manually."));
+                mpMap->setSaveError(true);
+            } else {
+                mpMap->setSaveError(false);
             }
 #if defined(DEBUG_MAPAUTOSAVE)
         } else {

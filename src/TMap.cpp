@@ -3463,6 +3463,14 @@ void TMap::setUnsaved(const char* fromWhere)
     mUnsavedMap = true;
 }
 
+void TMap::setSaveError(bool state)
+{
+    if (mSaveError != state) {
+        mSaveError = state;
+        emit signal_saveErrorChanged(state);
+    }
+}
+
 void TMap::setDefaultAreaShown(bool state)
 {
     if (mShowDefaultArea != state) {
