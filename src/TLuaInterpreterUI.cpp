@@ -968,6 +968,17 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderColor
+int TLuaInterpreter::getBorderColor(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QColor color = host.mpConsole->mpMainFrame->palette().color(QPalette::Window);
+    lua_pushnumber(L, color.red());
+    lua_pushnumber(L, color.green());
+    lua_pushnumber(L, color.blue());
+    return 3;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
 int TLuaInterpreter::getClipboardText(lua_State* L)
 {
