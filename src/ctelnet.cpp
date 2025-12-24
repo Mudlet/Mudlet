@@ -4285,19 +4285,21 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    // List of MXP startup indicators
-    static const std::vector<std::string> mxpIndicators = {
-        "<version>", "<support>",
-        "<!element", "<!entity", "<!attlist", "<!tag",
-        "<send ", "<a ", "<expire ", "<sound ", "<music ", "<var ", "<color "
+    // MXP escape sequences are the ONLY safe detection method.
+    // Text-based tags like <version>, <send>, etc. can be faked by players
+    // using illusions in games like IRE MUDs, which would cause false positives.
+    // ESC sequences contain control character 0x1B which cannot be typed/illusioned.
+    // Per MXP spec: "To ensure that tags are difficult to send by MUD players,
+    // an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
+    // Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
+    //              5=lock open, 6=lock secure, 7=lock locked
+    static const std::vector<std::string> mxpEscapes = {
+        "\x1B[0z", "\x1B[1z", "\x1B[2z", "\x1B[3z",
+        "\x1B[4z", "\x1B[5z", "\x1B[6z", "\x1B[7z"
     };
 
-    // Convert line to lower-case for case-insensitive search
-    std::string lowerLine = line;
-    std::transform(lowerLine.begin(), lowerLine.end(), lowerLine.begin(), ::tolower);
-
-    for (const auto& indicator : mxpIndicators) {
-        if (lowerLine.find(indicator) != std::string::npos) {
+    for (const auto& esc : mxpEscapes) {
+        if (line.find(esc) != std::string::npos) {
             // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
             // Re-apply secure mode without showing the auto-enable message
             if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
@@ -4305,18 +4307,6 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
                 return;
             }
             // Otherwise, this is the first time we're seeing MXP, so auto-enable it
-            autoEnableMXPProcessor();
-            return;
-        }
-    }
-
-    // MXP escape tags (case-sensitive, as they are control codes)
-    static const std::vector<std::string> mxpEscapes = {
-        "\x1B[0z", "\x1B[1z", "\x1B[2z", "\x1B[3z", "\x1B[4z"
-    };
-
-    for (const auto& esc : mxpEscapes) {
-        if (line.find(esc) != std::string::npos) {
             autoEnableMXPProcessor();
             return;
         }
