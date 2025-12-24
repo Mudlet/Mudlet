@@ -537,8 +537,9 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-            mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")));
+            if (!mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+                postMessage(tr("[ ALERT ] - Map autosave failed. Please save your map manually."));
+            }
 #if defined(DEBUG_MAPAUTOSAVE)
         } else {
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save requested at:" << nowString << " but declined whilst \"Host::mIsProfileLoadingSequence\" flag set.";
