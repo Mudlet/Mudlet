@@ -659,7 +659,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
     checkBox_mVersionInTTYPE->setChecked(pHost->mVersionInTTYPE);
-    checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
+    checkBox_mForceMXPProcessorOff->setChecked(pHost->getForceMXPProcessorOff());
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
@@ -1473,7 +1473,7 @@ void dlgProfilePreferences::clearHostDetails()
     edbeePreviewWidget->textDocument()->setText(QString());
 
     checkBox_mVersionInTTYPE->setChecked(false);
-    checkBox_mForceMXPProcessorOn->setChecked(false);
+    checkBox_mForceMXPProcessorOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
     checkBox_drawUpperLowerLevels->setChecked(false);
@@ -3012,7 +3012,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
-        pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
+        pHost->setForceMXPProcessorOff(checkBox_mForceMXPProcessorOff->isChecked());
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;

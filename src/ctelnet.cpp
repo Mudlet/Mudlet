@@ -2284,17 +2284,21 @@ void cTelnet::autoEnableTTYPEVersion()
 // Auto-enable MXP processor when indicators are detected
 void cTelnet::autoEnableMXPProcessor()
 {
+    if (mpHost->getForceMXPProcessorOff()) {
+        return;
+    }
+
     mpHost->mPromptedForMXPProcessorOn = true;
 
     // Automatically enable MXP processing
-    mpHost->setForceMXPProcessorOn(true);
+    mpHost->mMxpProcessor.enable();
 
     // Games that auto-enable MXP (without telnet negotiation) typically use
     // IRE-style implementation that doesn't send mode switches but uses
     // secure tags. Lock to secure mode for compatibility.
     // Properly-negotiated MXP games will use mode switches as needed.
     mpHost->mMxpProcessor.setMode(6); // Lock secure mode
-    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings > Special Options."));
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can force it off in Settings > Special Options."));
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
@@ -2622,15 +2626,19 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             if (!mpHost->mEnableMXP) {
                 sendTelnetOption(TN_DONT, OPT_MXP);
-
-                if (!mpHost->getForceMXPProcessorOn()) {
-                    mpHost->mMxpProcessor.disable();
-                }
+                mpHost->mMxpProcessor.disable();
 
                 if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
                 }
 
+                enableMXP = false;
+                break;
+            }
+
+            if (mpHost->getForceMXPProcessorOff()) {
+                sendTelnetOption(TN_DONT, OPT_MXP);
+                mpHost->mMxpProcessor.disable();
                 enableMXP = false;
                 break;
             }
@@ -2792,11 +2800,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             if (option == OPT_MXP) {
                 // MXP got turned off
                 enableMXP = false;
-
-                if (!mpHost->getForceMXPProcessorOn()) {
-                    mpHost->mMxpProcessor.disable();
-                }
-
+                mpHost->mMxpProcessor.disable();
                 raiseProtocolEvent("sysProtocolDisabled", "MXP");
             }
 
@@ -2974,17 +2978,14 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
 
         if (option == OPT_MXP) {
-            if (mpHost->mEnableMXP) {
+            if (mpHost->mEnableMXP && !mpHost->getForceMXPProcessorOff()) {
                 enableMXP = true;
                 sendTelnetOption(TN_WILL, OPT_MXP);
                 mpHost->mMxpProcessor.enable();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
-
-                if (!mpHost->getForceMXPProcessorOn()) {
-                    mpHost->mMxpProcessor.disable();
-                }
+                mpHost->mMxpProcessor.disable();
 
                 if (enableMXP) {
                     raiseProtocolEvent("sysProtocolDisabled", "MXP");
@@ -3100,11 +3101,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             // MXP got turned off
             enableMXP = false;
-
-            if (!mpHost->getForceMXPProcessorOn()) {
-                mpHost->mMxpProcessor.disable();
-            }
-
+            mpHost->mMxpProcessor.disable();
             raiseProtocolEvent("sysProtocolDisabled", "MXP");
         }
 
@@ -4236,7 +4233,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
 
     mMudData += mud_data;
 
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOff() && !isMXPEnabled()) {
         trackMXPElementDetection(mud_data);
     }
 
@@ -4279,9 +4276,8 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    // If we've already prompted for MXP and it's not force-enabled, don't auto-detect again
-    // But if force MXP is enabled, continue to detect re-initialization
-    if (mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn()) {
+    // Don't auto-detect if force off is set or we've already prompted
+    if (mpHost->getForceMXPProcessorOff() || mpHost->mPromptedForMXPProcessorOn) {
         return;
     }
 
@@ -4300,13 +4296,6 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
     for (const auto& esc : mxpEscapes) {
         if (line.find(esc) != std::string::npos) {
-            // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
-            // Re-apply secure mode without showing the auto-enable message
-            if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
-                mpHost->mMxpProcessor.setMode(6); // Re-lock to secure mode
-                return;
-            }
-            // Otherwise, this is the first time we're seeing MXP, so auto-enable it
             autoEnableMXPProcessor();
             return;
         }
@@ -4319,10 +4308,8 @@ void cTelnet::gotRest(std::string& mud_data)
         return;
     }
 
-    // MXP detection scan
-    // Always scan when force MXP is enabled to detect re-initialization (e.g., after "config mxp on")
-    // Otherwise, only scan if MXP hasn't been prompted for and isn't telnet-negotiated
-    if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
+    // MXP detection scan - only if force off is not set, MXP hasn't been prompted for, and isn't negotiated
+    if (!mpHost->getForceMXPProcessorOff() && !mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled()) {
         trackMXPElementDetection(mud_data);
     }
 
@@ -4372,7 +4359,7 @@ void cTelnet::slot_timerPosting()
 
     mMudData += "\r";
 
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOff() && !isMXPEnabled()) {
         trackMXPElementDetection(mMudData);
     }
 

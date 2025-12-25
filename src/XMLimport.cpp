@@ -783,7 +783,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mUseProxy"), pHost->mUseProxy);
     setBoolAttribute(qsl("f3SearchEnabled"), pHost->mF3SearchEnabled);
 
-    pHost->setForceMXPProcessorOn(attributes().value(qsl("mForceMXPProcessorOn")) == YES);
+    pHost->setForceMXPProcessorOff(attributes().value(qsl("mForceMXPProcessorOff")) == YES);
     pHost->mProxyAddress = attributes().value(qsl("mProxyAddress")).toString();
 
     if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {

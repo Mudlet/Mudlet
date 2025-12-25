@@ -285,8 +285,3 @@ void TMxpMudlet::insertText(const QString& text)
         mpHost->mpConsole->buffer.translateToPlainText(textToInsert, false);
     }
 }
-
-bool TMxpMudlet::shouldLockModeToSecure() const
-{
-    return mpHost && mpHost->getForceMXPProcessorOn();
-}

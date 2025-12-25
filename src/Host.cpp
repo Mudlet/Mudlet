@@ -332,36 +332,15 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this]() {
         purgeTimer.start(1min);
-
-        if (getForceMXPProcessorOn()) {
-            mMxpProcessor.disable();
-        }
     });
     connect(&mTelnet, &cTelnet::signal_connected, this, [this]() {
         purgeTimer.stop();
-
-        if (getForceMXPProcessorOn()) {
-            mMxpProcessor.enable();
-            // When force-enabling MXP (typically for games like IRE MUDs that don't
-            // negotiate properly), lock to secure mode for compatibility
-            mMxpProcessor.setMode(6); // Lock secure mode
-            qDebug() << "MXP enabled (forced)";
-        }
     });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
-    connect(this, &Host::signal_forceMXPProcessorOnChanged, this, [this](bool enabled) {
-        if (enabled) {
-            if (!mMxpProcessor.isEnabled()) {
-                mMxpProcessor.enable();
-                // When force-enabling MXP (typically for games like IRE MUDs that don't
-                // negotiate properly), lock to secure mode for compatibility with games
-                // that use secure tags without sending mode switches
-                mMxpProcessor.setMode(6); // Lock secure mode
-                qDebug() << "MXP enabled (forced)";
-            }
-        } else if (mMxpProcessor.isEnabled() && !mTelnet.isMXPEnabled()) {
+    connect(this, &Host::signal_forceMXPProcessorOffChanged, this, [this](bool enabled) {
+        if (enabled && mMxpProcessor.isEnabled()) {
             mMxpProcessor.disable();
-            qDebug() << "MXP disabled (forced)";
+            qDebug() << "MXP disabled (force off enabled)";
         }
     });
 

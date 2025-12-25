@@ -450,11 +450,11 @@ public:
             mpConsole->setF3SearchEnabled(enabled);
         }
     }
-    bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
-    void setForceMXPProcessorOn(bool value) {
-        if (mForceMXPProcessorOn != value) {
-            mForceMXPProcessorOn = value;
-            emit signal_forceMXPProcessorOnChanged(value);
+    bool getForceMXPProcessorOff() const { return mForceMXPProcessorOff; }
+    void setForceMXPProcessorOff(bool value) {
+        if (mForceMXPProcessorOff != value) {
+            mForceMXPProcessorOff = value;
+            emit signal_forceMXPProcessorOffChanged(value);
         }
     }
     void sendCmdLine(const QString& cmd);
@@ -808,7 +808,7 @@ signals:
     void signal_saveCommandLinesHistory();
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
-    void signal_forceMXPProcessorOnChanged(bool enabled);
+    void signal_forceMXPProcessorOffChanged(bool enabled);
 
 private slots:
     void slot_purgeTemps();
@@ -1008,9 +1008,8 @@ private:
     // Whether F3 search functionality is enabled
     bool mF3SearchEnabled = false;
 
-    // Whether to force the MXP processor to be on, even if not negotiated with the
-    // MUD Server
-    bool mForceMXPProcessorOn = false;
+    // Whether to force the MXP processor to be off, to disable autodetected MXP
+    bool mForceMXPProcessorOff = false;
 
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:

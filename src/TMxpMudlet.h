@@ -145,7 +145,6 @@ public:
     
     // Get the encoding used by the connection
     QByteArray getEncoding() const override;
-    bool shouldLockModeToSecure() const override;
 
 private:
     bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const;

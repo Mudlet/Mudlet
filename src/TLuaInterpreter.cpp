@@ -7763,7 +7763,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         } },
         { qsl("askTlsAvailable"), [&](){lua_pushboolean(L, host.mAskTlsAvailable); } },
         { qsl("promptForMXPProcessorOn"), [&](){lua_pushboolean(L, host.mPromptedForMXPProcessorOn); } },
-        { qsl("specialForceMXPProcessorOn"), [&](){lua_pushboolean(L, host.getForceMXPProcessorOn()); } },
+        { qsl("specialForceMXPProcessorOff"), [&](){lua_pushboolean(L, host.getForceMXPProcessorOff()); } },
         { qsl("promptForVersionInTTYPE"), [&](){lua_pushboolean(L, host.mPromptedForVersionInTTYPE); } },
         { qsl("versionInTTYPE"), [&](){ lua_pushboolean(L, host.mVersionInTTYPE); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
