@@ -558,6 +558,8 @@ private:
     QColor parseColorValue(const QString& value);
     // Accessibility enhancements for hyperlink styling
     void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
+    // Helper function to check if OSC 8 visibility experiment is enabled
+    bool isOsc8VisibilityEnabled() const;
 
     QPointer<TConsole> mpConsole;
 

@@ -23,6 +23,7 @@
 
 #include "TBuffer.h"
 
+#include "Host.h"
 #include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -45,6 +46,16 @@
 #include <QTimer>
 #include <QRegularExpression>
 #include <QUrlQuery>
+
+namespace {
+
+// Helper to interpret JSON values as boolean
+// Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
+bool jsonBoolValue(const QJsonValue& val) {
+    return val.toBool() || (val.isDouble() && val.toDouble() != 0);
+}
+
+} // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
 : mFgColor(foreground)
@@ -2650,7 +2661,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             // Visibility currently only supports single-line hyperlinks
             // Multi-line links will not have visibility management applied
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings 
-                && mpConsole
+                && mpConsole && isOsc8VisibilityEnabled()
                 && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
                 
                 int currentColumn = mMudLine.length();
@@ -2693,6 +2704,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
                 }
             } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings
+                       && isOsc8VisibilityEnabled()
                        && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Skipping visibility registration for multi-line hyperlink"
@@ -3266,8 +3278,8 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #endif
     }
 
-    if (root.contains(qsl("spoiler")) && root[qsl("spoiler")].isBool()) {
-        styling.isSpoiler = root[qsl("spoiler")].toBool();
+    if (root.contains(qsl("spoiler"))) {
+        styling.isSpoiler = jsonBoolValue(root[qsl("spoiler")]);
         if (styling.isSpoiler) {
             styling.hasCustomStyling = true;
             
@@ -3305,8 +3317,8 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #endif
     }
 
-    if (root.contains(qsl("disabled")) && root[qsl("disabled")].isBool()) {
-        styling.selection.disabled = root[qsl("disabled")].toBool();
+    if (root.contains(qsl("disabled"))) {
+        styling.selection.disabled = jsonBoolValue(root[qsl("disabled")]);
         if (styling.selection.disabled) {
             styling.hasCustomStyling = true;
         }
@@ -3391,20 +3403,20 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
         }
     }
 
-    if (stateObj.contains(qsl("bold")) && stateObj[qsl("bold")].isBool()) {
-        stateStyle.isBold = stateObj[qsl("bold")].toBool();
+    if (stateObj.contains(qsl("bold"))) {
+        stateStyle.isBold = jsonBoolValue(stateObj[qsl("bold")]);
         hasAnyCustomStyling = true;
     }
 
-    if (stateObj.contains(qsl("italic")) && stateObj[qsl("italic")].isBool()) {
-        stateStyle.isItalic = stateObj[qsl("italic")].toBool();
+    if (stateObj.contains(qsl("italic"))) {
+        stateStyle.isItalic = jsonBoolValue(stateObj[qsl("italic")]);
         hasAnyCustomStyling = true;
     }
 
     if (stateObj.contains(qsl("underline"))) {
         QJsonValue underlineVal = stateObj[qsl("underline")];
-        if (underlineVal.isBool()) {
-            stateStyle.isUnderlined = underlineVal.toBool();
+        if (underlineVal.isBool() || underlineVal.isDouble()) {
+            stateStyle.isUnderlined = jsonBoolValue(underlineVal);
             if (stateStyle.isUnderlined) {
                 stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
             }
@@ -3427,8 +3439,8 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
 
     if (stateObj.contains(qsl("overline"))) {
         QJsonValue overlineVal = stateObj[qsl("overline")];
-        if (overlineVal.isBool()) {
-            stateStyle.isOverlined = overlineVal.toBool();
+        if (overlineVal.isBool() || overlineVal.isDouble()) {
+            stateStyle.isOverlined = jsonBoolValue(overlineVal);
             hasAnyCustomStyling = true;
         } else if (overlineVal.isString()) {
             stateStyle.isOverlined = true;
@@ -3438,8 +3450,8 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
 
     if (stateObj.contains(qsl("strikethrough"))) {
         QJsonValue strikeVal = stateObj[qsl("strikethrough")];
-        if (strikeVal.isBool()) {
-            stateStyle.isStrikeOut = strikeVal.toBool();
+        if (strikeVal.isBool() || strikeVal.isDouble()) {
+            stateStyle.isStrikeOut = jsonBoolValue(strikeVal);
             hasAnyCustomStyling = true;
         } else if (strikeVal.isString()) {
             stateStyle.isStrikeOut = true;
@@ -3474,16 +3486,16 @@ void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::
         settings.value = selectionObj[qsl("value")].toString();
     }
 
-    if (selectionObj.contains(qsl("toggle")) && selectionObj[qsl("toggle")].isBool()) {
-        settings.toggle = selectionObj[qsl("toggle")].toBool();
+    if (selectionObj.contains(qsl("toggle"))) {
+        settings.toggle = jsonBoolValue(selectionObj[qsl("toggle")]);
     }
 
-    if (selectionObj.contains(qsl("selected")) && selectionObj[qsl("selected")].isBool()) {
-        settings.selected = selectionObj[qsl("selected")].toBool();
+    if (selectionObj.contains(qsl("selected"))) {
+        settings.selected = jsonBoolValue(selectionObj[qsl("selected")]);
     }
 
-    if (selectionObj.contains(qsl("exclusive")) && selectionObj[qsl("exclusive")].isBool()) {
-        settings.exclusive = selectionObj[qsl("exclusive")].toBool();
+    if (selectionObj.contains(qsl("exclusive"))) {
+        settings.exclusive = jsonBoolValue(selectionObj[qsl("exclusive")]);
     }
 }
 
@@ -3562,24 +3574,24 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
     }
 
     // Parse wholeline (optional)
-    if (visibilityObj.contains(qsl("wholeline")) && visibilityObj[qsl("wholeline")].isBool()) {
-        settings.deletesEntireLine = visibilityObj[qsl("wholeline")].toBool();
+    if (visibilityObj.contains(qsl("wholeline"))) {
+        settings.deletesEntireLine = jsonBoolValue(visibilityObj[qsl("wholeline")]);
     }
 
     // Parse expire triggers (optional)
     if (visibilityObj.contains(qsl("expire")) && visibilityObj[qsl("expire")].isObject()) {
         QJsonObject expireObj = visibilityObj[qsl("expire")].toObject();
         
-        if (expireObj.contains(qsl("input")) && expireObj[qsl("input")].isBool()) {
-            settings.expireOnInput = expireObj[qsl("input")].toBool();
+        if (expireObj.contains(qsl("input"))) {
+            settings.expireOnInput = jsonBoolValue(expireObj[qsl("input")]);
         }
         
-        if (expireObj.contains(qsl("prompt")) && expireObj[qsl("prompt")].isBool()) {
-            settings.expireOnPrompt = expireObj[qsl("prompt")].toBool();
+        if (expireObj.contains(qsl("prompt"))) {
+            settings.expireOnPrompt = jsonBoolValue(expireObj[qsl("prompt")]);
         }
         
-        if (expireObj.contains(qsl("output")) && expireObj[qsl("output")].isBool()) {
-            settings.expireOnOutput = expireObj[qsl("output")].toBool();
+        if (expireObj.contains(qsl("output"))) {
+            settings.expireOnOutput = jsonBoolValue(expireObj[qsl("output")]);
         }
         
         if (expireObj.contains(qsl("outputDelay"))) {
@@ -6294,6 +6306,17 @@ void TBuffer::applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling)
 
         styling.focusVisibleStyle = styling.focusStyle; // Copy focus style to focus-visible
     }
+}
+
+bool TBuffer::isOsc8VisibilityEnabled() const
+{
+    if (mpConsole) {
+        Host* pHost = mpConsole->getHost();
+        if (pHost) {
+            return pHost->experimentEnabled(qsl("experiment.osc8.visibility"));
+        }
+    }
+    return false;
 }
 
 // Link state management methods for interactive pseudo-classes

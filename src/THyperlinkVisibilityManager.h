@@ -67,6 +67,7 @@ struct TrackedHyperlink {
     bool expireOnPrompt = false;   // GA/EOR telnet signal received
     bool expireOnOutput = false;   // New output after idle gap
     quint32 outputDelayMs = 500;   // Idle gap for output trigger
+    bool expireActivated = false;  // Link has been clicked, expire triggers are active
     bool skipFirstPrompt = false;  // Skip the immediate prompt after registration
     bool skipFirstOutput = false;  // Skip the first output gap after registration
 };

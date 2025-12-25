@@ -88,10 +88,8 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
     tracked.expireOnPrompt = styling.visibility.expireOnPrompt;
     tracked.expireOnOutput = styling.visibility.expireOnOutput;
     tracked.outputDelayMs = styling.visibility.outputDelayMs;
-    // Skip the first prompt since it likely fires immediately after the link is printed
-    tracked.skipFirstPrompt = styling.visibility.expireOnPrompt;
-    // Skip the first output gap since the timer starts immediately during link registration
-    tracked.skipFirstOutput = styling.visibility.expireOnOutput;
+    // expire triggers require clicking the link to activate them
+    // skip flags are set when the link is clicked, not at registration
 
     mTrackedLinks.insert(linkId, tracked);
 
@@ -184,6 +182,7 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
 #endif
             performConcealment(link);
             emit visibilityChanged();
+            return; // Link was removed from map, must not access reference anymore
         } else if (link.delayMs > 0 && link.timerActivatedMs == 0) {
             // Delayed concealment - start timer
             link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
@@ -192,31 +191,33 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
 #endif
             mHasTimerBasedLinks = true;
             startTimerIfNeeded();
+        } else if (hasExpireTriggers && !link.expireActivated) {
+            // Expire triggers: clicking activates them
+            // For prompt/output, set skip flags to avoid immediate trigger from server response
+            link.expireActivated = true;
+            link.skipFirstPrompt = link.expireOnPrompt;
+            link.skipFirstOutput = link.expireOnOutput;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug().noquote() << "[OSC] Link" << linkId << "clicked - expire triggers activated"
+                               << "input:" << link.expireOnInput
+                               << "skipPrompt:" << link.skipFirstPrompt
+                               << "skipOutput:" << link.skipFirstOutput;
+#endif
         }
     }
     
-    // For RevealThenConceal links that have been revealed, clicking starts the conceal phase
+    // For RevealThenConceal links that have been revealed, clicking conceals immediately
+    // (the delay only applies to the initial reveal phase, not the conceal)
     if (link.action == TrackedHyperlink::Action::RevealThenConceal 
         && link.phase == TrackedHyperlink::Phase::Revealed) {
         
-        if (link.delayMs == 0) {
-            // Immediate concealment after click
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC] RevealThenConceal link" << linkId << "clicked - concealing immediately";
+        qDebug().noquote() << "[OSC] RevealThenConceal link" << linkId << "clicked - concealing immediately";
 #endif
-            link.phase = TrackedHyperlink::Phase::Concealed;
-            performConcealment(link);
-            emit visibilityChanged();
-        } else {
-            // Delayed concealment - start timer
-            link.phase = TrackedHyperlink::Phase::WaitingToConceal;
-            link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC] RevealThenConceal link" << linkId << "clicked - will conceal in" << link.delayMs << "ms";
-#endif
-            mHasTimerBasedLinks = true;
-            startTimerIfNeeded();
-        }
+        link.phase = TrackedHyperlink::Phase::Concealed;
+        performConcealment(link);
+        emit visibilityChanged();
+        return; // Link was removed from map, must not access reference anymore
     }
 }
 
@@ -311,7 +312,12 @@ void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool p
     for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
         TrackedHyperlink& link = it.value();
         
-        // Handle skipFirstPrompt - if this is a prompt trigger and the link should skip the first one
+        // Only process links that have been activated by clicking
+        if (!link.expireActivated) {
+            continue;
+        }
+        
+        // Handle skipFirstPrompt - skip the immediate prompt from the click action response
         if (prompt && link.skipFirstPrompt) {
             link.skipFirstPrompt = false;
 #if defined(DEBUG_OSC_PROCESSING)
@@ -320,7 +326,7 @@ void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool p
             continue;
         }
         
-        // Handle skipFirstOutput - if this is an output trigger and the link should skip the first one
+        // Handle skipFirstOutput - skip the immediate output from the click action response
         if (output && link.skipFirstOutput) {
             link.skipFirstOutput = false;
 #if defined(DEBUG_OSC_PROCESSING)
@@ -539,22 +545,6 @@ void THyperlinkVisibilityManager::slot_checkTimers()
                 // Keep timer running as link transitions to Revealed phase waiting for click
                 stillHasTimerLinks = true;
                 linksToTransition.append(it.key());
-            } else if (link.phase == TrackedHyperlink::Phase::WaitingToConceal) {
-                // Waiting to conceal after click - timer starts from click
-                if (link.timerActivatedMs == 0) {
-                    stillHasTimerLinks = true;
-                    continue;
-                }
-                qint64 elapsed = currentTime - link.timerActivatedMs;
-                if (elapsed < link.delayMs) {
-                    stillHasTimerLinks = true;
-                    continue;
-                }
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug().noquote() << "[OSC] RevealThenConceal link" << it.key() 
-                                   << "- timer concealing (phase: WaitingToConceal -> Concealed)";
-#endif
-                linksToConceal.append(it.key());
             } else if (link.phase == TrackedHyperlink::Phase::Revealed) {
                 // Revealed and waiting for click - keep timer active
                 stillHasTimerLinks = true;
@@ -636,8 +626,8 @@ void THyperlinkVisibilityManager::stopTimerIfNotNeeded()
                 break;
             }
             if (link.action == TrackedHyperlink::Action::RevealThenConceal) {
-                // Timer needed if in Initial (waiting to reveal), Revealed (waiting for click), 
-                // or WaitingToConceal (waiting to conceal after click)
+                // Timer needed if in Initial (waiting to reveal) or Revealed (waiting for click)
+                // Conceal happens immediately on click, so no timer needed for that phase
                 if (link.phase != TrackedHyperlink::Phase::Concealed) {
                     hasTimerLinks = true;
                     break;
