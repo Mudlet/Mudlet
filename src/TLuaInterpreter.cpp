@@ -7448,6 +7448,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableNAWS")) {
+        host.mEnableNAWS = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("askTlsAvailable")) {
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -7752,6 +7756,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
         { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
+        { qsl("enableNAWS"), [&](){ lua_pushboolean(L, host.mEnableNAWS); } },
         { qsl("logDirectory"), [&](){
             const auto logDir = host.mLogDir;
 

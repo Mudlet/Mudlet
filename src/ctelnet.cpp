@@ -3066,7 +3066,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 if (option == OPT_NAWS) {
-                    qDebug() << "We ARE willing to enable telnet option NAWS";
+                    qDebug() << "NAWS enabled";
                     raiseProtocolEvent("sysProtocolEnabled", "NAWS");
                 }
 
@@ -3074,7 +3074,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 myOptionState[idxOption] = true;
                 announcedState[idxOption] = true;
             } else if (option == OPT_NAWS && !mpHost->mEnableNAWS) {
-                qDebug() << "We are NOT WILLING to enable telnet option NAWS (disabled in preferences)";
+                qDebug() << "NAWS disabled (user preference)";
                 sendTelnetOption(TN_WONT, option);
                 myOptionState[idxOption] = false;
                 announcedState[idxOption] = true;
