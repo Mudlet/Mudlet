@@ -238,6 +238,7 @@ private:
     QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableNAWS;
     QPointer<QAction> mEnableCHARSET;
     QPointer<QAction> mEnableNEWENVIRON;
 

@@ -2729,9 +2729,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
                         mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                     }
-                } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
+                } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE || (option == OPT_NAWS && mpHost->mEnableNAWS)) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
+                } else if (option == OPT_NAWS && !mpHost->mEnableNAWS) {
+                    sendTelnetOption(TN_DONT, option);
+                    hisOptionState[idxOption] = false;
                 } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
                     //these are handled separately, as they're a bit special
                     if (mpHost->mFORCE_NO_COMPRESSION) {
@@ -3047,7 +3050,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         } else if (!myOptionState[idxOption]) {
             // only if the option is currently disabled
 
-            if ((option == OPT_STATUS) || (option == OPT_NAWS) || (option == OPT_TERMINAL_TYPE)) {
+            if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE || (option == OPT_NAWS && mpHost->mEnableNAWS)) {
                 if (option == OPT_STATUS) {
                     qDebug() << "We ARE willing to enable telnet option STATUS";
                 }
@@ -3059,6 +3062,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
                 sendTelnetOption(TN_WILL, option);
                 myOptionState[idxOption] = true;
+                announcedState[idxOption] = true;
+            } else if (option == OPT_NAWS && !mpHost->mEnableNAWS) {
+                qDebug() << "We are NOT WILLING to enable telnet option NAWS (disabled in preferences)";
+                sendTelnetOption(TN_WONT, option);
+                myOptionState[idxOption] = false;
                 announcedState[idxOption] = true;
             } else {
                 qDebug() << "We are NOT WILLING to enable this telnet option.";

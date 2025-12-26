@@ -501,6 +501,7 @@ public:
     bool mEnableMNES = false;
     bool mEnableMXP = true;
     bool mEnableCHARSET = true;
+    bool mEnableNAWS = true;
     bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
