@@ -1359,6 +1359,10 @@ void cTelnet::checkNAWS()
 // https://www.rfc-editor.org/rfc/rfc1073
 void cTelnet::sendNAWS(int width, int height)
 {
+    if (!mpHost || !mpHost->mEnableNAWS) {
+        return;
+    }
+
     std::string message;
     message += TN_IAC; // Interpret As Command
     message += TN_SB;  // Sub-negotiation begins
