@@ -1439,9 +1439,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
                         Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
                         
-                        // Check if OSC 8 visibility experiment is enabled
-                        bool osc8VisibilityEnabled = mpHost && mpHost->experimentEnabled(qsl("experiment.osc8.visibility"));
-                        
 #if defined(DEBUG_OSC_PROCESSING)
                         qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "disabled:" << hyperlinkStyling.selection.disabled << "hasSelectionSettings:" << hyperlinkStyling.selection.hasSelectionSettings << "isSpoiler:" << hyperlinkStyling.isSpoiler;
 #endif
@@ -1549,7 +1546,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         forceUpdate();
 
                         // Notify visibility manager that link was clicked (activates timers)
-                        if (osc8VisibilityEnabled && mpConsole) {
+                        if (mpConsole) {
                             mpConsole->getHyperlinkVisibilityManager().onLinkClicked(linkIndex);
                         }
 
@@ -3320,8 +3317,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
                 if (!commands.isEmpty()) {
                     // Notify visibility manager that link was clicked (activates timers)
-                    bool osc8VisibilityEnabled = mpHost && mpHost->experimentEnabled(qsl("experiment.osc8.visibility"));
-                    if (osc8VisibilityEnabled && mpConsole) {
+                    if (mpConsole) {
                         mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
                     }
 
