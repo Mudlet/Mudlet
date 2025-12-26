@@ -2732,9 +2732,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE || (option == OPT_NAWS && mpHost->mEnableNAWS)) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
+
+                    if (option == OPT_NAWS) {
+                        qDebug() << "NAWS enabled";
+                        raiseProtocolEvent("sysProtocolEnabled", "NAWS");
+                    }
                 } else if (option == OPT_NAWS && !mpHost->mEnableNAWS) {
                     sendTelnetOption(TN_DONT, option);
                     hisOptionState[idxOption] = false;
+                    raiseProtocolEvent("sysProtocolDisabled", "NAWS");
                 } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
                     //these are handled separately, as they're a bit special
                     if (mpHost->mFORCE_NO_COMPRESSION) {
@@ -3054,12 +3060,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 if (option == OPT_STATUS) {
                     qDebug() << "We ARE willing to enable telnet option STATUS";
                 }
+
                 if (option == OPT_TERMINAL_TYPE) {
                     qDebug() << "We ARE willing to enable telnet option TERMINAL_TYPE";
                 }
+
                 if (option == OPT_NAWS) {
                     qDebug() << "We ARE willing to enable telnet option NAWS";
+                    raiseProtocolEvent("sysProtocolEnabled", "NAWS");
                 }
+
                 sendTelnetOption(TN_WILL, option);
                 myOptionState[idxOption] = true;
                 announcedState[idxOption] = true;
@@ -3068,6 +3078,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 sendTelnetOption(TN_WONT, option);
                 myOptionState[idxOption] = false;
                 announcedState[idxOption] = true;
+                raiseProtocolEvent("sysProtocolDisabled", "NAWS");
             } else {
                 qDebug() << "We are NOT WILLING to enable this telnet option.";
                 sendTelnetOption(TN_WONT, option);
