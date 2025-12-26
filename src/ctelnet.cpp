@@ -3066,7 +3066,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 if (option == OPT_TERMINAL_TYPE) {
-                    qDebug() << "We ARE willing to enable telnet option TERMINAL_TYPE";
+                    qDebug() << "TERMINAL_TYPE enabled";
                 }
 
                 if (option == OPT_NAWS) {
