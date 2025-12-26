@@ -2733,18 +2733,20 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
                         mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                     }
-                } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE || (option == OPT_NAWS && mpHost->mEnableNAWS)) {
+                } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
-
-                    if (option == OPT_NAWS) {
+                } else if (option == OPT_NAWS) {
+                    if (mpHost->mEnableNAWS) {
+                        sendTelnetOption(TN_DO, option);
+                        hisOptionState[idxOption] = true;
                         qDebug() << "NAWS enabled";
                         raiseProtocolEvent("sysProtocolEnabled", "NAWS");
+                    } else {
+                        sendTelnetOption(TN_DONT, option);
+                        hisOptionState[idxOption] = false;
+                        raiseProtocolEvent("sysProtocolDisabled", "NAWS");
                     }
-                } else if (option == OPT_NAWS && !mpHost->mEnableNAWS) {
-                    sendTelnetOption(TN_DONT, option);
-                    hisOptionState[idxOption] = false;
-                    raiseProtocolEvent("sysProtocolDisabled", "NAWS");
                 } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
                     //these are handled separately, as they're a bit special
                     if (mpHost->mFORCE_NO_COMPRESSION) {
