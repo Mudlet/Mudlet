@@ -126,6 +126,9 @@ set(LIB_MUDLET_TARGET "mudlet_core")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
+# Include static analysis configuration
+# include(StaticAnalysis)
+
 include(IncludeOptionalModule)
 
 include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
