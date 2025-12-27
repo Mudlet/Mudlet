@@ -1186,6 +1186,21 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
+    // DOWN at position 0 with text: save to history and clear input
+    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty()) {
+        mHistoryList.removeAll(toPlainText());
+        if (!mHistoryList.isEmpty()) {
+            mHistoryList[0] = toPlainText();
+        } else {
+            mHistoryList.push_front(toPlainText());
+        }
+        mHistoryList.push_front(QString());
+
+        clear();
+        adjustHeight();
+        return;
+    }
+
     if (mHistoryList.empty()) {
         return;
     }
