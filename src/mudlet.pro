@@ -633,6 +633,11 @@ WITH_SENTRY {
 
     SENTRY_PATH = $$PWD/../3rdparty/sentry-native
 
+    # Check if sentry-native submodule is initialized
+    !exists($$SENTRY_PATH/CMakeLists.txt) {
+        error("Sentry is enabled (WITH_SENTRY) but the sentry-native submodule is not initialized. Either: 1) Initialize it: git submodule update --init 3rdparty/sentry-native, or 2) Disable Sentry by removing WITH_SENTRY from CONFIG")
+    }
+
     !exists($$SENTRY_PATH/install) {
         message("Sentry install missing, building sentry-native from sources")
 
@@ -768,6 +773,9 @@ SOURCES += \
     TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
+    THyperlinkCompactManager.cpp \
+    THyperlinkSelectionManager.cpp \
+    THyperlinkVisibilityManager.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
@@ -934,6 +942,9 @@ HEADERS += \
     TFlipButton.h \
     TForkedProcess.h \
     TGameDetails.h \
+    THyperlinkCompactManager.h \
+    THyperlinkSelectionManager.h \
+    THyperlinkVisibilityManager.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \

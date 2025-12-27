@@ -2148,8 +2148,7 @@ int TLuaInterpreter::selectSection(lua_State* L)
     const int to = getVerifiedInt(L, __func__, s, "length");
 
     auto console = CONSOLE(L, windowName);
-    const int ret = console->selectSection(from, to);
-    lua_pushboolean(L, ret != -1);
+    lua_pushboolean(L, console->selectSection(from, to));
     return 1;
 }
 

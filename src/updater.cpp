@@ -71,6 +71,31 @@ static void cleanupSquirrelTempFiles()
                   << (freedSpace / 1024 / 1024) << "MB of disk space";
     }
 }
+
+// Squirrel keeps .nupkg files for delta updates, but we don't use them
+static void cleanupPackagesFolder()
+{
+    QString appPath = QCoreApplication::applicationDirPath();
+    QDir appDir(appPath);
+    appDir.cdUp();
+
+    QDir packagesDir(appDir.absoluteFilePath(qsl("packages")));
+    if (!packagesDir.exists()) {
+        return;
+    }
+
+    qint64 freedSpace = 0;
+    for (const auto& fileInfo : packagesDir.entryInfoList({qsl("*.nupkg")}, QDir::Files)) {
+        qint64 fileSize = fileInfo.size();
+        if (QFile::remove(fileInfo.absoluteFilePath())) {
+            freedSpace += fileSize;
+        }
+    }
+
+    if (freedSpace > 0) {
+        qDebug() << "Cleaned up" << (freedSpace / 1024 / 1024) << "MB from packages folder";
+    }
+}
 #endif // Q_OS_WINDOWS
 
 // update flows:
@@ -223,8 +248,8 @@ void Updater::finishSetup()
     qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).constFirst().getVersion();
 #elif defined(Q_OS_WINDOWS)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).first().getVersion() << "on restart";
-    // Clean up .nupkg files from SquirrelTemp to prevent cross-app contamination
     cleanupSquirrelTempFiles();
+    cleanupPackagesFolder();
 #endif
     recordUpdateTime();
     recordUpdatedVersion();
@@ -243,8 +268,8 @@ void Updater::setupOnMacOS()
 #if defined(Q_OS_WINDOWS)
 void Updater::setupOnWindows()
 {
-    // Clean up old .nupkg files on startup
     cleanupSquirrelTempFiles();
+    cleanupPackagesFolder();
 
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, feed, [=, this]() {

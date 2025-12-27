@@ -148,11 +148,13 @@ set(mudlet_SRCS
     TEntityResolver.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
+    THyperlinkCompactManager.cpp
+    THyperlinkSelectionManager.cpp
+    THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
     TLinkStore.cpp
-
     TLuaInterpreter.cpp
     TLuaInterpreterAI.cpp
     TLuaInterpreterDiscord.cpp
@@ -362,6 +364,9 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    THyperlinkCompactManager.h
+    THyperlinkSelectionManager.h
+    THyperlinkVisibilityManager.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h

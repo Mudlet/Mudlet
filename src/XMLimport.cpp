@@ -226,7 +226,10 @@ std::pair<EditorViewType, int> XMLimport::importFromClipboard()
     QBuffer xmlBuffer(&ba);
 
     setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::ReadOnly);
+    if (!xmlBuffer.open(QIODevice::ReadOnly)) {
+        qWarning() << "XMLimport::importFromClipboard() ERROR: failed to open XML buffer for reading";
+        return {EditorViewType::cmUnknownView, 0};
+    }
 
     while (!atEnd()) {
         readNext();

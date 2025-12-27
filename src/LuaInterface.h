@@ -28,6 +28,8 @@
 #include <QScopedPointer>
 #include <QSet>
 
+#include <utility>
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lua.h>
@@ -66,7 +68,7 @@ public:
     bool loadVar(TVar* var);
     bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
     bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
-    bool validMove(QTreeWidgetItem*);
+    std::pair<bool, QString> validMove(QTreeWidgetItem*);
     void getAllChildren(TVar* var, QList<TVar*>* list);
     lua_State* getState();
     static int onPanic(lua_State*);

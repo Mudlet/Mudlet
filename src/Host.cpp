@@ -3216,6 +3216,11 @@ void Host::setCompactInputLine(const bool state)
 
 QPointer<TConsole> Host::findConsole(QString name)
 {
+    if (!mpConsole) {
+        qWarning() << "Host::findConsole() ERROR: main console not initialized";
+        return nullptr;
+    }
+
     if (name.isEmpty() or name == qsl("main")) {
         // Reason for the deref-plus-ref in the next line: `QPointer`s do not
         // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258
@@ -4677,7 +4682,8 @@ const QSet<QString> Host::mValidExperiments = {
     qsl("experiment.rendering.more-transparent"),
     qsl("experiment.3dmap.modernmapper"),
     qsl("experiment.render-in-out-exits"),
-    qsl("experiment.3d-player-icon")
+    qsl("experiment.3d-player-icon"),
+    qsl("experiment.osc8.visibility")
 };
 
 bool Host::experimentEnabled(const QString& experimentKey) const

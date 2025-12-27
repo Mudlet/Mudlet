@@ -29,6 +29,7 @@
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -1233,6 +1234,11 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
 {
     Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mProcessingTimer.restart();
+
+    // Notify visibility manager of incoming data (for output gap detection)
+    if (isFromServer) {
+        getHyperlinkVisibilityManager().onDataReceived();
+    }
 
     mTriggerEngineMode = true;
     const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();

@@ -84,13 +84,14 @@ QStringList LuaInterface::varName(TVar* var)
     return names;
 }
 
-bool LuaInterface::validMove(QTreeWidgetItem* pWidget)
+std::pair<bool, QString> LuaInterface::validMove(QTreeWidgetItem* pWidget)
 {
     TVar* pNewParent = varUnit->getWVar(pWidget);
     if (pNewParent && pNewParent->getValueType() != LUA_TTABLE) {
-        return false;
+        //: Error message shown when user tries to drag a variable onto a non-table variable
+        return {false, QObject::tr("Cannot move variable here - the target is not a table")};
     }
-    return true;
+    return {true, QString()};
 }
 
 void LuaInterface::getAllChildren(TVar* var, QList<TVar*>* list)

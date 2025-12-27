@@ -50,6 +50,7 @@
 #include <deque>
 #include <list>
 #include <map>
+#include <memory>
 
 // This contains the details of a font that we might want to maintain a record
 // of, independently of a QFont instance:
@@ -157,6 +158,9 @@ class Host;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
+class THyperlinkCompactManager;
+class THyperlinkSelectionManager;
+class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
@@ -257,6 +261,11 @@ public:
     void setHorizontalScrollBar(bool);
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
+    
+    THyperlinkCompactManager& getHyperlinkCompactManager() { Q_ASSERT(mpHyperlinkCompactManager); return *mpHyperlinkCompactManager; }
+    THyperlinkSelectionManager& getHyperlinkSelectionManager() { Q_ASSERT(mpHyperlinkSelectionManager); return *mpHyperlinkSelectionManager; }
+    THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { Q_ASSERT(mpHyperlinkVisibilityManager); return *mpHyperlinkVisibilityManager; }
+    
     void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
@@ -446,6 +455,18 @@ private:
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
+    void initializeOSC8StyleFeature();
+    void initializeOSC8MenuFeature();
+    void initializeOSC8TooltipFeature();
+    void initializeOSC8VisibilityFeature();
+    void initializeOSC8SelectionFeature();
+    void initializeOSC8SpoilerFeature();
+    void initializeOSC8DisabledFeature();
+
+    // OSC 8 hyperlink managers
+    std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;
+    std::unique_ptr<THyperlinkSelectionManager> mpHyperlinkSelectionManager;
+    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
