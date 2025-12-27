@@ -39,22 +39,6 @@ if(USE_FONTS)
   endif()
 endif()
 
-if(WIN32)
-  # APP_BUILD should now be be available
-
-  if(APP_BUILD MATCHES "-ptb.+")
-    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD MATCHES "-dev.+" OR APP_BUILD MATCHES "-test.+"))
-    # The above test may not be correct as it won't pick up builds where
-    # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
-    # "Packagers" they will likely want the original icon anyhow for their
-    # modified for their system packages of Mudlet:
-    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  else()
-    list(APPEND mudlet_RCCS icons/mudlet.ico)
-  endif()
-endif()
-
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
@@ -737,6 +721,23 @@ if(WIN32)
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)
+
+  # Select Windows executable icon based on build type
+  if(APP_BUILD MATCHES "-ptb.+")
+    set(MUDLET_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/icons/mudlet_ptb.ico")
+  elseif((APP_BUILD MATCHES "-dev.+") OR (APP_BUILD MATCHES "-test.+"))
+    set(MUDLET_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/icons/mudlet_dev.ico")
+  else()
+    set(MUDLET_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/icons/mudlet.ico")
+  endif()
+
+  # Configure and add the Windows resource file for the executable icon
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/mudlet.rc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/mudlet.rc"
+    @ONLY
+  )
+  target_sources(${EXE_MUDLET_TARGET} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/mudlet.rc")
 endif()
 
 if(APPLE)
