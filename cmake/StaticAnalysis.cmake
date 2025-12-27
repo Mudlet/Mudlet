@@ -6,12 +6,22 @@
 # Usage:
 #   1. Uncomment include(StaticAnalysis) in root CMakeLists.txt
 #   2. Configure: cmake -DENABLE_STATIC_ANALYSIS=ON ..
-#   3. Build normally: make -j $(nproc)
+#   3. Build normally:
+#      - Linux: make -j $(nproc)
+#      - macOS: make -j `sysctl -n hw.ncpu`
 #
 # Notes:
 #   - clang-analyzer-* checks run the Clang Static Analyzer via clang-tidy
 #   - Analysis warnings appear in build output but don't fail the build
 #   - For scan-build wrapper usage, see: https://clang-analyzer.llvm.org/scan-build
+#
+# Clazy (Qt-specific static analysis):
+#   Clazy requires using clang as the compiler (separate from clang-tidy integration).
+#   Install: brew install clazy (macOS) or apt install clazy (Linux)
+#   Usage (clean build directory required):
+#     CLAZY_CHECKS="level0,level1" CXX=clazy cmake ..
+#     make -j `sysctl -n hw.ncpu`
+#   See: https://github.com/KDE/clazy
 
 option(ENABLE_STATIC_ANALYSIS "Enable static analysis with clang-tidy and cppcheck" OFF)
 
