@@ -62,6 +62,7 @@
 
 #include <QtConcurrent>
 #include <QCollator>
+#include <QApplication>
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
@@ -1463,8 +1464,14 @@ int TLuaInterpreter::getWindowWrap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasFocus
 int TLuaInterpreter::hasFocus(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.mpConsole->hasFocus()); //FIXME
+    QString windowName;
+    if (lua_gettop(L) > 0) {
+        windowName = WINDOW_NAME(L, 1);
+    }
+
+    auto console = CONSOLE(L, windowName);
+    QWidget* focusWidget = QApplication::focusWidget();
+    lua_pushboolean(L, focusWidget && (console == focusWidget || console->isAncestorOf(focusWidget)));
     return 1;
 }
 

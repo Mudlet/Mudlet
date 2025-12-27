@@ -277,7 +277,7 @@
     "gotoRoom": "gotoRoom (roomID)",
     "handleWindowResizeEvent": "handleWindowResizeEvent()",
     "hasExitLock": "status = hasExitLock(roomID, direction)",
-    "hasFocus": "hasFocus()",
+    "hasFocus": "hasFocus([windowName])",
     "hasSpecialExitLock": "hasSpecialExitLock(from roomID, to roomID, moveCommand)",
     "hecho": "hecho([windowName], text)",
     "hecho2ansi": "ansiFormattedString = hecho2ansi(text)",
