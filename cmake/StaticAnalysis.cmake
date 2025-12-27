@@ -1,5 +1,17 @@
 # Static Analysis Configuration for Mudlet
-# Add this to enable static analysis during builds
+# 
+# This module integrates clang-tidy and cppcheck into the CMake build process.
+# Static analysis runs during compilation without breaking the build.
+#
+# Usage:
+#   1. Uncomment include(StaticAnalysis) in root CMakeLists.txt
+#   2. Configure: cmake -DENABLE_STATIC_ANALYSIS=ON ..
+#   3. Build normally: make -j $(nproc)
+#
+# Notes:
+#   - clang-analyzer-* checks run the Clang Static Analyzer via clang-tidy
+#   - Analysis warnings appear in build output but don't fail the build
+#   - For scan-build wrapper usage, see: https://clang-analyzer.llvm.org/scan-build
 
 option(ENABLE_STATIC_ANALYSIS "Enable static analysis with clang-tidy and cppcheck" OFF)
 
@@ -11,6 +23,7 @@ if(ENABLE_STATIC_ANALYSIS)
         message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
         
         # Configure clang-tidy checks
+        # Note: clang-analyzer-* enables the Clang Static Analyzer
         set(CLANG_TIDY_CHECKS
             "performance-*" 
             "bugprone-*"
@@ -23,17 +36,21 @@ if(ENABLE_STATIC_ANALYSIS)
         set(CMAKE_CXX_CLANG_TIDY 
             ${CLANG_TIDY_EXE};
             --checks=${CLANG_TIDY_CHECKS_STR};
-            --header-filter=.*
+            --header-filter=.*;
         )
         
-        message(STATUS "clang-tidy integration enabled")
+        message(STATUS "clang-tidy integration enabled with checks: ${CLANG_TIDY_CHECKS_STR}")
+        message(STATUS "  - performance-*: Performance optimizations")
+        message(STATUS "  - bugprone-*: Bug detection")
+        message(STATUS "  - clang-analyzer-*: Clang Static Analyzer (deep analysis)")
     else()
         message(WARNING "clang-tidy not found, static analysis disabled")
     endif()
     
     if(CPPCHECK_EXE)
         message(STATUS "Found cppcheck: ${CPPCHECK_EXE}")
-        set(CMAKE_CXX_CPPCHECK ${CPPCHECK_EXE};
+        set(CMAKE_CXX_CPPCHECK 
+            ${CPPCHECK_EXE};
             --enable=all;
             --inconclusive;
             --std=c++20;
@@ -42,18 +59,7 @@ if(ENABLE_STATIC_ANALYSIS)
             --suppress=unmatchedSuppression;
         )
         message(STATUS "cppcheck integration enabled")
-    endif()
-endif()
-
-# Compiler-specific static analysis flags
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    option(ENABLE_CLANG_ANALYZER "Enable Clang Static Analyzer" OFF)
-    
-    if(ENABLE_CLANG_ANALYZER)
-        message(STATUS "Enabling Clang Static Analyzer")
-        add_compile_options(--analyze)
-        # Store analyzer results in build directory
-        add_compile_options(-Xanalyzer -analyzer-output=html-single-file)
-        add_compile_options(-Xanalyzer -analyzer-output-dir=${CMAKE_BINARY_DIR}/analyzer-reports)
+    else()
+        message(STATUS "cppcheck not found, skipping cppcheck analysis")
     endif()
 endif()
