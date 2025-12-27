@@ -69,6 +69,7 @@
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/models/textgrammar.h"
 #include "edbee/models/textundostack.h"
+#include "edbee/models/textautocompleteprovider.h"
 #include "edbee/texteditorcommand.h"
 #include "edbee/texteditorcontroller.h"
 #include "edbee/texteditorwidget.h"
@@ -172,6 +173,7 @@ public:
 
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
+    ~dlgTriggerEditor();
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
 
@@ -671,6 +673,9 @@ private:
 
     // Guarded pointer to text editor's undo stack (for safe signal connections):
     QPointer<edbee::TextUndoStack> mpTextUndoStack;
+
+    // Auto-complete provider (needs cleanup in destructor):
+    edbee::StringTextAutoCompleteProvider* mpAutoCompleteProvider = nullptr;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in

@@ -43,6 +43,9 @@ TScript::TScript(const QString& name, Host * pHost )
 
 TScript::~TScript()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qDebug() << "MEMORY: TScript::~TScript() - Destroying script" << getName();
+#endif
     if (!mpHost) {
         return;
     }

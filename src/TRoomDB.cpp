@@ -41,10 +41,19 @@ TRoomDB::TRoomDB(TMap* pMap)
     // Ensure the default area is created, the area/areaName items that get
     // created here will get blown away when a map is loaded but that is expected...
     addArea(-1, mpMap->getDefaultAreaName());
+
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TRoomDB::TRoomDB() - Created room database, ptr=" << static_cast<void*>(this);
+#endif
 }
 
 TRoomDB::~TRoomDB()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qDebug() << "MEMORY: TRoomDB::~TRoomDB() - Destroying room database, rooms=" << rooms.size() 
+             << "areas=" << areas.size() << "ptr=" << static_cast<void*>(this);
+#endif
+
     mBulkDeletionMode = true;
 
     // Get all pointers before clearing containers to prevent lookup issues
@@ -511,6 +520,10 @@ bool TRoomDB::setAreaName(int areaID, QString name)
 bool TRoomDB::addArea(int id)
 {
     if (!areas.contains(id)) {
+#ifdef DEBUG_MEMORY_TRACKING
+        qDebug() << "MEMORY: TRoomDB::addArea() - Creating TArea" << id 
+                 << "ptr=" << static_cast<void*>(this);
+#endif
         areas[id] = new TArea(mpMap, this);
         if (!areaNamesMap.contains(id)) {
             // Must provide a name for this new area

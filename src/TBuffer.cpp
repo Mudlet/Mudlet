@@ -171,6 +171,13 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 , mpHost(pH)
 , mTagWatchdog(std::make_unique<QTimer>())
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TBuffer::TBuffer() - Created text buffer, initial sizes:"
+             << "lineBuffer:" << lineBuffer.size() 
+             << "timeBuffer:" << timeBuffer.size() 
+             << "promptBuffer:" << promptBuffer.size()
+             << "ptr=" << static_cast<void*>(this);
+#endif
     mTagWatchdog->setSingleShot(true);
     QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
     // All additions to the buffer must use append()/appendLine() to preserve formatting via TChar.
@@ -188,6 +195,14 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 
 TBuffer::~TBuffer()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TBuffer::~TBuffer() - Destroying text buffer, final sizes:"
+             << "lineBuffer:" << lineBuffer.size()
+             << "timeBuffer:" << timeBuffer.size() 
+             << "promptBuffer:" << promptBuffer.size()
+             << "buffer.size():" << buffer.size()
+             << "ptr=" << static_cast<void*>(this);
+#endif
 }
 
 TBuffer::TBuffer(const TBuffer& other)
@@ -361,12 +376,28 @@ auto operator""_MB(unsigned long long const x)
 
 void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TBuffer::setBufferSize() - Buffer resize requested:"
+             << "current lines:" << lineBuffer.size()
+             << "requested limit:" << requestedLinesLimit
+             << "batch size:" << batch
+             << "current mLinesLimit:" << mLinesLimit;
+#endif
     if (requestedLinesLimit < 100) {
         requestedLinesLimit = 100;
     }
     if (batch >= requestedLinesLimit) {
         batch = requestedLinesLimit / 10;
     }
+    
+    // Prevent batch size from being too small (could cause performance issues)
+    if (batch < 10) {
+        batch = 10;
+#ifdef DEBUG_MEMORY_TRACKING
+        qWarning() << "MEMORY: TBuffer::setBufferSize() - Batch size too small, adjusted to" << batch;
+#endif
+    }
+    
     // clip the maximum to something reasonable that the machine can handle
     auto max = getMaxBufferSize();
     if (requestedLinesLimit > max) {
@@ -378,6 +409,11 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     }
 
     mBatchDeleteSize = batch;
+    
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TBuffer::setBufferSize() - Final configuration:"
+             << "mLinesLimit:" << mLinesLimit << "mBatchDeleteSize:" << mBatchDeleteSize;
+#endif
 }
 
 // naive calculation to get a reasonable limit for a maximum buffer size
@@ -3963,6 +3999,25 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end,
                      const QColor& fgColor, const QColor& bgColor,
                      TChar::AttributeFlags flags, int linkID)
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    static int appendCallCount = 0;
+    if (++appendCallCount % 100 == 0) { // Log every 100 calls to avoid spam
+        qWarning() << "MEMORY: TBuffer::append() - Buffer growth check (call #" << appendCallCount << "):"
+                 << "lineBuffer:" << lineBuffer.size()
+                 << "timeBuffer:" << timeBuffer.size()
+                 << "promptBuffer:" << promptBuffer.size()
+                 << "buffer.size():" << buffer.size()
+                 << "text.length():" << text.length();
+        
+        // Emergency guardrail: detect runaway buffer growth
+        if (static_cast<int>(buffer.size()) > (mLinesLimit * 2)) {
+            qWarning() << "MEMORY: TBuffer::append() - EMERGENCY: Buffer size" << buffer.size()
+                     << "exceeds 2x user limit" << mLinesLimit << "- forcing shrink";
+            shrinkBuffer();
+            shrinkBuffer(); // Double shrink in emergency
+        }
+    }
+#endif
     const int lastLineBeforeWrap = buffer.size() - 1;
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
     appendLine(text, sub_start, sub_end, fgColor, bgColor, flags, linkID);
@@ -4665,6 +4720,12 @@ bool TBuffer::deleteLine(int y)
 
 void TBuffer::shrinkBuffer()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    const int sizeBefore = static_cast<int>(buffer.size());
+    qWarning() << "MEMORY: TBuffer::shrinkBuffer() - Shrinking buffer from" << sizeBefore
+             << "lines (limit:" << mLinesLimit << "batch:" << mBatchDeleteSize << ")";
+#endif
+
     for (int i = 0; i < mBatchDeleteSize; ++i) {
         lineBuffer.pop_front();
         promptBuffer.pop_front();
@@ -4672,6 +4733,12 @@ void TBuffer::shrinkBuffer()
         buffer.pop_front();
         mCursorY--;
     }
+    
+#ifdef DEBUG_MEMORY_TRACKING
+    const int sizeAfter = static_cast<int>(buffer.size());
+    qWarning() << "MEMORY: TBuffer::shrinkBuffer() - Shrunk buffer to" << sizeAfter
+             << "lines (removed" << (sizeBefore - sizeAfter) << "lines)";
+#endif
     // We need to adjust the search result line as some lines have now gone
     // away:
     mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);

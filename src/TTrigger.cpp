@@ -63,6 +63,9 @@ TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList
 
 TTrigger::~TTrigger()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qDebug() << "MEMORY: TTrigger::~TTrigger() - Destroying trigger" << getName();
+#endif
     QMutableListIterator<TColorTable*> itColorTable(mColorPatternList);
     while (itColorTable.hasNext()) {
         if (itColorTable.next()) {

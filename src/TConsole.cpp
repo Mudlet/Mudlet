@@ -629,10 +629,20 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
             setProxyForFocus(mpCommandLine);
         });
     }
+
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TConsole::TConsole() - Created console" << mConsoleName 
+             << "type=" << mType << "ptr=" << static_cast<void*>(this);
+#endif
 }
 
 TConsole::~TConsole()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TConsole::~TConsole() - Destroying console" << mConsoleName 
+             << "type=" << mType << "ptr=" << static_cast<void*>(this);
+#endif
+
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:

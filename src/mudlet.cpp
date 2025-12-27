@@ -148,6 +148,9 @@ mudlet::mudlet()
 
 void mudlet::init()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: DEBUG_MEMORY_TRACKING is ACTIVE - memory tracking enabled";
+#endif
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
 
     QFile gitShaFile(":/app-build.txt");

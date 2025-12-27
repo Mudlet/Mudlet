@@ -371,16 +371,30 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto i = mudlet::self()->mpShortcutsManager->iterator();
     while (i.hasNext()) {
         auto entry = i.next();
+#ifdef DEBUG_MEMORY_TRACKING
+        qDebug() << "MEMORY: Host::Host() - Creating QKeySequence for shortcut" 
+                 << entry << "ptr=" << static_cast<void*>(this);
+#endif
         profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mpShortcutsManager->getSequence(entry)));
     }
 
     auto settings = mudlet::self()->getQSettings();
     const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
+
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: Host::Host() - Created host" << mHostName 
+             << "id=" << mHostID << "ptr=" << static_cast<void*>(this);
+#endif
 }
 
 Host::~Host()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: Host::~Host() - Destroying host" << mHostName 
+             << "id=" << mHostID << "ptr=" << static_cast<void*>(this);
+#endif
+
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
 
@@ -388,6 +402,14 @@ Host::~Host()
     // otherwise it'll be cleared when the Host object is being destroyed,
     // which can lead to a crash when closing multiple profiles at once.
     mpLastCommandLineUsed.clear();
+
+#ifdef DEBUG_MEMORY_TRACKING
+    qDebug() << "MEMORY: Host::~Host() - Cleaning up profileShortcuts count=" 
+             << profileShortcuts.size();
+#endif
+    // Clean up QKeySequence pointers to prevent memory leak
+    qDeleteAll(profileShortcuts);
+    profileShortcuts.clear();
 
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();

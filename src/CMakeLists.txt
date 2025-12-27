@@ -623,6 +623,11 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   including command execution, stack operations, and edbee text undo integration:
 target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
 
+# * Enable memory tracking for debugging memory leaks in core classes:
+#   This adds constructor/destructor logging for TConsole, Host, TRoomDB, etc.
+#   Useful for investigating object lifecycle and potential leaks:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_MEMORY_TRACKING)
+
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
@@ -719,6 +724,7 @@ target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
 add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
+target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE DEBUG_MEMORY_TRACKING)
 target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules

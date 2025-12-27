@@ -120,10 +120,18 @@ Discord::Discord(QObject* parent)
         // process Discord callbacks every 50ms once we are all set up:
         startTimer(50);
     });
+
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: Discord::Discord() - Created Discord integration, ptr=" << static_cast<void*>(this);
+#endif
 }
 
 Discord::~Discord()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: Discord::~Discord() - Destroying Discord integration, ptr=" << static_cast<void*>(this);
+#endif
+
     if (mLoaded) {
         Discord_Shutdown();
         // We might expect to have to do an mpLibrary->unload() but we do not

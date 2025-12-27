@@ -56,6 +56,10 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 
 TArea::~TArea()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qDebug() << "MEMORY: TArea::~TArea() - Destroying area, id=" << getAreaID() 
+             << "ptr=" << static_cast<void*>(this);
+#endif
     if (!mpRoomDB) {
         qDebug() << "ERROR: In TArea::~TArea(), instance has no mpRoomDB";
         return;

@@ -503,8 +503,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(mpUndoStack, &EditorUndoStack::itemsChanged, this, &dlgTriggerEditor::slot_itemsChanged);
 
-    auto* provider = new edbee::StringTextAutoCompleteProvider();
-    //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
+    mpAutoCompleteProvider = new edbee::StringTextAutoCompleteProvider();
+    auto* provider = mpAutoCompleteProvider; // Keep local reference for initialization
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
     for (const QString& key : mudlet::smLuaFunctionNames.keys()) {
@@ -1414,6 +1414,50 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         startTimer(mAutosaveInterval * 1min);
     }
 
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: dlgTriggerEditor::dlgTriggerEditor() - Created trigger editor for profile" 
+             << mpHost->getName() << "ptr=" << static_cast<void*>(this);
+#endif
+
+}
+
+// Fix StringTextAutoCompleteProvider leak (96KB identified by LeakSanitizer)
+dlgTriggerEditor::~dlgTriggerEditor()
+{
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: dlgTriggerEditor::~dlgTriggerEditor() - Destroying trigger editor for profile"
+             << (mpHost ? mpHost->getName() : "Unknown")
+             << "ptr=" << static_cast<void*>(this);
+#endif
+    
+    // Clean up StringTextAutoCompleteProvider to prevent 96KB leak
+    if (mpAutoCompleteProvider) {
+        // Remove from global provider list before deletion
+        auto* globalList = edbee::Edbee::instance()->autoCompleteProviderList();
+        if (globalList) {
+            // Use removeProvider to properly remove from lists
+            globalList->removeProvider(mpAutoCompleteProvider);
+            // Also clear parent provider if it points to ours
+            globalList->setParentProvider(nullptr);
+        }
+        
+        delete mpAutoCompleteProvider;
+        mpAutoCompleteProvider = nullptr;
+        
+#ifdef DEBUG_MEMORY_TRACKING
+        qWarning() << "MEMORY: dlgTriggerEditor::~dlgTriggerEditor() - Cleaned up StringTextAutoCompleteProvider";
+#endif
+    }
+    
+    // Disconnect text undo stack signals for safe cleanup
+    if (mpTextUndoStack) {
+        disconnect(mpTextUndoStack, nullptr, this, nullptr);
+    }
+    
+    // Disconnect undo stack signals for safe cleanup  
+    if (mpUndoStack) {
+        disconnect(mpUndoStack, nullptr, this, nullptr);
+    }
 }
 
 void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)

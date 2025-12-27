@@ -83,6 +83,11 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mpHost(pH)
 , mpPostingTimer(new QTimer(this))
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: cTelnet::cTelnet() - Created telnet connection for profile" << profileName 
+             << "initial command.size():" << command.size()
+             << "ptr=" << static_cast<void*>(this);
+#endif
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
@@ -152,6 +157,11 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: cTelnet::~cTelnet() - Destroying telnet connection for profile" << mProfileName
+             << "final command.size():" << command.size() 
+             << "ptr=" << static_cast<void*>(this);
+#endif
     // Stop all timers immediately
     if (mTimerLogin) {
         mTimerLogin->stop();
@@ -4265,6 +4275,14 @@ void cTelnet::postMessage(QString msg)
 //forward data for further processing
 void cTelnet::gotPrompt(std::string& mud_data)
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    static int promptCount = 0;
+    if (++promptCount % 20 == 0) { // Log every 20 prompts
+        qWarning() << "MEMORY: cTelnet::gotPrompt() - MUD data processing (call #" << promptCount << "):"
+                 << "mud_data.size():" << mud_data.size()
+                 << "mMudData.size():" << mMudData.size();
+    }
+#endif
     mpPostingTimer->stop();
 
     if (mpPostingTimer->interval() != mTimeOut) {
@@ -4700,6 +4718,18 @@ void cTelnet::slot_socketReadyToBeRead()
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    static int processCount = 0;
+    static size_t totalProcessed = 0;
+    totalProcessed += amount;
+    if (++processCount % 50 == 0) { // Log every 50 calls to avoid spam
+        qWarning() << "MEMORY: cTelnet::processSocketData() - Network data processing (call #" << processCount << "):"
+                 << "current amount:" << amount
+                 << "total processed:" << totalProcessed
+                 << "command.size():" << command.size()
+                 << "cleandata reserving:" << (BUFFER_SIZE * 4);
+    }
+#endif
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char out_buffer[BUFFER_SIZE + 10];
 

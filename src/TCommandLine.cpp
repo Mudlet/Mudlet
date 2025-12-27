@@ -49,6 +49,11 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 , mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TCommandLine::TCommandLine() - Created command line" << name 
+             << "type=" << mType << "initial mHistoryList.size():" << mHistoryList.size()
+             << "ptr=" << static_cast<void*>(this);
+#endif
     setObjectName(qsl("commandLine_%1_%2").arg(mpHost->getName(), name));
 
     setAutoFillBackground(true);
@@ -987,6 +992,15 @@ void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
 
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    static int commandCount = 0;
+    if (++commandCount % 20 == 0) { // Log every 20 commands
+        qWarning() << "MEMORY: TCommandLine::enterCommand() - Command history growth (command #" << commandCount << "):"
+                 << "mHistoryList.size():" << mHistoryList.size()
+                 << "current text length:" << toPlainText().length()
+                 << "command line:" << mCommandLineName;
+    }
+#endif
     Q_UNUSED(event)
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
@@ -1556,6 +1570,9 @@ void TCommandLine::restoreHistory()
         return;
     }
 
+#ifdef DEBUG_MEMORY_TRACKING
+    int initialHistorySize = mHistoryList.size();
+#endif
     QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
@@ -1566,6 +1583,10 @@ void TCommandLine::restoreHistory()
                 ifs.readLineInto(&buffer);
                 mHistoryList.append(buffer);
             }
+#ifdef DEBUG_MEMORY_TRACKING
+            qWarning() << "MEMORY: TCommandLine::restoreHistory() - Loaded history for" << mCommandLineName
+                     << "from" << initialHistorySize << "to" << mHistoryList.size() << "entries";
+#endif
 
             if (historyFile.error() != QFileDevice::NoError) {
                 qWarning() << "TCommandLine::restoreHistory() ERROR - unable to read command history from file for the command line called: " << mCommandLineName << " of type: " << mType

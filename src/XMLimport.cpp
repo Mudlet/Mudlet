@@ -1413,6 +1413,9 @@ int XMLimport::readTriggerPackage()
 // of the top-level trigger group.
 int XMLimport::readTrigger(TTrigger* pParent)
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qDebug() << "MEMORY: XMLimport::readTrigger() - Creating TTrigger";
+#endif
     auto pT = new TTrigger(pParent, mpHost);
 
     if (module) {
@@ -1767,6 +1770,9 @@ int XMLimport::readScriptPackage()
 
 int XMLimport::readScript(TScript* pParent)
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qDebug() << "MEMORY: XMLimport::readScript() - Creating TScript";
+#endif
     auto script = new TScript(pParent, mpHost);
 
     script->setIsFolder(attributes().value(qsl("isFolder")) == YES);
