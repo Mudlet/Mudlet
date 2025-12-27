@@ -45,85 +45,11 @@ TTreeWidget::TTreeWidget(QWidget* pW)
     mIsDropAction = false;
     mpHost = nullptr;
     mOldParentID = 0;
-
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsAliasTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-    mIsVarTree = false;
 }
 
-void TTreeWidget::setIsAliasTree()
+void TTreeWidget::setTreeType(TreeType type)
 {
-    mIsAliasTree = true;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsVarTree()
-{
-    mIsVarTree = true;
-    mIsAliasTree = false;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsTriggerTree()
-{
-    mIsTriggerTree = true;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsActionTree()
-{
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsKeyTree = false;
-    mIsActionTree = true;
-}
-
-void TTreeWidget::setIsKeyTree()
-{
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = true;
-}
-
-void TTreeWidget::setIsTimerTree()
-{
-    mIsTimerTree = true;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsAliasTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsScriptTree()
-{
-    mIsScriptTree = true;
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
+    mTreeType = type;
 }
 
 void TTreeWidget::setHost(Host* pH)
@@ -142,7 +68,7 @@ void TTreeWidget::getAllChildren(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>
 void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if (mIsVarTree && indexClicked.isValid() && indexClicked.row() != 0 && mClickedItem == indexClicked) {
+    if (mTreeType == TreeType::Var && indexClicked.isValid() && indexClicked.row() != 0 && mClickedItem == indexClicked) {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
@@ -180,7 +106,7 @@ void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 void TTreeWidget::mousePressEvent(QMouseEvent* event)
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if (mIsVarTree && indexClicked.isValid()) {
+    if (mTreeType == TreeType::Var && indexClicked.isValid()) {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
@@ -288,13 +214,17 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
             // Emit signal for undo system before performing the move
             emit itemMoved(childID, moveInfo.oldParentID, newParentID, moveInfo.oldPosition, childPosition);
 
-            if (mIsTriggerTree) {
+            switch (mTreeType) {
+            case TreeType::Trigger:
                 mpHost->getTriggerUnit()->reParentTrigger(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-            } else if (mIsAliasTree) {
+                break;
+            case TreeType::Alias:
                 mpHost->getAliasUnit()->reParentAlias(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-            } else if (mIsKeyTree) {
+                break;
+            case TreeType::Key:
                 mpHost->getKeyUnit()->reParentKey(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-            } else if (mIsTimerTree) {
+                break;
+            case TreeType::Timer: {
                 mpHost->getTimerUnit()->reParentTimer(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
                 TTimer* pTChild = mpHost->getTimerUnit()->getTimer(childID);
                 if (pTChild) {
@@ -325,15 +255,19 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                         }
                     }
                 }
-            } else if (mIsScriptTree) {
+                break;
+            }
+            case TreeType::Script:
                 mpHost->getScriptUnit()->reParentScript(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-            } else if (mIsActionTree) {
+                break;
+            case TreeType::Action:
                 mpHost->getActionUnit()->reParentAction(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
                 mpHost->getActionUnit()->updateToolbar();
-            } else {
+                break;
+            case TreeType::Var:
+            case TreeType::None:
                 qWarning().nospace().noquote() << "TTreeWidget::rowsInserted(...) WARNING - a TTreeWidget item which has not been classified as a mudlet type detected.";
-                // Consider marking this:
-                // Q_UNREACHABLE();
+                break;
             }
         }
 
@@ -383,7 +317,7 @@ void TTreeWidget::dropEvent(QDropEvent* event)
         event->ignore();
     }
 
-    if (mIsVarTree) {
+    if (mTreeType == TreeType::Var) {
         LuaInterface* lI = mpHost->getLuaInterface();
         auto [isValid, errorMsg] = lI->validMove(pItem);
         if (!isValid) {

@@ -721,7 +721,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(splitter_right, &QSplitter::splitterMoved, this, &dlgTriggerEditor::slot_rightSplitterMoved);
     // additional settings
     treeWidget_triggers->setColumnCount(1);
-    treeWidget_triggers->setIsTriggerTree();
+    treeWidget_triggers->setTreeType(TreeType::Trigger);
     treeWidget_triggers->setRootIsDecorated(false);
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
@@ -730,7 +730,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost(mpHost);
-    treeWidget_aliases->setIsAliasTree();
+    treeWidget_aliases->setTreeType(TreeType::Alias);
     treeWidget_aliases->setColumnCount(1);
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
@@ -739,7 +739,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_actions->hide();
     treeWidget_actions->setHost(mpHost);
-    treeWidget_actions->setIsActionTree();
+    treeWidget_actions->setTreeType(TreeType::Action);
     treeWidget_actions->setColumnCount(1);
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
@@ -748,7 +748,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_timers->hide();
     treeWidget_timers->setHost(mpHost);
-    treeWidget_timers->setIsTimerTree();
+    treeWidget_timers->setTreeType(TreeType::Timer);
     treeWidget_timers->setColumnCount(1);
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
@@ -757,7 +757,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_variables->hide();
     treeWidget_variables->setHost(mpHost);
-    treeWidget_variables->setIsVarTree();
+    treeWidget_variables->setTreeType(TreeType::Var);
     treeWidget_variables->setColumnCount(2);
     treeWidget_variables->hideColumn(1);
     treeWidget_variables->header()->hide();
@@ -767,7 +767,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_keys->hide();
     treeWidget_keys->setHost(mpHost);
-    treeWidget_keys->setIsKeyTree();
+    treeWidget_keys->setTreeType(TreeType::Key);
     treeWidget_keys->setColumnCount(1);
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
@@ -776,7 +776,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost(mpHost);
-    treeWidget_scripts->setIsScriptTree();
+    treeWidget_scripts->setTreeType(TreeType::Script);
     treeWidget_scripts->setColumnCount(1);
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
