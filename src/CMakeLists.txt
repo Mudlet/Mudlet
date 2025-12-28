@@ -626,7 +626,7 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
 # * Enable memory tracking for debugging memory leaks in core classes:
 #   This adds constructor/destructor logging for TConsole, Host, TRoomDB, etc.
 #   Useful for investigating object lifecycle and potential leaks:
-target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_MEMORY_TRACKING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_MEMORY_TRACKING)
 
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
