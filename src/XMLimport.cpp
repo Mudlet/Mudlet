@@ -542,8 +542,6 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             } else if (dir == qsl("out")) {
                 pT->out = e;
                 pT->setDoor(qsl("out"), door);
-            } else {
-                // TODO: Handle Special Exits
             }
         } else if (name() == qsl("coord")) {
             if (attributes().value(qsl("x")).toString().isEmpty()) {
