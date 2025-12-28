@@ -391,8 +391,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 Host::~Host()
 {
 #ifdef DEBUG_MEMORY_TRACKING
-    qWarning() << "MEMORY: Host::~Host() - Destroying host" << mHostName 
+    qWarning() << "MEMORY: Host::~Host() - Starting destruction, host" << mHostName 
              << "id=" << mHostID << "ptr=" << static_cast<void*>(this);
+    qWarning() << "MEMORY: Host::~Host() - mpMap ptr=" << static_cast<void*>(mpMap.data())
+             << "valid=" << (mpMap ? "true" : "false");
 #endif
 
     // Mark the host as closing down to prevent keybinding processing during destruction
@@ -414,6 +416,11 @@ Host::~Host()
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
+    
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: Host::~Host() - About to let QScopedPointer<TMap> mpMap auto-cleanup";
+#endif
+    
     mErrorLogStream.flush();
     mErrorLogFile.close();
     // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
@@ -423,6 +430,10 @@ Host::~Host()
 
     // Don't pass 'this' pointer during destruction - it's unsafe as the Host is being destroyed
     TDebug::removeHost(nullptr, mHostName);
+
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: Host::~Host() - Completed destruction for host" << mHostName;
+#endif
 }
 
 void Host::forceClose()

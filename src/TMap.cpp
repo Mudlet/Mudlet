@@ -66,7 +66,14 @@ TMap::TMap(Host* pH, const QString& profileName)
 
 TMap::~TMap()
 {
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TMap::~TMap() - Starting destruction, mpRoomDB ptr=" << static_cast<void*>(mpRoomDB)
+             << "has_roomdb=" << (mpRoomDB ? "true" : "false");
+#endif
     delete mpRoomDB;
+#ifdef DEBUG_MEMORY_TRACKING
+    qWarning() << "MEMORY: TMap::~TMap() - Completed destruction, mpRoomDB deleted";
+#endif
     if (!mStoredMessages.isEmpty()) {
         qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
                    << "messages are:\n"

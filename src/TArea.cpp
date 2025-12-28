@@ -57,7 +57,9 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 TArea::~TArea()
 {
 #ifdef DEBUG_MEMORY_TRACKING
-    qDebug() << "MEMORY: TArea::~TArea() - Destroying area, id=" << getAreaID() 
+    int areaID = getAreaID();
+    qDebug() << "MEMORY: TArea::~TArea() - Destroying area, id=" << areaID
+             << (areaID == -1 ? "(DEFAULT AREA)" : "(regular area)")
              << "ptr=" << static_cast<void*>(this);
 #endif
     if (!mpRoomDB) {
