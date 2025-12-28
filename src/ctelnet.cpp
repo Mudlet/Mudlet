@@ -2327,6 +2327,7 @@ void cTelnet::autoEnableMXPProcessor()
     mpHost->mPromptedForMXPProcessorOn = true;
 
     // Automatically enable MXP processing
+    enableMXP = true;
     mpHost->setForceMXPProcessorOn(true);
 
     // Games that auto-enable MXP (without telnet negotiation) typically use
