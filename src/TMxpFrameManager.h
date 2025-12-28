@@ -135,6 +135,7 @@ private:
     
     // Cleanup
     void removeFrameFromHierarchy(TMxpFrame* frame);
+    void recalculateBorders();
 };
 
 #endif // MUDLET_TMXPFRAMEMANAGER_H

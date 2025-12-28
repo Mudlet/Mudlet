@@ -154,6 +154,35 @@ bool TMxpFrameManager::closeFrame(const QString& name)
         clearDestination();
     }
     
+    // Special handling for frames that are tabs in a parent frame
+    if (frame->parentFrame && frame->parentFrame->tabWidget && frame->widget) {
+        QTabWidget* parentTabWidget = frame->parentFrame->tabWidget;
+        QWidget* tabWidget = frame->widget;
+        
+        // Find the tab index for this frame's widget
+        int tabIndex = parentTabWidget->indexOf(tabWidget);
+        if (tabIndex >= 0) {
+            // Remove the tab from the parent's tab widget
+            parentTabWidget->removeTab(tabIndex);
+            
+            // Clean up console registration
+            if (mpHost && mpHost->mpConsole) {
+                mpHost->mpConsole->mSubConsoleMap.remove(name);
+                mpHost->mpConsole->mDockWidgetMap.remove(name);
+            }
+            
+            // Remove from hierarchy
+            removeFrameFromHierarchy(frame);
+            
+            // Remove from frames map and delete
+            mFrames.remove(name);
+            delete frame;
+            
+            // No need to recalculate borders for tab frames since they don't affect main window borders
+            return true;
+        }
+    }
+    
     // Close children first - make a copy since closeFrame modifies the list
     QList<TMxpFrame*> childrenCopy = frame->childFrames;
 
@@ -172,6 +201,9 @@ bool TMxpFrameManager::closeFrame(const QString& name)
     
     mFrames.remove(name);
     delete frame;
+    
+    // Recalculate borders after frame removal to reclaim space
+    recalculateBorders();
     
     return true;
 }
@@ -1000,4 +1032,53 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
     tabWidget->setCurrentIndex(tabIndex);
     
     console->show();
+}
+
+void TMxpFrameManager::recalculateBorders()
+{
+    if (!mpHost) {
+        return;
+    }
+    
+    // Reset borders and recalculate based on remaining frames
+    mMxpBorders = QMargins();
+    
+    if (!mpHost->mpConsole) {
+        mpHost->setBorders(mMxpBorders);
+        return;
+    }
+    
+    QSize windowSize = mpHost->mpConsole->size();
+    
+    // Recalculate borders by examining all remaining top-level frames
+    // (frames without parents that affect the main window borders)
+    for (auto* frame : mFrames.values()) {
+        if (!frame || frame->parentFrame) {
+            continue; // Skip child frames, only process top-level frames
+        }
+        
+        // Only frames that were positioned using alignment (not absolute positioning)
+        // contribute to MXP borders
+        bool hasAbsolutePosition = !frame->left.isEmpty() || !frame->top.isEmpty();
+        if (hasAbsolutePosition) {
+            continue;
+        }
+        
+        QString align = frame->align.toLower();
+        QSize widthSize = calculateFrameSize(frame->width, windowSize, false);
+        QSize heightSize = calculateFrameSize(frame->height, windowSize, true);
+        
+        if (align == qsl("left")) {
+            mMxpBorders.setLeft(mMxpBorders.left() + widthSize.width());
+        } else if (align == qsl("right")) {
+            mMxpBorders.setRight(mMxpBorders.right() + widthSize.width());
+        } else if (align == qsl("top")) {
+            mMxpBorders.setTop(mMxpBorders.top() + heightSize.height());
+        } else if (align == qsl("bottom")) {
+            mMxpBorders.setBottom(mMxpBorders.bottom() + heightSize.height());
+        }
+    }
+    
+    // Apply the recalculated borders
+    mpHost->setBorders(mMxpBorders);
 }
