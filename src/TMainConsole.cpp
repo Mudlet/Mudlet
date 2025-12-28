@@ -1342,6 +1342,8 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
     if (saved) {
         mpHost->mpMap->resetUnsaved();
         mpHost->mpMap->setSaveError(false);
+    } else {
+        mpHost->mpMap->setSaveError(true);
     }
 
     return saved;
