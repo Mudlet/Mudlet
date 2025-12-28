@@ -54,6 +54,7 @@ class CustomLineDrawHandler;
 class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
 class CustomLineSession;
+class MiddleMousePanHandler;
 class RoomMoveActivationHandler;
 class RoomMoveDragHandler;
 class RoomContextMenuHandler;
@@ -75,7 +76,7 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
-    ~T2DMap();
+    ~T2DMap() override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     void paintEvent(QPaintEvent*) override;
@@ -96,6 +97,8 @@ public:
     friend class RoomContextMenuHandler;
     friend class RoomMoveDragHandler;
     friend class SelectionRectangleHandler;
+    friend class PanInteractionHandler;
+    friend class MiddleMousePanHandler;
 
     struct MapInteractionContext {
         QMouseEvent* event = nullptr;
@@ -149,6 +152,7 @@ public:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void prepareSingleClickSelection(MapInteractionContext& context);
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
+    QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
@@ -224,6 +228,7 @@ public:
     QRect mMapInfoRect;
     int mFontHeight = 20;
     bool mShowRoomID = false;
+    bool mShowGrid = false;
     QMap<int, QPixmap> mPixMap;
     double rSize = 0.5;
     double eSize = 3.0;
@@ -243,7 +248,7 @@ public:
     // centered on mRoomID - it seems to be needed if the room concerned
     // is being moved by the mouse as part of a selection:
     bool mShiftMode = false;
-    QComboBox* arealist_combobox = nullptr;
+    QPointer<QComboBox> arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom = 0;
     int mCustomLinesRoomTo = 0;
@@ -361,6 +366,7 @@ private:
     std::unique_ptr<IInteractionHandler> mRoomMoveDragHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
+    std::unique_ptr<MiddleMousePanHandler> mMiddleMousePanHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
@@ -408,8 +414,8 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
 
-    dlgRoomProperties* mpDlgRoomProperties = nullptr;
-    dlgMapLabel* mpDlgMapLabel = nullptr;
+    QPointer<dlgRoomProperties> mpDlgRoomProperties;
+    QPointer<dlgMapLabel> mpDlgMapLabel;
     // Track the area last viewed so we can raise an event when it changes,
     // initialised to an invalid area that is different to the one that mAreaID
     // is initialised to - so that the xyzoom gets read for the first area that

@@ -26,7 +26,9 @@ DarkTheme::DarkTheme()
 : DarkTheme(new AltFocusMenuBarDisable(qsl("Fusion")))
 {}
 
-DarkTheme::DarkTheme(QStyle* style) : QProxyStyle(style) {}
+DarkTheme::DarkTheme(QStyle* style)
+: QProxyStyle(style)
+{}
 
 void DarkTheme::polish(QPalette& palette)
 {

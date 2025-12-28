@@ -26,11 +26,15 @@
 #include "TConsole.h"
 
 
+#include "ctelnet.h"
 #include "Host.h"
 #include "TCommandLine.h"
+#include "THyperlinkCompactManager.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkSelectionManager.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -48,7 +52,6 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
-#include <QTextCodec>
 #include <QPainter>
 
 const QString TConsole::cmLuaLineVariable("line");
@@ -78,6 +81,18 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
+    mpHyperlinkCompactManager = std::make_unique<THyperlinkCompactManager>();
+    mpHyperlinkSelectionManager = std::make_unique<THyperlinkSelectionManager>(*this);
+    mpHyperlinkVisibilityManager = std::make_unique<THyperlinkVisibilityManager>(this);
+    
+    initializeOSC8StyleFeature();
+    initializeOSC8MenuFeature();
+    initializeOSC8TooltipFeature();
+    initializeOSC8DisabledFeature();
+    initializeOSC8SpoilerFeature();
+    initializeOSC8SelectionFeature();
+    initializeOSC8VisibilityFeature();
+
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
     quitShortcut->setContext(Qt::WidgetShortcut);
@@ -211,6 +226,25 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // Setting the focusProxy cannot be done here because things have not
         // been completed enough at this point - it has been defered to a
         // zero-timer at the end of this constructor
+
+        // Connect user input trigger (command submission only, not typing)
+        connect(mpCommandLine, &TCommandLine::commandSubmitted,
+                mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onUserInput);
+        
+        // Connect GA/EOR prompt signal from telnet
+        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived,
+                mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onPromptReceived);
+        
+        // Refresh display when hyperlink visibility changes
+        connect(mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::visibilityChanged,
+                this, [this]() {
+                    if (mUpperPane) {
+                        mUpperPane->forceUpdate();
+                    }
+                    if (mLowerPane) {
+                        mLowerPane->forceUpdate();
+                    }
+                });
     }
 
     layer = new QWidget(mpMainDisplay);
@@ -338,8 +372,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     replayButton->setMaximumSize(QSize(30, 30));
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
-    replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
-    replayButton->setToolTip(utils::richText(tr("Toggle recording of replays")));
+
+    QIcon replayIcon;
+    replayIcon.addPixmap(QPixmap(qsl(":/icons/media-tape.png")), QIcon::Normal, QIcon::Off);
+    replayIcon.addPixmap(QPixmap(qsl(":/icons/media-tape-red-cross.png")), QIcon::Normal, QIcon::On);
+    replayButton->setIcon(replayIcon);
+    //: Button tooltip for the replay recording toggle button
+    replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
@@ -348,7 +387,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     logButton->setCheckable(true);
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
-    logButton->setToolTip(utils::richText(tr("Toggle logging")));
+    //: Button tooltip for the logging button
+    logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
 
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
@@ -399,7 +439,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     emergencyStop->setMinimumSize(QSize(30, 30));
     emergencyStop->setMaximumSize(QSize(30, 30));
-    emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
+
+    QIcon emergencyIcon;
+    emergencyIcon.addPixmap(QPixmap(qsl(":/icons/edit-bomb.png")), QIcon::Normal, QIcon::Off);
+    emergencyIcon.addPixmap(QPixmap(qsl(":/icons/red-bomb.png")), QIcon::Normal, QIcon::On);
+    emergencyStop->setIcon(emergencyIcon);
+
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
@@ -878,6 +923,10 @@ void TConsole::slot_toggleReplayRecording()
         mReplayFile.setFileName(mLogFileName);
         if (!mReplayFile.open(QIODevice::WriteOnly)) {
             qWarning() << "TConsole: failed to open replay file for writing:" << mReplayFile.errorString();
+            mRecordReplay = false;
+            //: Informational message displayed when replay recording file could not be opened
+            printSystemMessage(tr("Failed to open replay recording file for writing.") % QChar::LineFeed);
+            return;
         }
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             mReplayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
@@ -885,13 +934,19 @@ void TConsole::slot_toggleReplayRecording()
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
         printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
     } else {
         if (!mReplayFile.commit()) {
             qDebug() << "TConsole::slot_toggleReplayRecording: error saving replay: " << mReplayFile.errorString();
+            //: Informational message displayed when replay recording is stopped but could not be saved
             printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved.") % QChar::LineFeed);
         } else {
+            //: Informational message displayed when replay recording is stopped
             printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
         }
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     }
 }
 
@@ -1064,7 +1119,7 @@ void TConsole::scrollUp(int lines)
     mLowerPane->forceUpdate();
 
     if (lowerAppears) {
-        QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
+        QTimer::singleShot(0, this, [this, lines]() {  mUpperPane->scrollUp(mLowerPane->getRowCount() + lines); });
         if (mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
@@ -1074,8 +1129,9 @@ void TConsole::scrollUp(int lines)
             mpHost->postMessage(infoMsg);
             mudlet::self()->showedSplitscreenTutorial();
         }
+    } else {
+        mUpperPane->scrollUp(lines);
     }
-    mUpperPane->scrollUp(lines);
     slot_adjustAccessibleNames();
 }
 
@@ -1248,9 +1304,8 @@ bool TConsole::hasSelection()
 {
     if (P_begin != P_end) {
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void TConsole::insertText(const QString& msg)
@@ -1580,9 +1635,8 @@ bool TConsole::moveCursor(int x, int y)
         mUserCursor.setX(x);
         mUserCursor.setY(y);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 int TConsole::select(const QString& text, int numOfMatch)
@@ -1903,10 +1957,8 @@ void TConsole::slot_stopAllItems(bool b)
 {
     if (b) {
         mpHost->stopAllTriggers();
-        emergencyStop->setIcon(QIcon(qsl(":/icons/red-bomb.png")));
     } else {
         mpHost->reenableAllTriggers();
-        emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
     }
 }
 
@@ -2669,4 +2721,101 @@ void TConsole::restoreCommandSearchSettings()
     }
 
     commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
+}
+
+void TConsole::initializeOSC8StyleFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthands for style property names
+    mpHyperlinkCompactManager->registerShorthand(qsl("s"), qsl("style"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("c"), qsl("color"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("bg"), qsl("bg"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("b"), qsl("bold"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("i"), qsl("italic"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("u"), qsl("underline"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("o"), qsl("overline"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("st"), qsl("strikethrough"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("tdc"), qsl("text-decoration-color"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("h"), qsl("hover"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("a"), qsl("active"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("f"), qsl("focus"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("fv"), qsl("focus-visible"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("vi"), qsl("visited"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("l"), qsl("link"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("al"), qsl("any-link"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("sl"), qsl("selected"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("style"));
+}
+
+void TConsole::initializeOSC8MenuFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthand for menu property
+    mpHyperlinkCompactManager->registerShorthand(qsl("m"), qsl("menu"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("menu"));
+}
+
+void TConsole::initializeOSC8TooltipFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthand for tooltip property
+    mpHyperlinkCompactManager->registerShorthand(qsl("t"), qsl("tooltip"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("tooltip"));
+}
+
+void TConsole::initializeOSC8VisibilityFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthand for visibility property
+    mpHyperlinkCompactManager->registerShorthand(qsl("v"), qsl("visibility"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("visibility"));
+}
+
+void TConsole::initializeOSC8SelectionFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthand for selection property
+    mpHyperlinkCompactManager->registerShorthand(qsl("sel"), qsl("selection"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("selection"));
+}
+
+void TConsole::initializeOSC8SpoilerFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    mpHyperlinkCompactManager->registerShorthand(qsl("sp"), qsl("spoiler"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("spoiler"));
+}
+
+void TConsole::initializeOSC8DisabledFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    mpHyperlinkCompactManager->registerShorthand(qsl("d"), qsl("disabled"));
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("disabled"));
 }

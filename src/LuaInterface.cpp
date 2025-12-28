@@ -84,13 +84,14 @@ QStringList LuaInterface::varName(TVar* var)
     return names;
 }
 
-bool LuaInterface::validMove(QTreeWidgetItem* pWidget)
+std::pair<bool, QString> LuaInterface::validMove(QTreeWidgetItem* pWidget)
 {
     TVar* pNewParent = varUnit->getWVar(pWidget);
     if (pNewParent && pNewParent->getValueType() != LUA_TTABLE) {
-        return false;
+        //: Error message shown when user tries to drag a variable onto a non-table variable
+        return {false, QObject::tr("Cannot move variable here - the target is not a table")};
     }
-    return true;
+    return {true, QString()};
 }
 
 void LuaInterface::getAllChildren(TVar* var, QList<TVar*>* list)
@@ -139,12 +140,35 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
             //everything is tabled in lua, we need to just find what table
             //we're using, if index == 0, we iterate to the closest table
             if (index) {
+                // Validate stack before attempting table access
+                const int stackTop = lua_gettop(L);
+                const int actualIndex = (index < 0) ? stackTop + index + 1 : index;
+                
+                if (actualIndex <= 0 || actualIndex > stackTop) {
+                    qWarning() << "LuaInterface::loadValue() - Invalid stack index:" << index 
+                               << "Stack size:" << stackTop << "Actual index:" << actualIndex;
+                    return false;
+                }
+                
+                if (!lua_istable(L, index)) {
+                    qWarning() << "LuaInterface::loadValue() - Value at index" << index << "is not a table, type:" << lua_typename(L, lua_type(L, index));
+                    return false;
+                }
+                
                 lua_gettable(L, index);
             } else {
+                // Find the closest table on the stack
+                bool foundTable = false;
                 for (int j = 1; j <= lua_gettop(L); j++) {
                     if (lua_type(L, j * -1) == LUA_TTABLE) {
                         lua_gettable(L, j * -1);
+                        foundTable = true;
+                        break;
                     }
+                }
+                if (!foundTable) {
+                    qWarning() << "LuaInterface::loadValue() - No table found on stack when index=0";
+                    return false;
                 }
             }
         } else {

@@ -282,7 +282,7 @@ private:
     // Window menu management for multiple windows
     QList<QAction*> mWindowListActions;
     QAction* mWindowListSeparator{nullptr};
-    QMenu* mpWindowMenu{nullptr};
+    QPointer<QMenu> mpWindowMenu;
 
     // Docked widgets management
     QMap<QString, QPointer<QDockWidget>> mDockWidgetMap;

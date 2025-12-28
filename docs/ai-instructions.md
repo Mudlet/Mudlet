@@ -54,6 +54,15 @@ QString displayText = tr("Connection failed: %1").arg(errorMessage);
 QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 ```
 
+```xml
+// In .ui files, set "notr" attribute to true for string literals which require no translation
+<widget>
+  <property name="text">
+    <string notr="true">-</string>
+  </property>
+</widget>
+```
+
 ### Memory management
 
 - Use Qt's parent-child system for automatic cleanup for Qt classes
@@ -88,6 +97,10 @@ int TLuaInterpreter::functionName(lua_State* L)
 
 ## Common patterns
 
+### Comments
+
+Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
+
 ### Error handling
 
 ```cpp
@@ -112,6 +125,10 @@ if (!file.open(QIODevice::ReadOnly)) {
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
 
+### Static analysis
+
+For complete setup instructions on how to run static analysis during a build see, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
+
 ### Debugging options
 
 Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defines for development (search "Debugging code inclusions"):
@@ -123,6 +140,10 @@ Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defin
 - And others for encoding, MXP, map autosave, etc.
 
 **Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines (CMake) or `DEFINES+=DEBUG_XXX` lines (QMake) when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+
+### Git
+
+Do not force-push to remote branches.
 
 ### Building on macOS
 
@@ -153,7 +174,7 @@ cd /path/to/Mudlet/build
 # configure (only needed the first time)
 cmake ../ -G Ninja
 
-# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default:
+# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default, no need to specify number of jobs:
 cmake --build .
 
 # Run Mudlet - it's a visual, desktop application

@@ -6,6 +6,12 @@ on:
     - '**.cpp'
     - '**.h'
     - '.github/workflows/clangtidy-diff-analysis.yml'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to analyze (required for clang-tidy to have files to check)'
+        required: true
+        type: number
 
 jobs:
   compile-mudlet:
@@ -23,13 +29,13 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
+      BOOST_URL: https://github.com/boostorg/boost/releases/download/boost-1.83.0/boost-1.83.0.7z
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
         # https://github.com/ZedThree/clang-tidy-review/issues/10
         ref: ${{ github.event.pull_request.head.sha }}
@@ -56,7 +62,7 @@ jobs:
         modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -70,69 +76,72 @@ jobs:
           BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
         fi
         mkdir -p $BOOST_ROOT
-        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
-        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
-        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
-        cd $BOOST_ROOT && cp -r boost_*/* .
-        rm -rf boost_*/* download.tar.bz2 download.tar
+        curl --progress-bar --location --output $BOOST_ROOT/download.7z $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.7z -y -bd
+        cd $BOOST_ROOT && cp -r boost-*/* .
+        rm -rf boost-*/* download.7z
       shell: bash
 
-    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
-    - name: Use CMake 3.20.1
-      uses: lukka/get-cmake@v3.20.1
+    - name: Use CMake 3.30.3
+      uses: lukka/get-cmake@v3.30.3
 
-    - name: (Linux) Install non-vcpkg dependencies (1/2)
+    - name: (Linux) Install Lua via GitHub Actions
+      uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
-      run: |
-        # gettext is needed for vcpkg
-        sudo apt-get install gettext -y
-
-    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
-    - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v7
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       with:
-        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
-        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
+        luaVersion: "5.1.5"
+        buildCache: false
 
-    - name: (Linux) Install non-vcpkg dependencies (2/2)
+    - name: (Linux) Install Luarocks via GitHub Actions
+      uses: leafo/gh-actions-luarocks@v6
+      if: runner.os == 'Linux'
+
+    - name: (Linux) Install dependencies
       if: runner.os == 'Linux'
       run: |
-        # Install from vcpkg everything we can for cross-platform consistency
-        # If not available, use other methods
-        sudo apt-get install libsecret-1-dev pkg-config libzip-dev libglu1-mesa-dev libpulse-dev -y
+        sudo apt-get update
 
-        echo "Skipping generation of translation stats, so not installing lua-yajl."
+        # Install all required dependencies
+        # liblua5.1-0-dev is needed for CMake to find Lua headers/library
+        sudo apt-get install libsecret-1-dev ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev \
+          libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
+
+        # Install lua-yajl early to generate translation statistics
+        luarocks install --local lua-yajl
+
+        # Allow stats generation script to see location of lua-yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: Generate compile_commands.json
       uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        useVcpkgToolchainFile: true
         # has to be the github workspace, not the runner workspace, for the docker-based clang-tidy-review
         buildDirectory: '${{github.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DVCPKG_APPLOCAL_DEPS=OFF
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         buildWithCMakeArgs: >-
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.21.0
+      uses: ZedThree/clang-tidy-review@v0.22.3
       id: static_analysis
       with:
+        pr: ${{ inputs.pr_number || github.event.pull_request.number }}
         build_dir: 'b/ninja' # path is relative to checkout directory
         exclude: '3rdparty'
         config_file: '.clang-tidy'
         # the action doesn't see system-level libraries, need to replicate them here
-        apt_packages: 'gettext, pkg-config, libzip-dev, libglu1-mesa-dev, libpulse-dev'
+        apt_packages: 'gettext, pkg-config, libzip-dev, libglu1-mesa-dev, libpulse-dev, libpcre3-dev, liblua5.1-0-dev, libassimp-dev, libboost-dev, libhunspell-dev, libpugixml-dev, libsecret-1-dev, libsqlite3-dev, libyajl-dev'
+        # workaround for https://github.com/ZedThree/clang-tidy-review/issues/157
+        extra_arguments: '--allow-no-checks'
         split_workflow: true
 
     - name: Upload check results
-      uses: ZedThree/clang-tidy-review/upload@v0.21.0
+      uses: ZedThree/clang-tidy-review/upload@v0.22.3

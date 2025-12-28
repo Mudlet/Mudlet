@@ -1271,6 +1271,7 @@ function getConfig(...)
       "mapperPanelVisible", 
       "mapRoomSize",
       "mapRoundRooms",
+      "mapShowGrid",
       "mapShowRoomBorders",
       "promptForMXPProcessorOn",
       "promptForVersionInTTYPE",
