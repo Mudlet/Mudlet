@@ -674,8 +674,9 @@ private:
     // Guarded pointer to text editor's undo stack (for safe signal connections):
     QPointer<edbee::TextUndoStack> mpTextUndoStack;
 
-    // Auto-complete provider (needs cleanup in destructor):
-    edbee::StringTextAutoCompleteProvider* mpAutoCompleteProvider = nullptr;
+    // Shared auto-complete provider for all editor instances
+    static edbee::StringTextAutoCompleteProvider* smSharedAutoCompleteProvider;
+    static int smAutoCompleteProviderRefCount;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
