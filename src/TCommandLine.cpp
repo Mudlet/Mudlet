@@ -661,7 +661,7 @@ void TCommandLine::adjustHeight()
         qWarning() << "TCommandLine::adjustHeight() ERROR: mpConsole->layerCommandLine is NULL!";
         return;
     }
-    int lines = document()->size().height();
+    int lines = static_cast<int>(document()->size().height());
     // Workaround for SubCommandLines textCursor not visible in some situations
     // SubCommandLines cannot autoresize
     if (mType == SubCommandLine) {

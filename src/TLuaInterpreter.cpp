@@ -612,7 +612,7 @@ int TLuaInterpreter::Wait(lua_State* L)
 QString TLuaInterpreter::dirToString(lua_State* L, int position)
 {
     if (lua_isnumber(L, position)) {
-        qint64 const dirNum = lua_tonumber(L, position);
+        qint64 const dirNum = static_cast<qint64>(lua_tonumber(L, position));
         switch (dirNum) {
         // breaks not needed - all handled cases end in a return!
         case 1:
@@ -726,7 +726,7 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
         }
     }
     if (lua_type(L, position) == LUA_TNUMBER) {
-        dirNum = lua_tonumber(L, position);
+        dirNum = static_cast<int>(lua_tonumber(L, position));
         return (dirNum >= DIR_NORTH && dirNum <= DIR_OUT ? dirNum : 0);
     }
     return 0;
@@ -7364,7 +7364,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have red component at index 1"));
             }
-            const int r = lua_tonumber(L, -1);
+            const int r = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (r < 0 || r > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
@@ -7376,7 +7376,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have green component at index 2"));
             }
-            const int g = lua_tonumber(L, -1);
+            const int g = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (g < 0 || g > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
@@ -7388,7 +7388,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have blue component at index 3"));
             }
-            const int b = lua_tonumber(L, -1);
+            const int b = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (b < 0 || b > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
@@ -7398,7 +7398,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
             int a = 255;
             lua_rawgeti(L, 2, 4);
             if (lua_isnumber(L, -1)) {
-                a = lua_tonumber(L, -1);
+                a = static_cast<int>(lua_tonumber(L, -1));
                 if (a < 0 || a > 255) {
                     lua_pop(L, 1);
                     return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
