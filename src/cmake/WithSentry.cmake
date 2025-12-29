@@ -2,9 +2,19 @@ if(NOT WITH_SENTRY)
     return()
 endif()
 
-message(STATUS "Building with Sentry enabled")
-
 set(SENTRY_PATH "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native")
+
+# Check if sentry-native submodule is initialized
+if(NOT EXISTS "${SENTRY_PATH}/CMakeLists.txt")
+    message(FATAL_ERROR
+        "Sentry is enabled (WITH_SENTRY=ON) but the sentry-native submodule is not initialized.\n"
+        "Either:\n"
+        "  1. Initialize it: git submodule update --init 3rdparty/sentry-native\n"
+        "  2. Disable Sentry: cmake -DWITH_SENTRY=OFF .."
+    )
+endif()
+
+message(STATUS "Building with Sentry enabled")
 set(SENTRY_COMMON_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
     -DCMAKE_C_COMPILER=clang

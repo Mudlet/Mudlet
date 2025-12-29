@@ -1,7 +1,8 @@
+#ifndef MUDLET_TMXPIMAGETAGHANDLER_H
+#define MUDLET_TMXPIMAGETAGHANDLER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,19 +20,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TMxpTagHandler.h"
 
-#include "TMapLabel.h"
-
-#include <QBuffer>
-#include <QDebug>
-
-QByteArray TMapLabel::base64EncodePixmap() const
+class TMxpImageTagHandler : public TMxpSingleTagHandler
 {
-    QBuffer buffer;
-    if (!buffer.open(QIODevice::WriteOnly)) {
-        qWarning() << "TMapLabel::base64EncodePixmap() ERROR: failed to open buffer for writing";
-        return {};
-    }
-    pix.save(&buffer, "PNG");
-    return buffer.data().toBase64();
-}
+public:
+    TMxpImageTagHandler()
+        : TMxpSingleTagHandler(qsl("IMAGE")) {}
+    
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
+};
+
+#endif // MUDLET_TMXPIMAGETAGHANDLER_H

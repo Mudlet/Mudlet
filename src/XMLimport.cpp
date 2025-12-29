@@ -226,7 +226,10 @@ std::pair<EditorViewType, int> XMLimport::importFromClipboard()
     QBuffer xmlBuffer(&ba);
 
     setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::ReadOnly);
+    if (!xmlBuffer.open(QIODevice::ReadOnly)) {
+        qWarning() << "XMLimport::importFromClipboard() ERROR: failed to open XML buffer for reading";
+        return {EditorViewType::cmUnknownView, 0};
+    }
 
     while (!atEnd()) {
         readNext();
@@ -725,6 +728,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
     setBoolAttributeWithDefault(qsl("mEnableMXP"), pHost->mEnableMXP, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_MXP_NEGOTIATION_OFF"), true, true));
+    setBoolAttributeWithDefault(qsl("mEnableNAWS"), pHost->mEnableNAWS, true);
     setBoolAttributeWithDefault(qsl("mEnableCHARSET"), pHost->mEnableCHARSET, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNEWENVIRON"), pHost->mEnableNEWENVIRON, getBoolValueFromLegacyAttributeOrDefault(qsl("forceNewEnvironNegotiationOff"), true, true));
 

@@ -1871,6 +1871,13 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     const int triggerID = pLuaInterpreter->startTempColorTrigger(ansiFgColor, ansiBgColor, code, expiryCount);
     if (code.isNull()) {
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempAnsiColorTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempColorTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, s-1);
@@ -1949,6 +1956,13 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempBeginOfLineTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempBeginOfLineTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
@@ -2159,6 +2173,13 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempColorTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempColorTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 3);
@@ -2345,6 +2366,13 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempExactMatchTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempExactMatchTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
@@ -2424,6 +2452,13 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), dontExpire);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempLineTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempLineTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 3);
@@ -2464,6 +2499,13 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempPromptTrigger(QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempPromptTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempPromptTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 1);
@@ -2504,6 +2546,13 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempRegexTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempRegexTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
@@ -2594,6 +2643,13 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);

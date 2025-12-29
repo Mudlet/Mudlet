@@ -236,6 +236,52 @@ public:
     }
 
     void setVariable(const QString& name, const QString& value) override {}
+
+    // MXP Frame/Dest tracking
+    bool createMxpFrameCalled = false;
+    QString lastCreatedFrameName;
+    QMap<QString, QString> lastFrameAttributes;
+    
+    bool setMxpDestinationCalled = false;
+    QString lastDestinationName;
+    bool lastDestinationEol = false;
+    bool lastDestinationEof = false;
+    
+    bool clearMxpDestinationCalled = false;
+    
+    bool createMxpFrame(const QString& name, const QMap<QString, QString>& attributes) override
+    {
+        createMxpFrameCalled = true;
+        lastCreatedFrameName = name;
+        lastFrameAttributes = attributes;
+        return false;
+    }
+    
+    bool setMxpDestination(const QString& frameName, bool eol, bool eof) override
+    {
+        setMxpDestinationCalled = true;
+        lastDestinationName = frameName;
+        lastDestinationEol = eol;
+        lastDestinationEof = eof;
+        return false;
+    }
+    
+    void clearMxpDestination() override
+    {
+        clearMxpDestinationCalled = true;
+    }
+    
+    void resetMxpTracking()
+    {
+        createMxpFrameCalled = false;
+        lastCreatedFrameName.clear();
+        lastFrameAttributes.clear();
+        setMxpDestinationCalled = false;
+        lastDestinationName.clear();
+        lastDestinationEol = false;
+        lastDestinationEof = false;
+        clearMxpDestinationCalled = false;
+    }
 };
 
 #endif //MUDLET_TEST_TMXPSTUBCLIENT_H

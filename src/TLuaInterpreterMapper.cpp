@@ -1372,7 +1372,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
     }
 
     lua_newtable(L);
-    if (n < 2 || (n > 1 && !isFullDataRequired)) {
+    if (n < 2 || !isFullDataRequired) {
         // Replicate original implementation
         QList<int> areaExits = pA->getAreaExitRoomIds();
         if (areaExits.size() > 1) {
@@ -3697,10 +3697,9 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
             .arg(QString::number(roomID), lua_tostring(L, 2)));
     }
 
-    qint64 const weight = getVerifiedInt(L, __func__, 3, "exit weight");
-    if (weight < 0 || weight > std::numeric_limits<int>::max()) {
-        return warnArgumentValue(L, __func__, qsl(
-            "weight %1 is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %2")
+    const int weight = getVerifiedInt(L, __func__, 3, "exit weight");
+    if (weight < 0) {
+        return warnArgumentValue(L, __func__, qsl("weight %1 is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %2")
             .arg(QString::number(weight), QString::number(std::numeric_limits<int>::max())));
     }
 

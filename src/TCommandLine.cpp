@@ -113,6 +113,9 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
 
+    // Forward textChanged signal for hyperlink visibility triggers
+    connect(this, &QPlainTextEdit::textChanged, this, &TCommandLine::commandLineTextChanged);
+
     if (mType == MainCommandLine) { // Limit to the main command line only
         connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
             this->setEchoSuppression(isRemoteEcho);
@@ -173,11 +176,8 @@ bool TCommandLine::event(QEvent* event)
     if (event->type() == QEvent::KeyPress) {
         auto* ke = dynamic_cast<QKeyEvent*>(event);
         if (!ke) {
-            // Something is wrong -
             qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynamically castable to the latter - so the processing of this event "
                                      "has been aborted - please report this to Mudlet Makers.";
-            // Indicate that we don't want to touch this event with a barge-pole!
-            event->ignore();
             return false;
         }
 
@@ -994,6 +994,9 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mLastCompletion.clear();
     mUserKeptOnTyping = false;
 
+    // Emit signal for hyperlink visibility triggers before processing the command
+    emit commandSubmitted();
+
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
@@ -1183,6 +1186,21 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
+    // DOWN at position 0 with text: save to history and clear input
+    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty()) {
+        mHistoryList.removeAll(toPlainText());
+        if (!mHistoryList.isEmpty()) {
+            mHistoryList[0] = toPlainText();
+        } else {
+            mHistoryList.push_front(toPlainText());
+        }
+        mHistoryList.push_front(QString());
+
+        clear();
+        adjustHeight();
+        return;
+    }
+
     if (mHistoryList.empty()) {
         return;
     }
