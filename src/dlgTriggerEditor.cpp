@@ -506,8 +506,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(mpUndoStack, &EditorUndoStack::itemsChanged, this, &dlgTriggerEditor::slot_itemsChanged);
 
-    // Initialize the shared auto-complete provider once - ownership is transferred to Edbee
-    // via giveProvider() so it gets deleted automatically at app shutdown
     if (!smAutoCompleteInitialized) {
         auto* provider = new edbee::StringTextAutoCompleteProvider();
 
