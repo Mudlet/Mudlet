@@ -674,7 +674,6 @@ private:
     QPointer<edbee::TextUndoStack> mpTextUndoStack;
 
     // Track whether auto-complete provider has been initialized
-    // The provider is owned by Edbee's global autoCompleteProviderList via giveProvider()
     static bool smAutoCompleteInitialized;
 
     // tracks the duration of the "Save Profile As" action so

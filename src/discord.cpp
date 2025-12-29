@@ -138,7 +138,6 @@ Discord::~Discord()
         }
     }
 
-    // Clean up event handlers - safe to call delete on nullptr if allocation failed
     delete mpHandlers;
     mpHandlers = nullptr;
 }

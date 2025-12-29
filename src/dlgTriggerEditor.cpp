@@ -99,7 +99,6 @@ using namespace std::chrono_literals;
 static const char* cButtonBaseColor = "baseColor";
 
 // Track whether the shared auto-complete provider has been initialized
-// The provider is owned by Edbee's global autoCompleteProviderList via giveProvider()
 bool dlgTriggerEditor::smAutoCompleteInitialized = false;
 
 dlgTriggerEditor::dlgTriggerEditor(Host* pH)
