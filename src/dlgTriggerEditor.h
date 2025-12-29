@@ -173,7 +173,6 @@ public:
 
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
-    ~dlgTriggerEditor();
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
 
@@ -674,9 +673,9 @@ private:
     // Guarded pointer to text editor's undo stack (for safe signal connections):
     QPointer<edbee::TextUndoStack> mpTextUndoStack;
 
-    // Shared auto-complete provider for all editor instances
-    static edbee::StringTextAutoCompleteProvider* smSharedAutoCompleteProvider;
-    static int smAutoCompleteProviderRefCount;
+    // Track whether auto-complete provider has been initialized
+    // The provider is owned by Edbee's global autoCompleteProviderList via giveProvider()
+    static bool smAutoCompleteInitialized;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in

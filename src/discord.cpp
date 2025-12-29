@@ -129,10 +129,6 @@ Discord::~Discord()
         // We might expect to have to do an mpLibrary->unload() but we do not
         // need to as it happens automagically on the application shutdown...
 
-        // Clean up the event handlers
-        delete mpHandlers;
-        mpHandlers = nullptr;
-
         // Clear out the localDiscordPresence collection:
         QMutableMapIterator<QString, localDiscordPresence*> itPresencePtrs(mPresencePtrs);
         while (itPresencePtrs.hasNext()) {
@@ -141,6 +137,10 @@ Discord::~Discord()
             itPresencePtrs.remove();
         }
     }
+
+    // Clean up event handlers - safe to call delete on nullptr if allocation failed
+    delete mpHandlers;
+    mpHandlers = nullptr;
 }
 
 // For all the setters below the caller is supposed to check that they have the
