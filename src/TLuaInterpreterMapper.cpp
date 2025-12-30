@@ -1148,7 +1148,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     }
 
     if (lua_isnumber(L, 1)) {
-        id = lua_tonumber(L, 1);
+        id = static_cast<int>(lua_tonumber(L, 1));
         if (id < 1) {
             return warnArgumentValue(L, __func__, qsl("number %1 is not a valid areaID greater than zero").arg(id));
         }
@@ -1969,7 +1969,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
         }
         name = lua_tostring(L, 1);
     } else {
-        id = lua_tonumber(L, 1);
+        id = static_cast<int>(lua_tonumber(L, 1));
     }
 
     if (!name.isNull()) {
@@ -2748,13 +2748,13 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
         int g = -1;
         int b = -1;
         if (!lua_isnil(L, ++index)) {
-            r = lua_tonumber(L, index);
+            r = static_cast<int>(lua_tonumber(L, index));
         }
         if (!lua_isnil(L, ++index)) {
-            g = lua_tonumber(L, index);
+            g = static_cast<int>(lua_tonumber(L, index));
         }
         if (!lua_isnil(L, ++index)) {
-            b = lua_tonumber(L, index);
+            b = static_cast<int>(lua_tonumber(L, index));
         }
         QColor color;
         if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
@@ -3269,7 +3269,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
     }
 
     if (lua_isnumber(L, 1)) {
-        id = lua_tonumber(L, 1);
+        id = static_cast<int>(lua_tonumber(L, 1));
         if (id < 1) {
             return warnArgumentValue(L, __func__, qsl("number %1 is not a valid areaID greater than zero").arg(id));
         }
@@ -3808,7 +3808,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     int areaId = -1;
     QString areaName;
     if (lua_isnumber(L, 2)) {
-        areaId = lua_tonumber(L, 2);
+        areaId = static_cast<int>(lua_tonumber(L, 2));
         if (areaId < 1) {
             return warnArgumentValue(L, __func__, qsl(
                 "number %1 is not a valid areaID greater than zero. "

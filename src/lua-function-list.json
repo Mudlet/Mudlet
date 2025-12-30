@@ -155,6 +155,7 @@
     "getBackgroundColor": "getBackgroundColor([windowName])",
     "getBgColor": "getBgColor(windowName)",
     "getBorderBottom": "getBorderBottom()",
+    "getBorderColor": "r, g, b = getBorderColor()",
     "getBorderLeft": "getBorderLeft()",
     "getBorderRight": "getBorderRight()",
     "getBorderSizes": "getBorderSizes()",
