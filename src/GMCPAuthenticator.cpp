@@ -30,7 +30,16 @@ GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 
 void GMCPAuthenticator::saveSupportsSet(const QString& data)
 {
-    auto jsonDoc = QJsonDocument::fromJson(data.toUtf8());
+    QJsonParseError parseError;
+    auto jsonDoc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        qWarning() << "GMCPAuthenticator::saveSupportsSet() - Failed to parse JSON:" << parseError.errorString();
+        return;
+    }
+    if (!jsonDoc.isObject()) {
+        qWarning() << "GMCPAuthenticator::saveSupportsSet() - JSON data is not an object";
+        return;
+    }
     auto jsonObj = jsonDoc.object();
 
     if (jsonObj.contains("type")) {
@@ -89,7 +98,18 @@ void GMCPAuthenticator::sendCredentials()
 
 void GMCPAuthenticator::handleAuthResult(const QString& data)
 {
-    auto doc = QJsonDocument::fromJson(data.toUtf8());
+    QJsonParseError parseError;
+    auto doc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        qWarning() << "GMCPAuthenticator::handleAuthResult() - Failed to parse JSON:" << parseError.errorString();
+        mpHost->postMessage(tr("[ ERROR ] - Failed to parse authentication result from server"));
+        return;
+    }
+    if (!doc.isObject()) {
+        qWarning() << "GMCPAuthenticator::handleAuthResult() - JSON data is not an object";
+        mpHost->postMessage(tr("[ ERROR ] - Invalid authentication result format from server"));
+        return;
+    }
     auto obj = doc.object();
 
     // some game drivers can parse JSON for true or false, but may not be able to write booleans back

@@ -514,7 +514,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
+            qWarning() << "LuaInterface::renameCVar() - Unknown key type:" << var->getKeyType() << "for variable:" << var->getName();
             return;
         }
 
@@ -542,7 +542,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
+            qWarning() << "LuaInterface::renameCVar() - Unknown key type when retrieving old value:" << var->getKeyType() << "for variable:" << var->getName();
             return;
         }
         lua_gettable(mL, -2);
@@ -557,7 +557,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
+            qWarning() << "LuaInterface::renameCVar() - Unknown key type when setting new key:" << var->getKeyType() << "for variable:" << var->getName();
             return;
         }
         pushCount++;
@@ -573,7 +573,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
+            qWarning() << "LuaInterface::renameCVar() - Unknown key type when deleting old key:" << var->getKeyType() << "for variable:" << var->getName();
             return;
         }
         lua_pushnil(mL);
@@ -614,7 +614,7 @@ bool LuaInterface::loadVar(TVar* var)
             return false;
         }
     } else {
-        //FIXME: report error to user qDebug()<<"panic in loadVar";
+        qWarning() << "LuaInterface::loadVar() - Lua panic occurred while loading variable:" << var->getName();
         return false;
     }
     return true;

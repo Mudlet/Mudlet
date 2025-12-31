@@ -66,7 +66,12 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 
     setProcessChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
-    waitForStarted();
+    if (!waitForStarted()) {
+        const QString errorMessage = qsl("Failed to start process '%1': %2").arg(prog, errorString());
+        lua_pushstring(L, errorMessage.toUtf8().constData());
+        lua_error(L);
+        return;
+    }
     running = true;
 }
 
