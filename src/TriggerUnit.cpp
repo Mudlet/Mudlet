@@ -278,9 +278,12 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     const QByteArray utf8Data = data.toUtf8();
     const char* utf8Ptr = utf8Data.constData();
-    const int utf8Length = utf8Data.size();
+    const size_t utf8Length = utf8Data.size();
 
     char* subject = static_cast<char*>(malloc(utf8Length + 1));
+    if (!subject) {
+        return;
+    }
     memcpy(subject, utf8Ptr, utf8Length);
     subject[utf8Length] = '\0';
 

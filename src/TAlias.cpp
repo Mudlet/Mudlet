@@ -90,8 +90,11 @@ bool TAlias::match(const QString& haystack)
     }
 
     const QByteArray utf8Data = haystack.toUtf8();
-    const int utf8Length = utf8Data.size();
+    const size_t utf8Length = utf8Data.size();
     char* haystackC = static_cast<char*>(malloc(utf8Length + 1));
+    if (!haystackC) {
+        return false;
+    }
     memcpy(haystackC, utf8Data.constData(), utf8Length);
     haystackC[utf8Length] = '\0';
 

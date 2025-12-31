@@ -2616,7 +2616,6 @@ void TTextEdit::slot_analyseSelection()
     // in Lua.
     short int utf8Index = 1;
     char utf8Bytes[5];
-    utf8Bytes[4] = '\0';
 
     int total = 0;
     startColumn = mPA.x();
@@ -2652,7 +2651,7 @@ void TTextEdit::slot_analyseSelection()
 
         if (mpBuffer->lineBuffer.at(line).at(index).isHighSurrogate() && ((index + 1) < lineLength)) {
             const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8();
-            const size_t utf8Width = qMin(static_cast<size_t>(utf8Data.size()), static_cast<size_t>(4));
+            const size_t utf8Width = qMin(static_cast<size_t>(utf8Data.size()), size_t{4});
             memcpy(utf8Bytes, utf8Data.constData(), utf8Width);
             utf8Bytes[utf8Width] = '\0';
             quint8 columnsToUse = qMax(static_cast<size_t>(2), utf8Width);
@@ -2747,7 +2746,7 @@ void TTextEdit::slot_analyseSelection()
             index += 1;
         } else {
             const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8();
-            const size_t utf8Width = qMin(static_cast<size_t>(utf8Data.size()), static_cast<size_t>(4));
+            const size_t utf8Width = qMin(static_cast<size_t>(utf8Data.size()), size_t{4});
             memcpy(utf8Bytes, utf8Data.constData(), utf8Width);
             utf8Bytes[utf8Width] = '\0';
             quint8 columnsToUse = qMax(static_cast<size_t>(1), utf8Width);
