@@ -25,12 +25,15 @@
 #include "TMxpBRTagHandler.h"
 #include "TMxpColorTagHandler.h"
 #include "TMxpCustomElementTagHandler.h"
+#include "TMxpDestTagHandler.h"
 #include "TMxpElementDefinitionHandler.h"
 #include "TMxpEntityTagHandler.h"
 #include "TMxpExpireTagHandler.h"
 #include "TMxpFontTagHandler.h"
 #include "TMxpFormattingTagsHandler.h"
+#include "TMxpFrameTagHandler.h"
 #include "TMxpHRTagHandler.h"
+#include "TMxpImageTagHandler.h"
 #include "TMxpLinkTagHandler.h"
 #include "TMxpMusicTagHandler.h"
 #include "TMxpSendTagHandler.h"
@@ -111,6 +114,14 @@ TMxpTagProcessor::TMxpTagProcessor()
     // Media tags (MSP compatibility)
     registerHandler(TMxpFeatureOptions({"sound", {"fname", "v", "l", "p", "t", "u"}}), new TMxpSoundTagHandler());
     registerHandler(TMxpFeatureOptions({"music", {"fname", "v", "l", "p", "c", "t", "u"}}), new TMxpMusicTagHandler());
+
+    // Image tag (placeholder - not yet implemented, but swallow it)
+    // Register without advertising support since IMAGE is not fully implemented
+    registerHandler(new TMxpImageTagHandler());
+
+    // Frame and destination tags
+    registerHandler(TMxpFeatureOptions({"frame", {"name", "action", "internal", "external", "align", "left", "right", "top", "bottom", "width", "height", "scrolling", "floating", "title"}}), new TMxpFrameTagHandler());
+    registerHandler(TMxpFeatureOptions({"dest", {"name", "eol", "eof"}}), new TMxpDestTagHandler());
 
     // Formatting tags (text style)
     mSupportedMxpElements["b"] = QVector<QString>();

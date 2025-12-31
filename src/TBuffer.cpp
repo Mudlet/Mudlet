@@ -946,13 +946,67 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         localBufferPosition++;
                         continue;
                     }
+                    case HANDLER_INSERT_AND_REPROCESS: {
+                        // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position
+                        // This is used for error recovery when a '<' is found inside a tag -
+                        // we output the incomplete tag as text, then reprocess the '<' to start a new tag
+
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        // Do NOT increment position - the current character needs to be reprocessed
+                        continue;
+                    }
                     default:
                         //HANDLER_FALL_THROUGH -> do nothing
                         assert(localBuffer[localBufferPosition] == ch);
                     }
                 } else if (mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
-                    localBufferPosition++;
-                    continue;
+                    // Mode is LOCKED but we're inside a tag that started in a different mode.
+                    // We need to continue feeding characters to the tag builder to complete the tag.
+                    TMxpProcessingResult const result =
+                            mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+                    
+                    switch (result) {
+                    case HANDLER_NEXT_CHAR:
+                        localBufferPosition++;
+                        continue;
+                    case HANDLER_INSERT_ENTITY_SYS: {
+                        // Tag was not handled, output as text
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        localBufferPosition++;
+                        continue;
+                    }
+                    case HANDLER_INSERT_AND_REPROCESS: {
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        continue;
+                    }
+                    default:
+                        localBufferPosition++;
+                        continue;
+                    }
                 } else {
                     mpHost->mMxpProcessor.processRawInput(ch);
                 }
@@ -960,7 +1014,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             if (CHAR_IS_COMMIT_CHAR(ch)) {
                 // after a newline (but not a <br>) return to default mode
-                mpHost->mMxpProcessor.resetToDefaultMode();
+                // BUT only if we're not in the middle of parsing a tag (tags can span lines)
+                if (!mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    mpHost->mMxpProcessor.resetToDefaultMode();
+                }
             }
         }
 
@@ -1200,6 +1257,48 @@ COMMIT_LINE:
     }
 }
 
+void TBuffer::flushPendingDestinationContent()
+{
+    if (!mpHost || mMudLine.isEmpty()) {
+        return;
+    }
+    
+    if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+        TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
+
+        if (destConsole && destConsole != mpHost->mpConsole) {
+            destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            mMudLine.clear();
+            mMudBuffer.clear();
+        }
+    }
+}
+
+void TBuffer::resetCurrentTextFormat()
+{
+    if (!mpHost) {
+        return;
+    }
+    
+    // Reset to default colors and attributes - equivalent to SGR 0
+    mIsDefaultColor = true;
+    mForeGroundColor = mpHost->mFgColor;
+    mForeGroundColorLight = mpHost->mFgColor;
+    mBackGroundColor = mpHost->mBgColor;
+    mBold = false;
+    mItalics = false;
+    mOverline = false;
+    mReverse = false;
+    mStrikeOut = false;
+    mUnderline = false;
+    mUnderlineWavy = false;
+    mUnderlineDotted = false;
+    mUnderlineDashed = false;
+    mBlink = false;
+    mFastBlink = false;
+    mConcealed = false;
+    mAltFont = 0;
+}
 
 bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 {
@@ -1212,6 +1311,21 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         // text would alter the prior contents but as that is on a separate
         // line there should not be any changes to text before a line feed
         // which sort of seems to be implied by the current value of ch:
+
+        // Check if there's an active MXP DEST - route to destination frame
+        if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+            TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
+            if (destConsole && destConsole != mpHost->mpConsole) {
+                if (!mMudLine.isEmpty()) {
+                    destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+                }
+                mMudLine.clear();
+                mMudBuffer.clear();
+                ++localBufferPosition;
+                // Skip creating lines in main console while destination is active
+                return true;
+            }
+        }
 
         // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
         // https://bugreports.qt.io/browse/QTBUG-105035
@@ -3959,6 +4073,87 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
 }
 
+void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+
+    // Ensure we have a line to append to BEFORE computing line indices
+    if (buffer.empty()) {
+        appendEmptyLine();
+    }
+
+    // Check for text/formatting size mismatch - this is a programming error
+    if (text.size() != static_cast<qsizetype>(formatting.size())) {
+        qWarning() << "TBuffer::appendFormatted: text size" << text.size() 
+                   << "differs from formatting size" << formatting.size()
+                   << "- using longer length with default formatting for missing entries";
+    }
+
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+
+    bool firstChar = lineBuffer.back().isEmpty();
+    int oldSourceLinkId = 0;
+    int destLinkId = 0;
+    const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
+    const TChar defaultChar;
+
+    for (qsizetype i = 0; i < length; ++i) {
+        if (i >= text.size()) {
+            break;
+        }
+        
+        const QChar ch = text.at(i);
+        if (ch == QChar::LineFeed) {
+            firstChar = true;
+            appendEmptyLine();
+            continue;
+        }
+        
+        const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
+        
+        const int sourceLinkId = srcChar.linkIndex();
+        if (sourceLinkId && (oldSourceLinkId != sourceLinkId)) {
+            destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), 
+                                              sourceLinkStore.getHintsConst(sourceLinkId), 
+                                              mpHost);
+            mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
+            oldSourceLinkId = sourceLinkId;
+        } else if (!sourceLinkId) {
+            destLinkId = 0;
+        }
+        
+        lineBuffer.back().append(ch);
+        TChar destChar(srcChar);
+        destChar.mLinkIndex = destLinkId;
+        buffer.back().push_back(destChar);
+
+        if (firstChar) {
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+            firstChar = false;
+        }
+    }
+
+    appendEmptyLine();
+
+    if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
+        log(lastLineBeforeWrap, lastLineBeforeWrap);
+        wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    } else {
+        wrapLine(lastLineBeforeWrap, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    }
+
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
+        shrinkBuffer();
+    }
+
+    if (!mpConsole.isNull()) {
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    }
+}
+
 void TBuffer::append(const QString& text, int sub_start, int sub_end,
                      const QColor& fgColor, const QColor& bgColor,
                      TChar::AttributeFlags flags, int linkID)
@@ -4656,6 +4851,16 @@ void TBuffer::clear()
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
+}
+
+void TBuffer::clearLastLine()
+{
+    if (!buffer.empty()) {
+        buffer.back().clear();
+        if (!lineBuffer.isEmpty()) {
+            lineBuffer.back().clear();
+        }
+    }
 }
 
 bool TBuffer::deleteLine(int y)
