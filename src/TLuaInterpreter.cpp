@@ -594,7 +594,7 @@ int TLuaInterpreter::Wait(lua_State* L)
     }
 
     const int luaSleepMsec = getVerifiedInt(L, __func__, 1, "sleep time in msec");
-    msleep(luaSleepMsec); // FIXME thread::sleep()
+    msleep(luaSleepMsec);
     return 0;
 }
 
@@ -612,7 +612,7 @@ int TLuaInterpreter::Wait(lua_State* L)
 QString TLuaInterpreter::dirToString(lua_State* L, int position)
 {
     if (lua_isnumber(L, position)) {
-        qint64 const dirNum = lua_tonumber(L, position);
+        qint64 const dirNum = static_cast<qint64>(lua_tonumber(L, position));
         switch (dirNum) {
         // breaks not needed - all handled cases end in a return!
         case 1:
@@ -726,7 +726,7 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
         }
     }
     if (lua_type(L, position) == LUA_TNUMBER) {
-        dirNum = lua_tonumber(L, position);
+        dirNum = static_cast<int>(lua_tonumber(L, position));
         return (dirNum >= DIR_NORTH && dirNum <= DIR_OUT ? dirNum : 0);
     }
     return 0;
@@ -2231,9 +2231,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     if (name.isEmpty()) {
-        if (luaLine > 0 && luaLine < host.mpConsole->buffer.timeBuffer.size()) {
-            // CHECK: Lua starts counting at 1 but we are indexing into a C/C++
-            // structure but the previous code did not accept a zero line number
+        if (luaLine < host.mpConsole->buffer.timeBuffer.size()) {
             lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toUtf8().constData());
         } else {
             lua_pushstring(L, "getTimestamp: invalid line number");
@@ -2244,7 +2242,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         if (!pC) {
             return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
         }
-        if (luaLine > 0 && luaLine < pC->buffer.timeBuffer.size()) {
+        if (luaLine < pC->buffer.timeBuffer.size()) {
             lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
         } else {
             lua_pushstring(L, "getTimestamp: invalid line number");
@@ -5223,6 +5221,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getBorderBottom", TLuaInterpreter::getBorderBottom);
     lua_register(pGlobalLua, "getBorderLeft", TLuaInterpreter::getBorderLeft);
     lua_register(pGlobalLua, "getBorderSizes", TLuaInterpreter::getBorderSizes);
+    lua_register(pGlobalLua, "getBorderColor", TLuaInterpreter::getBorderColor);
     lua_register(pGlobalLua, "getConsoleBufferSize", TLuaInterpreter::getConsoleBufferSize);
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
@@ -7366,7 +7365,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have red component at index 1"));
             }
-            const int r = lua_tonumber(L, -1);
+            const int r = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (r < 0 || r > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
@@ -7378,7 +7377,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have green component at index 2"));
             }
-            const int g = lua_tonumber(L, -1);
+            const int g = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (g < 0 || g > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
@@ -7390,7 +7389,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have blue component at index 3"));
             }
-            const int b = lua_tonumber(L, -1);
+            const int b = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (b < 0 || b > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
@@ -7400,7 +7399,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
             int a = 255;
             lua_rawgeti(L, 2, 4);
             if (lua_isnumber(L, -1)) {
-                a = lua_tonumber(L, -1);
+                a = static_cast<int>(lua_tonumber(L, -1));
                 if (a < 0 || a > 255) {
                     lua_pop(L, 1);
                     return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
@@ -7446,6 +7445,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("enableMXP")) {
         host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableNAWS")) {
+        host.mEnableNAWS = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("askTlsAvailable")) {
@@ -7752,6 +7755,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
         { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
+        { qsl("enableNAWS"), [&](){ lua_pushboolean(L, host.mEnableNAWS); } },
         { qsl("logDirectory"), [&](){
             const auto logDir = host.mLogDir;
 

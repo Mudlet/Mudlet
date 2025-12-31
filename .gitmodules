@@ -7,9 +7,6 @@
 [submodule "3rdparty/dblsqd"]
 	path = 3rdparty/dblsqd
 	url = https://github.com/Mudlet/dblsqd-sdk-qt.git
-[submodule "3rdparty/qt-ordered-map"]
-	path = 3rdparty/qt-ordered-map
-	url = https://github.com/Mudlet/qt-ordered-map
 [submodule "3rdparty/qt-tags-widget"]
 	path = 3rdparty/qt-tags-widget
 	url = https://github.com/julian-go/qt-tags-widget.git

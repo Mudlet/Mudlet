@@ -1359,6 +1359,10 @@ void cTelnet::checkNAWS()
 // https://www.rfc-editor.org/rfc/rfc1073
 void cTelnet::sendNAWS(int width, int height)
 {
+    if (!mpHost || !mpHost->mEnableNAWS) {
+        return;
+    }
+
     std::string message;
     message += TN_IAC; // Interpret As Command
     message += TN_SB;  // Sub-negotiation begins
@@ -1817,6 +1821,36 @@ QString cTelnet::getNewEnvironOSCHyperlinksMenu()
     return qsl("1");
 }
 
+QString cTelnet::getNewEnvironOSCHyperlinksCompact()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksPresets()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksVisibility()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksSelection()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksSpoiler()
+{
+    return qsl("1");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
+{
+    return qsl("1");
+}
+
 QString cTelnet::getNewEnvironScreenReader()
 {
     return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
@@ -1882,6 +1916,12 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_STYLE_STATES"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksStyleStates()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_TOOLTIP"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksTooltip()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_MENU"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksMenu()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_COMPACT"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksCompact()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_PRESETS"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksPresets()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_VISIBILITY"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksVisibility()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SELECTION"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSelection()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SPOILER"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSpoiler()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_DISABLED"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksDisabled()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
@@ -2287,6 +2327,7 @@ void cTelnet::autoEnableMXPProcessor()
     mpHost->mPromptedForMXPProcessorOn = true;
 
     // Automatically enable MXP processing
+    enableMXP = true;
     mpHost->setForceMXPProcessorOn(true);
 
     // Games that auto-enable MXP (without telnet negotiation) typically use
@@ -2378,6 +2419,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_GA:
     case TN_EOR: {
         recvdGA = true;
+        emit signal_promptReceived();
         break;
     }
     case TN_AYT: {
@@ -2692,9 +2734,20 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
                         mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                     }
-                } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
+                } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
+                } else if (option == OPT_NAWS) {
+                    if (mpHost->mEnableNAWS) {
+                        sendTelnetOption(TN_DO, option);
+                        hisOptionState[idxOption] = true;
+                        qDebug() << "NAWS enabled";
+                        raiseProtocolEvent("sysProtocolEnabled", "NAWS");
+                    } else {
+                        sendTelnetOption(TN_DONT, option);
+                        hisOptionState[idxOption] = false;
+                        raiseProtocolEvent("sysProtocolDisabled", "NAWS");
+                    }
                 } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
                     //these are handled separately, as they're a bit special
                     if (mpHost->mFORCE_NO_COMPRESSION) {
@@ -3010,19 +3063,29 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         } else if (!myOptionState[idxOption]) {
             // only if the option is currently disabled
 
-            if ((option == OPT_STATUS) || (option == OPT_NAWS) || (option == OPT_TERMINAL_TYPE)) {
+            if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE || (option == OPT_NAWS && mpHost->mEnableNAWS)) {
                 if (option == OPT_STATUS) {
                     qDebug() << "We ARE willing to enable telnet option STATUS";
                 }
+
                 if (option == OPT_TERMINAL_TYPE) {
-                    qDebug() << "We ARE willing to enable telnet option TERMINAL_TYPE";
+                    qDebug() << "TERMINAL_TYPE enabled";
                 }
+
                 if (option == OPT_NAWS) {
-                    qDebug() << "We ARE willing to enable telnet option NAWS";
+                    qDebug() << "NAWS enabled";
+                    raiseProtocolEvent("sysProtocolEnabled", "NAWS");
                 }
+
                 sendTelnetOption(TN_WILL, option);
                 myOptionState[idxOption] = true;
                 announcedState[idxOption] = true;
+            } else if (option == OPT_NAWS && !mpHost->mEnableNAWS) {
+                qDebug() << "NAWS disabled (user preference)";
+                sendTelnetOption(TN_WONT, option);
+                myOptionState[idxOption] = false;
+                announcedState[idxOption] = true;
+                raiseProtocolEvent("sysProtocolDisabled", "NAWS");
             } else {
                 qDebug() << "We are NOT WILLING to enable this telnet option.";
                 sendTelnetOption(TN_WONT, option);
@@ -4389,6 +4452,9 @@ void cTelnet::postData()
     if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
         return;
     }
+    
+    // All data goes through main console's printOnDisplay which calls
+    // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->mpConsole->printOnDisplay(mMudData, true);
 }
 

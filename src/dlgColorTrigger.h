@@ -25,7 +25,7 @@
 
 
 #include "ui_color_trigger.h"
-#include <QSignalMapper>
+
 #include <QPointer>
 
 class Host;
@@ -56,7 +56,6 @@ public slots:
 private:
     void setupBasicButton(QPushButton*, const int, const QColor&, const QString&);
 
-    QSignalMapper* mSignalMapper = nullptr;
     TTrigger* mpTrigger = nullptr;
     bool mIsBackground = false;
     QColor mRgbAnsiColor;

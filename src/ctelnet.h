@@ -274,6 +274,9 @@ signals:
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
+    // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
+    // Used by hyperlink visibility manager to trigger expire actions
+    void signal_promptReceived();
 
 
 private:
@@ -307,6 +310,12 @@ private:
     QString getNewEnvironOSCHyperlinksStyleStates();
     QString getNewEnvironOSCHyperlinksTooltip();
     QString getNewEnvironOSCHyperlinksMenu();
+    QString getNewEnvironOSCHyperlinksCompact();
+    QString getNewEnvironOSCHyperlinksPresets();
+    QString getNewEnvironOSCHyperlinksVisibility();
+    QString getNewEnvironOSCHyperlinksSelection();
+    QString getNewEnvironOSCHyperlinksSpoiler();
+    QString getNewEnvironOSCHyperlinksDisabled();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();
