@@ -117,6 +117,7 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+class NotesTabContainer;
 class ShortcutManager;
 class TConsole;
 class TDockWidget;
@@ -336,6 +337,18 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
+
+    // Notes tab management
+    void createNotesTabForHost(Host* pHost);
+    void removeNotesTabForHost(Host* pHost);
+    void toggleNotesTabVisibility(Host* pHost);
+    void setNotesTabVisible(Host* pHost, bool visible);
+    bool isNotesTabVisible(Host* pHost) const;
+    bool isNotesTab(int tabIndex) const;
+    Host* getHostForTabIndex(int tabIndex) const;
+    QString getTabProfileName(int tabIndex) const;
+    void loadOrRestoreNotesTabState(Host* pHost);
+    void saveNotesTabState(Host* pHost);
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void writeSettings();
     bool muteAPI() const { return mMuteAPI; }
@@ -773,6 +786,10 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+
+    // Notes tab management for profiles
+    QMap<Host*, QPointer<NotesTabContainer>> mNotesTabContainers;
+    QMap<Host*, bool> mNotesTabVisibleState;
 
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
