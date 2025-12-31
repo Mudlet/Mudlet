@@ -4845,11 +4845,77 @@ void TBuffer::clear()
             break;
         }
     }
+
+    // After deleting all lines, clear all links (none are referenced)
+    clearLinkState();
+
     std::deque<TChar> const newLine;
     buffer.push_back(newLine);
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
+}
+
+void TBuffer::clearLinkState()
+{
+    // Collect currently referenced link IDs from buffer
+    QSet<int> activeLinkIds = collectActiveLinkIds();
+
+    // Remove only unreferenced links (preserves links still in use)
+    mLinkStore.removeUnreferencedLinks(activeLinkIds, mpHost);
+
+    // Clear link state tracking for removed links
+    QList<int> stateKeysToRemove;
+
+    for (auto it = mLinkStates.constBegin(); it != mLinkStates.constEnd(); ++it) {
+        if (!activeLinkIds.contains(it.key())) {
+            stateKeysToRemove.append(it.key());
+        }
+    }
+
+    for (int key : stateKeysToRemove) {
+        mLinkStates.remove(key);
+        mVisitedLinks.remove(key);
+        mLinkSelectionState.remove(key);
+        mLinkOriginalBackgrounds.remove(key);
+        mLinkOriginalCharacters.remove(key);
+        mLinkOriginalText.remove(key);
+    }
+
+    // Reset hover/active/focus state if those links are gone
+    if (!activeLinkIds.contains(mCurrentHoveredLinkIndex)) {
+        mCurrentHoveredLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mCurrentActiveLinkIndex)) {
+        mCurrentActiveLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mCurrentFocusedLinkIndex)) {
+        mCurrentFocusedLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mLastClickedLinkIndex)) {
+        mLastClickedLinkIndex = 0;
+    }
+}
+
+QSet<int> TBuffer::collectActiveLinkIds() const
+{
+    QSet<int> activeLinkIds;
+
+    // Scan all TChar objects in buffer to find referenced link IDs
+    for (const auto& line : buffer) {
+        for (const TChar& tchar : line) {
+            int linkId = tchar.linkIndex();
+
+            if (linkId > 0) {
+                activeLinkIds.insert(linkId);
+            }
+        }
+    }
+
+    return activeLinkIds;
 }
 
 void TBuffer::clearLastLine()
@@ -4879,6 +4945,9 @@ void TBuffer::shrinkBuffer()
     // We need to adjust the search result line as some lines have now gone
     // away:
     mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+
+    // Clean up unreferenced links after removing old lines
+    clearLinkState();
 
     if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
         // Signal to lua subsystem that indexes into the Console will need adjusting

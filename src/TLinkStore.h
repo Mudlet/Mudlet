@@ -23,6 +23,7 @@
 
 #include <QMap>
 #include <QMultiHash>
+#include <QSet>
 #include <QStringList>
 #include <QVector>
 
@@ -60,6 +61,8 @@ public:
     int getCurrentLinkID() const { return mLinkID; }
 
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
+
+    void removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH = nullptr);
 
 #if !defined(LinkStore_Test)
     // OSC 8 hyperlink styling storage and retrieval

@@ -25,6 +25,8 @@
 #include "utils.h"    // For qsl() macro
 #endif
 
+#include <QSet>
+
 int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference, const QString& expireName)
 {
     if (++mLinkID > mMaxLinks) {
@@ -104,6 +106,51 @@ void TLinkStore::expireLinks(const QString& expireName, Host* pH)
 
     // Remove all mappings for this expire name
     mExpireToLinks.remove(expireName);
+}
+
+void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH)
+{
+    QList<int> idsToRemove;
+
+    // Identify links that are no longer referenced
+    for (auto it = mLinkStore.constBegin(); it != mLinkStore.constEnd(); ++it) {
+        if (!referencedIds.contains(it.key())) {
+            idsToRemove.append(it.key());
+        }
+    }
+
+    // Remove unreferenced links and free their resources
+    for (int id : idsToRemove) {
+        // Free Lua references
+        freeReference(pH, mReferenceStore.value(id));
+
+        // Remove from all stores
+        mLinkStore.remove(id);
+        mHintStore.remove(id);
+        mReferenceStore.remove(id);
+
+        // Clean up expire mappings
+        QString expireName = mExpireStore.value(id);
+
+        if (!expireName.isEmpty()) {
+            mExpireToLinks.remove(expireName, id);
+            mExpireStore.remove(id);
+        }
+
+#if !defined(LinkStore_Test)
+        // Clean up styling and selection group index
+        if (mStylingStore.contains(id)) {
+            const Mudlet::HyperlinkStyling& styling = mStylingStore[id];
+
+            if (styling.selection.hasSelectionSettings) {
+                QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
+                mSelectionGroupIndex.remove(key, id);
+            }
+
+            mStylingStore.remove(id);
+        }
+#endif
+    }
 }
 
 #if !defined(LinkStore_Test)
