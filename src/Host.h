@@ -68,6 +68,7 @@ class TRoom;
 class TConsole;
 class TMainConsole;
 class dlgNotepad;
+class NotesManager;
 class TMap;
 class dlgIRC;
 class dlgPackageManager;
@@ -545,6 +546,7 @@ public:
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
     QPointer<dlgNotepad> mpNotePad;
+    QPointer<NotesManager> mpNotesManager;
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {

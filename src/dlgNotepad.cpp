@@ -22,29 +22,38 @@
 
 
 #include "dlgNotepad.h"
+#include "NotesManager.h"
 
 #include "mudlet.h"
 
-#include <QDir>
-#include <QStringConverter>
+#include <QInputDialog>
+#include <QMenu>
+#include <QMessageBox>
 
 using namespace std::chrono;
-
-// Used before we spotted a problem with not specifying an encoding:
-const QString local8BitEncodedNotesFileName{qsl("notes.txt")};
-// Used afterwards:
-const QString utf8EncodedNotesFileName{qsl("notes_utf8.txt")};
 
 dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
 {
     setupUi(this);
 
-    //: label for prepended text entry box in notepad
+    mpNotesManager = pH->mpNotesManager;
+
+    mTabWidget = new QTabWidget(this);
+    mTabWidget->setTabsClosable(true);
+    mTabWidget->setMovable(true);
+    mTabWidget->setDocumentMode(true);
+
+    QLayout* layout = centralwidget->layout();
+    layout->replaceWidget(notesEdit, mTabWidget);
+    delete notesEdit;
+    notesEdit = nullptr;
+
+    setupTabContextMenu();
+
     label_prependText = new QLabel(tr("Prepend"), this);
     action_prependTextLabel = toolBar->addWidget(label_prependText);
     lineEdit_prependText = new QLineEdit(this);
-    //: placeholder text for text entry box in notepad - text which gets added before sending a line
     lineEdit_prependText->setPlaceholderText(tr("Text to prepend to lines"));
     lineEdit_prependText->setClearButtonEnabled(true);
     action_prependText = toolBar->addWidget(lineEdit_prependText);
@@ -54,31 +63,49 @@ dlgNotepad::dlgNotepad(Host* pH)
     action_stop->setEnabled(false);
 
     connect(action_stop, &QAction::triggered, this, &dlgNotepad::slot_stopSending);
+    connect(action_addTab, &QAction::triggered, this, &dlgNotepad::slot_addTab);
     connect(action_sendAll, &QAction::triggered, this, &dlgNotepad::slot_sendAll);
     connect(action_sendLine, &QAction::triggered, this, &dlgNotepad::slot_sendLine);
     connect(action_sendSelection, &QAction::triggered, this, &dlgNotepad::slot_sendSelection);
     connect(action_toggleSendControls, &QAction::triggered, this, &dlgNotepad::slot_toggleSendControls);
     connect(action_toggleSendControls, &QAction::triggered, this, &dlgNotepad::saveSettings);
 
+    connect(mTabWidget, &QTabWidget::tabCloseRequested, this, &dlgNotepad::slot_removeTab);
+    connect(mTabWidget, &QTabWidget::currentChanged, this, &dlgNotepad::slot_currentTabChanged);
+
+    connect(mpNotesManager, &NotesManager::tabAdded, this, &dlgNotepad::slot_managerTabAdded);
+    connect(mpNotesManager, &NotesManager::tabRemoved, this, &dlgNotepad::slot_managerTabRemoved);
+    connect(mpNotesManager, &NotesManager::tabRenamed, this, &dlgNotepad::slot_managerTabRenamed);
+
     if (mpHost) {
         restore();
-        notesEdit->setFont(mpHost->getDisplayFont());
         restoreSettings();
     }
 
-    connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_textWritten);
+    const auto& tabsMap = mpNotesManager->getTabsMap();
+    for (auto it = tabsMap.constBegin(); it != tabsMap.constEnd(); ++it) {
+        createTabContent(it.key(), it.value().name);
+    }
+
+    if (mTabWidget->count() == 0) {
+        const QString tabId = mpNotesManager->addTab(tr("General Notes"));
+        createTabContent(tabId, tr("General Notes"));
+    }
 
     startTimer(2min);
 }
 
 void dlgNotepad::setFont(const QFont& font)
 {
-    notesEdit->setFont(font);
+    for (int i = 0; i < mTabWidget->count(); ++i) {
+        if (auto* textEdit = qobject_cast<QPlainTextEdit*>(mTabWidget->widget(i))) {
+            textEdit->setFont(font);
+        }
+    }
 }
 
 dlgNotepad::~dlgNotepad()
 {
-    // Safety step, just in case:
     if (mpHost && mpHost->mpNotePad) {
         save();
         mpHost->mpNotePad = nullptr;
@@ -87,61 +114,20 @@ dlgNotepad::~dlgNotepad()
 
 void dlgNotepad::save()
 {
-    const QString directoryFile = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
-    const QString fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
-    const QDir dirFile;
-    if (!dirFile.exists(directoryFile)) {
-        dirFile.mkpath(directoryFile);
-    }
-    QSaveFile file;
-    file.setFileName(fileName);
-    if (!file.open(QIODevice::WriteOnly)) {
-        qDebug() << "dlgNotepad::save: failed to open file for writing:" << file.errorString();
-        return;
-    }
-    QTextStream fileStream;
-    fileStream.setDevice(&file);
-    fileStream << notesEdit->toPlainText();
-    if (!file.commit()) {
-        qDebug() << "dlgNotepad::save: error saving notepad contents: " << file.errorString();
+    updateTabContent(getCurrentTabId());
+
+    if (mpNotesManager) {
+        mpNotesManager->save();
     }
 
     mNeedToSave = false;
 }
 
-void dlgNotepad::restoreFile(const QString& fn, const bool useUtf8Encoding)
-{
-    QFile file(fn);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "dlgNotepad::restoreFile: failed to open file for reading:" << file.errorString();
-        return;
-    }
-    QTextStream fileStream;
-    fileStream.setDevice(&file);
-    if (!useUtf8Encoding) {
-        fileStream.setEncoding(QStringEncoder::Encoding::System);
-    }
-    const QString txt = fileStream.readAll();
-    notesEdit->blockSignals(true);
-    notesEdit->setPlainText(txt);
-    notesEdit->blockSignals(false);
-    file.close();
-}
-
 void dlgNotepad::restore()
 {
-    QString fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
-    if (QFile::exists(fileName)) {
-        restoreFile(fileName, true);
-        return;
+    if (mpNotesManager) {
+        mpNotesManager->restore();
     }
-
-    // A utf8 encoded (new style) file was not found, so look for an older one
-    // where we did not enforce an encoding (and, at least on Windows, it
-    // defaulted to the local8Bit one) and it would break if characters were
-    // used {e.g. emojis} that that encoding did not handle:
-    fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
-    restoreFile(fileName, false);
 }
 
 void dlgNotepad::slot_textWritten()
@@ -162,14 +148,24 @@ void dlgNotepad::timerEvent(QTimerEvent* event)
 
 void dlgNotepad::slot_sendAll()
 {
-    QString allText = notesEdit->toPlainText();
+    auto* textEdit = getCurrentTextEdit();
+    if (!textEdit) {
+        return;
+    }
+
+    QString allText = textEdit->toPlainText();
     QStringList lines = allText.split('\n');
     startSendingLines(lines);
 }
 
 void dlgNotepad::slot_sendLine()
 {
-    QTextCursor cursor = notesEdit->textCursor();
+    auto* textEdit = getCurrentTextEdit();
+    if (!textEdit) {
+        return;
+    }
+
+    QTextCursor cursor = textEdit->textCursor();
     cursor.select(QTextCursor::LineUnderCursor);
     QString line = cursor.selectedText();
 
@@ -180,7 +176,12 @@ void dlgNotepad::slot_sendLine()
 
 void dlgNotepad::slot_sendSelection()
 {
-    QString selectedText = notesEdit->textCursor().selectedText();
+    auto* textEdit = getCurrentTextEdit();
+    if (!textEdit) {
+        return;
+    }
+
+    QString selectedText = textEdit->textCursor().selectedText();
 
     if (!selectedText.isEmpty()) {
         QStringList lines = selectedText.replace(QChar(0x2029), "\n").split('\n');
@@ -280,7 +281,6 @@ void dlgNotepad::restoreSettings()
     const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
     const bool sendControlsVisible = pQSettings->value(settingsKey, false).toBool();
 
-    // Block signals to avoid triggering saveSettings during restoration
     const bool wasBlocked = action_toggleSendControls->signalsBlocked();
     action_toggleSendControls->blockSignals(true);
     action_toggleSendControls->setChecked(sendControlsVisible);
@@ -289,8 +289,167 @@ void dlgNotepad::restoreSettings()
     slot_toggleSendControls(sendControlsVisible);
 }
 
+QPlainTextEdit* dlgNotepad::getCurrentTextEdit() const
+{
+    QWidget* currentWidget = mTabWidget->currentWidget();
+    return qobject_cast<QPlainTextEdit*>(currentWidget);
+}
+
+QString dlgNotepad::getCurrentTabId() const
+{
+    int currentIndex = mTabWidget->currentIndex();
+    if (currentIndex < 0) {
+        return QString();
+    }
+
+    return mIndexToTabId.value(currentIndex, QString());
+}
+
+void dlgNotepad::setupTabContextMenu()
+{
+    mTabWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(mTabWidget, &QTabWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
+        int tabIndex = mTabWidget->tabBar()->tabAt(pos);
+        if (tabIndex < 0) {
+            return;
+        }
+
+        QMenu menu(this);
+        QAction* renameAction = menu.addAction(tr("Rename"));
+        QAction* deleteAction = menu.addAction(tr("Delete"));
+
+        QAction* selectedAction = menu.exec(mTabWidget->tabBar()->mapToGlobal(pos));
+        if (selectedAction == renameAction) {
+            slot_renameTab();
+        } else if (selectedAction == deleteAction) {
+            slot_removeTab();
+        }
+    });
+}
+
+void dlgNotepad::slot_addTab()
+{
+    const QString tabId = mpNotesManager->addTab();
+}
+
+void dlgNotepad::slot_removeTab()
+{
+    const QString tabId = getCurrentTabId();
+    if (!tabId.isEmpty() && mTabWidget->count() > 1) {
+        mpNotesManager->removeTab(tabId);
+    }
+}
+
+void dlgNotepad::slot_renameTab()
+{
+    const QString tabId = getCurrentTabId();
+    if (tabId.isEmpty()) {
+        return;
+    }
+
+    int currentIndex = mTabWidget->currentIndex();
+    if (currentIndex < 0) {
+        return;
+    }
+
+    const QString currentName = mTabWidget->tabText(currentIndex);
+    bool ok = false;
+    const QString newName = QInputDialog::getText(this, tr("Rename Tab"), tr("New tab name:"), QLineEdit::Normal, currentName, &ok);
+
+    if (ok && !newName.isEmpty() && newName != currentName) {
+        mpNotesManager->renameTab(tabId, newName);
+    }
+}
+
+void dlgNotepad::slot_currentTabChanged(int index)
+{
+    if (index >= 0 && index < mTabWidget->count()) {
+        const QString tabId = mIndexToTabId.value(index, QString());
+        if (!tabId.isEmpty() && mpNotesManager) {
+            const QString content = mpNotesManager->getTabContent(tabId);
+            auto* textEdit = qobject_cast<QPlainTextEdit*>(mTabWidget->widget(index));
+            if (textEdit) {
+                textEdit->blockSignals(true);
+                textEdit->setPlainText(content);
+                textEdit->blockSignals(false);
+            }
+        }
+    }
+}
+
+void dlgNotepad::slot_managerTabAdded(const QString& tabId, const QString& tabName)
+{
+    createTabContent(tabId, tabName);
+}
+
+void dlgNotepad::slot_managerTabRemoved(const QString& tabId)
+{
+    int index = mTabIdToIndex.value(tabId, -1);
+    if (index >= 0) {
+        mIndexToTabId.remove(index);
+        mTabIdToIndex.remove(tabId);
+        mTabWidget->removeTab(index);
+
+        for (int i = index; i < mTabWidget->count(); ++i) {
+            const QString id = mIndexToTabId.value(i, QString());
+            if (!id.isEmpty()) {
+                mIndexToTabId[i] = id;
+                mTabIdToIndex[id] = i;
+            }
+        }
+    }
+}
+
+void dlgNotepad::slot_managerTabRenamed(const QString& tabId, const QString& newName)
+{
+    int index = mTabIdToIndex.value(tabId, -1);
+    if (index >= 0) {
+        mTabWidget->setTabText(index, newName);
+    }
+}
+
+void dlgNotepad::createTabContent(const QString& tabId, const QString& tabName)
+{
+    auto* textEdit = new QPlainTextEdit(mTabWidget);
+    textEdit->setObjectName(qsl("tab_textedit_%1").arg(tabId));
+
+    if (mpHost) {
+        textEdit->setFont(mpHost->getDisplayFont());
+    }
+
+    if (mpNotesManager) {
+        const QString content = mpNotesManager->getTabContent(tabId);
+        textEdit->setPlainText(content);
+    }
+
+    connect(textEdit, &QPlainTextEdit::textChanged, this, [this, tabId]() {
+        mNeedToSave = true;
+        updateTabContent(tabId);
+    });
+
+    const int index = mTabWidget->addTab(textEdit, tabName);
+    mTabIdToIndex[tabId] = index;
+    mIndexToTabId[index] = tabId;
+}
+
+void dlgNotepad::updateTabContent(const QString& tabId)
+{
+    if (!mpNotesManager || tabId.isEmpty()) {
+        return;
+    }
+
+    int index = mTabIdToIndex.value(tabId, -1);
+    if (index >= 0) {
+        auto* textEdit = qobject_cast<QPlainTextEdit*>(mTabWidget->widget(index));
+        if (textEdit) {
+            mpNotesManager->setTabContent(tabId, textEdit->toPlainText());
+        }
+    }
+}
+
 void dlgNotepad::closeEvent(QCloseEvent *event)
 {
     saveSettings();
     QMainWindow::closeEvent(event);
 }
+

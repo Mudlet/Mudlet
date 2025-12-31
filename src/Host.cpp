@@ -29,6 +29,7 @@
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
+#include "NotesManager.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "GifTracker.h"
@@ -382,6 +383,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto settings = mudlet::self()->getQSettings();
     const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
+
+    mpNotesManager = new NotesManager(this);
 }
 
 Host::~Host()
@@ -491,6 +494,12 @@ void Host::closeChildren()
         mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
         mpNotePad->close();
         mpNotePad = nullptr;
+    }
+
+    if (mpNotesManager) {
+        mpNotesManager->save();
+        mpNotesManager->deleteLater();
+        mpNotesManager = nullptr;
     }
 
     for (TToolBar* pTB : hostToolBarMap) {
@@ -4111,7 +4120,6 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     }
     if (mpNotePad) {
         mpNotePad->setStyleSheet(styleSheet);
-        mpNotePad->notesEdit->setStyleSheet(styleSheet);
     }
     if (mpDockableMapWidget) {
         mpDockableMapWidget->setStyleSheet(styleSheet);

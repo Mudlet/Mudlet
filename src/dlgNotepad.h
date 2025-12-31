@@ -32,8 +32,11 @@
 #include <QPointer>
 #include <QSettings>
 #include <QTimer>
+#include <QTabWidget>
+#include <QPlainTextEdit>
 
 class Host;
+class NotesManager;
 
 
 class dlgNotepad : public QMainWindow, public Ui::notes_editor
@@ -62,14 +65,30 @@ private slots:
     void slot_sendNextLine();
     void slot_stopSending();
     void slot_toggleSendControls(bool checked);
+    void slot_addTab();
+    void slot_removeTab();
+    void slot_renameTab();
+    void slot_currentTabChanged(int index);
+    void slot_managerTabAdded(const QString& tabId, const QString& tabName);
+    void slot_managerTabRemoved(const QString& tabId);
+    void slot_managerTabRenamed(const QString& tabId, const QString& newName);
 
 private:
     void timerEvent(QTimerEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
-    void restoreFile(const QString&, const bool);
     void startSendingLines(const QStringList& lines);
+    QPlainTextEdit* getCurrentTextEdit() const;
+    QString getCurrentTabId() const;
+    void setupTabContextMenu();
+    void createTabContent(const QString& tabId, const QString& tabName);
+    void updateTabContent(const QString& tabId);
 
     QPointer<Host> mpHost;
+    QPointer<NotesManager> mpNotesManager;
+    QTabWidget* mTabWidget = nullptr;
+    QMap<QString, int> mTabIdToIndex;
+    QMap<int, QString> mIndexToTabId;
+
     bool mNeedToSave = false;
     QAction* action_stop = nullptr;
     QAction* action_prependText = nullptr;
