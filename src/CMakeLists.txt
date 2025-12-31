@@ -59,6 +59,7 @@ set(mudlet_SRCS
     dlgModuleManager.cpp
     dlgNotepad.cpp
     NotesManager.cpp
+    NotesTabContainer.cpp
     dlgPackageExporter.cpp
     dlgPackageManager.cpp
     dlgProfilePreferences.cpp
