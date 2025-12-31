@@ -2354,17 +2354,12 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
         searchVariables(s);
     }
 
-    // Highlight all search term matches in the code editor
-    auto controller = mpSourceEditorEdbee->controller();
-    auto searcher = controller->textSearcher();
-    controller->borderedTextRanges()->clear();
-    searcher->setSearchTerm(s);
-    searcher->setCaseSensitive(mSearchOptions & SearchOptionCaseSensitive);
-    searcher->markAll(controller->borderedTextRanges());
+    mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
+    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(mSearchOptions & SearchOptionCaseSensitive);
 
     treeWidget_searchResults->setUpdatesEnabled(true);
 
-    controller->update();
+    mpSourceEditorEdbee->controller()->update();
 }
 
 void dlgTriggerEditor::searchVariables(const QString& text)
