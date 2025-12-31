@@ -23,7 +23,11 @@
 
 #include <QIcon>
 #include <QMap>
+#include <QPointer>
 #include <QPushButton>
+#include <QString>
+
+class NotesManager;
 
 class NotesIndicator : public QPushButton
 {
@@ -40,7 +44,7 @@ public:
     Q_ENUM(State)
 
     explicit NotesIndicator(QWidget* pParent = nullptr);
-    ~NotesIndicator() = default;
+    ~NotesIndicator();
 
     Q_DISABLE_COPY(NotesIndicator)
 
@@ -53,6 +57,18 @@ public:
     void setNoteCount(int count);
     int noteCount() const { return mNoteCount; }
 
+    // NotesManager integration
+    void setNotesManager(NotesManager* pManager);
+    NotesManager* notesManager() const { return mpNotesManager.data(); }
+
+    void setCurrentTabId(const QString& tabId);
+    QString currentTabId() const { return mCurrentTabId; }
+
+    void setTabVisible(bool visible);
+    bool isTabVisible() const { return mIsTabVisible; }
+
+    void resetUnreadState();
+
 signals:
     void notesButtonClicked();
 
@@ -63,10 +79,29 @@ private:
     void loadIcons();
     void updateIcon();
 
+    // State management
+    void updateState();
+    void updateNoteCount();
+
+    // NotesManager signal handlers
+    void slotTabAdded(const QString& tabId, const QString& tabName);
+    void slotTabRemoved(const QString& tabId);
+    void slotTabRenamed(const QString& tabId, const QString& newName);
+    void slotContentChanged(const QString& tabId);
+
+    // NotesManager connection management
+    void connectToNotesManager();
+    void disconnectFromNotesManager();
+
     State mState = State::Empty;
     int mIconSize = 16;
     int mNoteCount = 0;
     QMap<State, QIcon> mIcons;
+
+    // NotesManager integration
+    QPointer<NotesManager> mpNotesManager;
+    QString mCurrentTabId;
+    bool mIsTabVisible = false;
 };
 
 #endif // MUDLET_NOTESINDICATOR_H
