@@ -773,6 +773,9 @@ SOURCES += \
     TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
+    THyperlinkCompactManager.cpp \
+    THyperlinkSelectionManager.cpp \
+    THyperlinkVisibilityManager.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
@@ -799,9 +802,13 @@ SOURCES += \
     TMxpExpireTagHandler.cpp \
     TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
+    TMxpFrameManager.cpp \
+    TMxpFrameTagHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
+    TMxpDestTagHandler.cpp \
     TMxpFontTagHandler.cpp \
+    TMxpImageTagHandler.cpp \
     TMxpLinkTagHandler.cpp \
     TMxpMusicTagHandler.cpp \
     TMxpSoundTagHandler.cpp \
@@ -935,6 +942,9 @@ HEADERS += \
     TFlipButton.h \
     TForkedProcess.h \
     TGameDetails.h \
+    THyperlinkCompactManager.h \
+    THyperlinkSelectionManager.h \
+    THyperlinkVisibilityManager.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
@@ -952,6 +962,7 @@ HEADERS += \
     TMxpClient.h \
     TMxpColorTagHandler.h \
     TMxpCustomElementTagHandler.h \
+    TMxpDestTagHandler.h \
     TMxpFontTagHandler.h \
     TMxpLinkTagHandler.h \
     TMxpMusicTagHandler.h \
@@ -962,6 +973,9 @@ HEADERS += \
     TMxpExpireTagHandler.h \
     TMxpContext.h \
     TMxpFormattingTagsHandler.h \
+    TMxpFrameManager.h \
+    TMxpFrameTagHandler.h \
+    TMxpImageTagHandler.h \
     TMxpMudlet.h \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \

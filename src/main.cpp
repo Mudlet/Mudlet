@@ -168,9 +168,10 @@ int main(int argc, char* argv[])
     for (int i = 1; i < argc; ++i) {
         const QString arg = QString::fromLocal8Bit(argv[i]);
         if (arg.startsWith(qsl("--squirrel-")) && arg != qsl("--squirrel-firstrun")) {
-            const QString appDir = QCoreApplication::applicationDirPath();
-            const QString updateExe = QDir(appDir).filePath(qsl("../Update.exe"));
-            const QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+            // Use argv[0] directly since QCoreApplication isn't instantiated yet
+            const QFileInfo appInfo(QString::fromLocal8Bit(argv[0]));
+            const QString updateExe = QDir(appInfo.absolutePath()).filePath(qsl("../Update.exe"));
+            const QString exeName = appInfo.fileName();
 
             if (arg.startsWith(qsl("--squirrel-install")) || arg.startsWith(qsl("--squirrel-updated"))) {
                 QProcess::execute(updateExe, {qsl("--createShortcut"), exeName, qsl("--shortcut-locations"), qsl("StartMenu")});

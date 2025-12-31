@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       scheduled:
-        description: 'Imitate a scheduled build'
+        description: 'Imitate a PTB'
         required: false
         default: 'false'
   schedule:

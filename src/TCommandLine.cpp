@@ -113,6 +113,9 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
 
+    // Forward textChanged signal for hyperlink visibility triggers
+    connect(this, &QPlainTextEdit::textChanged, this, &TCommandLine::commandLineTextChanged);
+
     if (mType == MainCommandLine) { // Limit to the main command line only
         connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
             this->setEchoSuppression(isRemoteEcho);
@@ -658,7 +661,7 @@ void TCommandLine::adjustHeight()
         qWarning() << "TCommandLine::adjustHeight() ERROR: mpConsole->layerCommandLine is NULL!";
         return;
     }
-    int lines = document()->size().height();
+    int lines = static_cast<int>(document()->size().height());
     // Workaround for SubCommandLines textCursor not visible in some situations
     // SubCommandLines cannot autoresize
     if (mType == SubCommandLine) {
@@ -991,6 +994,9 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mLastCompletion.clear();
     mUserKeptOnTyping = false;
 
+    // Emit signal for hyperlink visibility triggers before processing the command
+    emit commandSubmitted();
+
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
@@ -1180,6 +1186,21 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
+    // DOWN at position 0 with text: save to history and clear input
+    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty()) {
+        mHistoryList.removeAll(toPlainText());
+        if (!mHistoryList.isEmpty()) {
+            mHistoryList[0] = toPlainText();
+        } else {
+            mHistoryList.push_front(toPlainText());
+        }
+        mHistoryList.push_front(QString());
+
+        clear();
+        adjustHeight();
+        return;
+    }
+
     if (mHistoryList.empty()) {
         return;
     }

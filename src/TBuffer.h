@@ -92,7 +92,9 @@ struct HyperlinkStyling {
         StateHover,         // Mouse hover (:hover)
         StateActive,        // Mouse down/active (:active)
         StateFocus,         // Keyboard focus (:focus)
-        StateFocusVisible   // Visible keyboard focus (:focus-visible)
+        StateFocusVisible,  // Visible keyboard focus (:focus-visible)
+        StateSelected,      // Selected state (from selection object)
+        StateDisabled       // Disabled state (from selection object)
     };
 
     // State-specific styling containers
@@ -124,12 +126,64 @@ struct HyperlinkStyling {
     StateStyle focusStyle;          // :focus
     StateStyle focusVisibleStyle;   // :focus-visible
     StateStyle anyLinkStyle;        // :any-link (applies to both :link and :visited)
+    StateStyle selectedStyle;       // :selected (from selection object)
+    StateStyle disabledStyle;       // :disabled (from selection object)
 
     // State tracking
     LinkState currentState = StateDefault;
 
     // Methods to get effective styling for current state
     StateStyle getEffectiveStyle() const;
+
+    // Selection control: toggleable, stateful links (radio/checkbox behavior)
+    // JSON: {"group": "string", "value": "string", "toggle": bool, "selected": bool, "exclusive": bool, "disabled": bool}
+    // When exclusive=true: radio button behavior (only one selected per group)
+    // When exclusive=false: checkbox behavior (multiple selections per group)
+    struct SelectionSettings {
+        QString group;              // Group identifier for related selections
+        QString value;              // Unique value within the group
+        bool toggle = true;         // Allow deselecting when already selected
+        bool selected = false;      // Initial selection state
+        bool exclusive = true;      // Radio (true) vs checkbox (false) mode
+        bool disabled = false;      // Cannot be clicked when disabled
+        bool hasSelectionSettings = false;
+    };
+
+    SelectionSettings selection;
+
+    // Visibility control: conceal (hide after delay/expire) or reveal (show after delay/expire)
+    // JSON: {"action": "conceal"|"reveal"|["reveal","conceal"], "delay": ms, "wholeline": bool, "expire": {...}}
+    // expire object: {"input": bool, "prompt": bool, "output": bool, "outputDelay": ms}
+    // When action is ["reveal","conceal"]: starts hidden, reveals on trigger, then conceals on click
+    struct VisibilitySettings {
+        // Maximum allowed delay value (24 hours in milliseconds)
+        static constexpr quint32 MaxDelayMs = 86400000;
+        // Default output delay for batch detection (500ms)
+        static constexpr quint32 DefaultOutputDelayMs = 500;
+
+        enum class Action {
+            None,
+            Conceal,
+            Reveal,
+            RevealThenConceal  // Combined: reveal first, then conceal after click
+        };
+
+        Action action = Action::None;
+        quint32 delayMs = 0;
+        bool deletesEntireLine = false;
+        bool isConcealed = false;
+        bool hasVisibilitySettings = false;
+
+        // Expire triggers - when visibility action should occur
+        bool expireOnInput = false;    // User types/submits something
+        bool expireOnPrompt = false;   // GA/EOR telnet signal received
+        bool expireOnOutput = false;   // New output after idle gap
+        quint32 outputDelayMs = DefaultOutputDelayMs;  // Idle gap for output trigger
+    };
+
+    VisibilitySettings visibility;
+
+    bool isSpoiler = false;
 };
 
 } // namespace Mudlet
@@ -410,11 +464,15 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
+    void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
+    void flushPendingDestinationContent();
+    void resetCurrentTextFormat();
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
+    void appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     void appendEmptyLine();
     void setWrapAt(int i) { mWrapAt = i; }
@@ -426,6 +484,9 @@ public:
     void paste(QPoint&, const TBuffer&);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
+    int getLastClickedLinkIndex() const { return mLastClickedLinkIndex; }
+    void setLastClickedLinkIndex(int index) { mLastClickedLinkIndex = index; }
+    void clearLastClickedLinkIndex() { mLastClickedLinkIndex = 0; }
     static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
     void appendLog(const QString &text);
@@ -478,17 +539,25 @@ private:
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
-    QMap<QString, QString> parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling);
+    bool parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling, QMap<QString, QString>& parameters);
     // Helper function for parsing JSON format hyperlink configuration
-    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling);
+    bool parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling, QString* errorDetails = nullptr);
+    // Helper function for expanding shorthands in JSON object (recursive)
+    QJsonObject expandJsonShorthands(const QJsonObject& obj);
     // Helper function for directly parsing JSON style object to HyperlinkStyling
     void parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling);
     // Helper function for parsing JSON state style to StateStyle
     void parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::HyperlinkStyling::StateStyle& stateStyle);
+    // Helper function for parsing JSON selection config to SelectionSettings
+    void parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings);
     // Helper function for JSON menu array conversion
     QString jsonMenuArrayToString(const QJsonArray& menuArray);
+    // Helper function for parsing visibility JSON object into VisibilitySettings
+    bool parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling::VisibilitySettings& settings);
     // Helper function for appending query parameters to URIs (handles existing params)
     QString appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters);
+    // Helper function for parsing visibility settings from JSON string
+    bool parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling::VisibilitySettings& settings, QString* errorDetails = nullptr);
     // Helper function for parsing color values (hex, named, rgb)
     QColor parseColorValue(const QString& value);
     // Accessibility enhancements for hyperlink styling
@@ -574,6 +643,10 @@ private:
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    // Track hyperlink start position for visibility manager registration
+    int mCurrentHyperlinkStartLine = 0;
+    int mCurrentHyperlinkStartColumn = 0;
+    QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase {
         Phase1_Snapshot,
@@ -591,18 +664,24 @@ private:
 
     // Link state tracking for interactive pseudo-classes
     QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
-    QMap<int, bool> mVisitedLinks; // Track which links have been visited (base state)
-    QMap<int, QColor> mLinkOriginalBackgrounds; // Track original background color per link
-    QMap<int, TChar> mLinkOriginalCharacters; // Track original ANSI formatting per link
+    QMap<int, bool> mVisitedLinks;
+    QMap<int, bool> mLinkSelectionState;
+    QMap<int, QColor> mLinkOriginalBackgrounds;
+    QMap<int, TChar> mLinkOriginalCharacters;
+    QMap<int, QString> mLinkOriginalText;
     int mCurrentHoveredLinkIndex = 0;  // Which link is currently hovered (0 = none)
     int mCurrentActiveLinkIndex = 0;   // Which link is currently being clicked (0 = none)
     int mCurrentFocusedLinkIndex = 0;  // Which link has keyboard focus (0 = none)
+    int mLastClickedLinkIndex = 0;     // Last clicked link - suppresses hover until mouse leaves
 
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;
+
+    // Track links that need selection styling applied after buffer commit
+    QSet<int> mPendingSelectionStyling;
 
 public:
     // Methods for link state management (used by TTextEdit event handlers)
@@ -612,16 +691,23 @@ public:
     void setHoveredLink(int linkIndex);
     void setActiveLink(int linkIndex);
     void setFocusedLink(int linkIndex);
-    void markLinkAsVisited(int linkIndex); // Mark a link as visited (base state)
-    bool isLinkVisited(int linkIndex) const; // Check if link has been visited
+    void markLinkAsVisited(int linkIndex);
+    bool isLinkVisited(int linkIndex) const;
+    void setLinkSelected(int linkIndex, bool selected);
+    bool isLinkSelected(int linkIndex) const;
+    void revealSpoilerLink(int linkIndex);
+    bool isSpoilerUnrevealed(int linkIndex) const { return mLinkOriginalText.contains(linkIndex); }
+    void clearGroupSelection(const QString& group, const QString& exceptValue);
+    void applyPendingSelectionStyling();
+    void updateLinkCharacters(int linkIndex);
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
     int getLinkIndexAt(int line, int column) const; // Get link index at specific position
+    void clearLinkIndices(int lineNumber, int startColumn, int count); // Clear link indices in a range
+    void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 
 private:
-    // Update all TChar objects that belong to a specific link with effective styling
-    void updateLinkCharacters(int linkIndex);
 };
 
 #ifndef QT_NO_DEBUG_STREAM

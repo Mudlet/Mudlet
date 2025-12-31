@@ -98,6 +98,9 @@ using namespace std::chrono_literals;
 // it is disabled):
 static const char* cButtonBaseColor = "baseColor";
 
+// Track whether the shared auto-complete provider has been initialized
+bool dlgTriggerEditor::smAutoCompleteInitialized = false;
+
 dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 : mpHost(pH)
 , mSearchOptions(pH->mSearchOptions)
@@ -503,10 +506,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(mpUndoStack, &EditorUndoStack::itemsChanged, this, &dlgTriggerEditor::slot_itemsChanged);
 
-    auto* provider = new edbee::StringTextAutoCompleteProvider();
-    //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
+    if (!smAutoCompleteInitialized) {
+        auto* provider = new edbee::StringTextAutoCompleteProvider();
 
-    // Add lua functions and reserved lua terms to an AutoComplete provider
+        // Add lua functions and reserved lua terms to an AutoComplete provider
     for (const QString& key : mudlet::smLuaFunctionNames.keys()) {
         provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
     }
@@ -691,8 +694,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // DateTime utilities
     provider->add(qsl("datetime.parse"), 4, qsl("datetime.parse(format, date_string)"));
 
-    // Set the newly filled provider to be used by our Edbee instance
-    edbee::Edbee::instance()->autoCompleteProviderList()->setParentProvider(provider);
+        // Transfer ownership to Edbee - deleted automatically at app shutdown
+        edbee::Edbee::instance()->autoCompleteProviderList()->giveProvider(provider);
+        smAutoCompleteInitialized = true;
+    }
 
     mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpSourceEditorEdbee->textEditorComponent(), &QWidget::customContextMenuRequested, this, &dlgTriggerEditor::slot_editorContextMenu);
