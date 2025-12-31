@@ -3977,13 +3977,9 @@ void mudlet::slot_notes()
         pHost->mpNotePad = new dlgNotepad(pHost);
         pNotes = pHost->mpNotePad;
 
-        QTextCharFormat format;
-        format.setFont(pHost->getDisplayFont());
-        pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(qsl(":/icons/mudlet_notepad.png")));
         pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
-        pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
 
         // Set up focus restoration for the notepad
         setupNotepadFocusRestoration(pNotes);

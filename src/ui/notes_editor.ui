@@ -44,12 +44,27 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="action_addTab"/>
+   <addaction name="separator"/>
    <addaction name="action_toggleSendControls"/>
    <addaction name="action_sendAll"/>
    <addaction name="action_sendLine"/>
    <addaction name="action_sendSelection"/>
    <addaction name="separator"/>
   </widget>
+  <action name="action_addTab">
+   <property name="text">
+    <string>Add Tab</string>
+   </property>
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/tab-new-16x.png</normaloff>
+    </iconset>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
   <action name="action_toggleSendControls">
    <property name="text">
     <string/>
