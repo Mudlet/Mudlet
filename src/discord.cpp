@@ -21,10 +21,10 @@
 
 #include "discord.h"
 #include "mudlet.h"
+#include "utils.h"
 
 #include <QtDebug>
 #include <QHash>
-#include <string.h>
 
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
@@ -632,73 +632,55 @@ DiscordRichPresence localDiscordPresence::convert() const
 void localDiscordPresence::setDetailText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mDetails) - 1);
-    memcpy(mDetails, utf8Data.constData(), copyLen);
-    mDetails[copyLen] = '\0';
+    utils::copyString(mDetails, sizeof(mDetails), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setStateText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mState) - 1);
-    memcpy(mState, utf8Data.constData(), copyLen);
-    mState[copyLen] = '\0';
+    utils::copyString(mState, sizeof(mState), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mLargeImageText) - 1);
-    memcpy(mLargeImageText, utf8Data.constData(), copyLen);
-    mLargeImageText[copyLen] = '\0';
+    utils::copyString(mLargeImageText, sizeof(mLargeImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageKey(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mLargeImageKey) - 1);
-    memcpy(mLargeImageKey, utf8Data.constData(), copyLen);
-    mLargeImageKey[copyLen] = '\0';
+    utils::copyString(mLargeImageKey, sizeof(mLargeImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mSmallImageText) - 1);
-    memcpy(mSmallImageText, utf8Data.constData(), copyLen);
-    mSmallImageText[copyLen] = '\0';
+    utils::copyString(mSmallImageText, sizeof(mSmallImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageKey(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mSmallImageKey) - 1);
-    memcpy(mSmallImageKey, utf8Data.constData(), copyLen);
-    mSmallImageKey[copyLen] = '\0';
+    utils::copyString(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setJoinSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mJoinSecret) - 1);
-    memcpy(mJoinSecret, utf8Data.constData(), copyLen);
-    mJoinSecret[copyLen] = '\0';
+    utils::copyString(mJoinSecret, sizeof(mJoinSecret), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setMatchSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mMatchSecret) - 1);
-    memcpy(mMatchSecret, utf8Data.constData(), copyLen);
-    mMatchSecret[copyLen] = '\0';
+    utils::copyString(mMatchSecret, sizeof(mMatchSecret), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSpectateSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    const size_t copyLen = qMin(static_cast<size_t>(utf8Data.size()), sizeof(mSpectateSecret) - 1);
-    memcpy(mSpectateSecret, utf8Data.constData(), copyLen);
-    mSpectateSecret[copyLen] = '\0';
+    utils::copyString(mSpectateSecret, sizeof(mSpectateSecret), utf8Data.constData(), utf8Data.size());
 }
 
 bool Discord::usingMudletsDiscordID(Host* pHost) const

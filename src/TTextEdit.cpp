@@ -34,6 +34,7 @@
 #include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
+#include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
@@ -2651,10 +2652,8 @@ void TTextEdit::slot_analyseSelection()
 
         if (mpBuffer->lineBuffer.at(line).at(index).isHighSurrogate() && ((index + 1) < lineLength)) {
             const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8();
-            const size_t utf8Width = qMin(static_cast<size_t>(utf8Data.size()), size_t{4});
-            memcpy(utf8Bytes, utf8Data.constData(), utf8Width);
-            utf8Bytes[utf8Width] = '\0';
-            quint8 columnsToUse = qMax(static_cast<size_t>(2), utf8Width);
+            const size_t utf8Width = utils::copyString(utf8Bytes, sizeof(utf8Bytes), utf8Data.constData(), utf8Data.size());
+            quint8 columnsToUse = qMax(size_t{2}, utf8Width);
 
             if (includeThisCodePoint) {
                 utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
@@ -2746,10 +2745,8 @@ void TTextEdit::slot_analyseSelection()
             index += 1;
         } else {
             const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8();
-            const size_t utf8Width = qMin(static_cast<size_t>(utf8Data.size()), size_t{4});
-            memcpy(utf8Bytes, utf8Data.constData(), utf8Width);
-            utf8Bytes[utf8Width] = '\0';
-            quint8 columnsToUse = qMax(static_cast<size_t>(1), utf8Width);
+            const size_t utf8Width = utils::copyString(utf8Bytes, sizeof(utf8Bytes), utf8Data.constData(), utf8Data.size());
+            quint8 columnsToUse = qMax(size_t{1}, utf8Width);
 
             if (includeThisCodePoint) {
                 utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1)));
