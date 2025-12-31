@@ -22,6 +22,7 @@
  ***************************************************************************/
 
 #include <QMap>
+#include <QMultiHash>
 #include <QStringList>
 #include <QVector>
 
@@ -64,6 +65,11 @@ public:
     // OSC 8 hyperlink styling storage and retrieval
     void setStyling(int id, const Mudlet::HyperlinkStyling& styling);
     Mudlet::HyperlinkStyling getStyling(int id) const;
+    bool hasStyling(int id) const;
+    
+    // Selection group index for efficient exclusive group updates
+    // Returns list of link IDs that have the specified group and value
+    QList<int> getLinkIdsByGroupValue(const QString& group, const QString& value) const;
 #endif
 
 private:
@@ -79,9 +85,10 @@ private:
 #if !defined(LinkStore_Test)
     QMap<int, Mudlet::HyperlinkStyling> mStylingStore;
 #endif
-    // EXPIRE tag support - track which links belong to which expire group
-    QMap<int, QString> mExpireStore;  // Maps link ID to expire name
-    QMultiMap<QString, int> mExpireToLinks;  // Maps expire name to link IDs (for quick lookup)
+    QMap<int, QString> mExpireStore;
+    QMultiHash<QString, int> mExpireToLinks;
+    
+    QMultiHash<QPair<QString, QString>, int> mSelectionGroupIndex;
 };
 
 #endif //MUDLET_TLINKSTORE_H

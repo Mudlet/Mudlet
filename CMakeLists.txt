@@ -126,6 +126,10 @@ set(LIB_MUDLET_TARGET "mudlet_core")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
+# Static analysis support - always included, but only active when configured with
+# -DENABLE_STATIC_ANALYSIS=ON (see cmake/StaticAnalysis.cmake for details)
+include(StaticAnalysis)
+
 include(IncludeOptionalModule)
 
 include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER

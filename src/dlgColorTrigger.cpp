@@ -39,8 +39,6 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
     // init generated dialog
     setupUi(this);
 
-    mSignalMapper = new QSignalMapper(this);
-
     // The buttonBox's Cancel button has been connect up to this class's
     // rejected() signal to close it without changing anything in the caller!
     // The Ignore button means do not consider this fore or back ground (as per
@@ -64,8 +62,6 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
     buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Default"));
     buttonBox->button(QDialogButtonBox::Reset)->setToolTip(utils::richText(mIsBackground
                                                                                 ? tr("Click to make the color trigger when the text's background color has not been modified from its normal value.")                                                                          : tr("Click to make the color trigger when the text's foreground color has not been modified from its normal value.")));
-    connect(mSignalMapper, &QSignalMapper::mappedInt, this, &dlgColorTrigger::slot_basicColorClicked);
-
     groupBox_basicColors->setToolTip(utils::richText(mIsBackground
                                                      ? tr("Click a color to make the trigger fire only when the text's background color matches the color number indicated.")
                                                      : tr("Click a color to make the trigger fire only when the text's foreground color matches the color number indicated.")));
@@ -204,9 +200,9 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
 
 void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor, const QColor& color, const QString& colorText)
 {
-    // TODO: Eliminate use of QSignalMapper and use a lambda function
-    connect(pButton, &QPushButton::clicked, mSignalMapper, qOverload<>(&QSignalMapper::map));
-    mSignalMapper->setMapping(pButton, ansiColor);
+    connect(pButton, &QPushButton::clicked, this, [this, ansiColor]() {
+        slot_basicColorClicked(ansiColor);
+    });
 
     if ((mIsBackground && (mpTrigger->mColorTriggerBgAnsi == ansiColor))
      || (!mIsBackground && (mpTrigger->mColorTriggerFgAnsi == ansiColor))) {

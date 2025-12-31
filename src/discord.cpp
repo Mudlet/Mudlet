@@ -137,6 +137,9 @@ Discord::~Discord()
             itPresencePtrs.remove();
         }
     }
+
+    delete mpHandlers;
+    mpHandlers = nullptr;
 }
 
 // For all the setters below the caller is supposed to check that they have the

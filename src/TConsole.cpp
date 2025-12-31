@@ -26,11 +26,15 @@
 #include "TConsole.h"
 
 
+#include "ctelnet.h"
 #include "Host.h"
 #include "TCommandLine.h"
+#include "THyperlinkCompactManager.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkSelectionManager.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -77,6 +81,18 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
+    mpHyperlinkCompactManager = std::make_unique<THyperlinkCompactManager>();
+    mpHyperlinkSelectionManager = std::make_unique<THyperlinkSelectionManager>(*this);
+    mpHyperlinkVisibilityManager = std::make_unique<THyperlinkVisibilityManager>(this);
+    
+    initializeOSC8StyleFeature();
+    initializeOSC8MenuFeature();
+    initializeOSC8TooltipFeature();
+    initializeOSC8DisabledFeature();
+    initializeOSC8SpoilerFeature();
+    initializeOSC8SelectionFeature();
+    initializeOSC8VisibilityFeature();
+
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
     quitShortcut->setContext(Qt::WidgetShortcut);
@@ -210,6 +226,25 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // Setting the focusProxy cannot be done here because things have not
         // been completed enough at this point - it has been defered to a
         // zero-timer at the end of this constructor
+
+        // Connect user input trigger (command submission only, not typing)
+        connect(mpCommandLine, &TCommandLine::commandSubmitted,
+                mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onUserInput);
+        
+        // Connect GA/EOR prompt signal from telnet
+        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived,
+                mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onPromptReceived);
+        
+        // Refresh display when hyperlink visibility changes
+        connect(mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::visibilityChanged,
+                this, [this]() {
+                    if (mUpperPane) {
+                        mUpperPane->forceUpdate();
+                    }
+                    if (mLowerPane) {
+                        mLowerPane->forceUpdate();
+                    }
+                });
     }
 
     layer = new QWidget(mpMainDisplay);
@@ -1861,6 +1896,17 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     }
 }
 
+void TConsole::printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore)
+{
+    buffer.appendFormatted(text, formatting, sourceLinkStore);
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
+
+    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
+        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, text);
+    }
+}
+
 void TConsole::printSystemMessage(const QString& msg)
 {
     const QString txt = tr("System Message: %1").arg(msg);
@@ -2686,4 +2732,101 @@ void TConsole::restoreCommandSearchSettings()
     }
 
     commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
+}
+
+void TConsole::initializeOSC8StyleFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthands for style property names
+    mpHyperlinkCompactManager->registerShorthand(qsl("s"), qsl("style"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("c"), qsl("color"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("bg"), qsl("bg"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("b"), qsl("bold"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("i"), qsl("italic"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("u"), qsl("underline"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("o"), qsl("overline"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("st"), qsl("strikethrough"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("tdc"), qsl("text-decoration-color"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("h"), qsl("hover"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("a"), qsl("active"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("f"), qsl("focus"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("fv"), qsl("focus-visible"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("vi"), qsl("visited"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("l"), qsl("link"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("al"), qsl("any-link"));
+    mpHyperlinkCompactManager->registerShorthand(qsl("sl"), qsl("selected"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("style"));
+}
+
+void TConsole::initializeOSC8MenuFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthand for menu property
+    mpHyperlinkCompactManager->registerShorthand(qsl("m"), qsl("menu"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("menu"));
+}
+
+void TConsole::initializeOSC8TooltipFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthand for tooltip property
+    mpHyperlinkCompactManager->registerShorthand(qsl("t"), qsl("tooltip"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("tooltip"));
+}
+
+void TConsole::initializeOSC8VisibilityFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthand for visibility property
+    mpHyperlinkCompactManager->registerShorthand(qsl("v"), qsl("visibility"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("visibility"));
+}
+
+void TConsole::initializeOSC8SelectionFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    // Register shorthand for selection property
+    mpHyperlinkCompactManager->registerShorthand(qsl("sel"), qsl("selection"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("selection"));
+}
+
+void TConsole::initializeOSC8SpoilerFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    mpHyperlinkCompactManager->registerShorthand(qsl("sp"), qsl("spoiler"));
+
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("spoiler"));
+}
+
+void TConsole::initializeOSC8DisabledFeature()
+{
+    if (!mpHyperlinkCompactManager) {
+        return;
+    }
+
+    mpHyperlinkCompactManager->registerShorthand(qsl("d"), qsl("disabled"));
+    mpHyperlinkCompactManager->registerPresetProperty(qsl("disabled"));
 }
