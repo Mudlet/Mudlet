@@ -58,6 +58,7 @@ set(mudlet_SRCS
     dlgMapper.cpp
     dlgModuleManager.cpp
     dlgNotepad.cpp
+    NotesIndicator.cpp
     NotesManager.cpp
     NotesTabContainer.cpp
     dlgPackageExporter.cpp
@@ -312,6 +313,7 @@ set(mudlet_HDRS
     EditorModifyPropertyCommand.h
     EditorMoveItemCommand.h
     EditorToggleActiveCommand.h
+    NotesIndicator.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
