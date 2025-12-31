@@ -116,6 +116,29 @@ public:
     
     // Check if force MXP should prevent server from changing default mode
     virtual bool shouldLockModeToSecure() const { return false; }
+    
+    // MXP Frame management (FRAME and DEST tag support)
+    virtual bool createMxpFrame(const QString& name, const QMap<QString, QString>& attributes) {
+        Q_UNUSED(name)
+        Q_UNUSED(attributes)
+        return false;
+    }
+    
+    virtual bool closeMxpFrame(const QString& name) {
+        Q_UNUSED(name)
+        return false;
+    }
+    
+    virtual bool setMxpDestination(const QString& frameName, bool eol, bool eof) {
+        Q_UNUSED(frameName)
+        Q_UNUSED(eol)
+        Q_UNUSED(eof)
+        return false;
+    }
+    
+    virtual void clearMxpDestination() {}
+    
+    virtual QString getMxpCurrentDestination() const { return QString(); }
 };
 
 #endif //MUDLET_TMXPCLIENT_H

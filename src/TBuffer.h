@@ -464,11 +464,15 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
+    void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
+    void flushPendingDestinationContent();
+    void resetCurrentTextFormat();
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
+    void appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     void appendEmptyLine();
     void setWrapAt(int i) { mWrapAt = i; }

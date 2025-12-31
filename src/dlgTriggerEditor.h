@@ -69,6 +69,7 @@
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/models/textgrammar.h"
 #include "edbee/models/textundostack.h"
+#include "edbee/models/textautocompleteprovider.h"
 #include "edbee/texteditorcommand.h"
 #include "edbee/texteditorcontroller.h"
 #include "edbee/texteditorwidget.h"
@@ -548,7 +549,7 @@ private:
     // Note: Shortcut values use Qt's portable format (Ctrl+S) which Qt maps correctly per-platform
     // Keys use tr() to match translated action labels; values are not translated (they're key sequences)
     std::unordered_map<QString, QString> mButtonShortcuts = {
-        {qsl("Save Item"),    qsl("Ctrl+S")},
+        {tr("Save Item"),     qsl("Ctrl+S")},
         {tr("Save Trigger"),  qsl("Ctrl+S")},
         {tr("Save Timer"),    qsl("Ctrl+S")},
         {tr("Save Alias"),    qsl("Ctrl+S")},
@@ -671,6 +672,9 @@ private:
 
     // Guarded pointer to text editor's undo stack (for safe signal connections):
     QPointer<edbee::TextUndoStack> mpTextUndoStack;
+
+    // Track whether auto-complete provider has been initialized
+    static bool smAutoCompleteInitialized;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in

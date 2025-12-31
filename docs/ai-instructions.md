@@ -125,6 +125,10 @@ if (!file.open(QIODevice::ReadOnly)) {
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
 
+### Static analysis
+
+For complete setup instructions on how to run static analysis during a build see, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
+
 ### Debugging options
 
 Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defines for development (search "Debugging code inclusions"):

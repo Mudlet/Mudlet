@@ -1896,6 +1896,17 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     }
 }
 
+void TConsole::printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore)
+{
+    buffer.appendFormatted(text, formatting, sourceLinkStore);
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
+
+    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
+        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, text);
+    }
+}
+
 void TConsole::printSystemMessage(const QString& msg)
 {
     const QString txt = tr("System Message: %1").arg(msg);
