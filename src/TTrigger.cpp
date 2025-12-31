@@ -569,12 +569,13 @@ inline void TTrigger::filter(std::string& capture, int& posOffset)
     if (capture.empty()) {
         return;
     }
-    auto * filterSubject = static_cast<char*>(malloc(capture.size() + 2048));
-    if (filterSubject) {
-        strcpy(filterSubject, capture.c_str());
-    } else {
+    const size_t captureLen = capture.size();
+    auto* filterSubject = static_cast<char*>(malloc(captureLen + 2048));
+    if (!filterSubject) {
         return;
     }
+    memcpy(filterSubject, capture.c_str(), captureLen);
+    filterSubject[captureLen] = '\0';
     const QString text = capture.c_str();
     for (auto& trigger : *mpMyChildrenList) {
         trigger->match(filterSubject, text, -1, posOffset);

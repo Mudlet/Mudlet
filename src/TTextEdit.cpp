@@ -2651,8 +2651,10 @@ void TTextEdit::slot_analyseSelection()
         }
 
         if (mpBuffer->lineBuffer.at(line).at(index).isHighSurrogate() && ((index + 1) < lineLength)) {
-            strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8().constData(), 4);
-            size_t utf8Width = strnlen(utf8Bytes, 4);
+            const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8();
+            const size_t utf8Width = qMin(static_cast<size_t>(utf8Data.size()), static_cast<size_t>(4));
+            memcpy(utf8Bytes, utf8Data.constData(), utf8Width);
+            utf8Bytes[utf8Width] = '\0';
             quint8 columnsToUse = qMax(static_cast<size_t>(2), utf8Width);
 
             if (includeThisCodePoint) {
@@ -2744,8 +2746,10 @@ void TTextEdit::slot_analyseSelection()
             // for the surrogate pair:
             index += 1;
         } else {
-            strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8().constData(), 4);
-            size_t utf8Width = strnlen(utf8Bytes, 4);
+            const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8();
+            const size_t utf8Width = qMin(static_cast<size_t>(utf8Data.size()), static_cast<size_t>(4));
+            memcpy(utf8Bytes, utf8Data.constData(), utf8Width);
+            utf8Bytes[utf8Width] = '\0';
             quint8 columnsToUse = qMax(static_cast<size_t>(1), utf8Width);
 
             if (includeThisCodePoint) {
