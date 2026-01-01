@@ -46,6 +46,9 @@ namespace {
 constexpr int kHoverDelta = 2;
 constexpr int kIconSizeAnimationDurationMs = 120;
 constexpr int kHoverAnimationDurationMs = 140;
+constexpr int kTooltipUpdateThrottleMs = 500;
+constexpr int kPreviewLength = 50;
+constexpr int kMaxTooltipNotes = 20;
 
 [[nodiscard]] double srgbToLinear(const int channel)
 {
@@ -122,6 +125,7 @@ void NotesIndicator::setNotesManager(NotesManager* pManager)
     disconnectFromNotesManager();
     mpNotesManager = pManager;
     connectToNotesManager();
+    invalidateTooltipCache();
     updateState();
     updateNoteCount();
 }
@@ -399,6 +403,7 @@ void NotesIndicator::slotTabAdded(const QString& tabId, const QString& tabName)
     Q_UNUSED(tabId);
     Q_UNUSED(tabName);
 
+    invalidateTooltipCache();
     updateState();
     updateNoteCount();
 }
@@ -411,6 +416,7 @@ void NotesIndicator::slotTabRemoved(const QString& tabId)
         mCurrentTabId.clear();
     }
 
+    invalidateTooltipCache();
     updateState();
     updateNoteCount();
 }
@@ -419,6 +425,7 @@ void NotesIndicator::slotTabRenamed(const QString& tabId, const QString& newName
 {
     Q_UNUSED(tabId);
     Q_UNUSED(newName);
+    invalidateTooltipCache();
     updateState();
 }
 
@@ -426,6 +433,7 @@ void NotesIndicator::slotContentChanged(const QString& tabId)
 {
     Q_UNUSED(tabId);
 
+    invalidateTooltipCache();
     updateState();
 }
 
@@ -570,9 +578,55 @@ void NotesIndicator::updateToolTip()
         return;
     }
 
-    const QString countString = (mNoteCount == 1) ? tr("1 note") : tr("%1 notes").arg(mNoteCount);
+    scheduleTooltipUpdate();
+}
 
+void NotesIndicator::invalidateTooltipCache()
+{
+    mTooltipCacheValid = false;
+    mCachedTooltip.clear();
+}
+
+void NotesIndicator::scheduleTooltipUpdate()
+{
+    if (mTooltipUpdatePending) {
+        return;
+    }
+
+    mTooltipUpdatePending = true;
+    mTooltipUpdateTimer.start(kTooltipUpdateThrottleMs);
+}
+
+void NotesIndicator::onTooltipUpdateTimeout()
+{
+    mTooltipUpdatePending = false;
+
+    if (mTooltipCacheValid) {
+        setToolTip(mCachedTooltip);
+        return;
+    }
+
+    mCachedTooltip = generateRichTooltip();
+    mTooltipCacheValid = true;
+    setToolTip(mCachedTooltip);
+}
+
+QString NotesIndicator::generateRichTooltip() const
+{
+    if (!mpNotesManager) {
+        return tr("No notes");
+    }
+
+    const auto& tabsMap = mpNotesManager->getTabsMap();
+    if (tabsMap.isEmpty()) {
+        return tr("No notes");
+    }
+
+    const bool dark = isDarkTheme();
+
+    const QString countString = (mNoteCount == 1) ? tr("1 note") : tr("%1 notes").arg(mNoteCount);
     QString extraContext;
+
     switch (mState) {
     case State::HasContent:
         extraContext = QString();
@@ -590,15 +644,86 @@ void NotesIndicator::updateToolTip()
         break;
     }
 
-    //: Notes indicator tooltip; used as "%1 - Click to view" or "%1 (%2) - Click to view". %1 is a count, %2 is a short context like "unread".
-    const QString clickToView = tr("Click to view");
+    const QString textColor = dark ? qsl("#e0e0e0") : qsl("#333333");
+    const QString mutedColor = dark ? qsl("#a0a0a0") : qsl("#666666");
+    const QString headerColor = dark ? qsl("#ffffff") : qsl("#000000");
+    const QString warningColor = dark ? qsl("#ffcc00") : qsl("#cc9900");
+    const QString previewColor = dark ? qsl("#c0c0c0") : qsl("#555555");
 
-    if (extraContext.isEmpty()) {
-        setToolTip(tr("%1 - %2").arg(countString, clickToView));
-        return;
+    QString html = qsl("<div style='padding: 4px;'>");
+
+    html += qsl("<p style='margin: 0 0 6px 0; font-weight: bold; color: %1;'>%2").arg(headerColor, countString);
+
+    if (!extraContext.isEmpty()) {
+        html += qsl(" <span style='color: %1;'>(%2)</span>").arg(warningColor, extraContext);
     }
 
-    setToolTip(tr("%1 (%2) - %3").arg(countString, extraContext, clickToView));
+    html += qsl("</p>");
+
+    QList<QString> tabIds = tabsMap.keys();
+    int displayedNotes = 0;
+
+    for (const auto& tabId : tabIds) {
+        if (displayedNotes >= kMaxTooltipNotes) {
+            break;
+        }
+
+        const auto& tab = tabsMap.value(tabId);
+        const bool isDirty = tab.isDirty;
+
+        QString tabName = tab.name;
+        if (tabName.isEmpty()) {
+            tabName = tr("Untitled");
+        }
+
+        const QString modifiedIndicator = isDirty ? qsl("<span style='color: %1; margin-left: 4px;'>⚠</span>").arg(warningColor) : QString();
+
+        html += qsl("<div style='margin: 4px 0;'>");
+        html += qsl("<span style='color: %1; font-weight: 600;'>%2%3</span>").arg(textColor, tabName.toHtmlEscaped(), modifiedIndicator);
+
+        if (!tab.content.isEmpty()) {
+            QString preview = tab.content.left(kPreviewLength);
+            if (tab.content.length() > kPreviewLength) {
+                preview += qsl("...");
+            }
+            preview = preview.toHtmlEscaped();
+            preview.replace(qsl("\n"), qsl(" "));
+            preview.replace(qsl("\r"), QString());
+
+            const QString charCount = tr("%1 chars").arg(tab.content.length());
+            html += qsl("<br/><span style='color: %1; font-size: 90%%;'>%2</span>").arg(previewColor, preview);
+            html += qsl("<br/><span style='color: %1; font-size: 85%%;'>%2</span>").arg(mutedColor, charCount);
+        }
+
+        if (tab.lastModified.isValid()) {
+            const QString timeString = tab.lastModified.toString(Qt::DefaultLocaleShortDate);
+            const QString lastModifiedLabel = tr("Modified: %1").arg(timeString);
+            html += qsl("<br/><span style='color: %1; font-size: 85%%;'>%2</span>").arg(mutedColor, lastModifiedLabel);
+        }
+
+        html += qsl("</div>");
+        displayedNotes++;
+    }
+
+    if (mNoteCount > kMaxTooltipNotes) {
+        const QString remaining = tr("...and %1 more notes").arg(mNoteCount - kMaxTooltipNotes);
+        html += qsl("<p style='margin: 6px 0 0 0; color: %1; font-style: italic;'>%2</p>").arg(mutedColor, remaining);
+    }
+
+    html += qsl("<hr style='margin: 8px 0; border: none; border-top: 1px solid %1;'>").arg(mutedColor);
+
+    html += qsl("<div style='margin: 4px 0;'>");
+    //: Tooltip hint for clicking to view notes
+    html += qsl("<div style='color: %1;'>• <b>%2</b></div>").arg(textColor, tr("Click to view notes"));
+    //: Tooltip hint for keyboard shortcut to open notes
+    html += qsl("<div style='color: %1;'>• %2</div>").arg(mutedColor, tr("Press Ctrl+Alt+N to open notes"));
+    //: Tooltip hint for right-click context menu
+    html += qsl("<div style='color: %1;'>• %2</div>").arg(mutedColor, tr("Right-click for more options"));
+    html += qsl("</div>");
+
+    html += qsl("</div>");
+
+    return html;
 }
 
 void NotesIndicator::mousePressEvent(QMouseEvent* pEvent)
