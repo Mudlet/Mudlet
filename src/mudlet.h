@@ -129,6 +129,15 @@ class TTabBar;
 class TTimer;
 class TToolBar;
 
+struct ProfileTabInfo
+{
+    QPointer<QWidget> widget;
+    int tabIndex = -1;
+    bool hasNotes = false;
+    QPointer<Host> host;
+    QPointer<NotesManager> notesManager;
+};
+
 class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
@@ -349,6 +358,16 @@ public:
     QString getTabProfileName(int tabIndex) const;
     void loadOrRestoreNotesTabState(Host* pHost);
     void saveNotesTabState(Host* pHost);
+    
+    // Notes indicator management
+    void createNotesIndicator(Host* pHost);
+    void embedNotesIndicator(int tabIndex);
+    void removeNotesIndicator(int tabIndex);
+    void updateNotesIndicatorState(int tabIndex);
+    void updateAllNotesIndicators();
+    bool checkProfileHasNotes(Host* pHost);
+    bool showTabNotesIndicators() const { return mShowTabNotesIndicators; }
+    void setShowTabNotesIndicators(const bool show);
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void writeSettings();
     bool muteAPI() const { return mMuteAPI; }
@@ -398,6 +417,7 @@ public:
     QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
+    QMap<int, ProfileTabInfo> mProfileTabInfoMap;
     int mReplaySpeed = 1;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
@@ -433,6 +453,7 @@ public:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
+    bool mShowTabNotesIndicators = true; // Global preference for showing notes indicators on tabs
 
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
