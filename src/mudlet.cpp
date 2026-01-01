@@ -4122,7 +4122,7 @@ void mudlet::createNotesTab(Host* pHost)
     mpTabBar->setTabData(newTabIndex, notesTabName);
     
     // Add the notes container to the splitter at the same position
-    addConsoleToSplitter(notesTabContainer, insertIndex);
+    mpSplitter_profileContainer->insertWidget(insertIndex, notesTabContainer);
     
     // Switch to the new notes tab
     mpTabBar->setCurrentIndex(newTabIndex);
@@ -8937,81 +8937,5 @@ void mudlet::reattachOrphanedProfiles()
     updateMainWindowTabBarAutoHide();
     refreshTabBar();
     enableToolbarButtons();
-}
-
-// Notes tab management implementation
-NotesTabContainer::NotesTabContainer(Host* pHost, QWidget* parent)
-    : QWidget(parent), mpHost(pHost)
-{
-    setupUi();
-    initConnections();
-}
-
-NotesTabContainer::~NotesTabContainer()
-{
-    if (mpNotesWidget) {
-        disconnect(mpNotesWidget, nullptr, this, nullptr);
-    }
-}
-
-void NotesTabContainer::setupUi()
-{
-    mpLayout = new QVBoxLayout(this);
-    mpLayout->setContentsMargins(0, 0, 0, 0);
-    mpLayout->setSpacing(0);
-    
-    if (mpHost) {
-        mpNotesWidget = new dlgNotepad(mpHost);
-        mpLayout->addWidget(mpNotesWidget);
-    }
-}
-
-void NotesTabContainer::initConnections()
-{
-    if (mpNotesWidget) {
-        connect(mpNotesWidget, &dlgNotepad::notepadClosing, this, [this](const QString& profileName) {
-            Q_UNUSED(profileName);
-            emit notesTabHidden();
-        });
-    }
-}
-
-void NotesTabContainer::showNotesTab()
-{
-    if (mpNotesWidget) {
-        mpNotesWidget->show();
-        mpNotesWidget->restore();
-        emit notesTabFocused();
-    }
-}
-
-void NotesTabContainer::hideNotesTab()
-{
-    if (mpNotesWidget) {
-        mpNotesWidget->save();
-        hide();
-        emit notesTabHidden();
-    }
-}
-
-void NotesTabContainer::setFont(const QFont& font)
-{
-    if (mpNotesWidget) {
-        mpNotesWidget->setFont(font);
-    }
-}
-
-void NotesTabContainer::saveState()
-{
-    if (mpNotesWidget) {
-        mpNotesWidget->saveSettings();
-    }
-}
-
-void NotesTabContainer::restoreState()
-{
-    if (mpNotesWidget) {
-        mpNotesWidget->restoreSettings();
-    }
 }
 

@@ -218,7 +218,7 @@ void NotesIndicator::setupContextMenu()
     connect(mViewNotesAction, &QAction::triggered, this, &NotesIndicator::slotViewNotes);
 
     mActionRenameTab = new QAction(this);
-    mActionRenameTab->setIcon(style()->standardIcon(QStyle::SP_DialogRenameButton));
+    mActionRenameTab->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
     mActionRenameTab->setText(tr("&Rename Current Tab"));
     mActionRenameTab->setToolTip(tr("Rename the active note tab"));
     mActionRenameTab->setShortcut(tr("F2"));
@@ -528,7 +528,7 @@ void NotesIndicator::loadIcons()
         QPixmap pixmap(resourcePath);
 
         if (!pixmap.isNull()) {
-            icon = QIcon(pixmap.scaled(mIconSize, mIconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            icon = QIcon(pixmap.scaled(mDisplayIconSize, mDisplayIconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         } else {
             switch (state) {
             case State::Empty:
@@ -549,6 +549,8 @@ void NotesIndicator::loadIcons()
         mIcons.insert(state, icon);
     }
 
+    QIcon closedFolder = style()->standardIcon(QStyle::SP_DirClosedIcon);
+    QIcon openFolder = style()->standardIcon(QStyle::SP_DirOpenIcon);
     mIcons.insert(State::Empty, closedFolder);
     mIcons.insert(State::HasContent, makeIconWithBadge(openFolder, badgeColorForState(State::HasContent)));
     mIcons.insert(State::Modified, makeIconWithBadge(openFolder, badgeColorForState(State::Modified)));
@@ -696,7 +698,7 @@ QString NotesIndicator::generateRichTooltip() const
         }
 
         if (tab.lastModified.isValid()) {
-            const QString timeString = tab.lastModified.toString(Qt::DefaultLocaleShortDate);
+            const QString timeString = tab.lastModified.toString(Qt::TextDate);
             const QString lastModifiedLabel = tr("Modified: %1").arg(timeString);
             html += qsl("<br/><span style='color: %1; font-size: 85%%;'>%2</span>").arg(mutedColor, lastModifiedLabel);
         }

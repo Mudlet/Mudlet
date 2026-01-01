@@ -533,6 +533,8 @@ public slots:
     void updateDetachedWindowToolbars();
     static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
+    QIcon createNotesIndicatorIcon(bool hasNotes);
+    QIcon createCompositeTabIcon(bool isConnected, bool isConnecting, bool hasError, bool hasNotes);
     void updateMainWindowTabBarAutoHide();
     void updateTabIndicators(); // Update all tab indicators (main window)
     void updateDetachedWindowTabIndicators(); // Update all detached window tab indicators

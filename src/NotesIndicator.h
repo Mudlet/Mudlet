@@ -157,7 +157,7 @@ private slots:
     // NotesManager connection management
     void connectToNotesManager();
     void disconnectFromNotesManager();
-
+private:
     State mState = State::Empty;
     int mBaseIconSize = 16;
     int mNoteCount = 0;
