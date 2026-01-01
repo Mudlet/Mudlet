@@ -669,6 +669,7 @@ void mudlet::init()
     mKeySequenceCloseProfile = QKeySequence(Qt::ALT | Qt::Key_W);
     mKeySequenceToggleTimeStamp = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T);
     mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
+    mKeySequenceToggleNotesTab = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_N);
     mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
     mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
 #endif
@@ -692,6 +693,7 @@ void mudlet::init()
     mpShortcutsManager->registerShortcut(qsl("Close profile"), tr("Close profile"), &mKeySequenceCloseProfile);
     mpShortcutsManager->registerShortcut(qsl("Toggle Time Stamps"), tr("Toggle Time Stamps"), &mKeySequenceToggleTimeStamp);
     mpShortcutsManager->registerShortcut(qsl("Toggle Replay"), tr("Toggle Replay"), &mKeySequenceToggleReplay);
+    mpShortcutsManager->registerShortcut(qsl("Toggle Notes Tab"), tr("Toggle Notes Tab"), &mKeySequenceToggleNotesTab);
     mpShortcutsManager->registerShortcut(qsl("Toggle Logging"), tr("Toggle Logging"), &mKeySequenceToggleLogging);
     mpShortcutsManager->registerShortcut(qsl("Toggle Emergency Stop"), tr("Toggle Emergency Stop"), &mKeySequenceToggleEmergencyStop);
     readLateSettings(*mpSettings);
@@ -3609,6 +3611,10 @@ void mudlet::assignKeySequences()
         connect(mpShortcutToggleReplay.data(), &QShortcut::activated, this, &mudlet::slot_toggleReplay);
         dactionToggleReplay->setShortcut(QKeySequence());
 
+        delete mpShortcutToggleNotesTab.data();
+        mpShortcutToggleNotesTab = new QShortcut(mKeySequenceToggleNotesTab, this);
+        connect(mpShortcutToggleNotesTab.data(), &QShortcut::activated, this, &mudlet::slot_toggleNotesTab);
+
         delete mpShortcutToggleLogging.data();
         mpShortcutToggleLogging = new QShortcut(mKeySequenceToggleLogging, this);
         connect(mpShortcutToggleLogging.data(), &QShortcut::activated, this, &mudlet::slot_toggleLogging);
@@ -3668,6 +3674,9 @@ void mudlet::assignKeySequences()
 
         delete mpShortcutToggleReplay.data();
         dactionToggleReplay->setShortcut(mKeySequenceToggleReplay);
+
+        delete mpShortcutToggleNotesTab.data();
+        // No menu item for toggle notes tab - it's a global shortcut only
 
         delete mpShortcutToggleLogging.data();
         dactionToggleLogging->setShortcut(mKeySequenceToggleLogging);
@@ -3995,6 +4004,120 @@ void mudlet::slot_notes()
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     utils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
+}
+
+void mudlet::slot_toggleNotesTab()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
+    // Check if we have a valid tab bar
+    if (!mpTabBar) {
+        return;
+    }
+
+    // Find the current tab index
+    const int currentIndex = mpTabBar->currentIndex();
+    if (currentIndex < 0) {
+        return;
+    }
+
+    // Get current tab data to check if it's a notes tab
+    const QString currentTabData = mpTabBar->tabData(currentIndex).toString();
+    
+    // Check if current tab is the console tab for the active profile
+    const QString profileName = pHost->getName();
+    const QString notesTabName = qsl("notes:%1").arg(profileName);
+
+    bool isCurrentTabNotes = (currentTabData == notesTabName);
+    bool isCurrentTabConsole = (currentTabData == profileName);
+
+    if (isCurrentTabNotes) {
+        // If notes tab is currently active, switch to console tab
+        int consoleTabIndex = -1;
+        for (int i = 0; i < mpTabBar->count(); ++i) {
+            if (mpTabBar->tabData(i).toString() == profileName) {
+                consoleTabIndex = i;
+                break;
+            }
+        }
+
+        if (consoleTabIndex >= 0) {
+            mpTabBar->setCurrentIndex(consoleTabIndex);
+            slot_tabChanged(consoleTabIndex);
+        }
+    } else {
+        // If notes tab is not active, create or switch to notes tab
+        int notesTabIndex = -1;
+        for (int i = 0; i < mpTabBar->count(); ++i) {
+            if (mpTabBar->tabData(i).toString() == notesTabName) {
+                notesTabIndex = i;
+                break;
+            }
+        }
+
+        if (notesTabIndex >= 0) {
+            // Notes tab exists, switch to it
+            mpTabBar->setCurrentIndex(notesTabIndex);
+            slot_tabChanged(notesTabIndex);
+        } else {
+            // Create new notes tab
+            createNotesTab(pHost);
+        }
+    }
+}
+
+void mudlet::createNotesTab(Host* pHost)
+{
+    if (!pHost || !mpTabBar) {
+        return;
+    }
+
+    const QString profileName = pHost->getName();
+    const QString notesTabName = qsl("notes:%1").arg(profileName);
+
+    // Check if notes tab already exists
+    for (int i = 0; i < mpTabBar->count(); ++i) {
+        if (mpTabBar->tabData(i).toString() == notesTabName) {
+            mpTabBar->setCurrentIndex(i);
+            slot_tabChanged(i);
+            return;
+        }
+    }
+
+    // Create the notes tab container
+    auto* notesTabContainer = new NotesTabContainer(pHost);
+    
+    // Insert the notes tab after the console tab
+    int insertIndex = -1;
+    const QString consoleTabName = qsl("console:%1").arg(profileName);
+    
+    for (int i = 0; i < mpTabBar->count(); ++i) {
+        if (mpTabBar->tabData(i).toString() == consoleTabName) {
+            insertIndex = i + 1;
+            break;
+        }
+    }
+    
+    if (insertIndex < 0) {
+        insertIndex = mpTabBar->count(); // Add at end if console tab not found
+    }
+
+    // Add the tab to the tab bar
+    const int newTabIndex = mpTabBar->insertTab(insertIndex, tr("Notes"));
+    mpTabBar->setTabData(newTabIndex, notesTabName);
+    
+    // Add the notes container to the splitter at the same position
+    addConsoleToSplitter(notesTabContainer, insertIndex);
+    
+    // Switch to the new notes tab
+    mpTabBar->setCurrentIndex(newTabIndex);
+    slot_tabChanged(newTabIndex);
+    
+    // Store the notes tab container reference for this host
+    pHost->mpNotesTabContainer = notesTabContainer;
 }
 
 // This opens a profile specific IRC client for that client so should only be

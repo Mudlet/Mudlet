@@ -471,6 +471,8 @@ public slots:
     void slot_muteGame(const bool);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
     void slot_notes();
+    void slot_toggleNotesTab();
+    void createNotesTab(Host* pHost);
     void slot_openMappingScriptsPage();
     void slot_packageExporter();
     void slot_packageManager();
@@ -654,6 +656,7 @@ private:
     QKeySequence mKeySequenceTriggers;
     QKeySequence mKeySequenceToggleTimeStamp;
     QKeySequence mKeySequenceToggleReplay;
+    QKeySequence mKeySequenceToggleNotesTab;
     QKeySequence mKeySequenceToggleLogging;
     QKeySequence mKeySequenceToggleEmergencyStop;
     bool mIsGoingDown = false;
@@ -736,6 +739,7 @@ private:
     QPointer<QShortcut> mpShortcutTriggers;
     QPointer<QShortcut> mpShortcutToggleTimeStamp;
     QPointer<QShortcut> mpShortcutToggleReplay;
+    QPointer<QShortcut> mpShortcutToggleNotesTab;
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
