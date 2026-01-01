@@ -158,6 +158,14 @@
         <file>icons/mudlet_main_48px.png</file>
         <file>icons/mudlet_map_download.png</file>
         <file>icons/mudlet_notepad.png</file>
+        <file>icons/note-active.png</file>
+        <file>icons/note-active@2x.png</file>
+        <file>icons/note-empty.png</file>
+        <file>icons/note-empty@2x.png</file>
+        <file>icons/note-hover.png</file>
+        <file>icons/note-hover@2x.png</file>
+        <file>icons/note-present.png</file>
+        <file>icons/note-present@2x.png</file>
         <file>icons/mudlet_ptb_256px.png</file>
         <file>icons/mudlet_room_exits.png</file>
         <file>icons/mudlet-tutorial.png</file>
@@ -207,6 +215,7 @@
         <file>icons/view-restore.png</file>
         <file>icons/view-split-left-right.png</file>
         <file>icons/view-statistics.png</file>
+        <file>icons/view-pim-notes.png</file>
         <file>icons/window-close.png</file>
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>

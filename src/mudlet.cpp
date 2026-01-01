@@ -54,6 +54,7 @@
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
+#include "NotesManager.h"
 #include "NotesTabContainer.h"
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
@@ -1969,6 +1970,14 @@ void mudlet::closeHost(const QString& name)
         mDetachedWindows.remove(name);
     }
 
+    // Remove notes indicator for this profile before removing the tab
+    for (int i = 0; i < mpTabBar->count(); ++i) {
+        if (mpTabBar->tabData(i).toString() == name) {
+            removeNotesIndicator(i);
+            break;
+        }
+    }
+
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
     int hostCount = mHostManager.getHostCount();
@@ -2095,6 +2104,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
      *    a shortcut key for switching to that tab." in 'QTabBar' documentation"
      */
     mpTabBar->setTabData(newTabID, tabName);
+
+    // Create notes indicator for this profile
+    createNotesIndicator(pH);
 
     // update the window title for the currently selected profile
     updateMainWindowTitle();
@@ -5478,6 +5490,11 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
 
         pHost->refreshPackageFonts();
 
+        // Restore notes for this profile
+        if (pHost->mpNotesManager) {
+            pHost->mpNotesManager->restore();
+        }
+
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
             preInstallPackages = true;
@@ -5492,6 +5509,11 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
+
+    // Create notes indicator for this profile if it's being shown in the main window
+    if (!mDetachedWindows.contains(profile_name)) {
+        createNotesIndicator(pHost);
+    }
 
     return pHost;
 }
@@ -7542,13 +7564,91 @@ QIcon mudlet::createConnectionStatusIcon(bool isConnected, bool isConnecting, bo
     return QIcon(pixmap);
 }
 
+bool mudlet::checkProfileHasNotes(Host* pHost)
+{
+    if (!pHost) {
+        return false;
+    }
+
+    // Check if the host has a NotesManager and if it has any content
+    if (pHost->mpNotesManager) {
+        const QMap<QString, NotesManager::NoteTab>& tabs = pHost->mpNotesManager->getTabsMap();
+        for (const auto& tab : tabs) {
+            if (!tab.content.isEmpty()) {
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+QIcon mudlet::createNotesIndicatorIcon(bool hasNotes)
+{
+    // Create a 16x16 pixmap for the notes icon
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    if (hasNotes) {
+        // Use the existing note icon and overlay a small indicator
+        QIcon noteIcon = QIcon(":/icons/view-pim-notes.png");
+        if (!noteIcon.isNull()) {
+            // Draw the note icon
+            noteIcon.paint(&painter, QRect(0, 0, 16, 16), Qt::AlignCenter);
+            
+            // Add a small blue dot indicator in the corner
+            painter.setBrush(QColor(50, 100, 200));
+            painter.setPen(QPen(QColor(30, 80, 180), 1));
+            painter.drawEllipse(12, 2, 4, 4);
+        } else {
+            // Fallback: simple note icon
+            painter.setBrush(QColor(200, 200, 100));
+            painter.setPen(QPen(QColor(180, 180, 80), 1));
+            painter.drawRect(4, 4, 8, 8);
+            painter.drawLine(4, 4, 12, 12);
+        }
+    } else {
+        // Empty/transparent icon when no notes
+        // We could draw a faint note outline, but transparent is cleaner
+    }
+
+    return QIcon(pixmap);
+}
+
+QIcon mudlet::createCompositeTabIcon(bool isConnected, bool isConnecting, bool hasError, bool hasNotes)
+{
+    // Create a composite icon that shows both connection status and notes indicator
+    QPixmap pixmap(32, 16);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    // Draw connection status icon on the left
+    QIcon connectionIcon = createConnectionStatusIcon(isConnected, isConnecting, hasError);
+    if (!connectionIcon.isNull()) {
+        connectionIcon.paint(&painter, QRect(0, 0, 16, 16), Qt::AlignCenter);
+    }
+
+    // Draw notes indicator icon on the right
+    QIcon notesIcon = createNotesIndicatorIcon(hasNotes);
+    if (!notesIcon.isNull()) {
+        notesIcon.paint(&painter, QRect(16, 0, 16, 16), Qt::AlignCenter);
+    }
+
+    return QIcon(pixmap);
+}
+
 void mudlet::updateMainWindowTabIndicators()
 {
     if (!mpTabBar) {
         return;
     }
 
-    // Update connection status indicators for all tabs
+    // Update connection status and notes indicators for all tabs
     for (int i = 0; i < mpTabBar->count(); ++i) {
         const QString profileName = mpTabBar->tabData(i).toString();
         if (profileName.isEmpty()) {
@@ -7558,20 +7658,139 @@ void mudlet::updateMainWindowTabIndicators()
         Host* pHost = mHostManager.getHost(profileName);
         QIcon tabIcon;
 
-        // Only show connection indicators if the setting is enabled
-        if (mShowTabConnectionIndicators && pHost) {
-            bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
-            bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
-            tabIcon = createConnectionStatusIcon(isConnected, isConnecting, false);
-        } else if (mShowTabConnectionIndicators && !pHost) {
-            tabIcon = createConnectionStatusIcon(false, false, true);
+        bool showConnectionIndicators = mShowTabConnectionIndicators && pHost;
+        bool showNotesIndicators = mShowTabNotesIndicators && pHost;
+        
+        if (showConnectionIndicators || showNotesIndicators) {
+            bool isConnected = false;
+            bool isConnecting = false;
+            bool hasError = false;
+            bool hasNotes = false;
+            
+            if (showConnectionIndicators) {
+                isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
+                isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
+                hasError = !pHost;
+            }
+            
+            if (showNotesIndicators) {
+                // Check if this profile has any notes content
+                hasNotes = checkProfileHasNotes(pHost);
+            }
+            
+            // Create composite icon showing both indicators
+            tabIcon = createCompositeTabIcon(isConnected, isConnecting, hasError, hasNotes);
         } else {
-            // No icon when indicators are disabled
+            // No icons when both indicators are disabled
             tabIcon = QIcon();
         }
 
         // Only set the tab icon, keep the original tab text as just the profile name
         mpTabBar->setTabIcon(i, tabIcon);
+    }
+}
+
+void mudlet::createNotesIndicator(Host* pHost)
+{
+    if (!pHost || !mpTabBar) {
+        return;
+    }
+
+    // Find the tab index for this host
+    const QString profileName = pHost->getName();
+    for (int i = 0; i < mpTabBar->count(); ++i) {
+        if (mpTabBar->tabData(i).toString() == profileName) {
+            // Create or update the profile tab info
+            ProfileTabInfo info;
+            info.host = pHost;
+            info.tabIndex = i;
+            info.hasNotes = checkProfileHasNotes(pHost);
+            
+            // Store the notes manager reference
+            if (pHost->mpNotesManager) {
+                info.notesManager = pHost->mpNotesManager;
+                
+                // Connect to the content changed signal to update the indicator
+                connect(pHost->mpNotesManager, &NotesManager::contentChanged, this, [this, i]() {
+                    updateNotesIndicatorState(i);
+                });
+            }
+            
+            mProfileTabInfoMap[i] = info;
+            break;
+        }
+    }
+}
+
+void mudlet::embedNotesIndicator(int tabIndex)
+{
+    if (!mpTabBar || tabIndex < 0 || tabIndex >= mpTabBar->count()) {
+        return;
+    }
+
+    // This is handled by the main update method, so just trigger an update
+    updateNotesIndicatorState(tabIndex);
+}
+
+void mudlet::removeNotesIndicator(int tabIndex)
+{
+    if (tabIndex < 0 || tabIndex >= mpTabBar->count()) {
+        return;
+    }
+
+    // Remove the profile tab info for this tab
+    mProfileTabInfoMap.remove(tabIndex);
+    
+    // Clear the icon for this tab
+    if (mpTabBar) {
+        mpTabBar->setTabIcon(tabIndex, QIcon());
+    }
+}
+
+void mudlet::updateNotesIndicatorState(int tabIndex)
+{
+    if (!mpTabBar || tabIndex < 0 || tabIndex >= mpTabBar->count()) {
+        return;
+    }
+
+    // Update the indicator for this specific tab
+    const QString profileName = mpTabBar->tabData(tabIndex).toString();
+    if (profileName.isEmpty()) {
+        return;
+    }
+
+    Host* pHost = mHostManager.getHost(profileName);
+    if (!pHost) {
+        return;
+    }
+
+    // Update the profile tab info
+    if (mProfileTabInfoMap.contains(tabIndex)) {
+        ProfileTabInfo& info = mProfileTabInfoMap[tabIndex];
+        info.hasNotes = checkProfileHasNotes(pHost);
+    }
+    
+    // Refresh the tab icon
+    updateMainWindowTabIndicators();
+}
+
+void mudlet::updateAllNotesIndicators()
+{
+    if (!mpTabBar) {
+        return;
+    }
+
+    // Update all tabs
+    for (int i = 0; i < mpTabBar->count(); ++i) {
+        updateNotesIndicatorState(i);
+    }
+}
+
+void mudlet::setShowTabNotesIndicators(const bool show)
+{
+    if (mShowTabNotesIndicators != show) {
+        mShowTabNotesIndicators = show;
+        updateAllNotesIndicators();
     }
 }
 
