@@ -21,13 +21,22 @@
  ***************************************************************************/
 
 
+#include <QColor>
 #include <QIcon>
 #include <QMap>
 #include <QPushButton>
 
+class QEnterEvent;
+class QEvent;
+class QMouseEvent;
+class QPaintEvent;
+class QPropertyAnimation;
+
 class NotesIndicator : public QPushButton
 {
     Q_OBJECT
+    Q_PROPERTY(int displayIconSize READ displayIconSize WRITE setDisplayIconSize)
+    Q_PROPERTY(qreal hoverProgress READ hoverProgress WRITE setHoverProgress)
 
 public:
     enum State {
@@ -48,7 +57,7 @@ public:
     State getState() const { return mState; }
 
     void setSize(int size);
-    int size() const { return mIconSize; }
+    int size() const { return mBaseIconSize; }
 
     void setNoteCount(int count);
     int noteCount() const { return mNoteCount; }
@@ -58,15 +67,48 @@ signals:
 
 protected:
     void mousePressEvent(QMouseEvent* pEvent) override;
+    void mouseReleaseEvent(QMouseEvent* pEvent) override;
+    void enterEvent(QEnterEvent* pEvent) override;
+    void leaveEvent(QEvent* pEvent) override;
+    void changeEvent(QEvent* pEvent) override;
+    void paintEvent(QPaintEvent* pEvent) override;
 
 private:
     void loadIcons();
     void updateIcon();
+    void updateToolTip();
+
+    bool isClickable() const;
+
+    void animateIconSizeTo(int targetSize);
+    void animateHoverProgressTo(qreal targetProgress);
+
+    int displayIconSize() const { return mDisplayIconSize; }
+    void setDisplayIconSize(int size);
+
+    qreal hoverProgress() const { return mHoverProgress; }
+    void setHoverProgress(qreal progress);
+
+    QColor badgeColorForState(State state) const;
+    QIcon makeIconWithBadge(const QIcon& baseIcon, const QColor& badgeColor) const;
+
+    bool isDarkTheme() const;
+    bool isHighContrastTheme() const;
 
     State mState = State::Empty;
-    int mIconSize = 16;
+    int mBaseIconSize = 16;
     int mNoteCount = 0;
+
+    int mDisplayIconSize = 16;
+    qreal mHoverProgress = 0.0;
+
+    bool mIsHovered = false;
+    bool mIsPressed = false;
+
     QMap<State, QIcon> mIcons;
+
+    QPropertyAnimation* mpIconSizeAnimation = nullptr;
+    QPropertyAnimation* mpHoverAnimation = nullptr;
 };
 
 #endif // MUDLET_NOTESINDICATOR_H
