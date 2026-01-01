@@ -81,16 +81,16 @@ void NotesIndicator::loadIcons()
 
         switch (state) {
         case State::Empty:
-            resourcePath = qsl(":/icons/folder-grey.png");
+            resourcePath = qsl(":/icons/note-empty.png");
             break;
         case State::HasContent:
-            resourcePath = qsl(":/icons/folder-blue.png");
+            resourcePath = qsl(":/icons/note-present.png");
             break;
         case State::Modified:
-            resourcePath = qsl(":/icons/folder-yellow.png");
+            resourcePath = qsl(":/icons/note-active.png");
             break;
         case State::HasUnread:
-            resourcePath = qsl(":/icons/folder-green.png");
+            resourcePath = qsl(":/icons/note-hover.png");
             break;
         }
 
@@ -102,16 +102,16 @@ void NotesIndicator::loadIcons()
         } else {
             switch (state) {
             case State::Empty:
-                icon = style()->standardIcon(QStyle::SP_DirIcon);
+                icon = style()->standardIcon(QStyle::SP_FileIcon);
                 break;
             case State::HasContent:
-                icon = style()->standardIcon(QStyle::SP_DirOpenIcon);
+                icon = style()->standardIcon(QStyle::SP_FileDialogContentsView);
                 break;
             case State::Modified:
-                icon = style()->standardIcon(QStyle::SP_DirIcon);
+                icon = style()->standardIcon(QStyle::SP_DialogSaveButton);
                 break;
             case State::HasUnread:
-                icon = style()->standardIcon(QStyle::SP_DirOpenIcon);
+                icon = style()->standardIcon(QStyle::SP_DialogHelpButton);
                 break;
             }
         }
