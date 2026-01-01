@@ -31,12 +31,17 @@
 
 class NotesManager;
 
+class QContextMenuEvent;
 class QEnterEvent;
 class QEvent;
+class QKeyEvent;
 class QMouseEvent;
 class QPaintEvent;
 class QPropertyAnimation;
 class QTimer;
+
+class QMenu;
+class QAction;
 
 class NotesIndicator : public QPushButton
 {
@@ -82,6 +87,8 @@ public:
 
 signals:
     void notesButtonClicked();
+    void newNoteRequested();
+    void viewNotesRequested();
 
 protected:
     void mousePressEvent(QMouseEvent* pEvent) override;
@@ -90,6 +97,8 @@ protected:
     void leaveEvent(QEvent* pEvent) override;
     void changeEvent(QEvent* pEvent) override;
     void paintEvent(QPaintEvent* pEvent) override;
+    void contextMenuEvent(QContextMenuEvent* pEvent) override;
+    void keyPressEvent(QKeyEvent* pEvent) override;
 
 private:
     void loadIcons();
@@ -102,6 +111,23 @@ private:
     QString generateRichTooltip() const;
 
     bool isClickable() const;
+
+    void setupContextMenu();
+    void updateContextMenuState();
+    QMenu* createContextMenu();
+
+    QAction* mActionNewNote = nullptr;
+    QAction* mViewNotesAction = nullptr;
+    QAction* mActionRenameTab = nullptr;
+    QAction* mActionDeleteTab = nullptr;
+    QAction* mActionClearTab = nullptr;
+
+private slots:
+    void slotNewNote();
+    void slotViewNotes();
+    void slotRenameTab();
+    void slotDeleteTab();
+    void slotClearTab();
 
     void animateIconSizeTo(int targetSize);
     void animateHoverProgressTo(qreal targetProgress);

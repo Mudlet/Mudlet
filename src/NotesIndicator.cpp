@@ -23,9 +23,15 @@
 
 #include "utils.h"
 
+#include <QAction>
 #include <QApplication>
-#include <QDateTime>
+#include <QContextMenuEvent>
 #include <QEnterEvent>
+#include <QInputDialog>
+#include <QKeyEvent>
+#include <QLineEdit>
+#include <QMenu>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
@@ -96,8 +102,7 @@ NotesIndicator::NotesIndicator(QWidget* pParent)
 
     setSize(mBaseIconSize);
 
-    mTooltipUpdateTimer.setSingleShot(true);
-    connect(&mTooltipUpdateTimer, &QTimer::timeout, this, &NotesIndicator::onTooltipUpdateTimeout);
+    setupContextMenu();
 
     connect(this, &QPushButton::clicked, this, [this]() {
         if (isClickable()) {
@@ -130,6 +135,7 @@ void NotesIndicator::setCurrentTabId(const QString& tabId)
     if (mCurrentTabId != tabId) {
         mCurrentTabId = tabId;
         updateState();
+        updateContextMenuState();
     }
 }
 
@@ -194,6 +200,183 @@ void NotesIndicator::updateNoteCount()
 
     const int count = mpNotesManager->getTabsMap().size();
     setNoteCount(count);
+}
+
+void NotesIndicator::setupContextMenu()
+{
+    mActionNewNote = new QAction(this);
+    mActionNewNote->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
+    mActionNewNote->setText(tr("&New Note Tab"));
+    mActionNewNote->setToolTip(tr("Create and open a new note tab"));
+    mActionNewNote->setShortcut(tr("Ctrl+N"));
+    connect(mActionNewNote, &QAction::triggered, this, &NotesIndicator::slotNewNote);
+
+    mViewNotesAction = new QAction(this);
+    mViewNotesAction->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    mViewNotesAction->setText(tr("&View Notes"));
+    mViewNotesAction->setToolTip(tr("Switch to the notes tab"));
+    connect(mViewNotesAction, &QAction::triggered, this, &NotesIndicator::slotViewNotes);
+
+    mActionRenameTab = new QAction(this);
+    mActionRenameTab->setIcon(style()->standardIcon(QStyle::SP_DialogRenameButton));
+    mActionRenameTab->setText(tr("&Rename Current Tab"));
+    mActionRenameTab->setToolTip(tr("Rename the active note tab"));
+    mActionRenameTab->setShortcut(tr("F2"));
+    connect(mActionRenameTab, &QAction::triggered, this, &NotesIndicator::slotRenameTab);
+
+    mActionDeleteTab = new QAction(this);
+    mActionDeleteTab->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
+    mActionDeleteTab->setText(tr("&Delete Current Tab"));
+    mActionDeleteTab->setToolTip(tr("Remove the active note tab"));
+    connect(mActionDeleteTab, &QAction::triggered, this, &NotesIndicator::slotDeleteTab);
+
+    mActionClearTab = new QAction(this);
+    mActionClearTab->setIcon(style()->standardIcon(QStyle::SP_DialogResetButton));
+    mActionClearTab->setText(tr("&Clear Current Tab"));
+    mActionClearTab->setToolTip(tr("Empty the content of the active note tab"));
+    connect(mActionClearTab, &QAction::triggered, this, &NotesIndicator::slotClearTab);
+
+    updateContextMenuState();
+}
+
+void NotesIndicator::updateContextMenuState()
+{
+    const bool hasNotes = mState != State::Empty;
+    const bool hasCurrentTab = !mCurrentTabId.isEmpty();
+    const bool hasMultipleTabs = mpNotesManager && mpNotesManager->getTabsMap().size() > 1;
+
+    mActionNewNote->setEnabled(true);
+
+    mViewNotesAction->setEnabled(hasNotes);
+
+    mActionRenameTab->setEnabled(hasNotes && hasCurrentTab);
+
+    mActionDeleteTab->setEnabled(hasNotes && hasCurrentTab && hasMultipleTabs);
+
+    mActionClearTab->setEnabled(hasNotes && hasCurrentTab);
+}
+
+QMenu* NotesIndicator::createContextMenu()
+{
+    QMenu* menu = new QMenu(this);
+
+    menu->addAction(mActionNewNote);
+    menu->addAction(mViewNotesAction);
+    menu->addSeparator();
+    menu->addAction(mActionRenameTab);
+    menu->addAction(mActionDeleteTab);
+    menu->addSeparator();
+    menu->addAction(mActionClearTab);
+
+    return menu;
+}
+
+void NotesIndicator::contextMenuEvent(QContextMenuEvent* pEvent)
+{
+    QMenu* menu = createContextMenu();
+    if (menu) {
+        menu->exec(pEvent->globalPos());
+        delete menu;
+    }
+}
+
+void NotesIndicator::keyPressEvent(QKeyEvent* pEvent)
+{
+    if (pEvent->key() == Qt::Key_Menu && isClickable()) {
+        QMenu* menu = createContextMenu();
+        if (menu) {
+            menu->exec(mapToGlobal(rect().center()));
+            delete menu;
+        }
+        return;
+    }
+
+    QPushButton::keyPressEvent(pEvent);
+}
+
+void NotesIndicator::slotNewNote()
+{
+    if (mpNotesManager) {
+        mpNotesManager->addTab();
+        emit newNoteRequested();
+    }
+}
+
+void NotesIndicator::slotViewNotes()
+{
+    if (isClickable()) {
+        emit viewNotesRequested();
+    }
+}
+
+void NotesIndicator::slotRenameTab()
+{
+    if (!mpNotesManager || mCurrentTabId.isEmpty()) {
+        return;
+    }
+
+    const auto& tabsMap = mpNotesManager->getTabsMap();
+    if (!tabsMap.contains(mCurrentTabId)) {
+        return;
+    }
+
+    const QString currentName = tabsMap.value(mCurrentTabId).name;
+    bool ok = false;
+    const QString newName = QInputDialog::getText(this, tr("Rename Tab"), tr("New tab name:"), QLineEdit::Normal, currentName, &ok);
+
+    if (ok && !newName.isEmpty() && newName != currentName) {
+        mpNotesManager->renameTab(mCurrentTabId, newName);
+    }
+}
+
+void NotesIndicator::slotDeleteTab()
+{
+    if (!mpNotesManager || mCurrentTabId.isEmpty()) {
+        return;
+    }
+
+    const auto& tabsMap = mpNotesManager->getTabsMap();
+    if (!tabsMap.contains(mCurrentTabId)) {
+        return;
+    }
+
+    const QString tabName = tabsMap.value(mCurrentTabId).name;
+
+    //: Confirmation dialog for deleting a note tab
+    const QString message = tr("Are you sure you want to delete the note tab \"%1\"?").arg(tabName);
+    //: Confirmation dialog title for deleting a note tab
+    const QString title = tr("Delete Note Tab");
+
+    QMessageBox::StandardButton result = QMessageBox::question(this, title, message, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+
+    if (result == QMessageBox::Yes) {
+        mpNotesManager->removeTab(mCurrentTabId);
+    }
+}
+
+void NotesIndicator::slotClearTab()
+{
+    if (!mpNotesManager || mCurrentTabId.isEmpty()) {
+        return;
+    }
+
+    const auto& tabsMap = mpNotesManager->getTabsMap();
+    if (!tabsMap.contains(mCurrentTabId)) {
+        return;
+    }
+
+    const QString tabName = tabsMap.value(mCurrentTabId).name;
+
+    //: Confirmation dialog for clearing a note tab
+    const QString message = tr("Are you sure you want to clear all content from the note tab \"%1\"? This action cannot be undone.").arg(tabName);
+    //: Confirmation dialog title for clearing a note tab
+    const QString title = tr("Clear Note Tab");
+
+    QMessageBox::StandardButton result = QMessageBox::question(this, title, message, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+
+    if (result == QMessageBox::Yes) {
+        mpNotesManager->setTabContent(mCurrentTabId, QString());
+    }
 }
 
 void NotesIndicator::connectToNotesManager()
@@ -262,6 +445,7 @@ void NotesIndicator::setState(State state)
 
     mState = state;
     updateIcon();
+    updateContextMenuState();
 
     if (!isClickable()) {
         mIsPressed = false;
