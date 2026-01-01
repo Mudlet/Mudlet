@@ -27,6 +27,7 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QString>
+#include <QTimer>
 
 class NotesManager;
 
@@ -35,6 +36,7 @@ class QEvent;
 class QMouseEvent;
 class QPaintEvent;
 class QPropertyAnimation;
+class QTimer;
 
 class NotesIndicator : public QPushButton
 {
@@ -94,6 +96,11 @@ private:
     void updateIcon();
     void updateToolTip();
 
+    void invalidateTooltipCache();
+    void scheduleTooltipUpdate();
+    void onTooltipUpdateTimeout();
+    QString generateRichTooltip() const;
+
     bool isClickable() const;
 
     void animateIconSizeTo(int targetSize);
@@ -137,10 +144,19 @@ private:
 
     QMap<State, QIcon> mIcons;
 
+    QPropertyAnimation* mpIconSizeAnimation = nullptr;
+    QPropertyAnimation* mpHoverAnimation = nullptr;
+
     // NotesManager integration
     QPointer<NotesManager> mpNotesManager;
     QString mCurrentTabId;
     bool mIsTabVisible = false;
+
+    // Rich tooltip caching and throttling
+    QString mCachedTooltip;
+    bool mTooltipCacheValid = false;
+    QTimer mTooltipUpdateTimer;
+    bool mTooltipUpdatePending = false;
 };
 
 #endif // MUDLET_NOTESINDICATOR_H
