@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2021, 2023-2025 by Stephen Lyons        *
+ *   Copyright (C) 2013-2014, 2016-2021, 2023-2026 by Stephen Lyons        *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -398,7 +398,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2025  Mudlet developers"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2026  Mudlet developers"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                                   "There is NO WARRANTY, to the extent permitted by law."));
@@ -519,7 +519,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2026");
         QFont font(qsl("Bitstream Vera Serif"), 16, 75);
         font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
