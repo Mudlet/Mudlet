@@ -1972,6 +1972,14 @@ void mudlet::closeHost(const QString& name)
         mDetachedWindows.remove(name);
     }
 
+    // Clean up notes container for this profile
+    if (mNotesTabContainers.contains(pH)) {
+#if defined(DEBUG_WINDOW_HANDLING)
+        qDebug() << "mudlet::closeHost: Removing notes container for profile" << name;
+#endif
+        mNotesTabContainers.remove(pH);
+    }
+
     // Remove notes indicator for this profile before removing the tab
     for (int i = 0; i < mpTabBar->count(); ++i) {
         if (mpTabBar->tabData(i).toString() == name) {
@@ -2025,14 +2033,46 @@ void mudlet::reshowRequiredMainConsoles()
                 }
             }
         }
+
+        // Also show notes containers in multiview mode
+        for (auto it = mNotesTabContainers.constBegin(); it != mNotesTabContainers.constEnd(); ++it) {
+            if (it.value() && !mDetachedWindows.contains(it.key()->getName())) {
+                it.value()->show();
+            }
+        }
     }
 }
 
 // Moved as much as possible to activateProfile()...
 void mudlet::slot_tabChanged(int tabID)
 {
-    const QString hostName = mpTabBar->tabData(tabID).toString();
-    activateProfile(mHostManager.getHost(hostName));
+    QString hostName = mpTabBar->tabData(tabID).toString();
+
+    // Check if this is a notes tab (format: "notes:profileName")
+    const bool isNotesTab = hostName.startsWith(qsl("notes:"));
+
+    if (isNotesTab) {
+        // Extract the profile name from the notes tab
+        hostName = hostName.mid(6); // Remove "notes:" prefix
+
+        // Get the host and activate it
+        Host* pHost = mHostManager.getHost(hostName);
+        if (pHost) {
+            activateProfile(pHost);
+
+            // Show the notes container for this profile
+            if (mNotesTabContainers.contains(pHost)) {
+                auto* notesContainer = mNotesTabContainers.value(pHost);
+                if (notesContainer) {
+                    notesContainer->show();
+                }
+            }
+        }
+    } else {
+        // This is a console tab - activate the profile normally
+        activateProfile(mHostManager.getHost(hostName));
+    }
+
     updateDetachedWindowToolbars();
     updateMainWindowTabIndicators();
 
@@ -2953,6 +2993,14 @@ void mudlet::writeSettings()
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
     mpSettings->setValue("AI/modelPath", mAIModelPath);
     mpSettings->setValue("AI/autoStart", mAIAutoStart);
+
+    // Save notes container state for all profiles
+    for (auto it = mNotesTabContainers.constBegin(); it != mNotesTabContainers.constEnd(); ++it) {
+        auto* notesContainer = it.value();
+        if (notesContainer) {
+            notesContainer->saveState();
+        }
+    }
 
     settings.sync();
     switch (settings.status()) {
@@ -4101,18 +4149,18 @@ void mudlet::createNotesTab(Host* pHost)
 
     // Create the notes tab container
     auto* notesTabContainer = new NotesTabContainer(pHost);
-    
+
     // Insert the notes tab after the console tab
     int insertIndex = -1;
     const QString consoleTabName = qsl("console:%1").arg(profileName);
-    
+
     for (int i = 0; i < mpTabBar->count(); ++i) {
         if (mpTabBar->tabData(i).toString() == consoleTabName) {
             insertIndex = i + 1;
             break;
         }
     }
-    
+
     if (insertIndex < 0) {
         insertIndex = mpTabBar->count(); // Add at end if console tab not found
     }
@@ -4120,16 +4168,20 @@ void mudlet::createNotesTab(Host* pHost)
     // Add the tab to the tab bar
     const int newTabIndex = mpTabBar->insertTab(insertIndex, tr("Notes"));
     mpTabBar->setTabData(newTabIndex, notesTabName);
-    
+
     // Add the notes container to the splitter at the same position
     addConsoleToSplitter(notesTabContainer, insertIndex);
-    
+
+    // Store the notes tab container reference in both places
+    pHost->mpNotesTabContainer = notesTabContainer;
+    mNotesTabContainers.insert(pHost, notesTabContainer);
+
+    // Restore the notes tab state from settings
+    notesTabContainer->restoreState();
+
     // Switch to the new notes tab
     mpTabBar->setCurrentIndex(newTabIndex);
     slot_tabChanged(newTabIndex);
-    
-    // Store the notes tab container reference for this host
-    pHost->mpNotesTabContainer = notesTabContainer;
 }
 
 // This opens a profile specific IRC client for that client so should only be
@@ -6665,6 +6717,41 @@ void mudlet::activateProfile(Host* pHost)
         }
     }
 
+    // Handle notes container visibility - show active profile's notes, hide others if not in multiview
+    if (mNotesTabContainers.contains(pHost)) {
+        auto* notesContainer = mNotesTabContainers.value(pHost);
+        if (notesContainer) {
+            // In single-view mode, we need to check which tab is currently active
+            // to determine if we should show or hide the notes container
+            const int currentIndex = mpTabBar->currentIndex();
+            if (currentIndex >= 0) {
+                const QString currentTabData = mpTabBar->tabData(currentIndex).toString();
+                const QString notesTabName = qsl("notes:%1").arg(pHost->getName());
+                const bool isNotesTabActive = (currentTabData == notesTabName);
+
+                if (isNotesTabActive || mMultiView) {
+                    notesContainer->show();
+                } else {
+                    notesContainer->hide();
+                }
+            } else if (mMultiView) {
+                // No valid tab index but in multiview mode, show it
+                notesContainer->show();
+            }
+        }
+    }
+
+    if (!mMultiView) {
+        for (auto it = mNotesTabContainers.constBegin(); it != mNotesTabContainers.constEnd(); ++it) {
+            if (it.key() != pHost) {
+                auto* notesContainer = it.value();
+                if (notesContainer && !mDetachedWindows.contains(it.key()->getName())) {
+                    notesContainer->hide();
+                }
+            }
+        }
+    }
+
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
 
@@ -7620,9 +7707,73 @@ void mudlet::addConsoleToSplitter(TMainConsole* console, int index)
             }
             mpSplitter_profileContainer->setSizes(newSizes);
 
-            // Force immediate update
+                    // Force immediate update
             mpSplitter_profileContainer->update();
             console->update();
+            QCoreApplication::processEvents();
+        }
+    }
+}
+
+void mudlet::addConsoleToSplitter(QWidget* widget, int index)
+{
+    if (!widget) {
+        return;
+    }
+
+    // Safety check: make sure widget doesn't have a conflicting parent
+    if (widget->parentWidget() && widget->parentWidget() != mpSplitter_profileContainer) {
+        qWarning() << "addConsoleToSplitter: Widget has unexpected parent" << widget->parentWidget()
+                   << ", removing from current parent first";
+        // Remove from current parent without setting to nullptr
+        if (auto* layout = widget->parentWidget()->layout()) {
+            layout->removeWidget(widget);
+        }
+        widget->setParent(nullptr);
+    }
+
+    if (index < 0 || index >= mpSplitter_profileContainer->count()) {
+        mpSplitter_profileContainer->addWidget(widget);
+    } else {
+        mpSplitter_profileContainer->insertWidget(index, widget);
+    }
+
+    // Always show the widget initially when adding to main window
+    // The proper hide/show logic will be handled by activateProfile() later
+    widget->show();
+
+    // Force a layout update on the splitter
+    mpSplitter_profileContainer->update();
+
+    // CRITICAL FIX: Ensure the splitter allocates proper space to all widgets
+    // This fixes the issue where newly added widgets get zero width
+    QList<int> sizes = mpSplitter_profileContainer->sizes();
+    bool needsResize = false;
+
+    // Check if any widget has zero or very small size
+    for (int size : sizes) {
+        if (size < 10) { // Less than 10 pixels is effectively invisible
+            needsResize = true;
+            break;
+        }
+    }
+
+    if (needsResize || sizes.isEmpty()) {
+        // Redistribute space equally among all widgets
+        int totalWidth = mpSplitter_profileContainer->width();
+        int widgetCount = mpSplitter_profileContainer->count();
+
+        if (totalWidth > 0 && widgetCount > 0) {
+            int sizePerWidget = totalWidth / widgetCount;
+            QList<int> newSizes;
+            for (int i = 0; i < widgetCount; ++i) {
+                newSizes.append(sizePerWidget);
+            }
+            mpSplitter_profileContainer->setSizes(newSizes);
+
+            // Force immediate update
+            mpSplitter_profileContainer->update();
+            widget->update();
             QCoreApplication::processEvents();
         }
     }
