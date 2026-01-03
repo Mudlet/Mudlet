@@ -827,6 +827,7 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
             reply->deleteLater();
             mpHost->raiseEvent(event);
+            return;
         }
 
         qint64 const bytesWritten = localFile.write(reply->readAll());
@@ -847,16 +848,27 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
             localFile.flush();
 
             if (localFile.error() == QFile::NoError) {
+                if (!localFile.commit()) {
+                    event.mArgumentList << QLatin1String("sysDownloadError");
+                    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                    event.mArgumentList << QLatin1String("Couldn't save to the destination file");
+                    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                    event.mArgumentList << mediaData.mediaAbsolutePathFileName();
+                    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                    event.mArgumentList << qsl("Failed to commit file: %1").arg(localFile.errorString());
+                    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+                    reply->deleteLater();
+                    mpHost->raiseEvent(event);
+                    return;
+                }
+
                 event.mArgumentList << QLatin1String("sysDownloadDone");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << mediaData.mediaAbsolutePathFileName();
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << QString::number(bytesWritten);
                 event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-
-                if (!localFile.commit()) {
-                    qDebug() << "TMedia::slot_writeFile: error saving downloaded media: " << localFile.errorString();
-                }
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);

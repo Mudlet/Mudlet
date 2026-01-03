@@ -6107,9 +6107,8 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
-    aff.commit();
-    if (aff.error() != QFile::NoError) {
-        qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to completely write affix file: \"" << aff.fileName() << "\" status: " << aff.errorString();
+    if (!aff.commit()) {
+        qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to commit affix file: \"" << aff.fileName() << "\" reason: " << aff.errorString();
         return false;
     }
 
