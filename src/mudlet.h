@@ -828,6 +828,7 @@ private:
     void reattachTab(const QString& profileName, int insertIndex = -1);
     TMainConsole* removeConsoleFromSplitter(const QString& profileName);
     void addConsoleToSplitter(TMainConsole* console, int index = -1);
+    void addConsoleToSplitter(QWidget* widget, int index = -1);
 
     // Helper methods for main window dock widget management
     void updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName);
