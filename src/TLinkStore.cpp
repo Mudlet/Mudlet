@@ -70,6 +70,39 @@ void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
     }
 }
 
+void TLinkStore::removeLinkById(int id, Host* pH)
+{
+    // Free Lua references
+    freeReference(pH, mReferenceStore.value(id));
+
+#if !defined(LinkStore_Test)
+    // Remove from selection group index if applicable
+    if (mStylingStore.contains(id)) {
+        const Mudlet::HyperlinkStyling& styling = mStylingStore[id];
+        if (styling.selection.hasSelectionSettings) {
+            QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
+            mSelectionGroupIndex.remove(key, id);
+        }
+    }
+#endif
+
+    // Remove from all stores
+    mLinkStore.remove(id);
+    mHintStore.remove(id);
+    mReferenceStore.remove(id);
+
+    // Clean up expire mappings
+    QString expireName = mExpireStore.value(id);
+    if (!expireName.isEmpty()) {
+        mExpireToLinks.remove(expireName, id);
+        mExpireStore.remove(id);
+    }
+
+#if !defined(LinkStore_Test)
+    mStylingStore.remove(id);
+#endif
+}
+
 void TLinkStore::expireLinks(const QString& expireName, Host* pH)
 {
     if (expireName.isEmpty()) {
@@ -79,33 +112,10 @@ void TLinkStore::expireLinks(const QString& expireName, Host* pH)
     // Get all link IDs with this expire name
     QList<int> linkIds = mExpireToLinks.values(expireName);
 
+    // Remove each link - removeLinkById cleans up expire mappings
     for (int linkId : linkIds) {
-        // Free Lua references
-        freeReference(pH, mReferenceStore.value(linkId));
-
-#if !defined(LinkStore_Test)
-        // Remove from selection group index if applicable
-        if (mStylingStore.contains(linkId)) {
-            const Mudlet::HyperlinkStyling& styling = mStylingStore[linkId];
-            if (styling.selection.hasSelectionSettings) {
-                QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
-                mSelectionGroupIndex.remove(key, linkId);
-            }
-        }
-#endif
-
-        // Remove from all stores
-        mLinkStore.remove(linkId);
-        mHintStore.remove(linkId);
-        mReferenceStore.remove(linkId);
-        mExpireStore.remove(linkId);
-#if !defined(LinkStore_Test)
-        mStylingStore.remove(linkId);
-#endif
+        removeLinkById(linkId, pH);
     }
-
-    // Remove all mappings for this expire name
-    mExpireToLinks.remove(expireName);
 }
 
 void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH)
@@ -113,43 +123,15 @@ void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* p
     QList<int> idsToRemove;
 
     // Identify links that are no longer referenced
-    for (auto it = mLinkStore.constBegin(); it != mLinkStore.constEnd(); ++it) {
-        if (!referencedIds.contains(it.key())) {
-            idsToRemove.append(it.key());
+    for (auto&& [id, links] : mLinkStore.asKeyValueRange()) {
+        if (!referencedIds.contains(id)) {
+            idsToRemove.append(id);
         }
     }
 
     // Remove unreferenced links and free their resources
     for (int id : idsToRemove) {
-        // Free Lua references
-        freeReference(pH, mReferenceStore.value(id));
-
-        // Remove from all stores
-        mLinkStore.remove(id);
-        mHintStore.remove(id);
-        mReferenceStore.remove(id);
-
-        // Clean up expire mappings
-        QString expireName = mExpireStore.value(id);
-
-        if (!expireName.isEmpty()) {
-            mExpireToLinks.remove(expireName, id);
-            mExpireStore.remove(id);
-        }
-
-#if !defined(LinkStore_Test)
-        // Clean up styling and selection group index
-        if (mStylingStore.contains(id)) {
-            const Mudlet::HyperlinkStyling& styling = mStylingStore[id];
-
-            if (styling.selection.hasSelectionSettings) {
-                QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
-                mSelectionGroupIndex.remove(key, id);
-            }
-
-            mStylingStore.remove(id);
-        }
-#endif
+        removeLinkById(id, pH);
     }
 }
 

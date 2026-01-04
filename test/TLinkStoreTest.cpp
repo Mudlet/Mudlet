@@ -134,7 +134,9 @@ private slots:
         store.removeUnreferencedLinks(emptySet, nullptr);
 
         QVERIFY(store.getLinksConst(id1).isEmpty());
+        QVERIFY(store.getHintsConst(id1).isEmpty());
         QVERIFY(store.getLinksConst(id2).isEmpty());
+        QVERIFY(store.getHintsConst(id2).isEmpty());
     }
 
     void testRemoveUnreferencedLinksNone()
@@ -157,7 +159,71 @@ private slots:
         store.removeUnreferencedLinks(referencedIds, nullptr);
 
         QCOMPARE(store.getLinksConst(id1), links);
+        QCOMPARE(store.getHintsConst(id1), hints);
         QCOMPARE(store.getLinksConst(id2), links);
+        QCOMPARE(store.getHintsConst(id2), hints);
+    }
+
+    void testRemoveUnreferencedLinksWithExpireNames()
+    {
+        TLinkStore store(10);
+
+        QStringList links;
+        links.append("command");
+        QStringList hints;
+        hints.append("hint");
+
+        int id1 = store.addLinks(links, hints, nullptr, QVector<int>(), "expire_group");
+        int id2 = store.addLinks(links, hints);
+
+        // Verify expire name is set for id1
+        QCOMPARE(store.getExpireName(id1), QString("expire_group"));
+        QVERIFY(store.getExpireName(id2).isEmpty());
+
+        // Simulate only id2 is still referenced in buffer
+        QSet<int> referencedIds;
+        referencedIds.insert(id2);
+
+        store.removeUnreferencedLinks(referencedIds, nullptr);
+
+        // id1 should be removed along with its expire name
+        QVERIFY(store.getLinksConst(id1).isEmpty());
+        QVERIFY(store.getHintsConst(id1).isEmpty());
+        QVERIFY(store.getExpireName(id1).isEmpty());
+
+        // id2 should still exist
+        QCOMPARE(store.getLinksConst(id2), links);
+        QCOMPARE(store.getHintsConst(id2), hints);
+    }
+
+    void testRemoveUnreferencedLinksWithLuaReferences()
+    {
+        TLinkStore store(10);
+
+        QStringList links;
+        links.append("command");
+        QStringList hints;
+        hints.append("hint");
+
+        QVector<int> luaRefs;
+        luaRefs.append(42);
+
+        int id1 = store.addLinks(links, hints, nullptr, luaRefs);
+        int id2 = store.addLinks(links, hints);
+
+        // Simulate only id2 is still referenced in buffer
+        QSet<int> referencedIds;
+        referencedIds.insert(id2);
+
+        store.removeUnreferencedLinks(referencedIds, nullptr);
+
+        // id1 should be removed (freeReference is a no-op in test builds)
+        QVERIFY(store.getLinksConst(id1).isEmpty());
+        QVERIFY(store.getHintsConst(id1).isEmpty());
+
+        // id2 should still exist
+        QCOMPARE(store.getLinksConst(id2), links);
+        QCOMPARE(store.getHintsConst(id2), hints);
     }
 
     void cleanupTestCase()

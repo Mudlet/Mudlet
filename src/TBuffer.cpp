@@ -4858,22 +4858,37 @@ void TBuffer::clear()
 
 void TBuffer::clearLinkState()
 {
+    Host* pH = mpHost;
+
     // Collect currently referenced link IDs from buffer
-    QSet<int> activeLinkIds = collectActiveLinkIds();
+    const QSet<int> activeLinkIds = collectActiveLinkIds();
 
-    // Remove only unreferenced links (preserves links still in use)
-    mLinkStore.removeUnreferencedLinks(activeLinkIds, mpHost);
-
-    // Clear link state tracking for removed links
-    QList<int> stateKeysToRemove;
-
-    for (auto it = mLinkStates.constBegin(); it != mLinkStates.constEnd(); ++it) {
-        if (!activeLinkIds.contains(it.key())) {
-            stateKeysToRemove.append(it.key());
-        }
+    // Remove unreferenced links from link store only if we have a valid Host pointer
+    if (pH) {
+        mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
+    } else {
+        qWarning() << "TBuffer::clearLinkState() WARNING - mpHost is null, cannot remove unreferenced links from store";
     }
 
-    for (int key : stateKeysToRemove) {
+    // Clear link state tracking for any link that is no longer referenced
+    QSet<int> staleIds;
+
+    auto collectStale = [&activeLinkIds, &staleIds](const auto& map) {
+        for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+            if (!activeLinkIds.contains(it.key())) {
+                staleIds.insert(it.key());
+            }
+        }
+    };
+
+    collectStale(mLinkStates);
+    collectStale(mVisitedLinks);
+    collectStale(mLinkSelectionState);
+    collectStale(mLinkOriginalBackgrounds);
+    collectStale(mLinkOriginalCharacters);
+    collectStale(mLinkOriginalText);
+
+    for (int key : staleIds) {
         mLinkStates.remove(key);
         mVisitedLinks.remove(key);
         mLinkSelectionState.remove(key);
@@ -4881,6 +4896,11 @@ void TBuffer::clearLinkState()
         mLinkOriginalCharacters.remove(key);
         mLinkOriginalText.remove(key);
     }
+
+    // Clean up pending selection styling for stale link IDs using set intersection
+    // This prevents applyPendingSelectionStyling() from attempting to update
+    // characters for links that no longer exist
+    mPendingSelectionStyling &= activeLinkIds;
 
     // Reset hover/active/focus state if those links are gone
     if (!activeLinkIds.contains(mCurrentHoveredLinkIndex)) {

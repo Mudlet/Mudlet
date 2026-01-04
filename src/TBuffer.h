@@ -34,6 +34,7 @@
 #include <QQueue>
 #include <QPoint>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 #include <QStringBuilder>
 #include <QStringList>
