@@ -1426,11 +1426,11 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
 
-    for (auto&& [key, value] : mDockWidgetMap.asKeyValueRange()) {
-        if (value) {
-            dockWidgetsToProcess.append(qMakePair(key, value));
+    for (auto&& [key, dockWidget] : mDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
+            dockWidgetsToProcess.append(qMakePair(key, dockWidget));
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "TDetachedWindow: Found dock widget in map:" << key << "isVisible:" << value->isVisible();
+            qDebug() << "TDetachedWindow: Found dock widget in map:" << key << "isVisible:" << dockWidget->isVisible();
 #endif
         } else {
 #if defined(DEBUG_WINDOW_HANDLING)

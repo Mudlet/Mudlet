@@ -8050,11 +8050,11 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
 
-    for (auto&& [key, value] : mMainWindowDockWidgetMap.asKeyValueRange()) {
-        if (value) {
-            dockWidgetsToProcess.append(qMakePair(key, value));
+    for (auto&& [key, dockWidget] : mMainWindowDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
+            dockWidgetsToProcess.append(qMakePair(key, dockWidget));
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Found main window dock widget in map:" << key << "isVisible:" << value->isVisible();
+            qDebug() << "mudlet: Found main window dock widget in map:" << key << "isVisible:" << dockWidget->isVisible();
 #endif
         } else {
 #if defined(DEBUG_WINDOW_HANDLING)

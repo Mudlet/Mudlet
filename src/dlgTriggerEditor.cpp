@@ -1439,8 +1439,8 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 
 void dlgTriggerEditor::slot_editorThemeChanged()
 {
-    for (auto* pattern : mTriggerPatternEdit) {
-        applyPatternWidgetStyle(pattern);
+    for (auto* patternEdit : mTriggerPatternEdit) {
+        applyPatternWidgetStyle(patternEdit);
     }
 }
 
