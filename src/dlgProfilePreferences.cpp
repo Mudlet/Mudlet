@@ -1216,6 +1216,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 #endif
 
+    if (!pHost->mLoadedOk) {
+        notificationAreaIconLabelWarning->show();
+        frame_notificationArea->show();
+        notificationAreaMessageBox->show();
+        QString errorDetails = pHost->mProfileLoadError.isEmpty()
+            ? tr("unknown error")
+            : pHost->mProfileLoadError;
+        notificationAreaMessageBox->setText(tr("This profile could not be loaded correctly (%1). "
+                                               "Settings cannot be saved. Close the profile and try loading an older version from "
+                                               "'Connect - Options - Profile history'.").arg(errorDetails));
+    }
+
     groupBox_ssl->setChecked(pHost->mSslTsl);
     checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
@@ -3280,6 +3292,10 @@ void dlgProfilePreferences::slot_saveAndClose()
     pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
 
     mudlet::self()->mDiscord.UpdatePresence();
+
+    if (pHost && pHost->mFORCE_SAVE_ON_EXIT) {
+        pHost->saveProfile();
+    }
 
     emit signal_preferencesSaved();
 
