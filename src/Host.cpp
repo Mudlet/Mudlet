@@ -258,7 +258,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
     const QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
-        dirLogFile.mkpath(directoryLogFile);
+        if (!dirLogFile.mkpath(directoryLogFile)) {
+            qWarning() << "Host: failed to create error log directory:" << directoryLogFile;
+        }
     }
     mErrorLogFile.setFileName(logFileName);
     if (!mErrorLogFile.open(QIODevice::Append)) {

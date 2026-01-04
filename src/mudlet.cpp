@@ -1686,10 +1686,7 @@ void mudlet::slot_reattachAllDetachedWindows()
     qDebug() << "slot_reattachAllDetachedWindows: Reattaching" << detachedWindowsCopy.size() << "detached windows";
 #endif
 
-    for (auto it = detachedWindowsCopy.begin(); it != detachedWindowsCopy.end(); ++it) {
-        const QString& profileName = it.key();
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (auto&& [profileName, detachedWindow] : detachedWindowsCopy.asKeyValueRange()) {
         if (detachedWindow) {
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "slot_reattachAllDetachedWindows: Reattaching profile" << profileName;
@@ -1791,9 +1788,7 @@ void mudlet::updateWindowMenu()
         // Collect unique detached windows to avoid duplicates
         QSet<TDetachedWindow*> uniqueDetachedWindows;
 
-        for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-            TDetachedWindow* detachedWindow = it.value();
-
+        for (const auto& detachedWindow : mDetachedWindows) {
             if (detachedWindow) {
                 uniqueDetachedWindows.insert(detachedWindow);
             }
@@ -1818,9 +1813,7 @@ void mudlet::updateWindowMenu()
     }
 
     // Also update window menus on all detached windows
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->updateWindowMenu();
         }
@@ -1903,9 +1896,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     QString profileName = action->data().toString();
 
     // Find which detached window contains this profile
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
             // Activate the detached window
             detachedWindow->raise();
@@ -3734,9 +3725,7 @@ void mudlet::slot_showMapperDialog()
     // Close any existing map for this profile in detached windows first
     const auto& detachedWindows = getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow) {
             auto detachedMapDock = detachedWindow->getDockWidget(mapKey);
 
@@ -6636,9 +6625,7 @@ void mudlet::refreshTabBar()
     }
 
     // Also refresh all detached windows to ensure they show CDC identifiers
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->refreshTabBar();
         }
@@ -6934,8 +6921,7 @@ void mudlet::shutdownAI()
 
 void mudlet::saveDetachedWindowsGeometry()
 {
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->saveWindowGeometry();
         }
@@ -7492,10 +7478,8 @@ void mudlet::updateDetachedWindowToolbars()
     cleanupDetachedWindowsMap();
 
     // Update toolbars in all detached windows
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        QPointer<TDetachedWindow> detachedWindow = it.value();
+    for (auto&& [profileName, detachedWindow] : mDetachedWindows.asKeyValueRange()) {
         if (detachedWindow) {
-            const QString& profileName = it.key();
             Host* pHost = mHostManager.getHost(profileName);
             detachedWindow->updateToolbarForProfile(pHost);
         }
@@ -7589,9 +7573,7 @@ void mudlet::updateDetachedWindowTabIndicators()
     // Update tab indicators for all detached windows
     const auto& detachedWindows = getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow) {
             // Update all tabs in this detached window
             detachedWindow->updateAllTabIndicators();
@@ -8068,15 +8050,15 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
 
-    for (auto it = mMainWindowDockWidgetMap.begin(); it != mMainWindowDockWidgetMap.end(); ++it) {
-        if (it.value()) {
-            dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
+    for (auto&& [key, dockWidget] : mMainWindowDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
+            dockWidgetsToProcess.append(qMakePair(key, dockWidget));
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Found main window dock widget in map:" << it.key() << "isVisible:" << it.value()->isVisible();
+            qDebug() << "mudlet: Found main window dock widget in map:" << key << "isVisible:" << dockWidget->isVisible();
 #endif
         } else {
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Found null main window dock widget in map for key:" << it.key();
+            qDebug() << "mudlet: Found null main window dock widget in map for key:" << key;
 #endif
         }
     }

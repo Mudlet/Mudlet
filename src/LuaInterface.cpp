@@ -143,18 +143,21 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
                 // Validate stack before attempting table access
                 const int stackTop = lua_gettop(L);
                 const int actualIndex = (index < 0) ? stackTop + index + 1 : index;
-                
+
                 if (actualIndex <= 0 || actualIndex > stackTop) {
-                    qWarning() << "LuaInterface::loadValue() - Invalid stack index:" << index 
-                               << "Stack size:" << stackTop << "Actual index:" << actualIndex;
+                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - Invalid stack index " << index
+                                                   << " for variable \"" << var->getName() << "\". Stack size: " << stackTop
+                                                   << ", resolved index: " << actualIndex << ".";
                     return false;
                 }
-                
+
                 if (!lua_istable(L, index)) {
-                    qWarning() << "LuaInterface::loadValue() - Value at index" << index << "is not a table, type:" << lua_typename(L, lua_type(L, index));
+                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - Value at stack index " << index
+                                                   << " is not a table for variable \"" << var->getName()
+                                                   << "\". Got type: " << lua_typename(L, lua_type(L, index)) << ".";
                     return false;
                 }
-                
+
                 lua_gettable(L, index);
             } else {
                 // Find the closest table on the stack
@@ -167,7 +170,8 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
                     }
                 }
                 if (!foundTable) {
-                    qWarning() << "LuaInterface::loadValue() - No table found on stack when index=0";
+                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - No table found on stack for variable \"" << var->getName()
+                                                   << "\" when index=0. Stack size: " << lua_gettop(L) << ".";
                     return false;
                 }
             }
@@ -514,7 +518,9 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
+            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type: " << lua_typename(mL, kType)
+                                           << " for variable \"" << var->getName()
+                                           << "\". Expected string, number, or table.";
             return;
         }
 
@@ -542,7 +548,9 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
+            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when retrieving old value: " << lua_typename(mL, kType)
+                                           << " for variable \"" << var->getName()
+                                           << "\". Expected string, number, table, or function.";
             return;
         }
         lua_gettable(mL, -2);
@@ -557,7 +565,9 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
+            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when setting new key: " << lua_typename(mL, kType)
+                                           << " for variable \"" << var->getName()
+                                           << "\". Expected string, number, or table.";
             return;
         }
         pushCount++;
@@ -573,7 +583,9 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
+            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when deleting old key: " << lua_typename(mL, kType)
+                                           << " for variable \"" << var->getName()
+                                           << "\". Expected string, number, table, or function.";
             return;
         }
         lua_pushnil(mL);
@@ -614,7 +626,9 @@ bool LuaInterface::loadVar(TVar* var)
             return false;
         }
     } else {
-        //FIXME: report error to user qDebug()<<"panic in loadVar";
+        qWarning().noquote().nospace() << "LuaInterface::loadVar() - Lua panic occurred while loading variable \"" << var->getName()
+                                       << "\" with key type " << lua_typename(mL, var->getKeyType())
+                                       << " and value type " << lua_typename(mL, var->getValueType()) << ".";
         return false;
     }
     return true;

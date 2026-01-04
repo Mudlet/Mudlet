@@ -282,6 +282,12 @@ signals:
 private:
     cTelnet() = default;
 
+#if defined(QT_NO_SSL)
+    void abortLosingSocket(QTcpSocket* losingSocket);
+#else
+    void abortLosingSocket(QSslSocket* losingSocket);
+#endif
+
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
     void processSocketData(char *data, int size, const bool loopbackTesting = false);

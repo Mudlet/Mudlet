@@ -24,6 +24,8 @@
 
 #include "TForkedProcess.h"
 
+#include <QDir>
+
 
 TForkedProcess::~TForkedProcess()
 {
@@ -66,7 +68,13 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 
     setProcessChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
-    waitForStarted();
+    if (!waitForStarted()) {
+        const QString errorMessage = qsl("Failed to start process '%1': %2. Working directory: '%3'. PATH: '%4'")
+                                             .arg(prog, errorString(), QDir::currentPath(), qEnvironmentVariable("PATH"));
+        lua_pushstring(L, errorMessage.toUtf8().constData());
+        lua_error(L);
+        return;
+    }
     running = true;
 }
 
