@@ -1910,6 +1910,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 // Module files don't exist, clean up stale references
                 mInstalledModules.remove(packageName);
                 mActiveModules.removeAll(packageName);
+                mModulesLoadedOk.remove(packageName);
             } else {
                 // Module actually exists, show duplicate error
                 return {false, tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName)};
@@ -2034,6 +2035,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     mModulesLoadedOk.insert(packageName);
                 } else {
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
+                    postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
                 }
             }
             file2.close();
@@ -2060,6 +2062,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 mModulesLoadedOk.insert(packageName);
             } else {
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
+                postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
             }
         }
         file2.close();
@@ -2084,6 +2087,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QTimer::singleShot(0, this, [this, thing, packageName, fileName]() {
         // Don't raise events if Host is shutting down to avoid handlers executing during teardown
         if (isClosingDown()) {
+            return;
+        }
+
+        // Don't raise install events for modules that failed to load
+        if (thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName)) {
             return;
         }
 
