@@ -75,6 +75,8 @@ public slots:
     void slot_toggleUpperLowerLevels(bool enabled);
     void slot_toggleShowRoomIDsFromMenu(bool enabled);
     void updateInfoMenu();
+    void slot_showSaveWarningMenu();
+    void slot_saveErrorChanged(bool hasError);
 
     static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
                             int roomID, int displayAreaId, int selectionSize, QColor& infoColor,

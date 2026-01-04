@@ -214,11 +214,11 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 }
 
 // returns the type of item and ID of the first (root) element
-std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
+std::pair<EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
-    std::pair<dlgTriggerEditor::EditorViewType, int> result;
+    std::pair<EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
 
@@ -226,7 +226,10 @@ std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard(
     QBuffer xmlBuffer(&ba);
 
     setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::ReadOnly);
+    if (!xmlBuffer.open(QIODevice::ReadOnly)) {
+        qWarning() << "XMLimport::importFromClipboard() ERROR: failed to open XML buffer for reading";
+        return {EditorViewType::cmUnknownView, 0};
+    }
 
     while (!atEnd()) {
         readNext();
@@ -539,8 +542,6 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             } else if (dir == qsl("out")) {
                 pT->out = e;
                 pT->setDoor(qsl("out"), door);
-            } else {
-                // TODO: Handle Special Exits
             }
         } else if (name() == qsl("coord")) {
             if (attributes().value(qsl("x")).toString().isEmpty()) {
@@ -590,9 +591,9 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
+std::pair<EditorViewType, int> XMLimport::readPackage()
 {
-    dlgTriggerEditor::EditorViewType objectType = dlgTriggerEditor::EditorViewType::cmUnknownView;
+    EditorViewType objectType = EditorViewType::cmUnknownView;
     int rootItemID = -1;
     while (!atEnd()) {
         readNext();
@@ -603,27 +604,27 @@ std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
             if (name() == qsl("HostPackage")) {
                 readHostPackage();
             } else if (name() == qsl("TriggerPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmTriggerView;
+                objectType = EditorViewType::cmTriggerView;
                 rootItemID = readTriggerPackage();
             } else if (name() == qsl("TimerPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmTimerView;
+                objectType = EditorViewType::cmTimerView;
                 rootItemID = readTimerPackage();
             } else if (name() == qsl("AliasPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmAliasView;
+                objectType = EditorViewType::cmAliasView;
                 rootItemID = readAliasPackage();
             } else if (name() == qsl("ActionPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmActionView;
+                objectType = EditorViewType::cmActionView;
                 rootItemID = readActionPackage();
             } else if (name() == qsl("ScriptPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmScriptView;
+                objectType = EditorViewType::cmScriptView;
                 rootItemID = readScriptPackage();
             } else if (name() == qsl("KeyPackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmKeysView;
+                objectType = EditorViewType::cmKeysView;
                 rootItemID = readKeyPackage();
             } else if (name() == qsl("HelpPackage")) {
                 readHelpPackage();
             } else if (name() == qsl("VariablePackage")) {
-                objectType = dlgTriggerEditor::EditorViewType::cmVarsView;
+                objectType = EditorViewType::cmVarsView;
                 readVariablePackage();
             } else {
                 readUnknownElement(qsl("MudletPackage"));
@@ -725,6 +726,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
     setBoolAttributeWithDefault(qsl("mEnableMXP"), pHost->mEnableMXP, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_MXP_NEGOTIATION_OFF"), true, true));
+    setBoolAttributeWithDefault(qsl("mEnableNAWS"), pHost->mEnableNAWS, true);
     setBoolAttributeWithDefault(qsl("mEnableCHARSET"), pHost->mEnableCHARSET, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNEWENVIRON"), pHost->mEnableNEWENVIRON, getBoolValueFromLegacyAttributeOrDefault(qsl("forceNewEnvironNegotiationOff"), true, true));
 

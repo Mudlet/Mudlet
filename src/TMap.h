@@ -77,6 +77,10 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+signals:
+    void signal_saveErrorChanged(bool hasError);
+
+private:
     QString mDefaultAreaName;
     QString mUnnamedAreaName;
 
@@ -196,6 +200,8 @@ public:
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
     bool isUnsaved() const { return mUnsavedMap; }
+    void setSaveError(bool state);
+    bool hasSaveError() const { return mSaveError; }
     void setDefaultAreaShown(bool);
     bool getDefaultAreaShown() { return mShowDefaultArea; }
 
@@ -391,6 +397,8 @@ private:
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    // Used to indicate that the last map save attempt failed:
+    bool mSaveError = false;
     // Used to hide the default area from casual viewing for those MUDs that
     // want to script a "fog-of-war" system by hiding rooms in the -1 area:
     bool mShowDefaultArea = true;

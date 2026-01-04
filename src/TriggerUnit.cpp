@@ -120,25 +120,43 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     }
 }
 
-void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
+// Enum-based reParentTrigger implementation
+void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
 {
     TTrigger* pOldParent = getTriggerPrivate(oldParentID);
     TTrigger* pNewParent = getTriggerPrivate(newParentID);
     TTrigger* pChild = getTriggerPrivate(childID);
+
     if (!pChild) {
         return;
     }
+
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
         mTriggerRootNodeList.remove(pChild);
     }
+
+    // Convert enum mode to the internal flags
+    int parentPosition = (mode == TreeItemInsertMode::AtPosition) ? 0 : -1;
+    int childPosition = (mode == TreeItemInsertMode::AtPosition) ? position : -1;
+
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
         pChild->setParent(pNewParent);
     } else {
         pChild->Tree<TTrigger>::setParent(nullptr);
         addTriggerRootNode(pChild, parentPosition, childPosition, true);
+    }
+}
+
+// Legacy integer-based reParentTrigger - delegates to enum-based version
+void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
+{
+    if (parentPosition == -1 || childPosition == -1) {
+        reParentTrigger(childID, oldParentID, newParentID, TreeItemInsertMode::Append, 0);
+    } else {
+        reParentTrigger(childID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, childPosition);
     }
 }
 

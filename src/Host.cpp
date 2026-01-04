@@ -219,6 +219,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mLuaInterpreter(this, hostname, id)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
+, mMxpFrameManager(this)
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
@@ -257,7 +258,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
     const QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
-        dirLogFile.mkpath(directoryLogFile);
+        if (!dirLogFile.mkpath(directoryLogFile)) {
+            qWarning() << "Host: failed to create error log directory:" << directoryLogFile;
+        }
     }
     mErrorLogFile.setFileName(logFileName);
     if (!mErrorLogFile.open(QIODevice::Append)) {
@@ -340,6 +343,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     connect(&mTelnet, &cTelnet::signal_connected, this, [this]() {
         purgeTimer.stop();
 
+        // Reset MXP frames on reconnect - per user feedback, frames shouldn't persist
+        // between sessions as the server should send new FRAME commands
+        mMxpFrameManager.resetAllFrames();
+
         if (getForceMXPProcessorOn()) {
             mMxpProcessor.enable();
             // When force-enabling MXP (typically for games like IRE MUDs that don't
@@ -389,9 +396,13 @@ Host::~Host()
     // which can lead to a crash when closing multiple profiles at once.
     mpLastCommandLineUsed.clear();
 
+    qDeleteAll(profileShortcuts);
+    profileShortcuts.clear();
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
+
     mErrorLogStream.flush();
     mErrorLogFile.close();
     // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
@@ -537,8 +548,11 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-            mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")));
+            if (!mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+                mpMap->setSaveError(true);
+            } else {
+                mpMap->setSaveError(false);
+            }
 #if defined(DEBUG_MAPAUTOSAVE)
         } else {
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save requested at:" << nowString << " but declined whilst \"Host::mIsProfileLoadingSequence\" flag set.";
@@ -3211,6 +3225,11 @@ void Host::setCompactInputLine(const bool state)
 
 QPointer<TConsole> Host::findConsole(QString name)
 {
+    if (!mpConsole) {
+        qWarning() << "Host::findConsole() ERROR: main console not initialized";
+        return nullptr;
+    }
+
     if (name.isEmpty() or name == qsl("main")) {
         // Reason for the deref-plus-ref in the next line: `QPointer`s do not
         // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258

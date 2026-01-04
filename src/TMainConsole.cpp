@@ -29,6 +29,7 @@
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -1234,6 +1235,11 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
     Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mProcessingTimer.restart();
 
+    // Notify visibility manager of incoming data (for output gap detection)
+    if (isFromServer) {
+        getHyperlinkVisibilityManager().onDataReceived();
+    }
+
     mTriggerEngineMode = true;
     const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
     const auto beforeTranslateLastLine = buffer.line(beforeTranslateLastLineNumber - 1);
@@ -1341,6 +1347,9 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
 
     if (saved) {
         mpHost->mpMap->resetUnsaved();
+        mpHost->mpMap->setSaveError(false);
+    } else {
+        mpHost->mpMap->setSaveError(true);
     }
 
     return saved;
@@ -1656,23 +1665,8 @@ void TMainConsole::closeEvent(QCloseEvent* event)
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
-            const QDir dir_map;
-            const QString directory_map = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
-            const QString filename_map = mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
-            if (!dir_map.exists(directory_map)) {
-                dir_map.mkpath(directory_map);
-            }
-            QSaveFile file(filename_map);
-            if (file.open(QIODevice::WriteOnly)) {
-                QDataStream out(&file);
-                if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                    out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-                }
-                // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-                mpHost->mpMap->serialize(out);
-                if (!file.commit()) {
-                    qWarning() << "TMainConsole::closeEvent(...) WARNING - error saving map: " << file.errorString();
-                }
+            if (!saveMap(QString())) {
+                qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close map save failed";
             }
         }
         mpHost->waitForProfileSave();
@@ -1682,7 +1676,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     }
 
     if (!mEnableClose) {
-    ASK:
+    ASK_PROFILE:
         const int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
             event->ignore();
@@ -1701,29 +1695,25 @@ void TMainConsole::closeEvent(QCloseEvent* event)
                                       tr("Sorry, could not save your profile as \"%1\" - got the following error: \"%2\".")
                                               .arg(filename, error),
                                       QMessageBox::Retry);
-                goto ASK;
+                goto ASK_PROFILE;
             }
 
             if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!
-                const QDir dir_map;
-                const QString directory_map = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
-                const QString filename_map = mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-                if (!dir_map.exists(directory_map)) {
-                    dir_map.mkpath(directory_map);
-                }
-
-                QSaveFile file(filename_map);
-                if (file.open(QIODevice::WriteOnly)) {
-                    QDataStream out(&file);
-                    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+            ASK_MAP:
+                if (!saveMap(QString())) {
+                    const int mapChoice = QMessageBox::warning(this,
+                                          tr("Could not save map"),
+                                          tr("Sorry, could not save the map. Would you like to retry or close without saving the map?"),
+                                          QMessageBox::Retry | QMessageBox::Ignore | QMessageBox::Cancel);
+                    if (mapChoice == QMessageBox::Retry) {
+                        goto ASK_MAP;
                     }
-                    // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-                    mpHost->mpMap->serialize(out);
-                    if (!file.commit()) {
-                        qDebug() << "TConsole::closeEvent: error saving map: " << file.errorString();
+                    if (mapChoice == QMessageBox::Cancel) {
+                        event->ignore();
+                        return;
                     }
+                    // QMessageBox::Ignore - continue without saving map
                 }
             }
 
