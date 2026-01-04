@@ -4423,7 +4423,10 @@ void mudlet::installModulesList(Host* pHost, QStringList modules)
 {
     for (const auto& module : modules) {
         QStringList entry = pHost->mInstalledModules[module];
-        pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
+        auto [success, error] = pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
+        if (!success && !error.isEmpty()) {
+            qWarning() << "mudlet::installModulesList() WARNING - failed to load module" << module << ":" << error;
+        }
         //we repeat this step here b/c we use the same installPackage method for initial loading,
         //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
         pHost->mInstalledModules[module] = entry;

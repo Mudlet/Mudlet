@@ -1901,8 +1901,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (thing != enums::PackageModuleType::Package) {
         if ((thing == enums::PackageModuleType::ModuleSync) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
-        } else if ((thing == enums::PackageModuleType::ModuleFromUI) && (mInstalledModules.contains(packageName) || mActiveModules.contains(packageName))) {
+        } else if ((thing == enums::PackageModuleType::ModuleFromUI) && !mIsProfileLoadingSequence && (mInstalledModules.contains(packageName) || mActiveModules.contains(packageName))) {
             // Check if this is just a stale reference by verifying if module files actually exist
+            // Skip this check during profile loading - modules are expected to be in mInstalledModules already
             QString modulePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
             QString moduleFile = mInstalledModules.value(packageName).value(0); // Get the actual file path from stored reference
 
