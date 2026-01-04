@@ -110,7 +110,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: development
-          submodules: ${{ matrix.type == 'submodule' || matrix.type == 'submodule-branch' }}
+          submodules: ${{ (matrix.type == 'submodule' || matrix.type == 'submodule-branch') && 'recursive' || false }}
           fetch-depth: ${{ (matrix.type == 'submodule' || matrix.type == 'submodule-branch') && 0 || 1 }}
 
       - name: Download file
