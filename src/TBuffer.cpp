@@ -4859,18 +4859,14 @@ void TBuffer::clear()
 void TBuffer::clearLinkState()
 {
     Host* pH = mpHost;
-
-    // Collect currently referenced link IDs from buffer
     const QSet<int> activeLinkIds = collectActiveLinkIds();
 
-    // Remove unreferenced links from link store only if we have a valid Host pointer
     if (pH) {
         mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
     } else {
         qWarning() << "TBuffer::clearLinkState() WARNING - mpHost is null, cannot remove unreferenced links from store";
     }
 
-    // Clear link state tracking for any link that is no longer referenced
     QSet<int> staleIds;
 
     auto collectStale = [&activeLinkIds, &staleIds](const auto& map) {
@@ -4897,9 +4893,7 @@ void TBuffer::clearLinkState()
         mLinkOriginalText.remove(key);
     }
 
-    // Clean up pending selection styling for stale link IDs using set intersection
-    // This prevents applyPendingSelectionStyling() from attempting to update
-    // characters for links that no longer exist
+    // Prevent applyPendingSelectionStyling from updating non-existent links
     mPendingSelectionStyling &= activeLinkIds;
 
     // Reset hover/active/focus state if those links are gone
@@ -4924,7 +4918,6 @@ QSet<int> TBuffer::collectActiveLinkIds() const
 {
     QSet<int> activeLinkIds;
 
-    // Scan all TChar objects in buffer to find referenced link IDs
     for (const auto& line : buffer) {
         for (const TChar& tchar : line) {
             int linkId = tchar.linkIndex();
