@@ -418,7 +418,9 @@ private:
     int mCommands = 0;
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
-
+    // Flag set when MCCP start sequence detected in processTelnetCommand,
+    // compression should be enabled after returning to main parsing loop
+    bool mMCCPStartAfterSB = false;
 
     std::string mMudData;
     bool mIsTimerPosting = false;

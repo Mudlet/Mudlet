@@ -3395,8 +3395,19 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             return;
         }
 
-        // Original fix by CR, second revision by MH - To take out normal MCCP version 1 option and 2, no need for this. -MH
-        // TODO: Remove these comments. Old boolean taken out for MCCP, and other options which were un-needed code. Rev.3 -MH //
+        // MCCP v2: IAC SB COMPRESS2 IAC SE
+        // When we receive this complete SB, set flag to enable compression
+        // after returning to main parsing loop. This avoids lookahead issues
+        // when the sequence spans packet boundaries. Fixes #6624.
+        if (option == OPT_COMPRESS2 && mMCCP_version_2 && !mNeedDecompression) {
+            // telnetCommand should be: IAC SB COMPRESS2 IAC SE (5 bytes)
+            if (telnetCommand.size() == 5 &&
+                telnetCommand[3] == TN_IAC && telnetCommand[4] == TN_SE) {
+                qDebug() << "MCCP version 2 starting sequence detected in processTelnetCommand";
+                mMCCPStartAfterSB = true;
+            }
+            return;
+        }
 
         // GMCP
         if (option == OPT_GMCP) {
@@ -4800,61 +4811,69 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 command = "";
                 iac = false;
             } else if (insb) {
-                // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
-                // IAC SB COMPRESS2 IAC SE for MCCP v2
-                if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
-                    // TODO this code looks ahead instead of using the state machine.
-                    // This is not a good idea.
-                    char _ch = buffer[i];
-                    if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
-                        bool _compress = false;
-
-                        if ((i > 1) && (i + 2 < datalen)) {
-                            if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
-                                qDebug() << "MCCP version 1 starting sequence";
-                                _compress = true;
-                            }
-
-                            if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
-                                qDebug() << "MCCP version 2 starting sequence";
-                                _compress = true;
-                            }
-                        }
-
-                        if (_compress) {
-                            mNeedDecompression = true;
-                            // from this position in stream onwards, data will be compressed by zlib
-                            gotRest(cleandata);
-                            cleandata = "";
-                            initStreamDecompressor();
-                            buffer += i + 3; //bugfix: BenH
-                            int restLength = datalen - i - 3;
-
-                            if (restLength > 0) {
-                                datalen = decompressBuffer(buffer, restLength, out_buffer);
-                                buffer = out_buffer;
-                                i = -1; // start processing buffer from the beginning.
-                            } else {
-                                datalen = 0;
-                                i = -1; // end the loop, this will make i and datalen the same.
-                            }
-                            // compressed data starts in clean state
-                            iac = false;
-                            insb = false;
-                            command = "";
-                            goto MAIN_LOOP_END;
-                        }
-                    }
-                }
-
                 //7. inside IAC SB
                 command += ch;
+
+                // MCCP v1 detection: IAC SB COMPRESS WILL SE
+                // Unlike v2, this doesn't use IAC SE so we check the pattern directly.
+                // This fixes packet boundary issues when the sequence is split.
+                if (mMCCP_version_1 && !mNeedDecompression && command.size() >= 5) {
+                    size_t len = command.size();
+                    if (command[len-5] == TN_IAC &&
+                        command[len-4] == TN_SB &&
+                        command[len-3] == OPT_COMPRESS &&
+                        command[len-2] == TN_WILL &&
+                        command[len-1] == TN_SE) {
+                        qDebug() << "MCCP version 1 starting sequence detected";
+                        mNeedDecompression = true;
+                        gotRest(cleandata);
+                        cleandata = "";
+                        initStreamDecompressor();
+                        // Data after current position (i+1) is compressed
+                        int restLength = datalen - i - 1;
+                        if (restLength > 0) {
+                            buffer += i + 1;
+                            datalen = decompressBuffer(buffer, restLength, out_buffer);
+                            buffer = out_buffer;
+                            i = -1;
+                        } else {
+                            datalen = 0;
+                            i = -1;
+                        }
+                        command = "";
+                        iac = false;
+                        insb = false;
+                        goto MAIN_LOOP_END;
+                    }
+                }
 
                 if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
                     processTelnetCommand(command);
                     command = "";
                     iac = false;
                     insb = false;
+
+                    // Check if MCCP v2 start was detected in processTelnetCommand
+                    if (mMCCPStartAfterSB) {
+                        mMCCPStartAfterSB = false;
+                        mNeedDecompression = true;
+                        // Flush any pending clean data before switching to decompression
+                        gotRest(cleandata);
+                        cleandata = "";
+                        initStreamDecompressor();
+                        // Data after current position (i+1) is compressed
+                        int restLength = datalen - i - 1;
+                        if (restLength > 0) {
+                            buffer += i + 1;
+                            datalen = decompressBuffer(buffer, restLength, out_buffer);
+                            buffer = out_buffer;
+                            i = -1; // Restart processing from beginning of decompressed data
+                        } else {
+                            datalen = 0;
+                            i = -1; // End the loop
+                        }
+                        goto MAIN_LOOP_END;
+                    }
                 } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
                     command.pop_back();
                     iac = false;
