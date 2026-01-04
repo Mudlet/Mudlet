@@ -558,6 +558,8 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
                 matchStatePair.second->multiCapturePosList.push_back(posList);
                 if (nameMatches != nullptr) {
                     matchStatePair.second->nameCaptures.push_back(*nameMatches);
+                } else {
+                    matchStatePair.second->nameCaptures.push_back(QVector<QPair<QString, QString>>());
                 }
             }
         }
@@ -806,6 +808,7 @@ bool TTrigger::match_line_spacer(int patternNumber)
                     std::list<int> const posList;
                     matchStatePair.second->multiCaptureList.push_back(captureList);
                     matchStatePair.second->multiCapturePosList.push_back(posList);
+                    matchStatePair.second->nameCaptures.push_back(QVector<QPair<QString, QString>>());
                 }
             }
         }
