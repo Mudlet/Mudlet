@@ -82,7 +82,7 @@ jobs:
             type: curl
             url: https://raw.githubusercontent.com/KDAB/KDToolBox/master/qt/singleshot_connect/singleshot_connect.h
             file: 3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
-            path: 3rdparty/kdtoolbox
+            path: 3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
             branch: update-singleshot-connect
             title: "Infrastructure: Update singleshot_connect.h to latest upstream"
             body: |
@@ -95,7 +95,7 @@ jobs:
             type: curl
             url: https://raw.githubusercontent.com/StableCoder/cmake-scripts/main/sanitizers.cmake
             file: 3rdparty/cmake-scripts/sanitizers.cmake
-            path: 3rdparty/cmake-scripts
+            path: 3rdparty/cmake-scripts/sanitizers.cmake
             branch: update-cmake-scripts
             title: "Infrastructure: Update sanitizers.cmake to latest upstream"
             body: |
@@ -123,7 +123,7 @@ jobs:
 
       - name: Download via curl
         if: matrix.type == 'curl'
-        run: curl -o ${{ matrix.file }} ${{ matrix.url }}
+        run: curl -fS -o ${{ matrix.file }} ${{ matrix.url }}
 
       - name: Update submodule
         if: matrix.type == 'submodule'
