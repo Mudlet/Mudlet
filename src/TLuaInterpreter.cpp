@@ -5235,6 +5235,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize);
     lua_register(pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger);
     lua_register(pGlobalLua, "permSubstringTrigger", TLuaInterpreter::permSubstringTrigger);
+    lua_register(pGlobalLua, "permExactMatchTrigger", TLuaInterpreter::permExactMatchTrigger);
     lua_register(pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger);
     lua_register(pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger);
     lua_register(pGlobalLua, "permTimer", TLuaInterpreter::permTimer);
@@ -6469,6 +6470,34 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     QList<int> propertyList;
     for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_SUBSTRING;
+    }
+    if (parent.isEmpty()) {
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
+    } else {
+        TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
+        if (!pP) {
+            return {-1, qsl("parent '%1' not found").arg(parent)};
+        }
+        pT = new TTrigger(pP, mpHost);
+        pT->setRegexCodeList(patterns, propertyList);
+    }
+    pT->setIsFolder(patterns.empty());
+    pT->setIsActive(true);
+    pT->setTemporary(false);
+    pT->registerTrigger();
+    pT->setScript(function);
+    pT->setName(name);
+    updateEditor();
+    return {pT->getID(), QString()};
+}
+
+// No documentation available in wiki - internal function
+std::pair<int, QString> TLuaInterpreter::startPermExactMatchTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
+{
+    TTrigger* pT;
+    QList<int> propertyList;
+    for (int i = 0; i < patterns.size(); i++) {
+        propertyList << REGEX_EXACT_MATCH;
     }
     if (parent.isEmpty()) {
         pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
