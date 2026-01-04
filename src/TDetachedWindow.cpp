@@ -113,11 +113,11 @@ TDetachedWindow::~TDetachedWindow()
     }
 
     // Clean up any docked widgets and restore main mappers
-    for (auto it = mDockWidgetMap.begin(); it != mDockWidgetMap.end(); ++it) {
-        if (it.value()) {
+    for (auto&& [key, dockWidget] : mDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
             // If this is a map dock widget, restore the main mapper
-            if (it.key().startsWith("map_")) {
-                QString profileName = it.key().mid(4); // Remove "map_" prefix
+            if (key.startsWith("map_")) {
+                QString profileName = key.mid(4); // Remove "map_" prefix
                 if (auto mudletInstance = mudlet::self()) {
                     if (auto pHost = mudletInstance->getHostManager().getHost(profileName)) {
                         auto pMap = pHost->mpMap.data();
@@ -134,7 +134,7 @@ TDetachedWindow::~TDetachedWindow()
                 }
             }
 
-            it.value()->deleteLater();
+            dockWidget->deleteLater();
         }
     }
 
@@ -1426,15 +1426,15 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
 
-    for (auto it = mDockWidgetMap.begin(); it != mDockWidgetMap.end(); ++it) {
-        if (it.value()) {
-            dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
+    for (auto&& [key, dockWidget] : mDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
+            dockWidgetsToProcess.append(qMakePair(key, dockWidget));
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "TDetachedWindow: Found dock widget in map:" << it.key() << "isVisible:" << it.value()->isVisible();
+            qDebug() << "TDetachedWindow: Found dock widget in map:" << key << "isVisible:" << dockWidget->isVisible();
 #endif
         } else {
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "TDetachedWindow: Found null dock widget in map for key:" << it.key();
+            qDebug() << "TDetachedWindow: Found null dock widget in map for key:" << key;
 #endif
         }
     }
@@ -1720,9 +1720,7 @@ void TDetachedWindow::updateWindowMenu()
         // Collect unique detached windows to avoid duplicates
         QSet<TDetachedWindow*> uniqueDetachedWindows;
 
-        for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-            TDetachedWindow* detachedWindow = it.value();
-
+        for (const auto& detachedWindow : detachedWindows) {
             if (detachedWindow) {
                 uniqueDetachedWindows.insert(detachedWindow);
             }
@@ -1837,18 +1835,16 @@ void TDetachedWindow::slot_activateDetachedWindowProfile()
     // Find which detached window contains this profile
     const auto& detachedWindows = mudlet::self()->getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
             // Activate the detached window
             detachedWindow->raise();
             detachedWindow->activateWindow();
             detachedWindow->show(); // Ensure it's not minimized
-            
+
             // Switch to the specific profile tab in the detached window
             detachedWindow->switchToProfile(profileName);
-            
+
             updateWindowMenu(); // Refresh checkmarks
             break;
         }
@@ -2265,12 +2261,12 @@ void TDetachedWindow::slot_tabMoved(int oldPos, int newPos)
     // Create a map of profile names to console widgets
     QMap<QString, TMainConsole*> consoleWidgetMap;
 
-    for (auto it = mProfileConsoleMap.begin(); it != mProfileConsoleMap.end(); ++it) {
-        if (it.value()) {
-            consoleWidgetMap.insert(it.key(), it.value());
+    for (auto&& [profileName, console] : mProfileConsoleMap.asKeyValueRange()) {
+        if (console) {
+            consoleWidgetMap.insert(profileName, console);
         } else {
-            qWarning().nospace().noquote() << "TDetachedWindow::slot_tabMoved(" << oldPos << ", " << newPos 
-                                           << ") WARNING - nullptr for TMainConsole for profile: " << it.key();
+            qWarning().nospace().noquote() << "TDetachedWindow::slot_tabMoved(" << oldPos << ", " << newPos
+                                           << ") WARNING - nullptr for TMainConsole for profile: " << profileName;
         }
     }
 
@@ -2364,9 +2360,7 @@ void TDetachedWindow::checkForWindowMergeOpportunity()
     // Look for overlapping detached windows
     const auto& detachedWindows = mudletInstance->getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* otherWindow = it.value();
-
+    for (const auto& otherWindow : detachedWindows) {
         // Skip ourselves
         if (otherWindow == this || !otherWindow || !otherWindow->isVisible()) {
             continue;
@@ -2662,9 +2656,7 @@ void TDetachedWindow::slot_showMapperDialog()
     // Check other detached windows for conflicting maps
     const auto& detachedWindows = mudletInstance->getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* otherWindow = it.value();
-
+    for (const auto& otherWindow : detachedWindows) {
         if (otherWindow && otherWindow != this) {
             auto otherMapDock = otherWindow->getDockWidget(mapKey);
 

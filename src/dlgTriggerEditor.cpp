@@ -1439,8 +1439,8 @@ void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 
 void dlgTriggerEditor::slot_editorThemeChanged()
 {
-    for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
-        applyPatternWidgetStyle(mTriggerPatternEdit.at(i));
+    for (auto* patternEdit : mTriggerPatternEdit) {
+        applyPatternWidgetStyle(patternEdit);
     }
 }
 
@@ -6572,13 +6572,13 @@ void dlgTriggerEditor::saveTrigger()
     QStringList patterns;
     QList<int> patternKinds;
     int validItems = 0;
-    for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
-        QString pattern = mTriggerPatternEdit.at(i)->singleLineTextEdit_pattern->toPlainText();
+    for (auto* patternEdit : mTriggerPatternEdit) {
+        QString pattern = patternEdit->singleLineTextEdit_pattern->toPlainText();
 
         // Spaces in the pattern may be marked with middle dots, convert them back
         unmarkQString(&pattern);
 
-        const int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
+        const int patternType = patternEdit->comboBox_patternType->currentIndex();
         if (pattern.isEmpty() && patternType != REGEX_PROMPT && patternType != REGEX_LINE_SPACER) {
             continue;
         }
@@ -6602,7 +6602,7 @@ void dlgTriggerEditor::saveTrigger()
             break;
         case 5:
             patternKinds << REGEX_LINE_SPACER;
-            pattern = mTriggerPatternEdit.at(i)->spinBox_lineSpacer->text();
+            pattern = patternEdit->spinBox_lineSpacer->text();
             break;
         case 6:
             patternKinds << REGEX_COLOR_PATTERN;
@@ -13800,18 +13800,18 @@ void dlgTriggerEditor::slot_restoreEditorItemsToolbar()
 void dlgTriggerEditor::clearTriggerForm()
 {
     // Clear pattern fields
-    for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
-        mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
-        if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
-            mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
+    for (auto* patternEdit : mTriggerPatternEdit) {
+        patternEdit->singleLineTextEdit_pattern->clear();
+        if (patternEdit->singleLineTextEdit_pattern->isHidden()) {
+            patternEdit->singleLineTextEdit_pattern->show();
         }
-        mTriggerPatternEdit[i]->pushButton_fgColor->hide();
-        mTriggerPatternEdit[i]->pushButton_bgColor->hide();
-        mTriggerPatternEdit[i]->label_prompt->hide();
-        mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
+        patternEdit->pushButton_fgColor->hide();
+        patternEdit->pushButton_bgColor->hide();
+        patternEdit->label_prompt->hide();
+        patternEdit->spinBox_lineSpacer->hide();
         // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
-        mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
-        mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
+        patternEdit->comboBox_patternType->setCurrentIndex(1);
+        patternEdit->comboBox_patternType->setCurrentIndex(0);
     }
 
     mpTriggersMainArea->lineEdit_trigger_name->clear();
@@ -14176,17 +14176,17 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
                 }
             }
         } else {
-            for (int i = 0; i < mTriggerPatternEdit.size(); i++) {
-                mTriggerPatternEdit[i]->singleLineTextEdit_pattern->clear();
-                if (mTriggerPatternEdit[i]->singleLineTextEdit_pattern->isHidden()) {
-                    mTriggerPatternEdit[i]->singleLineTextEdit_pattern->show();
+            for (auto* patternEdit : mTriggerPatternEdit) {
+                patternEdit->singleLineTextEdit_pattern->clear();
+                if (patternEdit->singleLineTextEdit_pattern->isHidden()) {
+                    patternEdit->singleLineTextEdit_pattern->show();
                 }
-                mTriggerPatternEdit[i]->pushButton_fgColor->hide();
-                mTriggerPatternEdit[i]->pushButton_bgColor->hide();
-                mTriggerPatternEdit[i]->label_prompt->hide();
-                mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
-                mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
-                mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
+                patternEdit->pushButton_fgColor->hide();
+                patternEdit->pushButton_bgColor->hide();
+                patternEdit->label_prompt->hide();
+                patternEdit->spinBox_lineSpacer->hide();
+                patternEdit->comboBox_patternType->setCurrentIndex(1);
+                patternEdit->comboBox_patternType->setCurrentIndex(0);
             }
 
             mpTriggersMainArea->lineEdit_trigger_name->clear();
