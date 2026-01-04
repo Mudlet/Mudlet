@@ -368,7 +368,7 @@ bool XMLexport::saveXmlFile(QSaveFile& file)
         qWarning() << "XMLexport::saveXmlFile() ERROR - failed to write XML data:" << file.errorString();
         return false;
     }
-    if (static_cast<size_t>(bytesWritten) != output.size()) {
+    if (bytesWritten != static_cast<qint64>(output.size())) {
         qWarning() << "XMLexport::saveXmlFile() ERROR - incomplete write: wrote" << bytesWritten << "of" << output.size() << "bytes";
         return false;
     }
