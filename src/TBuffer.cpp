@@ -49,6 +49,9 @@
 
 namespace {
 
+// Maximum length for an OSC sequence before aborting (defense against malformed sequences)
+constexpr size_t MAX_OSC_SEQUENCE_LENGTH = 4096;
+
 // Helper to interpret JSON values as boolean
 // Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
 bool jsonBoolValue(const QJsonValue& val) {
@@ -830,9 +833,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         } // End of if (mGotCSI)
 
         if (mGotOSC) {
-            // Lookahead and find end of sequence (the ST string terminator)
-            // DANGER, WILL ROBINSON! Should an OSC be received without a
-            // terminator then all data will just be swallowed into the buffer
+            // Lookahead and find end of sequence - valid terminators are:
+            // - ST (String Terminator): ESC followed by '\' (backslash)
+            // - BEL (0x07): Common alternative used by xterm and many MUDs
 
             // Valid characters inside an OSC are: a "command string" or a
             // "character string".
@@ -847,27 +850,45 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             // It is safe to look at spanEnd-1 even at the starting position
             // because we already know that the localBuffer extends backwards
             // that far (it will be the ']' character!)
+            // Loop until we find ST (ESC \), BEL, exceed length limit, or run out of data
             while (spanEnd < localBufferLength
-                   && (spanEnd == 0 || localBuffer[spanEnd-1] != '\033')
-                   && (localBuffer[spanEnd] != '\\')) {
+                   && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH
+                   && localBuffer[spanEnd] != '\x07'
+                   && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
                 ++spanEnd;
             }
 
-            if (localBuffer[spanEnd] != '\\') {
-                // The last character in the buffer is NOT the expected ST
-                // - therefore we have probably got a split between
-                // data packets and are not in a position to process the
-                // current line further...
+            // Determine what terminated the loop
+            bool const foundBEL = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
+            bool const foundST = (spanEnd < localBufferLength && spanEnd > 0
+                                  && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
+            bool const exceededLength = ((spanEnd - spanStart) >= MAX_OSC_SEQUENCE_LENGTH);
 
+            if (foundBEL) {
+                // BEL terminator - sequence content excludes the BEL
+                decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart).c_str()));
+                mGotOSC = false;
+                localBufferPosition = spanEnd + 1; // Skip past BEL
+                continue;
+            } else if (foundST) {
+                // ST terminator (ESC \) - sequence content excludes the ESC before backslash
+                decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart - 1).c_str()));
+                mGotOSC = false;
+                localBufferPosition = spanEnd + 1; // Skip past backslash
+                continue;
+            } else if (exceededLength) {
+                // Length limit exceeded - abort OSC mode to prevent infinite buffering
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - OSC sequence exceeded "
+                                             << MAX_OSC_SEQUENCE_LENGTH << " bytes without terminator, aborting.";
+                mGotOSC = false;
+                // Don't advance localBufferPosition - let the content be processed as normal text
+                continue;
+            } else {
+                // Incomplete sequence - not enough data yet, wait for more
+                // (This is safe because we're under the length limit)
                 mIncompleteSequenceBytes = localBuffer.substr(spanStart);
                 return;
             }
-
-            decodeOSC(QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart - 1).c_str()));
-            mGotOSC = false;
-            localBufferPosition += 1 + spanEnd - spanStart;
-            // Go around while loop again:
-            continue;
         }
 
         // We are outside of a CSI or OSC sequence if we get to here:
