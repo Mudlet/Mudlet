@@ -2341,6 +2341,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     }
 
     char ch = telnetCommand[1];
+
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 2)
     QString commandType;
     switch (ch) {
@@ -3403,7 +3404,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             // telnetCommand should be: IAC SB COMPRESS2 IAC SE (5 bytes)
             if (telnetCommand.size() == 5 &&
                 telnetCommand[3] == TN_IAC && telnetCommand[4] == TN_SE) {
-                qDebug() << "MCCP version 2 starting sequence detected in processTelnetCommand";
                 mMCCPStartAfterSB = true;
             }
             return;
@@ -4484,6 +4484,10 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     int zval = inflate(&mZstream, Z_SYNC_FLUSH);
     int outSize = BUFFER_SIZE - mZstream.avail_out;
 
+    if (zval != Z_OK && zval != Z_STREAM_END) {
+        qDebug() << "MCCP decompressBuffer: zlib error code:" << zval << "input:" << length << "output:" << outSize;
+    }
+
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
 
@@ -4757,6 +4761,14 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (mNeedDecompression) {
         datalen = decompressBuffer(in_buffer, amount, out_buffer);
         buffer = out_buffer;
+
+        // After Z_STREAM_END, mNeedDecompression becomes false but there may be
+        // leftover uncompressed data in the same packet. If so, append it to the
+        // decompressed output so it gets processed. Fixes #6624.
+        if (!mNeedDecompression && amount > 0) {
+            memcpy(out_buffer + datalen, in_buffer, amount);
+            datalen += amount;
+        }
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
@@ -4864,8 +4876,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                         // Data after current position (i+1) is compressed
                         int restLength = datalen - i - 1;
                         if (restLength > 0) {
-                            buffer += i + 1;
-                            datalen = decompressBuffer(buffer, restLength, out_buffer);
+                            char* compressedData = buffer + i + 1;
+                            datalen = decompressBuffer(compressedData, restLength, out_buffer);
                             buffer = out_buffer;
                             i = -1; // Restart processing from beginning of decompressed data
                         } else {
