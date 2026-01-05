@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -35,7 +35,7 @@ jobs:
           fi
 
       - name: send in a pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         if: steps.check-changes.outputs.changes == 'true'
         with:
           token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -77,7 +77,7 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         if: steps.getdiff.outputs.lines_changed > 0
         with:
           token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
@@ -98,10 +98,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
 
       - name: update submodule to latest
@@ -117,7 +117,7 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         if: steps.getdiff.outputs.lines_changed > 0
         with:
           token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
@@ -139,10 +139,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
 
       - name: update submodule to latest in branch
@@ -161,7 +161,7 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         if: steps.getdiff.outputs.lines_changed > 0
         with:
           token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
@@ -183,7 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -201,7 +201,7 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         if: steps.getdiff.outputs.lines_changed > 0
         with:
           token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -241,7 +241,7 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         if: steps.getdiff.outputs.lines_changed > 0
         with:
           token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
@@ -263,7 +263,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: development
 
@@ -281,7 +281,7 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         if: steps.getdiff.outputs.lines_changed > 0
         with:
           token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}

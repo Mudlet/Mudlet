@@ -33,7 +33,6 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-#include "pre_guard.h"
 #include "ui_profile_preferences.h"
 #include <QtCore>
 #include <QDialog>
@@ -42,7 +41,6 @@
 #include <QFontDialog>
 #include <QMap>
 #include <QCloseEvent>
-#include "post_guard.h"
 
 class Host;
 
@@ -104,6 +102,7 @@ public slots:
     void slot_setMapRoomBorderColor();
     void slot_setMapInfoBgColor();
     void slot_setMapRoomCollisionBorderColor();
+    void slot_setMapGridColor();
     void slot_setLowerLevelColor();
     void slot_setUpperLevelColor();
     void slot_resetMapColors();
@@ -174,10 +173,14 @@ private slots:
     void slot_changeInvertMapZoom(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
+    void slot_roomSizeChanged(int size);
+    void slot_exitSizeChanged(int size);
+    void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
     void slot_changeShowTabConnectionIndicators(bool state);
+    void slot_crashReportPolicyChanged(int index);
 
 
 signals:
@@ -235,6 +238,9 @@ private:
     QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableNAWS;
+    QPointer<QAction> mEnableCHARSET;
+    QPointer<QAction> mEnableNEWENVIRON;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

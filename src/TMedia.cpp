@@ -25,7 +25,6 @@
 #include "TMedia.h"
 #include "TLabel.h"
 
-#include "pre_guard.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -34,7 +33,6 @@
 #include <QRandomGenerator>
 #include <QStandardPaths>
 #include <QVideoWidget>
-#include "post_guard.h"
 
 // Public
 TMedia::TMedia(Host* pHost, const QString& profileName)
@@ -1785,7 +1783,7 @@ int TMedia::parseJSONByMediaFinish(QJsonObject& json)
 {
     int mediaFinish = TMediaData::MediaFinishNotSet;
 
-    auto mediaFinishJSON = json.value(qsl("end"));
+    auto mediaFinishJSON = json.value(qsl("finish"));
 
     if (mediaFinishJSON != QJsonValue::Undefined && mediaFinishJSON.isString() && !mediaFinishJSON.toString().isEmpty()) {
         mediaFinish = mediaFinishJSON.toString().toInt();
@@ -2055,7 +2053,7 @@ void TMedia::printClosedCaption(const TMediaData& mediaData, const QString& acti
         //: This word is part of a sentence like "Music stops" when Mudlet handles a piece of music.
         const QString mediaType = mediaData.mediaType() == TMediaData::MediaTypeMusic ? tr("music") :
         //: This word is part of a sentence like "Video stops" when Mudlet handles a video.
-                                  mediaData.mediaType() == TMediaData::MediaTypeVideo ? tr("video") 
+                                  mediaData.mediaType() == TMediaData::MediaTypeVideo ? tr("video")
         //: This word is part of a sentence like "Sound stops" when Mudlet handles neither music nor video.
                                                                                       : tr("sound");
         const QString mediaKey = mediaData.mediaKey();

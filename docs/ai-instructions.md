@@ -7,15 +7,15 @@ Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing script
 ## Core technologies
 
 - **C++20** with Qt6 (minimum 6.8.2)
-- **CMake** build system (minimum 3.25.1)  
+- **CMake** build system (minimum 3.25.1)
 - **Lua 5.1** scripting engine
 - **Cross-platform**: Windows, macOS, Linux
 
 ## Project structure
 
 - `src/` - main application source code
-- `test/` - Qt Test unit tests for C++ core
-- `src/mudlet-lua/tests/` - Busted unit tests for Lua functionality
+- `test/` - Unit tests for C++ core, written in Qt Test
+- `src/mudlet-lua/tests/` - Unit tests covering the Lua API, written in Busted
 - `3rdparty/` - External dependencies and libraries
 - `translations/` - Internationalization files
 - `.github/workflows/` - Github Actions workflows
@@ -25,6 +25,8 @@ All files should end with a newline character at the end of the file.
 
 ### C++ Conventions
 In general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
+
+Use range-based for loops instead of iterator-based or index-based loops where appropriate.
 
 See `.github/CONTRIBUTING.md` for the coding standards as well as the information below:
 
@@ -54,10 +56,19 @@ QString displayText = tr("Connection failed: %1").arg(errorMessage);
 QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 ```
 
+```xml
+// In .ui files, set "notr" attribute to true for string literals which require no translation
+<widget>
+  <property name="text">
+    <string notr="true">-</string>
+  </property>
+</widget>
+```
+
 ### Memory management
 
-- Use Qt's parent-child system for automatic cleanup
-- Use C++ smart pointers (shared_ptr, unique_ptr) when ownership is unclear
+- Use Qt's parent-child system for automatic cleanup for Qt classes
+- Otherwise, use C++ smart pointers for non-Qt classes
 
 ## Key architecture points
 Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
@@ -80,13 +91,17 @@ int TLuaInterpreter::functionName(lua_State* L)
 {
     const QString param = getVerifiedString(L, __func__, 1, "parameter name");
     // ... implementation
-    
+
     lua_pushboolean(L, true);
     return 1; // number of return values
 }
 ```
 
 ## Common patterns
+
+### Comments
+
+Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
 
 ### Error handling
 
@@ -107,10 +122,14 @@ if (!file.open(QIODevice::ReadOnly)) {
 ## Build system notes
 
 - **Primary**: CMake (handles platform-specific configurations)
-- **Legacy**: QMake in `src/mudlet.pro` 
+- **Legacy**: QMake in `src/mudlet.pro`
 - Use `.clang-format` configuration in `src/` for C++ code style
-- Check code quality with clang-tidy using `.clang-tidy` configuration file 
+- Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
+
+### Static analysis
+
+For complete setup instructions on how to run static analysis during a build see, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
 
 ### Debugging options
 
@@ -123,6 +142,10 @@ Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defin
 - And others for encoding, MXP, map autosave, etc.
 
 **Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines (CMake) or `DEFINES+=DEBUG_XXX` lines (QMake) when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+
+### Git
+
+Do not force-push to remote branches.
 
 ### Building on macOS
 
@@ -153,7 +176,7 @@ cd /path/to/Mudlet/build
 # configure (only needed the first time)
 cmake ../ -G Ninja
 
-# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default:
+# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default, no need to specify number of jobs:
 cmake --build .
 
 # Run Mudlet - it's a visual, desktop application

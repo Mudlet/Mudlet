@@ -20,10 +20,8 @@
 
 #include "TriggerHighlighter.h"
 
-#include "pre_guard.h"
 #include <QMimeData>
 #include <QPlainTextEdit>
-#include "post_guard.h"
 
 class SingleLineTextEdit : public QPlainTextEdit
 {

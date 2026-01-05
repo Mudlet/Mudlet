@@ -25,18 +25,15 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QDebug>
 #include <QPointer>
 #include <QSharedPointer>
-#include "post_guard.h"
 
-#include <pcre.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 class Host;
-
-#define MAX_CAPTURE_GROUPS 33
 
 using NameGroupMatches = QVector<QPair<QString, QString>>;
 
@@ -78,7 +75,7 @@ public:
     QString mName;
     QString mCommand;
     QString mRegexCode;
-    QSharedPointer<pcre> mpRegex;
+    QSharedPointer<pcre2_code> mpRegex;
     QString mScript;
     QPointer<Host> mpHost;
     bool mModuleMember = false;

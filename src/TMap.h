@@ -30,7 +30,6 @@
 #endif
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QColor>
 #include <QFont>
@@ -41,11 +40,11 @@
 #include <QNetworkReply>
 #include <QPixmap>
 #include <QPointer>
+#include <QSet>
 #include <QSizeF>
 #include <QVector3D>
 #include <stdlib.h>
 #include <optional>
-#include "post_guard.h"
 
 #define DIR_NORTH 1
 #define DIR_NORTHEAST 2
@@ -78,6 +77,10 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+signals:
+    void signal_saveErrorChanged(bool hasError);
+
+private:
     QString mDefaultAreaName;
     QString mUnnamedAreaName;
 
@@ -197,6 +200,8 @@ public:
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
     bool isUnsaved() const { return mUnsavedMap; }
+    void setSaveError(bool state);
+    bool hasSaveError() const { return mSaveError; }
     void setDefaultAreaShown(bool);
     bool getDefaultAreaShown() { return mShowDefaultArea; }
 
@@ -345,6 +350,14 @@ public slots:
 
 
 private:
+    void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+                             const QMap<QString, int>& exitWeights,
+                             unsigned int source,
+                             TRoom* pSourceR,
+                             int target,
+                             quint8 direction,
+                             const QString& exitKey,
+                             const QSet<unsigned int>& unUsableRoomSet);
     const QString createFileHeaderLine(QString, QChar);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
@@ -384,6 +397,8 @@ private:
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    // Used to indicate that the last map save attempt failed:
+    bool mSaveError = false;
     // Used to hide the default area from casual viewing for those MUDs that
     // want to script a "fog-of-war" system by hiding rooms in the -1 area:
     bool mShowDefaultArea = true;

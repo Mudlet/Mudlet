@@ -27,7 +27,6 @@
 
 #include "dlgTriggerEditor.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QFile>
 #include <QMap>
@@ -35,7 +34,6 @@
 #include <QPointer>
 #include <QXmlStreamReader>
 #include <QClipboard>
-#include "post_guard.h"
 
 class Host;
 class TAction;
@@ -55,12 +53,12 @@ public:
     explicit XMLimport(Host*);
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
-    std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
+    std::pair<EditorViewType, int> importFromClipboard();
 
 private:
     const QString YES = qsl("yes");
 
-    std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
+    std::pair<EditorViewType, int> readPackage();
 
     void readHostPackage();
     int readTriggerPackage();

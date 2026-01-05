@@ -30,10 +30,8 @@
 #include "TConsole.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QBuffer>
 #include <QElapsedTimer>
-#include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without
@@ -918,7 +916,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 {
     QBuffer imageInputBuffer;
 
-    imageInputBuffer.open(QIODevice::WriteOnly);
+    if (!imageInputBuffer.open(QIODevice::WriteOnly)) {
+        qWarning() << "TArea::convertImageToBase64Data() ERROR: failed to open image input buffer for writing";
+        return {};
+    }
     // Go for maximum compression - for the smallest amount of data, the second
     // argument is a const char[] so does not require a QString wrapper:
     pixmap.save(&imageInputBuffer, "PNG", 0);
@@ -926,7 +927,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
     QByteArray encodedImageArray{imageInputBuffer.buffer().toBase64()};
     imageInputBuffer.close();
     imageOutputBuffer.setBuffer(&encodedImageArray);
-    imageOutputBuffer.open(QIODevice::ReadOnly);
+    if (!imageOutputBuffer.open(QIODevice::ReadOnly)) {
+        qWarning() << "TArea::convertImageToBase64Data() ERROR: failed to open image output buffer for reading";
+        return {};
+    }
 
     QList<QByteArray> pixmapArray;
     // Extract the image into lines of bytes (unsigned chars):

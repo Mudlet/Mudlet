@@ -25,8 +25,11 @@
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     Q_UNUSED(ctx)
-    if (tag->hasAttribute("EXPIRE")) {
-        return MXP_TAG_NOT_HANDLED;
+    
+    // Extract expire name if present
+    QString expireName;
+    if (tag->hasAttribute(qsl("expire"))) {
+        expireName = tag->getAttributeValue(qsl("expire"));
     }
 
     QString href = getHref(tag);
@@ -34,11 +37,17 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         return MXP_TAG_NOT_HANDLED;
     }
 
-    const QString hint = tag->hasAttribute("hint") ? tag->getAttributeValue("hint") : href;
+    const QString hint = tag->hasAttribute(qsl("hint")) ? tag->getAttributeValue(qsl("hint")) : href;
 
     href = qsl("openUrl([[%1]])").arg(href);
 
-    mLinkId = client.setLink(QStringList(href), QStringList(hint));
+    // Use the version of setLink that supports expire names
+    if (!expireName.isEmpty()) {
+        mLinkId = client.setLink(QStringList(href), QStringList(hint), expireName);
+    } else {
+        mLinkId = client.setLink(QStringList(href), QStringList(hint));
+    }
+    
     client.setLinkMode(true);
     return MXP_TAG_HANDLED;
 }
@@ -65,13 +74,14 @@ QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)
         // <A>http://someurl.com/<A>
         mIsHrefInContent = true;
         return "&text;";
-    } else if (tag->hasAttribute("href")) {
-        return tag->getAttributeValue("href");
-    } else if (!tag->getAttribute(0).hasValue()) {
-        return tag->getAttribute(0).getName();
-    } else {
-        return "";
     }
+    if (tag->hasAttribute("href")) {
+        return tag->getAttributeValue("href");
+    }
+    if (!tag->getAttribute(0).hasValue()) {
+        return tag->getAttribute(0).getName();
+    }
+    return "";
 }
 void TMxpLinkTagHandler::handleContent(char ch)
 {

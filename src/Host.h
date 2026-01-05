@@ -41,7 +41,6 @@
 #include "dlgTriggerEditor.h"
 #include "enums.h"
 
-#include "pre_guard.h"
 #include <QColor>
 #include <QFile>
 #include <QFont>
@@ -50,10 +49,10 @@
 #include <QPointer>
 #include <QStack>
 #include <QTextStream>
-#include "post_guard.h"
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
+#include "TMxpFrameManager.h"
 
 class QDialog;
 class QDockWidget;
@@ -355,6 +354,8 @@ public:
     std::pair<bool, QString> setDisplayFont(const QFont&);
     void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
+    QFont createFontWithSettings(const QString& fontName, int pointSize) const;
+    std::pair<QString, QFont::Weight> parseFontNameAndStyle(const QString& fontName) const;
     int getConsoleBufferSize() const { return mConsoleBufferSize; }
     void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
     bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
@@ -362,6 +363,7 @@ public:
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
     void updateAnsi16ColorsInTable();
+    void updateExtendedAnsiColorsInTable();
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
@@ -380,6 +382,10 @@ public:
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool setClickthrough(const QString& name, bool clickthrough);
+    bool setLabelStyleSheet(const QString& name, const QString& styleSheet);
+    bool setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
+    bool resetLinkStyle(const QString& name);
+    bool clearVisitedLinks(const QString& name);
     void hideMudletsVariables();
     bool createBuffer(const QString& name);
     QSize calcFontSize(const QString& windowName);
@@ -495,6 +501,9 @@ public:
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
     bool mEnableMXP = true;
+    bool mEnableCHARSET = true;
+    bool mEnableNAWS = true;
+    bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
     bool mPromptedForVersionInTTYPE = false;
@@ -504,6 +513,7 @@ public:
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
+    TMxpFrameManager mMxpFrameManager;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
@@ -530,11 +540,11 @@ public:
     bool mIsProfileLoadingSequence = false;
 
 
-    dlgTriggerEditor* mpEditorDialog{nullptr};
+    QPointer<dlgTriggerEditor> mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
-    dlgNotepad* mpNotePad{nullptr};
+    QPointer<dlgNotepad> mpNotePad;
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {
@@ -559,11 +569,11 @@ public:
     // Command echo mode getters and setters
     CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
     void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
-    
+
     // Backward compatibility methods - for existing code that expects boolean behavior
     bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
-    void setPrintCommand(bool print) { 
-        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; 
+    void setPrintCommand(bool print) {
+        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never;
     }
 
 public:
@@ -687,6 +697,7 @@ public:
     QColor mUpperLevelColor{QColorConstants::White};
     QColor mRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
+    QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight = false;
@@ -713,6 +724,7 @@ public:
 
     double mLineSize = 10.0;
     double mRoomSize = 0.5;
+    double mMapGridLineSize = 0.5;
     QSet<QString> mMapInfoContributors{qsl("Short")};
     bool mBubbleMode = false;
     bool mMapViewOnly = true;
@@ -727,8 +739,7 @@ public:
     QColor mCommandLineBgColor{Qt::black};
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
-    bool mFORCE_CHARSET_NEGOTIATION_OFF = false;
-    bool mForceNewEnvironNegotiationOff = false;
+    bool mMapperShowGrid = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
@@ -835,7 +846,7 @@ private:
 
     // Experiment system storage: key -> enabled state
     QMap<QString, bool> mExperiments;
-    
+
     // Static whitelist of valid experiments
     static const QSet<QString> mValidExperiments;
 

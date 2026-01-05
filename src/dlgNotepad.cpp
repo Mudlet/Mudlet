@@ -25,10 +25,8 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QDir>
-#include <QTextCodec>
-#include "post_guard.h"
+#include <QStringConverter>
 
 using namespace std::chrono;
 
@@ -162,13 +160,15 @@ void dlgNotepad::timerEvent(QTimerEvent* event)
     save();
 }
 
-void dlgNotepad::slot_sendAll() {
+void dlgNotepad::slot_sendAll()
+{
     QString allText = notesEdit->toPlainText();
     QStringList lines = allText.split('\n');
     startSendingLines(lines);
 }
 
-void dlgNotepad::slot_sendLine() {
+void dlgNotepad::slot_sendLine()
+{
     QTextCursor cursor = notesEdit->textCursor();
     cursor.select(QTextCursor::LineUnderCursor);
     QString line = cursor.selectedText();
@@ -178,7 +178,8 @@ void dlgNotepad::slot_sendLine() {
     }
 }
 
-void dlgNotepad::slot_sendSelection() {
+void dlgNotepad::slot_sendSelection()
+{
     QString selectedText = notesEdit->textCursor().selectedText();
 
     if (!selectedText.isEmpty()) {
@@ -187,7 +188,8 @@ void dlgNotepad::slot_sendSelection() {
     }
 }
 
-void dlgNotepad::startSendingLines(const QStringList& lines) {
+void dlgNotepad::startSendingLines(const QStringList& lines)
+{
     mLinesToSend = lines;
     mCurrentLineIndex = 0;
 
@@ -200,7 +202,8 @@ void dlgNotepad::startSendingLines(const QStringList& lines) {
     mSendTimer->start(300);
 }
 
-void dlgNotepad::slot_sendNextLine() {
+void dlgNotepad::slot_sendNextLine()
+{
     if (mCurrentLineIndex >= mLinesToSend.size()) {
         mSendTimer->stop();
         action_stop->setEnabled(false);
@@ -214,7 +217,8 @@ void dlgNotepad::slot_sendNextLine() {
     }
 }
 
-void dlgNotepad::slot_stopSending() {
+void dlgNotepad::slot_stopSending()
+{
     if (mSendTimer && mSendTimer->isActive()) {
         mSendTimer->stop();
     }

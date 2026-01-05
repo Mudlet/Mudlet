@@ -41,7 +41,6 @@
 #include "updater.h"
 #endif
 
-#include "pre_guard.h"
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
 #include <QAction>
@@ -59,7 +58,7 @@
 #include <QWindow>
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include <../3rdparty/qtkeychain/keychain.h>
+#include <qtkeychain/keychain.h>
 #else
 #include <qt6keychain/keychain.h>
 #endif
@@ -93,7 +92,6 @@
 #else
 // Any other OS?
 #endif
-#include "post_guard.h"
 
 class QCloseEvent;
 class QMediaPlayer;
@@ -274,7 +272,7 @@ public:
     bool isVersionAtLeast(const QString& minVersion);
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
-    
+
     // Profile validation and orphan detection
     bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
@@ -334,6 +332,7 @@ public:
     void showOptionsDialog(const QString&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
@@ -557,7 +556,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
-
+    void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
@@ -774,7 +773,7 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
-    
+
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
     QMap<QString, bool> mMainWindowDockWidgetUserPreference; // User's show/hide preference for dock widgets

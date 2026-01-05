@@ -29,13 +29,12 @@
 
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QLabel>
 #include <QMovie>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 #include <QVideoWidget>
-#include "post_guard.h"
 
 class Host;
 class QMouseEvent;
@@ -49,6 +48,7 @@ public:
     explicit TLabel(Host*, const QString&, QWidget* pW = nullptr);
     ~TLabel();
 
+    void setText(const QString& text);
     void setClick(const int func);
     void setDoubleClick(const int func);
     void setRelease(const int func);
@@ -65,6 +65,9 @@ public:
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
     void setClickThrough(bool clickthrough);
+    void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
+    void resetLinkStyle();
+    void clearVisitedLinks();
 
     QPointer<Host> mpHost;
     QString mName;
@@ -77,9 +80,16 @@ public:
     int mLeaveFunction = 0;
     QMovie* mpMovie = nullptr;
     QVideoWidget* mpVideoWidget = nullptr;
+    QString mLinkColor;        // Store link color for inline style injection
+    QString mLinkVisitedColor; // Store visited color for inline style injection
+    bool mLinkUnderline = true; // Store underline preference
+    QSet<QString> mVisitedLinks; // Track which link URLs have been clicked
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
+
+private slots:
+    void slot_linkActivated(const QString& link);
 
 signals:
     void resized();

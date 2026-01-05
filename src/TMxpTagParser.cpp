@@ -22,9 +22,7 @@
 #include "TMxpNodeBuilder.h"
 #include "TStringUtils.h"
 
-#include "pre_guard.h"
 #include <QDebug>
-#include "post_guard.h"
 
 QList<QSharedPointer<MxpNode>> TMxpTagParser::parseToMxpNodeList(const QString& tagText, bool ignoreText)
 {

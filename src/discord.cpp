@@ -22,11 +22,9 @@
 #include "discord.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QtDebug>
 #include <QHash>
 #include <string.h>
-#include "post_guard.h"
 
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
@@ -139,6 +137,9 @@ Discord::~Discord()
             itPresencePtrs.remove();
         }
     }
+
+    delete mpHandlers;
+    mpHandlers = nullptr;
 }
 
 // For all the setters below the caller is supposed to check that they have the
@@ -544,9 +545,8 @@ QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
     // Handle using localhost as an off-line testing case
     if (deducedName == QLatin1String("localhost")) {
         return qMakePair(true, deducedName);
-    } else {
-        return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);
     }
+    return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);
 }
 
 bool Discord::libraryLoaded()
@@ -584,9 +584,8 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
         UpdatePresence();
 
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void Discord::resetData(Host* pHost){

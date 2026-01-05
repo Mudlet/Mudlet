@@ -63,7 +63,6 @@
 #include <limits>
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -77,7 +76,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
@@ -435,8 +433,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         line_style = Qt::DashDotDotLine;
     } else {
         return warnArgumentValue(L, __func__, qsl(
-            "invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'")
-            .arg(lineStyleString));
+                "invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'")
+                .arg(lineStyleString));
     }
 
     if (!lua_istable(L, 5)) {
@@ -709,9 +707,8 @@ int TLuaInterpreter::centerview(lua_State* L)
         }
         lua_pushboolean(L, true);
         return 1;
-    } else {
-        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
     }
+    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearAreaUserData
@@ -1151,7 +1148,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     }
 
     if (lua_isnumber(L, 1)) {
-        id = lua_tonumber(L, 1);
+        id = static_cast<int>(lua_tonumber(L, 1));
         if (id < 1) {
             return warnArgumentValue(L, __func__, qsl("number %1 is not a valid areaID greater than zero").arg(id));
         }
@@ -1375,7 +1372,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
     }
 
     lua_newtable(L);
-    if (n < 2 || (n > 1 && !isFullDataRequired)) {
+    if (n < 2 || !isFullDataRequired) {
         // Replicate original implementation
         QList<int> areaExits = pA->getAreaExitRoomIds();
         if (areaExits.size() > 1) {
@@ -1972,7 +1969,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
         }
         name = lua_tostring(L, 1);
     } else {
-        id = lua_tonumber(L, 1);
+        id = static_cast<int>(lua_tonumber(L, 1));
     }
 
     if (!name.isNull()) {
@@ -2128,9 +2125,8 @@ int TLuaInterpreter::getRoomExits(lua_State* L)
             lua_settable(L, -3);
         }
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomHashByID
@@ -2214,6 +2210,31 @@ int TLuaInterpreter::getRoomsByPosition(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition1
+int TLuaInterpreter::getRoomsByPosition1(lua_State* L)
+{
+    const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    const int x = getVerifiedInt(L, __func__, 2, "x");
+    const int y = getVerifiedInt(L, __func__, 3, "y");
+    const int z = getVerifiedInt(L, __func__, 4, "z");
+
+    const Host& host = getHostFromLua(L);
+    TArea* pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    QList<int> rL = pA->getRoomsByPosition(x, y, z);
+    lua_newtable(L);
+    for (int i = 0; i < rL.size(); i++) {
+        lua_pushnumber(L, i + 1);
+        lua_pushnumber(L, rL[i]);
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomUserData
 int TLuaInterpreter::getRoomUserData(lua_State* L)
 {
@@ -2289,9 +2310,8 @@ int TLuaInterpreter::getRoomWeight(lua_State* L)
     if (pR) {
         lua_pushnumber(L, pR->getWeight());
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 // documented in the wiki!
@@ -2567,9 +2587,8 @@ int TLuaInterpreter::loadMap(lua_State* L)
             if (!errMsg.isEmpty()) {
                 lua_pushstring(L, errMsg.toUtf8().constData());
                 return 2;
-            } else {
-                return 1;
             }
+            return 1;
         }
     } else {
         isOk = host.mpConsole->loadMap(location);
@@ -2729,13 +2748,13 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
         int g = -1;
         int b = -1;
         if (!lua_isnil(L, ++index)) {
-            r = lua_tonumber(L, index);
+            r = static_cast<int>(lua_tonumber(L, index));
         }
         if (!lua_isnil(L, ++index)) {
-            g = lua_tonumber(L, index);
+            g = static_cast<int>(lua_tonumber(L, index));
         }
         if (!lua_isnil(L, ++index)) {
-            b = lua_tonumber(L, index);
+            b = static_cast<int>(lua_tonumber(L, index));
         }
         QColor color;
         if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
@@ -3250,7 +3269,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
     }
 
     if (lua_isnumber(L, 1)) {
-        id = lua_tonumber(L, 1);
+        id = static_cast<int>(lua_tonumber(L, 1));
         if (id < 1) {
             return warnArgumentValue(L, __func__, qsl("number %1 is not a valid areaID greater than zero").arg(id));
         }
@@ -3530,6 +3549,133 @@ int TLuaInterpreter::setExitStub(lua_State* L)
     host.mpMap->update();
     return 0;
 }
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeightFilter
+// Function passed to setExitWeightFilter should return numeric exit weight (current or modified)
+// Scripts may return false or the string "block" from the callback which will prevent the exit from being added to the pathfinding graph.
+int TLuaInterpreter::setExitWeightFilter(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (lua_isnoneornil(L, 1)) {
+        if (auto* interpreter = host.getLuaInterpreter(); interpreter) {
+            interpreter->clearExitWeightFilter(L);
+        }
+        if (host.mpMap) {
+            host.mpMap->mMapGraphNeedsUpdate = true;
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    if (!lua_isfunction(L, 1)) {
+        lua_pushfstring(L,
+                        "setExitWeightFilter: bad argument #1 type (callback as function expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    if (auto* interpreter = host.getLuaInterpreter(); interpreter) {
+        interpreter->storeExitWeightFilter(L, 1);
+    }
+
+    if (host.mpMap) {
+        host.mpMap->mMapGraphNeedsUpdate = true;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(int roomId, const QString& exitCommand)
+{
+    ExitWeightFilterResult result;
+    if (mExitWeightFilterRef == LUA_NOREF || !pGlobalLua) {
+        return result;
+    }
+
+    lua_State* L = pGlobalLua;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mExitWeightFilterRef);
+    lua_pushinteger(L, roomId);
+    const QByteArray exitCommandUtf8 = exitCommand.toUtf8();
+    lua_pushlstring(L, exitCommandUtf8.constData(), exitCommandUtf8.size());
+
+    const int error = lua_pcall(L, 2, 1, 0);
+    if (error) {
+        if (mudlet::smDebugMode && lua_isstring(L, -1)) {
+            const char* errorMessage = lua_tostring(L, -1);
+            if (errorMessage) {
+                TDebug(QColor(Qt::white), QColor(Qt::red))
+                    << "LUA ERROR: when running exit weight filter\nreason: " << errorMessage << "\n" >> 0;
+            }
+        }
+        lua_pop(L, 1);
+        return result;
+    }
+
+    if (lua_isboolean(L, -1)) {
+        if (!lua_toboolean(L, -1)) {
+            result.blocked = true;
+        } else if (mudlet::smDebugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red))
+                << "LUA WARNING: exit weight filter returned boolean 'true', expected numeric weight. Ignoring.\n" >> 0;
+        }
+    } else if (lua_isnil(L, -1)) {
+        // nothing to do
+    } else if (lua_isnumber(L, -1)) {
+        double rawWeight = lua_tonumber(L, -1);
+        if (rawWeight < 1.0) {
+            rawWeight = 1.0;
+        } else if (rawWeight > std::numeric_limits<int>::max()) {
+            rawWeight = std::numeric_limits<int>::max();
+        }
+        result.weightOverride = qRound(rawWeight);
+    } else if (lua_isstring(L, -1)) {
+        size_t length = 0;
+        const char* rawValue = lua_tolstring(L, -1, &length);
+        const QString value = QString::fromUtf8(rawValue, static_cast<int>(length));
+        if (value.compare(qsl("block"), Qt::CaseInsensitive) == 0) {
+            result.blocked = true;
+        } else if (mudlet::smDebugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red))
+                << "LUA WARNING: exit weight filter returned unexpected string '" << value
+                << "', expected numeric weight. Ignoring.\n" >> 0;
+        }
+    } else {
+        if (mudlet::smDebugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red))
+                << "LUA WARNING: exit weight filter returned unexpected type '" << luaL_typename(L, -1) << "', ignoring.\n" >> 0;
+        }
+    }
+
+    lua_pop(L, 1);
+    return result;
+}
+
+bool TLuaInterpreter::hasExitWeightFilter() const
+{
+    return mExitWeightFilterRef != LUA_NOREF;
+}
+
+void TLuaInterpreter::storeExitWeightFilter(lua_State* L, int index)
+{
+    if (!L) {
+        return;
+    }
+
+    clearExitWeightFilter(L);
+    lua_pushvalue(L, index);
+    mExitWeightFilterRef = luaL_ref(L, LUA_REGISTRYINDEX);
+}
+
+void TLuaInterpreter::clearExitWeightFilter(lua_State* L)
+{
+    if (mExitWeightFilterRef == LUA_NOREF || !L) {
+        return;
+    }
+
+    luaL_unref(L, LUA_REGISTRYINDEX, mExitWeightFilterRef);
+    mExitWeightFilterRef = LUA_NOREF;
+}
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeight
 int TLuaInterpreter::setExitWeight(lua_State* L)
@@ -3551,10 +3697,9 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
             .arg(QString::number(roomID), lua_tostring(L, 2)));
     }
 
-    qint64 const weight = getVerifiedInt(L, __func__, 3, "exit weight");
-    if (weight < 0 || weight > std::numeric_limits<int>::max()) {
-        return warnArgumentValue(L, __func__, qsl(
-            "weight %1 is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %2")
+    const int weight = getVerifiedInt(L, __func__, 3, "exit weight");
+    if (weight < 0) {
+        return warnArgumentValue(L, __func__, qsl("weight %1 is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %2")
             .arg(QString::number(weight), QString::number(std::numeric_limits<int>::max())));
     }
 
@@ -3663,7 +3808,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     int areaId = -1;
     QString areaName;
     if (lua_isnumber(L, 2)) {
-        areaId = lua_tonumber(L, 2);
+        areaId = static_cast<int>(lua_tonumber(L, 2));
         if (areaId < 1) {
             return warnArgumentValue(L, __func__, qsl(
                 "number %1 is not a valid areaID greater than zero. "
@@ -3988,10 +4133,10 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
 
     // filePath parameter is required
     const QString filePath = getVerifiedString(L, __func__, 2, "file path");
-    
+
     std::optional<int> zLevel = std::nullopt;
     bool exportAllZLevels = false;
-    
+
     if (lua_gettop(L) > 2) {
         // Check if the third parameter is a boolean (true means export all Z levels)
         if (lua_type(L, 3) == LUA_TBOOLEAN) {
@@ -4004,7 +4149,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
             zLevel = getVerifiedInt(L, __func__, 3, "z level", true);
         }
     }
-    
+
     // NOTE: Zoom parameter temporarily disabled due to blurry room symbol rendering at zoom > 2.0
     qreal zoom = 2.0;
 
@@ -4018,7 +4163,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
     }
 
     auto [success, message] = host.mpMap->mpMapper->mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);
-    
+
     lua_pushboolean(L, success);
     if (!success) {
         lua_pushstring(L, message.toUtf8().constData());
