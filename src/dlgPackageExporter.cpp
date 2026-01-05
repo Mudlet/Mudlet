@@ -1459,13 +1459,13 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
         } else {
             return {false,
-                    tr("Required file \"%1\" was not found in the staging area. "
-                       "This area contains the Mudlet items chosen for the package, "
-                       "which you selected to be included in the package file. "
-                       "This suggests there may be a problem with that directory: "
-                       "\"%2\" - "
-                       "Do you have the necessary permissions and free disk-space?")
-                            .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
+                        tr("Required file \"%1\" was not found in the staging area. "
+                           "This area contains the Mudlet items chosen for the package, "
+                           "which you selected to be included in the package file. "
+                           "This suggests there may be a problem with that directory: "
+                           "\"%2\" - "
+                           "Do you have the necessary permissions and free disk-space?")
+                                .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
         }
     }
 

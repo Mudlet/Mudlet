@@ -126,9 +126,8 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
         mudlet::smDebugMode = false;
         mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
-    } else {
-        return QObject::eventFilter(obj, event);
     }
+    return QObject::eventFilter(obj, event);
 }
 
 /*static*/ void mudlet::start()
@@ -1687,10 +1686,7 @@ void mudlet::slot_reattachAllDetachedWindows()
     qDebug() << "slot_reattachAllDetachedWindows: Reattaching" << detachedWindowsCopy.size() << "detached windows";
 #endif
 
-    for (auto it = detachedWindowsCopy.begin(); it != detachedWindowsCopy.end(); ++it) {
-        const QString& profileName = it.key();
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (auto&& [profileName, detachedWindow] : detachedWindowsCopy.asKeyValueRange()) {
         if (detachedWindow) {
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "slot_reattachAllDetachedWindows: Reattaching profile" << profileName;
@@ -1792,9 +1788,7 @@ void mudlet::updateWindowMenu()
         // Collect unique detached windows to avoid duplicates
         QSet<TDetachedWindow*> uniqueDetachedWindows;
 
-        for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-            TDetachedWindow* detachedWindow = it.value();
-
+        for (const auto& detachedWindow : mDetachedWindows) {
             if (detachedWindow) {
                 uniqueDetachedWindows.insert(detachedWindow);
             }
@@ -1819,9 +1813,7 @@ void mudlet::updateWindowMenu()
     }
 
     // Also update window menus on all detached windows
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->updateWindowMenu();
         }
@@ -1904,9 +1896,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     QString profileName = action->data().toString();
 
     // Find which detached window contains this profile
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
             // Activate the detached window
             detachedWindow->raise();
@@ -2479,9 +2469,8 @@ bool mudlet::saveWindowLayout()
         }
         mHasSavedLayout = true;
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::loadWindowLayout()
@@ -3736,9 +3725,7 @@ void mudlet::slot_showMapperDialog()
     // Close any existing map for this profile in detached windows first
     const auto& detachedWindows = getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow) {
             auto detachedMapDock = detachedWindow->getDockWidget(mapKey);
 
@@ -3932,24 +3919,36 @@ void mudlet::slot_showAboutDialog()
 void mudlet::slot_toggleTimeStamp()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->timeStampButton->click();
 }
 
 void mudlet::slot_toggleReplay()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->replayButton->click();
 }
 
 void mudlet::slot_toggleLogging()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->logButton->click();
 }
 
 void mudlet::slot_toggleEmergencyStop()
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
     pHost->mpConsole->emergencyStop->click();
 }
 
@@ -4301,6 +4300,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
+    if (mHostManager.hostLoaded(profile_name)) {
+        qDebug() << "Profile" << profile_name << "already loaded, skipping duplicate autologin";
+        return;
+    }
+
     loadProfile(profile_name, true);
 
     slot_connectionDialogueFinished(profile_name, true);
@@ -4412,13 +4416,17 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
     pHost->raiseEvent(event);
     pHost->mIsProfileLoadingSequence = false;
+    emit signal_profileLoaded();
 }
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
 {
     for (const auto& module : modules) {
         QStringList entry = pHost->mInstalledModules[module];
-        pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
+        auto [success, error] = pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
+        if (!success && !error.isEmpty()) {
+            qWarning() << "mudlet::installModulesList() WARNING - failed to load module" << module << ":" << error;
+        }
         //we repeat this step here b/c we use the same installPackage method for initial loading,
         //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
         pHost->mInstalledModules[module] = entry;
@@ -5417,12 +5425,11 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     // load an old profile if there is any
-    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
-        pHost = mHostManager.getHost(profile_name);
-        if (!pHost) {
-            return pHost;
-        }
-    } else {
+    if (!mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+        return pHost;
+    }
+    pHost = mHostManager.getHost(profile_name);
+    if (!pHost) {
         return pHost;
     }
 
@@ -5655,8 +5662,6 @@ bool mudlet::migratePasswordsToProfileStorage()
 
     const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
-    bool anyMigrationNeeded = false;
-
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
         QString password = CredentialManager::retrieveCredential(profile, "character");
@@ -5673,7 +5678,6 @@ bool mudlet::migratePasswordsToProfileStorage()
             } else {
                 qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile << "\" to profile storage (secure storage preserved for compatibility).";
             }
-            anyMigrationNeeded = true;
         }
 
         // Also check for old-format keychain entries (service: "Mudlet profile", key: profile name)
@@ -6624,9 +6628,7 @@ void mudlet::refreshTabBar()
     }
 
     // Also refresh all detached windows to ensure they show CDC identifiers
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->refreshTabBar();
         }
@@ -6740,25 +6742,23 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
         if (egg) {
             auto eggFileName = qsl(":/splash/Mudlet_splashscreen_other_%1.png").arg(egg, 2, 10, QLatin1Char('0'));
             return QImage(eggFileName);
-        } else {
-            // For the zeroth case just rotate the picture 180 degrees:
-            const QImage original(releaseVersion
-                                    ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                                    : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
-                                                                     : qsl(":/splash/Mudlet_splashscreen_development.png"));
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-            return original.flipped(Qt::Horizontal|Qt::Vertical);
-#else
-            // Deprecated in 6.9 and due for removal in 6.13:
-            return original.mirrored(true, true);
-#endif
         }
-    } else {
-        return QImage(releaseVersion
+        // For the zeroth case just rotate the picture 180 degrees:
+        const QImage original(releaseVersion
+                                ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                                : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                                 : qsl(":/splash/Mudlet_splashscreen_development.png"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+        return original.flipped(Qt::Horizontal|Qt::Vertical);
+#else
+        // Deprecated in 6.9 and due for removal in 6.13:
+        return original.mirrored(true, true);
+#endif
+    }
+    return QImage(releaseVersion
                               ? qsl(":/splash/Mudlet_splashscreen_main.png")
                               : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                : qsl(":/splash/Mudlet_splashscreen_development.png"));
-    }
 #else
     return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN
@@ -6924,8 +6924,7 @@ void mudlet::shutdownAI()
 
 void mudlet::saveDetachedWindowsGeometry()
 {
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->saveWindowGeometry();
         }
@@ -7482,10 +7481,8 @@ void mudlet::updateDetachedWindowToolbars()
     cleanupDetachedWindowsMap();
 
     // Update toolbars in all detached windows
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        QPointer<TDetachedWindow> detachedWindow = it.value();
+    for (auto&& [profileName, detachedWindow] : mDetachedWindows.asKeyValueRange()) {
         if (detachedWindow) {
-            const QString& profileName = it.key();
             Host* pHost = mHostManager.getHost(profileName);
             detachedWindow->updateToolbarForProfile(pHost);
         }
@@ -7579,9 +7576,7 @@ void mudlet::updateDetachedWindowTabIndicators()
     // Update tab indicators for all detached windows
     const auto& detachedWindows = getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow) {
             // Update all tabs in this detached window
             detachedWindow->updateAllTabIndicators();
@@ -8058,15 +8053,15 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
 
-    for (auto it = mMainWindowDockWidgetMap.begin(); it != mMainWindowDockWidgetMap.end(); ++it) {
-        if (it.value()) {
-            dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
+    for (auto&& [key, dockWidget] : mMainWindowDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
+            dockWidgetsToProcess.append(qMakePair(key, dockWidget));
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Found main window dock widget in map:" << it.key() << "isVisible:" << it.value()->isVisible();
+            qDebug() << "mudlet: Found main window dock widget in map:" << key << "isVisible:" << dockWidget->isVisible();
 #endif
         } else {
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Found null main window dock widget in map for key:" << it.key();
+            qDebug() << "mudlet: Found null main window dock widget in map for key:" << key;
 #endif
         }
     }

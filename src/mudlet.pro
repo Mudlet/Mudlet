@@ -81,14 +81,12 @@ win32 {
     DEFINES += INCLUDE_WINSOCK2
 }
 
-QT += network uitools multimedia multimediawidgets gui concurrent
+# Qt6 Core5Compat is needed by third-party libraries (communi, edbee-lib)
+# Mudlet itself doesn't use it, but these dependencies still require it
+QT += network uitools multimedia multimediawidgets gui concurrent core5compat
 qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
-}
-
-greaterThan(QT_MAJOR_VERSION, 5) {
-    QT += core5compat
 }
 
 TEMPLATE = app
@@ -303,9 +301,12 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
 # day of the fourth month of the Gregorian calendar year:
 # DEFINES+=DEBUG_EASTER_EGGS
 #
-# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
-# commands for suboptions - change the value to 2 to get a bit more detail
-# about the size or nature of the command:
+# * Uncomment this and set to a integer value with the following bits to:
+#   1 - debugging messages about WILL/WONT/DO/DONT and other commands for
+#       suboptions
+#   2 - more detail about the size or nature of the command:
+#   4 - to monitor the use of and choice of both sockets (one each for IPv4
+#       and IPv6 prototcols)
 DEFINES+=DEBUG_TELNET=1
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
@@ -343,9 +344,13 @@ DEFINES+=DEBUG_TELNET=1
 # transfers, profile switching, and detached window management:
 # DEFINES+=DEBUG_WINDOW_HANDLING
 #
-# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# * Enable player icon adjustment controls in the 3D mapper for debugging and
 # alignment purposes - these are normally hidden in production builds:
 # DEFINES+=DEBUG_PLAYER_ICON_CONTROLS
+#
+# * Produce qDebug() messages about undo/redo operations in the trigger editor,
+# including command execution, stack operations, and edbee text undo integration:
+# DEFINES+=DEBUG_UNDO_REDO
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -402,7 +407,9 @@ unix:!macx {
         -lpugixml
 
     isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       LIBS += -lGLU
+       LIBS += \
+         -lGLU \
+         -lassimp
     }
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
@@ -608,11 +615,74 @@ contains( DEFINES, INCLUDE_UPDATER ) {
     }
 }
 
+WITH_SENTRY {
+    DEFINES += WITH_SENTRY
+
+
+    CONFIG(debug, debug|release) {
+        BUILD_SUBDIR = debug
+    } else {
+        BUILD_SUBDIR = release
+    }
+
+    DEFINES += SENTRY_DSN=\\\"$$SENTRY_DSN\\\"
+
+    APP_DIR_PATH = $$OUT_PWD/$$BUILD_SUBDIR
+    DEFINES += APP_DIR_PATH=\\\"$$APP_DIR_PATH\\\"
+    DEFINES += SENTRY_BUILD_STATIC
+
+    SENTRY_PATH = $$PWD/../3rdparty/sentry-native
+
+    # Check if sentry-native submodule is initialized
+    !exists($$SENTRY_PATH/CMakeLists.txt) {
+        error("Sentry is enabled (WITH_SENTRY) but the sentry-native submodule is not initialized. Either: 1) Initialize it: git submodule update --init 3rdparty/sentry-native, or 2) Disable Sentry by removing WITH_SENTRY from CONFIG")
+    }
+
+    !exists($$SENTRY_PATH/install) {
+        message("Sentry install missing, building sentry-native from sources")
+
+        system(cmake -S $$SENTRY_PATH -B $$SENTRY_PATH/build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DSENTRY_BACKEND=crashpad -D SENTRY_BUILD_SHARED_LIBS=OFF --log-level=ERROR)
+        system(cmake --build $$SENTRY_PATH/build --parallel)
+        system(cmake --install $$SENTRY_PATH/build --prefix $$SENTRY_PATH/install)
+    }
+
+    INCLUDEPATH += $$SENTRY_PATH/install/include
+    LIBS        += -L$$SENTRY_PATH/install/lib
+    LIBS += -lsentry \
+        -lcrashpad_client -lcrashpad_handler_lib -lcrashpad_minidump \
+        -lcrashpad_mpack -lcrashpad_snapshot -lcrashpad_tools \
+        -lcrashpad_util -lmini_chromium -lcrashpad_compat -lwinhttp -ldbghelp -lversion
+
+    QMAKE_CFLAGS_RELEASE    += -g
+    QMAKE_CXXFLAGS_RELEASE  += -g
+    QMAKE_LFLAGS_RELEASE    += -g -gcodeview
+    QMAKE_LFLAGS_RELEASE    -= -Wl,-s
+
+
+    QMAKE_POST_LINK += $$quote($$QMAKE_MOVE $$OUT_PWD/mudlet.pdb $$APP_DIR_PATH/) ;
+    QMAKE_POST_LINK += $$quote(cp -f $$SENTRY_PATH/install/bin/* $$APP_DIR_PATH/) ;
+
+    system(cmake -S $$PWD/crash_reporter/ -B $$PWD/crash_reporter/build/ -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$$APP_DIR_PATH/)
+    system(cmake --build $$PWD/crash_reporter/build/)
+
+    SENTRY_SEND_DEBUG = $$SENTRY_SEND_DEBUG
+    equals(SENTRY_SEND_DEBUG, 1) {
+        SENTRY_AUTH_TOKEN = $$getenv(SENTRY_AUTH_TOKEN)
+        isEmpty(SENTRY_AUTH_TOKEN) {
+            error("[Option SENTRY_SEND_DEBUG enabled] The environment variable SENTRY_AUTH_TOKEN is missing. SENTRY_AUTH_TOKEN is required to authenticate with Sentry before uploading debug files. Fix: try exporting SENTRY_AUTH_TOKEN=\"...\"")
+        }
+        QMAKE_POST_LINK += $$quote(bash "$$PWD/../CI/send_debug_files_to_sentry.sh" "$$APP_DIR_PATH/mudlet.exe") ;
+    }
+
+    QMAKE_POST_LINK += $$quote(strip --strip-debug $$APP_DIR_PATH/mudlet.exe) ;
+}
+
 ################################## File Lists ##################################
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
+    WideComboBox.cpp \
     ctelnet.cpp \
     DarkTheme.cpp \
     discord.cpp \
@@ -630,6 +700,7 @@ SOURCES += \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
     dlgPackageManager.cpp \
+    PackageItemDelegate.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
@@ -639,10 +710,12 @@ SOURCES += \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
     dlgTriggerEditor.cpp \
+    ../test/dlgTriggerEditorUndoRedoTest.cpp \
     dlgTriggerPatternEdit.cpp \
     dlgTriggersMainArea.cpp \
     dlgVarsMainArea.cpp \
     EAction.cpp \
+    EditorItemXMLHelpers.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
     FileOpenHandler.cpp \
@@ -659,6 +732,12 @@ SOURCES += \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
+    EditorAddItemCommand.cpp \
+    EditorDeleteItemCommand.cpp \
+    EditorModifyPropertyCommand.cpp \
+    EditorMoveItemCommand.cpp \
+    EditorToggleActiveCommand.cpp \
+    EditorUndoStack.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     SecureStringUtils.cpp \
@@ -672,11 +751,13 @@ SOURCES += \
     CustomLineEditHandler.cpp \
     CustomLineSession.cpp \
     LabelInteractionHandler.cpp \
+    MiddleMousePanHandler.cpp \
     PanInteractionHandler.cpp \
     RoomContextMenuHandler.cpp \
     RoomMoveActivationHandler.cpp \
     RoomMoveDragHandler.cpp \
     SelectionRectangleHandler.cpp \
+    SentryWrapper.cpp \
     TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \
@@ -692,6 +773,9 @@ SOURCES += \
     TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
+    THyperlinkCompactManager.cpp \
+    THyperlinkSelectionManager.cpp \
+    THyperlinkVisibilityManager.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
@@ -711,15 +795,20 @@ SOURCES += \
     TMedia.cpp \
     TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
+    TMxpHRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
     TMxpExpireTagHandler.cpp \
     TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
+    TMxpFrameManager.cpp \
+    TMxpFrameTagHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
+    TMxpDestTagHandler.cpp \
     TMxpFontTagHandler.cpp \
+    TMxpImageTagHandler.cpp \
     TMxpLinkTagHandler.cpp \
     TMxpMusicTagHandler.cpp \
     TMxpSoundTagHandler.cpp \
@@ -744,6 +833,7 @@ SOURCES += \
     TTabBar.cpp \
     TDetachedWindow.cpp \
     TTextCodec.cpp \
+    TEncodingHelper.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -760,6 +850,7 @@ HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    WideComboBox.h \
     ctelnet.h \
     DarkTheme.h \
     discord.h \
@@ -777,6 +868,7 @@ HEADERS += \
     dlgNotepad.h \
     dlgPackageExporter.h \
     dlgPackageManager.h \
+    PackageItemDelegate.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \
@@ -790,6 +882,7 @@ HEADERS += \
     dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
     EAction.h \
+    EditorItemXMLHelpers.h \
     exitstreewidget.h \
     FileOpenHandler.h \
     GifTracker.h \
@@ -804,6 +897,13 @@ HEADERS += \
     mapInfoContributorManager.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
+    EditorCommand.h \
+    EditorAddItemCommand.h \
+    EditorDeleteItemCommand.h \
+    EditorModifyPropertyCommand.h \
+    EditorMoveItemCommand.h \
+    EditorToggleActiveCommand.h \
+    EditorUndoStack.h \
     MxpTag.h \
     ScriptUnit.h \
     SecureStringUtils.h \
@@ -817,6 +917,7 @@ HEADERS += \
     CustomLineEditHandler.h \
     CustomLineSession.h \
     LabelInteractionHandler.h \
+    MiddleMousePanHandler.h \
     PanInteractionHandler.h \
     RoomContextMenuHandler.h \
     RoomMoveActivationHandler.h \
@@ -841,6 +942,9 @@ HEADERS += \
     TFlipButton.h \
     TForkedProcess.h \
     TGameDetails.h \
+    THyperlinkCompactManager.h \
+    THyperlinkSelectionManager.h \
+    THyperlinkVisibilityManager.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
@@ -854,9 +958,11 @@ HEADERS += \
     TMediaData.h \
     TMediaPlaylist.h \
     TMxpBRTagHandler.h \
+    TMxpHRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
     TMxpCustomElementTagHandler.h \
+    TMxpDestTagHandler.h \
     TMxpFontTagHandler.h \
     TMxpLinkTagHandler.h \
     TMxpMusicTagHandler.h \
@@ -867,6 +973,9 @@ HEADERS += \
     TMxpExpireTagHandler.h \
     TMxpContext.h \
     TMxpFormattingTagsHandler.h \
+    TMxpFrameManager.h \
+    TMxpFrameTagHandler.h \
+    TMxpImageTagHandler.h \
     TMxpMudlet.h \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
@@ -890,6 +999,7 @@ HEADERS += \
     TTabBar.h \
     TDetachedWindow.h \
     TTextCodec.h \
+    TEncodingHelper.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
