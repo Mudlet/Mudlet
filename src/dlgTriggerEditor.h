@@ -389,6 +389,7 @@ private:
     void populateActions();
     void populateKeys();
     void saveOpenChanges();
+    EditorViewType determineViewFromVisibleTree();
     void saveTrigger();
     void saveAlias();
     void saveTimer();
