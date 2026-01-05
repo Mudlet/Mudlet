@@ -219,6 +219,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mLuaInterpreter(this, hostname, id)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
+, mMxpFrameManager(this)
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
@@ -257,7 +258,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
     const QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
-        dirLogFile.mkpath(directoryLogFile);
+        if (!dirLogFile.mkpath(directoryLogFile)) {
+            qWarning() << "Host: failed to create error log directory:" << directoryLogFile;
+        }
     }
     mErrorLogFile.setFileName(logFileName);
     if (!mErrorLogFile.open(QIODevice::Append)) {
@@ -340,6 +343,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     connect(&mTelnet, &cTelnet::signal_connected, this, [this]() {
         purgeTimer.stop();
 
+        // Reset MXP frames on reconnect - per user feedback, frames shouldn't persist
+        // between sessions as the server should send new FRAME commands
+        mMxpFrameManager.resetAllFrames();
+
         if (getForceMXPProcessorOn()) {
             mMxpProcessor.enable();
             // When force-enabling MXP (typically for games like IRE MUDs that don't
@@ -389,9 +396,13 @@ Host::~Host()
     // which can lead to a crash when closing multiple profiles at once.
     mpLastCommandLineUsed.clear();
 
+    qDeleteAll(profileShortcuts);
+    profileShortcuts.clear();
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
+
     mErrorLogStream.flush();
     mErrorLogFile.close();
     // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
@@ -537,8 +548,11 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-            mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")));
+            if (!mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+                mpMap->setSaveError(true);
+            } else {
+                mpMap->setSaveError(false);
+            }
 #if defined(DEBUG_MAPAUTOSAVE)
         } else {
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save requested at:" << nowString << " but declined whilst \"Host::mIsProfileLoadingSequence\" flag set.";
@@ -1887,8 +1901,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (thing != enums::PackageModuleType::Package) {
         if ((thing == enums::PackageModuleType::ModuleSync) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
-        } else if ((thing == enums::PackageModuleType::ModuleFromUI) && (mInstalledModules.contains(packageName) || mActiveModules.contains(packageName))) {
+        } else if ((thing == enums::PackageModuleType::ModuleFromUI) && !mIsProfileLoadingSequence && (mInstalledModules.contains(packageName) || mActiveModules.contains(packageName))) {
             // Check if this is just a stale reference by verifying if module files actually exist
+            // Skip this check during profile loading - modules are expected to be in mInstalledModules already
             QString modulePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
             QString moduleFile = mInstalledModules.value(packageName).value(0); // Get the actual file path from stored reference
 
@@ -3211,6 +3226,11 @@ void Host::setCompactInputLine(const bool state)
 
 QPointer<TConsole> Host::findConsole(QString name)
 {
+    if (!mpConsole) {
+        qWarning() << "Host::findConsole() ERROR: main console not initialized";
+        return nullptr;
+    }
+
     if (name.isEmpty() or name == qsl("main")) {
         // Reason for the deref-plus-ref in the next line: `QPointer`s do not
         // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258
@@ -4541,7 +4561,7 @@ void Host::setFocusOnHostActiveCommandLine()
 
 void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
 {
-    if (!pCommandLine) {
+    if (!pCommandLine || mIsClosingDown) {
         return;
     }
     mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
@@ -4550,7 +4570,7 @@ void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
 
 void Host::forgetCommandLine(TCommandLine* pCommandLine)
 {
-    if (pCommandLine) {
+    if (pCommandLine && !mIsClosingDown) {
         mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
     }
 }
@@ -4559,7 +4579,7 @@ void Host::forgetCommandLine(TCommandLine* pCommandLine)
 TCommandLine* Host::activeCommandLine()
 {
     TCommandLine* pCommandLine = nullptr;
-    if (mpLastCommandLineUsed.isEmpty()) {
+    if (mIsClosingDown || mpLastCommandLineUsed.isEmpty()) {
         return nullptr;
     }
 

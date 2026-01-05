@@ -957,6 +957,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMXP->setChecked(pHost->mEnableMXP);
     protocolMenu->addAction(mEnableMXP);
 
+    mEnableNAWS = new QAction(tr("NAWS: Negotiate About Window Size"), nullptr);
+    mEnableNAWS->setCheckable(true);
+    mEnableNAWS->setChecked(pHost->mEnableNAWS);
+    protocolMenu->addAction(mEnableNAWS);
+
     mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
@@ -1305,6 +1310,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableMXP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMTTS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMNES, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableNAWS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableCHARSET, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableNEWENVIRON, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
 
@@ -1433,6 +1439,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(mEnableMXP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMTTS, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMNES, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableNAWS, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableCHARSET, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableNEWENVIRON, &QAction::toggled, nullptr, nullptr);
 
@@ -2979,6 +2986,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMXP = mEnableMXP->isChecked();
         pHost->mEnableMTTS = mEnableMTTS->isChecked();
         pHost->mEnableMNES = mEnableMNES->isChecked();
+        pHost->mEnableNAWS = mEnableNAWS->isChecked();
         pHost->mEnableCHARSET = mEnableCHARSET->isChecked();
         pHost->mEnableNEWENVIRON = mEnableNEWENVIRON->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();

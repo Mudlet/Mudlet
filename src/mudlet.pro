@@ -344,9 +344,13 @@ DEFINES+=DEBUG_TELNET=1
 # transfers, profile switching, and detached window management:
 # DEFINES+=DEBUG_WINDOW_HANDLING
 #
-# * Enable player icon adjustment controls in the 3D mapper for debugging and 
+# * Enable player icon adjustment controls in the 3D mapper for debugging and
 # alignment purposes - these are normally hidden in production builds:
 # DEFINES+=DEBUG_PLAYER_ICON_CONTROLS
+#
+# * Produce qDebug() messages about undo/redo operations in the trigger editor,
+# including command execution, stack operations, and edbee text undo integration:
+# DEFINES+=DEBUG_UNDO_REDO
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -629,6 +633,11 @@ WITH_SENTRY {
 
     SENTRY_PATH = $$PWD/../3rdparty/sentry-native
 
+    # Check if sentry-native submodule is initialized
+    !exists($$SENTRY_PATH/CMakeLists.txt) {
+        error("Sentry is enabled (WITH_SENTRY) but the sentry-native submodule is not initialized. Either: 1) Initialize it: git submodule update --init 3rdparty/sentry-native, or 2) Disable Sentry by removing WITH_SENTRY from CONFIG")
+    }
+
     !exists($$SENTRY_PATH/install) {
         message("Sentry install missing, building sentry-native from sources")
 
@@ -660,9 +669,7 @@ WITH_SENTRY {
     equals(SENTRY_SEND_DEBUG, 1) {
         SENTRY_AUTH_TOKEN = $$getenv(SENTRY_AUTH_TOKEN)
         isEmpty(SENTRY_AUTH_TOKEN) {
-            error([Option SENTRY_SEND_DEBUG enabled] The environment variable SENTRY_AUTH_TOKEN is missing.
-                    SENTRY_AUTH_TOKEN is required to authenticate with Sentry before uploading debug files.
-                    Fix: try exporting SENTRY_AUTH_TOKEN="...")
+            error("[Option SENTRY_SEND_DEBUG enabled] The environment variable SENTRY_AUTH_TOKEN is missing. SENTRY_AUTH_TOKEN is required to authenticate with Sentry before uploading debug files. Fix: try exporting SENTRY_AUTH_TOKEN=\"...\"")
         }
         QMAKE_POST_LINK += $$quote(bash "$$PWD/../CI/send_debug_files_to_sentry.sh" "$$APP_DIR_PATH/mudlet.exe") ;
     }
@@ -703,10 +710,12 @@ SOURCES += \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
     dlgTriggerEditor.cpp \
+    ../test/dlgTriggerEditorUndoRedoTest.cpp \
     dlgTriggerPatternEdit.cpp \
     dlgTriggersMainArea.cpp \
     dlgVarsMainArea.cpp \
     EAction.cpp \
+    EditorItemXMLHelpers.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
     FileOpenHandler.cpp \
@@ -723,6 +732,12 @@ SOURCES += \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
+    EditorAddItemCommand.cpp \
+    EditorDeleteItemCommand.cpp \
+    EditorModifyPropertyCommand.cpp \
+    EditorMoveItemCommand.cpp \
+    EditorToggleActiveCommand.cpp \
+    EditorUndoStack.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     SecureStringUtils.cpp \
@@ -758,6 +773,9 @@ SOURCES += \
     TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
+    THyperlinkCompactManager.cpp \
+    THyperlinkSelectionManager.cpp \
+    THyperlinkVisibilityManager.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
@@ -784,9 +802,13 @@ SOURCES += \
     TMxpExpireTagHandler.cpp \
     TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
+    TMxpFrameManager.cpp \
+    TMxpFrameTagHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
+    TMxpDestTagHandler.cpp \
     TMxpFontTagHandler.cpp \
+    TMxpImageTagHandler.cpp \
     TMxpLinkTagHandler.cpp \
     TMxpMusicTagHandler.cpp \
     TMxpSoundTagHandler.cpp \
@@ -860,6 +882,7 @@ HEADERS += \
     dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
     EAction.h \
+    EditorItemXMLHelpers.h \
     exitstreewidget.h \
     FileOpenHandler.h \
     GifTracker.h \
@@ -874,6 +897,13 @@ HEADERS += \
     mapInfoContributorManager.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
+    EditorCommand.h \
+    EditorAddItemCommand.h \
+    EditorDeleteItemCommand.h \
+    EditorModifyPropertyCommand.h \
+    EditorMoveItemCommand.h \
+    EditorToggleActiveCommand.h \
+    EditorUndoStack.h \
     MxpTag.h \
     ScriptUnit.h \
     SecureStringUtils.h \
@@ -912,6 +942,9 @@ HEADERS += \
     TFlipButton.h \
     TForkedProcess.h \
     TGameDetails.h \
+    THyperlinkCompactManager.h \
+    THyperlinkSelectionManager.h \
+    THyperlinkVisibilityManager.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
@@ -929,6 +962,7 @@ HEADERS += \
     TMxpClient.h \
     TMxpColorTagHandler.h \
     TMxpCustomElementTagHandler.h \
+    TMxpDestTagHandler.h \
     TMxpFontTagHandler.h \
     TMxpLinkTagHandler.h \
     TMxpMusicTagHandler.h \
@@ -939,6 +973,9 @@ HEADERS += \
     TMxpExpireTagHandler.h \
     TMxpContext.h \
     TMxpFormattingTagsHandler.h \
+    TMxpFrameManager.h \
+    TMxpFrameTagHandler.h \
+    TMxpImageTagHandler.h \
     TMxpMudlet.h \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \

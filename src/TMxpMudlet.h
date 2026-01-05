@@ -146,6 +146,13 @@ public:
     // Get the encoding used by the connection
     QByteArray getEncoding() const override;
     bool shouldLockModeToSecure() const override;
+    
+    // MXP Frame management (FRAME and DEST tag support)
+    bool createMxpFrame(const QString& name, const QMap<QString, QString>& attributes) override;
+    bool closeMxpFrame(const QString& name) override;
+    bool setMxpDestination(const QString& frameName, bool eol, bool eof) override;
+    void clearMxpDestination() override;
+    QString getMxpCurrentDestination() const override;
 
 private:
     bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const;

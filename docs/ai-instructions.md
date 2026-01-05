@@ -26,6 +26,8 @@ All files should end with a newline character at the end of the file.
 ### C++ Conventions
 In general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
 
+Use range-based for loops instead of iterator-based or index-based loops where appropriate.
+
 See `.github/CONTRIBUTING.md` for the coding standards as well as the information below:
 
 ```cpp
@@ -124,6 +126,10 @@ if (!file.open(QIODevice::ReadOnly)) {
 - Use `.clang-format` configuration in `src/` for C++ code style
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
+
+### Static analysis
+
+For complete setup instructions on how to run static analysis during a build see, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
 
 ### Debugging options
 

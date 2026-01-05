@@ -31,7 +31,7 @@
 #include <QPointer>
 #include <QString>
 #include <QStringList>
-#include <QTextDecoder>
+#include <QStringDecoder>
 #include <QToolButton>
 #include <QResizeEvent>
 
@@ -89,6 +89,12 @@ public:
     // end of the session:
     bool mSaveCommands = true;
 
+
+signals:
+    // Emitted when a command is submitted (Enter pressed)
+    void commandSubmitted();
+    // Emitted when the command line text changes (for hyperlink visibility triggers)
+    void commandLineTextChanged();
 
 public slots:
     void slot_popupMenu();

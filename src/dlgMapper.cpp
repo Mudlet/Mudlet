@@ -83,6 +83,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(toolButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
     connect(toolButton_shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
     connect(toolButton_mapperMenu, &QToolButton::clicked, this, &dlgMapper::slot_setupMapperMenu);
+    connect(toolButton_saveWarning, &QToolButton::clicked, this, &dlgMapper::slot_showSaveWarningMenu);
+    connect(mpMap, &TMap::signal_saveErrorChanged, this, &dlgMapper::slot_saveErrorChanged);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 #if defined(INCLUDE_3DMAPPER)
@@ -647,4 +649,39 @@ void dlgMapper::updateInfoMenu()
         });
         mpInfoMenu->addAction(action);
     }
+}
+
+void dlgMapper::slot_saveErrorChanged(bool hasError)
+{
+    toolButton_saveWarning->setVisible(hasError);
+}
+
+void dlgMapper::slot_showSaveWarningMenu()
+{
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto* infoAction = new QAction(tr("Map autosave failed"), this);
+    infoAction->setEnabled(false);
+    menu->addAction(infoAction);
+
+    menu->addSeparator();
+
+    auto* retryAction = new QAction(tr("Retry save"), this);
+    connect(retryAction, &QAction::triggered, this, [this]() {
+        if (mpHost && mpHost->mpConsole) {
+            if (mpHost->mpConsole->saveMap(QString())) {
+                mpMap->setSaveError(false);
+            }
+        }
+    });
+    menu->addAction(retryAction);
+
+    auto* dismissAction = new QAction(tr("Dismiss warning"), this);
+    connect(dismissAction, &QAction::triggered, this, [this]() {
+        mpMap->setSaveError(false);
+    });
+    menu->addAction(dismissAction);
+
+    menu->exec(toolButton_saveWarning->mapToGlobal(toolButton_saveWarning->rect().bottomLeft()));
 }

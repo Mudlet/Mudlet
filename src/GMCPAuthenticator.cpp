@@ -28,9 +28,20 @@ GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 : mpHost(pHost)
 {}
 
-void GMCPAuthenticator::saveSupportsSet(const QString& data)
+void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QString& data)
 {
-    auto jsonDoc = QJsonDocument::fromJson(data.toUtf8());
+    QJsonParseError parseError;
+    auto jsonDoc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Failed to parse JSON: " << parseError.errorString()
+                                       << " at offset " << parseError.offset << ". Received data: \"" << data << "\"";
+        return;
+    }
+    if (!jsonDoc.isObject()) {
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Expected JSON object but got "
+                                       << (jsonDoc.isArray() ? "array" : jsonDoc.isNull() ? "null" : "unknown type") << ".";
+        return;
+    }
     auto jsonObj = jsonDoc.object();
 
     if (jsonObj.contains("type")) {
@@ -87,9 +98,20 @@ void GMCPAuthenticator::sendCredentials()
 }
 
 
-void GMCPAuthenticator::handleAuthResult(const QString& data)
+void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QString& data)
 {
-    auto doc = QJsonDocument::fromJson(data.toUtf8());
+    QJsonParseError parseError;
+    auto doc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Failed to parse JSON: " << parseError.errorString()
+                                       << " at offset " << parseError.offset << ". Received data: \"" << data << "\"";
+        return;
+    }
+    if (!doc.isObject()) {
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Expected JSON object but got "
+                                       << (doc.isArray() ? "array" : doc.isNull() ? "null" : "unknown type") << ".";
+        return;
+    }
     auto obj = doc.object();
 
     // some game drivers can parse JSON for true or false, but may not be able to write booleans back
@@ -120,7 +142,7 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
 void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QString& data)
 {
     if (packageMessage == qsl("Char.Login.Default")) {
-        saveSupportsSet(data);
+        saveSupportsSet(packageMessage, data);
 
         if (mSupportedAuthTypes.contains(qsl("password-credentials"))) {
             mpHost->mTelnet.cancelLoginTimers();
@@ -134,7 +156,7 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
     }
 
     if (packageMessage == qsl("Char.Login.Result")) {
-        handleAuthResult(data);
+        handleAuthResult(packageMessage, data);
         return;
     }
 
