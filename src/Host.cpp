@@ -616,6 +616,10 @@ void Host::saveModules(bool backup)
         const QString moduleName = it.key();
         const QString filename = entry[0];
 
+        if (!mModulesLoadedOk.contains(moduleName)) {
+            continue;
+        }
+
         if (backup) {
             createModuleBackup(filename, savePath + moduleName);
         }
@@ -1912,6 +1916,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 // Module files don't exist, clean up stale references
                 mInstalledModules.remove(packageName);
                 mActiveModules.removeAll(packageName);
+                mModulesLoadedOk.remove(packageName);
             } else {
                 // Module actually exists, show duplicate error
                 return {false, tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName)};
@@ -2030,7 +2035,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 mInstalledPackages.append(packageName);
             }
-            reader.importPackage(&file2, packageName, static_cast<int>(thing));
+            auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
+            if (thing != enums::PackageModuleType::Package) {
+                if (success) {
+                    mModulesLoadedOk.insert(packageName);
+                } else {
+                    qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
+                    postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
+                }
+            }
             file2.close();
         }
     } else {
@@ -2049,7 +2062,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         } else {
             mInstalledPackages.append(packageName);
         }
-        reader.importPackage(&file2, packageName, static_cast<int>(thing));
+        auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
+        if (thing != enums::PackageModuleType::Package) {
+            if (success) {
+                mModulesLoadedOk.insert(packageName);
+            } else {
+                qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
+                postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
+            }
+        }
         file2.close();
     }
     if (mpEditorDialog) {
@@ -2072,6 +2093,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QTimer::singleShot(0, this, [this, thing, packageName, fileName]() {
         // Don't raise events if Host is shutting down to avoid handlers executing during teardown
         if (isClosingDown()) {
+            return;
+        }
+
+        // Don't raise install events for modules that failed to load
+        if (thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName)) {
             return;
         }
 
@@ -2252,6 +2278,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         //if ModuleSync, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
         mInstalledModules.remove(packageName);
+        mModulesLoadedOk.remove(packageName);
         mActiveModules.removeAll(packageName);
         if (thing == enums::PackageModuleType::ModuleSync) {
             return true;

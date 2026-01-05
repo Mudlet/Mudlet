@@ -121,8 +121,7 @@ if (!file.open(QIODevice::ReadOnly)) {
 
 ## Build system notes
 
-- **Primary**: CMake (handles platform-specific configurations)
-- **Legacy**: QMake in `src/mudlet.pro`
+- **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
 - Use `.clang-format` configuration in `src/` for C++ code style
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
@@ -133,7 +132,7 @@ For complete setup instructions on how to run static analysis during a build see
 
 ### Debugging options
 
-Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defines for development (search "Debugging code inclusions"):
+`src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
 
 - `DEBUG_TELNET` - Telnet protocol debugging
 - `DEBUG_UTF8_PROCESSING` - UTF-8 decoding messages
@@ -141,7 +140,7 @@ Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defin
 - `DEBUG_WINDOW_HANDLING` - UI window operations
 - And others for encoding, MXP, map autosave, etc.
 
-**Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines (CMake) or `DEFINES+=DEBUG_XXX` lines (QMake) when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+**Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
 
 ### Git
 
