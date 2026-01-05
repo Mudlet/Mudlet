@@ -76,7 +76,7 @@ public:
     // Returns path unchanged if it was already absolute or an empty string
     static QString pathResolveRelative(const QString& path, const QString& base)
     {
-        if (path.size() == 0) {
+        if (path.isEmpty()) {
             return path;
         }
         if (QDir::isAbsolutePath(path)) {

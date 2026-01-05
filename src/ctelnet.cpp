@@ -3940,7 +3940,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     QStringList argumentList = transcodedMsg.split(QChar::Space);
 
-    if (argumentList.size() > 0) {
+    if (!argumentList.isEmpty()) {
         for (int i = 0; i < argumentList.size(); ++i) {
             if (i < 1) {
                 mediaData.setMediaFileName(argumentList[i]);

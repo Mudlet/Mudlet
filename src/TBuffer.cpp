@@ -2996,7 +2996,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
 
             // Handle menu functionality by extending commands and hints
-            if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 1) {
+            if (!mCurrentHyperlinkMenu.isEmpty()) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
 #endif
@@ -4619,7 +4619,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         QString newLineText;
         const QString time = timeBuffer[i];
         // trivial case
-        if (buffer[i].size() == 0) {
+        if (buffer[i].empty()) {
             tempList.append(newLineText);
             queue.push(newBufferLine);
             timeList.append(time);
@@ -4694,7 +4694,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     const int insertedLines = queue.size() - 1;
     for (int i = 0; i <= insertedLines; ++i) {
-        if (tempList[i].size() < 1) {
+        if (tempList[i].isEmpty()) {
             queue.pop();
             appendEmptyLine();
         } else {
