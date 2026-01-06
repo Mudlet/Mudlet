@@ -23,6 +23,7 @@
 
 #include "HostManager.h"
 
+#include "Host.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "TMap.h"

@@ -121,7 +121,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | AliasUnit.h | ⏳ Pending | |
 | ctelnet.h | ⏳ Pending | |
 | Host.h | ⏳ Pending | |
-| HostManager.h | ⏳ Pending | |
+| HostManager.h | ✅ Done | Host.h → forward decl |
 | KeyUnit.h | ⏳ Pending | |
 | mudlet.h | ⏳ Pending | |
 | ScriptUnit.h | ⏳ Pending | |
