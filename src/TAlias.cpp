@@ -276,6 +276,7 @@ void TAlias::compileRegex()
         }
         setError(qsl("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
+        pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE);
         mOK_init = true;
     }
 
