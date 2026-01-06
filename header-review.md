@@ -19,7 +19,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | TMap.h | ✅ Done | Removed redundant QApplication |
 | mudlet.h | ⏳ Pending | Main app singleton, 65 files |
 | TConsole.h | ⏳ Pending | Text display, 40 files |
-| TTextEdit.h | ⏳ Pending | Text editing widget |
+| TTextEdit.h | ✅ Done | Removed TBuffer.h, use forward decl |
 | dlgTriggerEditor.h | ⚠️ Complex | Too many dependencies to remove from Host.h |
 | TRoom.h | ✅ Done | QApplication → QCoreApplication, moved TMap.h to cpp |
 | TArea.h | ⏳ Pending | Area data |
@@ -62,7 +62,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgPackageManager.h | ⏳ Pending | |
 | dlgProfilePreferences.h | ⚠️ Complex | Too many implicit dependencies via mudlet.h |
 | dlgRoomExits.h | ⏳ Pending | |
-| dlgRoomProperties.h | ⏳ Pending | |
+| dlgRoomProperties.h | ✅ Done | Removed Host.h, use forward decl |
 | dlgScriptsMainArea.h | ⏳ Pending | |
 | dlgSourceEditorArea.h | ⏳ Pending | |
 | dlgSourceEditorFindArea.h | ⏳ Pending | |
@@ -89,10 +89,10 @@ These headers are included by many files, so optimizing them has cascading benef
 | TEntityHandler.h | ⏳ Pending | |
 | TEntityResolver.h | ⏳ Pending | |
 | TEvent.h | ⏳ Pending | |
-| TFlipButton.h | ⏳ Pending | |
+| TFlipButton.h | ✅ Reviewed | Already minimal, uses forward decls |
 | TForkedProcess.h | ⏳ Pending | |
 | TGameDetails.h | ⏳ Pending | |
-| TKey.h | ⏳ Pending | |
+| TKey.h | ✅ Done | Removed unused lua.h |
 | TLabel.h | ✅ Done | Removed unused TEvent.h |
 | TLuaInterpreter.h | ✅ Done (PR) | |
 | TMainConsole.h | ⚠️ Complex | TScrollBox.h removal causes cascading issues |
@@ -104,12 +104,11 @@ These headers are included by many files, so optimizing them has cascading benef
 | TRoom.h | ⏳ Pending | |
 | TRoomDB.h | ⏳ Pending | |
 | TScript.h | ⏳ Pending | |
-| TSplitter.h | ⏳ Pending | |
+| TSplitter.h | ✅ Reviewed | Already minimal |
 | TTabBar.h | ✅ Done | Removed QDrag, QMimeData, QApplication, utils.h → cpp |
 | TTextCodec.h | ⏳ Pending | |
-| TTextEdit.h | ⏳ Pending | |
 | TTimer.h | ⏳ Pending | |
-| TToolBar.h | ⏳ Pending | |
+| TToolBar.h | ✅ Reviewed | Already minimal, uses forward decls |
 | TTrigger.h | ⏳ Pending | |
 | TVar.h | ⏳ Pending | |
 
@@ -117,8 +116,8 @@ These headers are included by many files, so optimizing them has cascading benef
 
 | File | Status | Notes |
 |------|--------|-------|
-| ActionUnit.h | ⏳ Pending | |
-| AliasUnit.h | ⏳ Pending | |
+| ActionUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
+| AliasUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
 | ctelnet.h | ⏳ Pending | |
 | Host.h | ⏳ Pending | |
 | HostManager.h | ✅ Done | Host.h → forward decl |
@@ -126,7 +125,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | mudlet.h | ⏳ Pending | |
 | ScriptUnit.h | ⏳ Pending | |
 | TimerUnit.h | ⏳ Pending | |
-| TriggerUnit.h | ⏳ Pending | |
+| TriggerUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
 | VarUnit.h | ⏳ Pending | |
 
 ---
