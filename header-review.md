@@ -99,8 +99,8 @@ These headers are included by many files, so optimizing them has cascading benef
 | TMap.h | ⏳ Pending | |
 | TMapLabel.h | ⏳ Pending | |
 | TMedia.h | ⚠️ Complex | Host.h removal causes circular dependency issues |
-| TMediaData.h | ⏳ Pending | |
-| TMxpClient.h | ⏳ Pending | |
+| TMediaData.h | ✅ Reviewed | Already minimal |
+| TMxpClient.h | ✅ Done | Removed unused utils.h |
 | TRoom.h | ⏳ Pending | |
 | TRoomDB.h | ⏳ Pending | |
 | TScript.h | ⏳ Pending | |
