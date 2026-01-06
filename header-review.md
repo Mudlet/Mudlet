@@ -56,10 +56,10 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgKeysMainArea.h | ⏳ Pending | |
 | dlgMapLabel.h | ⏳ Pending | |
 | dlgMapper.h | ✅ Done | Removed unused QDir, QMainWindow |
-| dlgModuleManager.h | ⏳ Pending | |
+| dlgModuleManager.h | ✅ Done | Removed Host.h, QCloseEvent, use forward decls |
 | dlgNotepad.h | ✅ Done | Removed unused QCheckBox, QSettings |
 | dlgPackageExporter.h | ⏳ Pending | |
-| dlgPackageManager.h | ⏳ Pending | |
+| dlgPackageManager.h | ✅ Done | Removed redundant Host.h, added QNetworkReply forward decl |
 | dlgProfilePreferences.h | ⚠️ Complex | Too many implicit dependencies via mudlet.h |
 | dlgRoomExits.h | ⏳ Pending | |
 | dlgRoomProperties.h | ✅ Done | Removed Host.h, use forward decl |
