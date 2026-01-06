@@ -49,7 +49,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgAboutDialog.h | ✅ Reviewed | Already minimal |
 | dlgActionMainArea.h | ✅ Reviewed | Already minimal |
 | dlgAliasMainArea.h | ✅ Done | Removed duplicate TrailingWhitespaceMarker.h |
-| dlgColorTrigger.h | ⏳ Pending | |
+| dlgColorTrigger.h | ✅ Reviewed | Already minimal |
 | dlgComposer.h | ✅ Reviewed | Already minimal |
 | dlgConnectionProfiles.h | ✅ Done | Moved pugixml.hpp to cpp, added forward decl |
 | dlgIRC.h | ⏳ Pending | |
@@ -61,17 +61,17 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgPackageExporter.h | ⏳ Pending | |
 | dlgPackageManager.h | ✅ Done | Removed redundant Host.h, added QNetworkReply forward decl |
 | dlgProfilePreferences.h | ⚠️ Complex | Too many implicit dependencies via mudlet.h |
-| dlgRoomExits.h | ⏳ Pending | |
+| dlgRoomExits.h | ✅ Done | Remove QCheckBox, use forward decl |
 | dlgRoomProperties.h | ✅ Done | Removed Host.h, use forward decl |
-| dlgScriptsMainArea.h | ⏳ Pending | |
-| dlgSourceEditorArea.h | ⏳ Pending | |
-| dlgSourceEditorFindArea.h | ⏳ Pending | |
-| dlgSystemMessageArea.h | ⏳ Pending | |
+| dlgScriptsMainArea.h | ✅ Reviewed | Already minimal |
+| dlgSourceEditorArea.h | ✅ Done | Move utils.h to cpp |
+| dlgSourceEditorFindArea.h | ✅ Done | Remove QTextEdit, QKeyEvent, add forward decl |
+| dlgSystemMessageArea.h | ✅ Reviewed | Already minimal |
 | dlgTimersMainArea.h | ✅ Reviewed | Already minimal |
 | dlgTriggerEditor.h | ⏳ Pending | |
-| dlgTriggerPatternEdit.h | ⏳ Pending | |
+| dlgTriggerPatternEdit.h | ✅ Reviewed | Uses QPalette for members, already optimized |
 | dlgTriggersMainArea.h | ✅ Reviewed | Already minimal |
-| dlgVarsMainArea.h | ⏳ Pending | |
+| dlgVarsMainArea.h | ✅ Reviewed | Already minimal |
 
 ## T-Class Headers
 
