@@ -24,6 +24,8 @@
 
 #include "TForkedProcess.h"
 
+#include "TLuaInterpreter.h"
+
 #include <QDir>
 
 
