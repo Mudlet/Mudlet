@@ -85,7 +85,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | TCommandLine.h | ✅ Done | TConsole.h → forward decl + utils.h |
 | TConsole.h | ⏳ Pending | |
 | TDebug.h | ⏳ Pending | |
-| TDockWidget.h | ⏳ Pending | |
+| TDockWidget.h | ✅ Done | Removed mudlet.h, Host.h, TConsole.h, QtEvents → forward decls |
 | TEntityHandler.h | ⏳ Pending | |
 | TEntityResolver.h | ⏳ Pending | |
 | TEvent.h | ⏳ Pending | |
