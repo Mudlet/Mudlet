@@ -60,7 +60,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgNotepad.h | ⏳ Pending | |
 | dlgPackageExporter.h | ⏳ Pending | |
 | dlgPackageManager.h | ⏳ Pending | |
-| dlgProfilePreferences.h | ⏳ Pending | |
+| dlgProfilePreferences.h | ⚠️ Complex | Too many implicit dependencies via mudlet.h |
 | dlgRoomExits.h | ⏳ Pending | |
 | dlgRoomProperties.h | ⏳ Pending | |
 | dlgScriptsMainArea.h | ⏳ Pending | |
