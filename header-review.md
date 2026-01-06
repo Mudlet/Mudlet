@@ -93,7 +93,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | TForkedProcess.h | ⏳ Pending | |
 | TGameDetails.h | ⏳ Pending | |
 | TKey.h | ⏳ Pending | |
-| TLabel.h | ⏳ Pending | |
+| TLabel.h | ✅ Done | Removed unused TEvent.h |
 | TLuaInterpreter.h | ✅ Done (PR) | |
 | TMainConsole.h | ⏳ Pending | |
 | TMap.h | ⏳ Pending | |
