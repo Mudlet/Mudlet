@@ -7684,6 +7684,14 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
+    if (key == qsl("muteMediaScript")) {
+        mudlet::self()->slot_muteAPI(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("muteMediaGame")) {
+        mudlet::self()->slot_muteGame(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
 
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
@@ -7905,7 +7913,9 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
-        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } }
+        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
+        { qsl("muteMediaScript"), [&](){ lua_pushboolean(L, mudlet::self()->muteAPI()); } },
+        { qsl("muteMediaGame"), [&](){ lua_pushboolean(L, mudlet::self()->muteGame()); } }
     };
 
     auto it = configMap.find(key);
