@@ -46,14 +46,14 @@ These headers are included by many files, so optimizing them has cascading benef
 
 | File | Status | Notes |
 |------|--------|-------|
-| dlgAboutDialog.h | ⏳ Pending | |
-| dlgActionMainArea.h | ⏳ Pending | |
-| dlgAliasMainArea.h | ⏳ Pending | |
+| dlgAboutDialog.h | ✅ Reviewed | Already minimal |
+| dlgActionMainArea.h | ✅ Reviewed | Already minimal |
+| dlgAliasMainArea.h | ✅ Done | Removed duplicate TrailingWhitespaceMarker.h |
 | dlgColorTrigger.h | ⏳ Pending | |
-| dlgComposer.h | ⏳ Pending | |
+| dlgComposer.h | ✅ Reviewed | Already minimal |
 | dlgConnectionProfiles.h | ✅ Done | Moved pugixml.hpp to cpp, added forward decl |
 | dlgIRC.h | ⏳ Pending | |
-| dlgKeysMainArea.h | ⏳ Pending | |
+| dlgKeysMainArea.h | ✅ Reviewed | Already minimal |
 | dlgMapLabel.h | ⏳ Pending | |
 | dlgMapper.h | ✅ Done | Removed unused QDir, QMainWindow |
 | dlgModuleManager.h | ✅ Done | Removed Host.h, QCloseEvent, use forward decls |
@@ -67,10 +67,10 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgSourceEditorArea.h | ⏳ Pending | |
 | dlgSourceEditorFindArea.h | ⏳ Pending | |
 | dlgSystemMessageArea.h | ⏳ Pending | |
-| dlgTimersMainArea.h | ⏳ Pending | |
+| dlgTimersMainArea.h | ✅ Reviewed | Already minimal |
 | dlgTriggerEditor.h | ⏳ Pending | |
 | dlgTriggerPatternEdit.h | ⏳ Pending | |
-| dlgTriggersMainArea.h | ⏳ Pending | |
+| dlgTriggersMainArea.h | ✅ Reviewed | Already minimal |
 | dlgVarsMainArea.h | ⏳ Pending | |
 
 ## T-Class Headers
