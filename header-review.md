@@ -58,7 +58,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgMapper.h | ✅ Done | Removed unused QDir, QMainWindow |
 | dlgModuleManager.h | ✅ Done | Removed Host.h, QCloseEvent, use forward decls |
 | dlgNotepad.h | ✅ Done | Removed unused QCheckBox, QSettings |
-| dlgPackageExporter.h | ⏳ Pending | |
+| dlgPackageExporter.h | ✅ Done | Remove Host.h, QCloseEvent, QGroupBox, use forward decls |
 | dlgPackageManager.h | ✅ Done | Removed redundant Host.h, added QNetworkReply forward decl |
 | dlgProfilePreferences.h | ⚠️ Complex | Too many implicit dependencies via mudlet.h |
 | dlgRoomExits.h | ✅ Done | Remove QCheckBox, use forward decl |
