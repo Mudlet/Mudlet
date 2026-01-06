@@ -38,7 +38,6 @@
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
-#include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"

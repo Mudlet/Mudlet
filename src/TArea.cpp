@@ -951,7 +951,9 @@ QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) co
 {
     const QByteArray decodedImageArray = QByteArray::fromBase64(pixmapArray.join());
     QPixmap pixmap;
-    pixmap.loadFromData(decodedImageArray);
+    if (!pixmap.loadFromData(decodedImageArray)) {
+        qWarning() << "TArea::convertBase64DataToImage() ERROR - failed to load pixmap from base64 data, data size:" << decodedImageArray.size() << "bytes";
+    }
 
     return pixmap;
 }

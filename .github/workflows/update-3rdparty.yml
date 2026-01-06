@@ -6,295 +6,158 @@ on:
     - cron: '0 0 * * fri'
 
 jobs:
-  update-mpkg-mpackage:
+  update-3rdparty:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: mpkg-mpackage
+            type: download
+            url: https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.mpackage
+            file: mpkg.mpackage
+            path: src/
+            branch: update-mpkg-mpackage
+            title: "Infrastructure: Update bundled mpkg.mpackage to latest upstream"
+            body: |
+              #### Brief overview of PR changes/additions
+              :crown: An automated PR to update mpkg.mpackage to the latest version.
+              #### Motivation for adding to Mudlet
+              Users are automatically updated to the latest version of mpkg.
+
+          - name: ire-mapper
+            type: download
+            url: https://raw.githubusercontent.com/IRE-Mudlet-Mapping/ire-mapping-script/gh-pages/downloads/mudlet-mapper.xml
+            file: mudlet-mapper.xml
+            path: src/
+            branch: update-ire-mapping-script
+            title: "Infrastructure: Update bundled IRE mapper script to latest upstream"
+            body: |
+              #### Brief overview of PR changes/additions
+              :crown: An automated PR to update the IRE mapper script to the latest version.
+              #### Motivation for adding to Mudlet
+              So people don't get attacked with a "your mapping script is out of date!" notification as soon as they create a profile for a new IRE game.
+
+          - name: dblsqd
+            type: submodule
+            submodule_path: 3rdparty/dblsqd/
+            path: 3rdparty/dblsqd
+            branch: update-dblsqd
+            title: "Infrastructure: Update dblsqd to latest in our fork"
+            body: |
+              #### Brief overview of PR changes/additions
+              :crown: An automated PR to update dblsqd to its latest version in our fork.
+              #### Motivation for adding to Mudlet
+              Get new features, bugfixes, improvements! Stay modern.
+
+          - name: lcf
+            type: submodule-branch
+            submodule_path: 3rdparty/lcf/
+            submodule_branch: 5.1-syntax_5.1
+            path: 3rdparty/lcf
+            branch: update-lcf
+            title: "Infrastructure: Update Lua code formatter to latest upstream branch"
+            body: |
+              #### Brief overview of PR changes/additions
+              :crown: An automated PR to update the built-in Lua code formatter to its latest version in upstream `5.1-syntax_5.1` (parses code only as Lua version 5.1) branch.
+              #### Motivation for adding to Mudlet
+              Get new features, bugfixes, improvements! Stay modern.
+
+          - name: widecharwidth
+            type: curl
+            url: https://raw.githubusercontent.com/ridiculousfish/widecharwidth/master/widechar_width.h
+            file: src/widechar_width.h
+            path: src/widechar_width.h
+            branch: update-widechar-width
+            title: "Infrastructure: Update widechar_width.h to latest upstream"
+            body: |
+              #### Brief overview of PR changes/additions
+              :crown: An automated PR to update the built-in `src/widechar_width.h` to its latest version in upstream. We don't include it as a submodule as it's just one file.
+              #### Motivation for adding to Mudlet
+              Better emoji and symbol support! This file helps us tell if a particular character is 0, 1, or 2 widths wide so we can show it correctly in the display.
+
+          - name: singleshot-connect
+            type: curl
+            url: https://raw.githubusercontent.com/KDAB/KDToolBox/master/qt/singleshot_connect/singleshot_connect.h
+            file: 3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
+            path: 3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
+            branch: update-singleshot-connect
+            title: "Infrastructure: Update singleshot_connect.h to latest upstream"
+            body: |
+              #### Brief overview of PR changes/additions
+              :crown: An automated PR to update the built-in `3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h` to its latest version in upstream. We don't include it as a submodule as we're using tools from the KDToolBox as we need them.
+              #### Motivation for adding to Mudlet
+              Latest version of the Qt utility feature that allows singleshot connections.
+
+          - name: cmake-scripts
+            type: curl
+            url: https://raw.githubusercontent.com/StableCoder/cmake-scripts/main/sanitizers.cmake
+            file: 3rdparty/cmake-scripts/sanitizers.cmake
+            path: 3rdparty/cmake-scripts/sanitizers.cmake
+            branch: update-cmake-scripts
+            title: "Infrastructure: Update sanitizers.cmake to latest upstream"
+            body: |
+              #### Brief overview of PR changes/additions
+              :crown: An automated PR to update the built-in `3rdparty/cmake-scripts/sanitizers.cmake` to its latest version in upstream. We don't include it as a submodule as we need just this one file from the entire repo.
+              #### Motivation for adding to Mudlet
+              Latest version of the CMake utility feature that allows use to use various CMake sanitizers via the `USE_SANITIZER` CMake variable.
+
+    name: Update ${{ matrix.name }}
+
     steps:
       - uses: actions/checkout@v6
         with:
           ref: development
+          submodules: ${{ (matrix.type == 'submodule' || matrix.type == 'submodule-branch') && 'recursive' || false }}
+          fetch-depth: ${{ (matrix.type == 'submodule' || matrix.type == 'submodule-branch') && 0 || 1 }}
 
-      - name: Download latest mpkg
+      - name: Download file
+        if: matrix.type == 'download'
         uses: carlosperate/download-file-action@v2.0.2
         with:
-          file-url: https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.mpackage
-          file-name: mpkg.mpackage
-          location: src/
+          file-url: ${{ matrix.url }}
+          file-name: ${{ matrix.file }}
+          location: ${{ matrix.path }}
 
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
+      - name: Download via curl
+        if: matrix.type == 'curl'
+        run: curl -fS -o ${{ matrix.file }} ${{ matrix.url }}
+
+      - name: Update submodule
+        if: matrix.type == 'submodule'
+        run: git submodule update --remote ${{ matrix.submodule_path }}
+
+      - name: Update submodule to branch
+        if: matrix.type == 'submodule-branch'
+        run: |
+          cd ${{ matrix.submodule_path }}
+          git checkout ${{ matrix.submodule_branch }}
+          git pull
+
+      - name: Check for changes
         id: getdiff
         run: |
-          echo "Checking for changes in src/mpkg.mpackage..."
-          if git diff --quiet "src/mpkg.mpackage"; then
-            echo "No changes detected in mpkg.mpackage"
+          if git diff --quiet "${{ matrix.path }}"; then
+            echo "No changes detected"
+            echo "changes=false" >> $GITHUB_OUTPUT
           else
-            echo "Changes detected in mpkg.mpackage"
+            echo "Changes detected"
             echo "changes=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: send in a pull request
+      - name: Create pull request
         uses: peter-evans/create-pull-request@v8
-        if: steps.check-changes.outputs.changes == 'true'
+        if: steps.getdiff.outputs.changes == 'true'
         with:
           token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-          add-paths: src/
-          branch: update-mpkg-mpackage
-          commit-message: (autocommit) Updated mpkg.mpackage to latest upstream
-          title: "Infrastructure: Update bundled mpkg.mpackage to latest upstream"
+          add-paths: ${{ matrix.path }}
+          branch: ${{ matrix.branch }}
+          commit-message: (autocommit) Updated ${{ matrix.name }} to latest upstream
+          title: ${{ matrix.title }}
           body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update mpkg.mpackage to the latest version.
-            #### Motivation for adding to Mudlet
-            Users are automatically updated to the latest version of mpkg.
+            ${{ matrix.body }}
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
           author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
-
-  update-iremapper-source:
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: development
-
-      - name: Download latest IRE mapper
-        uses: carlosperate/download-file-action@v2.0.2
-        with:
-          file-url: https://raw.githubusercontent.com/IRE-Mudlet-Mapping/ire-mapping-script/gh-pages/downloads/mudlet-mapper.xml
-          file-name: mudlet-mapper.xml
-          location: src/
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 src/mudlet-mapper.xml | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: peter-evans/create-pull-request@v8
-        if: steps.getdiff.outputs.lines_changed > 0
-        with:
-          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-          add-paths: src/
-          branch: update-ire-mapping-script
-          commit-message: (autocommit) Updated IRE mapping script to latest upstream
-          title: "Infrastructure: Update bundled IRE mapper script to latest upstream"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update the IRE mapper script to the latest version.
-            #### Motivation for adding to Mudlet
-            So people don't get attacked with a "your mapping script is out of date!" notification as soon as they create a profile for a new IRE game.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
-
-  update-dblsqd-fork:
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: development
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: update submodule to latest
-        run: git submodule update --remote 3rdparty/dblsqd/
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 3rdparty/dblsqd/ | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: peter-evans/create-pull-request@v8
-        if: steps.getdiff.outputs.lines_changed > 0
-        with:
-          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-          add-paths: 3rdparty/dblsqd
-          branch: update-dblsqd
-          commit-message: (autocommit) Updated dblsqd submodule to latest in our fork
-          title: "Infrastructure: Update dblsqd to latest in our fork"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update dblsqd to its latest version in our fork.
-            #### Motivation for adding to Mudlet
-            Get new features, bugfixes, improvements! Stay modern.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
-
-
-  update-lcf-source-51:
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: development
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: update submodule to latest in branch
-        run: |
-          cd 3rdparty/lcf/
-          git checkout 5.1-syntax_5.1
-          git pull
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 3rdparty/lcf/ | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: peter-evans/create-pull-request@v8
-        if: steps.getdiff.outputs.lines_changed > 0
-        with:
-          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-          add-paths: 3rdparty/lcf
-          branch: update-lcf
-          commit-message: (autocommit) Updated lcf submodule to latest upstream branch
-          title: "Infrastructure: Update Lua code formatter to latest upstream branch"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update the built-in Lua code formatter to its latest version in upstream `5.1-syntax_5.1` (parses code only as Lua version 5.1) branch.
-            #### Motivation for adding to Mudlet
-            Get new features, bugfixes, improvements! Stay modern.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
-
-
-  update-widecharwidth-source:
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: development
-
-      - name: download latest from source repo
-        run: |
-          curl -o src/widechar_width.h https://raw.githubusercontent.com/ridiculousfish/widecharwidth/master/widechar_width.h
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 src/widechar_width.h | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: peter-evans/create-pull-request@v8
-        if: steps.getdiff.outputs.lines_changed > 0
-        with:
-          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-          add-paths: src/widechar_width.h
-          branch: update-widechar-width
-          commit-message: (autocommit) Update widechar_width.h to latest upstream
-          title: "Infrastructure: Update widechar_width.h to latest upstream"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update the built-in `src/widechar_width.h` to its latest version in upstream. We don't include it as a submodule as it's just one file.
-            #### Motivation for adding to Mudlet
-            Better emoji and symbol support! This file helps us tell if a particular character is 0, 1, or 2 widths wide so we can show it correctly in the display.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
-
-
-  update-singleshot-connect-source:
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: development
-
-      - name: download latest from source repo
-        run: |
-          curl -o 3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h https://raw.githubusercontent.com/KDAB/KDToolBox/master/qt/singleshot_connect/singleshot_connect.h
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: peter-evans/create-pull-request@v8
-        if: steps.getdiff.outputs.lines_changed > 0
-        with:
-          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-          add-paths: 3rdparty/kdtoolbox
-          branch: update-singleshot-connect
-          commit-message: (autocommit) Update singleshot_connect.h to latest upstream
-          title: "Infrastructure: Update singleshot_connect.h to latest upstream"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update the built-in `3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h` to its latest version in upstream. We don't include it as a submodule as we're using tools from the KDToolBox as we need them.
-            #### Motivation for adding to Mudlet
-            Latest version of the Qt utility feature that allows singleshot connections.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
-
-
-  update-cmake-scripts-source:
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: development
-
-      - name: download latest from source repo
-        run: |
-          curl -o 3rdparty/cmake-scripts/sanitizers.cmake https://raw.githubusercontent.com/StableCoder/cmake-scripts/main/sanitizers.cmake
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 3rdparty/cmake-scripts/sanitizers.cmake | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: peter-evans/create-pull-request@v8
-        if: steps.getdiff.outputs.lines_changed > 0
-        with:
-          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-          add-paths: 3rdparty/cmake-scripts
-          branch: update-cmake-scripts
-          commit-message: (autocommit) Update sanitizers.cmake to latest upstream
-          title: "Infrastructure: Update sanitizers.cmake to latest upstream"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update the built-in `3rdparty/cmake-scripts/sanitizers.cmake` to its latest version in upstream. We don't include it as a submodule as we need just this one file from the entire repo.
-            #### Motivation for adding to Mudlet
-            Latest version of the CMake utility feature that allows use to use various CMake sanitizers via the `USE_SANITIZER` CMake variable.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
-

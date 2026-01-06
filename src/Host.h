@@ -612,6 +612,7 @@ public:
     // has the profile save data been loaded without issues?
     // if there were issues during loading, we should not save anything on close
     bool mLoadedOk = false;
+    QString mProfileLoadError;
 
     int mTimeout = 60;
 

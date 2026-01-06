@@ -30,6 +30,8 @@
 #include <QScreen>
 #include <QWidget>
 
+#include <cstring>
+
 #define qsl(s) QStringLiteral(s)
 
 using TEnterEvent = QEnterEvent;
@@ -44,6 +46,19 @@ enum class TreeItemInsertMode {
 class utils
 {
 public:
+    // Safe string copy: copies up to destSize-1 bytes and always null-terminates.
+    // Returns the number of bytes copied (excluding null terminator).
+    static size_t copyString(char* dest, size_t destSize, const char* src, size_t srcLen)
+    {
+        if (destSize == 0) {
+            return 0;
+        }
+        const size_t copyLen = (srcLen < destSize) ? srcLen : destSize - 1;
+        std::memcpy(dest, src, copyLen);
+        dest[copyLen] = '\0';
+        return copyLen;
+    }
+
     // This construct will be very useful for formatting tooltips and by
     // defining a static function/method here we can save using the same
     // qsl all over the place:
