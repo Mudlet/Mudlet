@@ -57,7 +57,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgMapLabel.h | ⏳ Pending | |
 | dlgMapper.h | ⏳ Pending | |
 | dlgModuleManager.h | ⏳ Pending | |
-| dlgNotepad.h | ⏳ Pending | |
+| dlgNotepad.h | ✅ Done | Removed unused QCheckBox, QSettings |
 | dlgPackageExporter.h | ⏳ Pending | |
 | dlgPackageManager.h | ⏳ Pending | |
 | dlgProfilePreferences.h | ⚠️ Complex | Too many implicit dependencies via mudlet.h |
