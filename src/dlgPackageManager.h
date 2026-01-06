@@ -28,6 +28,7 @@
 
 #include "ui_package_manager.h"
 #include <QDialog>
+#include <QJsonArray>
 #include <QListWidget>
 #include <QTextBrowser>
 

@@ -27,6 +27,7 @@
 
 #include "ui_room_properties.h"
 
+#include <QListWidget>
 
 class dlgRoomProperties : public QDialog, public Ui::room_properties
 {

@@ -26,11 +26,11 @@
 
 #include "Host.h"
 
+#include <QCloseEvent>
 #include <QDialog>
 #include <QFileInfo>
+#include <QGroupBox>
 #include <QTextEdit>
-#include <QCloseEvent>
-#include <zip.h>
 #include <zip.h>
 
 #if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR  > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))

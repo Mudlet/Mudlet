@@ -29,6 +29,8 @@
 
 #include "TLuaInterpreter.h"
 
+#include <QClipboard>
+
 #include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"

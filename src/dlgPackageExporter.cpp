@@ -31,6 +31,7 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "XMLexport.h"
 
 #include <QtConcurrent>
 #include <QDesktopServices>

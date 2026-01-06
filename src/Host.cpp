@@ -49,6 +49,7 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
+#include "XMLexport.h"
 #include "XMLimport.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
