@@ -303,8 +303,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     setAutoReconnect(!val.isEmpty() && val.toInt() == Qt::Checked);
 
     // This settings also need to be configured, note that the only time not to
-    // save the setting is on profile loading:
-    mTelnet.setEncoding(readProfileData(qsl("encoding")).toUtf8(), false);
+    // save the setting is on profile loading. Only override the default UTF-8
+    // encoding if a saved encoding exists:
+    const QByteArray savedEncoding = readProfileData(qsl("encoding")).toUtf8();
+    if (!savedEncoding.isEmpty()) {
+        mTelnet.setEncoding(savedEncoding, false);
+    }
 
     auto optin = readProfileData(qsl("discordserveroptin"));
     if (!optin.isEmpty()) {
