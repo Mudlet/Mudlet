@@ -105,7 +105,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | TRoomDB.h | ⏳ Pending | |
 | TScript.h | ⏳ Pending | |
 | TSplitter.h | ⏳ Pending | |
-| TTabBar.h | ⏳ Pending | |
+| TTabBar.h | ✅ Done | Removed QDrag, QMimeData, QApplication, utils.h → cpp |
 | TTextCodec.h | ⏳ Pending | |
 | TTextEdit.h | ⏳ Pending | |
 | TTimer.h | ⏳ Pending | |
