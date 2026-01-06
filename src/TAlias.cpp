@@ -89,14 +89,14 @@ bool TAlias::match(const QString& haystack)
         return false; //regex compile error
     }
 
-#if defined(Q_OS_WINDOWS)
-    // strndup(3) - a safe strdup(3) does not seem to be available in the
-    // original Mingw or the replacement Mingw-w64 environment we use:
-    char* haystackC = static_cast<char*>(malloc(strlen(haystack.toUtf8().constData()) + 1));
-    strcpy(haystackC, haystack.toUtf8().constData());
-#else
-    char* haystackC = strndup(haystack.toUtf8().constData(), strlen(haystack.toUtf8().constData()));
-#endif
+    const QByteArray utf8Data = haystack.toUtf8();
+    const size_t utf8Length = utf8Data.size();
+    char* haystackC = static_cast<char*>(malloc(utf8Length + 1));
+    if (!haystackC) {
+        return false;
+    }
+    memcpy(haystackC, utf8Data.constData(), utf8Length);
+    haystackC[utf8Length] = '\0';
 
     // These must be initialised before any goto so the latter does not jump
     // over them:

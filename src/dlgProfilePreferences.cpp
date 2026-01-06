@@ -1216,6 +1216,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 #endif
 
+    if (!pHost->mLoadedOk) {
+        notificationAreaIconLabelWarning->show();
+        frame_notificationArea->show();
+        notificationAreaMessageBox->show();
+        QString errorDetails = pHost->mProfileLoadError.isEmpty()
+            ? tr("unknown error")
+            : pHost->mProfileLoadError;
+        notificationAreaMessageBox->setText(tr("This profile could not be loaded correctly (%1). "
+                                               "Settings cannot be saved. Close the profile and try loading an older version from "
+                                               "'Connect - Options - Profile history'.").arg(errorDetails));
+    }
+
     groupBox_ssl->setChecked(pHost->mSslTsl);
     checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
@@ -3281,6 +3293,10 @@ void dlgProfilePreferences::slot_saveAndClose()
 
     mudlet::self()->mDiscord.UpdatePresence();
 
+    if (pHost && pHost->mFORCE_SAVE_ON_EXIT) {
+        pHost->saveProfile();
+    }
+
     emit signal_preferencesSaved();
 
     close();
@@ -3617,13 +3633,21 @@ void dlgProfilePreferences::populateThemesList()
     QJsonArray unsortedThemes;
 
     if (themesFile.open(QIODevice::ReadOnly)) {
-        unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-        for (auto theme : std::as_const(unsortedThemes)) {
-            const QString themeText = theme.toObject()["Title"].toString();
-            const QString themeFileName = theme.toObject()["FileName"].toString();
+        QJsonParseError parseError;
+        const QJsonDocument doc = QJsonDocument::fromJson(themesFile.readAll(), &parseError);
+        if (parseError.error != QJsonParseError::NoError) {
+            qWarning() << "dlgProfilePreferences::populateThemesList() ERROR - failed to parse themes JSON file:" << themesFile.fileName() << "reason:" << parseError.errorString();
+        } else if (!doc.isArray()) {
+            qWarning() << "dlgProfilePreferences::populateThemesList() ERROR - themes JSON file does not contain an array:" << themesFile.fileName();
+        } else {
+            unsortedThemes = doc.array();
+            for (auto theme : std::as_const(unsortedThemes)) {
+                const QString themeText = theme.toObject()["Title"].toString();
+                const QString themeFileName = theme.toObject()["FileName"].toString();
 
-            if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
-                sortedThemes << std::make_pair(themeText, themeFileName);
+                if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
+                    sortedThemes << std::make_pair(themeText, themeFileName);
+                }
             }
         }
     }

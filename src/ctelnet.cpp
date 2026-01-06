@@ -886,8 +886,15 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
         }
     }
 
-    const bool hasIPv4_address = (addressList_ipV4.count());
-    const bool hasIPv6_address = (addressList_ipV6.count());
+    bool hasIPv4_address = (addressList_ipV4.count());
+    bool hasIPv6_address = (addressList_ipV6.count());
+
+    const bool onlyLocalhost = (addressList_ipV4.isEmpty() || addressList_ipV4 == QStringList{qsl("127.0.0.1")})
+                            && (addressList_ipV6.isEmpty() || addressList_ipV6 == QStringList{qsl("::1")});
+    if (onlyLocalhost && hasIPv4_address && hasIPv6_address) {
+        hasIPv6_address = false;
+    }
+
     if (!(hasIPv4_address || hasIPv6_address)) {
         /*: This text is used in the (expected) case when the user has provided
          * a URL for the Game Server rather than (unusually) an IP address.
