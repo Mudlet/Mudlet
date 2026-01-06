@@ -14,16 +14,21 @@ These headers are included by many files, so optimizing them has cascading benef
 
 | File | Status | Notes |
 |------|--------|-------|
-| Host.h | ⏳ Pending | Core class, included everywhere |
+| Host.h | ✅ Done | Removed XMLexport.h, added forward decl |
 | TLuaInterpreter.h | ✅ Done (PR) | Removed TMap.h include |
-| TMap.h | ⏳ Pending | Map system, heavy Qt includes |
-| mudlet.h | ⏳ Pending | Main app singleton |
-| TConsole.h | ⏳ Pending | Text display |
+| TMap.h | ✅ Done | Removed redundant QApplication |
+| mudlet.h | ⏳ Pending | Main app singleton, 65 files |
+| TConsole.h | ⏳ Pending | Text display, 40 files |
 | TTextEdit.h | ⏳ Pending | Text editing widget |
-| dlgTriggerEditor.h | ⏳ Pending | Editor dialog |
-| TRoom.h | ⏳ Pending | Room data |
+| dlgTriggerEditor.h | ⚠️ Complex | Too many dependencies to remove from Host.h |
+| TRoom.h | ✅ Done | QApplication → QCoreApplication, moved TMap.h to cpp |
 | TArea.h | ⏳ Pending | Area data |
-| TRoomDB.h | ⏳ Pending | Room database |
+| TRoomDB.h | ✅ Done | Removed redundant QApplication |
+| TBuffer.h | ✅ Done | Removed unused QApplication |
+| TAlias.h | ✅ Done | Removed unused QApplication |
+| TTrigger.h | ✅ Done | Removed unused QApplication |
+| TEncodingTable.h | ✅ Done | Removed unused QApplication |
+| VarUnit.h | ✅ Done | QApplication → QCoreApplication |
 
 ## MXP Tag Handlers (Duplicate Includes Fixed in PR)
 
