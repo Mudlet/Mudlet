@@ -26,7 +26,6 @@
 
 #include "TTextCodec.h"
 
-#include <QApplication>
 #include <QChar>
 #include <QColor>
 #include <QDebug>
