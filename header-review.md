@@ -82,7 +82,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | TAlias.h | ⏳ Pending | |
 | TArea.h | ⏳ Pending | |
 | TBuffer.h | ⏳ Pending | |
-| TCommandLine.h | ⏳ Pending | |
+| TCommandLine.h | ✅ Done | TConsole.h → forward decl + utils.h |
 | TConsole.h | ⏳ Pending | |
 | TDebug.h | ⏳ Pending | |
 | TDockWidget.h | ⏳ Pending | |
