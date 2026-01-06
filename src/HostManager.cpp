@@ -25,6 +25,7 @@
 
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "TMap.h"
 
 void HostManager::deleteHost(const QString& hostname)
 {
