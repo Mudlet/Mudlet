@@ -24,6 +24,7 @@
 
 #include "dlgConnectionProfiles.h"
 
+#include <pugixml.hpp>
 
 #include "Host.h"
 #include "HostManager.h"

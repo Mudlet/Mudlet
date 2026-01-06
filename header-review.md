@@ -51,7 +51,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgAliasMainArea.h | ⏳ Pending | |
 | dlgColorTrigger.h | ⏳ Pending | |
 | dlgComposer.h | ⏳ Pending | |
-| dlgConnectionProfiles.h | ⏳ Pending | |
+| dlgConnectionProfiles.h | ✅ Done | Moved pugixml.hpp to cpp, added forward decl |
 | dlgIRC.h | ⏳ Pending | |
 | dlgKeysMainArea.h | ⏳ Pending | |
 | dlgMapLabel.h | ⏳ Pending | |
