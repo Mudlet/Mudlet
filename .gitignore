@@ -50,3 +50,10 @@ CMakeSettings.json
 # flatpak builder
 CI/.flatpak-builder
 CI/build-dir
+
+# Build artifacts and AppImages
+*.AppImage
+CMakeCache.txt
+CMakeFiles/
+cmake_log.txt
+squashfs-root/

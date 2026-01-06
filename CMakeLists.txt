@@ -156,7 +156,7 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
 
-find_package(Qt6 6.8.2 REQUIRED)
+find_package(Qt6 6.2.4 REQUIRED)
 
 # Find Core5Compat for third-party libraries (communi, edbee-lib) that still need it
 find_package(Qt6 COMPONENTS Core5Compat REQUIRED)

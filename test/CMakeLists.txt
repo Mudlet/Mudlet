@@ -11,7 +11,7 @@ PROJECT(mudlet-tests
 
 ENABLE_TESTING()
 
-find_package(Qt6 6.8.2 REQUIRED
+find_package(Qt6 6.2.4 REQUIRED
     COMPONENTS Core
     Multimedia
     MultimediaWidgets
