@@ -25,8 +25,6 @@
 
 
 #include "ui_mapper.h"
-#include <QDir>
-#include <QMainWindow>
 #include <QPointer>
 
 class Host;

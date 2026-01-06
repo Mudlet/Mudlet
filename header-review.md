@@ -55,7 +55,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgIRC.h | ⏳ Pending | |
 | dlgKeysMainArea.h | ⏳ Pending | |
 | dlgMapLabel.h | ⏳ Pending | |
-| dlgMapper.h | ⏳ Pending | |
+| dlgMapper.h | ✅ Done | Removed unused QDir, QMainWindow |
 | dlgModuleManager.h | ⏳ Pending | |
 | dlgNotepad.h | ✅ Done | Removed unused QCheckBox, QSettings |
 | dlgPackageExporter.h | ⏳ Pending | |
