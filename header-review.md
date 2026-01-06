@@ -90,8 +90,8 @@ These headers are included by many files, so optimizing them has cascading benef
 | TEntityResolver.h | ⏳ Pending | |
 | TEvent.h | ⏳ Pending | |
 | TFlipButton.h | ✅ Reviewed | Already minimal, uses forward decls |
-| TForkedProcess.h | ⏳ Pending | |
-| TGameDetails.h | ⏳ Pending | |
+| TForkedProcess.h | ✅ Done | Removed TLuaInterpreter.h, use forward decls |
+| TGameDetails.h | ✅ Reviewed | Needs utils.h for qsl macro |
 | TKey.h | ✅ Done | Removed unused lua.h |
 | TLabel.h | ✅ Done | Removed unused TEvent.h |
 | TLuaInterpreter.h | ✅ Done (PR) | |
