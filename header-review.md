@@ -54,7 +54,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgConnectionProfiles.h | ✅ Done | Moved pugixml.hpp to cpp, added forward decl |
 | dlgIRC.h | ⏳ Pending | |
 | dlgKeysMainArea.h | ✅ Reviewed | Already minimal |
-| dlgMapLabel.h | ⏳ Pending | |
+| dlgMapLabel.h | ✅ Done | Remove Qt dialog includes, use forward decls |
 | dlgMapper.h | ✅ Done | Removed unused QDir, QMainWindow |
 | dlgModuleManager.h | ✅ Done | Removed Host.h, QCloseEvent, use forward decls |
 | dlgNotepad.h | ✅ Done | Removed unused QCheckBox, QSettings |
@@ -87,7 +87,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | TDebug.h | ⏳ Pending | |
 | TDockWidget.h | ✅ Done | Removed mudlet.h, Host.h, TConsole.h, QtEvents → forward decls |
 | TEntityHandler.h | ⏳ Pending | |
-| TEntityResolver.h | ⏳ Pending | |
+| TEntityResolver.h | ✅ Reviewed | Already minimal |
 | TEvent.h | ⏳ Pending | |
 | TFlipButton.h | ✅ Reviewed | Already minimal, uses forward decls |
 | TForkedProcess.h | ✅ Done | Removed TLuaInterpreter.h, use forward decls |
@@ -106,7 +106,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | TScript.h | ⏳ Pending | |
 | TSplitter.h | ✅ Reviewed | Already minimal |
 | TTabBar.h | ✅ Done | Removed QDrag, QMimeData, QApplication, utils.h → cpp |
-| TTextCodec.h | ⏳ Pending | |
+| TTextCodec.h | ✅ Reviewed | Already minimal |
 | TTimer.h | ⏳ Pending | |
 | TToolBar.h | ✅ Reviewed | Already minimal, uses forward decls |
 | TTrigger.h | ⏳ Pending | |
