@@ -95,10 +95,10 @@ These headers are included by many files, so optimizing them has cascading benef
 | TKey.h | ⏳ Pending | |
 | TLabel.h | ✅ Done | Removed unused TEvent.h |
 | TLuaInterpreter.h | ✅ Done (PR) | |
-| TMainConsole.h | ⏳ Pending | |
+| TMainConsole.h | ⚠️ Complex | TScrollBox.h removal causes cascading issues |
 | TMap.h | ⏳ Pending | |
 | TMapLabel.h | ⏳ Pending | |
-| TMedia.h | ⏳ Pending | |
+| TMedia.h | ⚠️ Complex | Host.h removal causes circular dependency issues |
 | TMediaData.h | ⏳ Pending | |
 | TMxpClient.h | ⏳ Pending | |
 | TRoom.h | ⏳ Pending | |
