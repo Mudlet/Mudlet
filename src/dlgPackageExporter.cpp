@@ -24,6 +24,7 @@
 #include "dlgPackageExporter.h"
 #include "ui_dlgPackageExporter.h"
 
+#include "Host.h"
 #include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
