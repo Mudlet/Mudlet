@@ -23,10 +23,10 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgTriggerEditor.h | ✅ Done | Complex - has many transitive includes other files depend on, not safe to optimize |
 | TRoom.h | ✅ Done | QVector3D needed for transitive includes (debug output), no optimization possible |
 | TArea.h | ✅ Done | TMap.h needed for friend decls, TMapLabel.h for by-value member, no optimization possible |
-| TRoomDB.h | ⏳ Pending | |
-| TBuffer.h | ⏳ Pending | |
-| TAlias.h | ⏳ Pending | |
-| TTrigger.h | ⏳ Pending | |
+| TRoomDB.h | ✅ Done | Already optimized with forward declarations |
+| TBuffer.h | ✅ Done | Removed TTextCodec.h, QStringBuilder, QTime (moved to .cpp) |
+| TAlias.h | ✅ Done | Already optimized - all includes needed for members |
+| TTrigger.h | ✅ Done | Already optimized - all includes needed for members |
 | TEncodingTable.h | ⏳ Pending | |
 | VarUnit.h | ⏳ Pending | |
 

@@ -24,24 +24,21 @@
  ***************************************************************************/
 
 
-#include "TTextCodec.h"
+#include "TEncodingTable.h"
+#include "TLinkStore.h"
 #include "utils.h"
 
 #include <QChar>
 #include <QColor>
 #include <QDebug>
 #include <QMap>
-#include <QQueue>
 #include <QPoint>
 #include <QPointer>
+#include <QQueue>
 #include <QSet>
 #include <QString>
-#include <QStringBuilder>
 #include <QStringList>
-#include <QTime>
 #include <QVector>
-#include "TEncodingTable.h"
-#include "TLinkStore.h"
 
 #include <deque>
 #include <memory>
