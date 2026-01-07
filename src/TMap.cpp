@@ -34,13 +34,17 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
+#include <QBuffer>
 #include <QElapsedTimer>
 #include <QFileDialog>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonParseError>
 #include <QMessageBox>
-#include <QProgressDialog>
 #include <QPainter>
-#include <QBuffer>
+#include <QPixmap>
+#include <QProgressDialog>
+#include <QSizeF>
 
 
 TMap::TMap(Host* pH, const QString& profileName)

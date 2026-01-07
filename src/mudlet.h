@@ -32,8 +32,6 @@
 #include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
-#include "TDetachedWindow.h"
-#include "TMediaData.h"
 #include "utils.h"
 #include <memory>
 
@@ -42,7 +40,6 @@
 #endif
 
 #include "ui_main_window.h"
-#include "edbee/views/texttheme.h"
 #include <QAction>
 #include <QDir>
 #include <QFlags>
@@ -56,7 +53,6 @@
 #include <QTime>
 #include <QVersionNumber>
 #include <QWindow>
-#include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
 #else
@@ -92,6 +88,7 @@ class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
 class TConsole;
+class TDetachedWindow;
 class TDockWidget;
 class TEvent;
 class TLabel;

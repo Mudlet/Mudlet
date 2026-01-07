@@ -31,15 +31,10 @@
 
 #include <QDataStream>
 #include <QElapsedTimer>
-#include <QFile>
 #include <QFont>
-#include <QHBoxLayout>
 #include <QIcon>
-#include <QLabel>
 #include <QPointer>
 #include <QSaveFile>
-#include <QSplitter>
-#include <QVideoWidget>
 #include <QWidget>
 
 #include <hunspell/hunspell.h>
@@ -145,10 +140,13 @@ enum class ControlCharacterMode {
 Q_DECLARE_METATYPE(ControlCharacterMode)
 
 class QCloseEvent;
+class QHBoxLayout;
 class QLineEdit;
 class QScrollBar;
 class QShortcut;
+class QSplitter;
 class QToolButton;
+class QVideoWidget;
 
 class dlgMapper;
 class Host;

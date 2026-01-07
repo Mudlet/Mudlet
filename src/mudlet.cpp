@@ -58,7 +58,11 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "TMediaData.h"
 #include "VarUnit.h"
+
+#include "edbee/models/textautocompleteprovider.h"
+#include "edbee/views/texttheme.h"
 
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
