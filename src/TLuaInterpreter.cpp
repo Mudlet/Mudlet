@@ -66,7 +66,6 @@
 #include <QTableWidget>
 #include <QToolTip>
 #include <QFileInfo>
-#include <QMovie>
 #include <QVector>
 #include <limits>
 
