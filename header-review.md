@@ -68,7 +68,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgSourceEditorFindArea.h | ✅ Done | Remove QTextEdit, QKeyEvent, add forward decl |
 | dlgSystemMessageArea.h | ✅ Reviewed | Already minimal |
 | dlgTimersMainArea.h | ✅ Reviewed | Already minimal |
-| dlgTriggerEditor.h | ⏳ Pending | |
+| dlgTriggerEditor.h | ⚠️ Complex | Too many dependencies, see Priority Headers |
 | dlgTriggerPatternEdit.h | ✅ Reviewed | Uses QPalette for members, already optimized |
 | dlgTriggersMainArea.h | ✅ Reviewed | Already minimal |
 | dlgVarsMainArea.h | ✅ Reviewed | Already minimal |
@@ -172,10 +172,6 @@ These headers are included by many files, so optimizing them has cascading benef
 - dlgRoomProperties.h - needed QListWidget
 
 ### TMap.h
-**Status:** ⏳ Pending
-**Current includes:**
-- TAstar.h
-- utils.h
-- QApplication (heavy!)
-- Many Qt headers
+**Status:** ✅ Reviewed
+**Notes:** Heavy header but already uses forward declarations. Needs TAstar.h for member types. QApplication was previously removed.
 
