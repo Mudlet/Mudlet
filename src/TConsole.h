@@ -29,9 +29,6 @@
 
 #include "TBuffer.h"
 
-
-#include "TTextCodec.h"
-
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QFile>

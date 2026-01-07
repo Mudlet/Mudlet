@@ -77,18 +77,18 @@ These headers are included by many files, so optimizing them has cascading benef
 
 | File | Status | Notes |
 |------|--------|-------|
-| TAstar.h | ⏳ Pending | |
-| TAction.h | ⏳ Pending | |
-| TAlias.h | ⏳ Pending | |
-| TArea.h | ⏳ Pending | |
-| TBuffer.h | ⏳ Pending | |
+| TAstar.h | ✅ Reviewed | Needs TRoom.h for template code accessing members |
+| TAction.h | ✅ Reviewed | Already minimal, uses forward decls |
+| TAlias.h | ✅ Reviewed | Already minimal, uses forward decl for Host |
+| TArea.h | ✅ Reviewed | Needs TMap.h for friend decls, TMapLabel.h for member |
+| TBuffer.h | ✅ Done | Removed unused TMxpMudlet.h, TMxpProcessor.h |
 | TCommandLine.h | ✅ Done | TConsole.h → forward decl + utils.h |
-| TConsole.h | ⏳ Pending | |
-| TDebug.h | ⏳ Pending | |
+| TConsole.h | ✅ Done | Removed redundant TTextCodec.h (via TBuffer.h) |
+| TDebug.h | ✅ Reviewed | Already minimal, utils.h for qsl(), forward decl Host |
 | TDockWidget.h | ✅ Done | Removed mudlet.h, Host.h, TConsole.h, QtEvents → forward decls |
-| TEntityHandler.h | ⏳ Pending | |
+| TEntityHandler.h | ✅ Reviewed | Already minimal, needs TEntityResolver.h for ref member |
 | TEntityResolver.h | ✅ Reviewed | Already minimal |
-| TEvent.h | ⏳ Pending | |
+| TEvent.h | ✅ Reviewed | Already minimal, needs QDebug for debug operator |
 | TFlipButton.h | ✅ Reviewed | Already minimal, uses forward decls |
 | TForkedProcess.h | ✅ Done | Removed TLuaInterpreter.h, use forward decls |
 | TGameDetails.h | ✅ Reviewed | Needs utils.h for qsl macro |
@@ -96,21 +96,21 @@ These headers are included by many files, so optimizing them has cascading benef
 | TLabel.h | ✅ Done | Removed unused TEvent.h |
 | TLuaInterpreter.h | ✅ Done (PR) | |
 | TMainConsole.h | ⚠️ Complex | TScrollBox.h removal causes cascading issues |
-| TMap.h | ⏳ Pending | |
+| TMap.h | ✅ Reviewed | Heavy header, uses forward decls, needs TAstar.h |
 | TMapLabel.h | ✅ Reviewed | Already minimal |
 | TMedia.h | ⚠️ Complex | Host.h removal causes circular dependency issues |
 | TMediaData.h | ✅ Reviewed | Already minimal |
 | TMxpClient.h | ✅ Done | Removed unused utils.h |
-| TRoom.h | ⏳ Pending | |
-| TRoomDB.h | ⏳ Pending | |
-| TScript.h | ⏳ Pending | |
+| TRoom.h | ✅ Reviewed | Already minimal, uses forward decls |
+| TRoomDB.h | ✅ Reviewed | Already minimal, uses forward decls |
+| TScript.h | ✅ Reviewed | Already minimal, forward decls for Host, TEvent |
 | TSplitter.h | ✅ Reviewed | Already minimal |
 | TTabBar.h | ✅ Done | Removed QDrag, QMimeData, QApplication, utils.h → cpp |
 | TTextCodec.h | ✅ Reviewed | Already minimal |
-| TTimer.h | ⏳ Pending | |
+| TTimer.h | ✅ Reviewed | Already minimal, forward decls for Host, QTimer |
 | TToolBar.h | ✅ Reviewed | Already minimal, uses forward decls |
-| TTrigger.h | ⏳ Pending | |
-| TVar.h | ⏳ Pending | |
+| TTrigger.h | ✅ Reviewed | Already minimal, forward decls for Host, TLuaInterpreter, TMatchState |
+| TVar.h | ✅ Reviewed | Already minimal, needs lua.h for LUA_T* constants |
 
 ## Other Headers
 
@@ -118,7 +118,7 @@ These headers are included by many files, so optimizing them has cascading benef
 |------|--------|-------|
 | ActionUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
 | AliasUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
-| ctelnet.h | ⏳ Pending | |
+| ctelnet.h | ✅ Reviewed | Complex networking, uses forward decls, needs system headers |
 | Host.h | ⏳ Pending | |
 | HostManager.h | ✅ Done | Host.h → forward decl |
 | KeyUnit.h | ⏳ Pending | |

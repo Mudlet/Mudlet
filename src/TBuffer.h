@@ -25,6 +25,7 @@
 
 
 #include "TTextCodec.h"
+#include "utils.h"
 
 #include <QChar>
 #include <QColor>
@@ -41,8 +42,6 @@
 #include <QVector>
 #include "TEncodingTable.h"
 #include "TLinkStore.h"
-#include "TMxpMudlet.h"
-#include "TMxpProcessor.h"
 
 #include <deque>
 #include <memory>
