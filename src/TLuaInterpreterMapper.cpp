@@ -34,7 +34,6 @@
 
 #include "EAction.h"
 #include "Host.h"
-#include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
