@@ -17,12 +17,12 @@ These headers are included by many files, so optimizing them has cascading benef
 | Host.h | ✅ Done | Removed XMLexport.h, added forward decl |
 | TLuaInterpreter.h | ✅ Done (PR) | Removed TMap.h include |
 | TMap.h | ✅ Done | Removed redundant QApplication |
-| mudlet.h | ⏳ Pending | Main app singleton, 65 files |
-| TConsole.h | ⏳ Pending | Text display, 40 files |
+| mudlet.h | ✅ Partially Done | Moved system memory headers to cpp (65 files) |
+| TConsole.h | ✅ Done | Removed redundant TTextCodec.h (via TBuffer.h) |
 | TTextEdit.h | ✅ Done | Removed TBuffer.h, use forward decl |
 | dlgTriggerEditor.h | ⚠️ Complex | Too many dependencies to remove from Host.h |
 | TRoom.h | ✅ Done | QApplication → QCoreApplication, moved TMap.h to cpp |
-| TArea.h | ⏳ Pending | Area data |
+| TArea.h | ✅ Reviewed | Needs TMap.h for friend decls, TMapLabel.h for member |
 | TRoomDB.h | ✅ Done | Removed redundant QApplication |
 | TBuffer.h | ✅ Done | Removed unused QApplication |
 | TAlias.h | ✅ Done | Removed unused QApplication |
@@ -52,7 +52,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | dlgColorTrigger.h | ✅ Reviewed | Already minimal |
 | dlgComposer.h | ✅ Reviewed | Already minimal |
 | dlgConnectionProfiles.h | ✅ Done | Moved pugixml.hpp to cpp, added forward decl |
-| dlgIRC.h | ⏳ Pending | |
+| dlgIRC.h | ✅ Done | Moved IrcTextFormat, IrcUser to cpp |
 | dlgKeysMainArea.h | ✅ Reviewed | Already minimal |
 | dlgMapLabel.h | ✅ Done | Remove Qt dialog includes, use forward decls |
 | dlgMapper.h | ✅ Done | Removed unused QDir, QMainWindow |
@@ -122,7 +122,7 @@ These headers are included by many files, so optimizing them has cascading benef
 | Host.h | ✅ Partially Done | See Priority Headers section for details |
 | HostManager.h | ✅ Done | Host.h → forward decl |
 | KeyUnit.h | ✅ Reviewed | Already minimal, utils.h for TreeItemInsertMode |
-| mudlet.h | ⏳ Pending | See Priority Headers - Main app singleton, 65 files |
+| mudlet.h | ✅ Partially Done | Moved system memory headers to cpp |
 | ScriptUnit.h | ✅ Reviewed | Already minimal, uses forward decls |
 | TimerUnit.h | ✅ Reviewed | Already minimal, forward decls for Host, TTimer, QTimer |
 | TriggerUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
