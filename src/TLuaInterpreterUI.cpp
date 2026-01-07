@@ -39,8 +39,6 @@
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
-#include "TForkedProcess.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
