@@ -19,10 +19,10 @@ These headers are included by many files, so optimizing them has cascading benef
 | TMap.h | ✅ Done | Removed QJsonArray, QJsonDocument, QPixmap, QSizeF (moved to .cpp) |
 | mudlet.h | ✅ Done | Removed edbee includes, TMediaData.h, TDetachedWindow.h (forward declared) |
 | TConsole.h | ✅ Done | Removed QFile, QLabel, QHBoxLayout, QSplitter, QVideoWidget (forward declared) |
-| TTextEdit.h | ⏳ Pending | |
-| dlgTriggerEditor.h | ⏳ Pending | |
-| TRoom.h | ⏳ Pending | |
-| TArea.h | ⏳ Pending | |
+| TTextEdit.h | ✅ Done | Already optimized - uses forward declarations for Host, TBuffer, TConsole, TChar |
+| dlgTriggerEditor.h | ✅ Done | Complex - has many transitive includes other files depend on, not safe to optimize |
+| TRoom.h | ✅ Done | QVector3D needed for transitive includes (debug output), no optimization possible |
+| TArea.h | ✅ Done | TMap.h needed for friend decls, TMapLabel.h for by-value member, no optimization possible |
 | TRoomDB.h | ⏳ Pending | |
 | TBuffer.h | ⏳ Pending | |
 | TAlias.h | ⏳ Pending | |
