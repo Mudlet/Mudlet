@@ -119,14 +119,14 @@ These headers are included by many files, so optimizing them has cascading benef
 | ActionUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
 | AliasUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
 | ctelnet.h | ✅ Reviewed | Complex networking, uses forward decls, needs system headers |
-| Host.h | ⏳ Pending | |
+| Host.h | ✅ Partially Done | See Priority Headers section for details |
 | HostManager.h | ✅ Done | Host.h → forward decl |
-| KeyUnit.h | ⏳ Pending | |
-| mudlet.h | ⏳ Pending | |
-| ScriptUnit.h | ⏳ Pending | |
-| TimerUnit.h | ⏳ Pending | |
+| KeyUnit.h | ✅ Reviewed | Already minimal, utils.h for TreeItemInsertMode |
+| mudlet.h | ⏳ Pending | See Priority Headers - Main app singleton, 65 files |
+| ScriptUnit.h | ✅ Reviewed | Already minimal, uses forward decls |
+| TimerUnit.h | ✅ Reviewed | Already minimal, forward decls for Host, TTimer, QTimer |
 | TriggerUnit.h | ✅ Reviewed | Already optimized, needs utils.h for TreeItemInsertMode |
-| VarUnit.h | ⏳ Pending | |
+| VarUnit.h | ✅ Reviewed | Already minimal, forward decls for TVar, QTreeWidgetItem |
 
 ---
 
