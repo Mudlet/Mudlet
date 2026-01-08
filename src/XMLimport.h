@@ -83,6 +83,8 @@ private:
     void readUnknownElement(const QString&);
 
     void readHost(Host*);
+    bool readHostColorElement(Host*, QStringView elementName);
+    bool readHostBorderElement(QMargins&, QStringView elementName);
     void readLegacyMapInfoContributors();
     void readMapInfoContributor();
     void readProfileShortcut();

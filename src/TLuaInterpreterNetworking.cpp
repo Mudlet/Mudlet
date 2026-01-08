@@ -416,6 +416,24 @@ int TLuaInterpreter::sendIrc(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openIRC
+int TLuaInterpreter::openIRC(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost) {
+        return warnArgumentValue(L, __func__, "no host found");
+    }
+    
+    if (!pHost->mpDlgIRC) {
+        pHost->mpDlgIRC = new dlgIRC(pHost);
+    }
+    pHost->mpDlgIRC->raise();
+    pHost->mpDlgIRC->show();
+    
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendMSDP
 int TLuaInterpreter::sendMSDP(lua_State* L)
 {

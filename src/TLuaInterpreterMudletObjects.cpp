@@ -1211,6 +1211,44 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permExactMatchTrigger
+int TLuaInterpreter::permExactMatchTrigger(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
+    QStringList patternList;
+    if (!lua_istable(L, 3)) {
+        lua_pushfstring(L, "permExactMatchTrigger: bad argument #3 type (exact match patterns list as table expected, got %s!)",
+                        luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            patternList << lua_tostring(L, -1);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permExactMatchTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    const QString script{lua_tostring(L, 4)};
+    auto [triggerID, message] = pLuaInterpreter->startPermExactMatchTrigger(name, parent, patternList, script);
+    if (triggerID == -1) {
+        lua_pushfstring(L, "permExactMatchTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerID);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permScript
 int TLuaInterpreter::permScript(lua_State* L)
 {

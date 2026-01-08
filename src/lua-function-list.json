@@ -342,6 +342,7 @@
     "pauseSpeedwalk": "pauseSpeedwalk()",
     "permAlias": "permAlias(name, parent, regex, lua code)",
     "permBeginOfLineStringTrigger": "permBeginOfLineStringTrigger(name, parent, pattern table, lua code)",
+    "permExactMatchTrigger": "permExactMatchTrigger(name, parent, pattern table, lua code)",
     "permGroup": "permGroup(name, itemtype, [parent])",
     "permKey": "permKey(name, parent, [modifier], key code, lua code)",
     "permPromptTrigger": "permPromptTrigger(name, parent, lua code)",

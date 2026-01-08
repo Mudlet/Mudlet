@@ -278,16 +278,14 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     const QByteArray utf8Data = data.toUtf8();
     const char* utf8Ptr = utf8Data.constData();
-    const int utf8Length = utf8Data.size();
+    const size_t utf8Length = utf8Data.size();
 
-#if defined(Q_OS_WINDOWS)
-    // strndup(3) - a safe strdup(3) does not seem to be available in the
-    // original mingw or the replacement mingw-w64 enmvironment we use:
     char* subject = static_cast<char*>(malloc(utf8Length + 1));
-    strcpy(subject, utf8Ptr);
-#else
-    char* subject = strndup(utf8Ptr, utf8Length);
-#endif
+    if (!subject) {
+        return;
+    }
+    memcpy(subject, utf8Ptr, utf8Length);
+    subject[utf8Length] = '\0';
 
     // Set processing flag to prevent re-entrant cleanup during trigger execution
     mIsProcessing = true;
