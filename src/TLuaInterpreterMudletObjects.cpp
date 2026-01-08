@@ -525,7 +525,7 @@ int TLuaInterpreter::exists(lua_State* L)
         count = host.getScriptUnit()->findItems(nameOrId).size();
     } else {
         return warnArgumentValue(L, __func__, qsl(
-            "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+                "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
     // If we get here we have successfully identified a type and have looked for
     // the item type with a specific NAME - so now just return the count of
@@ -989,7 +989,7 @@ int TLuaInterpreter::isActive(lua_State* L)
 
     } else {
         return warnArgumentValue(L, __func__, qsl(
-            "invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+                "invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
     lua_pushnumber(L, cnt);
     return 1;
@@ -1205,6 +1205,44 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script);
     if(triggerID == - 1) {
         lua_pushfstring(L, "permSubstringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerID);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permExactMatchTrigger
+int TLuaInterpreter::permExactMatchTrigger(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
+    QStringList patternList;
+    if (!lua_istable(L, 3)) {
+        lua_pushfstring(L, "permExactMatchTrigger: bad argument #3 type (exact match patterns list as table expected, got %s!)",
+                        luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            patternList << lua_tostring(L, -1);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permExactMatchTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    const QString script{lua_tostring(L, 4)};
+    auto [triggerID, message] = pLuaInterpreter->startPermExactMatchTrigger(name, parent, patternList, script);
+    if (triggerID == -1) {
+        lua_pushfstring(L, "permExactMatchTrigger: cannot create trigger (%s)", message.toUtf8().constData());
         return lua_error(L);
     }
     lua_pushnumber(L, triggerID);
@@ -1858,7 +1896,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
 
     int expiryCount = -1;
     if (lua_isnumber(L, ++s)) {
-        expiryCount = lua_tonumber(L, s);
+        expiryCount = static_cast<int>(lua_tonumber(L, s));
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl(
                 "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
@@ -1871,6 +1909,13 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     const int triggerID = pLuaInterpreter->startTempColorTrigger(ansiFgColor, ansiBgColor, code, expiryCount);
     if (code.isNull()) {
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempAnsiColorTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempColorTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, s-1);
@@ -1900,6 +1945,10 @@ int TLuaInterpreter::tempAlias(lua_State* L)
         Q_ASSERT_X(alias,
                    "TLuaInterpreter::tempAlias(...)",
                    "Got a positive result from LuaInterpreter::startTempAlias(...) but that failed to produce pointer to it from Host::mAliasUnit::getAlias(...)");
+        if (!alias) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         alias->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, alias);
         lua_pushvalue(L, 2);
@@ -1928,7 +1977,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
     const QString pattern = getVerifiedString(L, __func__, 1, "pattern");
 
     if (lua_isnumber(L, 3)) {
-        expiryCount = lua_tonumber(L, 3);
+        expiryCount = static_cast<int>(lua_tonumber(L, 3));
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl(
@@ -1945,6 +1994,13 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempBeginOfLineTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempBeginOfLineTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
@@ -2138,7 +2194,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     int expiryCount = -1;
 
     if (lua_isnumber(L, 4)) {
-        expiryCount = lua_tonumber(L, 4);
+        expiryCount = static_cast<int>(lua_tonumber(L, 4));
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl(
@@ -2155,6 +2211,13 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempColorTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempColorTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 3);
@@ -2184,19 +2247,19 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #4 type (multiline flag as number expected, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     }
-    const bool multiLine = lua_tonumber(L, 4);
+    const bool multiLine = static_cast<bool>(lua_tonumber(L, 4));
 
     if (!lua_isnumber(L, 7)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #7 type (filter flag as number expected, got %s!)", luaL_typename(L, 7));
         return lua_error(L);
     }
-    const bool filter = lua_tonumber(L, 7);
+    const bool filter = static_cast<bool>(lua_tonumber(L, 7));
 
     if (!lua_isnumber(L, 8)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #8 type (match all flag as number expected, got %s!)", luaL_typename(L, 8));
         return lua_error(L);
     }
-    const bool matchAll = lua_tonumber(L, 8);
+    const bool matchAll = static_cast<bool>(lua_tonumber(L, 8));
 
     const int fireLength = getVerifiedInt(L, __func__, 12, "fire length");
     const int lineDelta = getVerifiedInt(L, __func__, 13, "line delta");
@@ -2253,7 +2316,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     int expiryCount = -1;
 
     if (lua_isnumber(L, 14)) {
-        expiryCount = lua_tonumber(L, 14);
+        expiryCount = static_cast<int>(lua_tonumber(L, 14));
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl(
@@ -2324,7 +2387,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
     const QString exactMatchPattern = getVerifiedString(L, __func__, 1, "exact match pattern");
 
     if (lua_isnumber(L, 3)) {
-        expiryCount = lua_tonumber(L, 3);
+        expiryCount = static_cast<int>(lua_tonumber(L, 3));
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl(
@@ -2341,6 +2404,13 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempExactMatchTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempExactMatchTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
@@ -2380,6 +2450,10 @@ int TLuaInterpreter::tempKey(lua_State* L)
         Q_ASSERT_X(key,
                    "TLuaInterpreter::tempKey(...)",
                    "Got a positive result from LuaInterpreter::startTempKey(...) but that failed to produce pointer to it from Host::mKeyUnit::getKey(...)");
+        if (!key) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         key->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, key);
         lua_pushvalue(L, argIndex);
@@ -2416,6 +2490,13 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), dontExpire);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempLineTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempLineTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 3);
@@ -2439,7 +2520,7 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
     int expiryCount = -1;
 
     if (lua_isnumber(L, 2)) {
-        expiryCount = lua_tonumber(L, 2);
+        expiryCount = static_cast<int>(lua_tonumber(L, 2));
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl(
@@ -2456,6 +2537,13 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempPromptTrigger(QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempPromptTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempPromptTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 1);
@@ -2479,7 +2567,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
     const QString regexPattern = getVerifiedString(L, __func__, 1, "regex pattern");
 
     if (lua_isnumber(L, 3)) {
-        expiryCount = lua_tonumber(L, 3);
+        expiryCount = static_cast<int>(lua_tonumber(L, 3));
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl(
@@ -2496,6 +2584,13 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempRegexTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempRegexTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
@@ -2533,6 +2628,10 @@ int TLuaInterpreter::tempTimer(lua_State* L)
         Q_ASSERT_X(timer,
                    "TLuaInterpreter::tempTimer(...)",
                    "Got a positive result from LuaInterpreter::startTempTimer(...) but that failed to produce pointer to it from Host::mTimerUnit::getTimer(...)");
+        if (!timer) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         timer->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, timer);
         lua_pushvalue(L, 2);
@@ -2565,7 +2664,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     const QString substringPattern = getVerifiedString(L, __func__, 1, "substring pattern");
 
     if (lua_isnumber(L, 3)) {
-        expiryCount = lua_tonumber(L, 3);
+        expiryCount = static_cast<int>(lua_tonumber(L, 3));
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, qsl(
@@ -2582,6 +2681,13 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
         triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        Q_ASSERT_X(trigger,
+                   "TLuaInterpreter::tempTrigger(...)",
+                   "Got a positive result from LuaInterpreter::startTempTrigger(...) but that failed to produce pointer to it from Host::mTriggerUnit::getTrigger(...)");
+        if (!trigger) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
@@ -2645,12 +2751,11 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 
 
         auto host = hostManager.getHost(profile);
-        const auto loaded = static_cast<bool>(host);
         lua_pushstring(L, "loaded");
-        lua_pushboolean(L, loaded);
+        lua_pushboolean(L, host != nullptr);
         lua_settable(L, -3);
 
-        if (loaded) {
+        if (host) {
             auto [hostName, hostPort, connected] = host->mTelnet.getConnectionInfo();
 
             lua_pushstring(L, "connected");

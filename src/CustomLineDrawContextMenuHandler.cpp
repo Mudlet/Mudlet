@@ -85,6 +85,26 @@ bool CustomLineDrawContextMenuHandler::handle(T2DMap::MapInteractionContext& con
         customLineUndoLastPoint->setEnabled(false);
     }
 
+    //: 2D Mapper context menu (drawing custom exit line) item
+    auto snapToGrid = new QAction(T2DMap::tr("Snap points to grid"), &mMapWidget);
+    snapToGrid->setCheckable(true);
+    snapToGrid->setChecked(mMapWidget.isSnapCustomLinePointsToGridEnabled());
+    QObject::connect(snapToGrid, &QAction::toggled, &mMapWidget, &T2DMap::slot_setSnapCustomLinePointsToGrid);
+    //: 2D Mapper context menu (drawing custom exit line) item tooltip
+    snapToGrid->setToolTip(utils::richText(T2DMap::tr("Snap current points and keep custom line edits aligned to the map grid")));
+
+    //: 2D Mapper context menu (drawing custom exit line) item
+    auto moveLastPoint = new QAction(T2DMap::tr("Move last point to target room"), &mMapWidget);
+    if (mMapWidget.canMoveCustomLineLastPointToTargetRoom(*room, context.customLinesRoomExit)) {
+        QObject::connect(moveLastPoint, &QAction::triggered, &mMapWidget, &T2DMap::slot_moveCustomLineLastPointToTargetRoom);
+        //: 2D Mapper context menu (drawing custom exit line) item tooltip (enabled state)
+        moveLastPoint->setToolTip(utils::richText(T2DMap::tr("Snap the final point to the destination room")));
+    } else {
+        moveLastPoint->setEnabled(false);
+        //: 2D Mapper context menu (drawing custom exit line) item tooltip (disabled state)
+        moveLastPoint->setToolTip(utils::richText(T2DMap::tr("Select a line with a valid target room and at least one adjustable point")));
+    }
+
     //: 2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
     auto customLineProperties = new QAction(T2DMap::tr("Properties"), &mMapWidget);
     //: 2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
@@ -102,6 +122,8 @@ bool CustomLineDrawContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     room->calcRoomDimensions();
 
     popup->addAction(customLineUndoLastPoint);
+    popup->addAction(snapToGrid);
+    popup->addAction(moveLastPoint);
     popup->addAction(customLineProperties);
     popup->addAction(customLineFinish);
 

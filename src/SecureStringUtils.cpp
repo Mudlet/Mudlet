@@ -410,14 +410,7 @@ bool SecureStringUtils::isTestEnvironment()
 {
     // Check if we're running in a test environment
     // This prevents keychain access during automated testing
-
-    // Check various indicators that we're in a test environment
-    QString appName = QCoreApplication::applicationName();
-    QStringList args = QCoreApplication::arguments();
-
-    return qEnvironmentVariableIsSet("MUDLET_TEST_MODE") ||
-           appName.contains("Test", Qt::CaseInsensitive) ||
-           args.first().contains("Test", Qt::CaseInsensitive);
+    return qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
 }
 
 QByteArray SecureStringUtils::generateNonce()

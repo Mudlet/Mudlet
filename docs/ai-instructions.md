@@ -26,6 +26,8 @@ All files should end with a newline character at the end of the file.
 ### C++ Conventions
 In general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
 
+Use range-based for loops instead of iterator-based or index-based loops where appropriate.
+
 See `.github/CONTRIBUTING.md` for the coding standards as well as the information below:
 
 ```cpp
@@ -52,6 +54,15 @@ QString displayText = tr("Connection failed: %1").arg(errorMessage);
 // Always add contextual comments for translators using //:
 //: Toast notification shown when user dismisses an editor tip banner
 QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
+```
+
+```xml
+// In .ui files, set "notr" attribute to true for string literals which require no translation
+<widget>
+  <property name="text">
+    <string notr="true">-</string>
+  </property>
+</widget>
 ```
 
 ### Memory management
@@ -88,6 +99,10 @@ int TLuaInterpreter::functionName(lua_State* L)
 
 ## Common patterns
 
+### Comments
+
+Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
+
 ### Error handling
 
 ```cpp
@@ -106,15 +121,18 @@ if (!file.open(QIODevice::ReadOnly)) {
 
 ## Build system notes
 
-- **Primary**: CMake (handles platform-specific configurations)
-- **Legacy**: QMake in `src/mudlet.pro`
+- **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
 - Use `.clang-format` configuration in `src/` for C++ code style
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
 
+### Static analysis
+
+For complete setup instructions on how to run static analysis during a build see, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
+
 ### Debugging options
 
-Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defines for development (search "Debugging code inclusions"):
+`src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
 
 - `DEBUG_TELNET` - Telnet protocol debugging
 - `DEBUG_UTF8_PROCESSING` - UTF-8 decoding messages
@@ -122,7 +140,11 @@ Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defin
 - `DEBUG_WINDOW_HANDLING` - UI window operations
 - And others for encoding, MXP, map autosave, etc.
 
-**Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines (CMake) or `DEFINES+=DEBUG_XXX` lines (QMake) when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+**Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+
+### Git
+
+Do not force-push to remote branches.
 
 ### Building on macOS
 
@@ -153,7 +175,7 @@ cd /path/to/Mudlet/build
 # configure (only needed the first time)
 cmake ../ -G Ninja
 
-# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default:
+# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default, no need to specify number of jobs:
 cmake --build .
 
 # Run Mudlet - it's a visual, desktop application
