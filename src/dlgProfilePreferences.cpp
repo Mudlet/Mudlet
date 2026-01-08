@@ -26,11 +26,18 @@
 #include "dlgProfilePreferences.h"
 
 #include "Host.h"
+#include "TAction.h"
+#include "TAlias.h"
 #include "TConsole.h"
+#include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TTextEdit.h"
+#include "TTimer.h"
+#include "TTrigger.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -39,7 +46,10 @@
 
 #include <chrono>
 #include <QtConcurrent>
+#include <QCloseEvent>
 #include <QColorDialog>
+#include <QDir>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>

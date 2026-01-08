@@ -25,8 +25,12 @@
 
 #include "mudlet.h"
 
+#include <QCloseEvent>
 #include <QDir>
+#include <QLabel>
+#include <QLineEdit>
 #include <QStringConverter>
+#include <QTimer>
 
 using namespace std::chrono;
 

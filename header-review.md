@@ -27,102 +27,106 @@ These headers are included by many files, so optimizing them has cascading benef
 | TBuffer.h | ✅ Done | Removed TTextCodec.h, QStringBuilder, QTime (moved to .cpp) |
 | TAlias.h | ✅ Done | Already optimized - all includes needed for members |
 | TTrigger.h | ✅ Done | Already optimized - all includes needed for members |
-| TEncodingTable.h | ⏳ Pending | |
-| VarUnit.h | ⏳ Pending | |
+| TEncodingTable.h | ✅ Done | Already minimal |
+| VarUnit.h | ✅ Done | Already minimal |
 
 ## MXP Tag Handlers
 
 | File | Status | Notes |
 |------|--------|-------|
-| TMxpBRTagHandler.h | ⏳ Pending | |
-| TMxpColorTagHandler.h | ⏳ Pending | |
-| TMxpCustomElementTagHandler.h | ⏳ Pending | |
-| TMxpElementDefinitionHandler.h | ⏳ Pending | |
-| TMxpFontTagHandler.h | ⏳ Pending | |
-| TMxpLinkTagHandler.h | ⏳ Pending | |
-| TMxpVersionTagHandler.h | ⏳ Pending | |
+| TMxpBRTagHandler.h | ✅ Done | Already minimal (only TMxpTagHandler.h) |
+| TMxpColorTagHandler.h | ✅ Done | Already minimal (only TMxpTagHandler.h) |
+| TMxpCustomElementTagHandler.h | ✅ Done | Removed TMxpElementRegistry.h (provided by TMxpContext.h) |
+| TMxpElementDefinitionHandler.h | ✅ Done | Removed TMxpElementRegistry.h and utils.h (provided transitively) |
+| TMxpFontTagHandler.h | ✅ Done | Already minimal (only TMxpTagHandler.h) |
+| TMxpLinkTagHandler.h | ✅ Done | Already minimal (only TMxpTagHandler.h) |
+| TMxpVersionTagHandler.h | ✅ Done | Already minimal (only TMxpTagHandler.h) |
 
 ## Dialog Headers
 
 | File | Status | Notes |
 |------|--------|-------|
-| dlgAboutDialog.h | ⏳ Pending | |
-| dlgActionMainArea.h | ⏳ Pending | |
-| dlgAliasMainArea.h | ⏳ Pending | |
-| dlgColorTrigger.h | ⏳ Pending | |
-| dlgComposer.h | ⏳ Pending | |
-| dlgConnectionProfiles.h | ⏳ Pending | |
-| dlgIRC.h | ⏳ Pending | |
-| dlgKeysMainArea.h | ⏳ Pending | |
-| dlgMapLabel.h | ⏳ Pending | |
-| dlgMapper.h | ⏳ Pending | |
-| dlgModuleManager.h | ⏳ Pending | |
-| dlgNotepad.h | ⏳ Pending | |
-| dlgPackageExporter.h | ⏳ Pending | |
-| dlgPackageManager.h | ⏳ Pending | |
-| dlgProfilePreferences.h | ⏳ Pending | |
-| dlgRoomExits.h | ⏳ Pending | |
-| dlgRoomProperties.h | ⏳ Pending | |
-| dlgScriptsMainArea.h | ⏳ Pending | |
-| dlgSourceEditorArea.h | ⏳ Pending | |
-| dlgSourceEditorFindArea.h | ⏳ Pending | |
-| dlgSystemMessageArea.h | ⏳ Pending | |
-| dlgTimersMainArea.h | ⏳ Pending | |
-| dlgTriggerPatternEdit.h | ⏳ Pending | |
-| dlgTriggersMainArea.h | ⏳ Pending | |
-| dlgVarsMainArea.h | ⏳ Pending | |
+| dlgAboutDialog.h | ✅ Done | Already minimal |
+| dlgActionMainArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgAliasMainArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgColorTrigger.h | ✅ Done | Already optimized with forward declarations |
+| dlgComposer.h | ✅ Done | Already optimized with forward declarations |
+| dlgConnectionProfiles.h | ✅ Done | Already optimized with forward declarations |
+| dlgIRC.h | ✅ Done | IRC library includes needed for types |
+| dlgKeysMainArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgMapLabel.h | ✅ Done | Already optimized with forward declarations |
+| dlgMapper.h | ✅ Done | Already optimized with forward declarations |
+| dlgModuleManager.h | ✅ Done | Already optimized with forward declarations |
+| dlgNotepad.h | ✅ Done | Removed QCloseEvent, QLabel, QLineEdit, QTimer (forward declared) |
+| dlgPackageExporter.h | ✅ Done | Already optimized with forward declarations |
+| dlgPackageManager.h | ✅ Done | QJsonArray needed for by-value member |
+| dlgProfilePreferences.h | ✅ Done | Removed QtCore, 7 T* headers (forward declared) |
+| dlgRoomExits.h | ✅ Done | Already optimized with forward declarations |
+| dlgRoomProperties.h | ✅ Done | Already optimized with forward declarations |
+| dlgScriptsMainArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgSourceEditorArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgSourceEditorFindArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgSystemMessageArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgTimersMainArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgTriggerPatternEdit.h | ✅ Done | Already minimal (only UI file) |
+| dlgTriggersMainArea.h | ✅ Done | Already minimal (only UI file) |
+| dlgVarsMainArea.h | ✅ Done | Already minimal (only UI file) |
 
 ## T-Class Headers
 
+Note: High-impact T-Class headers were reviewed in Priority Headers section above.
+
 | File | Status | Notes |
 |------|--------|-------|
-| TAstar.h | ⏳ Pending | |
-| TAction.h | ⏳ Pending | |
-| TAlias.h | ⏳ Pending | |
-| TArea.h | ⏳ Pending | |
-| TBuffer.h | ⏳ Pending | |
-| TCommandLine.h | ⏳ Pending | |
-| TConsole.h | ⏳ Pending | |
-| TDebug.h | ⏳ Pending | |
-| TDockWidget.h | ⏳ Pending | |
-| TEntityHandler.h | ⏳ Pending | |
-| TEntityResolver.h | ⏳ Pending | |
-| TEvent.h | ⏳ Pending | |
-| TFlipButton.h | ⏳ Pending | |
-| TForkedProcess.h | ⏳ Pending | |
-| TGameDetails.h | ⏳ Pending | |
-| TKey.h | ⏳ Pending | |
-| TLabel.h | ⏳ Pending | |
-| TLuaInterpreter.h | ⏳ Pending | |
-| TMainConsole.h | ⏳ Pending | |
-| TMap.h | ⏳ Pending | |
-| TMapLabel.h | ⏳ Pending | |
-| TMedia.h | ⏳ Pending | |
-| TMediaData.h | ⏳ Pending | |
-| TMxpClient.h | ⏳ Pending | |
-| TRoom.h | ⏳ Pending | |
-| TRoomDB.h | ⏳ Pending | |
-| TScript.h | ⏳ Pending | |
-| TSplitter.h | ⏳ Pending | |
-| TTabBar.h | ⏳ Pending | |
-| TTextCodec.h | ⏳ Pending | |
-| TTimer.h | ⏳ Pending | |
-| TToolBar.h | ⏳ Pending | |
-| TTrigger.h | ⏳ Pending | |
-| TVar.h | ⏳ Pending | |
+| TAstar.h | ✅ Done | Minimal - only QList needed |
+| TAction.h | ✅ Done | All includes needed for members |
+| TAlias.h | ✅ Done | See Priority Headers |
+| TArea.h | ✅ Done | See Priority Headers |
+| TBuffer.h | ✅ Done | See Priority Headers |
+| TCommandLine.h | ✅ Done | All includes needed |
+| TConsole.h | ✅ Done | See Priority Headers |
+| TDebug.h | ✅ Done | Minimal |
+| TDockWidget.h | ✅ Done | Minimal |
+| TEntityHandler.h | ✅ Done | Minimal |
+| TEntityResolver.h | ✅ Done | Minimal |
+| TEvent.h | ✅ Done | Minimal |
+| TFlipButton.h | ✅ Done | Minimal |
+| TForkedProcess.h | ✅ Done | Uses forward declarations |
+| TGameDetails.h | ✅ Done | Minimal |
+| TKey.h | ✅ Done | All includes needed for members |
+| TLabel.h | ✅ Done | Uses forward declarations |
+| TLuaInterpreter.h | ✅ Done | See Priority Headers |
+| TMainConsole.h | ✅ Done | All includes needed |
+| TMap.h | ✅ Done | See Priority Headers |
+| TMapLabel.h | ✅ Done | Minimal |
+| TMedia.h | ✅ Done | All includes needed |
+| TMediaData.h | ✅ Done | All includes needed |
+| TMxpClient.h | ✅ Done | Uses forward declarations |
+| TRoom.h | ✅ Done | See Priority Headers |
+| TRoomDB.h | ✅ Done | See Priority Headers |
+| TScript.h | ✅ Done | All includes needed for members |
+| TSplitter.h | ✅ Done | Minimal |
+| TTabBar.h | ✅ Done | Minimal |
+| TTextCodec.h | ✅ Done | Minimal |
+| TTimer.h | ✅ Done | All includes needed for members |
+| TToolBar.h | ✅ Done | Uses forward declarations |
+| TTrigger.h | ✅ Done | See Priority Headers |
+| TVar.h | ✅ Done | Minimal |
 
 ## Other Headers
 
+Note: High-impact headers were reviewed in Priority Headers section above.
+
 | File | Status | Notes |
 |------|--------|-------|
-| ActionUnit.h | ⏳ Pending | |
-| AliasUnit.h | ⏳ Pending | |
-| ctelnet.h | ⏳ Pending | |
-| Host.h | ⏳ Pending | |
-| HostManager.h | ⏳ Pending | |
-| KeyUnit.h | ⏳ Pending | |
-| mudlet.h | ⏳ Pending | |
-| ScriptUnit.h | ⏳ Pending | |
-| TimerUnit.h | ⏳ Pending | |
-| TriggerUnit.h | ⏳ Pending | |
-| VarUnit.h | ⏳ Pending | |
+| ActionUnit.h | ✅ Done | All includes needed |
+| AliasUnit.h | ✅ Done | All includes needed |
+| ctelnet.h | ✅ Done | Uses forward declarations |
+| Host.h | ✅ Done | See Priority Headers |
+| HostManager.h | ✅ Done | Minimal |
+| KeyUnit.h | ✅ Done | All includes needed |
+| mudlet.h | ✅ Done | See Priority Headers |
+| ScriptUnit.h | ✅ Done | All includes needed |
+| TimerUnit.h | ✅ Done | All includes needed |
+| TriggerUnit.h | ✅ Done | All includes needed |
+| VarUnit.h | ✅ Done | See Priority Headers |
