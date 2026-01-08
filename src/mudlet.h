@@ -32,8 +32,6 @@
 #include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
-#include "TDetachedWindow.h"
-#include "TMediaData.h"
 #include "utils.h"
 #include <memory>
 
@@ -42,7 +40,6 @@
 #endif
 
 #include "ui_main_window.h"
-#include "edbee/views/texttheme.h"
 #include <QAction>
 #include <QDir>
 #include <QFlags>
@@ -56,7 +53,6 @@
 #include <QTime>
 #include <QVersionNumber>
 #include <QWindow>
-#include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
 #else
@@ -65,33 +61,6 @@
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
-
-// for system physical memory info
-#if defined(Q_OS_WINDOWS)
-#include <Windows.h>
-#include <Psapi.h>
-#elif defined(Q_OS_MACOS)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <array>
-#elif defined(Q_OS_HURD)
-#include <errno.h>
-#include <unistd.h>
-#elif defined(Q_OS_OPENBSD)
-// OpenBSD doesn't have a sysinfo.h
-#include <sys/sysctl.h>
-#include <unistd.h>
-#elif defined(Q_OS_UNIX)
-// Including both GNU/Linux and FreeBSD
-#include <sys/resource.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// Any other OS?
-#endif
 
 class QCloseEvent;
 class QMediaPlayer;
@@ -119,6 +88,7 @@ class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
 class TConsole;
+class TDetachedWindow;
 class TDockWidget;
 class TEvent;
 class TLabel;

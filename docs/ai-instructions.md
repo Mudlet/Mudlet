@@ -70,6 +70,36 @@ QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 - Use Qt's parent-child system for automatic cleanup for Qt classes
 - Otherwise, use C++ smart pointers for non-Qt classes
 
+### Include management
+
+Minimize `#include` directives to reduce build times:
+
+**In header files (.h):**
+- Only include what's needed for declarations in that header
+- Use forward declarations (`class Foo;`) when only pointers or references are used
+- Never include headers "just in case" - each include in a header propagates to all files that include it
+
+**In source files (.cpp):**
+- Only include headers actually used in that file
+- When adding new code, verify you need each include you add
+- Don't copy includes from similar files without checking if they're needed
+
+**Forward declaration examples:**
+```cpp
+// In header: use forward declaration when only pointer/reference is needed
+class Host;  // Forward declare instead of #include "Host.h"
+class QCloseEvent;
+
+class MyClass {
+    Host* mpHost;  // Pointer - forward declaration sufficient
+    void closeEvent(QCloseEvent* event);  // Pointer param - forward declaration sufficient
+};
+
+// In cpp: include the full header where the type is actually used
+#include "Host.h"
+#include <QCloseEvent>
+```
+
 ## Key architecture points
 Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
 

@@ -24,6 +24,7 @@
 #include "dlgPackageExporter.h"
 #include "ui_dlgPackageExporter.h"
 
+#include "Host.h"
 #include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -31,6 +32,7 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "XMLexport.h"
 
 #include <QtConcurrent>
 #include <QDesktopServices>

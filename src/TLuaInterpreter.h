@@ -25,9 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMap.h"
 #include "TMediaData.h"
-#include "TTextCodec.h"
 #include "TTrigger.h"
 #include "utils.h"
 
@@ -69,7 +67,6 @@ class TAction;
 class TEvent;
 class TLuaThread;
 class TMapLabel;
-class TTrigger;
 
 
 #define SERVEROUTPUT 1

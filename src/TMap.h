@@ -30,18 +30,13 @@
 #endif
 #include "utils.h"
 
-#include <QApplication>
 #include <QColor>
 #include <QFont>
-#include <QJsonArray>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
 #include <QNetworkReply>
-#include <QPixmap>
 #include <QPointer>
 #include <QSet>
-#include <QSizeF>
 #include <QVector3D>
 #include <stdlib.h>
 #include <optional>

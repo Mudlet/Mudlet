@@ -28,6 +28,7 @@
 #include "TTextEdit.h"
 
 #include "Host.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"

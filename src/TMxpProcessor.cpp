@@ -188,7 +188,6 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         return HANDLER_NEXT_CHAR;
     }
-    
     if (mMxpTagBuilder.hasTag()) {
         // Save raw tag content before it gets cleared by buildTag()
         // Note: getRawTagContent() returns content INCLUDING the closing '>'

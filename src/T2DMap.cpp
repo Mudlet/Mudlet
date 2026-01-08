@@ -55,7 +55,6 @@
 
 
 #include <QAction>
-#include <QApplication>
 #include <QCoreApplication>
 #include <QCursor>
 #include <QMap>
