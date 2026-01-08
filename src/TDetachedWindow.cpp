@@ -327,13 +327,6 @@ void TDetachedWindow::createMenus()
     toolboxMenu->addAction(mpMenuNotepadAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    auto ircAction = new QAction(tr("&IRC"), this);
-    //: This explains the "IRC" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    ircAction->setStatusTip(tr("Opens a built-in IRC chat."));
-    connect(ircAction, &QAction::triggered, mudlet::self(), &mudlet::slot_irc);
-    toolboxMenu->addAction(ircAction);
-
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuPackageManagerAction = new QAction(tr("&Package manager"), this);
     //: This explains the "Package manager" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuPackageManagerAction->setStatusTip(tr("Install and remove collections of Mudlet lua items (packages)."));
