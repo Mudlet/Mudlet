@@ -23,10 +23,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Host.h"
-
 #include "ui_room_properties.h"
 
+#include <QListWidget>
+
+class Host;
+class TRoom;
 
 class dlgRoomProperties : public QDialog, public Ui::room_properties
 {
@@ -75,6 +77,7 @@ private:
     QColor mRoomColor;
     int mRoomColorNumber = -1;
     bool mChangeRoomColor = false;
+    bool mSymbolColorWasChanged = false;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:

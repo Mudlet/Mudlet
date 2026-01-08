@@ -113,11 +113,11 @@ TDetachedWindow::~TDetachedWindow()
     }
 
     // Clean up any docked widgets and restore main mappers
-    for (auto it = mDockWidgetMap.begin(); it != mDockWidgetMap.end(); ++it) {
-        if (it.value()) {
+    for (auto&& [key, dockWidget] : mDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
             // If this is a map dock widget, restore the main mapper
-            if (it.key().startsWith("map_")) {
-                QString profileName = it.key().mid(4); // Remove "map_" prefix
+            if (key.startsWith("map_")) {
+                QString profileName = key.mid(4); // Remove "map_" prefix
                 if (auto mudletInstance = mudlet::self()) {
                     if (auto pHost = mudletInstance->getHostManager().getHost(profileName)) {
                         auto pMap = pHost->mpMap.data();
@@ -134,7 +134,7 @@ TDetachedWindow::~TDetachedWindow()
                 }
             }
 
-            it.value()->deleteLater();
+            dockWidget->deleteLater();
         }
     }
 
@@ -325,13 +325,6 @@ void TDetachedWindow::createMenus()
     mpMenuNotepadAction->setStatusTip(tr("Opens a free form text editor window for this profile that is saved between sessions."));
     connect(mpMenuNotepadAction, &QAction::triggered, this, &TDetachedWindow::slot_showNotesDialog);
     toolboxMenu->addAction(mpMenuNotepadAction);
-
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    auto ircAction = new QAction(tr("&IRC"), this);
-    //: This explains the "IRC" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    ircAction->setStatusTip(tr("Opens a built-in IRC chat."));
-    connect(ircAction, &QAction::triggered, mudlet::self(), &mudlet::slot_irc);
-    toolboxMenu->addAction(ircAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuPackageManagerAction = new QAction(tr("&Package manager"), this);
@@ -948,8 +941,7 @@ void TDetachedWindow::createToolBar()
     mpButtonDiscord = new QToolButton(this);
     mpButtonDiscord->setText(qsl("Discord"));
     mpButtonDiscord->setObjectName(qsl("discord"));
-    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
-    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonDiscord->setContextMenuPolicy(Qt::DefaultContextMenu);
     mpButtonDiscord->setAutoRaise(true);
     mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonDiscord);
@@ -966,13 +958,8 @@ void TDetachedWindow::createToolBar()
     mpToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
 
-    mpActionIRC = new QAction(tr("Open IRC"), this);
-    mpActionIRC->setIcon(QIcon(qsl(":/icons/internet-telephony.png")));
-    mpActionIRC->setObjectName(qsl("openIRC"));
 
     mpButtonDiscord->addAction(mpActionDiscord);
-    mpButtonDiscord->addAction(mpActionIRC);
-    mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     // Map and other tools
     mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);
@@ -1107,7 +1094,6 @@ void TDetachedWindow::connectToolBarActions()
     // Discord/IRC actions - use our custom slots to ensure correct profile context
     connect(mpActionDiscord, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
     connect(mpActionMudletDiscord, &QAction::triggered, this, &TDetachedWindow::slot_mudletDiscord);
-    connect(mpActionIRC, &QAction::triggered, this, &TDetachedWindow::slot_irc);
 }
 
 QKeySequence TDetachedWindow::resolveShortcut(const QString& key, const QKeySequence& fallback) const
@@ -1426,15 +1412,15 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
 
-    for (auto it = mDockWidgetMap.begin(); it != mDockWidgetMap.end(); ++it) {
-        if (it.value()) {
-            dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
+    for (auto&& [key, dockWidget] : mDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
+            dockWidgetsToProcess.append(qMakePair(key, dockWidget));
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "TDetachedWindow: Found dock widget in map:" << it.key() << "isVisible:" << it.value()->isVisible();
+            qDebug() << "TDetachedWindow: Found dock widget in map:" << key << "isVisible:" << dockWidget->isVisible();
 #endif
         } else {
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "TDetachedWindow: Found null dock widget in map for key:" << it.key();
+            qDebug() << "TDetachedWindow: Found null dock widget in map for key:" << key;
 #endif
         }
     }
@@ -1720,9 +1706,7 @@ void TDetachedWindow::updateWindowMenu()
         // Collect unique detached windows to avoid duplicates
         QSet<TDetachedWindow*> uniqueDetachedWindows;
 
-        for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-            TDetachedWindow* detachedWindow = it.value();
-
+        for (const auto& detachedWindow : detachedWindows) {
             if (detachedWindow) {
                 uniqueDetachedWindows.insert(detachedWindow);
             }
@@ -1837,18 +1821,16 @@ void TDetachedWindow::slot_activateDetachedWindowProfile()
     // Find which detached window contains this profile
     const auto& detachedWindows = mudlet::self()->getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
             // Activate the detached window
             detachedWindow->raise();
             detachedWindow->activateWindow();
             detachedWindow->show(); // Ensure it's not minimized
-            
+
             // Switch to the specific profile tab in the detached window
             detachedWindow->switchToProfile(profileName);
-            
+
             updateWindowMenu(); // Refresh checkmarks
             break;
         }
@@ -2265,12 +2247,12 @@ void TDetachedWindow::slot_tabMoved(int oldPos, int newPos)
     // Create a map of profile names to console widgets
     QMap<QString, TMainConsole*> consoleWidgetMap;
 
-    for (auto it = mProfileConsoleMap.begin(); it != mProfileConsoleMap.end(); ++it) {
-        if (it.value()) {
-            consoleWidgetMap.insert(it.key(), it.value());
+    for (auto&& [profileName, console] : mProfileConsoleMap.asKeyValueRange()) {
+        if (console) {
+            consoleWidgetMap.insert(profileName, console);
         } else {
-            qWarning().nospace().noquote() << "TDetachedWindow::slot_tabMoved(" << oldPos << ", " << newPos 
-                                           << ") WARNING - nullptr for TMainConsole for profile: " << it.key();
+            qWarning().nospace().noquote() << "TDetachedWindow::slot_tabMoved(" << oldPos << ", " << newPos
+                                           << ") WARNING - nullptr for TMainConsole for profile: " << profileName;
         }
     }
 
@@ -2364,9 +2346,7 @@ void TDetachedWindow::checkForWindowMergeOpportunity()
     // Look for overlapping detached windows
     const auto& detachedWindows = mudletInstance->getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* otherWindow = it.value();
-
+    for (const auto& otherWindow : detachedWindows) {
         // Skip ourselves
         if (otherWindow == this || !otherWindow || !otherWindow->isVisible()) {
             continue;
@@ -2662,9 +2642,7 @@ void TDetachedWindow::slot_showMapperDialog()
     // Check other detached windows for conflicting maps
     const auto& detachedWindows = mudletInstance->getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* otherWindow = it.value();
-
+    for (const auto& otherWindow : detachedWindows) {
         if (otherWindow && otherWindow != this) {
             auto otherMapDock = otherWindow->getDockWidget(mapKey);
 
@@ -3018,10 +2996,6 @@ void TDetachedWindow::slot_mudletDiscord()
     }
 }
 
-void TDetachedWindow::slot_irc()
-{
-    mudlet::self()->slot_irc();
-}
 
 void TDetachedWindow::slot_muteMedia()
 {

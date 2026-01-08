@@ -32,8 +32,6 @@
 #include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
-#include "TDetachedWindow.h"
-#include "TMediaData.h"
 #include "utils.h"
 #include <memory>
 
@@ -42,7 +40,6 @@
 #endif
 
 #include "ui_main_window.h"
-#include "edbee/views/texttheme.h"
 #include <QAction>
 #include <QDir>
 #include <QFlags>
@@ -56,42 +53,14 @@
 #include <QTime>
 #include <QVersionNumber>
 #include <QWindow>
-#include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include <../3rdparty/qtkeychain/keychain.h>
+#include <qtkeychain/keychain.h>
 #else
 #include <qt6keychain/keychain.h>
 #endif
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
-
-// for system physical memory info
-#if defined(Q_OS_WINDOWS)
-#include <Windows.h>
-#include <Psapi.h>
-#elif defined(Q_OS_MACOS)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <array>
-#elif defined(Q_OS_HURD)
-#include <errno.h>
-#include <unistd.h>
-#elif defined(Q_OS_OPENBSD)
-// OpenBSD doesn't have a sysinfo.h
-#include <sys/sysctl.h>
-#include <unistd.h>
-#elif defined(Q_OS_UNIX)
-// Including both GNU/Linux and FreeBSD
-#include <sys/resource.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// Any other OS?
-#endif
 
 class QCloseEvent;
 class QMediaPlayer;
@@ -119,6 +88,7 @@ class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
 class TConsole;
+class TDetachedWindow;
 class TDockWidget;
 class TEvent;
 class TLabel;
@@ -332,6 +302,7 @@ public:
     void showOptionsDialog(const QString&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
@@ -442,7 +413,6 @@ public slots:
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
-    void slot_irc();
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
     void slot_showFullChangelog();
@@ -555,7 +525,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
-
+    void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
@@ -664,7 +634,6 @@ private:
     QPointer<QAction> mpActionDiscord;
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
-    QPointer<QAction> mpActionIRC;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
     QPointer<QAction> mpActionModuleManager;

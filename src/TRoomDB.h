@@ -24,7 +24,6 @@
  ***************************************************************************/
 
 
-#include <QApplication>
 #include <QHash>
 #include <QMap>
 #include <QString>

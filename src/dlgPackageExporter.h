@@ -24,14 +24,21 @@
  ***************************************************************************/
 
 
-#include "Host.h"
-
 #include <QDialog>
 #include <QFileInfo>
+#include <QPointer>
 #include <QTextEdit>
-#include <QCloseEvent>
 #include <zip.h>
-#include <zip.h>
+
+class Host;
+class QCloseEvent;
+class QGroupBox;
+class TAction;
+class TAlias;
+class TKey;
+class TScript;
+class TTimer;
+class TTrigger;
 
 #if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR  > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
 // libzip 1.7.0 supports cancelling archiving in progress

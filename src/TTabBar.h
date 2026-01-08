@@ -25,11 +25,6 @@
 #include <QSet>
 #include <QString>
 #include <QTabBar>
-#include <QDrag>
-#include <QMimeData>
-#include <QApplication>
-
-#include "utils.h"
 
 class TStyle : public QProxyStyle
 {

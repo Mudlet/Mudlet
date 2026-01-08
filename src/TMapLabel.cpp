@@ -23,11 +23,15 @@
 #include "TMapLabel.h"
 
 #include <QBuffer>
+#include <QDebug>
 
 QByteArray TMapLabel::base64EncodePixmap() const
 {
     QBuffer buffer;
-    buffer.open(QIODevice::WriteOnly);
+    if (!buffer.open(QIODevice::WriteOnly)) {
+        qWarning() << "TMapLabel::base64EncodePixmap() ERROR: failed to open buffer for writing";
+        return {};
+    }
     pix.save(&buffer, "PNG");
     return buffer.data().toBase64();
 }

@@ -25,8 +25,12 @@
 
 #include "ui_composer.h"
 #include <QPointer>
+#include <QPoint>
 
 class Host;
+class QMenu;
+class QMouseEvent;
+class QTextCursor;
 
 
 class dlgComposer : public QMainWindow, public Ui::composer
@@ -43,8 +47,31 @@ public slots:
     void slot_save();
     void slot_cancel();
 
+private slots:
+    void slot_spellCheck();
+    void slot_contextMenu(const QPoint& pos);
+    void slot_addWord();
+    void slot_removeWord();
+    void slot_popupMenu();
+
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
+
 private:
+    void spellCheckWord(QTextCursor& cursor);
+    void recheckWholeLine();
+    void fillSpellCheckList(QMouseEvent* event, QMenu* popup);
+
     QPointer<Host> mpHost;
+    QString mSpellCheckedWord;
+    bool mSpellChecking = false;
+    int mSystemDictionarySuggestionsCount = 0;
+    int mUserDictionarySuggestionsCount = 0;
+    char** mpSystemSuggestionsList = nullptr;
+    char** mpUserSuggestionsList = nullptr;
+    QPoint mPopupPosition;
+    int mLastWordStart = -1;
+    int mLastWordEnd = -1;
 };
 
 #endif // MUDLET_DLGCOMPOSER_H

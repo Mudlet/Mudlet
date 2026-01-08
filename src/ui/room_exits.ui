@@ -1927,7 +1927,7 @@
          <enum>Qt::StrongFocus</enum>
         </property>
         <property name="toolTip">
-         <string>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</string>
+         <string>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, either: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</string>
         </property>
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>

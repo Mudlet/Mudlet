@@ -62,7 +62,7 @@ public:
     // Camera state
     QVector3D getPosition();
     QVector3D getTarget() const { return mTarget; }
-    QVector3D getUp() const { return mUpVector; }
+    // QVector3D getUp() const { return mUpVector; }
     float getScale() const { return mDistance; }
 
     // View center (for external API compatibility)

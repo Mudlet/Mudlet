@@ -23,20 +23,40 @@
 
 #include "TBuffer.h"
 
+#include "Host.h"
 #include "mudlet.h"
+#include "TConsole.h"
 #include "TEvent.h"
+#include "THyperlinkCompactManager.h"
+#include "THyperlinkVisibilityManager.h"
+#include "THyperlinkSelectionManager.h"
 #include "TStringUtils.h"
+#include "TTextEdit.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
+#include "TEncodingHelper.h"
+#include "SentryWrapper.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QJsonValue>
-#include <QTextBoundaryFinder>
-#include <QTextCodec>
 #include <QRegularExpression>
+#include <QTextBoundaryFinder>
+#include <QTime>
+#include <QTimer>
+#include <QUrlQuery>
+
+namespace {
+
+// Helper to interpret JSON values as boolean
+// Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
+bool jsonBoolValue(const QJsonValue& val) {
+    return val.toBool() || (val.isDouble() && val.toDouble() != 0);
+}
+
+} // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
 : mFgColor(foreground)
@@ -150,11 +170,10 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 , mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
 , mpHost(pH)
-, mTagWatchdog(nullptr)
+, mTagWatchdog(std::make_unique<QTimer>())
 {
-    mTagWatchdog = new QTimer();
     mTagWatchdog->setSingleShot(true);
-    QObject::connect(mTagWatchdog, &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
     // All additions to the buffer must use append()/appendLine() to preserve formatting via TChar.
     // Direct modification of the `buffer` vector may bypass formatting and should be avoided.
     clear();
@@ -170,7 +189,170 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 
 TBuffer::~TBuffer()
 {
-    delete mTagWatchdog;
+}
+
+TBuffer::TBuffer(const TBuffer& other)
+: bufferLine(other.bufferLine)
+, buffer(other.buffer)
+, lineBuffer(other.lineBuffer)
+, timeBuffer(other.timeBuffer)
+, promptBuffer(other.promptBuffer)
+, mLinkStore(other.mLinkStore)
+, mLinesLimit(other.mLinesLimit)
+, mBatchDeleteSize(other.mBatchDeleteSize)
+, mWrapAt(other.mWrapAt)
+, mWrapIndent(other.mWrapIndent)
+, mWrapHangingIndent(other.mWrapHangingIndent)
+, mCursorY(other.mCursorY)
+, mEchoingText(other.mEchoingText)
+, mpConsole(other.mpConsole)
+, mGotESC(other.mGotESC)
+, mGotCSI(other.mGotCSI)
+, mGotOSC(other.mGotOSC)
+, mIsDefaultColor(other.mIsDefaultColor)
+, mBlack(other.mBlack)
+, mLightBlack(other.mLightBlack)
+, mRed(other.mRed)
+, mLightRed(other.mLightRed)
+, mLightGreen(other.mLightGreen)
+, mGreen(other.mGreen)
+, mLightBlue(other.mLightBlue)
+, mBlue(other.mBlue)
+, mLightYellow(other.mLightYellow)
+, mYellow(other.mYellow)
+, mLightCyan(other.mLightCyan)
+, mCyan(other.mCyan)
+, mLightMagenta(other.mLightMagenta)
+, mMagenta(other.mMagenta)
+, mLightWhite(other.mLightWhite)
+, mWhite(other.mWhite)
+, mForeGroundColor(other.mForeGroundColor)
+, mForeGroundColorLight(other.mForeGroundColorLight)
+, mBackGroundColor(other.mBackGroundColor)
+, mpHost(other.mpHost)
+, mBold(other.mBold)
+, mItalics(other.mItalics)
+, mOverline(other.mOverline)
+, mReverse(other.mReverse)
+, mStrikeOut(other.mStrikeOut)
+, mUnderline(other.mUnderline)
+, mUnderlineWavy(other.mUnderlineWavy)
+, mUnderlineDotted(other.mUnderlineDotted)
+, mUnderlineDashed(other.mUnderlineDashed)
+, mBlink(other.mBlink)
+, mFastBlink(other.mFastBlink)
+, mConcealed(other.mConcealed)
+, mAltFont(other.mAltFont)
+, mMudLine(other.mMudLine)
+, mMudBuffer(other.mMudBuffer)
+, mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
+, lastLoggedFromLine(other.lastLoggedFromLine)
+, lastloggedToLine(other.lastloggedToLine)
+, lastTextToLog(other.lastTextToLog)
+, mEncoding(other.mEncoding)
+, mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
+, mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
+, mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
+, mHyperlinkActive(other.mHyperlinkActive)
+, mWatchdogPhase(other.mWatchdogPhase)
+, mTagWatchdog(std::make_unique<QTimer>())
+, mWatchdogTagSnapshot(other.mWatchdogTagSnapshot)
+, mCurrentHyperlinkStyling(other.mCurrentHyperlinkStyling)
+, mCurrentHyperlinkMenu(other.mCurrentHyperlinkMenu)
+, mLinkStates(other.mLinkStates)
+, mVisitedLinks(other.mVisitedLinks)
+, mLinkOriginalBackgrounds(other.mLinkOriginalBackgrounds)
+, mLinkOriginalCharacters(other.mLinkOriginalCharacters)
+, mCurrentHoveredLinkIndex(other.mCurrentHoveredLinkIndex)
+, mCurrentActiveLinkIndex(other.mCurrentActiveLinkIndex)
+, mCurrentFocusedLinkIndex(other.mCurrentFocusedLinkIndex)
+{
+    mTagWatchdog->setSingleShot(true);
+    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+}
+
+TBuffer& TBuffer::operator=(const TBuffer& other)
+{
+    if (this != &other) {
+        bufferLine = other.bufferLine;
+        buffer = other.buffer;
+        lineBuffer = other.lineBuffer;
+        timeBuffer = other.timeBuffer;
+        promptBuffer = other.promptBuffer;
+        mLinkStore = other.mLinkStore;
+        mLinesLimit = other.mLinesLimit;
+        mBatchDeleteSize = other.mBatchDeleteSize;
+        mWrapAt = other.mWrapAt;
+        mWrapIndent = other.mWrapIndent;
+        mWrapHangingIndent = other.mWrapHangingIndent;
+        mCursorY = other.mCursorY;
+        mEchoingText = other.mEchoingText;
+        mpConsole = other.mpConsole;
+        mGotESC = other.mGotESC;
+        mGotCSI = other.mGotCSI;
+        mGotOSC = other.mGotOSC;
+        mIsDefaultColor = other.mIsDefaultColor;
+        mBlack = other.mBlack;
+        mLightBlack = other.mLightBlack;
+        mRed = other.mRed;
+        mLightRed = other.mLightRed;
+        mLightGreen = other.mLightGreen;
+        mGreen = other.mGreen;
+        mLightBlue = other.mLightBlue;
+        mBlue = other.mBlue;
+        mLightYellow = other.mLightYellow;
+        mYellow = other.mYellow;
+        mLightCyan = other.mLightCyan;
+        mCyan = other.mCyan;
+        mLightMagenta = other.mLightMagenta;
+        mMagenta = other.mMagenta;
+        mLightWhite = other.mLightWhite;
+        mWhite = other.mWhite;
+        mForeGroundColor = other.mForeGroundColor;
+        mForeGroundColorLight = other.mForeGroundColorLight;
+        mBackGroundColor = other.mBackGroundColor;
+        mpHost = other.mpHost;
+        mBold = other.mBold;
+        mItalics = other.mItalics;
+        mOverline = other.mOverline;
+        mReverse = other.mReverse;
+        mStrikeOut = other.mStrikeOut;
+        mUnderline = other.mUnderline;
+        mUnderlineWavy = other.mUnderlineWavy;
+        mUnderlineDotted = other.mUnderlineDotted;
+        mUnderlineDashed = other.mUnderlineDashed;
+        mBlink = other.mBlink;
+        mFastBlink = other.mFastBlink;
+        mConcealed = other.mConcealed;
+        mAltFont = other.mAltFont;
+        mMudLine = other.mMudLine;
+        mMudBuffer = other.mMudBuffer;
+        mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
+        lastLoggedFromLine = other.lastLoggedFromLine;
+        lastloggedToLine = other.lastloggedToLine;
+        lastTextToLog = other.lastTextToLog;
+        mEncoding = other.mEncoding;
+        mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
+        mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
+        mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
+        mHyperlinkActive = other.mHyperlinkActive;
+        mWatchdogPhase = other.mWatchdogPhase;
+        mWatchdogTagSnapshot = other.mWatchdogTagSnapshot;
+        mCurrentHyperlinkStyling = other.mCurrentHyperlinkStyling;
+        mCurrentHyperlinkMenu = other.mCurrentHyperlinkMenu;
+        mLinkStates = other.mLinkStates;
+        mVisitedLinks = other.mVisitedLinks;
+        mLinkOriginalBackgrounds = other.mLinkOriginalBackgrounds;
+        mLinkOriginalCharacters = other.mLinkOriginalCharacters;
+        mCurrentHoveredLinkIndex = other.mCurrentHoveredLinkIndex;
+        mCurrentActiveLinkIndex = other.mCurrentActiveLinkIndex;
+        mCurrentFocusedLinkIndex = other.mCurrentFocusedLinkIndex;
+        
+        mTagWatchdog = std::make_unique<QTimer>();
+        mTagWatchdog->setSingleShot(true);
+        QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+    }
+    return *this;
 }
 
 // user-defined literal to represent megabytes
@@ -409,6 +591,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     } else {
         localBuffer = incoming;
     }
+
+    crashIfRequested();
 
     // Fixup table for our own, substitute QTextCodecs:
     QByteArray encodingTableToUse{mEncoding};
@@ -763,13 +947,67 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         localBufferPosition++;
                         continue;
                     }
+                    case HANDLER_INSERT_AND_REPROCESS: {
+                        // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position
+                        // This is used for error recovery when a '<' is found inside a tag -
+                        // we output the incomplete tag as text, then reprocess the '<' to start a new tag
+
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        // Do NOT increment position - the current character needs to be reprocessed
+                        continue;
+                    }
                     default:
                         //HANDLER_FALL_THROUGH -> do nothing
                         assert(localBuffer[localBufferPosition] == ch);
                     }
                 } else if (mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
-                    localBufferPosition++;
-                    continue;
+                    // Mode is LOCKED but we're inside a tag that started in a different mode.
+                    // We need to continue feeding characters to the tag builder to complete the tag.
+                    TMxpProcessingResult const result =
+                            mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+                    
+                    switch (result) {
+                    case HANDLER_NEXT_CHAR:
+                        localBufferPosition++;
+                        continue;
+                    case HANDLER_INSERT_ENTITY_SYS: {
+                        // Tag was not handled, output as text
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        localBufferPosition++;
+                        continue;
+                    }
+                    case HANDLER_INSERT_AND_REPROCESS: {
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        continue;
+                    }
+                    default:
+                        localBufferPosition++;
+                        continue;
+                    }
                 } else {
                     mpHost->mMxpProcessor.processRawInput(ch);
                 }
@@ -777,7 +1015,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             if (CHAR_IS_COMMIT_CHAR(ch)) {
                 // after a newline (but not a <br>) return to default mode
-                mpHost->mMxpProcessor.resetToDefaultMode();
+                // BUT only if we're not in the middle of parsing a tag (tags can span lines)
+                if (!mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    mpHost->mMxpProcessor.resetToDefaultMode();
+                }
             }
         }
 
@@ -849,7 +1090,7 @@ COMMIT_LINE:
         if (mHyperlinkActive) {
             c.mLinkIndex = mCurrentHyperlinkLinkId;
 
-            // Store the original ANSI-formatted character before applying CSS styling
+            // Store the original ANSI-formatted character before applying JSON styling
             // This is needed for ANSI base restoration when pseudo-classes are inactive
             if (!mLinkOriginalCharacters.contains(mCurrentHyperlinkLinkId)) {
                 mLinkOriginalCharacters[mCurrentHyperlinkLinkId] = c;
@@ -861,59 +1102,116 @@ COMMIT_LINE:
 #endif
             }
 
-            // Apply enhanced hyperlink styling
+            // Apply base styling first (if any)
             if (mCurrentHyperlinkStyling.hasForegroundColor) {
                 c.mFgColor = mCurrentHyperlinkStyling.foregroundColor;
             }
+
             if (mCurrentHyperlinkStyling.hasBackgroundColor) {
                 c.mBgColor = mCurrentHyperlinkStyling.backgroundColor;
             }
-
-            // Apply text decorations
-            if (mCurrentHyperlinkStyling.isUnderlined) {
-                c.mFlags |= TChar::Underline;
-
-                // Apply specific underline style based on underlineStyle enum
-                switch (mCurrentHyperlinkStyling.underlineStyle) {
-                    case Mudlet::HyperlinkStyling::UnderlineWavy:
-                        c.mFlags |= TChar::UnderlineWavy;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineDotted:
-                        c.mFlags |= TChar::UnderlineDotted;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineDashed:
-                        c.mFlags |= TChar::UnderlineDashed;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineSolid:
-                    case Mudlet::HyperlinkStyling::UnderlineNone:
-                    default:
-                        // Standard solid underline (no additional flags needed)
-                        break;
+            
+            // For preset-only links, base styling may be empty but pseudo-class styling exists
+            // Apply effective styling with :link pseudo-class to ensure preset colors show
+            Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(mCurrentHyperlinkLinkId);
+            if (effectiveStyling.hasCustomStyling) {
+                if (effectiveStyling.hasForegroundColor) {
+                    c.mFgColor = effectiveStyling.foregroundColor;
+                }
+                if (effectiveStyling.hasBackgroundColor) {
+                    c.mBgColor = effectiveStyling.backgroundColor;
+                }
+                if (effectiveStyling.isBold) {
+                    c.mFlags |= TChar::Bold;
+                }
+                if (effectiveStyling.isItalic) {
+                    c.mFlags |= TChar::Italic;
+                }
+                if (effectiveStyling.isUnderlined) {
+                    c.mFlags |= TChar::Underline;
+                    switch (effectiveStyling.underlineStyle) {
+                        case Mudlet::HyperlinkStyling::UnderlineWavy:
+                            c.mFlags |= TChar::UnderlineWavy;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDotted:
+                            c.mFlags |= TChar::UnderlineDotted;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDashed:
+                            c.mFlags |= TChar::UnderlineDashed;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineSolid:
+                        case Mudlet::HyperlinkStyling::UnderlineNone:
+                        default:
+                            break;
+                    }
+                }
+                if (effectiveStyling.isOverlined) {
+                    c.mFlags |= TChar::Overline;
+                }
+                if (effectiveStyling.isStrikeOut) {
+                    c.mFlags |= TChar::StrikeOut;
+                }
+                if (effectiveStyling.hasUnderlineColor && effectiveStyling.isUnderlined) {
+                    c.setUnderlineColor(effectiveStyling.underlineColor);
+                }
+                if (effectiveStyling.hasOverlineColor && effectiveStyling.isOverlined) {
+                    c.setOverlineColor(effectiveStyling.overlineColor);
+                }
+                if (effectiveStyling.hasStrikeoutColor && effectiveStyling.isStrikeOut) {
+                    c.setStrikeoutColor(effectiveStyling.strikeoutColor);
                 }
             }
-            if (mCurrentHyperlinkStyling.isOverlined) {
-                c.mFlags |= TChar::Overline;
-            }
-            if (mCurrentHyperlinkStyling.isStrikeOut) {
-                c.mFlags |= TChar::StrikeOut;
-            }
 
-            // Apply decoration colors - only for active decorations
-            if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
-                c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
-            }
-            if (mCurrentHyperlinkStyling.hasOverlineColor && mCurrentHyperlinkStyling.isOverlined) {
-                c.setOverlineColor(mCurrentHyperlinkStyling.overlineColor);
-            }
-            if (mCurrentHyperlinkStyling.hasStrikeoutColor && mCurrentHyperlinkStyling.isStrikeOut) {
-                c.setStrikeoutColor(mCurrentHyperlinkStyling.strikeoutColor);
-            }
+            // Only re-apply base styling if effective pseudo-class styling is not present
+            // This prevents base decoration flags from overriding pseudo-class cascade decisions
+            if (!effectiveStyling.hasCustomStyling) {
+                if (mCurrentHyperlinkStyling.isUnderlined) {
+                    c.mFlags |= TChar::Underline;
 
-            if (mCurrentHyperlinkStyling.isBold) {
-                c.mFlags |= TChar::Bold;
-            }
-            if (mCurrentHyperlinkStyling.isItalic) {
-                c.mFlags |= TChar::Italic;
+                    switch (mCurrentHyperlinkStyling.underlineStyle) {
+                        case Mudlet::HyperlinkStyling::UnderlineWavy:
+                            c.mFlags |= TChar::UnderlineWavy;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDotted:
+                            c.mFlags |= TChar::UnderlineDotted;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineDashed:
+                            c.mFlags |= TChar::UnderlineDashed;
+                            break;
+                        case Mudlet::HyperlinkStyling::UnderlineSolid:
+                        case Mudlet::HyperlinkStyling::UnderlineNone:
+                        default:
+                            break;
+                    }
+                }
+
+                if (mCurrentHyperlinkStyling.isOverlined) {
+                    c.mFlags |= TChar::Overline;
+                }
+
+                if (mCurrentHyperlinkStyling.isStrikeOut) {
+                    c.mFlags |= TChar::StrikeOut;
+                }
+
+                if (mCurrentHyperlinkStyling.hasUnderlineColor && mCurrentHyperlinkStyling.isUnderlined) {
+                    c.setUnderlineColor(mCurrentHyperlinkStyling.underlineColor);
+                }
+
+                if (mCurrentHyperlinkStyling.hasOverlineColor && mCurrentHyperlinkStyling.isOverlined) {
+                    c.setOverlineColor(mCurrentHyperlinkStyling.overlineColor);
+                }
+
+                if (mCurrentHyperlinkStyling.hasStrikeoutColor && mCurrentHyperlinkStyling.isStrikeOut) {
+                    c.setStrikeoutColor(mCurrentHyperlinkStyling.strikeoutColor);
+                }
+
+                if (mCurrentHyperlinkStyling.isBold) {
+                    c.mFlags |= TChar::Bold;
+                }
+
+                if (mCurrentHyperlinkStyling.isItalic) {
+                    c.mFlags |= TChar::Italic;
+                }
             }
 
             // Only apply underline if explicitly set in styling (respects OSC 8 default of no underline)
@@ -937,14 +1235,71 @@ COMMIT_LINE:
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE - yes I think we do:
             mMudBuffer.push_back(c);
             mMudBuffer.push_back(c);
+            if (mHyperlinkActive) {
+                // Capture the column position when the first character of the hyperlink is added
+                if (mCurrentHyperlinkText.isEmpty()) {
+                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 2;  // -2 because we just added 2 chars
+                }
+                mCurrentHyperlinkText += QString(QChar(ch));
+                mCurrentHyperlinkText += QString(QChar(ch));
+            }
         } else {
             mMudBuffer.push_back(c);
+            if (mHyperlinkActive) {
+                // Capture the column position when the first character of the hyperlink is added
+                if (mCurrentHyperlinkText.isEmpty()) {
+                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1;  // -1 because we just added 1 char
+                }
+                mCurrentHyperlinkText += QString(QChar(ch));
+            }
         }
 
         ++localBufferPosition;
     }
 }
 
+void TBuffer::flushPendingDestinationContent()
+{
+    if (!mpHost || mMudLine.isEmpty()) {
+        return;
+    }
+    
+    if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+        TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
+
+        if (destConsole && destConsole != mpHost->mpConsole) {
+            destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            mMudLine.clear();
+            mMudBuffer.clear();
+        }
+    }
+}
+
+void TBuffer::resetCurrentTextFormat()
+{
+    if (!mpHost) {
+        return;
+    }
+    
+    // Reset to default colors and attributes - equivalent to SGR 0
+    mIsDefaultColor = true;
+    mForeGroundColor = mpHost->mFgColor;
+    mForeGroundColorLight = mpHost->mFgColor;
+    mBackGroundColor = mpHost->mBgColor;
+    mBold = false;
+    mItalics = false;
+    mOverline = false;
+    mReverse = false;
+    mStrikeOut = false;
+    mUnderline = false;
+    mUnderlineWavy = false;
+    mUnderlineDotted = false;
+    mUnderlineDashed = false;
+    mBlink = false;
+    mFastBlink = false;
+    mConcealed = false;
+    mAltFont = 0;
+}
 
 bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 {
@@ -957,6 +1312,21 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         // text would alter the prior contents but as that is on a separate
         // line there should not be any changes to text before a line feed
         // which sort of seems to be implied by the current value of ch:
+
+        // Check if there's an active MXP DEST - route to destination frame
+        if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+            TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
+            if (destConsole && destConsole != mpHost->mpConsole) {
+                if (!mMudLine.isEmpty()) {
+                    destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+                }
+                mMudLine.clear();
+                mMudBuffer.clear();
+                ++localBufferPosition;
+                // Skip creating lines in main console while destination is active
+                return true;
+            }
+        }
 
         // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
         // https://bugreports.qt.io/browse/QTBUG-105035
@@ -1015,7 +1385,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         mMudLine.clear();
         mMudBuffer.clear();
         const int line = lineBuffer.size() - 1;
-        mpHost->mpConsole->runTriggers(line);
+        if (!mSkipTriggerProcessing) {
+            mpHost->mpConsole->runTriggers(line);
+        }
 
         // Only use of TBuffer::wrap(), breaks up new text
         // NOTE: it MAY have been clobbered by the trigger engine!
@@ -1044,6 +1416,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
             // (translateToPlainText(...)) method is ONLY for that one:
             shrinkBuffer();
         }
+        
+        applyPendingSelectionStyling();
+        
         return true;
     }
     return false;
@@ -1070,7 +1445,7 @@ void TBuffer::processMxpWatchdogCallback()
                 size_t      unusedBufferPosition = 0;
 
                 mMudLine.append(lastEntityValue);
-                for (size_t i = 0; i < lastEntityValue.size(); ++i) {
+                for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
                     mMudBuffer.push_back(style);
                 }
                 commitLine('\r', unusedBufferPosition);
@@ -2313,9 +2688,7 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
         break;
     case static_cast<quint8>('8'): {
-        // Handle OSC 8 hyperlinks in the form: "8;params;URI"
-
-        QStringView rest = QStringView(sequence).mid(1);  // skip selector "8;"
+        QStringView rest = QStringView(sequence).mid(1);  // skip selector "8"
         int firstSemi = rest.indexOf(';');
 
         if (firstSemi == -1) {
@@ -2332,6 +2705,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
         QString param = rest.left(firstSemi).toString();
 
+        // Parameters are available but not used by Mudlet currently
 #if defined(DEBUG_OSC_PROCESSING)
         if (!param.isEmpty()) {
             qDebug().noquote().nospace() << "[OSC 8] Params provided (not used by Mudlet but shown for debugging): \"" << param << "\"";
@@ -2339,11 +2713,121 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
         QString rawUrl = rest.mid(secondSemi + 1).toString();
 
+#if defined(DEBUG_OSC_PROCESSING)
+        if (!rawUrl.isEmpty()) {
+            qDebug().noquote().nospace() << "[OSC] Received OSC 8 sequence with URL (length=" << rawUrl.length() << "): " 
+                                         << (rawUrl.length() > 80 ? rawUrl.left(80) + "..." : rawUrl);
+        }
+#endif
+
         // OSC 8 ;; closes the hyperlink
         if ((param.isEmpty() && rawUrl.isEmpty())) {
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8] Hyperlink terminator - closing active hyperlink";
+            qDebug().noquote() << "[OSC] Hyperlink terminator - closing active hyperlink";
 #endif
+            
+            // Apply initial selection/disabled state styling when link closes (from selection branch)
+            // OR apply :link pseudo-class styling for preset-only links (from compact branch)
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId
+                         << "selected:" << mCurrentHyperlinkStyling.selection.selected
+                         << "disabled:" << mCurrentHyperlinkStyling.selection.disabled
+                         << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
+#endif
+                if (mCurrentHyperlinkStyling.selection.selected) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
+                    mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+                } else if (mCurrentHyperlinkStyling.selection.disabled) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+                    mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+                }
+            } else if (mCurrentHyperlinkLinkId > 0) {
+                // Set initial :link pseudo-class state for regular links
+                setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDefault);
+                // DON'T call updateLinkCharacters() here - the link text hasn't been added to
+                // the buffer yet! It gets added later during COMMIT_LINE. Calling it now would
+                // scan the entire buffer looking for characters that don't exist yet, causing
+                // severe performance degradation with many links.
+                // The :link styling will be applied when characters are created in COMMIT_LINE.
+            }
+            
+            // For spoilers, capture original text BEFORE any visibility concealment
+            // This ensures spoiler reveal works even when combined with visibility actions
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+                int currentColumn = mMudLine.length();
+                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+                
+                if (linkLength > 0) {
+                    // Store the original text before any replacements
+                    QString originalText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                    mLinkOriginalText[mCurrentHyperlinkLinkId] = originalText;
+                    
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Spoiler link" << mCurrentHyperlinkLinkId << "- storing original text:" << originalText << "and replacing with spaces, length:" << linkLength;
+#endif
+                    // Replace spoiler text with spaces to hide it
+                    QString spaces(linkLength, ' ');
+                    mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                }
+            }
+            
+            // Register with visibility manager if visibility settings exist
+            // Visibility currently only supports single-line hyperlinks
+            // Multi-line links will not have visibility management applied
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings 
+                && mpConsole
+                && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
+                
+                int currentColumn = mMudLine.length();
+                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+
+                if (linkLength > 0) {
+                    // Only register if we have a valid link range
+                    QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                    
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Registering hyperlink" << mCurrentHyperlinkLinkId
+                             << "line:" << mCurrentHyperlinkStartLine
+                             << "col:" << mCurrentHyperlinkStartColumn
+                             << "length:" << linkLength
+                             << "text:" << linkText;
+#endif
+                    bool shouldStartConcealed = mpConsole->getHyperlinkVisibilityManager().registerHyperlink(
+                        mCurrentHyperlinkLinkId,
+                        mCurrentHyperlinkStartLine,
+                        mCurrentHyperlinkStartColumn,
+                        linkLength,
+                        linkText,
+                        mCurrentHyperlinkStyling);
+                    
+                    // If link should start concealed, replace its text with spaces in mMudLine
+                    // Skip if spoiler already did this to avoid double-replacement
+                    if (shouldStartConcealed && !mCurrentHyperlinkStyling.isSpoiler) {
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC] Link starts concealed - replacing text with spaces";
+#endif
+                        // CRITICAL: Maintain exact character length to preserve buffer consistency
+                        // Even though emojis have different visual widths, we must keep the same
+                        // character count to avoid disrupting buffer indices and causing crashes.
+                        QString spaces(linkLength, ' ');
+                        mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                    }
+                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Skipping registration for hyperlink with invalid length:" << linkLength;
+#endif
+                }
+            } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings
+                       && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Skipping visibility registration for multi-line hyperlink"
+                         << "(visibility only applies to single-line links)"
+                         << "- started on line" << mCurrentHyperlinkStartLine
+                         << "ending on line" << static_cast<int>(lineBuffer.size()) - 1;
+#endif
+            }
+            
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
             mCurrentHyperlinkLinkId = 0;
@@ -2351,6 +2835,10 @@ void TBuffer::decodeOSC(const QString& sequence)
             // Reset enhanced styling
             mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
             mCurrentHyperlinkMenu.clear();
+            // Reset visibility tracking
+            mCurrentHyperlinkStartLine = 0;
+            mCurrentHyperlinkStartColumn = 0;
+            mCurrentHyperlinkText.clear();
             break;
         }
 
@@ -2360,38 +2848,81 @@ void TBuffer::decodeOSC(const QString& sequence)
                 return;
             }
 
+            if (rawUrl.startsWith(qsl("preset:"))) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Detected preset: URL:" << rawUrl;
+#endif
+                // Extract preset name (between "preset:" and "?")
+                int queryStart = rawUrl.indexOf('?');
+                QString presetName = (queryStart > 7) ? rawUrl.mid(7, queryStart - 7) : rawUrl.mid(7);
+                
+                // Extract config parameter manually to avoid QUrl parsing issues with custom schemes
+                QString configParam;
+                if (queryStart != -1) {
+                    QString queryString = rawUrl.mid(queryStart + 1);
+                    QUrlQuery query(queryString);
+                    configParam = query.queryItemValue(qsl("config"), QUrl::FullyDecoded);
+                }
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Preset name extracted:" << presetName;
+                qDebug() << "[OSC] Config param length:" << configParam.length();
+                qDebug() << "[OSC] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
+#endif
+                
+                if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole) {
+                    // Parse the JSON configuration
+                    QJsonParseError parseError;
+                    QJsonDocument doc = QJsonDocument::fromJson(configParam.toUtf8(), &parseError);
+                    
+                    if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
+                        mpConsole->getHyperlinkCompactManager().registerPreset(presetName, doc.object());
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC] Successfully registered preset:" << presetName;
+#endif
+                    } else {
+                        qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Failed to parse preset JSON for \"" << presetName << "\": " << parseError.errorString();
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC] Failed JSON:" << configParam;
+#endif
+                    }
+                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() 
+                             << "configParam empty:" << configParam.isEmpty()
+                             << "mpConsole:" << (mpConsole != nullptr)
+                             << "mpHyperlinkCompactManager:" << (mpConsole != nullptr);
+#endif
+                }
+                // Preset definitions don't create visible hyperlinks
+                return;
+            }
+
             // Parse query parameters for enhanced functionality
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] Raw URL for parameter parsing:" << rawUrl;
+            qDebug() << "[OSC] Raw URL for parameter parsing:" << rawUrl;
 #endif
-            QMap<QString, QString> queryParams = parseUriQueryParameters(rawUrl);
+            // Reset styling to defaults before parsing
+            mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
+            QMap<QString, QString> queryParams;
+            parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
 
-            // Extract styling parameters
-            if (queryParams.contains(qsl("style"))) {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Found style parameter, applying custom styling";
+            qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
 #endif
-                parseHyperlinkStyling(queryParams.value(qsl("style")), mCurrentHyperlinkStyling);
-            } else {
-                mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling(); // Reset to defaults
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] No style parameter provided, using defaults (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
-#endif
-            }
 
             // Extract menu parameters
             if (queryParams.contains(qsl("menu"))) {
                 QString menuString = queryParams.value(qsl("menu"));
                 mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Menu parameter found:" << menuString;
-                qDebug() << "[OSC8] Menu items parsed:" << mCurrentHyperlinkMenu;
-                qDebug() << "[OSC8] Menu items count:" << mCurrentHyperlinkMenu.size();
+                qDebug() << "[OSC] Menu parameter found:" << menuString;
+                qDebug() << "[OSC] Menu items parsed:" << mCurrentHyperlinkMenu;
+                qDebug() << "[OSC] Menu items count:" << mCurrentHyperlinkMenu.size();
 #endif
             } else {
                 mCurrentHyperlinkMenu.clear();
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] No menu parameter found";
+                qDebug() << "[OSC] No menu parameter found";
 #endif
             }
 
@@ -2404,7 +2935,8 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             // Remove styling/menu/tooltip query parameters from URL for command processing
             QString baseUrl = rawUrl;
-            QMap<QString, QString> allParams = parseUriQueryParameters(rawUrl);
+            // Reuse the already parsed params for URL reconstruction
+            QMap<QString, QString> allParams = queryParams;
 
             // For web URLs, preserve original parameters except our special ones
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
@@ -2460,14 +2992,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Replace the default hint with the custom tooltip
                 hint = { customTooltip };
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Added standalone tooltip:" << customTooltip;
+                qDebug() << "[OSC] Added standalone tooltip:" << customTooltip;
 #endif
             }
 
             // Handle menu functionality by extending commands and hints
-            if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 2) {
+            if (!mCurrentHyperlinkMenu.isEmpty()) {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
+                qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
 #endif
                 QStringList menuCommands;
                 QStringList menuHints;
@@ -2475,7 +3007,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Add menu items in pairs (label, command)
                 // The first menu item becomes the primary left-click action (index 0)
                 // All items (including first) appear in the right-click menu (index 1+)
-                bool isFirstItem = true;
                 for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
                     QString menuLabel = mCurrentHyperlinkMenu[i];
                     QString menuCommand = mCurrentHyperlinkMenu[i + 1];
@@ -2498,7 +3029,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuCommands.append(qsl("send([[%1]])").arg(menuCommand));
                         menuHints.append(menuLabel);
                     }
-                    isFirstItem = false;
                 }
 
                 // Set the tooltip for the link (what shows on hover)
@@ -2522,8 +3052,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 command = menuCommands;
                 hint = finalHints;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] Final menu commands:" << command;
-                qDebug() << "[OSC8] Final menu hints:" << hint;
+                qDebug() << "[OSC] Final menu commands:" << command;
+                qDebug() << "[OSC] Final menu hints:" << hint;
 #endif
             }
 
@@ -2538,10 +3068,48 @@ void TBuffer::decodeOSC(const QString& sequence)
             // when the link styling doesn't specify a background
             mLinkOriginalBackgrounds[mCurrentHyperlinkLinkId] = mBackGroundColor;
 
+            // Initialize selection state if this link has selection settings
+            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpConsole) {
+                const QString& group = mCurrentHyperlinkStyling.selection.group;
+                const QString& value = mCurrentHyperlinkStyling.selection.value;
+                
+                // Configure group exclusivity mode
+                mpConsole->getHyperlinkSelectionManager().setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
+                
+                // Register the link with the selection manager
+                mpConsole->getHyperlinkSelectionManager().setSelected(group, value, 
+                    mCurrentHyperlinkStyling.selection.selected);
+                
+                // Update link selection state (visual styling will be applied when link closes)
+                setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
+                if (mCurrentHyperlinkStyling.selection.selected) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
+                } else if (mCurrentHyperlinkStyling.selection.disabled) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+                }
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC8] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
+                qDebug() << "[OSC] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:"
+                         << "group=" << group << "value=" << value 
+                         << "selected=" << mCurrentHyperlinkStyling.selection.selected 
+                         << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
+#endif
+            }
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug().noquote() << "[OSC] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
 #endif
             mHyperlinkActive = true;
+            
+            // Record start position for visibility manager registration
+            // Use mMudLine.length() since that's where link text will be added
+            // (mMudLine is the current line being built, lineBuffer contains completed lines)
+            mCurrentHyperlinkStartLine = static_cast<int>(lineBuffer.size()) - 1;
+            mCurrentHyperlinkStartColumn = mMudLine.length();
+            mCurrentHyperlinkText.clear();
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Hyperlink start position: line" << mCurrentHyperlinkStartLine << "column" << mCurrentHyperlinkStartColumn;
+#endif
         }
         break;
     }
@@ -2574,51 +3142,177 @@ QString TBuffer::appendQueryParameters(const QString& uri, const QMap<QString, Q
     return result;
 }
 
-QMap<QString, QString> TBuffer::parseUriQueryParameters(const QString& uri)
+bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling, QMap<QString, QString>& parameters)
 {
-    QMap<QString, QString> parameters;
+    parameters.clear();
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] parseUriQueryParameters called with uri:" << uri;
+    qDebug() << "[OSC] parseUriQueryParameters called with uri:" << uri;
 #endif
 
     // Find the query string part after '?'
     int queryStart = uri.indexOf('?');
     if (queryStart == -1) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] No query parameters found in URI";
+        qDebug() << "[OSC] No query parameters found in URI";
 #endif
-        return parameters; // No query parameters
+        return true; // No query parameters is not an error
     }
 
     QString queryString = uri.mid(queryStart + 1);
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Query string:" << queryString;
+    qDebug() << "[OSC] Query string:" << queryString;
 #endif
 
     // Decode the query string first, since the server percent-encodes the entire URL
     QString decodedQueryString = QUrl::fromPercentEncoding(queryString.toUtf8());
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Decoded query string:" << decodedQueryString;
+    qDebug() << "[OSC] Decoded query string:" << decodedQueryString;
 #endif
 
-    // Only process JSON config parameters - no legacy CSS support
-    if (decodedQueryString.startsWith(qsl("config={"))) {
-        QString jsonString = decodedQueryString.mid(7); // Remove "config="
-        parseJsonHyperlinkConfig(jsonString, parameters);
+    // Check for standard format: ?config={...} (entire query string is the config JSON)
+    // The JSON may have escaped quotes: config={\"style\":{...}} or unescaped: config={"style":{...}}
+    // Only treat as full-config JSON if there are no additional parameters (no '&' present)
+    if (decodedQueryString.startsWith(qsl("config=")) && decodedQueryString.indexOf('&') == -1) {
+        QString configJson = decodedQueryString.mid(7); // Remove "config="
+        bool success = parseJsonHyperlinkConfig(configJson, parameters, styling);
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Parsed config={...} format, success:" << success;
+#endif
+        return success;
+    }
+
+    QStringList paramPairs = decodedQueryString.split('&');
+    QString presetName;
+    QString configJson;
+
+    for (const QString& pair : paramPairs) {
+        int eqPos = pair.indexOf('=');
+        if (eqPos == -1) {
+            continue;
+        }
+
+        QString key = pair.left(eqPos);
+        QString value = pair.mid(eqPos + 1);
+
+        if (key == qsl("preset")) {
+            presetName = value;
+        } else if (key == qsl("config")) {
+            configJson = value;
+        }
+    }
+
+    if (!presetName.isEmpty() || !configJson.isEmpty()) {
+        QJsonObject baseConfig;
+
+        if (!presetName.isEmpty() && mpConsole) {
+            baseConfig = mpConsole->getHyperlinkCompactManager().getPreset(presetName);
+#if defined(DEBUG_OSC_PROCESSING)
+            if (!baseConfig.isEmpty()) {
+                qDebug() << "[OSC] Resolved preset" << presetName;
+            } else {
+                qDebug() << "[OSC] Preset" << presetName << "not found or empty";
+            }
+#endif
+        } else {
+#if defined(DEBUG_OSC_PROCESSING)
+            if (!presetName.isEmpty()) {
+                qDebug() << "[OSC] Cannot resolve preset - missing console or manager";
+            }
+#endif
+        }
+
+        // Merge with override config if present
+        if (!configJson.isEmpty()) {
+            QJsonParseError parseError;
+            QJsonDocument overrideDoc = QJsonDocument::fromJson(configJson.toUtf8(), &parseError);
+            
+            if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
+                QJsonObject overrideConfig = overrideDoc.object();
+                
+                if (!baseConfig.isEmpty() && mpConsole) {
+                    // Deep merge: override takes precedence
+                    baseConfig = mpConsole->getHyperlinkCompactManager().mergeConfigs(baseConfig, overrideConfig);
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Merged preset with override config";
+#endif
+                } else {
+                    baseConfig = overrideConfig;
+                }
+            }
+        }
+
+        // Parse the final merged config
+        if (!baseConfig.isEmpty()) {
+            QJsonDocument finalDoc(baseConfig);
+            QString finalJson = QString::fromUtf8(finalDoc.toJson(QJsonDocument::Compact));
+            return parseJsonHyperlinkConfig(finalJson, parameters, styling);
+        }
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Parsed JSON parameters:" << parameters;
+    qDebug() << "[OSC] Parsed JSON parameters:" << parameters;
 #endif
 
-    return parameters;
+    return true;
 }
 
-bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters)
+QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
+{
+    if (!mpConsole) {
+        return obj; // No manager available, return unchanged
+    }
+    
+    QJsonObject result;
+    
+    for (auto it = obj.begin(); it != obj.end(); ++it) {
+        QString originalKey = it.key();
+        QJsonValue value = it.value();
+        
+        QMap<QString, QString> singleKeyMap;
+        singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
+        QMap<QString, QString> expandedMap = mpConsole->getHyperlinkCompactManager().expandShorthand(singleKeyMap);
+        
+        // Guard against empty or multi-key expanded maps to prevent assertion/UB
+        QString resultKey;
+        if (expandedMap.isEmpty()) {
+            // No expansion occurred - use original key
+            resultKey = originalKey;
+        } else if (expandedMap.size() == 1) {
+            // Normal case - single expanded key
+            resultKey = expandedMap.firstKey();
+        } else {
+            // Unexpected: multiple keys from single input - use first deterministically and log
+            resultKey = expandedMap.firstKey();
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] expandShorthand returned multiple keys for single input:" << originalKey 
+                       << "-> expanded to:" << expandedMap.keys() << "using first key:" << resultKey;
+#endif
+        }
+        
+        // Recursively expand nested objects
+        QJsonValue resultValue = value.isObject() ? expandJsonShorthands(value.toObject()) : value;
+        
+        // Handle duplicate keys by merging objects (e.g., both "style" and "s" -> "style")
+        if (result.contains(resultKey) && result[resultKey].isObject() && resultValue.isObject()) {
+            // Merge the objects using the compact manager's deep merge functionality
+            QJsonObject existing = result[resultKey].toObject();
+            QJsonObject toAdd = resultValue.toObject();
+            
+            // When both shorthand and full names exist, shorthand takes precedence
+            result[resultKey] = mpConsole->getHyperlinkCompactManager().mergeConfigs(toAdd, existing);
+        } else {
+            result[resultKey] = resultValue;
+        }
+    }
+    
+    return result;
+}
+
+bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling, QString* errorDetails)
 {
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
+    qDebug() << "[OSC] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
 #endif
 
     QJsonParseError parseError;
@@ -2626,137 +3320,147 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 
     if (parseError.error != QJsonParseError::NoError) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] JSON parse error:" << parseError.errorString();
+        qDebug() << "[OSC] JSON parse error:" << parseError.errorString();
 #endif
         return false;
     }
 
     if (!doc.isObject()) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] JSON root is not an object";
+        qDebug() << "[OSC] JSON root is not an object";
 #endif
         return false;
     }
 
     QJsonObject root = doc.object();
 
-    // Parse style object
+    // Expand shorthands in the JSON object (recursive)
+    root = expandJsonShorthands(root);
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] After expansion, root contains:" << root.keys();
+    qDebug() << "[OSC] Has 'menu':" << root.contains(qsl("menu"));
+    qDebug() << "[OSC] Has 'tooltip':" << root.contains(qsl("tooltip"));
+#endif
+
     if (root.contains(qsl("style")) && root[qsl("style")].isObject()) {
         QJsonObject styleObj = root[qsl("style")].toObject();
-        QString cssStyleString = jsonStyleObjectToCss(styleObj);
-        if (!cssStyleString.isEmpty()) {
-            parameters.insert(qsl("style"), cssStyleString);
-        }
+        parseJsonStyleToHyperlinkStyling(styleObj, styling);
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Style parsed directly from JSON";
+#endif
     }
 
-    // Parse menu array
     if (root.contains(qsl("menu")) && root[qsl("menu")].isArray()) {
         QJsonArray menuArray = root[qsl("menu")].toArray();
         QString menuString = jsonMenuArrayToString(menuArray);
         if (!menuString.isEmpty()) {
             parameters.insert(qsl("menu"), menuString);
+            // Enable custom styling for links with menus
+            styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Menu parameter added:" << menuString;
+#endif
         }
     }
 
-    // Parse tooltip string
     if (root.contains(qsl("tooltip")) && root[qsl("tooltip")].isString()) {
         parameters.insert(qsl("tooltip"), root[qsl("tooltip")].toString());
+        // Enable custom styling for links with tooltips
+        styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Tooltip parameter added:" << root[qsl("tooltip")].toString();
+#endif
+    }
+
+    if (root.contains(qsl("selection")) && root[qsl("selection")].isObject()) {
+        QJsonObject selectionObj = root[qsl("selection")].toObject();
+        parseJsonSelectionConfig(selectionObj, styling.selection);
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Selection config parsed from JSON";
+#endif
+    }
+
+    if (root.contains(qsl("visibility")) && root[qsl("visibility")].isObject()) {
+        QJsonObject visibilityObj = root[qsl("visibility")].toObject();
+        if (!parseVisibilityFromJson(visibilityObj, styling.visibility)) {
+            qWarning() << "TBuffer::parseJsonHyperlinkConfig: Failed to parse visibility settings (continuing with other config)";
+            // Non-fatal: visibility settings ignored but other config parts still apply
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Visibility config parsed from JSON";
+#endif
+    }
+
+    if (root.contains(qsl("spoiler"))) {
+        styling.isSpoiler = jsonBoolValue(root[qsl("spoiler")]);
+        if (styling.isSpoiler) {
+            styling.hasCustomStyling = true;
+            
+            if (!styling.hasBackgroundColor) {
+                QColor spoilerBackground = mBackGroundColor;
+                
+                qreal luminance = 0.2126 * spoilerBackground.redF() + 
+                                 0.7152 * spoilerBackground.greenF() + 
+                                 0.0722 * spoilerBackground.blueF();
+                
+                QColor originalBackground = spoilerBackground;
+                
+                if (luminance < 0.5) {
+                    if (luminance < 0.1) {
+                        spoilerBackground = QColor(40, 40, 40);
+                    } else {
+                        spoilerBackground = spoilerBackground.lighter(140);
+                    }
+                } else {
+                    spoilerBackground = spoilerBackground.darker(140);
+                }
+                
+                styling.backgroundColor = spoilerBackground;
+                styling.hasBackgroundColor = true;
+                
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] EARLY SPOILER BACKGROUND: Generated" << spoilerBackground.name()
+                         << "from original" << originalBackground.name()
+                         << "luminance:" << luminance;
+#endif
+            }
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Spoiler config parsed from JSON:" << styling.isSpoiler;
+#endif
+    }
+
+    if (root.contains(qsl("disabled"))) {
+        styling.selection.disabled = jsonBoolValue(root[qsl("disabled")]);
+        if (styling.selection.disabled) {
+            styling.hasCustomStyling = true;
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Disabled config parsed from JSON:" << styling.selection.disabled;
+#endif
+    }
+
+    if (styling.isSpoiler) {
+        if (!parameters.contains(qsl("tooltip"))) {
+            parameters.insert(qsl("tooltip"), QObject::tr("Click to reveal"));
+            styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Auto-generated spoiler tooltip: Click to reveal for link - disabled:" << styling.selection.disabled;
+#endif
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        else {
+            qDebug() << "[OSC] Spoiler link has explicit tooltip:" << parameters.value(qsl("tooltip"));
+        }
+#endif
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] JSON converted to parameters:" << parameters;
+    qDebug() << "[OSC] JSON converted to parameters:" << parameters;
 #endif
 
     return true;
-}
-
-QString TBuffer::jsonStyleObjectToCss(const QJsonObject& styleObj)
-{
-    QStringList cssProperties;
-
-    // Basic style properties
-    if (styleObj.contains(qsl("color")) && styleObj[qsl("color")].isString()) {
-        cssProperties << qsl("color:") + styleObj[qsl("color")].toString();
-    }
-
-    if (styleObj.contains(qsl("bg")) && styleObj[qsl("bg")].isString()) {
-        cssProperties << qsl("background-color:") + styleObj[qsl("bg")].toString();
-    }
-
-    if (styleObj.contains(qsl("bold")) && styleObj[qsl("bold")].isBool() && styleObj[qsl("bold")].toBool()) {
-        cssProperties << qsl("font-weight:bold");
-    }
-
-    if (styleObj.contains(qsl("italic")) && styleObj[qsl("italic")].isBool() && styleObj[qsl("italic")].toBool()) {
-        cssProperties << qsl("font-style:italic");
-    }
-
-    // Text decorations - combine multiple decorations into single CSS property
-    QStringList decorationParts;
-    QString underlineStyle = qsl("solid"); // Default underline style
-
-    // Process underline
-    if (styleObj.contains(qsl("underline"))) {
-        QJsonValue underlineVal = styleObj[qsl("underline")];
-        if (underlineVal.isBool() && underlineVal.toBool()) {
-            decorationParts << qsl("underline");
-        } else if (underlineVal.isString()) {
-            decorationParts << qsl("underline");
-            underlineStyle = underlineVal.toString(); // Store style for later
-        }
-    }
-
-    // Process overline
-    if (styleObj.contains(qsl("overline"))) {
-        QJsonValue overlineVal = styleObj[qsl("overline")];
-        if (overlineVal.isBool() && overlineVal.toBool()) {
-            decorationParts << qsl("overline");
-        } else if (overlineVal.isString()) {
-            decorationParts << qsl("overline");
-            // Note: overline styles are currently limited to solid in the parser
-        }
-    }
-
-    // Process strikethrough
-    if (styleObj.contains(qsl("strikethrough"))) {
-        QJsonValue strikeVal = styleObj[qsl("strikethrough")];
-        if (strikeVal.isBool() && strikeVal.toBool()) {
-            decorationParts << qsl("line-through");
-        } else if (strikeVal.isString()) {
-            decorationParts << qsl("line-through");
-            // Note: strikethrough styles are currently limited to solid in the parser
-        }
-    }
-
-    // Combine all decorations into a single CSS property
-    if (!decorationParts.isEmpty()) {
-        QString decorationValue = decorationParts.join(qsl(" "));
-        // Add underline style if it's not solid and underline is present
-        if (decorationParts.contains(qsl("underline")) && underlineStyle != qsl("solid")) {
-            decorationValue += qsl(" ") + underlineStyle;
-        }
-        cssProperties << qsl("text-decoration:") + decorationValue;
-    }
-
-    // Text decoration color
-    if (styleObj.contains(qsl("text-decoration-color")) && styleObj[qsl("text-decoration-color")].isString()) {
-        cssProperties << qsl("text-decoration-color:") + styleObj[qsl("text-decoration-color")].toString();
-    }
-
-    // Pseudo-class states
-    QStringList pseudoClasses = {qsl("hover"), qsl("active"), qsl("visited"), qsl("link"), qsl("focus"), qsl("focus-visible"), qsl("any-link")};
-
-    for (const QString& pseudoClass : pseudoClasses) {
-        if (styleObj.contains(pseudoClass) && styleObj[pseudoClass].isObject()) {
-            QJsonObject pseudoObj = styleObj[pseudoClass].toObject();
-            QString pseudoCss = jsonStyleObjectToCss(pseudoObj);
-            if (!pseudoCss.isEmpty()) {
-                cssProperties << qsl(":") + pseudoClass + qsl("{") + pseudoCss + qsl("}");
-            }
-        }
-    }
-
-    return cssProperties.join(qsl(";"));
 }
 
 QString TBuffer::jsonMenuArrayToString(const QJsonArray& menuArray)
@@ -2781,322 +3485,482 @@ QString TBuffer::jsonMenuArrayToString(const QJsonArray& menuArray)
     return menuItems.join(qsl("|"));
 }
 
-void TBuffer::parseHyperlinkStyling(const QString& styleString, Mudlet::HyperlinkStyling& styling)
+void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::HyperlinkStyling::StateStyle& stateStyle)
 {
-#if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] parseHyperlinkStyling called with styleString:" << styleString;
-#endif
+    bool hasAnyCustomStyling = false;
 
-    // Reset styling to defaults
-    styling = Mudlet::HyperlinkStyling();
-
-    // Check if this is a CSS selector with pseudo-classes
-    // Format: "property:value;:pseudo-class{property:value;property:value}:pseudo-class{...}"
-    // or just: ":pseudo-class{property:value;property:value}:pseudo-class{...}"
-    if (styleString.contains('{') && styleString.contains('}')) {
-        // First, extract and parse any base properties (properties not in pseudo-classes)
-        // These are properties that come before any pseudo-class or between pseudo-classes
-        QString baseProperties;
-        QRegularExpression pseudoClassRegex(R"(:([\w-]+)\s*\{([^}]*)\})");
-
-        // Extract base properties by removing all pseudo-class blocks
-        QString remainingStyle = styleString;
-        QRegularExpressionMatchIterator matches = pseudoClassRegex.globalMatch(styleString);
-
-        // Remove pseudo-class blocks to get base properties
-        while (matches.hasNext()) {
-            QRegularExpressionMatch match = matches.next();
-            remainingStyle.replace(match.captured(0), "");
+    if (stateObj.contains(qsl("color")) && stateObj[qsl("color")].isString()) {
+        QColor color = parseColorValue(stateObj[qsl("color")].toString());
+        if (color.isValid()) {
+            stateStyle.foregroundColor = color;
+            stateStyle.hasForegroundColor = true;
+            hasAnyCustomStyling = true;
         }
+    }
 
-        // Parse base properties if any exist
-        // Filter out strings that are only semicolons and whitespace
-        QString filteredBase = remainingStyle;
-        filteredBase.remove(';');
-        filteredBase = filteredBase.trimmed();
+    if (stateObj.contains(qsl("bg")) && stateObj[qsl("bg")].isString()) {
+        QColor color = parseColorValue(stateObj[qsl("bg")].toString());
+        if (color.isValid()) {
+            stateStyle.backgroundColor = color;
+            stateStyle.hasBackgroundColor = true;
+            hasAnyCustomStyling = true;
+        }
+    }
 
-        if (!filteredBase.isEmpty()) {
-            baseProperties = remainingStyle.trimmed();
+    // Also support full CSS property name
+    if (stateObj.contains(qsl("background-color")) && stateObj[qsl("background-color")].isString()) {
+        QColor color = parseColorValue(stateObj[qsl("background-color")].toString());
+        if (color.isValid()) {
+            stateStyle.backgroundColor = color;
+            stateStyle.hasBackgroundColor = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("bold"))) {
+        stateStyle.isBold = jsonBoolValue(stateObj[qsl("bold")]);
+        hasAnyCustomStyling = true;
+    }
+
+    if (stateObj.contains(qsl("italic"))) {
+        stateStyle.isItalic = jsonBoolValue(stateObj[qsl("italic")]);
+        hasAnyCustomStyling = true;
+    }
+
+    if (stateObj.contains(qsl("underline"))) {
+        QJsonValue underlineVal = stateObj[qsl("underline")];
+        if (underlineVal.isBool() || underlineVal.isDouble()) {
+            stateStyle.isUnderlined = jsonBoolValue(underlineVal);
+            if (stateStyle.isUnderlined) {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
+            }
+            hasAnyCustomStyling = true;
+        } else if (underlineVal.isString()) {
+            stateStyle.isUnderlined = true;
+            QString style = underlineVal.toString().toLower();
+            if (style == qsl("wavy")) {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
+            } else if (style == qsl("dotted")) {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
+            } else if (style == qsl("dashed")) {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDashed;
+            } else {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
+            }
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("overline"))) {
+        QJsonValue overlineVal = stateObj[qsl("overline")];
+        if (overlineVal.isBool() || overlineVal.isDouble()) {
+            stateStyle.isOverlined = jsonBoolValue(overlineVal);
+            hasAnyCustomStyling = true;
+        } else if (overlineVal.isString()) {
+            stateStyle.isOverlined = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("strikethrough"))) {
+        QJsonValue strikeVal = stateObj[qsl("strikethrough")];
+        if (strikeVal.isBool() || strikeVal.isDouble()) {
+            stateStyle.isStrikeOut = jsonBoolValue(strikeVal);
+            hasAnyCustomStyling = true;
+        } else if (strikeVal.isString()) {
+            stateStyle.isStrikeOut = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("text-decoration-color")) && stateObj[qsl("text-decoration-color")].isString()) {
+        QColor decorationColor = parseColorValue(stateObj[qsl("text-decoration-color")].toString());
+        if (decorationColor.isValid()) {
+            stateStyle.underlineColor = decorationColor;
+            stateStyle.hasUnderlineColor = true;
+            stateStyle.overlineColor = decorationColor;
+            stateStyle.hasOverlineColor = true;
+            stateStyle.strikeoutColor = decorationColor;
+            stateStyle.hasStrikeoutColor = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    stateStyle.hasCustomStyling = hasAnyCustomStyling;
+}
+
+void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings)
+{
+    if (selectionObj.contains(qsl("group")) && selectionObj[qsl("group")].isString()) {
+        settings.group = selectionObj[qsl("group")].toString();
+        settings.hasSelectionSettings = true;
+    }
+
+    if (selectionObj.contains(qsl("value")) && selectionObj[qsl("value")].isString()) {
+        settings.value = selectionObj[qsl("value")].toString();
+    }
+
+    if (selectionObj.contains(qsl("toggle"))) {
+        settings.toggle = jsonBoolValue(selectionObj[qsl("toggle")]);
+    }
+
+    if (selectionObj.contains(qsl("selected"))) {
+        settings.selected = jsonBoolValue(selectionObj[qsl("selected")]);
+    }
+
+    if (selectionObj.contains(qsl("exclusive"))) {
+        settings.exclusive = jsonBoolValue(selectionObj[qsl("exclusive")]);
+    }
+}
+
+bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling::VisibilitySettings& settings)
+{
+    if (!visibilityObj.contains(qsl("action"))) {
+        return true; // No action specified = no visibility settings
+    }
+
+    // Parse action field (can be string or array of strings)
+    QJsonValue actionValue = visibilityObj[qsl("action")];
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] Found base properties:" << baseProperties;
+    qWarning() << "[OSC] Visibility action value:" << actionValue << "isString:" << actionValue.isString();
 #endif
-            // Mark that we have base styling (not just pseudo-class styling)
-            styling.hasBaseCustomStyling = true;
+    if (actionValue.isString()) {
+        QString actionStr = actionValue.toString().toLower();
+#if defined(DEBUG_OSC_PROCESSING)
+        qWarning() << "[OSC] Action string:" << actionStr;
+#endif
+        if (actionStr == qsl("conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
+            settings.isConcealed = false; // Start visible, will be concealed later
+        } else if (actionStr == qsl("reveal")) {
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] FOUND REVEAL ACTION - setting isConcealed=true";
+#endif
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
+            settings.isConcealed = true;  // Start concealed, will be revealed later
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] Setting reveal action: isConcealed=true, action=Reveal";
+#endif
+        } else if (actionStr == qsl("revealthenconceal") || actionStr == qsl("reveal-then-conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
+            settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
+        } else {
+            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action string:" << actionStr << "(ignoring visibility settings)";
+            settings.hasVisibilitySettings = false;
+            return true; // Non-fatal: allow other config parts to apply
+        }
+    } else if (actionValue.isArray()) {
+        QJsonArray actionArray = actionValue.toArray();
+        if (actionArray.size() == 2 
+            && actionArray[0].isString() && actionArray[0].toString().toLower() == qsl("reveal")
+            && actionArray[1].isString() && actionArray[1].toString().toLower() == qsl("conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
+            settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
+        } else {
+            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action array (expected [\"reveal\", \"conceal\"]) (ignoring visibility settings)";
+            settings.hasVisibilitySettings = false;
+            return true; // Non-fatal: allow other config parts to apply
+        }
+    } else {
+        qWarning() << "TBuffer::parseVisibilityFromJson: Action must be string or array (ignoring visibility settings)";
+        settings.hasVisibilitySettings = false;
+        return true; // Non-fatal: allow other config parts to apply
+    }
 
-            // Parse base properties as simple CSS
-            QStringList basePairs = baseProperties.split(';', Qt::SkipEmptyParts);
+    settings.hasVisibilitySettings = true;
 
-            for (const QString& pair : basePairs) {
-                QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
+    // Parse delay (optional)
+    if (visibilityObj.contains(qsl("delay"))) {
+        QJsonValue delayValue = visibilityObj[qsl("delay")];
+        if (delayValue.isDouble()) {
+            double delayDouble = delayValue.toDouble();
+            if (delayDouble < 0) {
+                qWarning() << "TBuffer::parseVisibilityFromJson: Delay cannot be negative:" << delayDouble << "(using 0)";
+                settings.delayMs = 0;
+            } else if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                qWarning() << "TBuffer::parseVisibilityFromJson: Delay exceeds maximum ("
+                           << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble << "(clamping to maximum)";
+                settings.delayMs = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+            } else {
+                settings.delayMs = static_cast<quint32>(delayDouble);
+            }
+        }
+    }
 
-                if (propertyValue.size() != 2) {
-                    continue;
-                }
+    // Parse wholeline (optional)
+    if (visibilityObj.contains(qsl("wholeline"))) {
+        settings.deletesEntireLine = jsonBoolValue(visibilityObj[qsl("wholeline")]);
+    }
 
-                QString property = propertyValue[0].trimmed().toLower();
-                QString value = propertyValue[1].trimmed();
-
-                // Apply base properties to the default state
-                if (property == qsl("color")) {
-                    QColor color = parseColorValue(value);
-                    if (color.isValid()) {
-                        styling.foregroundColor = color;
-                        styling.hasForegroundColor = true;
-                        styling.hasCustomStyling = true;
-                    }
-                } else if (property == qsl("background-color") || property == qsl("background")) {
-                    QColor color = parseColorValue(value);
-                    if (color.isValid()) {
-                        styling.backgroundColor = color;
-                        styling.hasBackgroundColor = true;
-                        styling.hasCustomStyling = true;
-                    }
-                } else if (property == qsl("font-weight")) {
-                    styling.isBold = (value.toLower() == qsl("bold"));
-                    styling.hasCustomStyling = true;
-                } else if (property == qsl("font-style")) {
-                    styling.isItalic = (value.toLower() == qsl("italic"));
-                    styling.hasCustomStyling = true;
+    // Parse expire triggers (optional)
+    if (visibilityObj.contains(qsl("expire")) && visibilityObj[qsl("expire")].isObject()) {
+        QJsonObject expireObj = visibilityObj[qsl("expire")].toObject();
+        
+        if (expireObj.contains(qsl("input"))) {
+            settings.expireOnInput = jsonBoolValue(expireObj[qsl("input")]);
+        }
+        
+        if (expireObj.contains(qsl("prompt"))) {
+            settings.expireOnPrompt = jsonBoolValue(expireObj[qsl("prompt")]);
+        }
+        
+        if (expireObj.contains(qsl("output"))) {
+            settings.expireOnOutput = jsonBoolValue(expireObj[qsl("output")]);
+        }
+        
+        if (expireObj.contains(qsl("outputDelay"))) {
+            QJsonValue outputDelayValue = expireObj[qsl("outputDelay")];
+            if (outputDelayValue.isDouble()) {
+                double delayDouble = outputDelayValue.toDouble();
+                if (delayDouble < 0) {
+                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay cannot be negative:" << delayDouble << "(using 0)";
+                    settings.outputDelayMs = 0;
+                } else if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay exceeds maximum ("
+                               << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble << "(clamping to maximum)";
+                    settings.outputDelayMs = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+                } else {
+                    settings.outputDelayMs = static_cast<quint32>(delayDouble);
                 }
             }
         }
+    }
 
-        // Now parse pseudo-class specific styles
-        matches = pseudoClassRegex.globalMatch(styleString);
+    return true;
+}
 
-        while (matches.hasNext()) {
-            QRegularExpressionMatch match = matches.next();
-            QString pseudoClass = ":" + match.captured(1);
-            QString properties = match.captured(2);
+bool TBuffer::parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling::VisibilitySettings& settings, QString* errorDetails)
+{
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
 
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC8] Found pseudo-class:" << pseudoClass << "with properties:" << properties;
-#endif
-
-            parseHyperlinkStateStyle(pseudoClass, properties, styling);
+    if (parseError.error != QJsonParseError::NoError) {
+        if (errorDetails) {
+            *errorDetails = qsl("JSON parse error: %1").arg(parseError.errorString());
         }
+        return false;
+    }
 
-        // If no base styling was provided, but we have :link or :any-link styles,
-        // use them as the default/base state since links need a default appearance
-        if (!styling.hasCustomStyling) {
-            // First try :any-link (applies to both :link and :visited)
-            if (styling.anyLinkStyle.hasCustomStyling) {
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] No base styling found, using :any-link as default";
-#endif
-                styling.foregroundColor = styling.anyLinkStyle.foregroundColor;
-                styling.backgroundColor = styling.anyLinkStyle.backgroundColor;
-                styling.underlineColor = styling.anyLinkStyle.underlineColor;
-                styling.overlineColor = styling.anyLinkStyle.overlineColor;
-                styling.strikeoutColor = styling.anyLinkStyle.strikeoutColor;
-                styling.hasForegroundColor = styling.anyLinkStyle.hasForegroundColor;
-                styling.hasBackgroundColor = styling.anyLinkStyle.hasBackgroundColor;
-                styling.hasUnderlineColor = styling.anyLinkStyle.hasUnderlineColor;
-                styling.hasOverlineColor = styling.anyLinkStyle.hasOverlineColor;
-                styling.hasStrikeoutColor = styling.anyLinkStyle.hasStrikeoutColor;
-                styling.isBold = styling.anyLinkStyle.isBold;
-                styling.isItalic = styling.anyLinkStyle.isItalic;
-                styling.isUnderlined = styling.anyLinkStyle.isUnderlined;
-                styling.isStrikeOut = styling.anyLinkStyle.isStrikeOut;
-                styling.isOverlined = styling.anyLinkStyle.isOverlined;
-                styling.underlineStyle = styling.anyLinkStyle.underlineStyle;
-                styling.hasCustomStyling = true;
-            } else if (styling.linkStyle.hasCustomStyling) {
-                // Fall back to :link style
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC8] No base styling found, using :link as default";
-#endif
-                styling.foregroundColor = styling.linkStyle.foregroundColor;
-                styling.backgroundColor = styling.linkStyle.backgroundColor;
-                styling.underlineColor = styling.linkStyle.underlineColor;
-                styling.overlineColor = styling.linkStyle.overlineColor;
-                styling.strikeoutColor = styling.linkStyle.strikeoutColor;
-                styling.hasForegroundColor = styling.linkStyle.hasForegroundColor;
-                styling.hasBackgroundColor = styling.linkStyle.hasBackgroundColor;
-                styling.hasUnderlineColor = styling.linkStyle.hasUnderlineColor;
-                styling.hasOverlineColor = styling.linkStyle.hasOverlineColor;
-                styling.hasStrikeoutColor = styling.linkStyle.hasStrikeoutColor;
-                styling.isBold = styling.linkStyle.isBold;
-                styling.isItalic = styling.linkStyle.isItalic;
-                styling.isUnderlined = styling.linkStyle.isUnderlined;
-                styling.isStrikeOut = styling.linkStyle.isStrikeOut;
-                styling.isOverlined = styling.linkStyle.isOverlined;
-                styling.underlineStyle = styling.linkStyle.underlineStyle;
-                styling.hasCustomStyling = true;
+    if (!doc.isObject()) {
+        if (errorDetails) {
+            *errorDetails = qsl("Root must be a JSON object");
+        }
+        return false;
+    }
+
+    QJsonObject root = doc.object();
+    if (!root.contains(qsl("visibility"))) {
+        // No visibility settings = success
+        return true;
+    }
+
+    if (!root[qsl("visibility")].isObject()) {
+        if (errorDetails) {
+            *errorDetails = qsl("'visibility' field must be an object");
+        }
+        return false;
+    }
+
+    bool success = parseVisibilityFromJson(root[qsl("visibility")].toObject(), settings);
+    if (!success) {
+        if (errorDetails) {
+            if (errorDetails->isEmpty()) {
+                *errorDetails = qsl("Failed to parse visibility settings (non-fatal)");
             }
+            // When errorDetails is provided, treat as warning only
+            return true;
         }
+    }
 
-        // Apply accessibility enhancements
-        applyAccessibilityEnhancements(styling);
+    return success;
+}
+
+void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] clearLinkIndices: invalid line number" << lineNumber << "buffer size:" << buffer.size();
+#endif
         return;
     }
 
-    // Fallback: Parse as simple CSS-like style string: "property:value;property:value"
-    QStringList stylePairs = styleString.split(';', Qt::SkipEmptyParts);
-
-    bool hasAnyCustomStyling = false;
-    bool textDecorationExplicitlySet = false;
-
-    for (const QString& pair : stylePairs) {
-        QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
-
-        if (propertyValue.size() != 2) {
-            continue; // Skip malformed property
-        }
-
-        QString property = propertyValue[0].trimmed().toLower();
-        QString value = propertyValue[1].trimmed();
-
-        if (property == "color") {
-            QColor color = parseColorValue(value);
-
-            if (color.isValid()) {
-                styling.foregroundColor = color;
-                styling.hasForegroundColor = true;
-                hasAnyCustomStyling = true;
-            }
-        } else if (property == "background-color") {
-            QColor color = parseColorValue(value);
-
-            if (color.isValid()) {
-                styling.backgroundColor = color;
-                styling.hasBackgroundColor = true;
-                hasAnyCustomStyling = true;
-            }
-        } else if (property == "font-weight") {
-            styling.isBold = (value.toLower() == qsl("bold"));
-            hasAnyCustomStyling = true;
-        } else if (property == "font-style") {
-            styling.isItalic = (value.toLower() == qsl("italic"));
-            hasAnyCustomStyling = true;
-        } else if (property == "text-decoration") {
-            // Handle text-decoration with optional style: "underline", "underline wavy", "overline", "line-through", "none"
-            // Can also handle multiple values: "underline overline", "underline wavy red"
-            QStringList decorationParts = value.toLower().split(' ', Qt::SkipEmptyParts);
-
-            // Reset decoration flags when text-decoration is explicitly set
-            styling.isUnderlined = false;
-            styling.isOverlined = false;
-            styling.isStrikeOut = false;
-            styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
-
-            for (const QString& part : decorationParts) {
-                if (part == "underline") {
-                    styling.isUnderlined = true;
-                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
-                } else if (part == "overline") {
-                    styling.isOverlined = true;
-                } else if (part == "line-through") {
-                    styling.isStrikeOut = true;
-                } else if (part == "none") {
-                    styling.isUnderlined = false;
-                    styling.isOverlined = false;
-                    styling.isStrikeOut = false;
-                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
-                } else if (part == "wavy" && styling.isUnderlined) {
-                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
-                } else if (part == "dotted" && styling.isUnderlined) {
-                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
-                } else if (part == "dashed" && styling.isUnderlined) {
-                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDashed;
-                } else if (part == "solid" && styling.isUnderlined) {
-                    styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
-                } else {
-                    // Check if it's a color for the decoration
-                    QColor decorationColor = parseColorValue(part);
-
-                    if (decorationColor.isValid()) {
-                        if (styling.isUnderlined) {
-                            styling.underlineColor = decorationColor;
-                            styling.hasUnderlineColor = true;
+    if (length <= 0) {
 #if defined(DEBUG_OSC_PROCESSING)
-                            qDebug() << "[OSC8] Set underline color to" << decorationColor.name();
+        qDebug() << "[OSC] clearLinkIndices: non-positive length" << length << "- returning early";
 #endif
-                        } else if (styling.isOverlined) {
-                            styling.overlineColor = decorationColor;
-                            styling.hasOverlineColor = true;
-#if defined(DEBUG_OSC_PROCESSING)
-                            qDebug() << "[OSC8] Set overline color to" << decorationColor.name();
-#endif
-                        } else if (styling.isStrikeOut) {
-                            styling.strikeoutColor = decorationColor;
-                            styling.hasStrikeoutColor = true;
-#if defined(DEBUG_OSC_PROCESSING)
-                            qDebug() << "[OSC8] Set strikeout color to" << decorationColor.name();
-#endif
-                        }
-                    }
-                }
-            }
-
-            textDecorationExplicitlySet = true;
-            hasAnyCustomStyling = true;
-        } else if (property == "text-decoration-line") {
-            // CSS3 specific property for decoration lines
-            // Reset decoration flags when text-decoration-line is explicitly set
-            styling.isUnderlined = false;
-            styling.isOverlined = false;
-            styling.isStrikeOut = false;
-
-            QStringList decorations = value.toLower().split(' ', Qt::SkipEmptyParts);
-
-            for (const QString& decoration : decorations) {
-                if (decoration == qsl("underline")) {
-                    styling.isUnderlined = true;
-                } else if (decoration == qsl("overline")) {
-                    styling.isOverlined = true;
-                } else if (decoration == qsl("line-through")) {
-                    styling.isStrikeOut = true;
-                } else if (decoration == qsl("none")) {
-                    styling.isUnderlined = false;
-                    styling.isOverlined = false;
-                    styling.isStrikeOut = false;
-                }
-            }
-
-            textDecorationExplicitlySet = true;
-            hasAnyCustomStyling = true;
-        } else if (property == "text-decoration-style") {
-            // CSS3 specific property for decoration style
-            QString decorationStyle = value.toLower();
-
-            if (decorationStyle == qsl("wavy")) {
-                styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
-            } else if (decorationStyle == qsl("dotted")) {
-                styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
-            } else if (decorationStyle == qsl("dashed")) {
-                styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDashed;
-            } else if (decorationStyle == qsl("solid")) {
-                styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
-            }
-            hasAnyCustomStyling = true;
-        } else if (property == "text-decoration-color") {
-            // CSS3 specific property for decoration color
-            QColor decorationColor = parseColorValue(value);
-
-            if (decorationColor.isValid()) {
-                // Store the color for all decoration types - we'll apply to active decorations later
-                styling.underlineColor = decorationColor;
-                styling.hasUnderlineColor = true;
-                styling.overlineColor = decorationColor;
-                styling.hasOverlineColor = true;
-                styling.strikeoutColor = decorationColor;
-                styling.hasStrikeoutColor = true;
-            }
-
-            hasAnyCustomStyling = true;
-        }
+        return;
     }
 
-    // If custom styling was provided, mark it and disable default underline if text-decoration wasn't explicitly set
-    if (hasAnyCustomStyling) {
+    std::deque<TChar>& line = buffer[lineNumber];
+    
+    // Extra safety: ensure we don't go out of bounds
+    if (line.empty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] clearLinkIndices: line" << lineNumber << "is empty";
+#endif
+        return;
+    }
+    
+    startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
+    
+    int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] clearLinkIndices: line" << lineNumber << "startCol" << startColumn << "length" << length 
+             << "endCol" << endColumn << "lineSize" << line.size();
+#endif
+    
+    for (int col = startColumn; col < endColumn; ++col) {
+        // Additional bounds check inside the loop
+        if (col >= static_cast<int>(line.size())) {
+            break;
+        }
+        int oldLinkIndex = line[col].mLinkIndex;
+        line[col].mLinkIndex = 0;
+#if defined(DEBUG_OSC_PROCESSING)
+        if (oldLinkIndex != 0) {
+            qDebug() << "[OSC] clearLinkIndices: cleared column" << col << "from linkIndex" << oldLinkIndex << "to 0";
+        }
+#endif
+    }
+}
+
+void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, int linkId)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+        return;
+    }
+
+    if (length <= 0) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] restoreLinkIndices: non-positive length" << length << "- returning early";
+#endif
+        return;
+    }
+
+    std::deque<TChar>& line = buffer[lineNumber];
+    
+    // Extra safety: ensure we don't go out of bounds
+    if (line.empty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] restoreLinkIndices: line" << lineNumber << "is empty";
+#endif
+        return;
+    }
+    
+    startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
+    
+    int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
+    
+    for (int col = startColumn; col < endColumn; ++col) {
+        // Additional bounds check inside the loop
+        if (col >= static_cast<int>(line.size())) {
+            break;
+        }
+        line[col].mLinkIndex = linkId;
+    }
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Link" << linkId << "restored";
+#endif
+}
+
+void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling)
+{
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] parseJsonStyleToHyperlinkStyling called with JSON object";
+#endif
+
+    // Parse base style properties directly into the default state
+    Mudlet::HyperlinkStyling::StateStyle baseStyle;
+    parseJsonStateStyle(styleObj, baseStyle);
+
+    // Apply base style to the main styling object
+    if (baseStyle.hasForegroundColor) {
+        styling.foregroundColor = baseStyle.foregroundColor;
+        styling.hasForegroundColor = true;
+    }
+
+    if (baseStyle.hasBackgroundColor) {
+        styling.backgroundColor = baseStyle.backgroundColor;
+        styling.hasBackgroundColor = true;
+    }
+
+    styling.isBold = baseStyle.isBold;
+    styling.isItalic = baseStyle.isItalic;
+    styling.isUnderlined = baseStyle.isUnderlined;
+    styling.underlineStyle = baseStyle.underlineStyle;
+    styling.isOverlined = baseStyle.isOverlined;
+
+    // CRITICAL: Set custom styling flags if any base properties were found
+    if (baseStyle.hasCustomStyling) {
         styling.hasCustomStyling = true;
-        // Only disable default underline if text-decoration wasn't explicitly specified
-        if (!textDecorationExplicitlySet) {
-            styling.isUnderlined = false;
-            styling.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
-        }
+        styling.hasBaseCustomStyling = true;
     }
+    styling.isStrikeOut = baseStyle.isStrikeOut;
+
+    if (baseStyle.hasUnderlineColor) {
+        styling.underlineColor = baseStyle.underlineColor;
+        styling.hasUnderlineColor = true;
+    }
+
+    if (baseStyle.hasOverlineColor) {
+        styling.overlineColor = baseStyle.overlineColor;
+        styling.hasOverlineColor = true;
+    }
+
+    if (baseStyle.hasStrikeoutColor) {
+        styling.strikeoutColor = baseStyle.strikeoutColor;
+        styling.hasStrikeoutColor = true;
+    }
+
+    // Parse pseudo-class states
+    if (styleObj.contains(qsl("link")) && styleObj[qsl("link")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("link")].toObject(), styling.linkStyle);
+    }
+
+    if (styleObj.contains(qsl("visited")) && styleObj[qsl("visited")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("visited")].toObject(), styling.visitedStyle);
+    }
+
+    if (styleObj.contains(qsl("hover")) && styleObj[qsl("hover")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("hover")].toObject(), styling.hoverStyle);
+    }
+
+    if (styleObj.contains(qsl("active")) && styleObj[qsl("active")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("active")].toObject(), styling.activeStyle);
+    }
+
+    if (styleObj.contains(qsl("focus")) && styleObj[qsl("focus")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("focus")].toObject(), styling.focusStyle);
+    }
+
+    if (styleObj.contains(qsl("focus-visible")) && styleObj[qsl("focus-visible")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("focus-visible")].toObject(), styling.focusVisibleStyle);
+    }
+
+    if (styleObj.contains(qsl("any-link")) && styleObj[qsl("any-link")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("any-link")].toObject(), styling.anyLinkStyle);
+    }
+
+    if (styleObj.contains(qsl("selected")) && styleObj[qsl("selected")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("selected")].toObject(), styling.selectedStyle);
+    }
+
+    if (styleObj.contains(qsl("disabled")) && styleObj[qsl("disabled")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("disabled")].toObject(), styling.disabledStyle);
+    }
+
+    // Update hasCustomStyling flag if any pseudo-class states have custom styling
+    if (styling.linkStyle.hasCustomStyling || styling.visitedStyle.hasCustomStyling ||
+        styling.hoverStyle.hasCustomStyling || styling.activeStyle.hasCustomStyling ||
+        styling.focusStyle.hasCustomStyling || styling.focusVisibleStyle.hasCustomStyling ||
+        styling.anyLinkStyle.hasCustomStyling || styling.selectedStyle.hasCustomStyling ||
+        styling.disabledStyle.hasCustomStyling) {
+        styling.hasCustomStyling = true;
+    }
+
+    applyAccessibilityEnhancements(styling);
 }
 
 QColor TBuffer::parseColorValue(const QString& value)
@@ -3209,6 +4073,87 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
 }
 
+void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+
+    // Ensure we have a line to append to BEFORE computing line indices
+    if (buffer.empty()) {
+        appendEmptyLine();
+    }
+
+    // Check for text/formatting size mismatch - this is a programming error
+    if (text.size() != static_cast<qsizetype>(formatting.size())) {
+        qWarning() << "TBuffer::appendFormatted: text size" << text.size() 
+                   << "differs from formatting size" << formatting.size()
+                   << "- using longer length with default formatting for missing entries";
+    }
+
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+
+    bool firstChar = lineBuffer.back().isEmpty();
+    int oldSourceLinkId = 0;
+    int destLinkId = 0;
+    const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
+    const TChar defaultChar;
+
+    for (qsizetype i = 0; i < length; ++i) {
+        if (i >= text.size()) {
+            break;
+        }
+        
+        const QChar ch = text.at(i);
+        if (ch == QChar::LineFeed) {
+            firstChar = true;
+            appendEmptyLine();
+            continue;
+        }
+        
+        const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
+        
+        const int sourceLinkId = srcChar.linkIndex();
+        if (sourceLinkId && (oldSourceLinkId != sourceLinkId)) {
+            destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), 
+                                              sourceLinkStore.getHintsConst(sourceLinkId), 
+                                              mpHost);
+            mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
+            oldSourceLinkId = sourceLinkId;
+        } else if (!sourceLinkId) {
+            destLinkId = 0;
+        }
+        
+        lineBuffer.back().append(ch);
+        TChar destChar(srcChar);
+        destChar.mLinkIndex = destLinkId;
+        buffer.back().push_back(destChar);
+
+        if (firstChar) {
+            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+            firstChar = false;
+        }
+    }
+
+    appendEmptyLine();
+
+    if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
+        log(lastLineBeforeWrap, lastLineBeforeWrap);
+        wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    } else {
+        wrapLine(lastLineBeforeWrap, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    }
+
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
+        shrinkBuffer();
+    }
+
+    if (!mpConsole.isNull()) {
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    }
+}
+
 void TBuffer::append(const QString& text, int sub_start, int sub_end,
                      const QColor& fgColor, const QColor& bgColor,
                      TChar::AttributeFlags flags, int linkID)
@@ -3248,16 +4193,23 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         return;
     }
 
-    // Check for OSC 8 documentation examples trigger phrase
+    // Use a 1-second debounce to prevent duplicate injection from echo + server response
     if (text.contains("!osc8-docs")) {
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        TBuffer& mainBuffer = mpHost->mpConsole->buffer;
+
+        if (now - mainBuffer.mLastOSC8DocsInjectionTime > 1000) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Documentation examples trigger phrase detected";
+            qDebug() << "[OSC] Documentation examples trigger phrase detected";
 #endif
-        injectOSC8DocumentationExamples();
+            mainBuffer.mLastOSC8DocsInjectionTime = now;
+            mainBuffer.injectOSC8DocumentationExamples();
+        }
         return; // Don't display the trigger phrase itself
     }
 
     int lastLine = buffer.size() - 1;
+
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
         appendEmptyLine();
@@ -3272,27 +4224,31 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (text.isEmpty()) {
         return;
     }
+
     bool firstChar = (lineBuffer.back().isEmpty());
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
     int lineEndPos = sub_end;
+
     if (lineEndPos >= length) {
         lineEndPos = text.size() - 1;
     }
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
         const QChar thisChar = text.at(i);
+
         if (thisChar == QChar::LineFeed) {
             firstChar = true;
             appendEmptyLine();
             continue;
         }
+
         lineBuffer.back().append(thisChar);
         const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(styling);
 
         // Note: Original character storage for ANSI-styled OSC 8 links happens in
         // translateToPlainText() where the TChar is created with ANSI formatting
-        // before CSS styling is applied
+        // before JSON styling is applied
 
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
@@ -3664,7 +4620,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         QString newLineText;
         const QString time = timeBuffer[i];
         // trivial case
-        if (buffer[i].size() == 0) {
+        if (buffer[i].empty()) {
             tempList.append(newLineText);
             queue.push(newBufferLine);
             timeList.append(time);
@@ -3690,11 +4646,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const QString qHangingIndent(hangingIndent, QChar::Space);
         for (WrapInfo w : lineBreaks) {
             // skip TChars as needed
-            while (newBufferCharPosition < w.firstChar) {
+            while (newBufferCharPosition < w.firstChar && !buffer[i].empty()) {
                 buffer[i].pop_front();
                 newBufferCharPosition++;
             }
-            if (w.needsIndent) {
+            if (w.needsIndent && !buffer[i].empty()) {
                 // background color of indentation spaces should match first char in the line
                 const TChar indentSpace = buffer[i].front();
                 // add indentation to TChar buffer and newLineText
@@ -3711,7 +4667,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 }
             }
             // append TChars of the wrapped lineText to TChar buffer
-            while (newBufferCharPosition < w.lastChar) {
+            while (newBufferCharPosition < w.lastChar && !buffer[i].empty()) {
                 newBufferLine.push_back(buffer[i].front());
                 buffer[i].pop_front();
                 newBufferCharPosition++;
@@ -3739,7 +4695,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     const int insertedLines = queue.size() - 1;
     for (int i = 0; i <= insertedLines; ++i) {
-        if (tempList[i].size() < 1) {
+        if (tempList[i].isEmpty()) {
             queue.pop();
             appendEmptyLine();
         } else {
@@ -3890,11 +4846,100 @@ void TBuffer::clear()
             break;
         }
     }
+
+    // After deleting all lines, clear all links (none are referenced)
+    clearLinkState();
+
     std::deque<TChar> const newLine;
     buffer.push_back(newLine);
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
+}
+
+void TBuffer::clearLinkState()
+{
+    Host* pH = mpHost;
+    const QSet<int> activeLinkIds = collectActiveLinkIds();
+
+    if (pH) {
+        mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
+    } else {
+        qWarning() << "TBuffer::clearLinkState() WARNING - mpHost is null, cannot remove unreferenced links from store";
+    }
+
+    QSet<int> staleIds;
+
+    auto collectStale = [&activeLinkIds, &staleIds](const auto& map) {
+        for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+            if (!activeLinkIds.contains(it.key())) {
+                staleIds.insert(it.key());
+            }
+        }
+    };
+
+    collectStale(mLinkStates);
+    collectStale(mVisitedLinks);
+    collectStale(mLinkSelectionState);
+    collectStale(mLinkOriginalBackgrounds);
+    collectStale(mLinkOriginalCharacters);
+    collectStale(mLinkOriginalText);
+
+    for (int key : staleIds) {
+        mLinkStates.remove(key);
+        mVisitedLinks.remove(key);
+        mLinkSelectionState.remove(key);
+        mLinkOriginalBackgrounds.remove(key);
+        mLinkOriginalCharacters.remove(key);
+        mLinkOriginalText.remove(key);
+    }
+
+    // Prevent applyPendingSelectionStyling from updating non-existent links
+    mPendingSelectionStyling &= activeLinkIds;
+
+    // Reset hover/active/focus state if those links are gone
+    if (!activeLinkIds.contains(mCurrentHoveredLinkIndex)) {
+        mCurrentHoveredLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mCurrentActiveLinkIndex)) {
+        mCurrentActiveLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mCurrentFocusedLinkIndex)) {
+        mCurrentFocusedLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mLastClickedLinkIndex)) {
+        mLastClickedLinkIndex = 0;
+    }
+}
+
+QSet<int> TBuffer::collectActiveLinkIds() const
+{
+    QSet<int> activeLinkIds;
+
+    for (const auto& line : buffer) {
+        for (const TChar& tchar : line) {
+            int linkId = tchar.linkIndex();
+
+            if (linkId > 0) {
+                activeLinkIds.insert(linkId);
+            }
+        }
+    }
+
+    return activeLinkIds;
+}
+
+void TBuffer::clearLastLine()
+{
+    if (!buffer.empty()) {
+        buffer.back().clear();
+        if (!lineBuffer.isEmpty()) {
+            lineBuffer.back().clear();
+        }
+    }
 }
 
 bool TBuffer::deleteLine(int y)
@@ -3915,6 +4960,9 @@ void TBuffer::shrinkBuffer()
     // away:
     mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
 
+    // Clean up unreferenced links after removing old lines
+    clearLinkState();
+
     if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
@@ -3930,7 +4978,7 @@ void TBuffer::shrinkBuffer()
 
 bool TBuffer::deleteLines(int from, int to)
 {
-    if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to >= 0) && (to < static_cast<int>(buffer.size()))) {
+    if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to < static_cast<int>(buffer.size()))) {
         const int delta = to - from + 1;
 
         for (int i = from, total = from + delta; i < total; ++i) {
@@ -3941,9 +4989,8 @@ bool TBuffer::deleteLines(int from, int to)
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, QVector<int> luaReference)
@@ -3985,9 +5032,8 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 // Replaces (bool)TBuffer::applyXxxx(QPoint& P_begin, QPoint& P_end, bool state)
@@ -4030,9 +5076,8 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
@@ -4072,9 +5117,8 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
@@ -4896,10 +5940,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, gbSequenceLength).c_str(), gbSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5013,10 +6055,8 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, big5SequenceLength).c_str(), static_cast<int>(big5SequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, big5SequenceLength).c_str(), big5SequenceLength), mEncoding);
             switch (codePoint.size()) {
                 default:
                     Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5138,10 +6178,8 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, eucSequenceLength).c_str(), static_cast<int>(eucSequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, eucSequenceLength).c_str(), eucSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
                     Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -5207,16 +6245,11 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
-            mMainIncomingCodec = QTextCodec::codecForName(mEncoding);
-            if (!mMainIncomingCodec) {
+            if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {
-                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Installing a codec that can handle:" << mMainIncomingCodec->aliases();
+                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Encoding is available and will be used.";
             }
-        } else if (mMainIncomingCodec) {
-            qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Uninstall a codec that can handle:" << mMainIncomingCodec->aliases() << " as the new encoding setting of: "
-                               << mEncoding << " does not need a dedicated one explicitly set...";
-            mMainIncomingCodec = nullptr;
         }
     }
 }
@@ -5254,188 +6287,151 @@ void TBuffer::clearSearchHighlights()
 
 void TBuffer::injectOSC8DocumentationExamples()
 {
-    // Inject OSC 8 hyperlink examples matching the documentation structure
+    // Inject OSC 8 hyperlink examples - concise, progressive, matching wiki docs
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] injectOSC8DocumentationExamples() called";
+    qDebug() << "[OSC] injectOSC8DocumentationExamples() called";
 #endif
 
-    QString output = "\n╔════════════════════════════════════════════════════════════════════╗\n";
-    output += "║         OSC 8 Hyperlink Documentation Examples                     ║\n";
-    output += "╚════════════════════════════════════════════════════════════════════╝\n\n";
+    QString output = "\n";
+    output += "╔══════════════════════════════════════════════════════════════════════╗\n";
+    output += "║              OSC 8 Hyperlink Examples - Try them all!                ║\n";
+    output += "╚══════════════════════════════════════════════════════════════════════╝\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Getting Started: Simple Links
+    // 1. FUNDAMENTALS - Basic links with color
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "GETTING STARTED: SIMPLE LINKS\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "1. Sending Commands:\n";
-    output += "   \x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\\n\n";
-
-    output += "2. Pre-filling Commands:\n";
-    output += "   \x1b]8;;prompt:cast%20fireball\x1b\\Cast Fireball\x1b]8;;\x1b\\\n\n";
-
-    output += "3. Opening Web Pages:\n";
-    output += "   \x1b]8;;https://www.mudlet.org\x1b\\Visit Mudlet\x1b]8;;\x1b\\\n\n";
+    output += "── FUNDAMENTALS ───────────────────────────────────────────────────────\n";
+    output += "Basic: ";
+    output += "\x1b]8;;send:look\x1b\\\x1b[34mLook\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;prompt:cast%20fireball\x1b\\\x1b[33mCast Spell\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;https://mudlet.org\x1b\\\x1b[36mWebsite\x1b[0m\x1b]8;;\x1b\\\n";
+    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Adding Custom Styling
+    // 2. JSON CONFIGURATION - Show the structure early
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "ADDING CUSTOM STYLING\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Basic Styling:\n";
-    output += "• Red text: \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\"}}\x1b\\Attack\x1b]8;;\x1b\\\n";
-    output += "• Bold red: \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"bold\":true}}\x1b\\Attack\x1b]8;;\x1b\\\n";
-    output += "• Blue background: \x1b]8;;send:action?config={\"style\":{\"color\":\"white\",\"bg\":\"blue\"}}\x1b\\Action\x1b]8;;\x1b\\\n\n";
-
-    output += "Text Decorations:\n";
-    output += "• Underlined: \x1b]8;;send:cast?config={\"style\":{\"underline\":true}}\x1b\\Underlined\x1b]8;;\x1b\\\n";
-    output += "• Overlined: \x1b]8;;send:heal?config={\"style\":{\"overline\":true}}\x1b\\Overlined\x1b]8;;\x1b\\\n";
-    output += "• Strikethrough: \x1b]8;;send:flee?config={\"style\":{\"strikethrough\":true}}\x1b\\Strikethrough\x1b]8;;\x1b\\\n";
-    output += "• Wavy underline: \x1b]8;;send:spell?config={\"style\":{\"underline\":\"wavy\"}}\x1b\\Wavy Underline\x1b]8;;\x1b\\\n";
-    output += "• Dotted overline: \x1b]8;;send:magic?config={\"style\":{\"overline\":\"dotted\"}}\x1b\\Dotted Overline\x1b]8;;\x1b\\\n\n";
-
-    output += "Decoration Colors:\n";
-    output += "• Red underline: \x1b]8;;send:redline?config={\"style\":{\"underline\":true,\"text-decoration-color\":\"red\"}}\x1b\\Red Underline\x1b]8;;\x1b\\\n";
-    output += "• Blue overline: \x1b]8;;send:blueover?config={\"style\":{\"overline\":true,\"text-decoration-color\":\"#0066ff\"}}\x1b\\Blue Overline\x1b]8;;\x1b\\\n";
-    output += "• Green wavy: \x1b]8;;send:greenwave?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"green\"}}\x1b\\Green Wavy\x1b]8;;\x1b\\\n";
-    output += "• Purple strike: \x1b]8;;send:purplestrike?config={\"style\":{\"strikethrough\":true,\"text-decoration-color\":\"purple\"}}\x1b\\Purple Strike\x1b]8;;\x1b\\\n\n";
+    output += "── JSON CONFIG (append ?config={...} to URI) ───────────────────────────\n";
+    output += "Structure: send:cmd?config={\"style\":{...},\"menu\":[...],\"tooltip\":\"...\"}\n";
+    output += "Example:   \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"bold\":true}}\x1b\\Attack\x1b]8;;\x1b\\ ← ";
+    output += "{\"style\":{\"color\":\"red\",\"bold\":true}}\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Interactive States
+    // 3. STYLING - Colors, decorations, states
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "INTERACTIVE STATES\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Hover Effects:\n";
-    output += "• Hover color change: \x1b]8;;send:look?config={\"style\":{\"color\":\"blue\",\"hover\":{\"color\":\"red\"}}}\x1b\\Hover Me\x1b]8;;\x1b\\\n";
-    output += "• Hover bold: \x1b]8;;send:defend?config={\"style\":{\"color\":\"blue\",\"bold\":true,\"hover\":{\"color\":\"yellow\"}}}\x1b\\Defend\x1b]8;;\x1b\\\n\n";
-
-    output += "Link vs Visited States:\n";
-    output += "• \x1b]8;;send:explore?config={\"style\":{\"link\":{\"color\":\"blue\",\"underline\":true},\"visited\":{\"color\":\"purple\",\"strikethrough\":true}}}\x1b\\Visit Me\x1b]8;;\x1b\\\n\n";
-
-    output += "Button-Style Link:\n";
-    output += "• \x1b]8;;send:attack?config={\"style\":{\"bg\":\"green\",\"color\":\"white\",\"bold\":true,\"hover\":{\"bg\":\"lightgreen\"},\"active\":{\"bg\":\"darkgreen\"}}}\x1b\\Attack\x1b]8;;\x1b\\\n\n";
-
-    output += "Multi-State Button:\n";
-    output += "• \x1b]8;;send:action?config={\"style\":{\"bg\":\"green\",\"hover\":{\"bg\":\"lightgreen\"},\"active\":{\"bg\":\"darkgreen\"},\"focus-visible\":{\"bg\":\"lightblue\"}}}\x1b\\Multi-State\x1b]8;;\x1b\\\n\n";
-
-    output += "Any-Link Styling:\n";
-    output += "• \x1b]8;;send:universal?config={\"style\":{\"any-link\":{\"bold\":true},\"hover\":{\"color\":\"orange\"}}}\x1b\\Universal Link\x1b]8;;\x1b\\\n\n";
+    output += "── STYLING ────────────────────────────────────────────────────────────\n";
+    output += "Colors: ";
+    output += "\x1b]8;;send:c1?config={\"style\":{\"color\":\"red\"}}\x1b\\red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c2?config={\"style\":{\"color\":\"#0066ff\"}}\x1b\\#0066ff\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c3?config={\"style\":{\"color\":\"rgb(0,200,100)\"}}\x1b\\rgb()\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c4?config={\"style\":{\"bg\":\"yellow\",\"color\":\"black\"}}\x1b\\bg:yellow\x1b]8;;\x1b\\\n";
+    output += "Text:   ";
+    output += "\x1b]8;;send:t1?config={\"style\":{\"bold\":true}}\x1b\\bold\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t2?config={\"style\":{\"italic\":true}}\x1b\\italic\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t3?config={\"style\":{\"underline\":true}}\x1b\\underline\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t4?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"red\"}}\x1b\\wavy-red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t5?config={\"style\":{\"strikethrough\":true}}\x1b\\strike\x1b]8;;\x1b\\\n";
+    output += "States: ";
+    output += "\x1b]8;;send:s1?config={\"style\":{\"color\":\"blue\",\"hover\":{\"color\":\"red\"}}}\x1b\\hover:red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:s2?config={\"style\":{\"bg\":\"green\",\"active\":{\"bg\":\"darkgreen\"}}}\x1b\\active:dark\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:s3?config={\"style\":{\"link\":{\"color\":\"blue\"},\"visited\":{\"color\":\"purple\"}}}\x1b\\visited:purple\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Context Menus and Tooltips
+    // 4. MENUS & TOOLTIPS
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "CONTEXT MENUS AND TOOLTIPS\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Basic Menu:\n";
-    output += "• \x1b]8;;send:combat?config={\"menu\":[{\"Attack\":\"send:attack\"},{\"Defend\":\"send:defend\"}]}\x1b\\Combat Menu\x1b]8;;\x1b\\ (right-click for menu)\n\n";
-
-    output += "Menu with Tooltip:\n";
-    output += "• \x1b]8;;send:magic?config={\"menu\":[{\"Cast\":\"send:cast fireball\"},{\"Heal\":\"send:heal\"}],\"tooltip\":\"Magic actions\"}\x1b\\Magic Menu\x1b]8;;\x1b\\\n\n";
-
-    output += "Menu with Separators:\n";
-    output += "• \x1b]8;;send:spells?config={\"menu\":[{\"Fireball\":\"send:cast fireball\"},{\"Ice Bolt\":\"send:cast ice bolt\"},\"-\",{\"Heal\":\"send:cast heal\"}]}\x1b\\Spell Menu\x1b]8;;\x1b\\\n\n";
-
-    output += "Primary vs Secondary Actions:\n";
-    output += "• \x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Examine\":\"send:examine\"},\"-\",{\"Go North\":\"send:north\"}]}\x1b\\Look Around\x1b]8;;\x1b\\\n";
-    output += "  (Left-click executes 'look', right-click shows menu)\n\n";
-
-    output += "Combined Styling and Menus:\n";
-    output += "• \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"bold\":true},\"menu\":[{\"Attack\":\"send:attack\"},{\"Defend\":\"send:defend\"},{\"Heal\":\"send:heal\"}],\"tooltip\":\"Combat Actions\"}\x1b\\Combat Menu\x1b]8;;\x1b\\\n\n";
+    output += "── MENUS & TOOLTIPS ───────────────────────────────────────────────────\n";
+    output += "Menu: \x1b]8;;send:attack?config={\"menu\":[{\"Strike\":\"send:strike\"},{\"Power\":\"send:power\"},\"-\",{\"Flee\":\"send:flee\"}]}\x1b\\⚔️ Combat\x1b]8;;\x1b\\ ← right-click (left=primary, \"-\"=separator)\n";
+    output += "Tip:  \x1b]8;;send:item?config={\"tooltip\":\"Legendary sword +5 damage\",\"style\":{\"color\":\"orange\"}}\x1b\\🗡️ Flaming Blade\x1b]8;;\x1b\\ ← hover for tooltip\n";
+    output += "Both: \x1b]8;;send:spell?config={\"menu\":[{\"Fire\":\"send:fireball\"},{\"Ice\":\"send:icebolt\"}],\"tooltip\":\"Magic spells\",\"style\":{\"color\":\"#9966ff\"}}\x1b\\✨ Magic\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Practical Examples
+    // 5. VISIBILITY - Hide/reveal
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "PRACTICAL EXAMPLES\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Simple Styled Links:\n";
-    output += "• Red attack link: \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\"}}\x1b\\Attack\x1b]8;;\x1b\\\n";
-    output += "• Bold blue with hover: \x1b]8;;send:defend?config={\"style\":{\"color\":\"blue\",\"bold\":true,\"hover\":{\"color\":\"yellow\"}}}\x1b\\Defend\x1b]8;;\x1b\\\n";
-    output += "• Green wavy underline: \x1b]8;;send:spell?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"green\"}}\x1b\\Spell Link\x1b]8;;\x1b\\\n\n";
-
-    output += "Interactive Menu Examples:\n";
-    output += "• Basic combat menu: \x1b]8;;send:combat?config={\"menu\":[{\"Attack\":\"send:attack\"},{\"Defend\":\"send:defend\"}]}\x1b\\Combat\x1b]8;;\x1b\\\n";
-    output += "• Menu with separators: \x1b]8;;send:spells?config={\"menu\":[{\"Fireball\":\"send:cast fireball\"},{\"Ice Bolt\":\"send:cast ice bolt\"},\"-\",{\"Heal\":\"send:cast heal\"}]}\x1b\\Spells\x1b]8;;\x1b\\\n";
-    output += "• Menu with tooltip: \x1b]8;;send:magic?config={\"menu\":[{\"Cast\":\"send:cast fireball\"},{\"Heal\":\"send:heal\"}],\"tooltip\":\"Magic actions\"}\x1b\\Magic\x1b]8;;\x1b\\\n\n";
-
-    output += "Button-Style Links:\n";
-    output += "• \x1b]8;;send:attack?config={\"style\":{\"bg\":\"green\",\"color\":\"white\",\"bold\":true,\"hover\":{\"bg\":\"lightgreen\"},\"active\":{\"bg\":\"darkgreen\"}}}\x1b\\Attack Button\x1b]8;;\x1b\\\n\n";
+    output += "── VISIBILITY (auto-hide/reveal) ──────────────────────────────────────\n";
+    output += "Click-hide: \x1b]8;;send:h1?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\I vanish 2s after click\x1b]8;;\x1b\\\n";
+    output += "Expire:     \x1b]8;;send:h2?config={\"style\":{\"color\":\"cyan\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Send any command to hide\x1b]8;;\x1b\\\n";
+    output += "Reveal:     Wait... \x1b]8;;send:h3?config={\"style\":{\"color\":\"lime\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":5000}}\x1b\\I APPEAR!\x1b]8;;\x1b\\ (5 seconds)\n";
+    output += "Wide chars: \x1b]8;;send:h4?config={\"style\":{\"bg\":\"blue\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\🎉🚀💎\x1b]8;;\x1b\\ ← emojis handled correctly\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Advanced Features
+    // 6. SPOILERS - Click to reveal
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "ADVANCED FEATURES\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "ANSI + JSON Hybrid Styling:\n";
-    output += "• \x1b[1m\x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"hover\":{\"color\":\"yellow\",\"underline\":true}}}\x1b\\Bold Red Attack\x1b]8;;\x1b\\\x1b[0m\n";
-    output += "• \x1b[38;5;196m\x1b]8;;send:fire?config={\"style\":{\"hover\":{\"bg\":\"black\"},\"active\":{\"color\":\"orange\"}}}\x1b\\Fire Magic\x1b]8;;\x1b\\\x1b[0m\n\n";
-
-    output += "Comprehensive Multi-State Example:\n";
-    output += "• \x1b]8;;send:comprehensive?config={\"style\":{\"any-link\":{\"underline\":true},\"link\":{\"color\":\"blue\"},\"visited\":{\"color\":\"purple\"},\"hover\":{\"color\":\"red\"},\"active\":{\"color\":\"darkred\"},\"focus-visible\":{\"bg\":\"orange\",\"color\":\"white\"}}}\x1b\\Comprehensive Link\x1b]8;;\x1b\\\n\n";
-
-    output += "Color Format Examples:\n";
-    output += "• Hex: \x1b]8;;send:hex?config={\"style\":{\"color\":\"#ff0000\"}}\x1b\\Red (#ff0000)\x1b]8;;\x1b\\\n";
-    output += "• Shorthand: \x1b]8;;send:short?config={\"style\":{\"color\":\"#f00\"}}\x1b\\Red (#f00)\x1b]8;;\x1b\\\n";
-    output += "• Named: \x1b]8;;send:named?config={\"style\":{\"color\":\"red\"}}\x1b\\Red (named)\x1b]8;;\x1b\\\n";
-    output += "• RGB: \x1b]8;;send:rgb?config={\"style\":{\"color\":\"rgb(255,0,0)\"}}\x1b\\Red (RGB)\x1b]8;;\x1b\\\n\n";
+    output += "── SPOILERS (click-to-reveal) ─────────────────────────────────────────\n";
+    output += "The answer is: \x1b]8;;send:sp1?config={\"spoiler\":true,\"disabled\":true}\x1b\\42\x1b]8;;\x1b\\  ";
+    output += "Secret code: \x1b]8;;https://www.mudlet.org?config={\"spoiler\":true,\"style\":{\"color\":\"yellow\"}}\x1b\\XYZZY\x1b]8;;\x1b\\  ";
+    output += "Emoji secret: \x1b]8;;send:sp3?config={\"spoiler\":true,\"disabled\":true}\x1b\\🔮💀🗝️\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Real World Examples
+    // 7. DISABLED - Non-clickable
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n";
-    output += "REAL WORLD EXAMPLES\n";
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-
-    output += "Navigation:\n";
-    output += "  \x1b]8;;send:north?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\North\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:south?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\South\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:east?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\East\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:west?config={\"style\":{\"color\":\"#0066cc\",\"bold\":true,\"hover\":{\"color\":\"#3399ff\",\"underline\":true}}}\x1b\\West\x1b]8;;\x1b\\\n\n";
-
-    output += "Combat:\n";
-    output += "  \x1b]8;;send:attack?config={\"style\":{\"color\":\"#cc0000\",\"bold\":true,\"hover\":{\"bg\":\"#ffcccc\",\"color\":\"#000000\"}},\"menu\":[{\"Quick Strike\":\"send:quick\"},{\"Power Attack\":\"send:power\"},\"-\",{\"Feint\":\"send:feint\"}]}\x1b\\⚔️ Attack\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:defend?config={\"style\":{\"color\":\"#006600\",\"bold\":true,\"hover\":{\"bg\":\"#ccffcc\",\"color\":\"#000000\"}},\"tooltip\":\"Defensive stance - reduces damage by 50%\"}\x1b\\🛡️ Defend\x1b]8;;\x1b\\\n\n";
-
-    output += "RPG Items:\n";
-    output += "  \x1b]8;;send:examine?config={\"style\":{\"color\":\"#cc6600\",\"italic\":true,\"hover\":{\"bg\":\"#ffe6cc\",\"color\":\"#000000\"}},\"tooltip\":\"Magic sword with fire enchantment\"}\x1b\\🗡️ Flaming Blade\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:bag?config={\"style\":{\"color\":\"#6600cc\",\"hover\":{\"color\":\"#9933ff\",\"underline\":true}},\"menu\":[{\"Open\":\"send:open\"},{\"Sort\":\"send:sort\"},\"-\",{\"Drop\":\"send:drop\"}]}\x1b\\🎒 Backpack\x1b]8;;\x1b\\\n\n";
-
-    output += "Status Indicators:\n";
-    output += "  \x1b]8;;send:warning?config={\"style\":{\"bg\":\"#ffcc00\",\"color\":\"#000000\",\"bold\":true}}\x1b\\⚠️ Warning\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:error?config={\"style\":{\"bg\":\"#cc0000\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\❌ Error\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:success?config={\"style\":{\"bg\":\"#006600\",\"color\":\"#ffffff\",\"bold\":true}}\x1b\\✅ Success\x1b]8;;\x1b\\\n\n";
-
-    output += "Complete Example (All Features):\n";
-    output += "  \x1b]8;;send:sword?config={\"style\":{\"color\":\"#cc6600\",\"bold\":true,\"hover\":{\"bg\":\"#ffcc99\",\"color\":\"#000000\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:examine\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"Flaming Sword: +5 damage, fire enchantment\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
+    output += "── DISABLED LINKS ─────────────────────────────────────────────────────\n";
+    output += "\x1b]8;;send:d1?config={\"disabled\":true,\"style\":{\"color\":\"gray\",\"strikethrough\":true}}\x1b\\Locked\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:d2?config={\"disabled\":true,\"style\":{\"color\":\"#666\"},\"tooltip\":\"Requires level 10\"}\x1b\\Premium\x1b]8;;\x1b\\ ";
+    output += "← click/right-click blocked, tooltip works\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
-    // Summary
+    // 8. SELECTION - Toggle states
     // ═══════════════════════════════════════════════════════════════════
-    output += "══════════════════════════════════════════════════════════════════════\n\n";
-    output += "Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8\n";
-    output += "All examples above are clickable - try them!\n\n";
+    output += "── SELECTION (stateful toggles) ───────────────────────────────────────\n";
+    output += "Radio:    ";
+    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"diff\",\"value\":\"easy\",\"exclusive\":true},\"style\":{\"color\":\"#8f8\",\"selected\":{\"bg\":\"green\",\"bold\":true}}}\x1b\\Easy\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"diff\",\"value\":\"hard\",\"exclusive\":true},\"style\":{\"color\":\"#f88\",\"selected\":{\"bg\":\"red\",\"bold\":true}}}\x1b\\Hard\x1b]8;;\x1b\\ (one at a time)\n";
+    output += "Checkbox: ";
+    output += "\x1b]8;;send:b1?config={\"selection\":{\"group\":\"buffs\",\"value\":\"str\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#f60\",\"bold\":true}}}\x1b\\[STR]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:b2?config={\"selection\":{\"group\":\"buffs\",\"value\":\"dex\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#08f\",\"bold\":true}}}\x1b\\[DEX]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:b3?config={\"selection\":{\"group\":\"buffs\",\"value\":\"int\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#a0f\",\"bold\":true}}}\x1b\\[INT]\x1b]8;;\x1b\\ (multi-select)\n";
+    output += "Server receives: &selected=true/false in callback\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 9. COMPACT SYNTAX - Shorthand keys
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── COMPACT SYNTAX (shorthand) ─────────────────────────────────────────\n";
+    output += "Full:  {\"style\":{\"color\":\"red\",\"bold\":true},\"tooltip\":\"info\"}\n";
+    output += "Short: {\"s\":{\"c\":\"red\",\"b\":true},\"t\":\"info\"}  ";
+    output += "\x1b]8;;send:sh1?config={\"s\":{\"c\":\"red\",\"b\":true},\"t\":\"Shorthand!\"}\x1b\\Try me\x1b]8;;\x1b\\\n";
+    output += "Keys: s=style c=color bg=bg b=bold i=italic u=underline t=tooltip m=menu\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 10. PRESETS - Reusable styles
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── PRESETS (define once, reuse) ───────────────────────────────────────\n";
+    // Define presets (invisible)
+    output += "\x1b]8;;preset:btn?config={\"s\":{\"bg\":\"#07f\",\"c\":\"white\",\"b\":true},\"t\":\"Button preset\"}\x1b\\\x1b]8;;\x1b\\";
+    output += "\x1b]8;;preset:warn?config={\"s\":{\"bg\":\"orange\",\"c\":\"black\",\"b\":true}}\x1b\\\x1b]8;;\x1b\\";
+    output += "\x1b]8;;preset:danger?config={\"s\":{\"bg\":\"red\",\"c\":\"white\",\"b\":true}}\x1b\\\x1b]8;;\x1b\\";
+    output += "Define: preset:NAME?config={...}  Use: ?preset=NAME\n";
+    output += "Usage:  ";
+    output += "\x1b]8;;send:p1?preset=btn\x1b\\Button\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p2?preset=warn\x1b\\Warning\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p3?preset=danger\x1b\\Danger\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p4?preset=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Override\x1b]8;;\x1b\\\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // REAL-WORLD SHOWCASE
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── REAL-WORLD EXAMPLE ─────────────────────────────────────────────────\n";
+    output += "Nav: ";
+    output += "\x1b]8;;send:north?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\North\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:south?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\South\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:east?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\East\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:west?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\West\x1b]8;;\x1b\\\n";
+    output += "Item: \x1b]8;;send:sword?config={\"style\":{\"color\":\"#f80\",\"bold\":true,\"hover\":{\"bg\":\"#fc9\",\"color\":\"black\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:exam\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"+5 Fire Damage\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
+
+    output += "───────────────────────────────────────────────────────────────────────\n";
+    output += "Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol\n";
 
     // Process the output through the normal text processing pipeline
+    // Skip trigger processing to avoid re-entrancy issues during injection
     std::string outputBytes = output.toStdString();
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] About to process documentation examples through translateToPlainText, length:" << outputBytes.length();
+    qDebug() << "[OSC] About to process documentation examples through translateToPlainText, length:" << outputBytes.length();
 #endif
+    mSkipTriggerProcessing = true;
     translateToPlainText(outputBytes, true); // Mark as from server
+    mSkipTriggerProcessing = false;
 }
 
 // ============================================================================
-// CSS Link States Implementation with Accessibility Best Practices
+// Link States Implementation with Accessibility Best Practices
 // ============================================================================
 
 Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle() const
@@ -5476,9 +6472,45 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     }
 
     // Apply state-specific styles with proper cascade order
+    // Priority: disabled > selected > active > focus-visible > focus > hover > visited > link > default
     const StateStyle* stateStyle = nullptr;
 
     switch (currentState) {
+        case StateDisabled:
+            if (disabledStyle.hasCustomStyling) {
+                stateStyle = &disabledStyle;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Using disabled style - hasCustomStyling:" << disabledStyle.hasCustomStyling
+                         << "hasForegroundColor:" << disabledStyle.hasForegroundColor 
+                         << "foregroundColor:" << (disabledStyle.hasForegroundColor ? disabledStyle.foregroundColor.name() : "none")
+                         << "hasBackgroundColor:" << disabledStyle.hasBackgroundColor 
+                         << "backgroundColor:" << (disabledStyle.hasBackgroundColor ? disabledStyle.backgroundColor.name() : "none")
+                         << "isBold:" << disabledStyle.isBold
+                         << "isStrikeOut:" << disabledStyle.isStrikeOut;
+#endif
+            } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Disabled style has no custom styling - hasCustomStyling:" << disabledStyle.hasCustomStyling;
+#endif
+            }
+            break;
+        case StateSelected:
+            if (selectedStyle.hasCustomStyling) {
+                stateStyle = &selectedStyle;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Using selected style - hasCustomStyling:" << selectedStyle.hasCustomStyling
+                         << "hasForegroundColor:" << selectedStyle.hasForegroundColor 
+                         << "foregroundColor:" << (selectedStyle.hasForegroundColor ? selectedStyle.foregroundColor.name() : "none")
+                         << "hasBackgroundColor:" << selectedStyle.hasBackgroundColor 
+                         << "backgroundColor:" << (selectedStyle.hasBackgroundColor ? selectedStyle.backgroundColor.name() : "none")
+                         << "isBold:" << selectedStyle.isBold;
+#endif
+            } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Selected style has no custom styling - hasCustomStyling:" << selectedStyle.hasCustomStyling;
+#endif
+            }
+            break;
         case StateVisited:
             if (visitedStyle.hasCustomStyling) stateStyle = &visitedStyle;
             break;
@@ -5539,150 +6571,13 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
         if (linkStyle.hasCustomStyling || visitedStyle.hasCustomStyling ||
             hoverStyle.hasCustomStyling || activeStyle.hasCustomStyling ||
             focusStyle.hasCustomStyling || focusVisibleStyle.hasCustomStyling ||
-            anyLinkStyle.hasCustomStyling) {
+            anyLinkStyle.hasCustomStyling || selectedStyle.hasCustomStyling ||
+            disabledStyle.hasCustomStyling) {
             effective.hasCustomStyling = true;
         }
     }
 
     return effective;
-}
-
-void TBuffer::parseHyperlinkStateStyle(const QString& pseudoClass, const QString& styleString, Mudlet::HyperlinkStyling& styling)
-{
-#if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] parseHyperlinkStateStyle called with pseudoClass:" << pseudoClass
-             << "styleString:" << styleString;
-#endif
-
-    QString cleanPseudoClass = pseudoClass.trimmed().toLower();
-    Mudlet::HyperlinkStyling::StateStyle* targetStyle = nullptr;
-
-    // Map pseudo-class selectors to appropriate state styles
-    if (cleanPseudoClass == qsl(":link")) {
-        targetStyle = &styling.linkStyle;
-    } else if (cleanPseudoClass == qsl(":visited")) {
-        targetStyle = &styling.visitedStyle;
-    } else if (cleanPseudoClass == qsl(":hover")) {
-        targetStyle = &styling.hoverStyle;
-    } else if (cleanPseudoClass == qsl(":active")) {
-        targetStyle = &styling.activeStyle;
-    } else if (cleanPseudoClass == qsl(":focus")) {
-        targetStyle = &styling.focusStyle;
-    } else if (cleanPseudoClass == qsl(":focus-visible")) {
-        targetStyle = &styling.focusVisibleStyle;
-    } else if (cleanPseudoClass == qsl(":any-link")) {
-        targetStyle = &styling.anyLinkStyle;
-    } else {
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Unknown pseudo-class:" << cleanPseudoClass;
-#endif
-        return;
-    }
-
-    if (targetStyle) {
-        parseStateStyleProperties(styleString, *targetStyle);
-        applyAccessibilityEnhancements(styling);
-    }
-}
-
-void TBuffer::parseStateStyleProperties(const QString& styleString, Mudlet::HyperlinkStyling::StateStyle& stateStyle)
-{
-    // Parse CSS-like style string: "property:value;property:value"
-    QStringList stylePairs = styleString.split(';', Qt::SkipEmptyParts);
-
-    bool hasAnyCustomStyling = false;
-
-    for (const QString& pair : stylePairs) {
-        QStringList propertyValue = pair.split(':', Qt::KeepEmptyParts);
-        if (propertyValue.size() != 2) {
-            continue; // Skip malformed property
-        }
-
-        QString property = propertyValue[0].trimmed().toLower();
-        QString value = propertyValue[1].trimmed();
-
-        if (property == qsl("color")) {
-            QColor color = parseColorValue(value);
-            if (color.isValid()) {
-                stateStyle.foregroundColor = color;
-                stateStyle.hasForegroundColor = true;
-                hasAnyCustomStyling = true;
-            }
-        } else if (property == qsl("background") || property == qsl("background-color")) {
-            // Support both "background" and "background-color" properties
-            QColor color = parseColorValue(value);
-            if (color.isValid()) {
-                stateStyle.backgroundColor = color;
-                stateStyle.hasBackgroundColor = true;
-                hasAnyCustomStyling = true;
-            }
-        } else if (property == qsl("font-weight")) {
-            stateStyle.isBold = (value.toLower() == qsl("bold") || value == "700" || value.toInt() >= 700);
-            hasAnyCustomStyling = true;
-        } else if (property == qsl("font-style")) {
-            stateStyle.isItalic = (value.toLower() == qsl("italic"));
-            hasAnyCustomStyling = true;
-        } else if (property == qsl("text-decoration")) {
-            // Handle text-decoration with optional style
-            QStringList decorationParts = value.toLower().split(' ', Qt::SkipEmptyParts);
-
-            // Reset decoration flags
-            stateStyle.isUnderlined = false;
-            stateStyle.isOverlined = false;
-            stateStyle.isStrikeOut = false;
-            stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineNone;
-
-            for (const QString& part : decorationParts) {
-                if (part == qsl("underline")) {
-                    stateStyle.isUnderlined = true;
-                    stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
-                } else if (part == qsl("overline")) {
-                    stateStyle.isOverlined = true;
-                } else if (part == qsl("line-through")) {
-                    stateStyle.isStrikeOut = true;
-                } else if (part == qsl("none")) {
-                    stateStyle.isUnderlined = false;
-                    stateStyle.isOverlined = false;
-                    stateStyle.isStrikeOut = false;
-                } else if (part == qsl("wavy") && stateStyle.isUnderlined) {
-                    stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
-                } else if (part == qsl("dotted") && stateStyle.isUnderlined) {
-                    stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
-                } else if (part == qsl("dashed") && stateStyle.isUnderlined) {
-                    stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDashed;
-                } else {
-                    // Check if it's a color for the decoration
-                    QColor decorationColor = parseColorValue(part);
-                    if (decorationColor.isValid()) {
-                        if (stateStyle.isUnderlined) {
-                            stateStyle.underlineColor = decorationColor;
-                            stateStyle.hasUnderlineColor = true;
-                        } else if (stateStyle.isOverlined) {
-                            stateStyle.overlineColor = decorationColor;
-                            stateStyle.hasOverlineColor = true;
-                        } else if (stateStyle.isStrikeOut) {
-                            stateStyle.strikeoutColor = decorationColor;
-                            stateStyle.hasStrikeoutColor = true;
-                        }
-                    }
-                }
-            }
-            hasAnyCustomStyling = true;
-        } else if (property == qsl("text-decoration-color")) {
-            QColor decorationColor = parseColorValue(value);
-            if (decorationColor.isValid()) {
-                stateStyle.underlineColor = decorationColor;
-                stateStyle.hasUnderlineColor = true;
-                stateStyle.overlineColor = decorationColor;
-                stateStyle.hasOverlineColor = true;
-                stateStyle.strikeoutColor = decorationColor;
-                stateStyle.hasStrikeoutColor = true;
-                hasAnyCustomStyling = true;
-            }
-        }
-    }
-
-    stateStyle.hasCustomStyling = hasAnyCustomStyling;
 }
 
 void TBuffer::applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling)
@@ -5718,8 +6613,10 @@ void TBuffer::setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState st
         case Mudlet::HyperlinkStyling::StateActive: stateName = "Active"; break;
         case Mudlet::HyperlinkStyling::StateFocus: stateName = "Focus"; break;
         case Mudlet::HyperlinkStyling::StateFocusVisible: stateName = "FocusVisible"; break;
+        case Mudlet::HyperlinkStyling::StateSelected: stateName = "Selected"; break;
+        case Mudlet::HyperlinkStyling::StateDisabled: stateName = "Disabled"; break;
     }
-    qDebug() << "[OSC8] Link" << linkIndex << "state changed to:" << stateName;
+    qDebug() << "[OSC] Link" << linkIndex << "state changed to:" << stateName;
 #endif
 }
 
@@ -5727,9 +6624,8 @@ Mudlet::HyperlinkStyling::LinkState TBuffer::getLinkState(int linkIndex) const
 {
     if (linkIndex <= 0) {
         return Mudlet::HyperlinkStyling::StateDefault;
-    } else {
-        return mLinkStates.value(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
     }
+    return mLinkStates.value(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
 }
 
 Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) const
@@ -5750,6 +6646,19 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
 
         auto effective = styling.getEffectiveStyle();
 
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] getEffectiveHyperlinkStyling for link" << linkIndex
+                 << "state:" << styling.currentState
+                 << "isSpoiler:" << styling.isSpoiler
+                 << "base hasBackgroundColor:" << styling.hasBackgroundColor
+                 << "base backgroundColor:" << (styling.hasBackgroundColor ? styling.backgroundColor.name() : "none")
+                 << "effective hasForegroundColor:" << effective.hasForegroundColor 
+                 << "effective foregroundColor:" << (effective.hasForegroundColor ? effective.foregroundColor.name() : "none")
+                 << "effective hasBackgroundColor:" << effective.hasBackgroundColor 
+                 << "effective backgroundColor:" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
+                 << "effective isBold:" << effective.isBold;
+#endif
+
         // Copy effective state back to base properties for rendering
         styling.foregroundColor = effective.foregroundColor;
         styling.backgroundColor = effective.backgroundColor;
@@ -5769,6 +6678,25 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
         styling.underlineStyle = effective.underlineStyle;
         styling.hasCustomStyling = effective.hasCustomStyling; // CRITICAL: Copy hasCustomStyling flag
 
+        // SPOILER FIX: Ensure spoiler backgrounds are always applied regardless of pseudo-class cascade
+        // This fixes the issue where spoilers show background on hover but not on initial display
+        if (styling.isSpoiler) {
+            // Get the base styling directly from link store to ensure spoiler background is preserved
+            Mudlet::HyperlinkStyling baseStyling = mLinkStore.getStyling(linkIndex);
+            if (baseStyling.hasBackgroundColor) {
+                // For spoilers, ALWAYS use the base background that was auto-generated
+                // Ignore whatever the pseudo-class cascade decided
+                styling.backgroundColor = baseStyling.backgroundColor;
+                styling.hasBackgroundColor = true;
+                styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] SPOILER FIX: Forced spoiler background" << baseStyling.backgroundColor.name() 
+                         << "over effective background" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
+                         << "for link" << linkIndex;
+#endif
+            }
+        }
+
         return styling;
     }
 }
@@ -5778,13 +6706,20 @@ void TBuffer::setHoveredLink(int linkIndex)
     int previousHoveredLink = mCurrentHoveredLinkIndex;
     mCurrentHoveredLinkIndex = linkIndex;
 
-    // Reset previous hovered link to its base state (default or visited)
+    // Reset previous hovered link to its base state (default, visited, or selected)
     if (previousHoveredLink > 0 && previousHoveredLink != linkIndex) {
         auto currentState = getLinkState(previousHoveredLink);
 
         if (currentState == Mudlet::HyperlinkStyling::StateHover) {
-            // Return to visited state if it was visited, otherwise to default
-            if (isLinkVisited(previousHoveredLink)) {
+            // Return to the appropriate base state:
+            // Priority: disabled > selected > visited > default
+            // Disabled links should stay disabled
+            Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousHoveredLink);
+            if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDisabled);
+            } else if (isLinkSelected(previousHoveredLink)) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateSelected);
+            } else if (isLinkVisited(previousHoveredLink)) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateVisited);
             } else {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDefault);
@@ -5797,9 +6732,10 @@ void TBuffer::setHoveredLink(int linkIndex)
     // Set new link to hover state
     if (linkIndex > 0) {
         auto currentState = getLinkState(linkIndex);
-        // Don't override active state with hover
-        // But we can hover over visited links to show hover styling
-        if (currentState != Mudlet::HyperlinkStyling::StateActive) {
+        // Don't override active or disabled states with hover
+        // Disabled links should stay disabled and show their disabled styling
+        if (currentState != Mudlet::HyperlinkStyling::StateActive && 
+            currentState != Mudlet::HyperlinkStyling::StateDisabled) {
             setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateHover);
             updateLinkCharacters(linkIndex); // Update displayed characters
         }
@@ -5813,15 +6749,18 @@ void TBuffer::setActiveLink(int linkIndex)
 
     // Reset previous active link
     if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
-        // Check current state to preserve visited links
-        Mudlet::HyperlinkStyling::LinkState currentState = getLinkState(previousActiveLink);
 
-        // Return to hover if it's still hovered
-        if (previousActiveLink == mCurrentHoveredLinkIndex) {
+        // Return to appropriate state based on priority: disabled > hover > selected > visited > default
+        Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
+        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDisabled);
+        } else if (previousActiveLink == mCurrentHoveredLinkIndex) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
-        } else if (isLinkVisited(previousActiveLink)) {  // Check base state: visited or default
+        } else if (isLinkSelected(previousActiveLink)) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateSelected);
+        } else if (isLinkVisited(previousActiveLink)) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateVisited);
-        } else {  // Otherwise return to default
+        } else {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDefault);
         }
 
@@ -5840,9 +6779,19 @@ void TBuffer::setFocusedLink(int linkIndex)
     int previousFocusedLink = mCurrentFocusedLinkIndex;
     mCurrentFocusedLinkIndex = linkIndex;
 
-    // Reset previous focused link
+    // Reset previous focused link to appropriate base state
     if (previousFocusedLink > 0 && previousFocusedLink != linkIndex) {
-        setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDefault);
+        // Preserve disabled state, otherwise return to base state
+        Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousFocusedLink);
+        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDisabled);
+        } else if (isLinkSelected(previousFocusedLink)) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateSelected);
+        } else if (isLinkVisited(previousFocusedLink)) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateVisited);
+        } else {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDefault);
+        }
     }
 
     // Set new link to focus state
@@ -5868,7 +6817,7 @@ void TBuffer::markLinkAsVisited(int linkIndex)
         }
 
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Link" << linkIndex << "marked as visited";
+        qDebug() << "[OSC] Link" << linkIndex << "marked as visited";
 #endif
     }
 }
@@ -5876,6 +6825,143 @@ void TBuffer::markLinkAsVisited(int linkIndex)
 bool TBuffer::isLinkVisited(int linkIndex) const
 {
     return mVisitedLinks.value(linkIndex, false);
+}
+
+void TBuffer::setLinkSelected(int linkIndex, bool selected)
+{
+    mLinkSelectionState[linkIndex] = selected;
+}
+
+bool TBuffer::isLinkSelected(int linkIndex) const
+{
+    return mLinkSelectionState.value(linkIndex, false);
+}
+
+void TBuffer::revealSpoilerLink(int linkIndex)
+{
+    if (!mLinkOriginalText.contains(linkIndex)) {
+        return;
+    }
+
+    QString originalText = mLinkOriginalText[linkIndex];
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Revealing spoiler link" << linkIndex << "with text:" << originalText;
+#endif
+
+    if (!mLinkStore.hasStyling(linkIndex)) {
+        return;
+    }
+
+    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+    
+    if (styling.isSpoiler) {
+        QStringList hints = mLinkStore.getHintsConst(linkIndex);
+        if (!hints.isEmpty() && hints.first() == QObject::tr("Click to reveal")) {
+            mLinkStore.getHints(linkIndex).clear();
+            
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Cleared auto-generated 'Click to reveal' tooltip for spoiler link" << linkIndex;
+#endif
+        }
+
+        if (styling.hasBackgroundColor && mLinkOriginalBackgrounds.contains(linkIndex)) {
+            QColor originalBackground = mLinkOriginalBackgrounds[linkIndex];
+            styling.backgroundColor = originalBackground;
+            
+            mLinkStore.setStyling(linkIndex, styling);
+            
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Restored original background color for spoiler link" << linkIndex;
+#endif
+        }
+    }
+
+    // Find all characters with this link index and restore their original text
+    int charIndex = 0;
+    for (size_t lineNum = 0; lineNum < buffer.size(); ++lineNum) {
+        auto& line = buffer[lineNum];
+        QString lineText = lineBuffer.at(static_cast<int>(lineNum));
+        bool lineModified = false;
+        
+        for (size_t charPos = 0; charPos < line.size(); ++charPos) {
+            if (line[charPos].linkIndex() == linkIndex && charIndex < originalText.length()) {
+                // Replace the space character with the original character
+                QChar originalChar = originalText[charIndex];
+                if (charPos < static_cast<size_t>(lineText.length())) {
+                    lineText[static_cast<int>(charPos)] = originalChar;
+                    lineModified = true;
+                }
+                charIndex++;
+            }
+        }
+        
+        if (lineModified) {
+            lineBuffer[static_cast<int>(lineNum)] = lineText;
+        }
+    }
+
+    updateLinkCharacters(linkIndex);
+
+    mLinkOriginalText.remove(linkIndex);
+    
+    if (mpConsole) {
+        mpConsole->update();
+    }
+}
+
+void TBuffer::clearGroupSelection(const QString& group, const QString& exceptValue)
+{
+    int maxLinkId = mLinkStore.getCurrentLinkID();
+    int clearedCount = 0;
+    
+    for (int linkIndex = 1; linkIndex <= maxLinkId; ++linkIndex) {
+        if (!mLinkStore.hasStyling(linkIndex)) {
+            continue;
+        }
+        
+        auto styling = mLinkStore.getStyling(linkIndex);
+        if (styling.selection.hasSelectionSettings && 
+            styling.selection.group == group && 
+            styling.selection.value != exceptValue) {
+            
+            if (mpConsole) {
+                mpConsole->getHyperlinkSelectionManager().setSelected(styling.selection.group, styling.selection.value, false);
+            }
+            
+            setLinkSelected(linkIndex, false);
+            if (styling.selection.disabled) {
+                setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+            } else {
+                setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+            }
+            
+            updateLinkCharacters(linkIndex);
+            clearedCount++;
+            
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] clearGroupSelection: Deselected link" << linkIndex 
+                     << "group:" << group << "value:" << styling.selection.value;
+#endif
+        }
+    }
+    
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] clearGroupSelection: Cleared" << clearedCount << "links in group" << group;
+#endif
+}
+
+void TBuffer::applyPendingSelectionStyling()
+{
+    if (!mPendingSelectionStyling.isEmpty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
+#endif
+        for (int linkId : mPendingSelectionStyling) {
+            updateLinkCharacters(linkId);
+        }
+        mPendingSelectionStyling.clear();
+    }
 }
 
 int TBuffer::getLinkIndexAt(int line, int column) const
@@ -5888,7 +6974,7 @@ int TBuffer::getLinkIndexAt(int line, int column) const
     const auto& bufferLine = buffer.at(line);
 
     // Validate column bounds
-    if (column < 0 || column >= bufferLine.size()) {
+    if (column < 0 || column >= static_cast<int>(bufferLine.size())) {
         return 0;
     }
 
@@ -5907,69 +6993,103 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     // Get the effective styling for this link's current state
     Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
 
-    // IMPORTANT: If this link has no custom CSS styling at all (neither base nor pseudo-class),
-    // don't modify the characters. This preserves ANSI formatting for links without any CSS.
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Link" << linkIndex << "effective styling:"
+             << "hasFg:" << effectiveStyling.hasForegroundColor
+             << "fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none")
+             << "hasBg:" << effectiveStyling.hasBackgroundColor
+             << "bold:" << effectiveStyling.isBold
+             << "underline:" << effectiveStyling.isUnderlined
+             << "hasCustom:" << effectiveStyling.hasCustomStyling;
+#endif
+
+    // IMPORTANT: If this link has no custom styling at all (neither base nor pseudo-class),
+    // don't modify the characters. This preserves ANSI formatting for links without styling.
     if (!effectiveStyling.hasCustomStyling) {
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC8] Link" << linkIndex << "has no custom styling - preserving ANSI formatting";
+        qDebug() << "[OSC] Link" << linkIndex << "has no custom styling - preserving ANSI formatting";
 #endif
         return; // Don't modify characters - preserve original ANSI formatting
     }
 
-    // Check if we should use ANSI base with pseudo-class overlays:
-    // - Has pseudo-class styling (hasCustomStyling = true)
-    // - But NO base CSS styling (hasBaseCustomStyling = false)
-    // - And we're in default/visited state (not hover/active/focus)
-    bool useAnsiBase = !effectiveStyling.hasBaseCustomStyling &&
-                       (effectiveStyling.currentState == Mudlet::HyperlinkStyling::StateDefault ||
-                        effectiveStyling.currentState == Mudlet::HyperlinkStyling::StateVisited);
+    // Never restore ANSI base when effective styling has custom properties.
+    // This includes both base-level styling AND pseudo-class styling.
+    // If the cascade resolved custom colors/formatting from :link, :hover, etc.,
+    // use those instead of reverting to ANSI.
+    bool useAnsiBase = false;
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC8] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling
+    qDebug() << "[OSC] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling
              << "currentState:" << effectiveStyling.currentState << "useAnsiBase:" << useAnsiBase;
+#endif
+
+    // Debug: Count how many characters we're checking and how many match
+#if defined(DEBUG_OSC_PROCESSING)
+    int totalCharacters = 0;
+    int matchingCharacters = 0;
 #endif
 
     // Iterate through all lines in the buffer
     for (auto& line : buffer) {
         // Iterate through all characters in the line
         for (auto& tchar : line) {
+#if defined(DEBUG_OSC_PROCESSING)
+            totalCharacters++;
+#endif
             // Check if this character belongs to the link we're updating
             if (tchar.linkIndex() == linkIndex) {
+#if defined(DEBUG_OSC_PROCESSING)
+                matchingCharacters++;
+                static int charUpdateCount = 0;
+                if (charUpdateCount++ < 2) { // Only log first 2 characters to avoid spam
+                    qDebug() << "[OSC] Before update - char with linkIndex" << linkIndex
+                             << "- FgColor:" << tchar.mFgColor.name()
+                             << "hasFg:" << effectiveStyling.hasForegroundColor
+                             << "new fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none");
+                }
+#endif
                 // Apply the effective styling to this character
 
-                // If we should use ANSI base (no base CSS but in default/visited state),
+                // If we should use ANSI base (no base styling but in default/visited state),
                 // restore the original ANSI colors and formatting as a BASE,
-                // then let pseudo-class CSS styling override it
+                // then let pseudo-class styling override it
                 if (useAnsiBase && mLinkOriginalCharacters.contains(linkIndex)) {
                     TChar originalChar = mLinkOriginalCharacters.value(linkIndex);
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC8] Restoring ANSI base for link" << linkIndex
+                    qDebug() << "[OSC] Restoring ANSI base for link" << linkIndex
                              << "- Original FgColor:" << originalChar.mFgColor.name()
                              << "Original BgColor:" << originalChar.mBgColor.name()
                              << "Original Bold:" << bool(originalChar.mFlags & TChar::Bold)
                              << "Current FgColor:" << tchar.mFgColor.name()
                              << "Current Bold:" << bool(tchar.mFlags & TChar::Bold);
 #endif
-                    // Restore ANSI base - these will be overridden below if CSS specifies them
+                    // Restore ANSI base - these will be overridden below if styling specifies them
                     tchar.mFgColor = originalChar.mFgColor;
                     tchar.mBgColor = originalChar.mBgColor;
                     tchar.mFlags = originalChar.mFlags; // Restore ALL ANSI formatting flags including decorations
 
-                    // Clear any custom decoration colors that were applied by CSS pseudo-classes
+                    // Clear any custom decoration colors that were applied by pseudo-classes
                     // ANSI doesn't support custom decoration colors, so we clear them when restoring ANSI base
                     tchar.clearCustomUnderlineColor();
                     tchar.clearCustomOverlineColor();
                     tchar.clearCustomStrikeoutColor();
 
-                    // DON'T continue here - let the CSS pseudo-class styling below override the ANSI base
+                    // DON'T continue here - let the pseudo-class styling below override the ANSI base
                     // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting
                 }
 
-                // Apply CSS styling
+                // Apply styling
 
                 // Update foreground color
                 if (effectiveStyling.hasForegroundColor) {
                     tchar.mFgColor = effectiveStyling.foregroundColor;
+#if defined(DEBUG_OSC_PROCESSING)
+                    static int fgUpdateCount = 0;
+                    if (fgUpdateCount++ < 2) {
+                        qDebug() << "[OSC] Applied FG color to link" << linkIndex
+                                 << "- New FgColor:" << tchar.mFgColor.name();
+                    }
+#endif
                 }
 
                 // Update background color - restore original if not specified in styling
@@ -6043,5 +7163,21 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                 }
             }
         }
+    }
+
+    // Debug: Report search results
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Character search completed for link" << linkIndex 
+             << "- Total characters searched:" << totalCharacters
+             << "- Matching characters found:" << matchingCharacters;
+#endif
+
+    // Refresh the display to show the updated character styling
+    // Use updateScreenView and repaint for immediate Qt rendering
+    if (mpConsole) {
+        mpConsole->mUpperPane->updateScreenView();
+        mpConsole->mUpperPane->repaint();
+        mpConsole->mLowerPane->updateScreenView();
+        mpConsole->mLowerPane->repaint();
     }
 }

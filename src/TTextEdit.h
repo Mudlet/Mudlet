@@ -28,8 +28,6 @@
  ***************************************************************************/
 
 
-#include "TBuffer.h"
-
 #include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
@@ -40,6 +38,7 @@
 
 
 class Host;
+class TBuffer;
 class TConsole;
 class TChar;
 

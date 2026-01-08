@@ -21,10 +21,10 @@
 
 #include "discord.h"
 #include "mudlet.h"
+#include "utils.h"
 
 #include <QtDebug>
 #include <QHash>
-#include <string.h>
 
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
@@ -137,6 +137,9 @@ Discord::~Discord()
             itPresencePtrs.remove();
         }
     }
+
+    delete mpHandlers;
+    mpHandlers = nullptr;
 }
 
 // For all the setters below the caller is supposed to check that they have the
@@ -542,9 +545,8 @@ QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
     // Handle using localhost as an off-line testing case
     if (deducedName == QLatin1String("localhost")) {
         return qMakePair(true, deducedName);
-    } else {
-        return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);
     }
+    return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);
 }
 
 bool Discord::libraryLoaded()
@@ -582,9 +584,8 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
         UpdatePresence();
 
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void Discord::resetData(Host* pHost){
@@ -630,52 +631,56 @@ DiscordRichPresence localDiscordPresence::convert() const
 
 void localDiscordPresence::setDetailText(const QString& text)
 {
-    // Set the amount to be copied to be one less than the size of the buffer
-    // so that the last byte is untouched and always contains the initial
-    // null that was placed there when the thing pointed to by
-    // pDiscordPresence was created:
-
-    strncpy(mDetails, text.toUtf8().constData(), 127);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mDetails, sizeof(mDetails), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setStateText(const QString& text)
 {
-    strncpy(mState, text.toUtf8().constData(), 127);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mState, sizeof(mState), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageText(const QString& text)
 {
-    strncpy(mLargeImageText, text.toUtf8().constData(), 127);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mLargeImageText, sizeof(mLargeImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageKey(const QString& text)
 {
-    strncpy(mLargeImageKey, text.toUtf8().constData(), 31);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mLargeImageKey, sizeof(mLargeImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageText(const QString& text)
 {
-    strncpy(mSmallImageText, text.toUtf8().constData(), 127);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mSmallImageText, sizeof(mSmallImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageKey(const QString& text)
 {
-    strncpy(mSmallImageKey, text.toUtf8().constData(), 31);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setJoinSecret(const QString& text)
 {
-    strncpy(mJoinSecret, text.toUtf8().constData(), 127);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mJoinSecret, sizeof(mJoinSecret), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setMatchSecret(const QString& text)
 {
-    strncpy(mMatchSecret, text.toUtf8().constData(), 127);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mMatchSecret, sizeof(mMatchSecret), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSpectateSecret(const QString& text)
 {
-    strncpy(mSpectateSecret, text.toUtf8().constData(), 127);
+    const QByteArray utf8Data = text.toUtf8();
+    utils::copyString(mSpectateSecret, sizeof(mSpectateSecret), utf8Data.constData(), utf8Data.size());
 }
 
 bool Discord::usingMudletsDiscordID(Host* pHost) const
