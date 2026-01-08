@@ -23,6 +23,7 @@
 #include "VarUnit.h"
 
 #include "TVar.h"
+#include "utils.h"
 
 #include <QDebug>
 #include <QLocale>

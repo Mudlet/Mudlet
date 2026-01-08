@@ -1,0 +1,69 @@
+# AddressSanitizer Leak Suppression File for Mudlet
+# This file suppresses known leaks from third-party libraries that are
+# typically one-time initialization leaks or false positives from library
+# internal caching mechanisms.
+#
+# Usage: Set the LSAN_OPTIONS environment variable before running:
+#   export LSAN_OPTIONS=suppressions=/path/to/asan-suppressions.txt
+#
+# See: https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
+
+# ==============================================================================
+# Fontconfig library leaks
+# These are typically one-time initialization leaks in the font system
+# ==============================================================================
+leak:libfontconfig.so
+
+# ==============================================================================
+# Pango text rendering library leaks
+# These include pango, pangocairo, and pangoft2 leaks
+# ==============================================================================
+leak:libpango-1.0.so
+leak:libpangocairo-1.0.so
+leak:libpangoft2-1.0.so
+
+# ==============================================================================
+# GTK3 GUI toolkit leaks
+# These are often related to widget initialization and theme loading
+# ==============================================================================
+leak:libgtk-3.so
+
+# ==============================================================================
+# Cairo graphics library leaks
+# ==============================================================================
+leak:libcairo.so
+
+# ==============================================================================
+# HarfBuzz text shaping library leaks
+# ==============================================================================
+leak:libharfbuzz.so
+
+# ==============================================================================
+# GLib/GObject library leaks
+# These are from the GLib object system and utilities
+# ==============================================================================
+leak:libglib-2.0.so
+leak:libgobject-2.0.so
+
+# ==============================================================================
+# Expat XML parser library leaks
+# ==============================================================================
+leak:libexpat.so
+
+# ==============================================================================
+# Qt internal leaks (Qt's integration with system libraries)
+# These are typically initialization leaks in Qt's platform integration
+# ==============================================================================
+
+# Qt's GTK3 platform theme integration
+leak:QGtk3Interface::widget
+
+# Qt's fontconfig database integration
+leak:QFontconfigDatabase::addApplicationFont
+leak:QFontEngineMultiFontConfig
+
+# Qt translation system (one-time initialization)
+leak:QTranslatorPrivate::do_load
+
+# Qt array data allocation (internal caching)
+leak:QArrayData::allocate2

@@ -29,17 +29,17 @@
 
 #include "TLuaInterpreter.h"
 
+#include <QClipboard>
+
 #include "EAction.h"
 #include "Host.h"
-#include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
-#include "TForkedProcess.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -1291,6 +1291,17 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
     const Host& host = getHostFromLua(L);
     lua_pushnumber(L, host.borders().top());
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderColor
+int TLuaInterpreter::getBorderColor(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QColor color = host.mpConsole->mpMainFrame->palette().color(QPalette::Window);
+    lua_pushnumber(L, color.red());
+    lua_pushnumber(L, color.green());
+    lua_pushnumber(L, color.blue());
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
@@ -2600,8 +2611,7 @@ int TLuaInterpreter::selectSection(lua_State* L)
     const int to = getVerifiedInt(L, __func__, s, "length");
 
     auto console = CONSOLE(L, windowName);
-    const int ret = console->selectSection(from, to);
-    lua_pushboolean(L, ret != -1);
+    lua_pushboolean(L, console->selectSection(from, to));
     return 1;
 }
 

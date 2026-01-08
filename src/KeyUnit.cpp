@@ -285,6 +285,16 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
     }
 }
 
+void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentKey(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentKey(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
     if (!pT) {

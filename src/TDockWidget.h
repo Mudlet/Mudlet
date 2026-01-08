@@ -21,14 +21,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "mudlet.h"
-#include "Host.h"
-#include "TConsole.h"
-
-#include <QtEvents>
 #include <QDockWidget>
 #include <QPointer>
 #include <QString>
+
+class Host;
+class TConsole;
 
 // TDockWidget contains helpers for User Windows QDockWidget.
 class TDockWidget : public QDockWidget {

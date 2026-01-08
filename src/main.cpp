@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2021, 2023-2025 by Stephen Lyons        *
+ *   Copyright (C) 2013-2014, 2016-2021, 2023-2026 by Stephen Lyons        *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -59,7 +59,7 @@ extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void        initializeQRCResources();
 
-#if defined(Q_OS_WINDOWS)
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 bool runUpdate();
 #endif
 
@@ -161,6 +161,27 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
+
+#ifdef Q_OS_WINDOWS
+    // Handle Squirrel installer commands - must exit quickly for install/update/uninstall
+    // https://github.com/clowd/Clowd.Squirrel/blob/master/docs/using/custom-squirrel-events-non-cs.md
+    for (int i = 1; i < argc; ++i) {
+        const QString arg = QString::fromLocal8Bit(argv[i]);
+        if (arg.startsWith(qsl("--squirrel-")) && arg != qsl("--squirrel-firstrun")) {
+            // Use argv[0] directly since QCoreApplication isn't instantiated yet
+            const QFileInfo appInfo(QString::fromLocal8Bit(argv[0]));
+            const QString updateExe = QDir(appInfo.absolutePath()).filePath(qsl("../Update.exe"));
+            const QString exeName = appInfo.fileName();
+
+            if (arg.startsWith(qsl("--squirrel-install")) || arg.startsWith(qsl("--squirrel-updated"))) {
+                QProcess::execute(updateExe, {qsl("--createShortcut"), exeName, qsl("--shortcut-locations"), qsl("StartMenu")});
+            } else if (arg.startsWith(qsl("--squirrel-uninstall"))) {
+                QProcess::execute(updateExe, {qsl("--removeShortcut"), exeName});
+            }
+            return 0;
+        }
+    }
+#endif
 
     #ifdef WITH_SENTRY
         initSentry();
@@ -274,6 +295,9 @@ int main(int argc, char* argv[])
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
 
+    const QCommandLineOption runUndoTests(QStringList() << qsl("run-undo-tests"), qsl("Run internal undo/redo tests (requires 'Mudlet self-test' profile) and exit."));
+    parser.addOption(runUndoTests);
+
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
@@ -374,7 +398,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2025  Mudlet developers"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2026  Mudlet developers"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                                   "There is NO WARRANTY, to the extent permitted by law."));
@@ -495,7 +519,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2026");
         QFont font(qsl("Bitstream Vera Serif"), 16, 75);
         font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
@@ -675,6 +699,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::smSteamMode = parser.isSet(steamMode);
+    const bool shouldRunUndoTests = parser.isSet(runUndoTests);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
@@ -686,9 +711,45 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles]() {
+    QTimer::singleShot(0, qApp, [cliProfiles, shouldRunUndoTests]() {
         // ensure Mudlet singleton is initialised before calling profile loading
         mudlet::self()->startAutoLogin(cliProfiles);
+
+        // If --run-undo-tests was specified, run tests after profile loads
+        if (shouldRunUndoTests) {
+            QTimer::singleShot(3000, qApp, []() {
+                // Find the first loaded host and run tests on its trigger editor
+                Host* firstHost = nullptr;
+                for (auto host : mudlet::self()->getHostManager()) {
+                    if (host) {
+                        firstHost = host.data();
+                        break;
+                    }
+                }
+
+                if (firstHost && firstHost->mpEditorDialog) {
+                    // Verify we're running in the test profile
+                    if (firstHost->getName() != qsl("Mudlet self-test")) {
+                        qDebug() << "ERROR: Undo/Redo tests can only be run in the 'Mudlet self-test' profile";
+                        qDebug() << "Current profile:" << firstHost->getName();
+                        QCoreApplication::exit(1);
+                        return;
+                    }
+
+                    qDebug() << "Running undo/redo tests via --run-undo-tests flag";
+                    firstHost->mpEditorDialog->slot_runUndoRedoTests();
+
+                    // Exit after tests complete
+                    QTimer::singleShot(1000, qApp, []() {
+                        qDebug() << "Tests complete, exiting...";
+                        QCoreApplication::exit(0);
+                    });
+                } else {
+                    qDebug() << "ERROR: No profile loaded or editor not available for undo tests";
+                    QCoreApplication::exit(1);
+                }
+            });
+        }
     });
 
 #if defined(INCLUDE_UPDATER)
@@ -779,7 +840,9 @@ static bool tryFileOperationWithRetry(const std::function<bool()>& operation, co
 bool runUpdate()
 {
     QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
-    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
+    // Keep the installer in temp directory - placing it in the app directory causes the Squirrel
+    // installer to delete itself while running, as it updates/replaces the application directory
+    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
     QDir updateDir;
 
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
@@ -808,7 +871,7 @@ bool runUpdate()
         bool moved = tryFileOperationWithRetry([&]() {
             return isFileAccessible(updatedInstaller.absoluteFilePath()) &&
                    updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath());
-        }, qsl("Move installer to application directory"));
+        }, qsl("Rename installer to mark as ready"));
 
         if (!moved) {
             qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath()

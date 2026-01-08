@@ -24,9 +24,7 @@
  ***************************************************************************/
 
 
-#include "TMap.h"
-
-#include <QApplication>
+#include <QCoreApplication>
 #include <QColor>
 #include <QDebug>
 #include <QHash>

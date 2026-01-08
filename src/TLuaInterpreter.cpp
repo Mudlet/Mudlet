@@ -40,6 +40,7 @@
 #include "TForkedProcess.h"
 #include "TGameDetails.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
@@ -65,7 +66,6 @@
 #include <QTableWidget>
 #include <QToolTip>
 #include <QFileInfo>
-#include <QMovie>
 #include <QVector>
 #include <limits>
 
@@ -594,7 +594,7 @@ int TLuaInterpreter::Wait(lua_State* L)
     }
 
     const int luaSleepMsec = getVerifiedInt(L, __func__, 1, "sleep time in msec");
-    msleep(luaSleepMsec); // FIXME thread::sleep()
+    msleep(luaSleepMsec);
     return 0;
 }
 
@@ -612,7 +612,7 @@ int TLuaInterpreter::Wait(lua_State* L)
 QString TLuaInterpreter::dirToString(lua_State* L, int position)
 {
     if (lua_isnumber(L, position)) {
-        qint64 const dirNum = lua_tonumber(L, position);
+        qint64 const dirNum = static_cast<qint64>(lua_tonumber(L, position));
         switch (dirNum) {
         // breaks not needed - all handled cases end in a return!
         case 1:
@@ -726,7 +726,7 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
         }
     }
     if (lua_type(L, position) == LUA_TNUMBER) {
-        dirNum = lua_tonumber(L, position);
+        dirNum = static_cast<int>(lua_tonumber(L, position));
         return (dirNum >= DIR_NORTH && dirNum <= DIR_OUT ? dirNum : 0);
     }
     return 0;
@@ -1205,6 +1205,14 @@ std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
 // Documentation: none - internal helper for getStopWatchBrokenDownTime()/getStopWatches()
 void TLuaInterpreter::generateElapsedTimeTable(lua_State* L, const QStringList& elapsedTimeSplitString, const bool includeDecimalSeconds, const qint64 elapsedTimeMilliSeconds)
 {
+    constexpr int expectedElements = 6;
+    if (elapsedTimeSplitString.size() < expectedElements) {
+        qWarning() << "TLuaInterpreter::generateElapsedTimeTable() ERROR: expected" << expectedElements
+                   << "elements in time string but got" << elapsedTimeSplitString.size();
+        lua_newtable(L);
+        return;
+    }
+
     lua_newtable(L);
     lua_pushstring(L, "negative");
     // Qt 5.7 seemed to not like comparing a QString with a QLatin1Char so
@@ -2223,9 +2231,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     if (name.isEmpty()) {
-        if (luaLine > 0 && luaLine < host.mpConsole->buffer.timeBuffer.size()) {
-            // CHECK: Lua starts counting at 1 but we are indexing into a C/C++
-            // structure but the previous code did not accept a zero line number
+        if (luaLine < host.mpConsole->buffer.timeBuffer.size()) {
             lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toUtf8().constData());
         } else {
             lua_pushstring(L, "getTimestamp: invalid line number");
@@ -2236,7 +2242,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         if (!pC) {
             return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
         }
-        if (luaLine > 0 && luaLine < pC->buffer.timeBuffer.size()) {
+        if (luaLine < pC->buffer.timeBuffer.size()) {
             lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
         } else {
             lua_pushstring(L, "getTimestamp: invalid line number");
@@ -4601,7 +4607,12 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     // Lua is limited to ~50 arguments on a function
-    auto maxArguments = std::min<qsizetype>(pE.mArgumentList.size(), LUA_FUNCTION_MAX_ARGS);
+    // Use minimum of argument list size and type list size to avoid out-of-bounds access
+    auto maxArguments = std::min({pE.mArgumentList.size(), pE.mArgumentTypeList.size(), static_cast<qsizetype>(LUA_FUNCTION_MAX_ARGS)});
+    if (pE.mArgumentList.size() != pE.mArgumentTypeList.size()) {
+        qWarning() << "TLuaInterpreter::callEventHandler() WARNING: argument list size" << pE.mArgumentList.size()
+                   << "does not match type list size" << pE.mArgumentTypeList.size() << "for function:" << function;
+    }
     for (int i = 0; i < maxArguments; i++) {
         switch (pE.mArgumentTypeList.at(i)) {
         case ARGUMENT_TYPE_NUMBER:
@@ -5210,6 +5221,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getBorderBottom", TLuaInterpreter::getBorderBottom);
     lua_register(pGlobalLua, "getBorderLeft", TLuaInterpreter::getBorderLeft);
     lua_register(pGlobalLua, "getBorderSizes", TLuaInterpreter::getBorderSizes);
+    lua_register(pGlobalLua, "getBorderColor", TLuaInterpreter::getBorderColor);
     lua_register(pGlobalLua, "getConsoleBufferSize", TLuaInterpreter::getConsoleBufferSize);
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
@@ -5223,6 +5235,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize);
     lua_register(pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger);
     lua_register(pGlobalLua, "permSubstringTrigger", TLuaInterpreter::permSubstringTrigger);
+    lua_register(pGlobalLua, "permExactMatchTrigger", TLuaInterpreter::permExactMatchTrigger);
     lua_register(pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger);
     lua_register(pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger);
     lua_register(pGlobalLua, "permTimer", TLuaInterpreter::permTimer);
@@ -5313,6 +5326,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomUserData", TLuaInterpreter::setRoomUserData);
     lua_register(pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData);
     lua_register(pGlobalLua, "getRoomsByPosition", TLuaInterpreter::getRoomsByPosition);
+    lua_register(pGlobalLua, "getRoomsByPosition1", TLuaInterpreter::getRoomsByPosition1);
     lua_register(pGlobalLua, "clearRoomUserData", TLuaInterpreter::clearRoomUserData);
     lua_register(pGlobalLua, "clearRoomUserDataItem", TLuaInterpreter::clearRoomUserDataItem);
     lua_register(pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile);
@@ -5346,6 +5360,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
+    lua_register(pGlobalLua, "openIRC", TLuaInterpreter::openIRC);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
     lua_register(pGlobalLua, "getIrcChannels", TLuaInterpreter::getIrcChannels);
@@ -6478,6 +6493,34 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
 }
 
 // No documentation available in wiki - internal function
+std::pair<int, QString> TLuaInterpreter::startPermExactMatchTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
+{
+    TTrigger* pT;
+    QList<int> propertyList;
+    for (int i = 0; i < patterns.size(); i++) {
+        propertyList << REGEX_EXACT_MATCH;
+    }
+    if (parent.isEmpty()) {
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
+    } else {
+        TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
+        if (!pP) {
+            return {-1, qsl("parent '%1' not found").arg(parent)};
+        }
+        pT = new TTrigger(pP, mpHost);
+        pT->setRegexCodeList(patterns, propertyList);
+    }
+    pT->setIsFolder(patterns.empty());
+    pT->setIsActive(true);
+    pT->setTemporary(false);
+    pT->registerTrigger();
+    pT->setScript(function);
+    pT->setName(name);
+    updateEditor();
+    return {pT->getID(), QString()};
+}
+
+// No documentation available in wiki - internal function
 std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& parent, const QString& function)
 {
     TTrigger* pT;
@@ -7352,7 +7395,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have red component at index 1"));
             }
-            const int r = lua_tonumber(L, -1);
+            const int r = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (r < 0 || r > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
@@ -7364,7 +7407,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have green component at index 2"));
             }
-            const int g = lua_tonumber(L, -1);
+            const int g = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (g < 0 || g > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
@@ -7376,7 +7419,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
                 lua_pop(L, 1);
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor table must have blue component at index 3"));
             }
-            const int b = lua_tonumber(L, -1);
+            const int b = static_cast<int>(lua_tonumber(L, -1));
             lua_pop(L, 1);
             if (b < 0 || b > 255) {
                 return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
@@ -7386,7 +7429,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
             int a = 255;
             lua_rawgeti(L, 2, 4);
             if (lua_isnumber(L, -1)) {
-                a = lua_tonumber(L, -1);
+                a = static_cast<int>(lua_tonumber(L, -1));
                 if (a < 0 || a > 255) {
                     lua_pop(L, 1);
                     return warnArgumentValue(L, __func__, csmInvalidAlphaValue.arg(a));
@@ -7432,6 +7475,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("enableMXP")) {
         host.mEnableMXP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableNAWS")) {
+        host.mEnableNAWS = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("askTlsAvailable")) {
@@ -7657,6 +7704,49 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
 
+    if (key == qsl("ircHostName")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcHostName(&host, getVerifiedString(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircHostPort")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcHostPort(&host, getVerifiedInt(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircHostSecure")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcHostSecure(&host, getVerifiedBool(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircChannels")) {
+        const QString channels = getVerifiedString(L, __func__, 2, "value");
+        QPair<bool, QString> result = dlgIRC::writeIrcChannels(&host, channels.split(qsl(" "), Qt::SkipEmptyParts));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircNickName")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcNickName(&host, getVerifiedString(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircPassword")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcPassword(&host, getVerifiedString(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7738,6 +7828,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
         { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
         { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
+        { qsl("enableNAWS"), [&](){ lua_pushboolean(L, host.mEnableNAWS); } },
         { qsl("logDirectory"), [&](){
             const auto logDir = host.mLogDir;
 
@@ -7858,7 +7949,13 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
-        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } }
+        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
+        { qsl("ircHostName"), [&](){ lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData()); } },
+        { qsl("ircHostPort"), [&](){ lua_pushnumber(L, dlgIRC::readIrcHostPort(&host)); } },
+        { qsl("ircHostSecure"), [&](){ lua_pushboolean(L, dlgIRC::readIrcHostSecure(&host)); } },
+        { qsl("ircChannels"), [&](){ lua_pushstring(L, dlgIRC::readIrcChannels(&host).join(qsl(" ")).toUtf8().constData()); } },
+        { qsl("ircNickName"), [&](){ lua_pushstring(L, dlgIRC::readIrcNickName(&host).toUtf8().constData()); } },
+        { qsl("ircPassword"), [&](){ lua_pushstring(L, dlgIRC::readIrcPassword(&host).toUtf8().constData()); } }
     };
 
     auto it = configMap.find(key);

@@ -36,7 +36,6 @@
 #include "TimerUnit.h"
 #include "TMainConsole.h"
 #include "TriggerUnit.h"
-#include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgTriggerEditor.h"
 #include "enums.h"
@@ -44,6 +43,7 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QFuture>
 #include <QList>
 #include <QMargins>
 #include <QPointer>
@@ -52,6 +52,7 @@
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
+#include "TMxpFrameManager.h"
 
 class QDialog;
 class QDockWidget;
@@ -61,6 +62,7 @@ class QListWidget;
 class TEvent;
 class TArea;
 class LuaInterface;
+class XMLexport;
 class TMedia;
 class GMCPAuthenticator;
 class TRoom;
@@ -501,6 +503,7 @@ public:
     bool mEnableMNES = false;
     bool mEnableMXP = true;
     bool mEnableCHARSET = true;
+    bool mEnableNAWS = true;
     bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
@@ -511,6 +514,7 @@ public:
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
+    TMxpFrameManager mMxpFrameManager;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
@@ -609,6 +613,7 @@ public:
     // has the profile save data been loaded without issues?
     // if there were issues during loading, we should not save anything on close
     bool mLoadedOk = false;
+    QString mProfileLoadError;
 
     int mTimeout = 60;
 
@@ -705,6 +710,8 @@ public:
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
+    // modules that loaded successfully - used to prevent saving modules that failed to load
+    QSet<QString> mModulesLoadedOk;
     // module name = priority
     QMap<QString, int> mModulePriorities;
     // module name = location on disk, sync to other profiles?, priority
@@ -751,7 +758,7 @@ public:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpConnectionProxy;
     QString mProfileStyleSheet;
-    dlgTriggerEditor::SearchOptions mSearchOptions = dlgTriggerEditor::SearchOption::SearchOptionNone;
+    dlgTriggerEditor::SearchOptions mSearchOptions = dlgTriggerEditor::SearchOptionNone;
     TConsole::SearchOptions mBufferSearchOptions = TConsole::SearchOption::SearchOptionNone;
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;

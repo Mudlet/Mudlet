@@ -187,6 +187,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                              .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
                     state = false;
                 } else {
+                    pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE);
                     if (mudlet::smDebugMode) {
                         TDebug(Qt::white, Qt::darkGreen) << "[OK]: REGEX_COMPILE OK\n" >> mpHost;
                     }
@@ -558,6 +559,8 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
                 matchStatePair.second->multiCapturePosList.push_back(posList);
                 if (nameMatches != nullptr) {
                     matchStatePair.second->nameCaptures.push_back(*nameMatches);
+                } else {
+                    matchStatePair.second->nameCaptures.push_back(QVector<QPair<QString, QString>>());
                 }
             }
         }
@@ -569,12 +572,13 @@ inline void TTrigger::filter(std::string& capture, int& posOffset)
     if (capture.empty()) {
         return;
     }
-    auto * filterSubject = static_cast<char*>(malloc(capture.size() + 2048));
-    if (filterSubject) {
-        strcpy(filterSubject, capture.c_str());
-    } else {
+    const size_t captureLen = capture.size();
+    auto* filterSubject = static_cast<char*>(malloc(captureLen + 2048));
+    if (!filterSubject) {
         return;
     }
+    memcpy(filterSubject, capture.c_str(), captureLen);
+    filterSubject[captureLen] = '\0';
     const QString text = capture.c_str();
     for (auto& trigger : *mpMyChildrenList) {
         trigger->match(filterSubject, text, -1, posOffset);
@@ -806,6 +810,7 @@ bool TTrigger::match_line_spacer(int patternNumber)
                     std::list<int> const posList;
                     matchStatePair.second->multiCaptureList.push_back(captureList);
                     matchStatePair.second->multiCapturePosList.push_back(posList);
+                    matchStatePair.second->nameCaptures.push_back(QVector<QPair<QString, QString>>());
                 }
             }
         }

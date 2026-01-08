@@ -21,6 +21,9 @@
 
 
 #include "dlgSourceEditorArea.h"
+
+#include "utils.h"
+
 #include "edbee/edbee.h"
 #include "edbee/models/textdocument.h"
 #include "edbee/models/texteditorconfig.h"

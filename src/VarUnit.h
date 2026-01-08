@@ -23,12 +23,10 @@
  ***************************************************************************/
 
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QMap>
 #include <QSet>
 #include <QStringList>
-
-#include "utils.h"
 
 
 class TVar;

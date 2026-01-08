@@ -152,6 +152,7 @@ public:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void prepareSingleClickSelection(MapInteractionContext& context);
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
+    QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
