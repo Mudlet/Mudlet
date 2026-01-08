@@ -27,10 +27,14 @@
 #include "TAccessibleTextEdit.h"
 #include "TTextEdit.h"
 
+#include "Host.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkSelectionManager.h"
+#include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
+#include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
@@ -315,6 +319,9 @@ void TTextEdit::showNewLines()
         // content has been deleted
         if (previousOldScrollPos > mOldScrollPos) {
             QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
+            if (!ti) {
+                return;
+            }
             auto totalCharacterCount = ti->characterCount();
             ti->setCursorPosition(totalCharacterCount);
             QAccessibleTextRemoveEvent event(this, totalCharacterCount, QString());
@@ -1234,9 +1241,15 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
 
                 // Update hover state for CSS pseudo-class support
+                // Don't set hover state for disabled links - they should stay disabled
+                // Also don't set hover if this link was just clicked - wait for mouse to leave first
                 if (mpBuffer->getHoveredLink() != linkIndex) {
-                    mpBuffer->setHoveredLink(linkIndex);
-                    forceUpdate(); // Trigger re-render with new hover state
+                    auto currentState = mpBuffer->getLinkState(linkIndex);
+                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled 
+                        && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
+                        mpBuffer->setHoveredLink(linkIndex);
+                        forceUpdate(); // Trigger re-render with new hover state
+                    }
                 }
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -1246,6 +1259,11 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 if (mpBuffer->getHoveredLink() != 0) {
                     mpBuffer->setHoveredLink(0);
                     forceUpdate(); // Trigger re-render
+                }
+                
+                // Clear last clicked link when mouse leaves - allows hover to work again
+                if (mpBuffer->getLastClickedLinkIndex() != 0) {
+                    mpBuffer->clearLastClickedLinkIndex();
                 }
             }
         }
@@ -1414,10 +1432,124 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QString func;
                     if (!command.empty() && mpHost) {
                         func = command.at(0);
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "TTextEdit::mousePressEvent - Link clicked, func:" << func << "luaReference:" << luaReference;
+#endif
 
-                        // Set active state for CSS pseudo-class support
                         mpBuffer->setActiveLink(linkIndex);
-                        forceUpdate(); // Trigger re-render with active state
+
+                        Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+                        
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "disabled:" << hyperlinkStyling.selection.disabled << "hasSelectionSettings:" << hyperlinkStyling.selection.hasSelectionSettings << "isSpoiler:" << hyperlinkStyling.isSpoiler;
+#endif
+                        
+                        // Handle spoiler revealing first (even for disabled links)
+                        if (hyperlinkStyling.isSpoiler) {
+                            // Check if this spoiler hasn't been revealed yet
+                            bool wasUnrevealed = mpBuffer->isSpoilerUnrevealed(linkIndex);
+                            mpBuffer->revealSpoilerLink(linkIndex);
+                            
+                            // For unrevealed spoilers, the first click should ONLY reveal, not execute the function
+                            if (wasUnrevealed && !hyperlinkStyling.selection.disabled) {
+#if defined(DEBUG_OSC_PROCESSING)
+                                qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "first spoiler reveal, blocking function execution until next click";
+#endif
+                                forceUpdate();
+                                return;
+                            }
+                            
+                            // Update styling after spoiler reveal
+                            hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+                        }
+                        
+                        // Check for disabled links - they can reveal spoilers but can't execute functions
+                        if (hyperlinkStyling.selection.disabled) {
+#if defined(DEBUG_OSC_PROCESSING)
+                            qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "is disabled, allowing spoiler reveal but blocking function execution";
+#endif
+                            // Disabled links only update visual state, don't execute functions
+                            mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+                            forceUpdate();
+                            return;
+                        }
+                        
+                        if (hyperlinkStyling.selection.hasSelectionSettings) {
+                            auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
+                            if (!mgr) {
+                                qWarning() << "TTextEdit::mousePressEvent - Selection manager is null, skipping selection handling for link" << linkIndex;
+                            } else {
+                                const QString& group = hyperlinkStyling.selection.group;
+                                const QString& value = hyperlinkStyling.selection.value;
+                                
+                                // Configure group exclusivity mode if needed
+                                mgr->setGroupExclusive(group, hyperlinkStyling.selection.exclusive);
+                                
+                                bool currentlySelected = mgr->isSelected(group, value);
+
+                                if (hyperlinkStyling.selection.toggle) {
+                                    mgr->toggleSelection(group, value);
+                                } else {
+                                    mgr->setSelected(group, value, true);
+                                }
+
+                                bool newSelected = mgr->isSelected(group, value);
+
+                                func = mgr->modifyUriForSelection(func, group, value);
+
+#if defined(DEBUG_OSC_PROCESSING)
+                                qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "selected=" << newSelected;
+#endif
+                                mpBuffer->setLinkSelected(linkIndex, newSelected);
+                                if (newSelected) {
+#if defined(DEBUG_OSC_PROCESSING)
+                                    qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateSelected";
+#endif
+                                    mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateSelected);
+                                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                                    qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateDefault";
+#endif
+                                    mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+                                }
+                                mpBuffer->updateLinkCharacters(linkIndex);
+                                
+                                // For exclusive groups, update visual state of all other members that may have been deselected
+                                if (mgr->isGroupExclusive(group)) {
+                                    QStringList groupMembers = mgr->getGroupMembers(group);
+                                    for (const QString& member : groupMembers) {
+                                        if (member != value) {
+                                            // Get all link IDs with this group/value combination using the reverse index
+                                            bool memberSelected = mgr->isSelected(group, member);
+                                            QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
+                                            
+                                            for (int otherLinkId : matchingLinkIds) {
+                                                mpBuffer->setLinkSelected(otherLinkId, memberSelected);
+                                                mpBuffer->setLinkState(otherLinkId, memberSelected ? 
+                                                    Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+                                                mpBuffer->updateLinkCharacters(otherLinkId);
+#if defined(DEBUG_OSC_PROCESSING)
+                                                qDebug() << "TTextEdit::mousePressEvent - Updated exclusive group member link" << otherLinkId << "to selected=" << memberSelected;
+#endif
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Clear hover to show selection immediately; mouse move will restore it
+                        mpBuffer->setHoveredLink(0);
+                        
+                        // Remember this link was just clicked - suppress hover until mouse leaves
+                        mpBuffer->setLastClickedLinkIndex(linkIndex);
+                        
+                        forceUpdate();
+
+                        // Notify visibility manager that link was clicked (activates timers)
+                        if (mpConsole) {
+                            mpConsole->getHyperlinkVisibilityManager().onLinkClicked(linkIndex);
+                        }
 
                         if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
@@ -1885,12 +2017,24 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer.at(static_cast<size_t>(y)).size()) && !isOutOfbounds) {
                 if (mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex()) {
-                    QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
-                    QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
-                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
-                    if (command.size() > 1) {
+                    int linkIndex = mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex();
+                    
+                    // Check if link is disabled - disabled links don't show context menus
+                    Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+                    if (hyperlinkStyling.selection.disabled) {
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "TTextEdit::mouseReleaseEvent - Right-click on disabled link" << linkIndex << ", blocking context menu";
+#endif
+                        mIsCommandPopup = false;
+                        return;
+                    }
+                    
+                    QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
+                    QStringList hint = mpBuffer->mLinkStore.getHints(linkIndex);
+                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(linkIndex);
+                    if (command.size() > 1 || hint.size() > command.size()) {
                         // This is a popup menu rather than a link as it has
-                        // more than one item.
+                        // more than one item, or has menu hints indicating menu items.
 
                         // Skip a special tooltip hint (at the start of the
                         // hints), if one was given, i.e. there is (at least)
@@ -2148,9 +2292,8 @@ int TTextEdit::imageTopLine()
         }
 
         return mCursorY - mScreenHeight;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 
@@ -2382,12 +2525,12 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
             if (value >= 0xFDD0 && value <= 0xFDEF) {
                 //: Unicode codepoint in range U+FFD0 to U+FDEF - not a character
                 return htmlCenter(tr("{noncharacter}")); break;
-            } else if ((value >= 0xFFF0 && value <= 0xFFF8) || value == 0xFFFE || value == 0xFFFF) {
+            }
+            if ((value >= 0xFFF0 && value <= 0xFFF8) || value == 0xFFFE || value == 0xFFFF) {
                 //: Unicode codepoint in range U+FFFx - not a character.
                 return htmlCenter(tr("{noncharacter}")); break;
-            } else {
-                return htmlCenter(first);
             }
+            return htmlCenter(first);
         }
     } else {
         // The code point is NOT on the BMP
@@ -2408,10 +2551,9 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
             if ((value % 0x10000 == 0xFFFE) || (value % 0x10000 == 0xFFFF)) {
                 //: Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.
                 return htmlCenter(tr("{noncharacter}")); break;
-            } else {
-                // The '%' is the QStringBuilder append operator here:
-                return htmlCenter(first % second);
             }
+            // The '%' is the QStringBuilder append operator here:
+            return htmlCenter(first % second);
         }
     }
     // clang-format on
@@ -2429,9 +2571,8 @@ inline QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
         // HTML/Rich-text formatting opening tag and has to be converted to
         // "&lt;":
         return qsl("&lt;");
-    } else {
-        return qsl("%1").arg(*byte);
     }
+    return qsl("%1").arg(*byte);
 }
 
 /*
@@ -2476,7 +2617,6 @@ void TTextEdit::slot_analyseSelection()
     // in Lua.
     short int utf8Index = 1;
     char utf8Bytes[5];
-    utf8Bytes[4] = '\0';
 
     int total = 0;
     startColumn = mPA.x();
@@ -2511,9 +2651,9 @@ void TTextEdit::slot_analyseSelection()
         }
 
         if (mpBuffer->lineBuffer.at(line).at(index).isHighSurrogate() && ((index + 1) < lineLength)) {
-            strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8().constData(), 4);
-            size_t utf8Width = strnlen(utf8Bytes, 4);
-            quint8 columnsToUse = qMax(static_cast<size_t>(2), utf8Width);
+            const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8();
+            const size_t utf8Width = utils::copyString(utf8Bytes, sizeof(utf8Bytes), utf8Data.constData(), utf8Data.size());
+            quint8 columnsToUse = qMax(size_t{2}, utf8Width);
 
             if (includeThisCodePoint) {
                 utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
@@ -2604,9 +2744,9 @@ void TTextEdit::slot_analyseSelection()
             // for the surrogate pair:
             index += 1;
         } else {
-            strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8().constData(), 4);
-            size_t utf8Width = strnlen(utf8Bytes, 4);
-            quint8 columnsToUse = qMax(static_cast<size_t>(1), utf8Width);
+            const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8();
+            const size_t utf8Width = utils::copyString(utf8Bytes, sizeof(utf8Bytes), utf8Data.constData(), utf8Data.size());
+            quint8 columnsToUse = qMax(size_t{1}, utf8Width);
 
             if (includeThisCodePoint) {
                 utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1)));
@@ -3176,6 +3316,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 // Get the link commands and execute them
                 QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
                 if (!commands.isEmpty()) {
+                    // Notify visibility manager that link was clicked (activates timers)
+                    if (mpConsole) {
+                        mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
+                    }
+
                     // Mark the link as visited
                     mpBuffer->markLinkAsVisited(focusedLink);
 

@@ -1459,13 +1459,13 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
         } else {
             return {false,
-                    tr("Required file \"%1\" was not found in the staging area. "
-                       "This area contains the Mudlet items chosen for the package, "
-                       "which you selected to be included in the package file. "
-                       "This suggests there may be a problem with that directory: "
-                       "\"%2\" - "
-                       "Do you have the necessary permissions and free disk-space?")
-                            .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
+                        tr("Required file \"%1\" was not found in the staging area. "
+                           "This area contains the Mudlet items chosen for the package, "
+                           "which you selected to be included in the package file. "
+                           "This suggests there may be a problem with that directory: "
+                           "\"%2\" - "
+                           "Do you have the necessary permissions and free disk-space?")
+                                .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
         }
     }
 
@@ -1907,8 +1907,8 @@ void dlgPackageExporter::listTimers()
 void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
-        // Big RED error message
-        ui->infoLabel->setText(qsl("<p><font color='red'><b><big>%1</big><b></font></p>").arg(html));
+        // Light coral red error message - #FF6B6B has good contrast on both light and dark backgrounds
+        ui->infoLabel->setText(qsl("<p><font color='#FF6B6B'><b><big>%1</big><b></font></p>").arg(html));
         return;
     }
 

@@ -257,13 +257,8 @@ void dlgNotepad::saveSettings()
         return;
     }
 
-    QSettings* pQSettings = mudlet::getQSettings();
-    if (!pQSettings) {
-        return;
-    }
-
-    const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
-    pQSettings->setValue(settingsKey, action_toggleSendControls->isChecked());
+    mpHost->writeProfileIniData(qsl("Notepad/SendControlsVisible"),
+                                 action_toggleSendControls->isChecked() ? qsl("true") : qsl("false"));
 }
 
 void dlgNotepad::restoreSettings()
@@ -272,13 +267,8 @@ void dlgNotepad::restoreSettings()
         return;
     }
 
-    QSettings* pQSettings = mudlet::getQSettings();
-    if (!pQSettings) {
-        return;
-    }
-
-    const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
-    const bool sendControlsVisible = pQSettings->value(settingsKey, false).toBool();
+    const QString sendControlsVisibleStr = mpHost->readProfileIniData(qsl("Notepad/SendControlsVisible"));
+    const bool sendControlsVisible = (sendControlsVisibleStr.compare(qsl("true"), Qt::CaseInsensitive) == 0);
 
     // Block signals to avoid triggering saveSettings during restoration
     const bool wasBlocked = action_toggleSendControls->signalsBlocked();

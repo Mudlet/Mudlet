@@ -22,7 +22,6 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-set(LIB_MUDLET_TARGET "mudlet_core")
 set(EXE_MUDLET_NAME "mudlet")
 set(EXE_MUDLET_TARGET "mudlet_executable")
 
@@ -37,22 +36,6 @@ if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
   if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
     list(APPEND mudlet_RCCS mudlet_fonts_posix.qrc)
-  endif()
-endif()
-
-if(WIN32)
-  # APP_BUILD should now be be available
-
-  if(APP_BUILD MATCHES "-ptb.+")
-    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD MATCHES "-dev.+" OR APP_BUILD MATCHES "-test.+"))
-    # The above test may not be correct as it won't pick up builds where
-    # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
-    # "Packagers" they will likely want the original icon anyhow for their
-    # modified for their system packages of Mudlet:
-    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  else()
-    list(APPEND mudlet_RCCS icons/mudlet.ico)
   endif()
 endif()
 
@@ -86,9 +69,11 @@ set(mudlet_SRCS
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
+    ../test/dlgTriggerEditorUndoRedoTest.cpp
     dlgTriggerPatternEdit.cpp
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
+    EditorItemXMLHelpers.cpp
     EAction.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
@@ -105,10 +90,17 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    EditorUndoStack.cpp
     MxpTag.cpp
+    EditorAddItemCommand.cpp
+    EditorDeleteItemCommand.cpp
+    EditorModifyPropertyCommand.cpp
+    EditorMoveItemCommand.cpp
+    EditorToggleActiveCommand.cpp
     CredentialManager.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
+    SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
@@ -140,11 +132,13 @@ set(mudlet_SRCS
     TEntityResolver.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
+    THyperlinkCompactManager.cpp
+    THyperlinkSelectionManager.cpp
+    THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
     TLinkStore.cpp
-
     TLuaInterpreter.cpp
     TLuaInterpreterAI.cpp
     TLuaInterpreterDiscord.cpp
@@ -172,6 +166,10 @@ set(mudlet_SRCS
     TMxpExpireTagHandler.cpp
     TMxpFontTagHandler.cpp
     TMxpFormattingTagsHandler.cpp
+    TMxpFrameManager.cpp
+    TMxpFrameTagHandler.cpp
+    TMxpDestTagHandler.cpp
+    TMxpImageTagHandler.cpp
     TMxpLinkTagHandler.cpp
     TMxpMudlet.cpp
     TMxpMusicTagHandler.cpp
@@ -288,6 +286,7 @@ set(mudlet_HDRS
     dlgTriggerPatternEdit.h
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
+    EditorItemXMLHelpers.h
     EAction.h
     exitstreewidget.h
     FileOpenHandler.h
@@ -302,8 +301,15 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    EditorCommand.h
     MudletInstanceCoordinator.h
+    EditorUndoStack.h
     MxpTag.h
+    EditorAddItemCommand.h
+    EditorDeleteItemCommand.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
     ScriptUnit.h
     SecureStringUtils.h
     ShortcutsManager.h
@@ -320,6 +326,7 @@ set(mudlet_HDRS
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
     SelectionRectangleHandler.h
+    SentryWrapper.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
     TAction.h
@@ -341,6 +348,9 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    THyperlinkCompactManager.h
+    THyperlinkSelectionManager.h
+    THyperlinkVisibilityManager.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -355,12 +365,16 @@ set(mudlet_HDRS
     TMxpColorTagHandler.h
     TMxpContext.h
     TMxpCustomElementTagHandler.h
+    TMxpDestTagHandler.h
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
     TMxpEntityTagHandler.h
     TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
+    TMxpFrameManager.h
+    TMxpFrameTagHandler.h
+    TMxpImageTagHandler.h
     TMxpLinkTagHandler.h
     TMxpMudlet.h
     TMxpMusicTagHandler.h
@@ -492,7 +506,7 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(PCRE REQUIRED)
+find_package(PCRE2 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 CONFIG REQUIRED)
@@ -595,6 +609,12 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #
 # * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
+# target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
+#
+# * Produce qDebug() messages about undo/redo operations in the trigger editor,
+#   including command execution, stack operations, and edbee text undo integration:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_UNDO_REDO)
+
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
@@ -623,6 +643,7 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+    target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
 endif()
 
 # Define shader hot-reloading if enabled
@@ -649,7 +670,7 @@ target_link_libraries(
         Boost::boost
         HUNSPELL::HUNSPELL
         LUA51::LUA51
-        PCRE::PCRE
+        PCRE2::PCRE2
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
@@ -697,12 +718,34 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
 # will fail to load with "undefined symbol" errors.
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
 
+if (WITH_SENTRY)
+  include(cmake/WithSentry.cmake)
+  add_subdirectory(crash_reporter)
+endif()
+
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)
+
+  # Select Windows executable icon based on build type
+  if(APP_BUILD MATCHES "-ptb.+")
+    set(MUDLET_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/icons/mudlet_ptb.ico")
+  elseif((APP_BUILD MATCHES "-dev.+") OR (APP_BUILD MATCHES "-test.+"))
+    set(MUDLET_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/icons/mudlet_dev.ico")
+  else()
+    set(MUDLET_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/icons/mudlet.ico")
+  endif()
+
+  # Configure and add the Windows resource file for the executable icon
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/mudlet.rc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/mudlet.rc"
+    @ONLY
+  )
+  target_sources(${EXE_MUDLET_TARGET} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/mudlet.rc")
 endif()
 
 if(APPLE)

@@ -141,6 +141,43 @@ std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, 
     return std::nullopt;
 }
 
+QSet<int> T2DMap::roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const
+{
+    QSet<int> result;
+
+    if (!mpMap || !mpMap->mpRoomDB || !area) {
+        return result;
+    }
+
+    const float fx = ((xspan / 2.0f) - mMapCenterX) * mRoomWidth;
+    const float fy = ((yspan / 2.0f) - mMapCenterY) * mRoomHeight;
+
+    const int mx = widgetPosition.x();
+    const int my = widgetPosition.y();
+    const int mz = mMapCenterZ;
+
+    QSetIterator<int> roomIterator(area->getAreaRooms());
+    while (roomIterator.hasNext()) {
+        const int roomId = roomIterator.next();
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+
+        const int rx = room->x() * mRoomWidth + fx;
+        const int ry = room->y() * -1 * mRoomHeight + fy;
+        const int rz = room->z();
+
+        if ((qAbs(mx - rx) < qRound(mRoomWidth * rSize / 2.0))
+            && (qAbs(my - ry) < qRound(mRoomHeight * rSize / 2.0))
+            && (mz == rz)) {
+            result.insert(roomId);
+        }
+    }
+
+    return result;
+}
+
 void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
 {
     mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
@@ -2800,9 +2837,11 @@ void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 {
     if (!mpMap||!mpMap->mpRoomDB) {
         // No map loaded!
+        event->ignore();
         return;
     }
     if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
+        event->ignore();
         return;
     }
 
@@ -2810,6 +2849,7 @@ void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
     mPick = true;
     mStartSpeedWalk = true;
     repaint();
+    event->accept();
 }
 
 void T2DMap::createLabel(QRectF labelRectangle)
@@ -2855,7 +2895,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     label.showOnTop = mpDlgMapLabel->isOnTop();
     label.noScaling = mpDlgMapLabel->noScale();
 
-    QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
+    QPixmap pixmap(static_cast<int>(fabs(labelRectangle.width())), static_cast<int>(fabs(labelRectangle.height())));
     pixmap.fill(Qt::transparent);
     QRect drawRectangle = labelRectangle.normalized().toRect();
     drawRectangle.moveTo(0, 0);
@@ -2914,11 +2954,13 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
 void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 {
     if (!mpMap) {
+        event->ignore();
         return;
     }
 
     auto context = buildInteractionContext(event);
     mInteractionDispatcher.dispatch(context);
+    event->accept();
 }
 
 bool T2DMap::event(QEvent* event)
@@ -2954,6 +2996,7 @@ bool T2DMap::event(QEvent* event)
 void T2DMap::mousePressEvent(QMouseEvent* event)
 {
     if (!mpMap) {
+        event->ignore();
         return;
     }
     auto context = buildInteractionContext(event);
@@ -2969,6 +3012,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
     updateSelectionWidget();
     update();
+    event->accept();
 }
 
 T2DMap::MapInteractionContext T2DMap::buildInteractionContext(QMouseEvent* event)
@@ -3593,7 +3637,10 @@ void T2DMap::slot_movePosition()
     }
 
     TRoom* pR_start = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
-    // pR has already been validated by getCenterSelection()
+    // pR has already been validated by getCenterSelection() but add explicit check
+    if (!pR_start) {
+        return;
+    }
 
     auto dialog = new QDialog(this);
     auto gridLayout = new QGridLayout;
@@ -4213,11 +4260,13 @@ void T2DMap::slot_setArea()
 void T2DMap::mouseMoveEvent(QMouseEvent* event)
 {
     if (!mpMap) {
+        event->ignore();
         return;
     }
 
     auto context = buildInteractionContext(event);
     mInteractionDispatcher.dispatch(context);
+    event->accept();
 }
 
 // Replacement for getTopLeftCenter - determines a room closest to geometrical
@@ -4273,9 +4322,8 @@ bool T2DMap::getCenterSelection()
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void T2DMap::wheelEvent(QWheelEvent* e)
@@ -5223,14 +5271,15 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
             painter.setBrush(QBrush(mpHost->mLowerLevelColor));
 
             // Draw shadow room using the same approach as paintEvent (lines 1426-1442)
+            const qreal scaledRoomSize = static_cast<qreal>(finalRoomSize) * rSize;
             if (mBubbleMode) {
                 const QPointF roomCenter(rx, ry);
-                const float roomRadius = (finalRoomSize * rSize) / 2.0f;
+                const qreal roomRadius = scaledRoomSize / 2.0;
                 QPainterPath diameterPath;
                 diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
                 painter.drawPath(diameterPath);
             } else {
-                const QRectF shadowRect(rx - (finalRoomSize * rSize * 0.8), ry - (finalRoomSize * rSize * 0.2), finalRoomSize * rSize, finalRoomSize * rSize);
+                const QRectF shadowRect(rx - (scaledRoomSize * 0.8), ry - (scaledRoomSize * 0.2), scaledRoomSize, scaledRoomSize);
                 painter.drawRect(shadowRect);
             }
             painter.restore();

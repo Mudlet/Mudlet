@@ -52,6 +52,7 @@
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
+#include "TMxpFrameManager.h"
 
 class QDialog;
 class QDockWidget;
@@ -353,6 +354,8 @@ public:
     std::pair<bool, QString> setDisplayFont(const QFont&);
     void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
+    QFont createFontWithSettings(const QString& fontName, int pointSize) const;
+    std::pair<QString, QFont::Weight> parseFontNameAndStyle(const QString& fontName) const;
     int getConsoleBufferSize() const { return mConsoleBufferSize; }
     void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
     bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
@@ -499,6 +502,7 @@ public:
     bool mEnableMNES = false;
     bool mEnableMXP = true;
     bool mEnableCHARSET = true;
+    bool mEnableNAWS = true;
     bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
@@ -509,6 +513,7 @@ public:
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
+    TMxpFrameManager mMxpFrameManager;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
@@ -535,11 +540,11 @@ public:
     bool mIsProfileLoadingSequence = false;
 
 
-    dlgTriggerEditor* mpEditorDialog{nullptr};
+    QPointer<dlgTriggerEditor> mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
-    dlgNotepad* mpNotePad{nullptr};
+    QPointer<dlgNotepad> mpNotePad;
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {
@@ -607,6 +612,7 @@ public:
     // has the profile save data been loaded without issues?
     // if there were issues during loading, we should not save anything on close
     bool mLoadedOk = false;
+    QString mProfileLoadError;
 
     int mTimeout = 60;
 
@@ -703,6 +709,8 @@ public:
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
+    // modules that loaded successfully - used to prevent saving modules that failed to load
+    QSet<QString> mModulesLoadedOk;
     // module name = priority
     QMap<QString, int> mModulePriorities;
     // module name = location on disk, sync to other profiles?, priority

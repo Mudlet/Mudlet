@@ -40,8 +40,6 @@ VERSION=""
 # in the top level CMakeList.txt file:
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${TRAVIS_BUILD_DIR}/CMakeLists.txt")
-elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
-  VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${TRAVIS_BUILD_DIR}/src/mudlet.pro")
 elif [ -n "$GITHUB_REPOSITORY" ]; then
   VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${GITHUB_WORKSPACE}/CMakeLists.txt")
 fi

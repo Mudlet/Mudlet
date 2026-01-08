@@ -162,6 +162,7 @@ public:
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
     std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermExactMatchTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
@@ -216,6 +217,7 @@ public:
     static int getRooms(lua_State*);
     static int connectToServer(lua_State*);
     static int sendIrc(lua_State*);
+    static int openIRC(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);
     static int getIrcChannels(lua_State*);
@@ -244,6 +246,7 @@ public:
     static int sendSocket(lua_State*);
     static int openUrl(lua_State*);
     static int getRoomsByPosition(lua_State*);
+    static int getRoomsByPosition1(lua_State*);
     static int getRoomEnv(lua_State*);
     static int downloadFile(lua_State*);
     static int setRoomUserData(lua_State*);
@@ -501,6 +504,7 @@ public:
     static int getBorderLeft(lua_State*);
     static int getBorderRight(lua_State*);
     static int getBorderSizes(lua_State*);
+    static int getBorderColor(lua_State*);
     static int getConsoleBufferSize(lua_State*);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
@@ -525,6 +529,7 @@ public:
     static int calcFontSize(lua_State*);
     static int permRegexTrigger(lua_State*);
     static int permSubstringTrigger(lua_State*);
+    static int permExactMatchTrigger(lua_State*);
     static int permTimer(lua_State*);
     static int permScript(lua_State*);
     static int getScript(lua_State*);

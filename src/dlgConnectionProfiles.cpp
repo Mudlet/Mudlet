@@ -933,9 +933,8 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
 
     if (file.error() == QFileDevice::NoError) {
         return {true, QString()};
-    } else {
-        return {false, file.errorString()};
     }
+    return {false, file.errorString()};
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
@@ -1774,8 +1773,12 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         }
 
         // This settings also need to be configured, note that the only time not to
-        // save the setting is on profile loading:
-        pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
+        // save the setting is on profile loading. Only override the default UTF-8
+        // encoding if a saved encoding exists:
+        const QByteArray savedEncoding = readProfileData(profile_name, qsl("encoding")).toUtf8();
+        if (!savedEncoding.isEmpty()) {
+            pHost->mTelnet.setEncoding(savedEncoding, false);
+        }
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
@@ -2302,9 +2305,9 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                             qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
                         }
                     } else {
-                        // Fallback to QSettings only if keychain operation failed
+                        // Fallback to QSettings only if credential retrieval failed
                         loadPasswordFromSettings(profile_name);
-                        qDebug() << "dlgConnectionProfiles: Keychain failed for" << profile_name << ", using file fallback:" << errorMessage;
+                        qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
                     }
                 }
 

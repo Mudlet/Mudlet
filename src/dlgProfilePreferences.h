@@ -180,6 +180,7 @@ private slots:
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
     void slot_changeShowTabConnectionIndicators(bool state);
+    void slot_crashReportPolicyChanged(int index);
 
 
 signals:
@@ -237,6 +238,7 @@ private:
     QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableNAWS;
     QPointer<QAction> mEnableCHARSET;
     QPointer<QAction> mEnableNEWENVIRON;
 
