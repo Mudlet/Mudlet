@@ -54,7 +54,7 @@ if(USE_OWN_QTKEYCHAIN)
     set(KEYCHAIN_LIBRARY qt6keychain)
 else()
     find_package(Qt6Keychain REQUIRED)
-    set(KEYCHAIN_LIBRARY Qt6::Keychain)
+    set(KEYCHAIN_LIBRARY qt6keychain)
 endif()
 
 
@@ -71,8 +71,9 @@ add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 
 target_compile_definitions(TLinkStoreTest PRIVATE LinkStore_Test)
 
-file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp)
+file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp ../src/TEncodingHelper.cpp ../src/TTextCodec.cpp ../src/TEncodingTable.cpp)
 list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
+list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpFrameManager.cpp")
 
 add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp)
 add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
@@ -83,6 +84,9 @@ add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
 add_executable(TMxpEntityTagHandlerTest TMxpEntityTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpEntityTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
 add_test(NAME TMxpEntityTagHandlerTest COMMAND TMxpEntityTagHandlerTest)
 
+add_executable(TMxpFrameDestTagHandlerTest TMxpFrameDestTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpFrameTagHandler.cpp ../src/TMxpDestTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpFrameDestTagHandlerTest COMMAND TMxpFrameDestTagHandlerTest)
+
 add_executable(TMxpVersionTagTest TMxpVersionTagTest.cpp ../src/TMxpVersionTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpTagHandler.cpp)
 add_test(NAME TMxpVersionTagTest COMMAND TMxpVersionTagTest)
 
@@ -91,6 +95,11 @@ add_test(NAME TMxpFormattingTagsTest COMMAND TMxpFormattingTagsTest)
 
 add_executable(TMxpCustomElementTagHandlerTest TMxpCustomElementTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
 add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandlerTest)
+
+add_executable(TMxpModeSecurityTest TMxpModeSecurityTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpModeSecurityTest COMMAND TMxpModeSecurityTest)
+add_executable(TMxpElementDefinitionHandlerTest TMxpElementDefinitionHandlerTest.cpp ${MXP_SOURCE})
+add_test(NAME TMxpElementDefinitionHandlerTest COMMAND TMxpElementDefinitionHandlerTest)
 
 add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp ../src/TVar.cpp ../src/VarUnit.cpp)
 add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)
@@ -113,3 +122,5 @@ if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
+
+add_subdirectory(functional_tests)

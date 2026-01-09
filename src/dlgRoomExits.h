@@ -23,16 +23,14 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_room_exits.h"
-#include <QCheckBox>
 #include <QDialog>
 #include <QPointer>
 #include <QSet>
 #include <QStyledItemDelegate>
-#include "post_guard.h"
 
 class QAction;
+class QCheckBox;
 class Host;
 class TRoom;
 

@@ -94,7 +94,25 @@ MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElem
         return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
     };
 
-    return definitionTag->transform(mapping);
+    // Transform the definition tag's attributes with mapped values
+    auto result = definitionTag->transform(mapping);
+    
+    // Collect all attributes from the transformed result
+    QList<MxpTagAttribute> allAttrs;
+    for (int i = 0; i < result.getAttributesCount(); ++i) {
+        allAttrs.append(result.getAttribute(i));
+    }
+    
+    // Add any attributes from the custom tag that aren't already present
+    for (int i = 0; i < customTag->getAttributesCount(); ++i) {
+        const auto& attr = customTag->getAttribute(i);
+        if (!result.hasAttribute(attr.getName())) {
+            allAttrs.append(attr);
+        }
+    }
+    
+    // Return a new tag with all combined attributes
+    return MxpStartTag(result.getName(), allAttrs, result.isEmpty());
 }
 
 QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, const QString& input, MxpStartTag* tag)

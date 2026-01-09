@@ -21,11 +21,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMap>
+#include <QMultiHash>
+#include <QSet>
 #include <QStringList>
 #include <QVector>
-#include "post_guard.h"
 
 class Host;
 
@@ -46,26 +46,38 @@ public:
     : mMaxLinks(maxLinks)
     {}
 
-    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>());
+    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString());
 
     QStringList& getLinks(int id) { return mLinkStore[id]; }
     QStringList& getHints(int id) { return mHintStore[id]; }
     QStringList getLinksConst(int id) const { return mLinkStore.value(id); }
     QStringList getHintsConst(int id) const { return mHintStore.value(id); }
     QVector<int> getReference(int id) const { return mReferenceStore.value(id); }
+    
+    // EXPIRE tag support - manage link expiry by name
+    void expireLinks(const QString& expireName, Host* pH = nullptr);
+    QString getExpireName(int id) const { return mExpireStore.value(id); }
 
     int getCurrentLinkID() const { return mLinkID; }
 
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
-    
+
+    void removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH = nullptr);
+
 #if !defined(LinkStore_Test)
     // OSC 8 hyperlink styling storage and retrieval
     void setStyling(int id, const Mudlet::HyperlinkStyling& styling);
     Mudlet::HyperlinkStyling getStyling(int id) const;
+    bool hasStyling(int id) const;
+    
+    // Selection group index for efficient exclusive group updates
+    // Returns list of link IDs that have the specified group and value
+    QList<int> getLinkIdsByGroupValue(const QString& group, const QString& value) const;
 #endif
 
 private:
     void freeReference(Host* pH, const QVector<int>& luaReference);
+    void removeLinkById(int id, Host* pH);
 
 
     int mLinkID = 0;
@@ -77,6 +89,10 @@ private:
 #if !defined(LinkStore_Test)
     QMap<int, Mudlet::HyperlinkStyling> mStylingStore;
 #endif
+    QMap<int, QString> mExpireStore;
+    QMultiHash<QString, int> mExpireToLinks;
+    
+    QMultiHash<QPair<QString, QString>, int> mSelectionGroupIndex;
 };
 
 #endif //MUDLET_TLINKSTORE_H

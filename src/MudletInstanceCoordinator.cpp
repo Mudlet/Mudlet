@@ -24,10 +24,7 @@
 
 const int WAIT_FOR_RESPONSE_MS = 500;
 
-MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent)
-: QLocalServer(parent)
-, mServerName(serverName)
-{}
+MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent) : QLocalServer(parent), mServerName(serverName) {}
 
 void MudletInstanceCoordinator::queuePackage(const QString& packageName)
 {
