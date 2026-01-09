@@ -1306,7 +1306,11 @@ int TLuaInterpreter::permKey(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("keyName"), Qt::CaseInsensitive)) {
                 keyName = getVerifiedString(L, __func__, -1, qPrintable(key));
@@ -2317,7 +2321,11 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("triggerName"), Qt::CaseInsensitive)) {

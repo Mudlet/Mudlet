@@ -317,7 +317,11 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("fromRoomID"), Qt::CaseInsensitive) ||
@@ -736,7 +740,11 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("uniquename"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("uniqueName"), Qt::CaseInsensitive)) {
@@ -1305,7 +1313,11 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("area"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("areaID"), Qt::CaseInsensitive)) {
@@ -1508,8 +1520,11 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("areaID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("area"), Qt::CaseInsensitive)) {
                 area = getVerifiedInt(L, __func__, -1, "areaID");
@@ -1617,7 +1632,11 @@ int TLuaInterpreter::createMapper(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
@@ -3089,8 +3108,11 @@ int TLuaInterpreter::highlightRoom(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("id"), Qt::CaseInsensitive)) {
                 id = getVerifiedInt(L, __func__, -1, "roomID");
@@ -4059,8 +4081,11 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("environmentID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("id"), Qt::CaseInsensitive)) {
                 id = getVerifiedInt(L, __func__, -1, "environmentID");

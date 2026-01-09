@@ -321,7 +321,11 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
@@ -431,16 +435,11 @@ int TLuaInterpreter::createLabel(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            // DEBUG: Check key type before calling getVerifiedString
-            int keyType = lua_type(L, -2);
-            qDebug() << "createLabel: table key type is" << lua_typename(L, keyType);
-            if (keyType != LUA_TSTRING) {
-                qWarning() << "createLabel: non-string key detected, type:" << lua_typename(L, keyType) << "- this would crash with getVerifiedString!";
+            if (lua_type(L, -2) != LUA_TSTRING) {
                 lua_pop(L, 1);
                 continue;
             }
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
                 windowName = getVerifiedString(L, __func__, -1, "windowName");
@@ -540,7 +539,11 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
@@ -642,7 +645,11 @@ int TLuaInterpreter::createScrollBox(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
@@ -920,7 +927,11 @@ int TLuaInterpreter::echoLink(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
@@ -1846,7 +1857,11 @@ int TLuaInterpreter::insertLink(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
@@ -1969,7 +1984,11 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 
             lua_pushnil(L);
             while (lua_next(L, 1) != 0) {
-                QString key = getVerifiedString(L, __func__, -2, "table key");
+                if (lua_type(L, -2) != LUA_TSTRING) {
+                    lua_pop(L, 1);
+                    continue;
+                }
+                const QString key = getVerifiedString(L, __func__, -2, "table key");
 
                 if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                     !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
@@ -2714,8 +2733,11 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
                 windowName = getVerifiedString(L, __func__, -1, "windowName");
@@ -2851,8 +2873,11 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            // key at index -2 and value at index -1
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive)) {
                 windowName = getVerifiedString(L, __func__, -1, "windowName");
@@ -3590,7 +3615,11 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
@@ -3989,7 +4018,11 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
@@ -4120,7 +4153,11 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
-            QString key = getVerifiedString(L, __func__, -2, "table key");
+            if (lua_type(L, -2) != LUA_TSTRING) {
+                lua_pop(L, 1);
+                continue;
+            }
+            const QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {

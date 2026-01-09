@@ -109,7 +109,10 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -321,7 +324,10 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -581,7 +587,10 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -721,7 +730,10 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
 
         if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive)
@@ -929,7 +941,10 @@ int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L, const char* fu
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1045,7 +1060,10 @@ int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* f
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1116,7 +1134,10 @@ int TLuaInterpreter::getPlayingVideosAsTableArgument(lua_State* L, const char* f
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1228,7 +1249,10 @@ int TLuaInterpreter::getPausedSoundsAsTableArgument(lua_State* L, const char* fu
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1290,7 +1314,10 @@ int TLuaInterpreter::getPausedMusicAsTableArgument(lua_State* L, const char* fun
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1352,7 +1379,10 @@ int TLuaInterpreter::getPausedVideosAsTableArgument(lua_State* L, const char* fu
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1476,7 +1506,10 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1625,7 +1658,10 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1714,7 +1750,10 @@ int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L, const char* func)
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1792,7 +1831,10 @@ int TLuaInterpreter::pauseSoundsAsTableArgument(lua_State* L, const char* func)
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1858,7 +1900,10 @@ int TLuaInterpreter::pauseMusicAsTableArgument(lua_State* L, const char* func)
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
@@ -1924,7 +1969,10 @@ int TLuaInterpreter::pauseVideosAsTableArgument(lua_State* L, const char* func)
 
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
-        // key at index -2 and value at index -1
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pop(L, 1);
+            continue;
+        }
         QString key = getVerifiedString(L, func, -2, "table keys");
         key = key.toLower();
 
