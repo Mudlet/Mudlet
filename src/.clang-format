@@ -86,6 +86,7 @@ AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Empty
 AllowShortLoopsOnASingleLine: false
 
 # alignment
@@ -128,4 +129,5 @@ MacroBlockEnd:   ''
 
 # comments
 CommentPragmas: ''
+FixNamespaceComments: false
 ReflowComments: false # revisit
