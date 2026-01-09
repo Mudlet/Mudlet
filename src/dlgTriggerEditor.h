@@ -375,6 +375,8 @@ private:
     void expand_child_action(TAction*, QTreeWidgetItem*);
     void expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
 
+    bool handlePackageFolderDeletion(const QString& packageName, bool isModule);
+
     void exportTrigger(const QString &fileName);
     void exportTimer(const QString &fileName);
     void exportAlias(const QString &fileName);
