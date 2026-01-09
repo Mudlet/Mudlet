@@ -32,9 +32,7 @@
 #include "utils.h"
 
 
-#include "pre_guard.h"
 #include <QAction>
-#include "post_guard.h"
 
 // A template for tooltip HTML formatting so that we do not have
 // 30 copies of the same QString in the read-only segment of the code:
@@ -103,6 +101,8 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
     mpEditor = new QLineEdit(parent);
     mpEditor->setFrame(false);
     mpEditor->setPlaceholderText(mpDlgRoomExits->mSpecialExitRoomIdPlaceholder);
+    // Hide anything in the original QLineEdit that this sits on top of:
+    mpEditor->setAutoFillBackground(true);
     if (mpDlgRoomExits) {
         if (!mpHost) {
             mpHost = mpDlgRoomExits->getHost();
@@ -284,10 +284,9 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
 dlgRoomExits::~dlgRoomExits()
 {
-    delete mpAction_otherAreaExit;
-    delete mpAction_inAreaExit;
-    delete mpAction_invalidExit;
-    delete mpAction_noExit;
+    // QActions are children of this dialog (created with 'this' as parent),
+    // so Qt's parent-child system handles their deletion automatically.
+    // Manual deletion here would cause double-delete crashes.
 }
 
 void dlgRoomExits::slot_endEditSpecialExits()
@@ -464,7 +463,6 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
 
-// >>>>>>> development
     specialExits->addTopLevelItem(pI);
 
     setIconAndToolTipsOnSpecialExit(pI, true);
@@ -482,6 +480,9 @@ void dlgRoomExits::save()
 
     for (int i = 0; i < specialExits->topLevelItemCount(); ++i) {
         QTreeWidgetItem* pI = specialExits->topLevelItem(i);
+        if (!pI) {
+            continue;
+        }
         const int value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
         const int weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
         int door = 0;
@@ -1960,6 +1961,9 @@ void dlgRoomExits::slot_checkModified()
         int currentCount = 0;
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);
+            if (!pI) {
+                continue;
+            }
 /*            qDebug("dlgRoomExits::slot_checkModified() considering specialExit (item %i, pass 1) to:%i, command:%s",
  *                   i,
  *                   pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt(),
@@ -1982,6 +1986,9 @@ void dlgRoomExits::slot_checkModified()
                 // set isModified...
                 for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
                     QTreeWidgetItem* pI = specialExits->topLevelItem(i);
+                    if (!pI) {
+                        continue;
+                    }
 /*                    qDebug("dlgRoomExits::slot_checkModified() considering specialExit (item %i, pass 2) to:%i, command:%s",
  *                           i,
  *                           pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt(),

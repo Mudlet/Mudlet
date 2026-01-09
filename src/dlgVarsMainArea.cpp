@@ -22,9 +22,7 @@
 
 #include "dlgVarsMainArea.h"
 
-#include "pre_guard.h"
 #include <QListWidgetItem>
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)

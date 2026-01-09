@@ -20,12 +20,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMatrix4x4>
 #include <QVector3D>
 #include <numbers>
 //#include <boost/math/constants/constants.hpp>
-#include "post_guard.h"
 
 class CameraController
 {
@@ -38,7 +36,7 @@ public:
     void setScale(float scale);
     void setViewportSize(int width, int height);
     void shiftPerspective(float verticalAngle, float horizontalAngle, float rotationAngle);
-    
+
     // Camera target control
     void setTarget(float x, float y, float z);
     void translateTargetUp();
@@ -51,22 +49,22 @@ public:
 
     // View presets
     void setDefaultView();
-    void setSideView();  
+    void setSideView();
     void setTopView();
     void setGridMode(bool enabled);
-    
+
     // Matrix generation
     void updateMatrices();
     QMatrix4x4 getProjectionMatrix() const { return mProjectionMatrix; }
     QMatrix4x4 getViewMatrix() const { return mViewMatrix; }
     QMatrix4x4 getModelMatrix() const { return mModelMatrix; }
-    
+
     // Camera state
     QVector3D getPosition();
     QVector3D getTarget() const { return mTarget; }
-    QVector3D getUp() const { return mUpVector; }
+    // QVector3D getUp() const { return mUpVector; }
     float getScale() const { return mDistance; }
-    
+
     // View center (for external API compatibility)
     void setViewCenter(float x, float y, float z);
 
@@ -79,17 +77,17 @@ private:
     QVector3D mPositionVector;
     QVector3D mRightVector;
     QVector3D mUpVector;
-    
+
     int mViewportWidth = 400;
     int mViewportHeight = 400;
-    
+
     bool mGridMode = false;
-    
+
     // Transformation matrices
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
-    
+
     // Internal matrix calculation
     void calculateProjectionMatrix();
     void calculateViewMatrix();

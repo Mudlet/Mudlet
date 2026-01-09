@@ -26,10 +26,8 @@
 
 #include "TConsole.h"
 
-#include "pre_guard.h"
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
-#include "post_guard.h"
 
 class TAccessibleConsole : public QAccessibleWidget
 {

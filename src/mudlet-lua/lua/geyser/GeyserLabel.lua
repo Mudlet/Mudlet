@@ -68,6 +68,150 @@ function Geyser.Label:rawEcho(message)
   self:autoAdjustSize()
 end
 
+--- Prints a message to the label with decho color formatting, preserving label's font size and formatting.
+-- @param message The message to print. Uses decho color codes like "<255,0,0>text" for colors.
+function Geyser.Label:decho(message)
+  message = message or self.message
+  self.message = message
+
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
+
+  -- Convert decho formatted text to HTML, preserving label's colors
+  local htmlContent = decho2html(message, resetFormat)
+
+  -- Apply label's formatting settings
+  local ft = self.formatTable
+  local fs = ft.fontSize
+  local alignment = ft.alignment
+  if alignment ~= "" then
+    alignment = string.format([[align="%s" ]], alignment)
+  end
+  if ft.bold then
+    htmlContent = "<b>" .. htmlContent .. "</b>"
+  end
+  if ft.italics then
+    htmlContent = "<i>" .. htmlContent .. "</i>"
+  end
+  if ft.underline then
+    htmlContent = "<u>" .. htmlContent .. "</u>"
+  end
+  if ft.strikethrough then
+    htmlContent = "<s>" .. htmlContent .. "</s>"
+  end
+  if self.font and self.font ~= "" then
+    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
+  end
+  if not fs then
+    fs = tostring(self.fontSize)
+  end
+  fs = "font-size: " .. fs .. "pt; "
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
+  [[">]] .. htmlContent .. [[</div>]]
+  echo(self.name, htmlContent)
+  self:autoAdjustSize()
+end
+
+--- Prints a message to the label with hecho color formatting, preserving label's font size and formatting.
+-- @param message The message to print. Uses hecho color codes like "|cff0000text" for colors.
+function Geyser.Label:hecho(message)
+  message = message or self.message
+  self.message = message
+
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
+
+  -- Convert hecho formatted text to HTML, preserving label's colors
+  local htmlContent = hecho2html(message, resetFormat)
+
+  -- Apply label's formatting settings
+  local ft = self.formatTable
+  local fs = ft.fontSize
+  local alignment = ft.alignment
+  if alignment ~= "" then
+    alignment = string.format([[align="%s" ]], alignment)
+  end
+  if ft.bold then
+    htmlContent = "<b>" .. htmlContent .. "</b>"
+  end
+  if ft.italics then
+    htmlContent = "<i>" .. htmlContent .. "</i>"
+  end
+  if ft.underline then
+    htmlContent = "<u>" .. htmlContent .. "</u>"
+  end
+  if ft.strikethrough then
+    htmlContent = "<s>" .. htmlContent .. "</s>"
+  end
+  if self.font and self.font ~= "" then
+    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
+  end
+  if not fs then
+    fs = tostring(self.fontSize)
+  end
+  fs = "font-size: " .. fs .. "pt; "
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
+  [[">]] .. htmlContent .. [[</div>]]
+  echo(self.name, htmlContent)
+  self:autoAdjustSize()
+end
+
+--- Prints a message to the label with cecho color formatting, preserving label's font size and formatting.
+-- @param message The message to print. Uses cecho color codes like "<red>text" for colors.
+function Geyser.Label:cecho(message)
+  message = message or self.message
+  self.message = message
+
+  -- Build resetFormat table using label's actual fgColor, not just stylesheet
+  local resetFormat = getLabelFormat(self.name)
+  -- Override foreground with label's fgColor property if set
+  if self.fgColor and self.fgColor ~= "" then
+    resetFormat.foreground = Geyser.Color.hex(self.fgColor)
+  end
+
+  -- Convert cecho formatted text to HTML, preserving label's colors
+  local htmlContent = cecho2html(message, resetFormat)
+
+  -- Apply label's formatting settings
+  local ft = self.formatTable
+  local fs = ft.fontSize
+  local alignment = ft.alignment
+  if alignment ~= "" then
+    alignment = string.format([[align="%s" ]], alignment)
+  end
+  if ft.bold then
+    htmlContent = "<b>" .. htmlContent .. "</b>"
+  end
+  if ft.italics then
+    htmlContent = "<i>" .. htmlContent .. "</i>"
+  end
+  if ft.underline then
+    htmlContent = "<u>" .. htmlContent .. "</u>"
+  end
+  if ft.strikethrough then
+    htmlContent = "<s>" .. htmlContent .. "</s>"
+  end
+  if self.font and self.font ~= "" then
+    htmlContent = string.format('<font face="%s">%s</font>', self.font, htmlContent)
+  end
+  if not fs then
+    fs = tostring(self.fontSize)
+  end
+  fs = "font-size: " .. fs .. "pt; "
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
+  [[">]] .. htmlContent .. [[</div>]]
+  echo(self.name, htmlContent)
+  self:autoAdjustSize()
+end
+
 --- sets the color of the text on the label
 -- @param color the color you want the text to be. Can use color names such as "red", decho codes such as "<255,0,0>" and hex codes such as "#ff0000"
 function Geyser.Label:setFgColor(color)
@@ -119,6 +263,11 @@ function Geyser.Label:setFont(font)
     debugc(err)
   end
   self.font = font
+  -- Apply the profile's antialiasing settings to the label for static font compatibility
+  -- Use existing setFont() function with label name - this handles static fonts and antialiasing
+  if font ~= "" then
+    setFont(self.name, font)
+  end
   self:echo()
 end
 
@@ -290,6 +439,11 @@ function Geyser.Label:setFontSize(fontSize)
   self.formatTable.fontSize = fontSize
   self.format = self.format:gsub("%d", "")
   self.format = self.format .. fontSize
+  -- Apply the profile's antialiasing settings to the label when font size changes
+  -- Use existing setFont() function - it will preserve the font family and apply antialiasing
+  if self.font and self.font ~= "" then
+    setFont(self.name, self.font)
+  end
   self:echo()
 end
 
@@ -424,6 +578,28 @@ function Geyser.Label:setStyleSheet(css)
   self.stylesheet = css
   self:autoAdjustSize()
 end
+
+--- Sets the hyperlink styling for the label
+-- @param linkColor Color for normal links (e.g., "cyan", "#00ffff")
+-- @param visitedColor Color for visited links (e.g., "purple", "#ff00ff")
+-- @param underline Whether links should be underlined (default: true)
+function Geyser.Label:setLinkStyle(linkColor, visitedColor, underline)
+  if underline == nil then
+    underline = true
+  end
+  setLinkStyle(self.name, linkColor, visitedColor, underline)
+end
+
+--- Resets the hyperlink styling to Qt defaults
+function Geyser.Label:resetLinkStyle()
+  resetLinkStyle(self.name)
+end
+
+--- Clears the visited links history for this label
+function Geyser.Label:clearVisitedLinks()
+  clearVisitedLinks(self.name)
+end
+
 --- Sets the tooltip of the label
 -- @param txt the tooltip txt
 -- @param duration the duration of the tooltip
@@ -787,7 +963,7 @@ function doNestLeave(label)
   if Geyser.Label.closeAllTimer then
     killTimer(Geyser.Label.closeAllTimer)
   end
-  Geyser.Label.closeAllTimer = tempTimer(2, function() closeAllLevels(label) end)
+  Geyser.Label.closeAllTimer = tempTimer(.5, function() closeAllLevels(label) end)
 end
 
 -- Save a reference to our parent constructor
@@ -920,6 +1096,18 @@ function Geyser.Label:new (cons, container)
   me:autoAdjustSize()
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
+end
+
+--- Deletes the label using the C++ deleteLabel function
+-- Note: Nested labels (in nestedLabels array) have their own containers
+-- and will be deleted through their container's cascading delete mechanism.
+-- The nestedLabels array is for organizational purposes only.
+function Geyser.Label:type_delete()
+  -- Clean up nested label references to avoid dangling references
+  if self.nestedLabels then
+    self.nestedLabels = {}
+  end
+  deleteLabel(self.name)
 end
 
 --- Overridden constructor to use add2

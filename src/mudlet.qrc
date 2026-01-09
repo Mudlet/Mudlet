@@ -90,6 +90,7 @@
         <file>icons/filter-grey.png</file>
         <file>icons/filter-locked.png</file>
         <file>icons/filter.png</file>
+        <file>icons/flag-red.png</file>
         <file>icons/folder-blue-locked.png</file>
         <file>icons/folder-blue.png</file>
         <file>icons/folder-bookmarks.png</file>
@@ -135,6 +136,7 @@
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
         <file>icons/media-tape.png</file>
+        <file>icons/media-tape-red-cross.png</file>
         <file>icons/medievia.png</file>
         <file>icons/midnightsun2.png</file>
         <file>icons/module-manager.png</file>
@@ -231,5 +233,6 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>3d-models/sword/sword.glb</file>
     </qresource>
 </RCC>

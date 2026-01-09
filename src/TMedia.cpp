@@ -25,7 +25,6 @@
 #include "TMedia.h"
 #include "TLabel.h"
 
-#include "pre_guard.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -34,7 +33,6 @@
 #include <QRandomGenerator>
 #include <QStandardPaths>
 #include <QVideoWidget>
-#include "post_guard.h"
 
 // Public
 TMedia::TMedia(Host* pHost, const QString& profileName)
@@ -829,6 +827,7 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
             reply->deleteLater();
             mpHost->raiseEvent(event);
+            return;
         }
 
         qint64 const bytesWritten = localFile.write(reply->readAll());
@@ -849,16 +848,27 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
             localFile.flush();
 
             if (localFile.error() == QFile::NoError) {
+                if (!localFile.commit()) {
+                    event.mArgumentList << QLatin1String("sysDownloadError");
+                    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                    event.mArgumentList << QLatin1String("Couldn't save to the destination file");
+                    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                    event.mArgumentList << mediaData.mediaAbsolutePathFileName();
+                    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                    event.mArgumentList << qsl("Failed to commit file: %1").arg(localFile.errorString());
+                    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+                    reply->deleteLater();
+                    mpHost->raiseEvent(event);
+                    return;
+                }
+
                 event.mArgumentList << QLatin1String("sysDownloadDone");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << mediaData.mediaAbsolutePathFileName();
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << QString::number(bytesWritten);
                 event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-
-                if (!localFile.commit()) {
-                    qDebug() << "TMedia::slot_writeFile: error saving downloaded media: " << localFile.errorString();
-                }
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
@@ -1785,7 +1795,7 @@ int TMedia::parseJSONByMediaFinish(QJsonObject& json)
 {
     int mediaFinish = TMediaData::MediaFinishNotSet;
 
-    auto mediaFinishJSON = json.value(qsl("end"));
+    auto mediaFinishJSON = json.value(qsl("finish"));
 
     if (mediaFinishJSON != QJsonValue::Undefined && mediaFinishJSON.isString() && !mediaFinishJSON.toString().isEmpty()) {
         mediaFinish = mediaFinishJSON.toString().toInt();
@@ -2055,7 +2065,7 @@ void TMedia::printClosedCaption(const TMediaData& mediaData, const QString& acti
         //: This word is part of a sentence like "Music stops" when Mudlet handles a piece of music.
         const QString mediaType = mediaData.mediaType() == TMediaData::MediaTypeMusic ? tr("music") :
         //: This word is part of a sentence like "Video stops" when Mudlet handles a video.
-                                  mediaData.mediaType() == TMediaData::MediaTypeVideo ? tr("video") 
+                                  mediaData.mediaType() == TMediaData::MediaTypeVideo ? tr("video")
         //: This word is part of a sentence like "Sound stops" when Mudlet handles neither music nor video.
                                                                                       : tr("sound");
         const QString mediaKey = mediaData.mediaKey();

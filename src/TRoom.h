@@ -24,17 +24,13 @@
  ***************************************************************************/
 
 
-#include "TMap.h"
-
-#include "pre_guard.h"
-#include <QApplication>
+#include <QCoreApplication>
 #include <QColor>
 #include <QDebug>
 #include <QHash>
 #include <QMap>
 #include <QSet>
 #include <QVector3D>
-#include "post_guard.h"
 
 class XMLimport;
 class XMLexport;
