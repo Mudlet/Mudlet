@@ -6,10 +6,10 @@ fi
 
 if [ "${RUNNER_OS}" = "Linux" ]; then
   echo Deploy on Linux.
-  . CI/travis.linux.after_success.sh;
+  . CI/linux.after_success.sh;
 elif [ "${RUNNER_OS}" = "macOS" ]; then
   echo Deploy on macOS.
-  . CI/travis.osx.after_success.sh;
+  . CI/osx.after_success.sh;
 fi
 
 echo ""
