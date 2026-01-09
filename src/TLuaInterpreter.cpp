@@ -7959,7 +7959,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
         { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
         { qsl("muteMediaScript"), [&](){ lua_pushboolean(L, mudlet::self()->muteAPI()); } },
-        { qsl("muteMediaGame"), [&](){ lua_pushboolean(L, mudlet::self()->muteGame()); } }
+        { qsl("muteMediaGame"), [&](){ lua_pushboolean(L, mudlet::self()->muteGame()); } },
         { qsl("ircHostName"), [&](){ lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData()); } },
         { qsl("ircHostPort"), [&](){ lua_pushnumber(L, dlgIRC::readIrcHostPort(&host)); } },
         { qsl("ircHostSecure"), [&](){ lua_pushboolean(L, dlgIRC::readIrcHostSecure(&host)); } },
