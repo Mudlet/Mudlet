@@ -432,6 +432,14 @@ int TLuaInterpreter::createLabel(lua_State* L)
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
             // key at index -2 and value at index -1
+            // DEBUG: Check key type before calling getVerifiedString
+            int keyType = lua_type(L, -2);
+            qDebug() << "createLabel: table key type is" << lua_typename(L, keyType);
+            if (keyType != LUA_TSTRING) {
+                qWarning() << "createLabel: non-string key detected, type:" << lua_typename(L, keyType) << "- this would crash with getVerifiedString!";
+                lua_pop(L, 1);
+                continue;
+            }
             QString key = getVerifiedString(L, __func__, -2, "table key");
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
