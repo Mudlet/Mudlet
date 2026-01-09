@@ -24,6 +24,7 @@
 #include "dlgPackageExporter.h"
 #include "ui_dlgPackageExporter.h"
 
+#include "Host.h"
 #include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -31,8 +32,8 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "XMLexport.h"
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QDesktopServices>
 #include <QDirIterator>
@@ -41,7 +42,6 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QTimer>
-#include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -1232,7 +1232,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         }
     }
 
-    if (!writer.exportPackage(mXmlPathFileName, false)) {
+    if (!writer.exportPackage(mXmlPathFileName, false, true)) {
         //: This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened
         displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".")
                              .arg(mXmlPathFileName.toHtmlEscaped()), false);
@@ -1461,13 +1461,13 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
         } else {
             return {false,
-                    tr("Required file \"%1\" was not found in the staging area. "
-                       "This area contains the Mudlet items chosen for the package, "
-                       "which you selected to be included in the package file. "
-                       "This suggests there may be a problem with that directory: "
-                       "\"%2\" - "
-                       "Do you have the necessary permissions and free disk-space?")
-                            .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
+                        tr("Required file \"%1\" was not found in the staging area. "
+                           "This area contains the Mudlet items chosen for the package, "
+                           "which you selected to be included in the package file. "
+                           "This suggests there may be a problem with that directory: "
+                           "\"%2\" - "
+                           "Do you have the necessary permissions and free disk-space?")
+                                .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
         }
     }
 
@@ -1909,8 +1909,8 @@ void dlgPackageExporter::listTimers()
 void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
-        // Big RED error message
-        ui->infoLabel->setText(qsl("<p><font color='red'><b><big>%1</big><b></font></p>").arg(html));
+        // Light coral red error message - #FF6B6B has good contrast on both light and dark backgrounds
+        ui->infoLabel->setText(qsl("<p><font color='#FF6B6B'><b><big>%1</big><b></font></p>").arg(html));
         return;
     }
 

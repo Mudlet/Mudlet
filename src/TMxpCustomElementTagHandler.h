@@ -22,7 +22,6 @@
 #define MUDLET_TMXPCUSTOMELEMENTTAGHANDLER_H
 
 #include "TMxpContext.h"
-#include "TMxpElementRegistry.h"
 #include "TMxpTagHandler.h"
 
 class TMxpCustomElementTagHandler : public TMxpTagHandler
@@ -47,5 +46,4 @@ public:
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
     void handleContent(char ch) override;
 };
-#include "TMxpTagHandler.h"
 #endif //MUDLET_TMXPCUSTOMELEMENTTAGHANDLER_H
