@@ -24,12 +24,12 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "utils.h"
+
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
@@ -63,6 +63,7 @@ public:
     bool registerTimer(TTimer* pT);
     void unregisterTimer(TTimer* pT);
     void reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     void stopAllTriggers();
     void reenableAllTriggers();
     void markCleanup(TTimer*);

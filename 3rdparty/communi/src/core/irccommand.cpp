@@ -31,7 +31,6 @@
 #include "ircconnection.h"
 #include "ircmessage.h"
 #include "irccore_p.h"
-#include <QTextCodec>
 #include <QMetaEnum>
 #include <QDebug>
 
@@ -371,14 +370,11 @@ void IrcCommand::setParameters(const QStringList& parameters)
     This property holds the encoding that is used when
     sending the command via IrcConnection::sendCommand().
 
-    See QTextCodec::availableCodes() for the list of
-    supported encodings. The default value is \c "UTF-8".
+    The default value is \c "UTF-8".
 
     \par Access functions:
     \li QByteArray <b>encoding</b>() const
     \li void <b>setEncoding</b>(const QByteArray& encoding)
-
-    \sa QTextCodec::availableCodecs()
  */
 QByteArray IrcCommand::encoding() const
 {

@@ -26,11 +26,9 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QColorDialog>
 #include <QMenu>
 #include <QPainter>
-#include "post_guard.h"
 
 
 dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
@@ -92,11 +90,13 @@ void dlgRoomProperties::init(
             comboBox_roomSymbol->lineEdit()->selectAll();
         }
     }
+    auto mapSymbolFont = mpHost->mpMap->mMapSymbolFont;
+    mapSymbolFont.setPointSize(qApp->font().pointSize());
     if (!lineEdit_roomSymbol->isHidden()) {
-        lineEdit_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+        lineEdit_roomSymbol->setFont(mapSymbolFont);
     }
     if (!comboBox_roomSymbol->isHidden()) {
-        comboBox_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+        comboBox_roomSymbol->setFont(mapSymbolFont);
     }
     initSymbolInstructions();
 
@@ -199,16 +199,17 @@ void dlgRoomProperties::initSymbolInstructions()
 
     QString instructions;
     if (mpSymbols.size() == 1) {
-        instructions = tr("Type one or more graphemes (\"visible characters\") to use as a symbol "
-                          "for all of the %n selected room(s), or enter a space to clear the symbol:",
+        //: room properties dialog, setting symbols
+        instructions = tr("Enter one or more characters to set a new symbol for %n room(s).  Clear to unset.",
                           // Intentional comment to separate arguments!
                           "%n is the total number of rooms involved.",
                           mpRooms.size());
     } else {
-        instructions = tr("To change the symbol for all of the %n selected room(s), please choose:\n"
-                          " • an existing symbol from the list below (sorted by most commonly used first)\n"
-                          " • enter one or more graphemes (\"visible characters\") as a new symbol\n"
-                          " • enter a space to clear any existing symbols",
+        //: room properties dialog, setting symbols
+        instructions = tr("To set the symbol for all %n room(s), please choose:\n"
+                          " • an existing symbol from the list,\n"
+                          " • enter one or more characters to set a new symbol,\n"
+                          " • clear to unset.",
                           // Intentional comment to separate arguments!
                           "This is for when applying a new room symbol to one or more rooms "
                           "and some have different symbols or no symbol at present. "
@@ -243,15 +244,13 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         while (itSymbolUsed.hasNext()) {
             itSymbolUsed.next();
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                displayStrings.append(qsl("%1 {%2:%3}")
-                    .arg(itSymbolUsed.key())
-                    /*:
-                    This text will be part of a list of room values shown, which will show the value
-                    itself, followed by the counted number of rooms with this very value like:
-                    grey {count:2} - so please translate like counted ammount, number of, etc.
-                    */
-                    .arg(tr("count"))
-                    .arg(QString::number(itSymbolUsed.value())));
+                /*:
+                Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., "★" or "!"),
+                %2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
+                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
+                */
+                displayStrings.append(tr("%1 (count: %2)")
+                    .arg(itSymbolUsed.key(), QString::number(itSymbolUsed.value())));
             }
         }
     }
@@ -283,15 +282,13 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
         while (itWeightUsed.hasNext()) {
             itWeightUsed.next();
             if (itWeightUsed.value() == weightCountsList.at(i)) {
-                displayStrings.append(qsl("%1 {%2:%3}")
-                    .arg(QString::number(itWeightUsed.key()))
-                    /*:
-                    This text will be part of a list of room values shown, which will name the value
-                    itself, followed by the counted number of rooms with that very value like:
-                    grey {count: 2} - So please translate like counted amount, number of, etc.
-                    */
-                    .arg(tr("count"))
-                    .arg(QString::number(itWeightUsed.value())));
+                /*:
+                Format for showing a room weight with its usage count. %1 is the weight value (e.g., "1" or "50"),
+                %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
+                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
+                */
+                displayStrings.append(tr("%1 (count: %2)")
+                    .arg(QString::number(itWeightUsed.key()), QString::number(itWeightUsed.value())));
             }
         }
     }
@@ -321,11 +318,10 @@ void dlgRoomProperties::accept()
     const QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
     const QColor newSymbolColor = selectedSymbolColor;
-    bool changeSymbolColor = true;
+    bool changeSymbolColor = mSymbolColorWasChanged;
     if (newSymbol == multipleValuesPlaceholder) {
         // We don't want to change then
         changeSymbol = false;
-        changeSymbolColor = false;
     }
 
     // Find weight to return back
@@ -368,8 +364,8 @@ QString dlgRoomProperties::getNewSymbol()
         return lineEdit_roomSymbol->text();
     }
     QString newSymbolText = comboBox_roomSymbol->currentText();
-    // Parse the initial text before the curly braces containing count
-    const QRegularExpression countStripper(qsl("^(.*) {.*}$"));
+    // Parse the initial text before the parentheses containing count
+    const QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
     const QRegularExpressionMatch match = countStripper.match(newSymbolText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1);
@@ -454,6 +450,7 @@ void dlgRoomProperties::slot_openSymbolColorSelector()
 void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 {
     selectedSymbolColor = color;
+    mSymbolColorWasChanged = true;
     slot_updatePreview();
 }
 
@@ -461,6 +458,7 @@ void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 void dlgRoomProperties::slot_resetSymbolColor()
 {
     selectedSymbolColor = QColor();
+    mSymbolColorWasChanged = true;
     slot_updatePreview();
 }
 
