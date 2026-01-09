@@ -18,7 +18,7 @@ Standard: c++20
 DisableFormat: false
 
 # line length
-ColumnLimit: 180
+ColumnLimit: 200
 
 # indentation
 IndentWidth: 4
@@ -67,7 +67,7 @@ SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-SpaceBeforeCpp11BracedList: true
+SpaceBeforeCpp11BracedList: false
 
 # parameters/arguments
 AllowAllParametersOfDeclarationOnNextLine: true
@@ -90,14 +90,14 @@ AllowShortLoopsOnASingleLine: false
 
 # alignment
 AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
 AlignEscapedNewlinesLeft: false
 AlignOperands: true
 AlignTrailingComments: true
 
 # penalties (revisit)
-PenaltyBreakBeforeFirstCallParameter: 5
+PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
 PenaltyBreakString: 1000
@@ -119,7 +119,7 @@ IncludeCategories:
   - Regex: '^"'
     Priority: 1
 # IncludeIsMainRegex: '$'
-SortIncludes: true
+SortIncludes: false
 
 # macros
 ForEachMacros: [ foreach, Q_FOREACH, BOOST_FOREACH ]
