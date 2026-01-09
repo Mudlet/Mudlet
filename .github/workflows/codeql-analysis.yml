@@ -140,8 +140,8 @@ jobs:
     - name: (Linux/macOS) Set build info
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3

@@ -213,8 +213,8 @@ jobs:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         sudo apt-get -y install pcre2-utils
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
 
     - name: (macOS) Set build info
       if: runner.os == 'macOS'
@@ -222,8 +222,8 @@ jobs:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         brew install pcre2
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
         echo "CXX=clang++" >> $GITHUB_ENV
         echo "CC=clang" >> $GITHUB_ENV
@@ -331,7 +331,7 @@ jobs:
           export ARCH_DBLSQD=$ARCH
           echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
         fi
-        ${{github.workspace}}/CI/travis.after_success.sh
+        ${{github.workspace}}/CI/after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}

@@ -65,11 +65,9 @@
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
-#include <QMargins>
 #include <QMessageBox>
 #include <QMetaEnum>
 #include <QPalette>
-#include <QPoint>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSpinBox>

@@ -28,7 +28,6 @@ bool TEntityHandler::handle(char c, bool resolveCustomEntities)
     const bool isLegalNamedEntityChar = isalnum(c) ||
                                         c == '#' || c == '.' || c == '-' ||
                                         c == '_' || c == '&' || c == ';';
-    
     if (!mCurrentEntity.isEmpty() || c == '&') {
         mCurrentEntity.append(c);
         if (c == ';') {

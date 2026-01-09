@@ -26,6 +26,7 @@
 
 
 #include "TArea.h"
+#include "TMap.h"
 #include "TRoomDB.h"
 #include "mudlet.h"
 

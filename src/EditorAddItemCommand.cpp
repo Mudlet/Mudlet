@@ -350,7 +350,9 @@ void EditorAddItemCommand::redo()
                     }
                 }
             } else {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorAddItemCommand::redo() - Failed to recreate trigger from snapshot";
+#endif
             }
             break;
         }
@@ -386,7 +388,9 @@ void EditorAddItemCommand::redo()
                     }
                 }
             } else {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorAddItemCommand::redo() - Failed to recreate alias from snapshot";
+#endif
             }
             break;
         }
@@ -422,7 +426,9 @@ void EditorAddItemCommand::redo()
                     }
                 }
             } else {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorAddItemCommand::redo() - Failed to recreate timer from snapshot";
+#endif
             }
             break;
         }
@@ -468,10 +474,14 @@ void EditorAddItemCommand::redo()
                         }
                     }
                 } else {
+#if defined(DEBUG_UNDO_REDO)
                     qWarning() << "EditorAddItemCommand::redo() - ID count mismatch! Old:" << mOldDescendantIDs.size() << "New:" << newDescendantIDs.size();
+#endif
                 }
             } else {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorAddItemCommand::redo() - Failed to recreate script from snapshot";
+#endif
             }
             break;
         }
@@ -507,7 +517,9 @@ void EditorAddItemCommand::redo()
                     }
                 }
             } else {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorAddItemCommand::redo() - Failed to recreate key from snapshot";
+#endif
             }
             break;
         }
@@ -543,7 +555,9 @@ void EditorAddItemCommand::redo()
                     }
                 }
             } else {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorAddItemCommand::redo() - Failed to recreate action from snapshot";
+#endif
             }
             break;
         }
