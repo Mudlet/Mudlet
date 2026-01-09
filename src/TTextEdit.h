@@ -28,20 +28,17 @@
  ***************************************************************************/
 
 
-#include "TBuffer.h"
-
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
 #include <QWidget>
 #include <chrono>
-#include "post_guard.h"
 
 #include <string>
 
 
 class Host;
+class TBuffer;
 class TConsole;
 class TChar;
 

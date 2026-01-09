@@ -20,10 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QOpenGLFunctions>
 #include <QDebug>
-#include "post_guard.h"
 
 // Resource manager for OpenGL error checking and monitoring
 class ResourceManager : protected QOpenGLFunctions
@@ -34,11 +32,11 @@ public:
 
     void initialize();
     void cleanup();
-    
+
     // OpenGL error checking
     bool checkGLError(const QString& operation) const;
     void enableErrorChecking(bool enable) { mErrorCheckingEnabled = enable; }
-    
+
     // Resource usage statistics
     struct ResourceStats {
         size_t totalBuffersCreated = 0;
@@ -49,17 +47,17 @@ public:
         size_t currentFrameDrawCalls = 0;
         size_t currentFrameVertices = 0;
     };
-    
+
     ResourceStats getStats() const { return mStats; }
     void printStats() const;
     void resetFrameStats();
-    
+
     // Resource tracking for statistics
     void onBufferCreated() { mStats.totalBuffersCreated++; }
     void onVAOCreated() { mStats.totalVAOsCreated++; }
     void onShaderCreated() { mStats.totalShadersCreated++; }
-    void onDrawCall(size_t vertexCount) { 
-        mStats.totalDrawCalls++; 
+    void onDrawCall(size_t vertexCount) {
+        mStats.totalDrawCalls++;
         mStats.totalVerticesRendered += vertexCount;
         mStats.currentFrameDrawCalls++;
         mStats.currentFrameVertices += vertexCount;

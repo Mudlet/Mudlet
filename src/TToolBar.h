@@ -22,10 +22,8 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QDockWidget>
 #include <QPointer>
-#include "post_guard.h"
 
 class Host;
 class TAction;

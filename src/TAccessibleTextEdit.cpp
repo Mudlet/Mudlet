@@ -55,10 +55,10 @@ int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) c
     const QStringList& lineBuffer = textEdit()->mpBuffer->lineBuffer;
     int lengthSoFar_ = 0;
 
-    // If the offset is just past the end of the contents, consider it to be on
+    // If the offset is at or past the end of the contents, consider it to be on
     // the last character.
-    if (offset == characterCount()) {
-        offset -= 1;
+    if (offset >= characterCount()) {
+        offset = std::max(0, characterCount() - 1);
     }
 
     for (int i = 0; i < lineBuffer.length(); i++) {
@@ -78,7 +78,8 @@ int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) c
         // The text() method doesn't add a '\n' to the end of the last line.
         *lengthSoFar = lengthSoFar_ - 1;
     }
-    return lineBuffer.length();
+    // Defensive: never return an out-of-bounds line index
+    return std::max(0, static_cast<int>(lineBuffer.length()) - 1);
 }
 
 // performance note - this is called extremely frequently on the same line
@@ -86,10 +87,10 @@ int TAccessibleTextEdit::columnForOffset(int offset) const
 {
     int lengthSoFar = 0;
 
-    // If the offset is just past the end of the contents, consider it to be on
+    // If the offset is at or past the end of the contents, consider it to be on
     // the last character.
-    if (offset == characterCount()) {
-        offset -= 1;
+    if (offset >= characterCount()) {
+        offset = std::max(0, characterCount() - 1);
     }
 
     lineForOffset(offset, &lengthSoFar);
@@ -323,6 +324,10 @@ int TAccessibleTextEdit::offsetAtPoint(const QPoint& point) const
  */
 void TAccessibleTextEdit::scrollToSubstring(int startIndex, int endIndex)
 {
+    if (offsetIsInvalid(startIndex) || offsetIsInvalid(endIndex)) {
+        return;
+    }
+
     int startLine = lineForOffset(startIndex);
     int endLine = lineForOffset(endIndex);
     TTextEdit* edit = textEdit();

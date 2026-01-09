@@ -161,6 +161,16 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
     pChild->enableTimer(childID);
 }
 
+void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentTimer(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentTimer(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void TimerUnit::removeAllTempTimers()
 {
     mCleanupSet.clear();

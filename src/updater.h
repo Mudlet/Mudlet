@@ -29,9 +29,7 @@
 #endif
 
 
-#include "pre_guard.h"
 #include <QObject>
-#include "post_guard.h"
 
 class Updater : public QObject
 {
@@ -76,6 +74,8 @@ private:
 
 #if defined(Q_OS_LINUX)
     QString unzippedBinaryName;
+#elif defined(Q_OS_WINDOWS)
+    QString mDownloadedInstallerPath;
 #elif defined(Q_OS_MACOS)
     SparkleUpdater* msparkleUpdater;
 #endif
