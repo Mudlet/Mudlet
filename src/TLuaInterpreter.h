@@ -25,13 +25,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMap.h"
 #include "TMediaData.h"
-#include "TTextCodec.h"
 #include "TTrigger.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QEvent>
 #include <QFileSystemWatcher>
 #include <QNetworkAccessManager>
@@ -47,7 +44,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -64,13 +60,13 @@ extern "C" {
 #include <list>
 #include <string>
 #include <memory>
+#include <optional>
 
 class Host;
 class TAction;
 class TEvent;
 class TLuaThread;
 class TMapLabel;
-class TTrigger;
 
 
 #define SERVEROUTPUT 1
@@ -121,6 +117,13 @@ public:
     QString formatLuaCode(const QString&);
     void loadGlobal();
     QString getLuaString(const QString& stringName);
+    struct ExitWeightFilterResult {
+        bool blocked = false;
+        std::optional<int> weightOverride;
+    };
+
+    ExitWeightFilterResult applyExitWeightFilter(int roomId, const QString& exitCommand);
+    bool hasExitWeightFilter() const;
     int check_for_mappingscript();
     int check_for_custom_speedwalk();
     void set_lua_integer(const QString& varName, int varValue);
@@ -156,6 +159,7 @@ public:
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
     std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermExactMatchTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
@@ -177,6 +181,7 @@ public:
     static int setDoor(lua_State*);
     static int getDoors(lua_State*);
     static int setExitWeight(lua_State*);
+    static int setExitWeightFilter(lua_State*);
     static int getExitWeights(lua_State*);
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State*);
@@ -209,6 +214,7 @@ public:
     static int getRooms(lua_State*);
     static int connectToServer(lua_State*);
     static int sendIrc(lua_State*);
+    static int openIRC(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);
     static int getIrcChannels(lua_State*);
@@ -237,6 +243,7 @@ public:
     static int sendSocket(lua_State*);
     static int openUrl(lua_State*);
     static int getRoomsByPosition(lua_State*);
+    static int getRoomsByPosition1(lua_State*);
     static int getRoomEnv(lua_State*);
     static int downloadFile(lua_State*);
     static int setRoomUserData(lua_State*);
@@ -400,6 +407,9 @@ public:
     static int createLabelMainWindow(lua_State*, const QString& labelName);
     static int createLabelUserWindow(lua_State*, const QString& windowName, const QString& labelName);
     static int deleteLabel(lua_State*);
+    static int deleteMiniConsole(lua_State*);
+    static int deleteCommandLine(lua_State*);
+    static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
@@ -491,6 +501,7 @@ public:
     static int getBorderLeft(lua_State*);
     static int getBorderRight(lua_State*);
     static int getBorderSizes(lua_State*);
+    static int getBorderColor(lua_State*);
     static int getConsoleBufferSize(lua_State*);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
@@ -504,6 +515,10 @@ public:
     static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
+    static int setLabelStyleSheet(lua_State*);
+    static int setLinkStyle(lua_State*);
+    static int resetLinkStyle(lua_State*);
+    static int clearVisitedLinks(lua_State*);
     static int startLogging(lua_State*);
     static int appendLog(lua_State*);
     static int calcFontWidth(int size);
@@ -511,6 +526,7 @@ public:
     static int calcFontSize(lua_State*);
     static int permRegexTrigger(lua_State*);
     static int permSubstringTrigger(lua_State*);
+    static int permExactMatchTrigger(lua_State*);
     static int permTimer(lua_State*);
     static int permScript(lua_State*);
     static int getScript(lua_State*);
@@ -527,7 +543,6 @@ public:
     static int disableAlias(lua_State*);
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
-    static int setLabelStyleSheet(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
@@ -859,6 +874,9 @@ private:
     QStringList mPossiblePaths;
 
     static std::pair<bool, QString> aiEnabled(lua_State*);
+    void storeExitWeightFilter(lua_State* L, int index);
+    void clearExitWeightFilter(lua_State* L);
+    int mExitWeightFilterRef = LUA_NOREF;
 };
 
 Host& getHostFromLua(lua_State*);

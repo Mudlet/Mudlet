@@ -69,6 +69,11 @@ function Geyser.ScrollBox:new (cons, container)
     return me
 end
 
+--- Deletes the scrollbox using the C++ deleteScrollBox function
+function Geyser.ScrollBox:type_delete()
+    deleteScrollBox(self.name)
+end
+
 --- Overridden constructor to use add2
 function Geyser.ScrollBox:new2 (cons, container)
     cons = cons or {}

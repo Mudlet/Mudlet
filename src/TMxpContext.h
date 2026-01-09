@@ -25,11 +25,9 @@
 #include "TMxpElementRegistry.h"
 #include "TMxpTagHandler.h"
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QVector>
 #include <QString>
-#include "post_guard.h"
 
 class TMxpClient;
 

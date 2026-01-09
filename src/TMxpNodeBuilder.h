@@ -50,6 +50,7 @@ class TMxpNodeBuilder
 
     // current text node
     std::string mCurrentText;
+    std::string mRawTagContent;
 
     // text node parsing state
     bool mIsInsideText = false;
@@ -80,6 +81,7 @@ public:
     MxpTag* buildTag();
 
     void reset();
+    void resetForNewTag();
 
     inline bool hasTag() const { return isTag() && hasNode(); }
 
@@ -87,8 +89,15 @@ public:
 
     inline bool isInsideTag() const { return mIsInsideTag; }
 
+    inline bool isInsideComment() const { return mCurrentTagName == "!--"; }
+
+    inline bool isQuotedSequence() const { return mIsQuotedSequence; }
+
     inline bool isTag() const { return !mIsText; }
 
     inline bool isText() const { return mIsText; }
+
+    const std::string& getRawTagContent() const { return mRawTagContent; }
+    void setRawTagContent(const std::string& content) { mRawTagContent = content; }
 };
 #endif //MUDLET_TMXPNODEBUILDER_H

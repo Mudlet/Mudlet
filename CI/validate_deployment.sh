@@ -12,20 +12,6 @@ else
     exit 1
   }
 
-  function validate_qmake() {
-    local VALID_QMAKE VALID_BUILD
-
-    VALID_QMAKE=$(pcregrep --only-matching=1 "^VERSION ? = ?(\d+\.\d+\.\d+)$" < src/mudlet.pro)
-    if [ -z "${VALID_QMAKE}" ]; then
-      error "mudlet.pro's VERSION variable isn't formatted following the semantic versioning rules in a release build."
-    fi
-
-    VALID_BUILD=$(pcregrep --only-matching=1 'BUILD ? = ? ("")' < src/mudlet.pro)
-    if [ "${VALID_BUILD}" != '""' ]; then
-      error "mudlet.pro's BUILD variable isn't set to \"\" as it should be in a release build."
-    fi
-  }
-
   function validate_cmake() {
     local VALID_CMAKE VALID_BUILD
     VALID_CMAKE=$(pcregrep --only-matching=1 "set\(APP_VERSION (\d+\.\d+\.\d+)\)$" < CMakeLists.txt)
@@ -46,7 +32,6 @@ else
     fi
   }
 
-  validate_qmake
   validate_cmake
   validate_updater_environment_variable
 fi
