@@ -22,11 +22,10 @@
  ***************************************************************************/
 
 #include "ui_map_label.h"
-#include <QColorDialog>
 #include <QDialog>
-#include <QFileDialog>
-#include <QFontDialog>
 
+class QColorDialog;
+class QFontDialog;
 
 class dlgMapLabel : public QDialog, public Ui::map_label
 {

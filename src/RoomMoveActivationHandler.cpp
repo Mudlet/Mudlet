@@ -19,6 +19,7 @@
 
 #include "RoomMoveActivationHandler.h"
 
+#include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include <QMouseEvent>

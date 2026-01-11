@@ -217,6 +217,7 @@ bool TMxpMudlet::startTagReceived(MxpStartTag* startTag)
 {
     // Get the current MXP mode from the processor
     TMXPMode currentMode = mpHost->mMxpProcessor.mode();
+    const QString tagName = startTag->getName().toUpper();
     
     // In LOCKED mode, no tags are allowed
     if (currentMode == MXP_MODE_LOCKED) {
@@ -224,8 +225,6 @@ bool TMxpMudlet::startTagReceived(MxpStartTag* startTag)
     }
     
     // Check if this tag is allowed in the current mode
-    const QString tagName = startTag->getName().toUpper();
-
     if (!isTagAllowedInMode(tagName, currentMode)) {
         return false;
     }
@@ -289,4 +288,51 @@ void TMxpMudlet::insertText(const QString& text)
 bool TMxpMudlet::shouldLockModeToSecure() const
 {
     return mpHost && mpHost->getForceMXPProcessorOn();
+}
+
+bool TMxpMudlet::createMxpFrame(const QString& name, const QMap<QString, QString>& attributes)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    return mpHost->mMxpFrameManager.createFrame(name, attributes);
+}
+
+bool TMxpMudlet::closeMxpFrame(const QString& name)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    return mpHost->mMxpFrameManager.closeFrame(name);
+}
+
+bool TMxpMudlet::setMxpDestination(const QString& frameName, bool eol, bool eof)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    mpHost->mMxpFrameManager.setDestination(frameName, eol, eof);
+    return true;
+}
+
+void TMxpMudlet::clearMxpDestination()
+{
+    if (mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->buffer.flushPendingDestinationContent();
+        // Reset text formatting to prevent color bleeding from frame content to main console
+        mpHost->mpConsole->buffer.resetCurrentTextFormat();
+        mpHost->mMxpFrameManager.clearDestination();
+    }
+}
+
+QString TMxpMudlet::getMxpCurrentDestination() const
+{
+    if (!mpHost) {
+        return QString();
+    }
+
+    return mpHost->mMxpFrameManager.getCurrentDestination();
 }

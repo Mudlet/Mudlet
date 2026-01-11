@@ -1168,9 +1168,9 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
     mPanMode = false;
     mCameraController.snapTargetToGrid();
     const QVector3D newCenter = mCameraController.getTarget();
-    mMapCenterX = newCenter.x();
-    mMapCenterY = newCenter.y();
-    mMapCenterZ = newCenter.z();
+    mMapCenterX = static_cast<int>(newCenter.x());
+    mMapCenterY = static_cast<int>(newCenter.y());
+    mMapCenterZ = static_cast<int>(newCenter.z());
     QOpenGLWidget::mouseReleaseEvent(event);
     update();
 }

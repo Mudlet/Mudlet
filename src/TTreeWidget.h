@@ -28,6 +28,17 @@
 
 class Host;
 
+enum class TreeType {
+    None,
+    Trigger,
+    Alias,
+    Timer,
+    Script,
+    Key,
+    Action,
+    Var
+};
+
 class TTreeWidget : public QTreeWidget
 {
     Q_OBJECT
@@ -46,18 +57,14 @@ public:
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
-    // TODO: replace these eight methods with a single one to "characterise"
-    // the TTreeWidget instance after creation:
     void setHost(Host* pH);
-    void setIsScriptTree();
-    void setIsTimerTree();
-    void setIsTriggerTree();
-    void setIsAliasTree();
-    void setIsActionTree();
-    void setIsVarTree();
-    void setIsKeyTree();
+    void setTreeType(TreeType type);
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
+
+    void updateTriggerIcon(QTreeWidgetItem* pItem, int triggerID);
+    void updateTriggerIconsRecursively(QTreeWidgetItem* pItem);
+    QTreeWidgetItem* findItemByTriggerID(QTreeWidgetItem* pParent, int triggerID);
 
 signals:
     void itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition);
@@ -78,14 +85,7 @@ private:
     int mOldParentID;  // Deprecated: kept for compatibility, will be removed
     int mOldPosition;  // Deprecated: kept for compatibility, will be removed
     int mChildID;      // Deprecated: kept for compatibility, will be removed
-    // TODO: replace these seven booleans with a single enum:
-    bool mIsTriggerTree;
-    bool mIsAliasTree;
-    bool mIsScriptTree;
-    bool mIsTimerTree;
-    bool mIsKeyTree;
-    bool mIsVarTree;
-    bool mIsActionTree;
+    TreeType mTreeType = TreeType::None;
     // CHECK: Should this actually be a: QPersistentModelIndex ?
     QModelIndex mClickedItem;
 };

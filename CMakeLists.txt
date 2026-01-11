@@ -53,22 +53,6 @@ endif()
 
 enable_testing()
 
-if(POLICY CMP0020)
-  cmake_policy(SET CMP0020 NEW)
-endif()
-
-if(POLICY CMP0057)
-  cmake_policy(SET CMP0057 NEW)
-endif()
-
-if(POLICY CMP0144)
-  cmake_policy(SET CMP0144 NEW)
-endif()
-
-if(POLICY CMP0167)
-  cmake_policy(SET CMP0167 NEW)
-endif()
-
 if(WIN32)
   set(APP_TARGET mudlet.exe)
 elseif(APPLE)
@@ -102,7 +86,7 @@ else()
     message(STATUS "Git SHA1 used: ${GIT_SHA1}")
 endif()
 
-# Set APP_VERSION (update in mudlet.pro as well)
+# Set APP_VERSION
 set(APP_VERSION 4.19.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
@@ -125,6 +109,10 @@ set(LIB_MUDLET_TARGET "mudlet_core")
 # set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+
+# Static analysis support - always included, but only active when configured with
+# -DENABLE_STATIC_ANALYSIS=ON (see cmake/StaticAnalysis.cmake for details)
+include(StaticAnalysis)
 
 include(IncludeOptionalModule)
 

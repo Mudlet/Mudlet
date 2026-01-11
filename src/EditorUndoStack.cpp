@@ -82,7 +82,9 @@ void EditorUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
             for (int id : itemIDs) {
                 if (id <= 0) {
                     allValid = false;
+#if defined(DEBUG_UNDO_REDO)
                     qWarning() << "EditorUndoStack::emitChangesForCommand() - Invalid item ID" << id << "found, skipping emission";
+#endif
                     break;
                 }
             }

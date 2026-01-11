@@ -29,14 +29,6 @@
 #include <QDebug>
 #include <QPointer>
 
-extern "C" {
-#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
-#include <lua5.1/lua.h>
-#else
-#include <lua.h>
-#endif
-}
-
 class Host;
 
 
