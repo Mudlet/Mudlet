@@ -726,18 +726,65 @@ int main(int argc, char* argv[])
                           || qEnvironmentVariableIsSet("GITHUB_ACTIONS")
                           || QCoreApplication::arguments().contains("--profile")
                           || QCoreApplication::arguments().contains("--mirror");
+
+    bool forceAsk = false;
+#if defined(__APPLE__)
+    // On macOS, verify if the CURRENT running instance is the registered handler.
+    // If not (e.g. new version/location), we should prompt the user again.
+    if (!isHeadlessMode) {
+        CFStringRef telnetScheme = CFSTR("telnet");
+        CFURLRef testUrl = CFURLCreateWithString(kCFAllocatorDefault, CFSTR("telnet://test"), nullptr);
+        if (testUrl) {
+            CFURLRef appUrl = nullptr;
+            OSStatus status = LSCopyDefaultApplicationURLForURL(testUrl, kLSRolesAll, &appUrl);
+            if (status == noErr && appUrl) {
+                // Get path of registered handler
+                char pathBuffer[4096];
+                if (CFURLGetFileSystemRepresentation(appUrl, true, (UInt8*)pathBuffer, sizeof(pathBuffer))) {
+                    QString handlerPath = QString::fromUtf8(pathBuffer);
+                    
+                    // CoreFoundation/LaunchServices paths might be just the .app bundle or the executable.
+                    // QCoreApplication::applicationFilePath() returns .../Mudlet.app/Contents/MacOS/Mudlet
+                    // handlerPath typically points to .../Mudlet.app
+                    
+                    QString myPath = QCoreApplication::applicationFilePath();
+                    QFileInfo myInfo(myPath);
+                    QDir myBundleDir = myInfo.absoluteDir(); 
+                    // Go up from Contents/MacOS to root .app if possible
+                    if (myBundleDir.dirName() == qsl("MacOS")) { myBundleDir.cdUp(); }
+                    if (myBundleDir.dirName() == qsl("Contents")) { myBundleDir.cdUp(); }
+                    QString myBundlePath = myBundleDir.absolutePath();
+
+                    // Simplify comparison by checking if one contains the other or identical
+                    // Ideally handlerPath == myBundlePath
+                    if (QFileInfo(handlerPath).canonicalFilePath() != QFileInfo(myBundlePath).canonicalFilePath()) {
+                        qDebug() << "main: macOS telnet handler path mismatch. Registered:" << handlerPath << "Current:" << myBundlePath;
+                        forceAsk = true;
+                    } else {
+                         qDebug() << "main: macOS telnet handler path matches current bundle.";
+                    }
+                }
+                CFRelease(appUrl);
+            } else {
+                // No handler? That's a reason to ask.
+                forceAsk = true;
+            }
+            CFRelease(testUrl);
+        }
+    }
+#endif
     
     if (isHeadlessMode) {
         // In CI/headless mode, skip registration entirely
         shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
         qDebug() << "main: Headless mode detected, skipping telnet handler registration";
-    } else if (appSettings->contains("telnetHandlerAsked")) {
+    } else if (!forceAsk && appSettings->contains("telnetHandlerAsked")) {
         // Already asked previously - use saved preference
         shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
     } else {
         // First time - check if there's an existing handler
         bool existingHandlerFound = false;
-        
+
 #if defined(Q_OS_WIN)
         // Check Windows registry for existing telnet handler
         QSettings checkSettings("HKEY_CLASSES_ROOT\\telnet\\shell\\open\\command", QSettings::NativeFormat);
@@ -757,21 +804,26 @@ int main(int argc, char* argv[])
 #endif
 
 #if defined(__APPLE__)
-        // Check macOS for existing handler
-        CFStringRef telnetScheme = CFSTR("telnet");
-        CFStringRef existingHandler = LSCopyDefaultHandlerForURLScheme(telnetScheme);
-        if (existingHandler) {
-            QString handlerStr = QString::fromCFString(existingHandler);
-            existingHandlerFound = !handlerStr.isEmpty() && !handlerStr.toLower().contains("mudlet");
-            CFRelease(existingHandler);
-            qDebug() << "main: macOS telnet handler check:" << handlerStr << (existingHandlerFound ? "(existing)" : "(mudlet)");
+        // We already did the check above for forceAsk. 
+        // If we are here, either it's first run OR forceAsk is true.
+        // existingHandlerFound determines if we show the "Another application..." prompt.
+        // If forceAsk is true due to path mismatch, we effectively treat it as "existing handler is NOT us".
+        if (forceAsk) {
+             existingHandlerFound = true;
         } else {
-            qDebug() << "main: macOS telnet handler check: none";
+            // Fallback for standard check (e.g. first run)
+            CFStringRef telnetScheme = CFSTR("telnet");
+            CFStringRef existingHandler = LSCopyDefaultHandlerForURLScheme(telnetScheme);
+            if (existingHandler) {
+                QString handlerStr = QString::fromCFString(existingHandler);
+                existingHandlerFound = !handlerStr.isEmpty() && !handlerStr.toLower().contains("mudlet");
+                CFRelease(existingHandler);
+            }
         }
 #endif
 
         if (existingHandlerFound) {
-            // Another handler exists - ask user if they want to override
+            // Another handler exists (or wrong path) - ask user if they want to override
             QMessageBox msgBox;
             msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
             msgBox.setText(QObject::tr("Another application is set to handle telnet:// links."));
