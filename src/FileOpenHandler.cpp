@@ -35,12 +35,26 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
             qWarning() << "FileOpenHandler::eventFilter() - mudlet instance not available, cannot process file open event";
             return false;
         }
+        
+        // Check for Telnet URI
+        const QUrl url = openEvent->url();
+        if (!url.isEmpty() && url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) == 0) {
+            mudlet::self()->handleTelnetUri(url.toString());
+            return true;
+        }
+
+        // Check for File
+        const QString filePath = openEvent->file();
+        if (filePath.isEmpty()) {
+            return false;
+        }
+
         MudletInstanceCoordinator* instanceCoordinator = mudlet::self()->getInstanceCoordinator();
         if (!instanceCoordinator) {
             qWarning() << "FileOpenHandler::eventFilter() - Instance coordinator not available, cannot process file open event";
             return false;
         }
-        const QString absPath = QDir(openEvent->file()).absolutePath();
+        const QString absPath = QDir(filePath).absolutePath();
         instanceCoordinator->queuePackage(absPath);
         instanceCoordinator->installPackagesLocally();
         return true;
