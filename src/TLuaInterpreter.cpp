@@ -7685,7 +7685,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
-    if (key == qsl("muteMediaScript")) {
+    if (key == qsl("muteMediaAPI")) {
         mudlet::self()->slot_muteAPI(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
@@ -7958,7 +7958,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         } },
         { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
         { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
-        { qsl("muteMediaScript"), [&](){ lua_pushboolean(L, mudlet::self()->muteAPI()); } },
+        { qsl("muteMediaAPI"), [&](){ lua_pushboolean(L, mudlet::self()->muteAPI()); } },
         { qsl("muteMediaGame"), [&](){ lua_pushboolean(L, mudlet::self()->muteGame()); } },
         { qsl("ircHostName"), [&](){ lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData()); } },
         { qsl("ircHostPort"), [&](){ lua_pushnumber(L, dlgIRC::readIrcHostPort(&host)); } },
