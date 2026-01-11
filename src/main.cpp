@@ -735,9 +735,8 @@ int main(int argc, char* argv[])
         CFStringRef telnetScheme = CFSTR("telnet");
         CFURLRef testUrl = CFURLCreateWithString(kCFAllocatorDefault, CFSTR("telnet://test"), nullptr);
         if (testUrl) {
-            CFURLRef appUrl = nullptr;
-            OSStatus status = LSCopyDefaultApplicationURLForURL(testUrl, kLSRolesAll, &appUrl);
-            if (status == noErr && appUrl) {
+            CFURLRef appUrl = LSCopyDefaultApplicationURLForURL(testUrl, kLSRolesAll, nullptr);
+            if (appUrl) {
                 // Get path of registered handler
                 char pathBuffer[4096];
                 if (CFURLGetFileSystemRepresentation(appUrl, true, (UInt8*)pathBuffer, sizeof(pathBuffer))) {
