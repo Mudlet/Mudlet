@@ -114,24 +114,13 @@ void CredentialManager::cleanupCurrentOperation()
     cleanupTimeout();
 
     if (mCurrentJob) {
-        // If we're destroying or shutting down, we must detach the job to prevent
-        // ~QObject from deleting it while it might be running in a background thread.
-        // This prevents the "crash on close" (SIGSEGV in libqt6keychain).
-
-        // Detach from parent so we don't auto-delete on destruction
-        mCurrentJob->setParent(nullptr);
-
+        // If we're destroying or shutting down, avoid disconnect calls that might crash
         if (!mShuttingDown && !QCoreApplication::closingDown()) {
-            // Normal operation: clean up properly
+            // Safe to disconnect during normal operation
             mCurrentJob->disconnect();
-            // Let the job delete itself when finished
-            connect(mCurrentJob, &QKeychain::Job::finished, mCurrentJob, &QObject::deleteLater);
-        } else {
-            // Shutting down: Detach and leak.
-            // The OS will reclaim memory on process exit.
-            // Attempts to interact with the job might be unsafe.
         }
 
+        mCurrentJob->deleteLater();
         mCurrentJob = nullptr;
     }
 
