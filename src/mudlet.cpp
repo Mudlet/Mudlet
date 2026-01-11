@@ -181,6 +181,10 @@ mudlet::mudlet()
 
 void mudlet::init()
 {
+#if defined(Q_OS_MACOS)
+    qApp->installEventFilter(this);
+#endif
+
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
 
     QFile gitShaFile(":/app-build.txt");
@@ -8892,4 +8896,19 @@ void mudlet::reattachOrphanedProfiles()
     updateMainWindowTabBarAutoHide();
     refreshTabBar();
     enableToolbarButtons();
+}
+
+bool mudlet::eventFilter(QObject* obj, QEvent* event)
+{
+#if defined(Q_OS_MACOS)
+    if (event->type() == QEvent::FileOpen) {
+        QFileOpenEvent* fileEvent = static_cast<QFileOpenEvent*>(event);
+        const QUrl url = fileEvent->url();
+        if (url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) == 0) {
+            handleTelnetUri(url.toString());
+            return true;
+        }
+    }
+#endif
+    return QMainWindow::eventFilter(obj, event);
 }
