@@ -423,8 +423,12 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
                     }
                 } else {
                     pC->selectSection(begin, length);
-                    pC->setBgColor(r1, g1, b1, 255);
-                    pC->setFgColor(r2, g2, b2);
+                    if (mBgColor != QColorConstants::Transparent) {
+                        pC->setBgColor(r1, g1, b1, 255);
+                    }
+                    if (mFgColor != QColorConstants::Transparent) {
+                        pC->setFgColor(r2, g2, b2);
+                    }
                 }
             }
             pC->reset();
