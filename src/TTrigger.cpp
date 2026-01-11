@@ -572,18 +572,10 @@ inline void TTrigger::filter(std::string& capture, int& posOffset)
     if (capture.empty()) {
         return;
     }
-    const size_t captureLen = capture.size();
-    auto* filterSubject = static_cast<char*>(malloc(captureLen + 2048));
-    if (!filterSubject) {
-        return;
-    }
-    memcpy(filterSubject, capture.c_str(), captureLen);
-    filterSubject[captureLen] = '\0';
-    const QString text = capture.c_str();
+    const QString text = QString::fromStdString(capture);
     for (auto& trigger : *mpMyChildrenList) {
-        trigger->match(filterSubject, text, -1, posOffset);
+        trigger->match(capture.data(), text, -1, posOffset);
     }
-    free(filterSubject);
 }
 
 int TTrigger::getExpiryCount() const
