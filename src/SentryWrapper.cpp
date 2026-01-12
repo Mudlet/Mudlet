@@ -38,6 +38,7 @@
 #include <algorithm>
 
 #include "SentryWrapper.h"
+#include "utils.h"
 
 // Initializes Sentry options for crash/error reporting.
 // Crashes are first stored in a local cache folder, then automatically sent.
@@ -58,11 +59,11 @@ void initSentry()
         }
 
         QString appBuild;
-        QFile gitShaFile(QStringLiteral(":/app-build.txt"));
+        QFile gitShaFile(qsl(":/app-build.txt"));
         if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
             appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
         }
-        const std::string release = QStringLiteral("mudlet@%1%2").arg(APP_VERSION, appBuild).toStdString();
+        const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, appBuild).toStdString();
 
         sentry_options_set_database_path(options, path.toUtf8().constData());
         sentry_options_set_release(options, release.c_str());
