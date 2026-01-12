@@ -74,6 +74,7 @@
 #include <QStyle>
 #include <QTextCursor>
 #include <QShowEvent>
+#include <QRegularExpression>
 #include <QToolButton>
 #include <QToolBar>
 #include <sstream>
@@ -1254,12 +1255,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpAction_searchIncludeVariables->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchIncludeVariables);
 
+    mpAction_searchWholeWord = new QAction(tr("Whole word"), this);
+    mpAction_searchWholeWord->setObjectName(qsl("mpAction_searchWholeWord"));
+    mpAction_searchWholeWord->setToolTip(utils::richText(tr("Only match whole words")));
+    mpAction_searchWholeWord->setCheckable(true);
+    pMenu_searchOptions->insertAction(nullptr, mpAction_searchWholeWord);
+
     // This will set the icon and the Search Options menu items - and needs to
     // be done BEFORE the menu items are connect()ed:
     setSearchOptions(mSearchOptions);
 
     connect(mpAction_searchCaseSensitive, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchCaseSensitivity);
     connect(mpAction_searchIncludeVariables, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchIncludeVariables);
+    connect(mpAction_searchWholeWord, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchWholeWord);
 
 
     mpAction_searchOptions->setMenu(pMenu_searchOptions);
@@ -2421,7 +2429,7 @@ void dlgTriggerEditor::searchVariables(const QString& text)
             }
 
             int startPos = 0;
-            if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            if ((startPos = findSearchMatch(name, text)) != -1) {
                 QStringList sl;
                 sl << tr("Variable") << idString << tr("Name");
                 parent = new QTreeWidgetItem(sl);
@@ -2434,7 +2442,7 @@ void dlgTriggerEditor::searchVariables(const QString& text)
             // the search term matches on the word "function" which will
             // appear in EVERY "value" for a lua function in the variable
             // tree widget...
-            if (value != QLatin1String("function") && (startPos = value.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            if (value != QLatin1String("function") && (startPos = findSearchMatch(value, text)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Variable") << idString << tr("Value") << value;
@@ -2464,7 +2472,7 @@ void dlgTriggerEditor::searchKeys(const QString& text)
         const QString name = key->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Key") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -2475,7 +2483,7 @@ void dlgTriggerEditor::searchKeys(const QString& text)
 
         // The simple "command"
         // TODO: (A) Revise to count multiple instances of search string within command?
-        if ((startPos = key->getCommand().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(key->getCommand(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Key") << name << tr("Command");
@@ -2497,14 +2505,14 @@ void dlgTriggerEditor::searchKeys(const QString& text)
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
             if (textList.at(index).isEmpty() ||
-               !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+               !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -2537,7 +2545,7 @@ void dlgTriggerEditor::searchTimers(const QString& text)
         const QString name = timer->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Timer") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -2548,7 +2556,7 @@ void dlgTriggerEditor::searchTimers(const QString& text)
 
         // The simple "command"
         // TODO: (A) Revise to count multiple instances of search string within command?
-        if (timer->getCommand().contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+        if (containsSearchMatch(timer->getCommand(), text)) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Timer") << name << tr("Command");
@@ -2569,14 +2577,14 @@ void dlgTriggerEditor::searchTimers(const QString& text)
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -2609,7 +2617,7 @@ void dlgTriggerEditor::searchActions(const QString& text)
         const QString name = action->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Button") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -2620,7 +2628,7 @@ void dlgTriggerEditor::searchActions(const QString& text)
 
         // The simple (down) "command"
         // TODO: (A) Revise to count multiple instances of search string within command?
-        if ((startPos = action->getCommandButtonDown().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(action->getCommandButtonDown(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Button") << name << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
@@ -2639,7 +2647,7 @@ void dlgTriggerEditor::searchActions(const QString& text)
         if (action->isPushDownButton()) {
             // We should only search this field if it IS a push-down button
             // as we can not show it if it is not...!
-            if ((startPos = action->getCommandButtonUp().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            if ((startPos = findSearchMatch(action->getCommandButtonUp(), text)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Button") << name << tr("Command {Up}");
@@ -2661,14 +2669,14 @@ void dlgTriggerEditor::searchActions(const QString& text)
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Action") << name << tr("Stylesheet {L: %1 C: %2}").arg(index + 1).arg(startPos + 1) << textList.at(index);
@@ -2691,14 +2699,14 @@ void dlgTriggerEditor::searchActions(const QString& text)
         total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -2731,7 +2739,7 @@ void dlgTriggerEditor::searchScripts(const QString& text)
         const QString name = script->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Script") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -2745,14 +2753,14 @@ void dlgTriggerEditor::searchScripts(const QString& text)
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Script") << name << tr("Event Handler") << textList.at(index);
@@ -2775,14 +2783,14 @@ void dlgTriggerEditor::searchScripts(const QString& text)
         total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             int startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -2815,7 +2823,7 @@ void dlgTriggerEditor::searchAliases(const QString& text)
         const QString name = alias->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Alias") << name << tr("Name");
             parent = new QTreeWidgetItem(sl);
@@ -2824,7 +2832,7 @@ void dlgTriggerEditor::searchAliases(const QString& text)
         }
 
         // The simple "command"
-        if ((startPos = alias->getCommand().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(alias->getCommand(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Alias") << name << tr("Command");
@@ -2841,7 +2849,7 @@ void dlgTriggerEditor::searchAliases(const QString& text)
         }
 
         // There is only ONE entry for "Patterns" for Aliases
-        if ((startPos = alias->getRegexCode().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(alias->getRegexCode(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Alias") << name << tr("Pattern") << alias->getRegexCode();
@@ -2862,14 +2870,14 @@ void dlgTriggerEditor::searchAliases(const QString& text)
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -2902,7 +2910,7 @@ void dlgTriggerEditor::searchTriggers(const QString& text)
         const QString name = trigger->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Trigger") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -2913,7 +2921,7 @@ void dlgTriggerEditor::searchTriggers(const QString& text)
 
         // The simple "command"
         // TODO: (A) Revise to count multiple instances of search string within command?
-        if ((startPos = trigger->getCommand().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(trigger->getCommand(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Trigger") << name << tr("Command");
@@ -2934,14 +2942,14 @@ void dlgTriggerEditor::searchTriggers(const QString& text)
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine this line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Trigger") << name << tr("Pattern {%1}").arg(index + 1) << textList.at(index);
@@ -2964,14 +2972,14 @@ void dlgTriggerEditor::searchTriggers(const QString& text)
         total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QStringList sl;
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::Tabulation), QString(QChar::Space).repeated(2));
@@ -3004,7 +3012,7 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
         const QString name = trigger->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Trigger") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -3015,7 +3023,7 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
 
         // The simple "command"
         // TODO: (A) Revise to count multiple instances of search string within command?
-        if ((startPos = trigger->getCommand().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(trigger->getCommand(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Trigger") << name << tr("Command");
@@ -3035,14 +3043,14 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
         QStringList textList = trigger->getPatternsList();
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Trigger") << name << tr("Pattern {%1}").arg(index + 1) << textList.at(index);
@@ -3064,14 +3072,14 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
         textList = trigger->getScript().split("\n");
         total = textList.count();
         for (int index = 0; index < total; ++index) {
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 // We need to replace tabs in the script with two spaces
                 // otherwise the displayed text A) does not match the main
                 // editor settings and B). often gets shifted out of view by
@@ -3110,7 +3118,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
         const QString name = alias->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Alias") << name << tr("Name");
             parent = new QTreeWidgetItem(sl);
@@ -3119,7 +3127,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
         }
 
         // The simple "command"
-        if ((startPos = alias->getCommand().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(alias->getCommand(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Alias") << name << tr("Command");
@@ -3136,7 +3144,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
         }
 
         // There is only ONE entry for "Patterns" for Aliases
-        if ((startPos = alias->getRegexCode().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(alias->getRegexCode(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Alias") << name << tr("Pattern") << alias->getRegexCode();
@@ -3157,14 +3165,14 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -3199,7 +3207,7 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
         const QString name = script->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Script") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -3213,14 +3221,14 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Script") << name << tr("Event Handler") << textList.at(index);
@@ -3243,14 +3251,14 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
         total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -3285,7 +3293,7 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
         const QString name = action->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Button") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -3296,7 +3304,7 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
 
         // The simple (down) "command"
         // TODO: (A) Revise to count multiple instances of search string within command?
-        if ((startPos = action->getCommandButtonDown().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(action->getCommandButtonDown(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Button") << name << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
@@ -3315,7 +3323,7 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
         if (action->isPushDownButton()) {
             // We should only search this field if it IS a push-down button
             // as we can not show it if it is not...!
-            if ((startPos = action->getCommandButtonUp().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            if ((startPos = findSearchMatch(action->getCommandButtonUp(), text)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Button") << name << tr("Command {Up}");
@@ -3337,14 +3345,14 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Action") << name << tr("Stylesheet {L: %1 C: %2}").arg(index + 1).arg(startPos + 1) << textList.at(index);
@@ -3367,14 +3375,14 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
         total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -3409,7 +3417,7 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
         const QString name = timer->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Timer") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -3420,7 +3428,7 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
 
         // The simple "command"
         // TODO: (A) Revise to count multiple instances of search string within command?
-        if ((startPos = timer->getCommand().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(timer->getCommand(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Timer") << name << tr("Command");
@@ -3441,14 +3449,14 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -3483,7 +3491,7 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
         const QString name = key->getName();
         int startPos = 0;
 
-        if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(name, text)) != -1) {
             QStringList sl;
             sl << tr("Key") << name << tr("Name");
             // This part can never have a parent as it is the first part of this item
@@ -3494,7 +3502,7 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
 
         // The simple "command"
         // TODO: (A) Revise to count multiple instances of search string within command?
-        if ((startPos = key->getCommand().indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+        if ((startPos = findSearchMatch(key->getCommand(), text)) != -1) {
             QStringList sl;
             if (!parent) {
                 sl << tr("Key") << name << tr("Command");
@@ -3515,14 +3523,14 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !containsSearchMatch(textList.at(index), text)) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
 
             int instance = 0;
             startPos = 0;
-            while ((startPos = textList.at(index).indexOf(text, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            while ((startPos = findSearchMatch(textList.at(index), text, startPos)) != -1) {
                 QString whatText(textList.at(index));
                 whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
                 QStringList sl;
@@ -13382,6 +13390,22 @@ void dlgTriggerEditor::createSearchOptionIcon()
     QIcon newIcon;
     switch (mSearchOptions) {
     // Each combination must be handled here
+    case SearchOptionCaseSensitive|SearchOptionIncludeVariables|SearchOptionWholeWord:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+withVariables+wholeWords.png"));
+        break;
+
+    case SearchOptionIncludeVariables|SearchOptionWholeWord:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-withVariables+wholeWords.png"));
+        break;
+
+    case SearchOptionCaseSensitive|SearchOptionWholeWord:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+wholeWords.png"));
+        break;
+
+    case SearchOptionWholeWord:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-wholeWords.png"));
+        break;
+
     case SearchOptionCaseSensitive|SearchOptionIncludeVariables:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+withVariables.png"));
         break;
@@ -13410,6 +13434,33 @@ void dlgTriggerEditor::createSearchOptionIcon()
     mpAction_searchOptions->setIcon(newIcon);
 }
 
+int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& needle, int from) const
+{
+    if (needle.isEmpty()) {
+        return -1;
+    }
+
+    if (mSearchOptions & SearchOptionWholeWord) {
+        QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+        if (!(mSearchOptions & SearchOptionCaseSensitive)) {
+            options |= QRegularExpression::CaseInsensitiveOption;
+        }
+        QRegularExpression regex(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
+        QRegularExpressionMatch match = regex.match(haystack, from);
+        if (match.hasMatch()) {
+            return match.capturedStart();
+        }
+        return -1;
+    }
+
+    return haystack.indexOf(needle, from, (mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive);
+}
+
+bool dlgTriggerEditor::containsSearchMatch(const QString& haystack, const QString& needle) const
+{
+    return findSearchMatch(haystack, needle) != -1;
+}
+
 void dlgTriggerEditor::slot_toggleSearchCaseSensitivity(const bool state)
 {
     if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
@@ -13423,6 +13474,15 @@ void dlgTriggerEditor::slot_toggleSearchIncludeVariables(const bool state)
 {
     if ((mSearchOptions & SearchOptionIncludeVariables) != state) {
         mSearchOptions = (mSearchOptions & ~(SearchOptionIncludeVariables)) | (state ? SearchOptionIncludeVariables : SearchOptionNone);
+        createSearchOptionIcon();
+        mpHost->mSearchOptions = mSearchOptions;
+    }
+}
+
+void dlgTriggerEditor::slot_toggleSearchWholeWord(const bool state)
+{
+    if ((mSearchOptions & SearchOptionWholeWord) != state) {
+        mSearchOptions = (mSearchOptions & ~(SearchOptionWholeWord)) | (state ? SearchOptionWholeWord : SearchOptionNone);
         createSearchOptionIcon();
         mpHost->mSearchOptions = mSearchOptions;
     }
@@ -13719,6 +13779,7 @@ void dlgTriggerEditor::setSearchOptions(const SearchOptions optionsState)
     mSearchOptions = optionsState;
     mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
     mpAction_searchIncludeVariables->setChecked(optionsState & SearchOptionIncludeVariables);
+    mpAction_searchWholeWord->setChecked(optionsState & SearchOptionWholeWord);
     createSearchOptionIcon();
 }
 
