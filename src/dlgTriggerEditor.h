@@ -662,7 +662,7 @@ private:
 
     // We need to keep a record of these buttons as we have to disable them
     // for the "Variables" view:
-    QAction* mpToggleActiveAction = nullptr;
+    QAction* mpAction_toggleActive = nullptr;
     QAction* mpExportAction = nullptr;
     QAction* mpCreateModuleAction = nullptr;
 
