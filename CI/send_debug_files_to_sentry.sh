@@ -100,8 +100,10 @@ for f in "${FILES_TO_UPLOAD[@]}"; do
     ./sentry-cli debug-files upload "$f" --project "mudlet"
 done
 
-if [[ "$OS" == MINGW* ]] || [[ "$OS" == MSYS* ]] || [[ "$OS" == CYGWIN* ]]; then
-    MINGW_BIN="/mingw64/bin"
+# Use MSYSTEM variable for MSYS2 detection (consistent with other CI scripts)
+# and MSYSTEM_PREFIX for the path (supports MINGW64, CLANG64, UCRT64, etc.)
+if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
+    MINGW_BIN="${MSYSTEM_PREFIX}/bin"
     if [[ -d "$MINGW_BIN" ]]; then
         echo ""
         echo "=== Uploading Qt debug files for full stack traces ==="
