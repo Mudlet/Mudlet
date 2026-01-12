@@ -272,7 +272,7 @@ void Updater::setupOnWindows()
 
         auto* downloadFile = feed->getDownloadFile();
         if (!downloadFile) {
-            qWarning() << "Download finished but no download file available";
+            qWarning() << "Download finished but no download file available - feed URL:" << feed->getUrl();
             return;
         }
         const QString fileName = downloadFile->fileName();
@@ -336,7 +336,7 @@ void Updater::setupOnLinux()
 
         auto* downloadFile = feed->getDownloadFile();
         if (!downloadFile) {
-            qWarning() << "Download finished but no download file available";
+            qWarning() << "Download finished but no download file available - feed URL:" << feed->getUrl();
             return;
         }
         const QString fileName = downloadFile->fileName();
