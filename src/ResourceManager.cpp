@@ -20,9 +20,7 @@
 #include "ResourceManager.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QOpenGLContext>
-#include "post_guard.h"
 
 ResourceManager::ResourceManager()
 {
@@ -38,14 +36,14 @@ void ResourceManager::initialize()
     if (mInitialized) {
         return;
     }
-    
+
     initializeOpenGLFunctions();
-    
+
     // Always enable error checking now that we have debug context
     mErrorCheckingEnabled = true;
 
     mInitialized = true;
-    qDebug() << "ResourceManager: Initialized with error checking" 
+    qDebug() << "ResourceManager: Initialized with error checking"
              << (mErrorCheckingEnabled ? "enabled" : "disabled");
 }
 
@@ -62,7 +60,7 @@ bool ResourceManager::checkGLError(const QString& operation) const
     if (!mErrorCheckingEnabled || !mInitialized) {
         return true;
     }
-    
+
     // Need to cast away const for OpenGL calls
     ResourceManager* nonConstThis = const_cast<ResourceManager*>(this);
     GLenum error = nonConstThis->glGetError();
@@ -88,11 +86,11 @@ bool ResourceManager::checkGLError(const QString& operation) const
                 errorString = "UNKNOWN_GL_ERROR";
                 break;
         }
-        
+
         qWarning() << "OpenGL Error in" << operation << ":" << errorString << "(" << error << ")";
         return false;
     }
-    
+
     return true;
 }
 
@@ -103,12 +101,12 @@ bool ResourceManager::isContextValid() const
         qWarning() << "ResourceManager: No current OpenGL context";
         return false;
     }
-    
+
     if (!context->isValid()) {
         qWarning() << "ResourceManager: Current OpenGL context is invalid";
         return false;
     }
-    
+
     return true;
 }
 
@@ -120,7 +118,7 @@ void ResourceManager::printStats() const
     qDebug() << "  Shaders created:" << mStats.totalShadersCreated;
     qDebug() << "  Total draw calls:" << mStats.totalDrawCalls;
     qDebug() << "  Total vertices rendered:" << mStats.totalVerticesRendered;
-    
+
     if (mStats.totalDrawCalls > 0) {
         double avgVerticesPerDraw = static_cast<double>(mStats.totalVerticesRendered) / mStats.totalDrawCalls;
         qDebug() << "  Average vertices per draw call:" << avgVerticesPerDraw;

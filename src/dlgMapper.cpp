@@ -28,15 +28,14 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mapInfoContributorManager.h"
+#include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
 #include <QProgressDialog>
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -49,7 +48,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 #if defined(INCLUDE_3DMAPPER)
     QSurfaceFormat fmt;
-#ifndef NDEBUG    
+#ifndef NDEBUG
     fmt.setOption(QSurfaceFormat::DebugContext);
 #endif
     fmt.setSamples(10);
@@ -77,42 +76,25 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     slot_toggleRoundRooms(mpHost->mBubbleMode);
     widget_3DControls->setVisible(false);
-    widget_2DControls->setVisible(true);
-    spinBox_roomSize->setValue(mpHost->mRoomSize * 10);
-    spinBox_exitSize->setValue(mpHost->mLineSize);
-
-    checkBox_showRoomIds->setChecked(mpHost->mShowRoomID);
+    widget_playerIconControls->setVisible(false);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
-    checkBox_showRoomNames->setVisible(mpMap->getRoomNamesPresent());
-    checkBox_showRoomNames->setChecked(mpMap->getRoomNamesShown());
-
     widget_panel->setVisible(mpHost->mShowPanel);
-    connect(checkBox_roundRooms, &QAbstractButton::clicked, this, &dlgMapper::slot_toggleRoundRooms);
     connect(toolButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
     connect(toolButton_shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
-    connect(toolButton_shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftLeft);
-    connect(toolButton_shiftRight, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftRight);
-    connect(toolButton_shiftUp, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftUp);
-    connect(toolButton_shiftDown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftDown);
-    connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_exitSize);
-    connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
+    connect(toolButton_mapperMenu, &QToolButton::clicked, this, &dlgMapper::slot_setupMapperMenu);
+    connect(toolButton_saveWarning, &QToolButton::clicked, this, &dlgMapper::slot_showSaveWarningMenu);
+    connect(mpMap, &TMap::signal_saveErrorChanged, this, &dlgMapper::slot_saveErrorChanged);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
     connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 #if defined(INCLUDE_3DMAPPER)
-    connect(pushButton_3D, &QAbstractButton::clicked, this, &dlgMapper::slot_toggle3DView);
+    mIs3DMode = mpHost->mShow3DView;
     if (mpHost->mShow3DView) {
-        slot_toggle3DView(true);
+        // Defer 3D view initialization until widget is fully constructed and added to parent
+        QTimer::singleShot(0ms, this, [this]() {
+            slot_toggle3DView(true);
+        });
     }
-#else
-    pushButton_3D->hide();
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(checkBox_showRoomIds, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
-    connect(checkBox_showRoomNames, &QCheckBox::checkStateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
-#else
-    connect(checkBox_showRoomIds, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
-    connect(checkBox_showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
 #endif
 
     // Explicitly set the font otherwise it changes between the Application and
@@ -126,10 +108,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     // font:
     setFont(qApp->font());
     mpMap->restore16ColorSet();
-    auto menu = new QMenu(this);
-    pushButton_info->setMenu(menu);
-    
-    connect(pushButton_exportArea, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_exportAreaToImage);
 
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
@@ -246,7 +224,7 @@ void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
-    pushButton_3D->setDown(is3DMode);
+    mIs3DMode = is3DMode;
     if (glWidget) {
         glWidget->update();
     } else {
@@ -268,10 +246,6 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
         connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
         connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
-        connect(toolButton_shiftLeft, SIGNAL(clicked()), glWidget, SLOT(slot_shiftLeft()));
-        connect(toolButton_shiftRight, SIGNAL(clicked()), glWidget, SLOT(slot_shiftRight()));
-        connect(toolButton_shiftUp, SIGNAL(clicked()), glWidget, SLOT(slot_shiftUp()));
-        connect(toolButton_shiftDown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftDown()));
         connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
         connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
         connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
@@ -279,6 +253,25 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
         connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
         connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
+        
+        // Player icon adjustment controls
+        connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
+        connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
+        connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
+        connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
+        connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
+        connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
+        
+        // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
+        if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+            connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
+                slider_playerIconHeight->setValue(height);
+                slider_playerIconRotX->setValue(rotX);
+                slider_playerIconRotY->setValue(rotY);
+                slider_playerIconRotZ->setValue(rotZ);
+                slider_playerIconScale->setValue(scale);
+            });
+        }
     }
 
 
@@ -286,12 +279,18 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     glWidget->setVisible(is3DMode);
     if (glWidget->isVisible()) {
         widget_3DControls->setVisible(true);
-        widget_2DControls->setVisible(false);
+        widget_playerIconControls->setVisible(mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+                                               && true
+#else
+                                               && false
+#endif
+                                               );
     } else {
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
             widget_3DControls->setVisible(false);
-            widget_2DControls->setVisible(true);
+            widget_playerIconControls->setVisible(false);
         });
     }
     mpHost->mShow3DView = is3DMode;
@@ -299,7 +298,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);
     widget_3DControls->setVisible(false);
-    widget_2DControls->setVisible(true);
+    widget_playerIconControls->setVisible(false);
 #endif
 }
 
@@ -316,29 +315,21 @@ void dlgMapper::slot_exitSize(int size)
     mp2dMap->update();
 }
 
-void dlgMapper::slot_setRoomSize(int size)
-{
-    dlgMapper::slot_roomSize(size);
-    spinBox_roomSize->setValue(size);
-}
-
-void dlgMapper::slot_setExitSize(int size)
-{
-    dlgMapper::slot_exitSize(size);
-    spinBox_exitSize->setValue(size);
-}
 
 void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
 {
-    checkBox_showRoomIds->setChecked(showRoomIds);
     dlgMapper::slot_toggleShowRoomIDs(showRoomIds ? Qt::Checked : Qt::Unchecked);
+}
+
+void dlgMapper::slot_setShowGrid(bool showGrid)
+{
+    mp2dMap->mShowGrid = showGrid;
+    mp2dMap->mpHost->mMapperShowGrid = showGrid;
+    mp2dMap->update();
 }
 
 void dlgMapper::slot_toggleRoundRooms(const bool state)
 {
-    if (checkBox_roundRooms->isChecked() != state) {
-        checkBox_roundRooms->setChecked(state);
-    }
     if (mp2dMap->mpHost->mBubbleMode != state) {
         mp2dMap->mpHost->mBubbleMode = state;
     }
@@ -382,30 +373,7 @@ void dlgMapper::slot_switchArea(const int index)
 
 void dlgMapper::slot_updateInfoContributors()
 {
-    pushButton_info->menu()->clear();
-    //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
-    auto* clearAction = new QAction(tr("None"), pushButton_info);
-    pushButton_info->menu()->addAction(clearAction);
-    connect(clearAction, &QAction::triggered, this, [=, this]() {
-        for (auto action : pushButton_info->menu()->actions()) {
-            action->setChecked(false);
-        }
-    });
-
-    for (const auto& name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
-        auto* action = new QAction(name, pushButton_info);
-        action->setCheckable(true);
-        action->setChecked(mpHost->mMapInfoContributors.contains(name));
-        connect(action, &QAction::toggled, this, [=, this](bool isToggled) {
-            if (isToggled) {
-                mpHost->mMapInfoContributors.insert(name);
-            } else {
-                mpHost->mMapInfoContributors.remove(name);
-            }
-            mp2dMap->update();
-        });
-        pushButton_info->menu()->addAction(action);
-    }
+    updateInfoMenu();
     mp2dMap->update();
 }
 
@@ -432,21 +400,21 @@ void dlgMapper::recreate3DWidget()
     if (!glWidget) {
         return;
     }
-    
+
     if (GLWidgetFactory::isCorrectWidgetType(glWidget, mpHost.data())) {
         return;
     }
-    
+
     bool was3DMode = glWidget->isVisible();
-    
+
     glWidget->setParent(nullptr);
     glWidget->deleteLater();
     glWidget = nullptr;
     mpMap->mpM = nullptr;
-    
+
     glWidget = GLWidgetFactory::createGLWidget(mpMap, mpHost.data(), this);
     glWidget->setObjectName("glWidget");
-    
+
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     sizePolicy.setHorizontalStretch(0);
     sizePolicy.setVerticalStretch(0);
@@ -454,7 +422,7 @@ void dlgMapper::recreate3DWidget()
     glWidget->setSizePolicy(sizePolicy);
     verticalLayout_mapper->insertWidget(0, glWidget);
     mpMap->mpM = glWidget;
-    
+
     connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
     connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
     connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
@@ -463,10 +431,6 @@ void dlgMapper::recreate3DWidget()
     connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
     connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
     connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
-    connect(toolButton_shiftLeft, SIGNAL(clicked()), glWidget, SLOT(slot_shiftLeft()));
-    connect(toolButton_shiftRight, SIGNAL(clicked()), glWidget, SLOT(slot_shiftRight()));
-    connect(toolButton_shiftUp, SIGNAL(clicked()), glWidget, SLOT(slot_shiftUp()));
-    connect(toolButton_shiftDown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftDown()));
     connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
     connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
     connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
@@ -474,7 +438,26 @@ void dlgMapper::recreate3DWidget()
     connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
     connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
     connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
-    
+
+    // Player icon adjustment controls
+    connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
+    connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
+    connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
+    connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
+    connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
+    connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
+
+    // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
+    if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+        connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
+            slider_playerIconHeight->setValue(height);
+            slider_playerIconRotX->setValue(rotX);
+            slider_playerIconRotY->setValue(rotY);
+            slider_playerIconRotZ->setValue(rotZ);
+            slider_playerIconScale->setValue(scale);
+        });
+    }
+
     glWidget->setVisible(was3DMode);
 #endif
 }
@@ -564,4 +547,141 @@ int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffs
                     infoText);
     painter.restore();
     return mapInfoRect.height();
+}
+
+void dlgMapper::slot_setupMapperMenu()
+{
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto* upperLowerLevelsAction = new QAction(tr("Draw rooms on upper and lower levels"), this);
+    upperLowerLevelsAction->setCheckable(true);
+    upperLowerLevelsAction->setChecked(mudlet::self()->mDrawUpperLowerLevels);
+    upperLowerLevelsAction->setToolTip(tr("When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context."));
+
+    connect(upperLowerLevelsAction, &QAction::toggled, this, &dlgMapper::slot_toggleUpperLowerLevels);
+    menu->addAction(upperLowerLevelsAction);
+
+    auto* roundRoomsAction = new QAction(tr("Round rooms"), this);
+    roundRoomsAction->setCheckable(true);
+    roundRoomsAction->setChecked(mpHost->mBubbleMode);
+    roundRoomsAction->setToolTip(tr("When enabled, rooms will be drawn with round corners instead of square corners."));
+
+    connect(roundRoomsAction, &QAction::toggled, this, &dlgMapper::slot_toggleRoundRooms);
+    menu->addAction(roundRoomsAction);
+
+    auto* showRoomIdsAction = new QAction(tr("Show room IDs"), this);
+    showRoomIdsAction->setCheckable(true);
+    showRoomIdsAction->setChecked(mpHost->mShowRoomID);
+    showRoomIdsAction->setToolTip(tr("When enabled, room IDs will be displayed on the map."));
+
+    connect(showRoomIdsAction, &QAction::toggled, this, &dlgMapper::slot_toggleShowRoomIDsFromMenu);
+    menu->addAction(showRoomIdsAction);
+
+    auto* showMapGrid = new QAction(tr("Show map grid"), this);
+    showMapGrid->setCheckable(true);
+    showMapGrid->setChecked(mpHost->mMapperShowGrid);
+    showMapGrid->setToolTip(tr("When enabled, grid will be shown on mapper."));
+
+    connect(showMapGrid, &QAction::toggled, this, &dlgMapper::slot_setShowGrid);
+    menu->addAction(showMapGrid);
+
+#if defined(INCLUDE_3DMAPPER)
+    auto* show3DMapAction = new QAction(tr("Show map in 3D"), this);
+    show3DMapAction->setCheckable(true);
+    show3DMapAction->setChecked(mIs3DMode);
+    show3DMapAction->setToolTip(tr("When enabled, the map will be displayed in 3D mode."));
+    connect(show3DMapAction, &QAction::toggled, this, &dlgMapper::slot_toggle3DView);
+    menu->addAction(show3DMapAction);
+#endif
+
+    // Add separator and Info submenu
+    menu->addSeparator();
+    mpInfoMenu = menu->addMenu(tr("Info overlays"));
+    updateInfoMenu();
+
+    menu->exec(toolButton_mapperMenu->mapToGlobal(toolButton_mapperMenu->rect().bottomLeft()));
+}
+
+void dlgMapper::slot_toggleUpperLowerLevels(bool enabled)
+{
+    mudlet::self()->mDrawUpperLowerLevels = enabled;
+    if (mp2dMap) {
+        mp2dMap->update();
+    }
+}
+
+void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
+{
+    mp2dMap->mShowRoomID = enabled;
+    mp2dMap->mpHost->mShowRoomID = enabled;
+    mp2dMap->update();
+}
+
+void dlgMapper::updateInfoMenu()
+{
+    if (!mpInfoMenu) {
+        return;
+    }
+
+    mpInfoMenu->clear();
+
+    //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
+    auto* clearAction = new QAction(tr("None"), mpInfoMenu);
+    mpInfoMenu->addAction(clearAction);
+    connect(clearAction, &QAction::triggered, this, [=, this]() {
+        for (auto action : mpInfoMenu->actions()) {
+            action->setChecked(false);
+        }
+    });
+
+    for (const auto& name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
+        auto* action = new QAction(name, mpInfoMenu);
+        action->setCheckable(true);
+        action->setChecked(mpHost->mMapInfoContributors.contains(name));
+        connect(action, &QAction::toggled, this, [=, this](bool isToggled) {
+            if (isToggled) {
+                mpHost->mMapInfoContributors.insert(name);
+            } else {
+                mpHost->mMapInfoContributors.remove(name);
+            }
+            mp2dMap->update();
+        });
+        mpInfoMenu->addAction(action);
+    }
+}
+
+void dlgMapper::slot_saveErrorChanged(bool hasError)
+{
+    toolButton_saveWarning->setVisible(hasError);
+}
+
+void dlgMapper::slot_showSaveWarningMenu()
+{
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto* infoAction = new QAction(tr("Map autosave failed"), this);
+    infoAction->setEnabled(false);
+    menu->addAction(infoAction);
+
+    menu->addSeparator();
+
+    auto* retryAction = new QAction(tr("Retry save"), this);
+    connect(retryAction, &QAction::triggered, this, [this]() {
+        if (mpHost && mpHost->mpConsole) {
+            if (mpHost->mpConsole->saveMap(QString())) {
+                mpMap->setSaveError(false);
+            }
+        }
+    });
+    menu->addAction(retryAction);
+
+    auto* dismissAction = new QAction(tr("Dismiss warning"), this);
+    connect(dismissAction, &QAction::triggered, this, [this]() {
+        mpMap->setSaveError(false);
+    });
+    menu->addAction(dismissAction);
+
+    menu->exec(toolButton_saveWarning->mapToGlobal(toolButton_saveWarning->rect().bottomLeft()));
 }

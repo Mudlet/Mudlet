@@ -380,7 +380,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_dependencies" stretch="1,0,1">
+             <layout class="QHBoxLayout" name="horizontalLayout_dependencies" stretch="1,0,0,1">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -404,12 +404,55 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
                </widget>
               </item>
               <item alignment="Qt::AlignmentFlag::AlignHCenter">
-               <widget class="QPushButton" name="addDependency">
+               <widget class="QPushButton" name="pushButton_addDependency">
                 <property name="enabled">
                  <bool>true</bool>
                 </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>34</width>
+                  <height>34</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>34</width>
+                  <height>34</height>
+                 </size>
+                </property>
                 <property name="text">
                  <string notr="true">+</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_removeDependency">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>34</width>
+                  <height>34</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>34</width>
+                  <height>34</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string notr="true">-</string>
                 </property>
                </widget>
               </item>

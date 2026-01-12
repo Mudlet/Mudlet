@@ -27,9 +27,26 @@
 #include "mudlet.h"
 #include "TTimer.h"
 
+#include <functional>
+
 TimerUnit::~TimerUnit()
 {
-    for (auto&& timer : std::as_const(mQTimerSet)) {
+    // Set mpHost to null on all timers (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto timer : mTimerRootNodeList) {
+        timer->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TTimer*)> nullifyChildren = [&nullifyChildren](TTimer* t) {
+            for (auto child : *t->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(timer);
+    }
+    // Delete all TTimer objects - each TTimer destructor will handle its own QTimer
+    for (auto timer : mTimerRootNodeList) {
         delete timer;
     }
 }
@@ -142,6 +159,16 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
     }
 
     pChild->enableTimer(childID);
+}
+
+void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentTimer(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentTimer(childID, oldParentID, newParentID, 0, position);
+    }
 }
 
 void TimerUnit::removeAllTempTimers()

@@ -24,6 +24,7 @@
 #include "dlgPackageExporter.h"
 #include "ui_dlgPackageExporter.h"
 
+#include "Host.h"
 #include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -31,8 +32,8 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "XMLexport.h"
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QDesktopServices>
 #include <QDirIterator>
@@ -41,7 +42,6 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QTimer>
-#include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -108,7 +108,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
-    connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
+    connect(ui->pushButton_addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
+    connect(ui->pushButton_removeDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_removeDependency);
     connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_importIcon);
     connect(ui->pushButton_removeIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_removeIcon);
     connect(mCancelButton, &QPushButton::clicked, this, &dlgPackageExporter::slot_cancelExport);
@@ -122,14 +123,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     te_parent->mPlainDescription = ui->textEdit_description->toPlainText();
 
     ui->packageList->addItem(tr("update installed package"));
-    ui->DependencyList->addItem(tr("add dependencies"));
-    ui->packageList->addItems(mpHost->mInstalledPackages);
-    ui->DependencyList->addItems(mpHost->mInstalledPackages);
-    auto modules = mpHost->mInstalledModules;
-    for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
-        ui->packageList->addItem(moduleName);
-        ui->DependencyList->addItem(moduleName);
-    }
+
+    populateDependencies();
 
     listTriggers();
     listAliases();
@@ -431,6 +426,19 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
     return {true, QString()};
 }
 
+void dlgPackageExporter::populateDependencies()
+{
+    ui->DependencyList->clear();
+    ui->DependencyList->addItem(tr("add dependencies"));
+    ui->packageList->addItems(mpHost->mInstalledPackages);
+    ui->DependencyList->addItems(mpHost->mInstalledPackages);
+    auto modules = mpHost->mInstalledModules;
+    for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
+        ui->packageList->addItem(moduleName);
+        ui->DependencyList->addItem(moduleName);
+    }
+}
+
 void dlgPackageExporter::slot_addDependency()
 {
     auto text = ui->DependencyList->currentText();
@@ -527,7 +535,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         ui->pushButton_removeIcon->show();
     } else {
         ui->Icon->hide();
-        ui->pushButton_removeIcon->show();
+        ui->pushButton_removeIcon->hide();
     }
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -539,12 +547,12 @@ void dlgPackageExporter::slot_packageChanged(int index)
     ui->textEdit_description->setMarkdown(description);
     const QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
+    populateDependencies(); // available dependencies, as opposed to required ones which is next
     const QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
     ui->comboBox_dependencies->clear();
     if (!dependencies.at(0).isEmpty()) {
         ui->comboBox_dependencies->addItems(dependencies);
     }
-
     //get files and folders from package
     ui->listWidget_addedFiles->clear();
     const QFileInfo info(qsl("%1/%2/").arg(packagePath, packageName));
@@ -623,6 +631,8 @@ void dlgPackageExporter::slot_importIcon()
     }
     lastDir = QFileInfo(fileName).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
+    mPackagePath = lastDir;
+    emit signal_exportLocationChanged(mPackagePath);
     mPackageIconPath = fileName;
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -1222,7 +1232,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         }
     }
 
-    if (!writer.exportPackage(mXmlPathFileName, false)) {
+    if (!writer.exportPackage(mXmlPathFileName, false, true)) {
         //: This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened
         displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".")
                              .arg(mXmlPathFileName.toHtmlEscaped()), false);
@@ -1451,13 +1461,13 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
         } else {
             return {false,
-                    tr("Required file \"%1\" was not found in the staging area. "
-                       "This area contains the Mudlet items chosen for the package, "
-                       "which you selected to be included in the package file. "
-                       "This suggests there may be a problem with that directory: "
-                       "\"%2\" - "
-                       "Do you have the necessary permissions and free disk-space?")
-                            .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
+                        tr("Required file \"%1\" was not found in the staging area. "
+                           "This area contains the Mudlet items chosen for the package, "
+                           "which you selected to be included in the package file. "
+                           "This suggests there may be a problem with that directory: "
+                           "\"%2\" - "
+                           "Do you have the necessary permissions and free disk-space?")
+                                .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
         }
     }
 
@@ -1541,6 +1551,8 @@ void dlgPackageExporter::slot_addFiles()
 
         lastDir = fDialog->directory().absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
+        mPackagePath = lastDir;
+        emit signal_exportLocationChanged(mPackagePath);
     }
     fDialog->deleteLater();
 }
@@ -1556,8 +1568,8 @@ void dlgPackageExporter::slot_openPackageLocation()
     if (mPackagePath.isEmpty()) {
         return;
     }
-    lastDir = QFileInfo(mPackagePath).absolutePath();
-    settings.setValue("lastFileDialogLocation", lastDir);
+
+    settings.setValue("lastFileDialogLocation", mPackagePath);
     emit signal_exportLocationChanged(mPackagePath);
 }
 
@@ -1897,8 +1909,8 @@ void dlgPackageExporter::listTimers()
 void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
-        // Big RED error message
-        ui->infoLabel->setText(qsl("<p><font color='red'><b><big>%1</big><b></font></p>").arg(html));
+        // Light coral red error message - #FF6B6B has good contrast on both light and dark backgrounds
+        ui->infoLabel->setText(qsl("<p><font color='#FF6B6B'><b><big>%1</big><b></font></p>").arg(html));
         return;
     }
 

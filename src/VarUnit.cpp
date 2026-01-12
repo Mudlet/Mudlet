@@ -23,16 +23,22 @@
 #include "VarUnit.h"
 
 #include "TVar.h"
+#include "utils.h"
 
-#include "pre_guard.h"
-#include <QTreeWidgetItem>
 #include <QDebug>
-#include "post_guard.h"
+#include <QLocale>
+#include <QTreeWidgetItem>
 
 
 VarUnit::VarUnit()
-: base()
+: base(nullptr)
 {
+}
+
+VarUnit::~VarUnit()
+{
+    // Delete the base TVar and all its children (recursively via TVar destructor)
+    delete base;
 }
 
 bool VarUnit::isHidden(TVar* var)
@@ -72,7 +78,60 @@ bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
 
 bool VarUnit::shouldSave(TVar* var)
 {
-    return !(var->getValueType() == 6 || var->isReference());
+    if (var->getValueType() == 6 || var->isReference()) {
+        return false;
+    }
+
+    // Check if table is too large (max 10,000 items)
+    if (var->getValueType() == LUA_TTABLE) {
+        const int itemCount = countTableItems(var);
+        if (itemCount > 10000) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+int VarUnit::countTableItems(TVar* var)
+{
+    int count = 0;
+    const QList<TVar*> children = var->getChildren(false);
+
+    for (TVar* child : children) {
+        count++;
+        // Recursively count items in nested tables
+        if (child->getValueType() == LUA_TTABLE) {
+            count += countTableItems(child);
+        }
+    }
+
+    return count;
+}
+
+QString VarUnit::getUnsaveableReason(TVar* var)
+{
+    if (var->getValueType() == LUA_TFUNCTION) {
+        //: Tooltip explaining why a Lua function cannot be saved
+        return tr("Lua functions cannot be saved.");
+    }
+
+    if (var->isReference()) {
+        //: Tooltip explaining why a referenced variable cannot be saved
+        return tr("Referenced variables cannot be saved.");
+    }
+
+    if (var->getValueType() == LUA_TTABLE) {
+        const int itemCount = countTableItems(var);
+        if (itemCount > 10000) {
+            //: Tooltip explaining why a large table cannot be saved, recommending alternative methods
+            return tr("This table has %1 items, exceeding the 10,000 item limit for saved variables. "
+                      "Use <b>table.save()</b> and <b>table.load()</b> instead for better performance with large tables.")
+                .arg(QLocale::system().toString(itemCount));
+        }
+    }
+
+    return QString();
 }
 
 void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
@@ -92,10 +151,11 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             if (isSaved(child)) {
                 pItem->setCheckState(0, Qt::Checked);
             }
-            if (!shouldSave(child)) { // 6 is lua_tfunction, parent must be saveable as well if not global
+            if (!shouldSave(child)) {
                 pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
                 pItem->setForeground(0, QBrush(QColor("grey")));
-                pItem->setToolTip(0, QString());
+                const QString reason = getUnsaveableReason(child);
+                pItem->setToolTip(0, reason.isEmpty() ? QString() : utils::richText(reason));
             }
             pItem->setData(0, Qt::UserRole, child->getValueType());
             QIcon icon;
@@ -269,7 +329,9 @@ void VarUnit::setBase(TVar* pVariable)
 
 void VarUnit::clear()
 {
-    // delete base;
+    // Delete the base TVar and all its children (recursively via TVar destructor)
+    delete base;
+    base = nullptr;
     tVars.clear();
     wVars.clear();
     variableSet.clear();

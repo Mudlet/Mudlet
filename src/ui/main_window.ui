@@ -99,7 +99,6 @@
     <addaction name="dactionShowMap"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
-    <addaction name="dactionIRC"/>
     <addaction name="dactionPackageManager"/>
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
@@ -275,14 +274,6 @@
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::AboutRole</enum>
-   </property>
-  </action>
-  <action name="dactionIRC">
-   <property name="text">
-    <string>IRC</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionVideo">

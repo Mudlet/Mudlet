@@ -25,10 +25,8 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QFileDialog>
 #include <QMessageBox>
-#include "post_guard.h"
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
@@ -240,6 +238,9 @@ void dlgModuleManager::slot_helpModule()
         if (!mudlet::self()->openWebPage(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
             //failed first open, try for a module related path
             QTableWidgetItem* item = moduleTable->item(cRow, 3);
+            if (!item) {
+                return;
+            }
             const QString itemPath = item->text();
             QStringList path = itemPath.split(QDir::separator());
             path.pop_back();

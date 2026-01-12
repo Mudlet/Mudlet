@@ -30,10 +30,8 @@
 #include "TConsole.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QBuffer>
 #include <QElapsedTimer>
-#include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without
@@ -58,11 +56,13 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 
 TArea::~TArea()
 {
-    if (mpRoomDB) {
-        mpRoomDB->removeArea(this);
-    } else {
+    if (!mpRoomDB) {
         qDebug() << "ERROR: In TArea::~TArea(), instance has no mpRoomDB";
+        return;
     }
+    if (!mpRoomDB->mBulkDeletionMode) {
+        mpRoomDB->removeArea(this);
+     }
 }
 
 int TArea::getAreaID()
@@ -916,7 +916,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 {
     QBuffer imageInputBuffer;
 
-    imageInputBuffer.open(QIODevice::WriteOnly);
+    if (!imageInputBuffer.open(QIODevice::WriteOnly)) {
+        qWarning() << "TArea::convertImageToBase64Data() ERROR: failed to open image input buffer for writing";
+        return {};
+    }
     // Go for maximum compression - for the smallest amount of data, the second
     // argument is a const char[] so does not require a QString wrapper:
     pixmap.save(&imageInputBuffer, "PNG", 0);
@@ -924,7 +927,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
     QByteArray encodedImageArray{imageInputBuffer.buffer().toBase64()};
     imageInputBuffer.close();
     imageOutputBuffer.setBuffer(&encodedImageArray);
-    imageOutputBuffer.open(QIODevice::ReadOnly);
+    if (!imageOutputBuffer.open(QIODevice::ReadOnly)) {
+        qWarning() << "TArea::convertImageToBase64Data() ERROR: failed to open image output buffer for reading";
+        return {};
+    }
 
     QList<QByteArray> pixmapArray;
     // Extract the image into lines of bytes (unsigned chars):
@@ -945,7 +951,9 @@ QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) co
 {
     const QByteArray decodedImageArray = QByteArray::fromBase64(pixmapArray.join());
     QPixmap pixmap;
-    pixmap.loadFromData(decodedImageArray);
+    if (!pixmap.loadFromData(decodedImageArray)) {
+        qWarning() << "TArea::convertBase64DataToImage() ERROR - failed to load pixmap from base64 data, data size:" << decodedImageArray.size() << "bytes";
+    }
 
     return pixmap;
 }
