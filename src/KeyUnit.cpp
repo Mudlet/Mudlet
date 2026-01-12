@@ -93,6 +93,10 @@ void KeyUnit::uninstall(const QString& packageName)
 bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers modifiers)
 {
     bool isMatchFound = false;
+
+    // Set processing flag to prevent re-entrant cleanup during key execution
+    mIsProcessing = true;
+
     for (auto keyObject : mKeyRootNodeList) {
         // Skip null or invalid key objects during profile closing/destruction
         // Skip null or invalid key objects during profile closing/destruction
@@ -102,11 +106,18 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 
         if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
+                // Clear processing flag and perform any deferred cleanup before returning
+                mIsProcessing = false;
+                doCleanup();
                 return true;
             }
             isMatchFound = true;
         }
     }
+
+    // Clear processing flag and perform any deferred cleanup
+    mIsProcessing = false;
+    doCleanup();
 
     return isMatchFound;
 }
@@ -274,6 +285,16 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
     }
 }
 
+void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentKey(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentKey(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
     if (!pT) {
@@ -428,20 +449,23 @@ std::tuple<QString, int, int, int> KeyUnit::assembleReport()
 
 void KeyUnit::markCleanup(TKey* pT)
 {
-    for (auto key : mCleanupList) {
-        if (key == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }
 
 void KeyUnit::doCleanup()
 {
-    for (auto key : mCleanupList) {
-        delete key;
+    // Skip cleanup if we're currently processing keys to prevent iterator invalidation
+    // Cleanup will be performed when processDataStream() completes
+    if (mIsProcessing) {
+        return;
     }
-    mCleanupList.clear();
+
+    QMutableSetIterator<TKey*> itKey(mCleanupSet);
+    while (itKey.hasNext()) {
+        auto pKey = itKey.next();
+        itKey.remove();
+        delete pKey;
+    }
 }
 
 void KeyUnit::setupKeyNames()

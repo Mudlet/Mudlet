@@ -33,5 +33,4 @@ public:
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
-#include "TMxpTagHandler.h"
 #endif //MUDLET_TMXPVERSIONTAGHANDLER_H

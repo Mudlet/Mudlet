@@ -28,18 +28,17 @@
 #include "dlgMapLabel.h"
 #include "dlgRoomProperties.h"
 
-#include "pre_guard.h"
 #include <QCache>
 #include <QColor>
 #include <QFont>
 #include <QFutureWatcher>
 #include <QPixmap>
 #include <QPointer>
+#include <QPointF>
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
 #include <QtConcurrent>
-#include "post_guard.h"
 
 #include <QList>
 #include <memory>
@@ -54,6 +53,8 @@ class CustomLineDrawContextMenuHandler;
 class CustomLineDrawHandler;
 class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
+class CustomLineSession;
+class MiddleMousePanHandler;
 class RoomMoveActivationHandler;
 class RoomMoveDragHandler;
 class RoomContextMenuHandler;
@@ -75,6 +76,7 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
+    ~T2DMap() override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     void paintEvent(QPaintEvent*) override;
@@ -89,10 +91,14 @@ public:
     friend class CustomLineDrawHandler;
     friend class CustomLineEditContextMenuHandler;
     friend class CustomLineEditHandler;
+    friend class CustomLineSession;
     friend class LabelInteractionHandler;
+    friend class RoomMoveActivationHandler;
     friend class RoomContextMenuHandler;
     friend class RoomMoveDragHandler;
     friend class SelectionRectangleHandler;
+    friend class PanInteractionHandler;
+    friend class MiddleMousePanHandler;
 
     struct MapInteractionContext {
         QMouseEvent* event = nullptr;
@@ -146,6 +152,7 @@ public:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void prepareSingleClickSelection(MapInteractionContext& context);
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
+    QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
@@ -194,6 +201,9 @@ public:
     QMap<QString, QStringList> mUserMenus;
 
     bool mRoomBeingMoved = false;
+    QPointF mRoomMoveLastMapPoint;
+    bool mHasRoomMoveLastMapPoint = false;
+    bool mRoomMoveViaContextMenu = false;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is
     // multiplied by rsize which is 1.0 to exactly fill space between adjacent
@@ -218,6 +228,7 @@ public:
     QRect mMapInfoRect;
     int mFontHeight = 20;
     bool mShowRoomID = false;
+    bool mShowGrid = false;
     QMap<int, QPixmap> mPixMap;
     double rSize = 0.5;
     double eSize = 3.0;
@@ -237,7 +248,7 @@ public:
     // centered on mRoomID - it seems to be needed if the room concerned
     // is being moved by the mouse as part of a selection:
     bool mShiftMode = false;
-    QComboBox* arealist_combobox = nullptr;
+    QPointer<QComboBox> arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom = 0;
     int mCustomLinesRoomTo = 0;
@@ -300,7 +311,10 @@ public slots:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, std::optional<bool> newLockStatus,
+        bool changeBorderColor, QColor newBorderColor,
+        bool changeBorderThickness, int newBorderThickness,
         QSet<TRoom*> rooms);
+    void slot_previewBorderProperties(QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_moveRoom();
@@ -319,6 +333,10 @@ public slots:
     void slot_customLineProperties();
     void slot_customLineAddPoint();
     void slot_customLineRemovePoint();
+    void slot_setSnapCustomLinePointsToGrid(bool enabled);
+    void slot_moveCustomLineLastPointToTargetRoom();
+    bool canMoveSelectedCustomLineLastPointToTargetRoom() const;
+    bool canMoveCustomLineLastPointToTargetRoom(const TRoom& room, const QString& exitKey) const;
     void slot_cancelCustomLineDialog();
     void slot_loadMap();
     void slot_newMap();
@@ -340,6 +358,7 @@ private:
         QList<HandlerEntry> mHandlers;
     };
 
+    std::unique_ptr<CustomLineSession> mCustomLineSession;
     InteractionDispatcher mInteractionDispatcher;
     std::unique_ptr<IInteractionHandler> mCustomLineDrawContextMenuHandler;
     std::unique_ptr<IInteractionHandler> mCustomLineDrawInteractionHandler;
@@ -350,6 +369,7 @@ private:
     std::unique_ptr<IInteractionHandler> mRoomMoveDragHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
+    std::unique_ptr<MiddleMousePanHandler> mMiddleMousePanHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
@@ -358,6 +378,8 @@ private:
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
+    bool isSnapCustomLinePointsToGridEnabled() const;
+    QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
     inline void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&, const bool showRoomCollision);
@@ -395,8 +417,8 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
 
-    dlgRoomProperties* mpDlgRoomProperties = nullptr;
-    dlgMapLabel* mpDlgMapLabel = nullptr;
+    QPointer<dlgRoomProperties> mpDlgRoomProperties;
+    QPointer<dlgMapLabel> mpDlgMapLabel;
     // Track the area last viewed so we can raise an event when it changes,
     // initialised to an invalid area that is different to the one that mAreaID
     // is initialised to - so that the xyzoom gets read for the first area that

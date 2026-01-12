@@ -30,7 +30,11 @@ bool TMxpFormattingTagsHandler::supports(TMxpContext& ctx, TMxpClient& client, M
            tag->isNamed(qsl("H")) || tag->isNamed(qsl("HIGH")) ||
            tag->isNamed(qsl("I")) || tag->isNamed(qsl("ITALIC")) || tag->isNamed(qsl("EM")) ||
            tag->isNamed(qsl("U")) || tag->isNamed(qsl("UNDERLINE")) ||
-           tag->isNamed(qsl("S")) || tag->isNamed(qsl("STRIKEOUT"));
+           tag->isNamed(qsl("S")) || tag->isNamed(qsl("STRIKEOUT")) ||
+           // Additional HTML tags - recognized but not styled differently:
+           tag->isNamed(qsl("H1")) || tag->isNamed(qsl("H2")) || tag->isNamed(qsl("H3")) ||
+           tag->isNamed(qsl("H4")) || tag->isNamed(qsl("H5")) || tag->isNamed(qsl("H6")) ||
+           tag->isNamed(qsl("SMALL")) || tag->isNamed(qsl("TT"));
 }
 
 TMxpTagHandlerResult TMxpFormattingTagsHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
@@ -61,6 +65,10 @@ void TMxpFormattingTagsHandler::setAttribute(TMxpClient& client, MxpTag* tag, bo
         client.setUnderline(value);
     } else if (tag->isNamed("S") || tag->isNamed("STRIKEOUT")) {
         client.setStrikeOut(value);
+    } else if (tag->isNamed("H1") || tag->isNamed("H2") || tag->isNamed("H3") ||
+               tag->isNamed("H4") || tag->isNamed("H5") || tag->isNamed("H6") ||
+               tag->isNamed("SMALL") || tag->isNamed("TT")) {
+        // Recognized but no styling applied
     } else {
         // do nothing
     }

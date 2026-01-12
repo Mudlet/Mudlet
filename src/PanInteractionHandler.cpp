@@ -21,10 +21,8 @@
 
 #include "TMap.h"
 
-#include "pre_guard.h"
 #include <QMouseEvent>
 #include <QtGlobal>
-#include "post_guard.h"
 
 PanInteractionHandler::PanInteractionHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)

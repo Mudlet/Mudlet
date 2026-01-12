@@ -24,14 +24,12 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QEvent>
 #include <QMouseEvent>
 #include <QPointF>
 #include <QLineF>
 #include <QMapIterator>
 #include <QSetIterator>
-#include "post_guard.h"
 
 #include <cmath>
 
@@ -61,6 +59,10 @@ bool CustomLineEditHandler::matches(const T2DMap::MapInteractionContext& context
     }
 
     if (eventType == QEvent::MouseMove) {
+        if (!(context.buttons & Qt::LeftButton)) {
+            return false;
+        }
+
         return mMapWidget.mCustomLineSelectedRoom != 0 && mMapWidget.mCustomLineSelectedPoint >= 0;
     }
 
@@ -186,6 +188,10 @@ bool CustomLineEditHandler::handleMousePress(T2DMap::MapInteractionContext& cont
 
 bool CustomLineEditHandler::handleMouseMove(T2DMap::MapInteractionContext& context)
 {
+    if (!(context.buttons & Qt::LeftButton)) {
+        return false;
+    }
+
     if (!mMapWidget.mpMap || !mMapWidget.mpMap->mpRoomDB) {
         mMapWidget.mCustomLineSelectedPoint = -1;
         return false;
@@ -208,7 +214,12 @@ bool CustomLineEditHandler::handleMouseMove(T2DMap::MapInteractionContext& conte
         return false;
     }
 
-    points[mMapWidget.mCustomLineSelectedPoint] = context.mapPoint;
+    QPointF newPoint = context.mapPoint;
+    if (mMapWidget.isSnapCustomLinePointsToGridEnabled()) {
+        newPoint = mMapWidget.snapPointToGrid(newPoint);
+    }
+
+    points[mMapWidget.mCustomLineSelectedPoint] = newPoint;
     room->calcRoomDimensions();
     mMapWidget.repaint();
     mMapWidget.mpMap->setUnsaved("CustomLineEditHandler::handleMouseMove");
@@ -218,7 +229,6 @@ bool CustomLineEditHandler::handleMouseMove(T2DMap::MapInteractionContext& conte
 
 bool CustomLineEditHandler::handleMouseRelease()
 {
-    mMapWidget.mCustomLineSelectedPoint = -1;
     return false;
 }
 

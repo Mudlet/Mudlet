@@ -23,14 +23,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
-#include <QApplication>
+#include <QCoreApplication>
 #include <QMap>
 #include <QSet>
 #include <QStringList>
-#include "post_guard.h"
-
-#include "utils.h"
 
 
 class TVar;
@@ -71,11 +67,13 @@ public:
     void removeHidden(const QString &name);
     bool isSaved(TVar*);
     void addPointer(const void*);
+    QString getUnsaveableReason(TVar*);
     QSet<QString> hidden;
     QSet<QString> hiddenByUser;
     QSet<QString> savedVars;
 
 private:
+    int countTableItems(TVar*);
     TVar* base;
     QSet<QString> variableSet;
     // ?? variables

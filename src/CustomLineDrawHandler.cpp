@@ -23,11 +23,9 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QEvent>
 #include <QMouseEvent>
 #include <QPointF>
-#include "post_guard.h"
 
 CustomLineDrawHandler::CustomLineDrawHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)
@@ -78,7 +76,12 @@ bool CustomLineDrawHandler::handle(T2DMap::MapInteractionContext& context)
     const float mapX = static_cast<float>(context.mapX);
     const float mapY = static_cast<float>(context.mapY);
 
-    room->customLines[context.customLinesRoomExit].push_back(QPointF(mapX, mapY));
+    QPointF newPoint(mapX, mapY);
+    if (mMapWidget.isSnapCustomLinePointsToGridEnabled()) {
+        newPoint = mMapWidget.snapPointToGrid(newPoint);
+    }
+
+    room->customLines[context.customLinesRoomExit].push_back(newPoint);
     room->calcRoomDimensions();
     mMapWidget.repaint();
 
