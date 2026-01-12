@@ -27,9 +27,12 @@
 #include <optional>
 #include <QTimer>
 #include <QKeyEvent>
-#include <pugixml.hpp>
 
 class QDir;
+
+namespace pugi {
+class xml_document;
+}
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {

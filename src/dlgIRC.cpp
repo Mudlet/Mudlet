@@ -27,6 +27,9 @@
 #include "Host.h"
 #include "ircmessageformatter.h"
 
+#include <IrcTextFormat>
+#include <IrcUser>
+
 #include "mudlet.h"
 
 #include <QDesktopServices>

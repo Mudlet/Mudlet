@@ -26,6 +26,8 @@
 
 #include "TTabBar.h"
 
+#include "utils.h"
+
 #include <QStyleOption>
 #include <QPainter>
 #include <QVariant>

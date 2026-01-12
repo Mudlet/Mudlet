@@ -25,9 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMap.h"
 #include "TMediaData.h"
-#include "TTextCodec.h"
 #include "TTrigger.h"
 #include "utils.h"
 
@@ -69,7 +67,6 @@ class TAction;
 class TEvent;
 class TLuaThread;
 class TMapLabel;
-class TTrigger;
 
 
 #define SERVEROUTPUT 1
@@ -236,6 +233,12 @@ public:
     static int setRoomCharColor(lua_State*);
     static int unsetRoomCharColor(lua_State*);
     static int getRoomCharColor(lua_State*);
+    static int setRoomBorderColor(lua_State*);
+    static int getRoomBorderColor(lua_State*);
+    static int clearRoomBorderColor(lua_State*);
+    static int setRoomBorderThickness(lua_State*);
+    static int getRoomBorderThickness(lua_State*);
+    static int clearRoomBorderThickness(lua_State*);
     static int deleteArea(lua_State*);
     static int deleteRoom(lua_State*);
     static int getRoomAreaName(lua_State*);

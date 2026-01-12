@@ -42,6 +42,7 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -58,7 +59,11 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "TMediaData.h"
 #include "VarUnit.h"
+
+#include "edbee/models/textautocompleteprovider.h"
+#include "edbee/views/texttheme.h"
 
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
@@ -96,6 +101,33 @@
 #include <QStyle>
 #if defined(Q_OS_WINDOWS)
 #include <QSettings>
+#endif
+
+// for system physical memory info
+#if defined(Q_OS_WINDOWS)
+#include <Windows.h>
+#include <Psapi.h>
+#elif defined(Q_OS_MACOS)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <array>
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_OPENBSD)
+// OpenBSD doesn't have a sysinfo.h
+#include <sys/sysctl.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
+#include <sys/resource.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
+#else
+// Any other OS?
 #endif
 
 // We are now using code that won't work with really old versions of libzip;

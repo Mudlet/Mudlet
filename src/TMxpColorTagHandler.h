@@ -32,5 +32,4 @@ public:
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 };
-#include "TMxpTagHandler.h"
 #endif //MUDLET_TMXPCOLORTAGHANDLER_H
