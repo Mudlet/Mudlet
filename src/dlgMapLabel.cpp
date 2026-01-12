@@ -21,6 +21,9 @@
 #include "dlgMapLabel.h"
 #include "mudlet.h"
 #include "utils.h"
+#include <QColorDialog>
+#include <QFileDialog>
+#include <QFontDialog>
 #include <QSettings>
 
 static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");

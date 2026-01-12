@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       scheduled:
-        description: 'Imitate a scheduled build'
+        description: 'Imitate a PTB'
         required: false
         default: 'false'
   schedule:
@@ -29,12 +29,13 @@ jobs:
           # spurious steps in the build and broke things! - SlySven
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-22.04
-            buildname: 'ubuntu / gcc / lua tests'
+            buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
             gcc_compiler_version: 10
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
+            enable_asan: 'true'
           - os: ubuntu-22.04
             # Another try to use GCC12
             buildname: 'ubuntu (x86_64)'
@@ -63,7 +64,7 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
 
     - name: Install Qt
@@ -97,7 +98,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # Install all required dependencies
-        brew install libzzip libzip ccache expect assimp hunspell pcre pugixml sqlite yajl boost
+        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -117,8 +118,8 @@ jobs:
         # The action installs to .lua/ and .luarocks/ in the runner home
         echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
 
-        # Help CMake find keg-only Homebrew packages (PCRE is keg-only on macOS)
-        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        # Help CMake find keg-only Homebrew packages (PCRE2 is keg-only on macOS)
+        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
@@ -154,10 +155,11 @@ jobs:
           imagemagick \
           libassimp-dev \
           libboost-dev \
+          libcurl4-openssl-dev \
           libglu1-mesa-dev \
           libhunspell-dev \
           liblua5.1-0-dev \
-          libpcre3-dev \
+          libpcre2-dev \
           libpulse-dev \
           libpugixml-dev \
           libsecret-1-dev \
@@ -165,8 +167,11 @@ jobs:
           libxkbcommon-x11-0 \
           libyajl-dev \
           libzip-dev \
-          pcregrep \
+          pcre2-utils \
           pkg-config \
+          libssl-dev \
+          openssl \
+          ca-certificates \
           -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
@@ -196,7 +201,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
@@ -207,18 +212,18 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        sudo apt-get -y install pcregrep
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        sudo apt-get -y install pcre2-utils
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
 
     - name: (macOS) Set build info
       if: runner.os == 'macOS'
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        brew install pcre
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        brew install pcre2
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
         echo "CXX=clang++" >> $GITHUB_ENV
         echo "CC=clang" >> $GITHUB_ENV
@@ -235,14 +240,19 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && 'Address' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
-          -DUSE_SANITIZER=""
+          -DWITH_SENTRY=ON
+          -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+          -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+        MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
@@ -250,10 +260,22 @@ jobs:
     - name: check ccache stats post build
       run: ccache --show-stats
 
+    - name: (Linux) Run C++ tests
+      if: runner.os == 'Linux' && matrix.run_tests == 'cpp'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
+      env:
+        QT_QPA_PLATFORM: offscreen
+
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
+
+    - name: Run QTest
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
 
     - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
@@ -266,11 +288,11 @@ jobs:
         if [ "$RUNNER_OS" = "macOS" ]; then
           $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
           $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
-          $LUAROCKS lrexlib-pcre PCRE_DIR=${HOMEBREW_PREFIX}/opt/pcre
+          $LUAROCKS lrexlib-pcre2 PCRE2_DIR=${HOMEBREW_PREFIX}/opt/pcre2
         else
           $LUAROCKS lua-zip
           $LUAROCKS LuaSQL-SQLite3 2.6.1
-          $LUAROCKS lrexlib-pcre
+          $LUAROCKS lrexlib-pcre2
         fi
 
         # CI changelog generation dependencies
@@ -309,7 +331,7 @@ jobs:
           export ARCH_DBLSQD=$ARCH
           echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
         fi
-        ${{github.workspace}}/CI/travis.after_success.sh
+        ${{github.workspace}}/CI/after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
@@ -323,9 +345,11 @@ jobs:
         APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
         APPLE_PASSWORD: ${{secrets.APPLE_PASSWORD}}
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
+        WITH_SENTRY: "ON"
+        GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
@@ -365,6 +389,8 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
+        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=0', github.workspace) || '' }}
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -375,6 +401,7 @@ jobs:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: detect_leaks=0
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'
@@ -382,5 +409,29 @@ jobs:
         if [ -e /tmp/busted-tests-failed ]
         then
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
+          exit 1
+        fi
+
+    - name: (Linux) Run C++ undo/redo tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      timeout-minutes: 5
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
+
+    - name: (macOS) Run C++ undo/redo tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      timeout-minutes: 5
+      shell: bash
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
+
+    - name: Passed C++ undo/redo tests
+      if: matrix.run_tests == 'true'
+      run: |
+        if [ -e /tmp/undo-tests-failed ]
+        then
+          echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
           exit 1
         fi

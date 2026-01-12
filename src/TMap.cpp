@@ -34,13 +34,17 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
+#include <QBuffer>
 #include <QElapsedTimer>
 #include <QFileDialog>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonParseError>
 #include <QMessageBox>
-#include <QProgressDialog>
 #include <QPainter>
-#include <QBuffer>
+#include <QPixmap>
+#include <QProgressDialog>
+#include <QSizeF>
 
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -547,6 +551,9 @@ void TMap::audit()
             itArea.next();
             const int areaID = itArea.key();
             TArea* pArea = mpRoomDB->getArea(areaID);
+            if (!pArea) {
+                continue;
+            }
             if (!pArea->mMapLabels.isEmpty()) {
                 QList<int> const labelIDList = pArea->mMapLabels.keys();
                 for (const int& i : labelIDList) {
@@ -1293,6 +1300,18 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
         }
 
+        // Border properties are stored in userData (not binary stream) to avoid map bloat
+        if (pR->mBorderColor.isValid()) {
+            pR->userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
+        } else {
+            pR->userData.remove(ROOM_UI_BORDERCOLOR);
+        }
+        if (pR->mBorderThickness > 0) {
+            pR->userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
+        } else {
+            pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
+        }
+
         ofs << pR->userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
@@ -1705,6 +1724,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         int labelId = -1;
                         ifs >> labelId;
                         TMapLabel label;
+                        ifs >> label.pos;
                         ifs >> label.size;
                         ifs >> label.text;
                         ifs >> label.fgColor;
@@ -2134,7 +2154,8 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
 
     label.size = br.normalized().size();
-    label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
+    const QRect brRect = br.normalized().toRect();
+    label.pix = pix.copy(brRect.topLeft().x(), brRect.topLeft().y(), brRect.width(), brRect.height());
     const QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
@@ -3458,6 +3479,14 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+}
+
+void TMap::setSaveError(bool state)
+{
+    if (mSaveError != state) {
+        mSaveError = state;
+        emit signal_saveErrorChanged(state);
+    }
 }
 
 void TMap::setDefaultAreaShown(bool state)

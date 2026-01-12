@@ -25,24 +25,20 @@
 
 
 #include "mudlet.h"
-#include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
-#include "TMedia.h"
-#include "TScript.h"
-#include "TTimer.h"
-#include "TTrigger.h"
 
 #include "ui_profile_preferences.h"
-#include <QtCore>
 #include <QDialog>
-#include <QDir>
-#include <QDoubleSpinBox>
-#include <QFontDialog>
 #include <QMap>
-#include <QCloseEvent>
 
 class Host;
+class QCloseEvent;
+class QDoubleSpinBox;
+class TAction;
+class TAlias;
+class TKey;
+class TScript;
+class TTimer;
+class TTrigger;
 
 
 class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
@@ -180,6 +176,7 @@ private slots:
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
     void slot_changeShowTabConnectionIndicators(bool state);
+    void slot_crashReportPolicyChanged(int index);
 
 
 signals:
@@ -237,6 +234,7 @@ private:
     QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableNAWS;
     QPointer<QAction> mEnableCHARSET;
     QPointer<QAction> mEnableNEWENVIRON;
 

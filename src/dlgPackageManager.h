@@ -23,15 +23,16 @@
  ***************************************************************************/
 
 
-#include "Host.h"
 #include "PackageItemDelegate.h"
 
 #include "ui_package_manager.h"
 #include <QDialog>
+#include <QJsonArray>
 #include <QListWidget>
 #include <QTextBrowser>
 
 class Host;
+class QNetworkReply;
 
 
 class dlgPackageManager : public QDialog, public Ui::package_manager

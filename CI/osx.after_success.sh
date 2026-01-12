@@ -96,7 +96,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
     app="${BUILD_DIR}/build/mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
 
-      if [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
+      # Skip commit check if this is a manually forced build
+      if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
+        echo "== Forced build requested, skipping commit date check =="
+      elif [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
         echo "== No new commits, aborting public test build generation =="
         exit 0
       fi

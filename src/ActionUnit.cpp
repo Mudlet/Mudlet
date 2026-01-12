@@ -187,6 +187,16 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     }
 }
 
+void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentAction(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentAction(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void ActionUnit::removeActionRootNode(TAction* pT)
 {
     if (!pT) {
@@ -199,18 +209,16 @@ TAction* ActionUnit::getAction(int id)
 {
     if (mActionMap.contains(id)) {
         return mActionMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TAction* ActionUnit::getActionPrivate(int id)
 {
     if (mActionMap.find(id) != mActionMap.end()) {
         return mActionMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool ActionUnit::registerAction(TAction* pT)
