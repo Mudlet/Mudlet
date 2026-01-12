@@ -27,10 +27,15 @@
 #include "TAccessibleTextEdit.h"
 #include "TTextEdit.h"
 
+#include "Host.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "THyperlinkSelectionManager.h"
+#include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
+#include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
@@ -67,6 +72,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 {
     mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
+    Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
     mFontHeight = fontMetrics().height();
     mFontWidth = fontMetrics().averageCharWidth();
@@ -307,13 +313,16 @@ void TTextEdit::showNewLines()
     update();
 
 
-    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole
+    if (mpHost && QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole
         && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
         QString newLines;
 
         // content has been deleted
         if (previousOldScrollPos > mOldScrollPos) {
             QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
+            if (!ti) {
+                return;
+            }
             auto totalCharacterCount = ti->characterCount();
             ti->setCursorPosition(totalCharacterCount);
             QAccessibleTextRemoveEvent event(this, totalCharacterCount, QString());
@@ -452,7 +461,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 
     // If caret mode is enabled and the line is empty, still draw the caret.
-    if (mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
+    if (mpHost && mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
         auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
         painter.fillRect(textRect, mCaretColor);
     }
@@ -581,7 +590,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     }
     textRects.append(textRect);
     QColor bgColor;
-    bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
     if (Q_UNLIKELY(charStyle.isFound())) {
         if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
             fgColors.append(mSearchHighlightBgColor);
@@ -592,8 +601,17 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         }
     } else {
         if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            fgColors.append(charStyle.background());
-            bgColor = charStyle.foreground();
+            // When colors would be swapped (e.g., during selection)
+            // and foreground equals background (hidden text),
+            // only reverse one color to make the text readable
+            if (charStyle.foreground() == charStyle.background()) {
+                fgColors.append(charStyle.foreground());
+                // Invert background: use white for dark colors, black for light colors
+                bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
+            } else {
+                fgColors.append(charStyle.background());
+                bgColor = charStyle.foreground();
+            }
         } else {
             fgColors.append(charStyle.foreground());
             bgColor = charStyle.background();
@@ -626,7 +644,6 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isUnderlineDotted = attributes & TChar::UnderlineDotted;
     const bool isUnderlineDashed = attributes & TChar::UnderlineDashed;
     const bool hasAdvancedUnderline = isUnderlineWavy || isUnderlineDotted || isUnderlineDashed;
-    const bool hasCustomDecorationColors = charStyle.hasCustomUnderlineColor() || charStyle.hasCustomOverlineColor() || charStyle.hasCustomStrikeoutColor();
 
     // If we have advanced underline styles or custom decoration colors, disable Qt's built-in decorations
     // and draw them manually later
@@ -1225,9 +1242,15 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
 
                 // Update hover state for CSS pseudo-class support
+                // Don't set hover state for disabled links - they should stay disabled
+                // Also don't set hover if this link was just clicked - wait for mouse to leave first
                 if (mpBuffer->getHoveredLink() != linkIndex) {
-                    mpBuffer->setHoveredLink(linkIndex);
-                    forceUpdate(); // Trigger re-render with new hover state
+                    auto currentState = mpBuffer->getLinkState(linkIndex);
+                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled 
+                        && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
+                        mpBuffer->setHoveredLink(linkIndex);
+                        forceUpdate(); // Trigger re-render with new hover state
+                    }
                 }
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -1237,6 +1260,11 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 if (mpBuffer->getHoveredLink() != 0) {
                     mpBuffer->setHoveredLink(0);
                     forceUpdate(); // Trigger re-render
+                }
+                
+                // Clear last clicked link when mouse leaves - allows hover to work again
+                if (mpBuffer->getLastClickedLinkIndex() != 0) {
+                    mpBuffer->clearLastClickedLinkIndex();
                 }
             }
         }
@@ -1337,7 +1365,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 void TTextEdit::slot_popupMenu()
 {
     auto* pA = qobject_cast<QAction*>(sender());
-    if (!pA) {
+    if (!pA || !mpHost) {
         return;
     }
     // index is set to be greater than zero for every possible sender():
@@ -1403,12 +1431,126 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
                     int luaReference = mpBuffer->mLinkStore.getReference(linkIndex).value(0, false);
                     QString func;
-                    if (!command.empty()) {
+                    if (!command.empty() && mpHost) {
                         func = command.at(0);
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "TTextEdit::mousePressEvent - Link clicked, func:" << func << "luaReference:" << luaReference;
+#endif
 
-                        // Set active state for CSS pseudo-class support
                         mpBuffer->setActiveLink(linkIndex);
-                        forceUpdate(); // Trigger re-render with active state
+
+                        Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+                        
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "disabled:" << hyperlinkStyling.selection.disabled << "hasSelectionSettings:" << hyperlinkStyling.selection.hasSelectionSettings << "isSpoiler:" << hyperlinkStyling.isSpoiler;
+#endif
+                        
+                        // Handle spoiler revealing first (even for disabled links)
+                        if (hyperlinkStyling.isSpoiler) {
+                            // Check if this spoiler hasn't been revealed yet
+                            bool wasUnrevealed = mpBuffer->isSpoilerUnrevealed(linkIndex);
+                            mpBuffer->revealSpoilerLink(linkIndex);
+                            
+                            // For unrevealed spoilers, the first click should ONLY reveal, not execute the function
+                            if (wasUnrevealed && !hyperlinkStyling.selection.disabled) {
+#if defined(DEBUG_OSC_PROCESSING)
+                                qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "first spoiler reveal, blocking function execution until next click";
+#endif
+                                forceUpdate();
+                                return;
+                            }
+                            
+                            // Update styling after spoiler reveal
+                            hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+                        }
+                        
+                        // Check for disabled links - they can reveal spoilers but can't execute functions
+                        if (hyperlinkStyling.selection.disabled) {
+#if defined(DEBUG_OSC_PROCESSING)
+                            qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "is disabled, allowing spoiler reveal but blocking function execution";
+#endif
+                            // Disabled links only update visual state, don't execute functions
+                            mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+                            forceUpdate();
+                            return;
+                        }
+                        
+                        if (hyperlinkStyling.selection.hasSelectionSettings) {
+                            auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
+                            if (!mgr) {
+                                qWarning() << "TTextEdit::mousePressEvent - Selection manager is null, skipping selection handling for link" << linkIndex;
+                            } else {
+                                const QString& group = hyperlinkStyling.selection.group;
+                                const QString& value = hyperlinkStyling.selection.value;
+                                
+                                // Configure group exclusivity mode if needed
+                                mgr->setGroupExclusive(group, hyperlinkStyling.selection.exclusive);
+                                
+                                bool currentlySelected = mgr->isSelected(group, value);
+
+                                if (hyperlinkStyling.selection.toggle) {
+                                    mgr->toggleSelection(group, value);
+                                } else {
+                                    mgr->setSelected(group, value, true);
+                                }
+
+                                bool newSelected = mgr->isSelected(group, value);
+
+                                func = mgr->modifyUriForSelection(func, group, value);
+
+#if defined(DEBUG_OSC_PROCESSING)
+                                qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "selected=" << newSelected;
+#endif
+                                mpBuffer->setLinkSelected(linkIndex, newSelected);
+                                if (newSelected) {
+#if defined(DEBUG_OSC_PROCESSING)
+                                    qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateSelected";
+#endif
+                                    mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateSelected);
+                                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                                    qDebug() << "TTextEdit::mousePressEvent - Setting link" << linkIndex << "to StateDefault";
+#endif
+                                    mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+                                }
+                                mpBuffer->updateLinkCharacters(linkIndex);
+                                
+                                // For exclusive groups, update visual state of all other members that may have been deselected
+                                if (mgr->isGroupExclusive(group)) {
+                                    QStringList groupMembers = mgr->getGroupMembers(group);
+                                    for (const QString& member : groupMembers) {
+                                        if (member != value) {
+                                            // Get all link IDs with this group/value combination using the reverse index
+                                            bool memberSelected = mgr->isSelected(group, member);
+                                            QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
+                                            
+                                            for (int otherLinkId : matchingLinkIds) {
+                                                mpBuffer->setLinkSelected(otherLinkId, memberSelected);
+                                                mpBuffer->setLinkState(otherLinkId, memberSelected ? 
+                                                    Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+                                                mpBuffer->updateLinkCharacters(otherLinkId);
+#if defined(DEBUG_OSC_PROCESSING)
+                                                qDebug() << "TTextEdit::mousePressEvent - Updated exclusive group member link" << otherLinkId << "to selected=" << memberSelected;
+#endif
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Clear hover to show selection immediately; mouse move will restore it
+                        mpBuffer->setHoveredLink(0);
+                        
+                        // Remember this link was just clicked - suppress hover until mouse leaves
+                        mpBuffer->setLastClickedLinkIndex(linkIndex);
+                        
+                        forceUpdate();
+
+                        // Notify visibility manager that link was clicked (activates timers)
+                        if (mpConsole) {
+                            mpConsole->getHyperlinkVisibilityManager().onLinkClicked(linkIndex);
+                        }
 
                         if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
@@ -1541,7 +1683,7 @@ void TTextEdit::slot_copySelectionToClipboard()
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
-    if (!establishSelectedText()) {
+    if (!establishSelectedText() || !mpHost) {
         return;
     }
 
@@ -1774,7 +1916,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
 void TTextEdit::searchSelectionOnline()
 {
-    if (!establishSelectedText()) {
+    if (!establishSelectedText() || !mpHost) {
         return;
     }
 
@@ -1876,12 +2018,24 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer.at(static_cast<size_t>(y)).size()) && !isOutOfbounds) {
                 if (mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex()) {
-                    QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
-                    QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
-                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
-                    if (command.size() > 1) {
+                    int linkIndex = mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex();
+                    
+                    // Check if link is disabled - disabled links don't show context menus
+                    Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+                    if (hyperlinkStyling.selection.disabled) {
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "TTextEdit::mouseReleaseEvent - Right-click on disabled link" << linkIndex << ", blocking context menu";
+#endif
+                        mIsCommandPopup = false;
+                        return;
+                    }
+                    
+                    QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
+                    QStringList hint = mpBuffer->mLinkStore.getHints(linkIndex);
+                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(linkIndex);
+                    if (command.size() > 1 || hint.size() > command.size()) {
                         // This is a popup menu rather than a link as it has
-                        // more than one item.
+                        // more than one item, or has menu hints indicating menu items.
 
                         // Skip a special tooltip hint (at the start of the
                         // hints), if one was given, i.e. there is (at least)
@@ -1950,7 +2104,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 
-        QString selectedEngine = mpHost->getSearchEngine().first;
+        QString selectedEngine = mpHost ? mpHost->getSearchEngine().first : tr("Unknown");
         QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
@@ -2011,17 +2165,21 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         }
 
         // Add user actions
-        QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
-        while (it.hasNext()) {
-            it.next();
-            QStringList actionInfo = it.value();
-            const QString& uniqueName = it.key();
-            const QString& actionName = actionInfo.at(1);
-            QAction* mouseAction = new QAction(actionName, this);
-            mouseAction->setToolTip(actionInfo.at(2));
-            popup->addAction(mouseAction);
-            connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
+        if (mpHost) {
+            QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
+
+            while (it.hasNext()) {
+                it.next();
+                QStringList actionInfo = it.value();
+                const QString& uniqueName = it.key();
+                const QString& actionName = actionInfo.at(1);
+                QAction* mouseAction = new QAction(actionName, this);
+                mouseAction->setToolTip(actionInfo.at(2));
+                popup->addAction(mouseAction);
+                connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
+            }
         }
+
         popup->popup(mapToGlobal(eventPos), action);
         event->accept();
         return;
@@ -2135,9 +2293,8 @@ int TTextEdit::imageTopLine()
         }
 
         return mCursorY - mScreenHeight;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 
@@ -2369,12 +2526,12 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
             if (value >= 0xFDD0 && value <= 0xFDEF) {
                 //: Unicode codepoint in range U+FFD0 to U+FDEF - not a character
                 return htmlCenter(tr("{noncharacter}")); break;
-            } else if ((value >= 0xFFF0 && value <= 0xFFF8) || value == 0xFFFE || value == 0xFFFF) {
+            }
+            if ((value >= 0xFFF0 && value <= 0xFFF8) || value == 0xFFFE || value == 0xFFFF) {
                 //: Unicode codepoint in range U+FFFx - not a character.
                 return htmlCenter(tr("{noncharacter}")); break;
-            } else {
-                return htmlCenter(first);
             }
+            return htmlCenter(first);
         }
     } else {
         // The code point is NOT on the BMP
@@ -2395,10 +2552,9 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
             if ((value % 0x10000 == 0xFFFE) || (value % 0x10000 == 0xFFFF)) {
                 //: Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.
                 return htmlCenter(tr("{noncharacter}")); break;
-            } else {
-                // The '%' is the QStringBuilder append operator here:
-                return htmlCenter(first % second);
             }
+            // The '%' is the QStringBuilder append operator here:
+            return htmlCenter(first % second);
         }
     }
     // clang-format on
@@ -2416,9 +2572,8 @@ inline QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
         // HTML/Rich-text formatting opening tag and has to be converted to
         // "&lt;":
         return qsl("&lt;");
-    } else {
-        return qsl("%1").arg(*byte);
     }
+    return qsl("%1").arg(*byte);
 }
 
 /*
@@ -2463,7 +2618,6 @@ void TTextEdit::slot_analyseSelection()
     // in Lua.
     short int utf8Index = 1;
     char utf8Bytes[5];
-    utf8Bytes[4] = '\0';
 
     int total = 0;
     startColumn = mPA.x();
@@ -2498,9 +2652,9 @@ void TTextEdit::slot_analyseSelection()
         }
 
         if (mpBuffer->lineBuffer.at(line).at(index).isHighSurrogate() && ((index + 1) < lineLength)) {
-            strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8().constData(), 4);
-            size_t utf8Width = strnlen(utf8Bytes, 4);
-            quint8 columnsToUse = qMax(static_cast<size_t>(2), utf8Width);
+            const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8();
+            const size_t utf8Width = utils::copyString(utf8Bytes, sizeof(utf8Bytes), utf8Data.constData(), utf8Data.size());
+            quint8 columnsToUse = qMax(size_t{2}, utf8Width);
 
             if (includeThisCodePoint) {
                 utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
@@ -2591,9 +2745,9 @@ void TTextEdit::slot_analyseSelection()
             // for the surrogate pair:
             index += 1;
         } else {
-            strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8().constData(), 4);
-            size_t utf8Width = strnlen(utf8Bytes, 4);
-            quint8 columnsToUse = qMax(static_cast<size_t>(1), utf8Width);
+            const QByteArray utf8Data = mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8();
+            const size_t utf8Width = utils::copyString(utf8Bytes, sizeof(utf8Bytes), utf8Data.constData(), utf8Data.size());
+            quint8 columnsToUse = qMax(size_t{1}, utf8Width);
 
             if (includeThisCodePoint) {
                 utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1)));
@@ -2815,6 +2969,10 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
 
 void TTextEdit::slot_mouseAction(const QString &uniqueName)
 {
+    if (!mpHost) {
+        return;
+    }
+
     TEvent event {};
     QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
     event.mArgumentList.append(mouseEvent[0]);
@@ -2882,7 +3040,7 @@ void TTextEdit::setCaretPosition(int line, int column)
     mCaretLine = line;
     mCaretColumn = column;
 
-    if (!mpHost->caretEnabled()) {
+    if (!mpHost || !mpHost->caretEnabled()) {
         return;
     }
 
@@ -2954,7 +3112,7 @@ void TTextEdit::updateCaret()
 // you act upon the key.
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
-    if (!mpHost->caretEnabled()) {
+    if (!mpHost || !mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
     }
@@ -3159,6 +3317,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 // Get the link commands and execute them
                 QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
                 if (!commands.isEmpty()) {
+                    // Notify visibility manager that link was clicked (activates timers)
+                    if (mpConsole) {
+                        mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
+                    }
+
                     // Mark the link as visited
                     mpBuffer->markLinkAsVisited(focusedLink);
 

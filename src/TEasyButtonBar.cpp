@@ -104,15 +104,13 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
         if (columns <= 0) {
             columns = 1;
         }
-        if (columns > 0) {
-            mItemCount++;
-            const int row = mItemCount / columns;
-            const int col = mItemCount % columns;
-            if (mVerticalOrientation) {
-                mpLayout->addWidget(pB, row, col);
-            } else {
-                mpLayout->addWidget(pB, col, row);
-            }
+        mItemCount++;
+        const int row = mItemCount / columns;
+        const int col = mItemCount % columns;
+        if (mVerticalOrientation) {
+            mpLayout->addWidget(pB, row, col);
+        } else {
+            mpLayout->addWidget(pB, col, row);
         }
     } else {
         pB->move(pB->mpTAction->mPosX, pB->mpTAction->mPosY);

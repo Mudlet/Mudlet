@@ -25,8 +25,12 @@
 
 #include "mudlet.h"
 
+#include <QCloseEvent>
 #include <QDir>
-#include <QTextCodec>
+#include <QLabel>
+#include <QLineEdit>
+#include <QStringConverter>
+#include <QTimer>
 
 using namespace std::chrono;
 
@@ -160,13 +164,15 @@ void dlgNotepad::timerEvent(QTimerEvent* event)
     save();
 }
 
-void dlgNotepad::slot_sendAll() {
+void dlgNotepad::slot_sendAll()
+{
     QString allText = notesEdit->toPlainText();
     QStringList lines = allText.split('\n');
     startSendingLines(lines);
 }
 
-void dlgNotepad::slot_sendLine() {
+void dlgNotepad::slot_sendLine()
+{
     QTextCursor cursor = notesEdit->textCursor();
     cursor.select(QTextCursor::LineUnderCursor);
     QString line = cursor.selectedText();
@@ -176,7 +182,8 @@ void dlgNotepad::slot_sendLine() {
     }
 }
 
-void dlgNotepad::slot_sendSelection() {
+void dlgNotepad::slot_sendSelection()
+{
     QString selectedText = notesEdit->textCursor().selectedText();
 
     if (!selectedText.isEmpty()) {
@@ -185,7 +192,8 @@ void dlgNotepad::slot_sendSelection() {
     }
 }
 
-void dlgNotepad::startSendingLines(const QStringList& lines) {
+void dlgNotepad::startSendingLines(const QStringList& lines)
+{
     mLinesToSend = lines;
     mCurrentLineIndex = 0;
 
@@ -198,7 +206,8 @@ void dlgNotepad::startSendingLines(const QStringList& lines) {
     mSendTimer->start(300);
 }
 
-void dlgNotepad::slot_sendNextLine() {
+void dlgNotepad::slot_sendNextLine()
+{
     if (mCurrentLineIndex >= mLinesToSend.size()) {
         mSendTimer->stop();
         action_stop->setEnabled(false);
@@ -212,7 +221,8 @@ void dlgNotepad::slot_sendNextLine() {
     }
 }
 
-void dlgNotepad::slot_stopSending() {
+void dlgNotepad::slot_stopSending()
+{
     if (mSendTimer && mSendTimer->isActive()) {
         mSendTimer->stop();
     }
@@ -251,13 +261,8 @@ void dlgNotepad::saveSettings()
         return;
     }
 
-    QSettings* pQSettings = mudlet::getQSettings();
-    if (!pQSettings) {
-        return;
-    }
-
-    const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
-    pQSettings->setValue(settingsKey, action_toggleSendControls->isChecked());
+    mpHost->writeProfileIniData(qsl("Notepad/SendControlsVisible"),
+                                 action_toggleSendControls->isChecked() ? qsl("true") : qsl("false"));
 }
 
 void dlgNotepad::restoreSettings()
@@ -266,13 +271,8 @@ void dlgNotepad::restoreSettings()
         return;
     }
 
-    QSettings* pQSettings = mudlet::getQSettings();
-    if (!pQSettings) {
-        return;
-    }
-
-    const QString settingsKey = qsl("notepad/%1/sendControlsVisible").arg(mpHost->getName());
-    const bool sendControlsVisible = pQSettings->value(settingsKey, false).toBool();
+    const QString sendControlsVisibleStr = mpHost->readProfileIniData(qsl("Notepad/SendControlsVisible"));
+    const bool sendControlsVisible = (sendControlsVisibleStr.compare(qsl("true"), Qt::CaseInsensitive) == 0);
 
     // Block signals to avoid triggering saveSettings during restoration
     const bool wasBlocked = action_toggleSendControls->signalsBlocked();

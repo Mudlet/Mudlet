@@ -144,9 +144,6 @@ QVector3D CameraController::getPosition()
     }
 
     const float toDegrees = 180.0f / pi;
-    const float x = mPositionVector.x();
-    const float y = mPositionVector.y();
-    const float z = mPositionVector.z();
     const float theta = toDegrees * std::acos(mPositionVector.z());
     const float phi = toDegrees * std::atan2(mPositionVector.y(), mPositionVector.x());
     return QVector3D(mDistance, theta, phi);

@@ -145,6 +145,68 @@ describe("Tests UI functions", function()
   -- This is intentional - it provides valuable diagnostic information for edge cases
   -- without breaking CI builds, making it easier to debug future issues.
 
+  describe("delete functions", function()
+    it("Should delete a label", function()
+      createLabel("testDeleteLabel", 10, 10, 50, 50, 1)
+      assert.is_true(deleteLabel("testDeleteLabel"))
+      -- Verify label no longer exists by checking windowType
+      assert.is_nil(windowType("testDeleteLabel"))
+    end)
+
+    it("Should delete a miniconsole", function()
+      createMiniConsole("testDeleteConsole", 10, 10, 100, 100)
+      assert.is_true(deleteMiniConsole("testDeleteConsole"))
+      -- Verify miniconsole no longer exists
+      assert.is_nil(windowType("testDeleteConsole"))
+    end)
+
+    it("Should delete a command line", function()
+      createCommandLine("testDeleteCmdLine", 10, 10, 100, 30)
+      assert.is_true(deleteCommandLine("testDeleteCmdLine"))
+      -- Verify command line no longer exists
+      assert.is_nil(windowType("testDeleteCmdLine"))
+    end)
+
+    it("Should delete a scrollbox", function()
+      createScrollBox("testDeleteScrollBox", 10, 10, 100, 100)
+      assert.is_true(deleteScrollBox("testDeleteScrollBox"))
+      -- Verify scrollbox no longer exists
+      assert.is_nil(windowType("testDeleteScrollBox"))
+    end)
+
+    it("Should fail to delete non-existent label", function()
+      local success, err = deleteLabel("nonExistentLabel")
+      assert.is_false(success)
+      assert.is_string(err)
+    end)
+
+    it("Should fail to delete non-existent miniconsole", function()
+      local success, err = deleteMiniConsole("nonExistentConsole")
+      assert.is_false(success)
+      assert.is_string(err)
+    end)
+
+    it("Should fail to delete non-existent command line", function()
+      local success, err = deleteCommandLine("nonExistentCmdLine")
+      assert.is_false(success)
+      assert.is_string(err)
+    end)
+
+    it("Should fail to delete non-existent scrollbox", function()
+      local success, err = deleteScrollBox("nonExistentScrollBox")
+      assert.is_false(success)
+      assert.is_string(err)
+    end)
+
+    it("Should prevent deletion of the main command line", function()
+      -- The main command line is named "main" and should not be deletable
+      local success, err = deleteCommandLine("main")
+      assert.is_false(success)
+      assert.is_string(err)
+      assert.is_true(string.find(err, "main command line cannot be deleted") ~= nil)
+    end)
+  end)
+
   describe("getTextFormat", function()
     setup(function()
       -- Use a dedicated console for getTextFormat tests to avoid interference
