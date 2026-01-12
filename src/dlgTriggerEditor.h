@@ -166,9 +166,9 @@ public:
         // Unset:
         SearchOptionNone = 0x0,
         SearchOptionCaseSensitive = 0x1,
-        SearchOptionIncludeVariables = 0x2 /*,
-        SearchOptionRegExp = 0x4,
-        SearchOptionWholeWord = 0x8 */
+        SearchOptionIncludeVariables = 0x2,
+        SearchOptionWholeWord = 0x4 /*,
+        SearchOptionRegExp = 0x8 */
     };
 
     Q_DISABLE_COPY(dlgTriggerEditor)
@@ -316,6 +316,7 @@ private slots:
     void slot_toggleIsPushDownButton(int);
     void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleSearchIncludeVariables(bool);
+    void slot_toggleSearchWholeWord(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_changedPattern();
     void slot_lineSpacerChanged(int value);
@@ -512,6 +513,8 @@ private:
     void recursiveSearchVariables(TVar*, QList<TVar*>&, bool);
 
     void createSearchOptionIcon();
+    int findSearchMatch(const QString& haystack, const QString& needle, int from = 0) const;
+    bool containsSearchMatch(const QString& haystack, const QString& needle) const;
     void clearEditorNotification();
     void runScheduledCleanReset();
     void autoSave();
@@ -646,8 +649,8 @@ private:
 
     QAction* mpAction_searchCaseSensitive = nullptr;
     QAction* mpAction_searchIncludeVariables = nullptr;
+    QAction* mpAction_searchWholeWord = nullptr;
     // TODO: Add other searchOptions
-    // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
 
     QAction* mProfileSaveAction = nullptr;

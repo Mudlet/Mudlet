@@ -42,9 +42,10 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QJsonValue>
-#include <QTextBoundaryFinder>
-#include <QTimer>
 #include <QRegularExpression>
+#include <QTextBoundaryFinder>
+#include <QTime>
+#include <QTimer>
 #include <QUrlQuery>
 
 namespace {
