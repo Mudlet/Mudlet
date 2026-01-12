@@ -4318,7 +4318,6 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 void Host::toggleMapperVisibility()
 {
     auto pMap = mpMap.data();
-    bool visStatus;
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks
@@ -4327,10 +4326,16 @@ void Host::toggleMapperVisibility()
         // (void) TDockWidget::setVisible(bool).
         // When in a dock widget, check the parent's visibility, not the child's,
         // to correctly handle the case where the dock widget was closed via X button.
-        visStatus = pMap->mpMapper->parentWidget()->isVisible();
-        pMap->mpMapper->parentWidget()->setVisible(!visStatus);
+        const bool isCurrentlyVisible = pMap->mpMapper->parentWidget()->isVisible();
+        if (isCurrentlyVisible) {
+            pMap->mpMapper->parentWidget()->setVisible(false);
+        } else {
+            // When showing, show child first then parent - same pattern as TDockWidget
+            pMap->mpMapper->show();
+            pMap->mpMapper->parentWidget()->setVisible(true);
+        }
     } else {
-        visStatus = pMap->mpMapper->isVisible();
+        const bool visStatus = pMap->mpMapper->isVisible();
         pMap->mpMapper->setVisible(!visStatus);
     }
 }
@@ -4380,6 +4385,12 @@ void Host::createMapper(const bool loadDefaultMap)
 
     // XXX: should this be called multiple times?
     mudlet::self()->loadWindowLayout();
+
+    // Ensure the mapper is visible after creation - loadWindowLayout() may have
+    // restored a previous hidden state, but when first creating the mapper, we
+    // always want it to be visible.
+    pMap->mpMapper->show();
+    mpDockableMapWidget->show();
 
     check_for_mappingscript();
     TEvent mapOpenEvent {};
