@@ -13402,6 +13402,22 @@ void dlgTriggerEditor::createSearchOptionIcon()
     QIcon newIcon;
     switch (mSearchOptions) {
     // Each combination must be handled here
+    case SearchOptionCaseSensitive|SearchOptionIncludeVariables|SearchOptionWholeWord:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+withVariables+wholeWords.png"));
+        break;
+
+    case SearchOptionIncludeVariables|SearchOptionWholeWord:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-withVariables+wholeWords.png"));
+        break;
+
+    case SearchOptionCaseSensitive|SearchOptionWholeWord:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+wholeWords.png"));
+        break;
+
+    case SearchOptionWholeWord:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-wholeWords.png"));
+        break;
+
     case SearchOptionCaseSensitive|SearchOptionIncludeVariables:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+withVariables.png"));
         break;
