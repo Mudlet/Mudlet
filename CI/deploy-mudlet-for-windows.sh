@@ -91,9 +91,9 @@ fi
 export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
-# Extract version from the mudlet.pro file
-VERSION_LINE=$(grep "VERSION =" "${GITHUB_WORKSPACE}/src/mudlet.pro")
-VERSION_REGEX='= {1}(.+)$'
+# Extract version from CMakeLists.txt
+VERSION_LINE=$(grep "set(APP_VERSION" "${GITHUB_WORKSPACE}/CMakeLists.txt")
+VERSION_REGEX='set\(APP_VERSION (.+)\)'
 
 # Use Bash regex matching to extract version - don't double-quote these as that
 # can mess things up!

@@ -23,6 +23,7 @@
 
 #include <QMap>
 #include <QMultiHash>
+#include <QSet>
 #include <QStringList>
 #include <QVector>
 
@@ -61,6 +62,8 @@ public:
 
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
 
+    void removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH = nullptr);
+
 #if !defined(LinkStore_Test)
     // OSC 8 hyperlink styling storage and retrieval
     void setStyling(int id, const Mudlet::HyperlinkStyling& styling);
@@ -74,6 +77,7 @@ public:
 
 private:
     void freeReference(Host* pH, const QVector<int>& luaReference);
+    void removeLinkById(int id, Host* pH);
 
 
     int mLinkID = 0;

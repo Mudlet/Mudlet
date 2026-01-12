@@ -42,9 +42,10 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QJsonValue>
-#include <QTextBoundaryFinder>
-#include <QTimer>
 #include <QRegularExpression>
+#include <QTextBoundaryFinder>
+#include <QTime>
+#include <QTimer>
 #include <QUrlQuery>
 
 namespace {
@@ -2996,7 +2997,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
 
             // Handle menu functionality by extending commands and hints
-            if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 1) {
+            if (!mCurrentHyperlinkMenu.isEmpty()) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
 #endif
@@ -4619,7 +4620,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         QString newLineText;
         const QString time = timeBuffer[i];
         // trivial case
-        if (buffer[i].size() == 0) {
+        if (buffer[i].empty()) {
             tempList.append(newLineText);
             queue.push(newBufferLine);
             timeList.append(time);
@@ -4694,7 +4695,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     const int insertedLines = queue.size() - 1;
     for (int i = 0; i <= insertedLines; ++i) {
-        if (tempList[i].size() < 1) {
+        if (tempList[i].isEmpty()) {
             queue.pop();
             appendEmptyLine();
         } else {
@@ -4845,11 +4846,90 @@ void TBuffer::clear()
             break;
         }
     }
+
+    // After deleting all lines, clear all links (none are referenced)
+    clearLinkState();
+
     std::deque<TChar> const newLine;
     buffer.push_back(newLine);
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
+}
+
+void TBuffer::clearLinkState()
+{
+    Host* pH = mpHost;
+    const QSet<int> activeLinkIds = collectActiveLinkIds();
+
+    if (pH) {
+        mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
+    } else {
+        qWarning() << "TBuffer::clearLinkState() WARNING - mpHost is null, cannot remove unreferenced links from store";
+    }
+
+    QSet<int> staleIds;
+
+    auto collectStale = [&activeLinkIds, &staleIds](const auto& map) {
+        for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+            if (!activeLinkIds.contains(it.key())) {
+                staleIds.insert(it.key());
+            }
+        }
+    };
+
+    collectStale(mLinkStates);
+    collectStale(mVisitedLinks);
+    collectStale(mLinkSelectionState);
+    collectStale(mLinkOriginalBackgrounds);
+    collectStale(mLinkOriginalCharacters);
+    collectStale(mLinkOriginalText);
+
+    for (int key : staleIds) {
+        mLinkStates.remove(key);
+        mVisitedLinks.remove(key);
+        mLinkSelectionState.remove(key);
+        mLinkOriginalBackgrounds.remove(key);
+        mLinkOriginalCharacters.remove(key);
+        mLinkOriginalText.remove(key);
+    }
+
+    // Prevent applyPendingSelectionStyling from updating non-existent links
+    mPendingSelectionStyling &= activeLinkIds;
+
+    // Reset hover/active/focus state if those links are gone
+    if (!activeLinkIds.contains(mCurrentHoveredLinkIndex)) {
+        mCurrentHoveredLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mCurrentActiveLinkIndex)) {
+        mCurrentActiveLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mCurrentFocusedLinkIndex)) {
+        mCurrentFocusedLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mLastClickedLinkIndex)) {
+        mLastClickedLinkIndex = 0;
+    }
+}
+
+QSet<int> TBuffer::collectActiveLinkIds() const
+{
+    QSet<int> activeLinkIds;
+
+    for (const auto& line : buffer) {
+        for (const TChar& tchar : line) {
+            int linkId = tchar.linkIndex();
+
+            if (linkId > 0) {
+                activeLinkIds.insert(linkId);
+            }
+        }
+    }
+
+    return activeLinkIds;
 }
 
 void TBuffer::clearLastLine()
@@ -4879,6 +4959,9 @@ void TBuffer::shrinkBuffer()
     // We need to adjust the search result line as some lines have now gone
     // away:
     mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+
+    // Clean up unreferenced links after removing old lines
+    clearLinkState();
 
     if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
         // Signal to lua subsystem that indexes into the Console will need adjusting

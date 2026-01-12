@@ -25,7 +25,6 @@
 
 #include "Tree.h"
 
-#include <QApplication>
 #include <QColor>
 #include <QDebug>
 #include <QMap>

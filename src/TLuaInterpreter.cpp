@@ -40,6 +40,7 @@
 #include "TForkedProcess.h"
 #include "TGameDetails.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
@@ -65,7 +66,6 @@
 #include <QTableWidget>
 #include <QToolTip>
 #include <QFileInfo>
-#include <QMovie>
 #include <QVector>
 #include <limits>
 
@@ -5235,6 +5235,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize);
     lua_register(pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger);
     lua_register(pGlobalLua, "permSubstringTrigger", TLuaInterpreter::permSubstringTrigger);
+    lua_register(pGlobalLua, "permExactMatchTrigger", TLuaInterpreter::permExactMatchTrigger);
     lua_register(pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger);
     lua_register(pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger);
     lua_register(pGlobalLua, "permTimer", TLuaInterpreter::permTimer);
@@ -5352,6 +5353,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomCharColor", TLuaInterpreter::setRoomCharColor);
     lua_register(pGlobalLua, "unsetRoomCharColor", TLuaInterpreter::unsetRoomCharColor);
     lua_register(pGlobalLua, "getRoomCharColor", TLuaInterpreter::getRoomCharColor);
+    lua_register(pGlobalLua, "setRoomBorderColor", TLuaInterpreter::setRoomBorderColor);
+    lua_register(pGlobalLua, "getRoomBorderColor", TLuaInterpreter::getRoomBorderColor);
+    lua_register(pGlobalLua, "clearRoomBorderColor", TLuaInterpreter::clearRoomBorderColor);
+    lua_register(pGlobalLua, "setRoomBorderThickness", TLuaInterpreter::setRoomBorderThickness);
+    lua_register(pGlobalLua, "getRoomBorderThickness", TLuaInterpreter::getRoomBorderThickness);
+    lua_register(pGlobalLua, "clearRoomBorderThickness", TLuaInterpreter::clearRoomBorderThickness);
     lua_register(pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler);
     lua_register(pGlobalLua, "saveMap", TLuaInterpreter::saveMap);
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);
@@ -5359,6 +5366,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
+    lua_register(pGlobalLua, "openIRC", TLuaInterpreter::openIRC);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
     lua_register(pGlobalLua, "getIrcChannels", TLuaInterpreter::getIrcChannels);
@@ -6469,6 +6477,34 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     QList<int> propertyList;
     for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_SUBSTRING;
+    }
+    if (parent.isEmpty()) {
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
+    } else {
+        TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
+        if (!pP) {
+            return {-1, qsl("parent '%1' not found").arg(parent)};
+        }
+        pT = new TTrigger(pP, mpHost);
+        pT->setRegexCodeList(patterns, propertyList);
+    }
+    pT->setIsFolder(patterns.empty());
+    pT->setIsActive(true);
+    pT->setTemporary(false);
+    pT->registerTrigger();
+    pT->setScript(function);
+    pT->setName(name);
+    updateEditor();
+    return {pT->getID(), QString()};
+}
+
+// No documentation available in wiki - internal function
+std::pair<int, QString> TLuaInterpreter::startPermExactMatchTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
+{
+    TTrigger* pT;
+    QList<int> propertyList;
+    for (int i = 0; i < patterns.size(); i++) {
+        propertyList << REGEX_EXACT_MATCH;
     }
     if (parent.isEmpty()) {
         pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
@@ -7674,6 +7710,49 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
 
+    if (key == qsl("ircHostName")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcHostName(&host, getVerifiedString(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircHostPort")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcHostPort(&host, getVerifiedInt(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircHostSecure")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcHostSecure(&host, getVerifiedBool(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircChannels")) {
+        const QString channels = getVerifiedString(L, __func__, 2, "value");
+        QPair<bool, QString> result = dlgIRC::writeIrcChannels(&host, channels.split(qsl(" "), Qt::SkipEmptyParts));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircNickName")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcNickName(&host, getVerifiedString(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
+    if (key == qsl("ircPassword")) {
+        QPair<bool, QString> result = dlgIRC::writeIrcPassword(&host, getVerifiedString(L, __func__, 2, "value"));
+        if (result.first) {
+            return success();
+        }
+        return warnArgumentValue(L, __func__, result.second);
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7876,7 +7955,13 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
-        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } }
+        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
+        { qsl("ircHostName"), [&](){ lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData()); } },
+        { qsl("ircHostPort"), [&](){ lua_pushnumber(L, dlgIRC::readIrcHostPort(&host)); } },
+        { qsl("ircHostSecure"), [&](){ lua_pushboolean(L, dlgIRC::readIrcHostSecure(&host)); } },
+        { qsl("ircChannels"), [&](){ lua_pushstring(L, dlgIRC::readIrcChannels(&host).join(qsl(" ")).toUtf8().constData()); } },
+        { qsl("ircNickName"), [&](){ lua_pushstring(L, dlgIRC::readIrcNickName(&host).toUtf8().constData()); } },
+        { qsl("ircPassword"), [&](){ lua_pushstring(L, dlgIRC::readIrcPassword(&host).toUtf8().constData()); } }
     };
 
     auto it = configMap.find(key);

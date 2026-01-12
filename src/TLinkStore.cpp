@@ -25,6 +25,8 @@
 #include "utils.h"    // For qsl() macro
 #endif
 
+#include <QSet>
+
 int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference, const QString& expireName)
 {
     if (++mLinkID > mMaxLinks) {
@@ -68,42 +70,61 @@ void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
     }
 }
 
+void TLinkStore::removeLinkById(int id, Host* pH)
+{
+    freeReference(pH, mReferenceStore.value(id));
+
+#if !defined(LinkStore_Test)
+    if (mStylingStore.contains(id)) {
+        const Mudlet::HyperlinkStyling& styling = mStylingStore[id];
+        if (styling.selection.hasSelectionSettings) {
+            QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
+            mSelectionGroupIndex.remove(key, id);
+        }
+    }
+#endif
+
+    mLinkStore.remove(id);
+    mHintStore.remove(id);
+    mReferenceStore.remove(id);
+
+    QString expireName = mExpireStore.value(id);
+    if (!expireName.isEmpty()) {
+        mExpireToLinks.remove(expireName, id);
+        mExpireStore.remove(id);
+    }
+
+#if !defined(LinkStore_Test)
+    mStylingStore.remove(id);
+#endif
+}
+
 void TLinkStore::expireLinks(const QString& expireName, Host* pH)
 {
     if (expireName.isEmpty()) {
         return;
     }
 
-    // Get all link IDs with this expire name
     QList<int> linkIds = mExpireToLinks.values(expireName);
 
     for (int linkId : linkIds) {
-        // Free Lua references
-        freeReference(pH, mReferenceStore.value(linkId));
+        removeLinkById(linkId, pH);
+    }
+}
 
-#if !defined(LinkStore_Test)
-        // Remove from selection group index if applicable
-        if (mStylingStore.contains(linkId)) {
-            const Mudlet::HyperlinkStyling& styling = mStylingStore[linkId];
-            if (styling.selection.hasSelectionSettings) {
-                QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
-                mSelectionGroupIndex.remove(key, linkId);
-            }
+void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH)
+{
+    QList<int> idsToRemove;
+
+    for (auto&& [id, links] : mLinkStore.asKeyValueRange()) {
+        if (!referencedIds.contains(id)) {
+            idsToRemove.append(id);
         }
-#endif
-
-        // Remove from all stores
-        mLinkStore.remove(linkId);
-        mHintStore.remove(linkId);
-        mReferenceStore.remove(linkId);
-        mExpireStore.remove(linkId);
-#if !defined(LinkStore_Test)
-        mStylingStore.remove(linkId);
-#endif
     }
 
-    // Remove all mappings for this expire name
-    mExpireToLinks.remove(expireName);
+    for (int id : idsToRemove) {
+        removeLinkById(id, pH);
+    }
 }
 
 #if !defined(LinkStore_Test)

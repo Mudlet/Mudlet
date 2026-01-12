@@ -26,11 +26,18 @@
 #include "dlgProfilePreferences.h"
 
 #include "Host.h"
+#include "TAction.h"
+#include "TAlias.h"
 #include "TConsole.h"
+#include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TTextEdit.h"
+#include "TTimer.h"
+#include "TTrigger.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -39,7 +46,10 @@
 
 #include <chrono>
 #include <QtConcurrent>
+#include <QCloseEvent>
 #include <QColorDialog>
+#include <QDir>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>
@@ -493,9 +503,6 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_ssl->setEnabled(false);
     checkBox_askTlsAvailable->setEnabled(false);
 
-    // ===== tab_chat =====
-    groupBox_ircOptions->setEnabled(false);
-
     groupBox_discordPrivacy->hide();
 
     // ===== tab_shortcuts =====
@@ -610,7 +617,7 @@ void dlgProfilePreferences::enableHostDetails()
 #endif
 
     // ===== tab_chat =====
-    groupBox_ircOptions->setEnabled(true);
+    groupBox_discordPrivacy->show();
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(true);
@@ -666,12 +673,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
-    ircHostName->setText(dlgIRC::readIrcHostName(pHost));
-    ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
-    ircHostSecure->setChecked(dlgIRC::readIrcHostSecure(pHost));
-    ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
-    ircNick->setText(dlgIRC::readIrcNickName(pHost));
-    ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
     comboBox_dictionary->clear();
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
@@ -1216,6 +1217,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 #endif
 
+    if (!pHost->mLoadedOk) {
+        notificationAreaIconLabelWarning->show();
+        frame_notificationArea->show();
+        notificationAreaMessageBox->show();
+        QString errorDetails = pHost->mProfileLoadError.isEmpty()
+            ? tr("unknown error")
+            : pHost->mProfileLoadError;
+        notificationAreaMessageBox->setText(tr("This profile could not be loaded correctly (%1). "
+                                               "Settings cannot be saved. Close the profile and try loading an older version from "
+                                               "'Connect - Options - Profile history'.").arg(errorDetails));
+    }
+
     groupBox_ssl->setChecked(pHost->mSslTsl);
     checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
@@ -1487,13 +1500,6 @@ void dlgProfilePreferences::clearHostDetails()
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
-    // Given that the IRC sub-system can handle there NOT being an active host
-    // this may need revising
-    ircHostName->clear();
-    ircHostPort->clear();
-    ircChannels->clear();
-    ircNick->clear();
-    ircPassword->clear();
 
     comboBox_dictionary->clear();
     checkBox_spellCheck->setChecked(false);
@@ -3054,91 +3060,6 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
-        const QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
-        const QString oldIrcPass = dlgIRC::readIrcPassword(pHost);
-        const QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
-        const QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
-        const bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
-        const QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
-
-        QString newIrcNick = ircNick->text();
-        const QString newIrcPass = ircPassword->text();
-        QString newIrcHost = ircHostName->text();
-        QString newIrcPort = ircHostPort->text();
-        const bool newIrcSecure = ircHostSecure->isChecked();
-        QString newIrcChannels = ircChannels->text();
-        QStringList newChanList;
-        int nIrcPort = dlgIRC::DefaultHostPort;
-        bool restartIrcClient = false;
-
-        if (newIrcHost.isEmpty()) {
-            newIrcHost = dlgIRC::DefaultHostName;
-        }
-
-        if (!newIrcPort.isEmpty()) {
-            bool ok;
-            nIrcPort = newIrcPort.toInt(&ok);
-            if (!ok) {
-                nIrcPort = dlgIRC::DefaultHostPort;
-            } else if (nIrcPort > 65535 || nIrcPort < 1) {
-                nIrcPort = dlgIRC::DefaultHostPort;
-            }
-            newIrcPort = QString::number(nIrcPort);
-        }
-
-        if (newIrcNick.isEmpty()) {
-            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(QRandomGenerator::global()->bounded(10000)));
-        }
-
-        if (!newIrcChannels.isEmpty()) {
-            const QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-            for (const QString& s : tL) {
-                if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
-                    newChanList << s;
-                }
-            }
-        } else {
-            newChanList = dlgIRC::DefaultChannels;
-        }
-        newIrcChannels = newChanList.join(" ");
-
-        if (oldIrcNick != newIrcNick) {
-            dlgIRC::writeIrcNickName(pHost, newIrcNick);
-
-            // if the client is active, update our client nickname.
-            if (pHost->mpDlgIRC) {
-                pHost->mpDlgIRC->connection->setNickName(newIrcNick);
-            }
-        }
-
-        if (oldIrcPass != newIrcPass) {
-            dlgIRC::writeIrcPassword(pHost, newIrcPass);
-            restartIrcClient = true;
-        }
-
-        if (oldIrcChannels != newIrcChannels) {
-            dlgIRC::writeIrcChannels(pHost, newChanList);
-        }
-
-        if (oldIrcHost != newIrcHost) {
-            dlgIRC::writeIrcHostName(pHost, newIrcHost);
-            restartIrcClient = true;
-        }
-
-        if (oldIrcPort != newIrcPort) {
-            dlgIRC::writeIrcHostPort(pHost, nIrcPort);
-            restartIrcClient = true;
-        }
-
-        if (oldIrcSecure != newIrcSecure) {
-            dlgIRC::writeIrcHostSecure(pHost, newIrcSecure);
-            restartIrcClient = true;
-        }
-
-        // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && pHost->mpDlgIRC) {
-            pHost->mpDlgIRC->ircRestart();
-        }
 
         if (console) {
             const int x = console->width();
@@ -3280,6 +3201,10 @@ void dlgProfilePreferences::slot_saveAndClose()
     pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
 
     mudlet::self()->mDiscord.UpdatePresence();
+
+    if (pHost && pHost->mFORCE_SAVE_ON_EXIT) {
+        pHost->saveProfile();
+    }
 
     emit signal_preferencesSaved();
 
@@ -3617,13 +3542,21 @@ void dlgProfilePreferences::populateThemesList()
     QJsonArray unsortedThemes;
 
     if (themesFile.open(QIODevice::ReadOnly)) {
-        unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-        for (auto theme : std::as_const(unsortedThemes)) {
-            const QString themeText = theme.toObject()["Title"].toString();
-            const QString themeFileName = theme.toObject()["FileName"].toString();
+        QJsonParseError parseError;
+        const QJsonDocument doc = QJsonDocument::fromJson(themesFile.readAll(), &parseError);
+        if (parseError.error != QJsonParseError::NoError) {
+            qWarning() << "dlgProfilePreferences::populateThemesList() ERROR - failed to parse themes JSON file:" << themesFile.fileName() << "reason:" << parseError.errorString();
+        } else if (!doc.isArray()) {
+            qWarning() << "dlgProfilePreferences::populateThemesList() ERROR - themes JSON file does not contain an array:" << themesFile.fileName();
+        } else {
+            unsortedThemes = doc.array();
+            for (auto theme : std::as_const(unsortedThemes)) {
+                const QString themeText = theme.toObject()["Title"].toString();
+                const QString themeFileName = theme.toObject()["FileName"].toString();
 
-            if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
-                sortedThemes << std::make_pair(themeText, themeFileName);
+                if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
+                    sortedThemes << std::make_pair(themeText, themeFileName);
+                }
             }
         }
     }

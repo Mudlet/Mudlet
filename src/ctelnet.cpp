@@ -534,6 +534,29 @@ void cTelnet::slot_send_pass()
     }
 }
 
+// Helper to disconnect signals and abort the socket that lost the connection race
+#if defined(QT_NO_SSL)
+void cTelnet::abortLosingSocket(QTcpSocket* losingSocket)
+#else
+void cTelnet::abortLosingSocket(QSslSocket* losingSocket)
+#endif
+{
+    const QSignalBlocker blocker(losingSocket);
+    disconnect(losingSocket, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
+    disconnect(losingSocket, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
+#if !defined(QT_NO_SSL)
+    if (mCurrent_sslTsl) {
+        disconnect(losingSocket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
+        disconnect(losingSocket, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
+    } else {
+#endif
+        disconnect(losingSocket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
+#if !defined(QT_NO_SSL)
+    }
+#endif
+    losingSocket->abort();
+}
+
 void cTelnet::slot_socketConnected()
 {
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
@@ -549,46 +572,16 @@ void cTelnet::slot_socketConnected()
     // disable the other one from doing anything more
     if (sender() == &mSocket_ipV6) {
         mpSocket = &mSocket_ipV6;
-        // Block signals from the other socket until we can disconnect them:
-        const QSignalBlocker blocker(&mSocket_ipV4);
-        disconnect(&mSocket_ipV4, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
-        disconnect(&mSocket_ipV4, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
-#if !defined(QT_NO_SSL)
-        if (mCurrent_sslTsl) {
-            disconnect(&mSocket_ipV4, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
-            disconnect(&mSocket_ipV4, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
-        } else {
-#endif
-            disconnect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
-#if !defined(QT_NO_SSL)
-        }
-#endif
-        mSocket_ipV4.abort();
+        abortLosingSocket(&mSocket_ipV4);
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
-        qDebug().noquote() << "cTelnet::~cTelnet() INFO - mpSocket pointed at IPv6 socket.";
+        qDebug().noquote() << "cTelnet::slot_socketConnected() INFO - mpSocket pointed at IPv6 socket.";
 #endif
-
-    } else {
-        if (sender() == &mSocket_ipV4) {
-            mpSocket = &mSocket_ipV4;
-            const QSignalBlocker blocker(&mSocket_ipV6);
-            disconnect(&mSocket_ipV6, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
-            disconnect(&mSocket_ipV6, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
-#if !defined(QT_NO_SSL)
-            if (mCurrent_sslTsl) {
-                disconnect(&mSocket_ipV6, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
-                disconnect(&mSocket_ipV6, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
-            } else {
-#endif
-                disconnect(&mSocket_ipV6, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
-#if !defined(QT_NO_SSL)
-            }
-#endif
-            mSocket_ipV6.abort();
+    } else if (sender() == &mSocket_ipV4) {
+        mpSocket = &mSocket_ipV4;
+        abortLosingSocket(&mSocket_ipV6);
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
-            qDebug().noquote() << "cTelnet::~cTelnet() INFO - mpSocket pointed at IPv6 socket.";
+        qDebug().noquote() << "cTelnet::slot_socketConnected() INFO - mpSocket pointed at IPv4 socket.";
 #endif
-        }
     }
 
     reset();
@@ -893,8 +886,15 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
         }
     }
 
-    const bool hasIPv4_address = (addressList_ipV4.count());
-    const bool hasIPv6_address = (addressList_ipV6.count());
+    bool hasIPv4_address = (addressList_ipV4.count());
+    bool hasIPv6_address = (addressList_ipV6.count());
+
+    const bool onlyLocalhost = (addressList_ipV4.isEmpty() || addressList_ipV4 == QStringList{qsl("127.0.0.1")})
+                            && (addressList_ipV6.isEmpty() || addressList_ipV6 == QStringList{qsl("::1")});
+    if (onlyLocalhost && hasIPv4_address && hasIPv6_address) {
+        hasIPv6_address = false;
+    }
+
     if (!(hasIPv4_address || hasIPv6_address)) {
         /*: This text is used in the (expected) case when the user has provided
          * a URL for the Game Server rather than (unusually) an IP address.
@@ -3947,7 +3947,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     QStringList argumentList = transcodedMsg.split(QChar::Space);
 
-    if (argumentList.size() > 0) {
+    if (!argumentList.isEmpty()) {
         for (int i = 0; i < argumentList.size(); ++i) {
             if (i < 1) {
                 mediaData.setMediaFileName(argumentList[i]);

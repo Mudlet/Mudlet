@@ -130,7 +130,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.22.3
+      uses: ZedThree/clang-tidy-review@v0.23.0
       id: static_analysis
       with:
         pr: ${{ inputs.pr_number || github.event.pull_request.number }}
@@ -142,6 +142,8 @@ jobs:
         # workaround for https://github.com/ZedThree/clang-tidy-review/issues/157
         extra_arguments: '--allow-no-checks'
         split_workflow: true
+        # skip posting compiler errors to reduce noise from cascading issues (e.g., missing includes)
+        error_action: skip
 
     - name: Upload check results
-      uses: ZedThree/clang-tidy-review/upload@v0.22.3
+      uses: ZedThree/clang-tidy-review/upload@v0.23.0
