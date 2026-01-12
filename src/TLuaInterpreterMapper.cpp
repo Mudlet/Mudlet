@@ -4053,6 +4053,163 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomBorderColor
+int TLuaInterpreter::setRoomBorderColor(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const int r = getVerifiedInt(L, __func__, 2, "red component");
+    if (r < 0 || r > 255) {
+        return warnArgumentValue(L, __func__, qsl("red component value %1 out of range (0 to 255)").arg(r));
+    }
+    const int g = getVerifiedInt(L, __func__, 3, "green component");
+    if (g < 0 || g > 255) {
+        return warnArgumentValue(L, __func__, qsl("green component value %1 out of range (0 to 255)").arg(g));
+    }
+    const int b = getVerifiedInt(L, __func__, 4, "blue component");
+    if (b < 0 || b > 255) {
+        return warnArgumentValue(L, __func__, qsl("blue component value %1 out of range (0 to 255)").arg(b));
+    }
+
+    int a = 255;
+    if (lua_gettop(L) >= 5) {
+        a = getVerifiedInt(L, __func__, 5, "alpha component");
+        if (a < 0 || a > 255) {
+            return warnArgumentValue(L, __func__, qsl("alpha component value %1 out of range (0 to 255)").arg(a));
+        }
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mBorderColor = QColor(r, g, b, a);
+
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->update();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomBorderColor
+int TLuaInterpreter::getRoomBorderColor(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    if (!pR->mBorderColor.isValid()) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, pR->mBorderColor.red());
+    lua_pushnumber(L, pR->mBorderColor.green());
+    lua_pushnumber(L, pR->mBorderColor.blue());
+    lua_pushnumber(L, pR->mBorderColor.alpha());
+    return 4;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearRoomBorderColor
+int TLuaInterpreter::clearRoomBorderColor(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mBorderColor = QColor();
+
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->update();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomBorderThickness
+int TLuaInterpreter::setRoomBorderThickness(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const int thickness = getVerifiedInt(L, __func__, 2, "thickness");
+    if (thickness < 1 || thickness > 10) {
+        return warnArgumentValue(L, __func__, qsl("thickness %1 is out of range (must be 1 to 10)").arg(thickness));
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mBorderThickness = thickness;
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->update();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomBorderThickness
+int TLuaInterpreter::getRoomBorderThickness(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    if (pR->mBorderThickness <= 0) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, pR->mBorderThickness);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearRoomBorderThickness
+int TLuaInterpreter::clearRoomBorderThickness(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    pR->mBorderThickness = 0;
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->update();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateMap
 int TLuaInterpreter::updateMap(lua_State* L)
 {

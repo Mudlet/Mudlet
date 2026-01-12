@@ -39,6 +39,8 @@ extern const QString ROOM_UI_SHOWNAME;
 extern const QString ROOM_UI_NAMEPOS;
 extern const QString ROOM_UI_NAMEFONT;  // global only
 extern const QString ROOM_UI_NAMESIZE;  // TODO
+extern const QString ROOM_UI_BORDERCOLOR;
+extern const QString ROOM_UI_BORDERTHICKNESS;
 
 class TRoomDB
 {
@@ -84,7 +86,7 @@ public:
     int getAreaID(TArea* pA);
     void restoreAreaMap(QDataStream&);
     void restoreSingleArea(int, TArea*);
-    void restoreSingleRoom(int, TRoom*);
+    bool restoreSingleRoom(int, TRoom*);
     qreal get2DMapZoom(const int areaId) const;
     bool set2DMapZoom(const int areaId, const qreal zoom) const;
 
