@@ -104,28 +104,47 @@ done
 # and MSYSTEM_PREFIX for the path (supports MINGW64, CLANG64, UCRT64, etc.)
 if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
-    if [[ -d "$MINGW_BIN" ]]; then
-        echo ""
-        echo "=== Uploading Qt debug files for full stack traces ==="
+    DUMP_SYMS="${MSYSTEM_PREFIX}/bin/dump_syms.exe"
 
-        QT_FILES=()
+    if [[ -d "$MINGW_BIN" && -x "$DUMP_SYMS" ]]; then
+        echo ""
+        echo "=== Converting Qt debug files to Breakpad symbols for Sentry ==="
+
+        # Create temporary directory for symbol files
+        SYM_DIR=$(mktemp -d)
+        SYM_FILES=()
+
         for dll in "$MINGW_BIN"/Qt6*.dll; do
             if [[ -f "$dll" ]]; then
-                QT_FILES+=("$dll")
-                debug_file="${dll%.dll}.debug"
-                if [[ -f "$debug_file" ]]; then
-                    QT_FILES+=("$debug_file")
+                dll_name=$(basename "$dll")
+                sym_file="${SYM_DIR}/${dll_name%.dll}.sym"
+
+                echo "Converting $dll_name to Breakpad symbols..."
+                if "$DUMP_SYMS" "$dll" > "$sym_file" 2>/dev/null; then
+                    if [[ -s "$sym_file" ]]; then
+                        SYM_FILES+=("$sym_file")
+                    else
+                        echo "  Warning: Empty symbol file for $dll_name, skipping"
+                        rm -f "$sym_file"
+                    fi
+                else
+                    echo "  Warning: Failed to convert $dll_name, skipping"
+                    rm -f "$sym_file"
                 fi
             fi
         done
 
-        if [[ ${#QT_FILES[@]} -gt 0 ]]; then
-            echo "Found ${#QT_FILES[@]} Qt files to upload"
-            ./sentry-cli debug-files upload "${QT_FILES[@]}" --project "mudlet"
-            echo "Qt debug files uploaded successfully"
+        if [[ ${#SYM_FILES[@]} -gt 0 ]]; then
+            echo "Uploading ${#SYM_FILES[@]} Breakpad symbol files to Sentry..."
+            ./sentry-cli debug-files upload "${SYM_FILES[@]}" --project "mudlet"
+            echo "Qt Breakpad symbols uploaded successfully"
         else
-            echo "No Qt debug files found in $MINGW_BIN"
+            echo "No Qt symbol files were generated"
         fi
+
+        rm -rf "$SYM_DIR"
+    elif [[ ! -x "$DUMP_SYMS" ]]; then
+        echo "Warning: dump_syms not found at $DUMP_SYMS, skipping Qt debug symbols"
     fi
 
     strip --strip-debug "$MUDLET_EXEC"
