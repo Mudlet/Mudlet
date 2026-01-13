@@ -26,6 +26,25 @@
 #include "Host.h"
 #include "TScript.h"
 
+#include <functional>
+
+ScriptUnit::~ScriptUnit()
+{
+    for (auto script : mScriptRootNodeList) {
+        script->mpHost = nullptr;
+        std::function<void(TScript*)> nullifyChildren = [&nullifyChildren](TScript* s) {
+            for (auto child : *s->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(script);
+    }
+    for (auto script : mScriptRootNodeList) {
+        delete script;
+    }
+}
+
 void ScriptUnit::resetStats()
 {
     statsItemsTotal = 0;
