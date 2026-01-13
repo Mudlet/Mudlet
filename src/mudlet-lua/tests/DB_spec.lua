@@ -1184,7 +1184,7 @@ describe("Tests DB.lua functions", function()
     it("should accept table arguments with optional parameters", function()
       local result = pcall(createMapLabel, {
         areaID = 1,
-        labelText = "Full Label",
+        text = "Full Label",
         x = 0,
         y = 0,
         z = 0,

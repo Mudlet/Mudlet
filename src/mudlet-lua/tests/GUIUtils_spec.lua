@@ -964,6 +964,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       _G.setFgColor = function() end
       _G.setBgColor = function() end
       _G.resetFormat = function() end
+      _G.getCurrentLine = function() return "" end
+      _G.getLineNumber = function() return 0 end
     end)
 
     it("should accept positional arguments", function()
@@ -991,6 +993,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       _G.setFgColor = function() end
       _G.setBgColor = function() end
       _G.resetFormat = function() end
+      _G.getCurrentLine = function() return "" end
+      _G.getLineNumber = function() return 0 end
     end)
 
     it("should accept positional arguments", function()

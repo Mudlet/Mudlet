@@ -560,13 +560,13 @@ describe("Tests Other.lua functions", function()
         pattern = ".*test.*",
         code = "echo('found')",
         multiLine = false,
-        colourTriggerFgColor = 0,
-        colourTriggerBgColor = 0,
-        filterTrigger = false,
+        fgColor = 0,
+        bgColor = 0,
+        filter = false,
         matchAll = false,
         highlightFgColor = 0,
         highlightBgColor = 0,
-        soundTrigger = "",
+        soundFile = "",
         fireLength = 0,
         lineDelta = 0,
         expireAfter = -1
@@ -579,18 +579,18 @@ describe("Tests Other.lua functions", function()
       local result = pcall(tempComplexRegexTrigger, {
         triggerName = "test3" .. os.time(),
         regex = ".*test.*",
-        luaFunction = codeFunc,
+        code = codeFunc,
         multiline = false,
         fgColor = 0,
         bgColor = 0,
         filter = false,
-        matchAllLines = false,
-        hlFg = 0,
-        hlBg = 0,
-        sound = "",
-        fireLen = 0,
-        delta = 0,
-        expiry = -1
+        matchAll = false,
+        highlightFgColor = 0,
+        highlightBgColor = 0,
+        soundFile = "",
+        fireLength = 0,
+        lineDelta = 0,
+        expireAfter = -1
       })
       assert.is_true(result)
     end)

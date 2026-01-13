@@ -288,7 +288,7 @@ describe("Tests the functionality of IDMgr", function()
       local result = pcall(registerNamedTimer, {
         userName = user,
         timerName = timerName .. "2",
-        interval = 1.0,
+        time = 1.0,
         functionReference = timerFunc
       })
       assert.is_true(result)

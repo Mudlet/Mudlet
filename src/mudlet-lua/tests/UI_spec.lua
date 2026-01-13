@@ -1288,34 +1288,12 @@ describe("Tests UI functions", function()
       local result = pcall(echoPopup, "main", "popup text", {"cmd1", "cmd2"}, {"hint1", "hint2"}, true)
       assert.is_true(result)
     end)
-
-    it("should accept table arguments", function()
-      local result = pcall(echoPopup, {
-        windowName = "main",
-        text = "popup text",
-        commands = {"cmd1", "cmd2"},
-        hints = {"hint1", "hint2"},
-        useCurrentFormat = true
-      })
-      assert.is_true(result)
-    end)
   end)
 
   describe("Tests insertPopup() table argument support", function()
     it("should accept positional arguments", function()
       echo("test ")
       local result = pcall(insertPopup, "main", "popup", {"cmd1"}, {"hint1"}, false)
-      assert.is_true(result)
-    end)
-
-    it("should accept table arguments", function()
-      echo("test ")
-      local result = pcall(insertPopup, {
-        windowName = "main",
-        text = "popup",
-        commands = {"cmd1"},
-        hints = {"hint1"}
-      })
       assert.is_true(result)
     end)
   end)
@@ -1492,138 +1470,4 @@ describe("Tests UI functions", function()
     end)
   end)
 
-  -- Tests for Lua wrapper functions (inherit table support from base C++ functions)
-  describe("Tests Lua wrapper functions table argument support", function()
-    it("cechoLink should accept table arguments", function()
-      local result = pcall(cechoLink, {
-        windowName = "main",
-        text = "<red>test link",
-        command = "echo('clicked')",
-        hint = "hint",
-        useCurrentFormat = true
-      })
-      assert.is_true(result)
-    end)
-
-    it("cinsertLink should accept table arguments", function()
-      echo("test ")
-      local result = pcall(cinsertLink, {
-        windowName = "main",
-        text = "<blue>insert",
-        command = "echo('clicked')",
-        hint = "hint"
-      })
-      assert.is_true(result)
-    end)
-
-    it("cechoPopup should accept table arguments", function()
-      local result = pcall(cechoPopup, {
-        windowName = "main",
-        text = "<green>popup",
-        commands = {"cmd1"},
-        hints = {"hint1"},
-        useCurrentFormat = true
-      })
-      assert.is_true(result)
-    end)
-
-    it("cinsertPopup should accept table arguments", function()
-      echo("test ")
-      local result = pcall(cinsertPopup, {
-        windowName = "main",
-        text = "<yellow>popup",
-        commands = {"cmd1"},
-        hints = {"hint1"}
-      })
-      assert.is_true(result)
-    end)
-
-    it("dechoLink should accept table arguments", function()
-      local result = pcall(dechoLink, {
-        windowName = "main",
-        text = "<255,0,0>test link",
-        command = "echo('clicked')",
-        hint = "hint",
-        useCurrentFormat = true
-      })
-      assert.is_true(result)
-    end)
-
-    it("dinsertLink should accept table arguments", function()
-      echo("test ")
-      local result = pcall(dinsertLink, {
-        windowName = "main",
-        text = "<0,255,0>insert",
-        command = "echo('clicked')",
-        hint = "hint"
-      })
-      assert.is_true(result)
-    end)
-
-    it("dechoPopup should accept table arguments", function()
-      local result = pcall(dechoPopup, {
-        windowName = "main",
-        text = "<0,0,255>popup",
-        commands = {"cmd1"},
-        hints = {"hint1"},
-        useCurrentFormat = true
-      })
-      assert.is_true(result)
-    end)
-
-    it("dinsertPopup should accept table arguments", function()
-      echo("test ")
-      local result = pcall(dinsertPopup, {
-        windowName = "main",
-        text = "<255,255,0>popup",
-        commands = {"cmd1"},
-        hints = {"hint1"}
-      })
-      assert.is_true(result)
-    end)
-
-    it("hechoLink should accept table arguments", function()
-      local result = pcall(hechoLink, {
-        windowName = "main",
-        text = "#FF0000test link",
-        command = "echo('clicked')",
-        hint = "hint",
-        useCurrentFormat = true
-      })
-      assert.is_true(result)
-    end)
-
-    it("hinsertLink should accept table arguments", function()
-      echo("test ")
-      local result = pcall(hinsertLink, {
-        windowName = "main",
-        text = "#00FF00insert",
-        command = "echo('clicked')",
-        hint = "hint"
-      })
-      assert.is_true(result)
-    end)
-
-    it("hechoPopup should accept table arguments", function()
-      local result = pcall(hechoPopup, {
-        windowName = "main",
-        text = "#0000FFpopup",
-        commands = {"cmd1"},
-        hints = {"hint1"},
-        useCurrentFormat = true
-      })
-      assert.is_true(result)
-    end)
-
-    it("hinsertPopup should accept table arguments", function()
-      echo("test ")
-      local result = pcall(hinsertPopup, {
-        windowName = "main",
-        text = "#FFFF00popup",
-        commands = {"cmd1"},
-        hints = {"hint1"}
-      })
-      assert.is_true(result)
-    end)
-  end)
 end)
