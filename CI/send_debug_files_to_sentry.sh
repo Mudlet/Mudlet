@@ -104,12 +104,18 @@ done
 # and MSYSTEM_PREFIX for the path (supports MINGW64, CLANG64, UCRT64, etc.)
 if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
-    DUMP_SYMS="${MSYSTEM_PREFIX}/bin/dump_syms.exe"
+
+    echo ""
+    echo "=== Converting Qt debug files to Breakpad symbols for Sentry ==="
+
+    # Download Mozilla's dump_syms (better DWARF support than MSYS2 breakpad)
+    DUMP_SYMS_URL="https://github.com/mozilla/dump_syms/releases/download/v2.3.5/dump_syms-x86_64-pc-windows-msvc.zip"
+    echo "Downloading Mozilla dump_syms..."
+    curl -sL "$DUMP_SYMS_URL" -o dump_syms.zip
+    unzip -q dump_syms.zip
+    DUMP_SYMS="./dump_syms.exe"
 
     if [[ -d "$MINGW_BIN" && -x "$DUMP_SYMS" ]]; then
-        echo ""
-        echo "=== Converting Qt debug files to Breakpad symbols for Sentry ==="
-
         # Create temporary directory for symbol files
         SYM_DIR=$(mktemp -d)
         SYM_FILES=()
@@ -126,6 +132,7 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                 # Check if companion .debug file exists (contains DWARF debug info)
                 if [[ -f "$debug_file" ]]; then
                     echo "  Found debug file: ${base_name}.debug ($(stat -c%s "$debug_file") bytes)"
+                    echo "  File format: $(file "$debug_file" | cut -d: -f2-)"
                     # Try just the debug file first (it should contain all DWARF info)
                     "$DUMP_SYMS" "$debug_file" > "$sym_file" 2>"${sym_file}.err" || true
                     if [[ -s "${sym_file}.err" ]]; then

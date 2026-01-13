@@ -152,7 +152,7 @@ echo "    Completed"
 echo ""
 
 if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
-  echo "=== Installing Qt debug packages and breakpad for Sentry ==="
+  echo "=== Installing Qt debug packages for Sentry ==="
   pacman_attempts=0
   while true; do
     if /usr/bin/pacman -S --needed --noconfirm \
@@ -162,8 +162,7 @@ if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
       "${MINGW_PACKAGE_PREFIX}-qt6-speech-debug" \
       "${MINGW_PACKAGE_PREFIX}-qt6-imageformats-debug" \
       "${MINGW_PACKAGE_PREFIX}-qt6-tools-debug" \
-      "${MINGW_PACKAGE_PREFIX}-qt6-5compat-debug" \
-      "${MINGW_PACKAGE_PREFIX}-breakpad-git"; then
+      "${MINGW_PACKAGE_PREFIX}-qt6-5compat-debug"; then
         break
     fi
 
