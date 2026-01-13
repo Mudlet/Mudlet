@@ -156,13 +156,13 @@ if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
   pacman_attempts=0
   while true; do
     if /usr/bin/pacman -S --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-base-debug" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-debug" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-svg-debug" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-speech-debug" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats-debug" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-tools-debug" \
-      "mingw-w64-${BUILDCOMPONENT}-qt6-5compat-debug"; then
+      "${MINGW_PACKAGE_PREFIX}-qt6-base-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-svg-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-speech-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-imageformats-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-tools-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-5compat-debug"; then
         break
     fi
 
