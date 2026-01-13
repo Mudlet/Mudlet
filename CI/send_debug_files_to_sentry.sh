@@ -120,15 +120,23 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                 sym_file="${SYM_DIR}/${dll_name%.dll}.sym"
 
                 echo "Converting $dll_name to Breakpad symbols..."
-                if "$DUMP_SYMS" "$dll" > "$sym_file" 2>/dev/null; then
+                if "$DUMP_SYMS" "$dll" > "$sym_file"; then
                     if [[ -s "$sym_file" ]]; then
-                        SYM_FILES+=("$sym_file")
+                        # Check if sym file has actual symbols (more than just MODULE line)
+                        line_count=$(wc -l < "$sym_file")
+                        if [[ $line_count -gt 5 ]]; then
+                            SYM_FILES+=("$sym_file")
+                            echo "  Generated $line_count lines of symbols"
+                        else
+                            echo "  Warning: Only $line_count lines in $dll_name symbols (no debug info?), skipping"
+                            rm -f "$sym_file"
+                        fi
                     else
                         echo "  Warning: Empty symbol file for $dll_name, skipping"
                         rm -f "$sym_file"
                     fi
                 else
-                    echo "  Warning: Failed to convert $dll_name, skipping"
+                    echo "  Warning: Failed to convert $dll_name (exit code $?), skipping"
                     rm -f "$sym_file"
                 fi
             fi
