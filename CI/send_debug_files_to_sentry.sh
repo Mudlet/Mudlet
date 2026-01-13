@@ -125,20 +125,21 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
 
                 # Check if companion .debug file exists (contains DWARF debug info)
                 if [[ -f "$debug_file" ]]; then
-                    echo "  Found debug file: ${base_name}.debug"
-                    # Pass both DLL and debug file to dump_syms
-                    if "$DUMP_SYMS" "$dll" "$debug_file" > "$sym_file" 2>&1; then
-                        :
-                    elif "$DUMP_SYMS" "$debug_file" > "$sym_file" 2>&1; then
-                        # Fallback: try just the debug file
-                        :
+                    echo "  Found debug file: ${base_name}.debug ($(stat -c%s "$debug_file") bytes)"
+                    # Try just the debug file first (it should contain all DWARF info)
+                    "$DUMP_SYMS" "$debug_file" > "$sym_file" 2>"${sym_file}.err" || true
+                    if [[ -s "${sym_file}.err" ]]; then
+                        echo "  dump_syms stderr: $(head -1 "${sym_file}.err")"
                     fi
+                    rm -f "${sym_file}.err"
                 else
                     echo "  No debug file found, trying DLL only..."
-                    "$DUMP_SYMS" "$dll" > "$sym_file" 2>&1 || true
+                    "$DUMP_SYMS" "$dll" > "$sym_file" 2>/dev/null || true
                 fi
 
                 if [[ -s "$sym_file" ]]; then
+                    # Show first line (MODULE line) for diagnostics
+                    echo "  Sym file header: $(head -1 "$sym_file")"
                     # Check if sym file has actual debug symbols (FILE/FUNC/LINE records)
                     if grep -q "^FUNC " "$sym_file"; then
                         func_count=$(grep -c "^FUNC " "$sym_file")
@@ -146,7 +147,9 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                         echo "  Generated symbols: $func_count functions, $line_count line records"
                         SYM_FILES+=("$sym_file")
                     else
-                        echo "  Warning: No FUNC records in $dll_name symbols, skipping"
+                        total_lines=$(wc -l < "$sym_file")
+                        public_count=$(grep -c "^PUBLIC " "$sym_file" || echo 0)
+                        echo "  Warning: No FUNC records ($total_lines lines, $public_count PUBLIC), skipping"
                         rm -f "$sym_file"
                     fi
                 else
