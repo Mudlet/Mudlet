@@ -36,10 +36,14 @@ void HostManager::deleteHost(const QString& hostname)
         return;
     }
 
+    qDebug() << "HostManager::deleteHost() START - removing host:" << hostname;
+
     // As this pulls the QSharedPointer that hostname identifies out of the pool
     // the Host goes out of scope when execution leaves this method and thus
     // gets destroyed:
     mHostPool.remove(hostname);
+
+    qDebug() << "HostManager::deleteHost() END - host removed, remaining hosts:" << mHostPool.size();
 }
 
 bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)

@@ -2597,7 +2597,7 @@ Host* mudlet::getActiveHost()
 // the "Connect" buttion):
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    qDebug() << "mudlet::closeEvent(...) INFO - called!";
+    qDebug() << "mudlet::closeEvent(...) INFO - called! Host count:" << mHostManager.getHostCount();
 
     QStringList hostsToDestroy;
     bool abortClose = false;
@@ -2624,9 +2624,12 @@ void mudlet::closeEvent(QCloseEvent* event)
     }
 
     // Clean up the profiles that are being closed
+    qDebug() << "mudlet::closeEvent() - closing" << hostsToDestroy.size() << "hosts:" << hostsToDestroy;
     for (auto const& hostName : hostsToDestroy) {
+        qDebug() << "mudlet::closeEvent() - calling closeHost for:" << hostName;
         closeHost(hostName);
     }
+    qDebug() << "mudlet::closeEvent() - all hosts closed, remaining:" << mHostManager.getHostCount();
 
     // Now we bail out if the close is cancelled:
     if (abortClose) {
@@ -2648,6 +2651,7 @@ void mudlet::closeEvent(QCloseEvent* event)
 
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled
+    qDebug() << "mudlet::closeEvent() END - accepting close event";
     event->accept();
 }
 
@@ -4620,6 +4624,8 @@ void mudlet::slot_compactInputLine(const bool state)
 
 mudlet::~mudlet()
 {
+    qDebug() << "mudlet::~mudlet() DESTRUCTOR START - remaining hosts:" << mHostManager.getHostCount();
+
     // There may be a corner case if a replay is running AND the application is
     // closing down AND the updater on a particular platform pauses the
     // application destruction...?
@@ -4647,6 +4653,7 @@ mudlet::~mudlet()
     saveDetachedWindowsGeometry();
     shutdownAI();
 
+    qDebug() << "mudlet::~mudlet() DESTRUCTOR END";
     mudlet::smpSelf = nullptr;
 }
 

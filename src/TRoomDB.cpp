@@ -47,6 +47,8 @@ TRoomDB::TRoomDB(TMap* pMap)
 
 TRoomDB::~TRoomDB()
 {
+    qDebug() << "TRoomDB::~TRoomDB() DESTRUCTOR START - rooms:" << rooms.size() << "areas:" << areas.size();
+
     mBulkDeletionMode = true;
 
     // Get all pointers before clearing containers to prevent lookup issues
@@ -71,6 +73,7 @@ TRoomDB::~TRoomDB()
         delete area;
     }
 
+    qDebug() << "TRoomDB::~TRoomDB() DESTRUCTOR END - deleted" << roomList.size() << "rooms and" << areaList.size() << "areas";
 }
 
 TRoom* TRoomDB::getRoom(int id)

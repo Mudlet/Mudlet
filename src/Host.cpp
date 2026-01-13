@@ -392,6 +392,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    qDebug() << "Host::~Host() DESTRUCTOR START for profile:" << mHostName;
+
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
 
@@ -416,6 +418,8 @@ Host::~Host()
 
     // Don't pass 'this' pointer during destruction - it's unsafe as the Host is being destroyed
     TDebug::removeHost(nullptr, mHostName);
+
+    qDebug() << "Host::~Host() DESTRUCTOR END for profile:" << mHostName;
 }
 
 void Host::forceClose()

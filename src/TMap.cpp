@@ -70,7 +70,9 @@ TMap::TMap(Host* pH, const QString& profileName)
 
 TMap::~TMap()
 {
+    qDebug() << "TMap::~TMap() DESTRUCTOR START";
     delete mpRoomDB;
+    qDebug() << "TMap::~TMap() DESTRUCTOR END - mpRoomDB deleted";
     if (!mStoredMessages.isEmpty()) {
         qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
                    << "messages are:\n"
