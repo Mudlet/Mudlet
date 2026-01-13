@@ -109,11 +109,12 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     echo "=== Converting Qt DWARF debug files to PDB for Sentry ==="
 
     # Download cv2pdb (converts MinGW DWARF to PDB format)
+    # Use 64-bit version to handle large debug files like Qt6Core (198MB)
     CV2PDB_URL="https://github.com/rainers/cv2pdb/releases/download/v0.54/cv2pdb-0.54.zip"
     echo "Downloading cv2pdb..."
     curl -sL "$CV2PDB_URL" -o cv2pdb.zip
     unzip -q cv2pdb.zip
-    CV2PDB="./cv2pdb.exe"
+    CV2PDB="./cv2pdb64.exe"
 
     if [[ -d "$MINGW_BIN" && -x "$CV2PDB" ]]; then
         # Use absolute Windows path for PDB files (cv2pdb is native Windows app)
