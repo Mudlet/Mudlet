@@ -2360,6 +2360,10 @@ void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* func
 // No documentation available in wiki - internal function
 void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
 {
+    if (index < 0) {
+        index = lua_gettop(lState) + index + 1;
+    }
+
     if (!lua_istable(lState, index)) {
         lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "hints", luaL_typename(lState, index));
         lua_error(lState);
@@ -2389,6 +2393,10 @@ void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionNam
 // No documentation available in wiki - internal function
 void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const char* functionName, int& index, QStringList& commandsList, QVector<int>& luaFunctionNumbers)
 {
+    if (index < 0) {
+        index = lua_gettop(lState) + index + 1;
+    }
+
     if (!lua_istable(lState, index)) {
         lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "commands/functions", luaL_typename(lState, index));
         lua_error(lState);
