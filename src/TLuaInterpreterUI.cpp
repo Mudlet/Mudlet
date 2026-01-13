@@ -29,6 +29,8 @@
 
 #include "TLuaInterpreter.h"
 
+#include "LuaStackDebug.h"
+
 #include <QClipboard>
 
 #include "EAction.h"
@@ -921,17 +923,28 @@ int TLuaInterpreter::echoLink(lua_State* L)
 
     // Check if first argument is a table for named-key format
     if (lua_istable(L, 1)) {
+        LUA_STACK_GUARD_NAMED(L, __func__, "table-arg-parsing", 1, stackGuard);
+        qDebug() << "[echoLink] Processing table argument, initial stack:" << lua_gettop(L);
+
         bool hasText = false;
         bool hasCommand = false;
         bool hasHint = false;
+        int iterationCount = 0;
 
         lua_pushnil(L);
+        stackGuard.checkPoint("after pushnil");
+
         while (lua_next(L, 1) != 0) {
+            ++iterationCount;
+            LUA_TABLE_ITER_DEBUG(L, __func__, iterationCount);
+
             if (lua_type(L, -2) != LUA_TSTRING) {
+                qDebug() << "[echoLink] Skipping non-string key at iteration" << iterationCount;
                 lua_pop(L, 1);
                 continue;
             }
             const QString key = getVerifiedString(L, __func__, -2, "table key");
+            qDebug() << "[echoLink] Processing key:" << key << "stack:" << lua_gettop(L);
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
@@ -940,8 +953,16 @@ int TLuaInterpreter::echoLink(lua_State* L)
                 text = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasText = true;
             } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
+                qDebug() << "[echoLink] About to call parseCommandOrFunction";
+                const int stackBefore = lua_gettop(L);
                 int valueIndex = -1;
                 parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
+                const int stackAfter = lua_gettop(L);
+                qDebug() << "[echoLink] After parseCommandOrFunction - before:" << stackBefore << "after:" << stackAfter;
+                if (stackAfter != stackBefore) {
+                    qCritical() << "[echoLink] STACK IMBALANCE from parseCommandOrFunction!";
+                    LUA_STACK_DEBUG(L, __func__, "after parseCommandOrFunction - IMBALANCED");
+                }
                 hasCommand = true;
             } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive)) {
                 hint = getVerifiedString(L, __func__, -1, qPrintable(key));
@@ -951,8 +972,11 @@ int TLuaInterpreter::echoLink(lua_State* L)
                 useCurrentFormat = getVerifiedBool(L, __func__, -1, qPrintable(key));
             }
 
+            qDebug() << "[echoLink] Before lua_pop(1), stack:" << lua_gettop(L);
             lua_pop(L, 1);
+            qDebug() << "[echoLink] After lua_pop(1), stack:" << lua_gettop(L);
         }
+        qDebug() << "[echoLink] Table iteration complete after" << iterationCount << "iterations, stack:" << lua_gettop(L);
 
         if (!hasText) {
             lua_pushfstring(L, "echoLink: bad argument, missing 'text' in table");
@@ -1849,19 +1873,30 @@ int TLuaInterpreter::insertLink(lua_State* L)
 {
     // Table argument support
     if (lua_istable(L, 1)) {
+        LUA_STACK_GUARD_NAMED(L, __func__, "table-arg-parsing", 1, stackGuard);
+        qDebug() << "[insertLink] Processing table argument, initial stack:" << lua_gettop(L);
+
         QString windowName = qsl("main");
         QString text, command, hint;
         int luaReference = 0;
         bool useCurrentFormat = false;
         bool hasText = false, hasCommand = false, hasHint = false;
+        int iterationCount = 0;
 
         lua_pushnil(L);
+        stackGuard.checkPoint("after pushnil");
+
         while (lua_next(L, 1) != 0) {
+            ++iterationCount;
+            LUA_TABLE_ITER_DEBUG(L, __func__, iterationCount);
+
             if (lua_type(L, -2) != LUA_TSTRING) {
+                qDebug() << "[insertLink] Skipping non-string key at iteration" << iterationCount;
                 lua_pop(L, 1);
                 continue;
             }
             const QString key = getVerifiedString(L, __func__, -2, "table key");
+            qDebug() << "[insertLink] Processing key:" << key << "stack:" << lua_gettop(L);
 
             if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
                 !key.compare(QLatin1String("window"), Qt::CaseInsensitive)) {
@@ -1870,8 +1905,16 @@ int TLuaInterpreter::insertLink(lua_State* L)
                 text = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasText = true;
             } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
+                qDebug() << "[insertLink] About to call parseCommandOrFunction";
+                const int stackBefore = lua_gettop(L);
                 int valueIndex = -1;
                 parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
+                const int stackAfter = lua_gettop(L);
+                qDebug() << "[insertLink] After parseCommandOrFunction - before:" << stackBefore << "after:" << stackAfter;
+                if (stackAfter != stackBefore) {
+                    qCritical() << "[insertLink] STACK IMBALANCE from parseCommandOrFunction!";
+                    LUA_STACK_DEBUG(L, __func__, "after parseCommandOrFunction - IMBALANCED");
+                }
                 hasCommand = true;
             } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive) ||
                        !key.compare(QLatin1String("tooltip"), Qt::CaseInsensitive)) {
@@ -1883,8 +1926,11 @@ int TLuaInterpreter::insertLink(lua_State* L)
                 }
             }
 
+            qDebug() << "[insertLink] Before lua_pop(1), stack:" << lua_gettop(L);
             lua_pop(L, 1);
+            qDebug() << "[insertLink] After lua_pop(1), stack:" << lua_gettop(L);
         }
+        qDebug() << "[insertLink] Table iteration complete after" << iterationCount << "iterations, stack:" << lua_gettop(L);
 
         if (!hasText) {
             return warnArgumentValue(L, __func__, "missing required 'text' in table");
