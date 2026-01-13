@@ -116,8 +116,9 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     CV2PDB="./cv2pdb.exe"
 
     if [[ -d "$MINGW_BIN" && -x "$CV2PDB" ]]; then
-        # Create temporary directory for PDB files
-        PDB_DIR=$(mktemp -d)
+        # Use current directory for PDB files (cv2pdb can't write to MSYS temp)
+        PDB_DIR="./qt_pdbs"
+        mkdir -p "$PDB_DIR"
         PDB_FILES=()
 
         for dll in "$MINGW_BIN"/Qt6*.dll; do
