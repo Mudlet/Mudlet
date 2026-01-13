@@ -116,9 +116,10 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     CV2PDB="./cv2pdb.exe"
 
     if [[ -d "$MINGW_BIN" && -x "$CV2PDB" ]]; then
-        # Use current directory for PDB files (cv2pdb can't write to MSYS temp)
-        PDB_DIR="./qt_pdbs"
+        # Use absolute Windows path for PDB files (cv2pdb is native Windows app)
+        PDB_DIR="$(pwd)/qt_pdbs"
         mkdir -p "$PDB_DIR"
+        WIN_PDB_DIR=$(cygpath -w "$PDB_DIR")
         PDB_FILES=()
 
         for dll in "$MINGW_BIN"/Qt6*.dll; do
@@ -138,7 +139,7 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                     # Convert paths to Windows format for native Windows cv2pdb.exe
                     win_debug_file=$(cygpath -w "$debug_file")
                     win_dll=$(cygpath -w "$dll")
-                    win_pdb_file=$(cygpath -w "$pdb_file")
+                    win_pdb_file="${WIN_PDB_DIR}\\${base_name}.pdb"
                     if "$CV2PDB" "-l${win_debug_file}" "$win_dll" "$win_pdb_file" 2>"${pdb_file}.err"; then
                         if [[ -f "$pdb_file" ]]; then
                             pdb_size=$(stat -c%s "$pdb_file")
