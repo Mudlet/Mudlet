@@ -134,8 +134,11 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
 
                     # cv2pdb converts DWARF to PDB format
                     # Usage: cv2pdb -l<debug-file> <dll> [<output-dll>] [<pdb>]
-                    # Pass DLL as input, use -l to specify separate debug file
-                    if "$CV2PDB" "-l${debug_file}" "$dll" "$pdb_file" 2>"${pdb_file}.err"; then
+                    # Convert paths to Windows format for native Windows cv2pdb.exe
+                    win_debug_file=$(cygpath -w "$debug_file")
+                    win_dll=$(cygpath -w "$dll")
+                    win_pdb_file=$(cygpath -w "$pdb_file")
+                    if "$CV2PDB" "-l${win_debug_file}" "$win_dll" "$win_pdb_file" 2>"${pdb_file}.err"; then
                         if [[ -f "$pdb_file" ]]; then
                             pdb_size=$(stat -c%s "$pdb_file")
                             echo "  Generated PDB: ${base_name}.pdb ($pdb_size bytes)"
