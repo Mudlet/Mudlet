@@ -106,77 +106,64 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
 
     echo ""
-    echo "=== Converting Qt debug files to Breakpad symbols for Sentry ==="
+    echo "=== Converting Qt DWARF debug files to PDB for Sentry ==="
 
-    # Download Mozilla's dump_syms (better DWARF support than MSYS2 breakpad)
-    DUMP_SYMS_URL="https://github.com/mozilla/dump_syms/releases/download/v2.3.5/dump_syms-x86_64-pc-windows-msvc.zip"
-    echo "Downloading Mozilla dump_syms..."
-    curl -sL "$DUMP_SYMS_URL" -o dump_syms.zip
-    unzip -q dump_syms.zip
-    DUMP_SYMS="./dump_syms.exe"
+    # Download cv2pdb (converts MinGW DWARF to PDB format)
+    CV2PDB_URL="https://github.com/rainers/cv2pdb/releases/download/v0.54/cv2pdb-0.54.zip"
+    echo "Downloading cv2pdb..."
+    curl -sL "$CV2PDB_URL" -o cv2pdb.zip
+    unzip -q cv2pdb.zip
+    CV2PDB="./cv2pdb.exe"
 
-    if [[ -d "$MINGW_BIN" && -x "$DUMP_SYMS" ]]; then
-        # Create temporary directory for symbol files
-        SYM_DIR=$(mktemp -d)
-        SYM_FILES=()
+    if [[ -d "$MINGW_BIN" && -x "$CV2PDB" ]]; then
+        # Create temporary directory for PDB files
+        PDB_DIR=$(mktemp -d)
+        PDB_FILES=()
 
         for dll in "$MINGW_BIN"/Qt6*.dll; do
             if [[ -f "$dll" ]]; then
                 dll_name=$(basename "$dll")
                 base_name="${dll_name%.dll}"
-                sym_file="${SYM_DIR}/${base_name}.sym"
                 debug_file="${MINGW_BIN}/${base_name}.debug"
-
-                echo "Converting $dll_name to Breakpad symbols..."
+                pdb_file="${PDB_DIR}/${base_name}.pdb"
 
                 # Check if companion .debug file exists (contains DWARF debug info)
                 if [[ -f "$debug_file" ]]; then
-                    echo "  Found debug file: ${base_name}.debug ($(stat -c%s "$debug_file") bytes)"
-                    echo "  File format: $(file "$debug_file" | cut -d: -f2-)"
-                    # Try just the debug file first (it should contain all DWARF info)
-                    "$DUMP_SYMS" "$debug_file" > "$sym_file" 2>"${sym_file}.err" || true
-                    if [[ -s "${sym_file}.err" ]]; then
-                        echo "  dump_syms stderr: $(head -1 "${sym_file}.err")"
-                    fi
-                    rm -f "${sym_file}.err"
-                else
-                    echo "  No debug file found, trying DLL only..."
-                    "$DUMP_SYMS" "$dll" > "$sym_file" 2>/dev/null || true
-                fi
+                    echo "Converting $dll_name to PDB..."
+                    echo "  Debug file: ${base_name}.debug ($(stat -c%s "$debug_file") bytes)"
 
-                if [[ -s "$sym_file" ]]; then
-                    # Show first line (MODULE line) for diagnostics
-                    echo "  Sym file header: $(head -1 "$sym_file")"
-                    # Check if sym file has actual debug symbols (FILE/FUNC/LINE records)
-                    if grep -q "^FUNC " "$sym_file"; then
-                        func_count=$(grep -c "^FUNC " "$sym_file")
-                        line_count=$(grep -c "^[0-9a-f]" "$sym_file" || echo 0)
-                        echo "  Generated symbols: $func_count functions, $line_count line records"
-                        SYM_FILES+=("$sym_file")
+                    # cv2pdb converts DWARF in PE files to PDB format
+                    # Usage: cv2pdb <exe> [<output_exe>] [<pdb>]
+                    if "$CV2PDB" "$debug_file" "$pdb_file" 2>"${pdb_file}.err"; then
+                        if [[ -f "$pdb_file" ]]; then
+                            pdb_size=$(stat -c%s "$pdb_file")
+                            echo "  Generated PDB: ${base_name}.pdb ($pdb_size bytes)"
+                            PDB_FILES+=("$pdb_file")
+                        else
+                            echo "  Warning: PDB file not created"
+                        fi
                     else
-                        total_lines=$(wc -l < "$sym_file")
-                        public_count=$(grep -c "^PUBLIC " "$sym_file" || echo 0)
-                        echo "  Warning: No FUNC records ($total_lines lines, $public_count PUBLIC), skipping"
-                        rm -f "$sym_file"
+                        echo "  cv2pdb failed: $(cat "${pdb_file}.err" 2>/dev/null || echo 'unknown error')"
                     fi
+                    rm -f "${pdb_file}.err"
                 else
-                    echo "  Warning: Empty symbol file for $dll_name, skipping"
-                    rm -f "$sym_file"
+                    echo "Skipping $dll_name (no .debug file)"
                 fi
             fi
         done
 
-        if [[ ${#SYM_FILES[@]} -gt 0 ]]; then
-            echo "Uploading ${#SYM_FILES[@]} Breakpad symbol files to Sentry..."
-            ./sentry-cli debug-files upload "${SYM_FILES[@]}" --project "mudlet"
-            echo "Qt Breakpad symbols uploaded successfully"
+        if [[ ${#PDB_FILES[@]} -gt 0 ]]; then
+            echo ""
+            echo "Uploading ${#PDB_FILES[@]} PDB files to Sentry..."
+            ./sentry-cli debug-files upload "${PDB_FILES[@]}" --project "mudlet"
+            echo "Qt PDB symbols uploaded successfully"
         else
-            echo "No Qt symbol files were generated"
+            echo "No Qt PDB files were generated"
         fi
 
-        rm -rf "$SYM_DIR"
-    elif [[ ! -x "$DUMP_SYMS" ]]; then
-        echo "Warning: dump_syms not found at $DUMP_SYMS, skipping Qt debug symbols"
+        rm -rf "$PDB_DIR"
+    elif [[ ! -x "$CV2PDB" ]]; then
+        echo "Warning: cv2pdb not found at $CV2PDB, skipping Qt debug symbols"
     fi
 
     strip --strip-debug "$MUDLET_EXEC"
