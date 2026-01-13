@@ -117,26 +117,40 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
         for dll in "$MINGW_BIN"/Qt6*.dll; do
             if [[ -f "$dll" ]]; then
                 dll_name=$(basename "$dll")
-                sym_file="${SYM_DIR}/${dll_name%.dll}.sym"
+                base_name="${dll_name%.dll}"
+                sym_file="${SYM_DIR}/${base_name}.sym"
+                debug_file="${MINGW_BIN}/${base_name}.debug"
 
                 echo "Converting $dll_name to Breakpad symbols..."
-                if "$DUMP_SYMS" "$dll" > "$sym_file"; then
-                    if [[ -s "$sym_file" ]]; then
-                        # Check if sym file has actual symbols (more than just MODULE line)
-                        line_count=$(wc -l < "$sym_file")
-                        if [[ $line_count -gt 5 ]]; then
-                            SYM_FILES+=("$sym_file")
-                            echo "  Generated $line_count lines of symbols"
-                        else
-                            echo "  Warning: Only $line_count lines in $dll_name symbols (no debug info?), skipping"
-                            rm -f "$sym_file"
-                        fi
+
+                # Check if companion .debug file exists (contains DWARF debug info)
+                if [[ -f "$debug_file" ]]; then
+                    echo "  Found debug file: ${base_name}.debug"
+                    # Pass both DLL and debug file to dump_syms
+                    if "$DUMP_SYMS" "$dll" "$debug_file" > "$sym_file" 2>&1; then
+                        :
+                    elif "$DUMP_SYMS" "$debug_file" > "$sym_file" 2>&1; then
+                        # Fallback: try just the debug file
+                        :
+                    fi
+                else
+                    echo "  No debug file found, trying DLL only..."
+                    "$DUMP_SYMS" "$dll" > "$sym_file" 2>&1 || true
+                fi
+
+                if [[ -s "$sym_file" ]]; then
+                    # Check if sym file has actual debug symbols (FILE/FUNC/LINE records)
+                    if grep -q "^FUNC " "$sym_file"; then
+                        func_count=$(grep -c "^FUNC " "$sym_file")
+                        line_count=$(grep -c "^[0-9a-f]" "$sym_file" || echo 0)
+                        echo "  Generated symbols: $func_count functions, $line_count line records"
+                        SYM_FILES+=("$sym_file")
                     else
-                        echo "  Warning: Empty symbol file for $dll_name, skipping"
+                        echo "  Warning: No FUNC records in $dll_name symbols, skipping"
                         rm -f "$sym_file"
                     fi
                 else
-                    echo "  Warning: Failed to convert $dll_name (exit code $?), skipping"
+                    echo "  Warning: Empty symbol file for $dll_name, skipping"
                     rm -f "$sym_file"
                 fi
             fi
