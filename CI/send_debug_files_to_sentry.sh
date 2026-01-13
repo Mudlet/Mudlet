@@ -132,9 +132,10 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                     echo "Converting $dll_name to PDB..."
                     echo "  Debug file: ${base_name}.debug ($(stat -c%s "$debug_file") bytes)"
 
-                    # cv2pdb converts DWARF in PE files to PDB format
-                    # Usage: cv2pdb <exe> [<output_exe>] [<pdb>]
-                    if "$CV2PDB" "$debug_file" "$pdb_file" 2>"${pdb_file}.err"; then
+                    # cv2pdb converts DWARF to PDB format
+                    # Usage: cv2pdb -l<debug-file> <dll> [<output-dll>] [<pdb>]
+                    # Pass DLL as input, use -l to specify separate debug file
+                    if "$CV2PDB" "-l${debug_file}" "$dll" "$pdb_file" 2>"${pdb_file}.err"; then
                         if [[ -f "$pdb_file" ]]; then
                             pdb_size=$(stat -c%s "$pdb_file")
                             echo "  Generated PDB: ${base_name}.pdb ($pdb_size bytes)"
