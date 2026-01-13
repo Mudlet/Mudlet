@@ -140,7 +140,7 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                     win_debug_file=$(cygpath -w "$debug_file")
                     win_dll=$(cygpath -w "$dll")
                     win_pdb_file="${WIN_PDB_DIR}\\${base_name}.pdb"
-                    if "$CV2PDB" "-l${win_debug_file}" "$win_dll" "$win_pdb_file" 2>"${pdb_file}.err"; then
+                    if "$CV2PDB" "-l${win_debug_file}" "$win_dll" "$win_dll" "$win_pdb_file" 2>"${pdb_file}.err"; then
                         if [[ -f "$pdb_file" ]]; then
                             pdb_size=$(stat -c%s "$pdb_file")
                             echo "  Generated PDB: ${base_name}.pdb ($pdb_size bytes)"
