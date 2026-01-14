@@ -120,7 +120,7 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
         # Use absolute Windows path for PDB files (cv2pdb is native Windows app)
         PDB_DIR="$(pwd)/qt_pdbs"
         mkdir -p "$PDB_DIR"
-        WIN_PDB_DIR=$(cygpath -w "$PDB_DIR")
+        WIN_PDB_DIR="$(cygpath -w "$PDB_DIR")"
         PDB_FILES=()
 
         for dll in "$MINGW_BIN"/Qt6*.dll; do
