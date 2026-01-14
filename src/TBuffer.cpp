@@ -1463,7 +1463,7 @@ void TBuffer::processMxpWatchdogCallback()
                 }
                 commitLine('\r', unusedBufferPosition);
                 hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
-                consoleGuard->finalize();
+                hostGuard->mpConsole->finalize();
             });
         }
         mWatchdogPhase = WatchdogPhase::None;
