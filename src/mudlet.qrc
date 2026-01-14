@@ -71,6 +71,7 @@
         <file>icons/document-save-as.png</file>
         <file>icons/document-save.png</file>
         <file>icons/dot-line.png</file>
+        <file>icons/dragonfire_icon.png</file>
         <file>icons/edit-bomb.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
         <file>icons/edit-cut.png</file>
@@ -211,6 +212,7 @@
         <file>icons/view-restore.png</file>
         <file>icons/view-split-left-right.png</file>
         <file>icons/view-statistics.png</file>
+        <file>icons/voidmud_icon.png</file>
         <file>icons/window-close.png</file>
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
