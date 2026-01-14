@@ -123,12 +123,16 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
         WIN_PDB_DIR="$(cygpath -w "$PDB_DIR")"
         PDB_FILES=()
 
-        for dll in "$MINGW_BIN"/Qt6*.dll; do
+        # Function to convert a DLL to PDB format
+        convert_dll_to_pdb() {
+            local dll="$1"
+            local source_dir="$2"
+
             if [[ -f "$dll" ]]; then
-                dll_name=$(basename "$dll")
-                base_name="${dll_name%.dll}"
-                debug_file="${MINGW_BIN}/${base_name}.debug"
-                pdb_file="${PDB_DIR}/${base_name}.pdb"
+                local dll_name=$(basename "$dll")
+                local base_name="${dll_name%.dll}"
+                local debug_file="${source_dir}/${base_name}.debug"
+                local pdb_file="${PDB_DIR}/${base_name}.pdb"
 
                 # Check if companion .debug file exists (contains DWARF debug info)
                 if [[ -f "$debug_file" ]]; then
@@ -138,12 +142,12 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                     # cv2pdb converts DWARF to PDB format
                     # Usage: cv2pdb -l<debug-file> <dll> [<output-dll>] [<pdb>]
                     # Convert paths to Windows format for native Windows cv2pdb.exe
-                    win_debug_file=$(cygpath -w "$debug_file")
-                    win_dll=$(cygpath -w "$dll")
-                    win_pdb_file="${WIN_PDB_DIR}\\${base_name}.pdb"
+                    local win_debug_file=$(cygpath -w "$debug_file")
+                    local win_dll=$(cygpath -w "$dll")
+                    local win_pdb_file="${WIN_PDB_DIR}\\${base_name}.pdb"
                     if "$CV2PDB" "-l${win_debug_file}" "$win_dll" "$win_dll" "$win_pdb_file" 2>"${pdb_file}.err"; then
                         if [[ -f "$pdb_file" ]]; then
-                            pdb_size=$(stat -c%s "$pdb_file")
+                            local pdb_size=$(stat -c%s "$pdb_file")
                             echo "  Generated PDB: ${base_name}.pdb ($pdb_size bytes)"
                             PDB_FILES+=("$pdb_file")
                         else
@@ -157,7 +161,43 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                     echo "Skipping $dll_name (no .debug file)"
                 fi
             fi
+        }
+
+        # Process main Qt6 DLLs from bin directory
+        for dll in "$MINGW_BIN"/Qt6*.dll; do
+            convert_dll_to_pdb "$dll" "$MINGW_BIN"
         done
+
+        # Process Qt plugin DLLs from share/qt6/plugins subdirectories
+        # These plugins can appear in crash stack traces and need debug symbols
+        QT_PLUGINS_DIR="${MSYSTEM_PREFIX}/share/qt6/plugins"
+        if [[ -d "$QT_PLUGINS_DIR" ]]; then
+            echo ""
+            echo "=== Converting Qt plugin debug files ==="
+
+            # Plugin directories and their DLLs (based on what Mudlet uses)
+            declare -A PLUGIN_DLLS=(
+                ["generic"]="qtuiotouchplugin"
+                ["iconengines"]="qsvgicon"
+                ["imageformats"]="qgif qicns qico qjp2 qjpeg qmng qsvg qtga qtiff qwbmp qwebp"
+                ["multimedia"]="ffmpegmediaplugin windowsmediaplugin"
+                ["networkinformation"]="qglib qnetworklistmanager"
+                ["platforms"]="qwindows"
+                ["styles"]="qmodernwindowsstyle"
+                ["texttospeech"]="qtexttospeech_mock qtexttospeech_sapi"
+                ["tls"]="qcertonlybackend qopensslbackend qschannelbackend"
+            )
+
+            for plugin_dir in "${!PLUGIN_DLLS[@]}"; do
+                plugin_path="${QT_PLUGINS_DIR}/${plugin_dir}"
+                if [[ -d "$plugin_path" ]]; then
+                    for plugin_name in ${PLUGIN_DLLS[$plugin_dir]}; do
+                        dll="${plugin_path}/${plugin_name}.dll"
+                        convert_dll_to_pdb "$dll" "$plugin_path"
+                    done
+                fi
+            done
+        fi
 
         if [[ ${#PDB_FILES[@]} -gt 0 ]]; then
             echo ""
