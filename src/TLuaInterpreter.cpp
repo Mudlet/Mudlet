@@ -5353,6 +5353,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomCharColor", TLuaInterpreter::setRoomCharColor);
     lua_register(pGlobalLua, "unsetRoomCharColor", TLuaInterpreter::unsetRoomCharColor);
     lua_register(pGlobalLua, "getRoomCharColor", TLuaInterpreter::getRoomCharColor);
+    lua_register(pGlobalLua, "setRoomBorderColor", TLuaInterpreter::setRoomBorderColor);
+    lua_register(pGlobalLua, "getRoomBorderColor", TLuaInterpreter::getRoomBorderColor);
+    lua_register(pGlobalLua, "clearRoomBorderColor", TLuaInterpreter::clearRoomBorderColor);
+    lua_register(pGlobalLua, "setRoomBorderThickness", TLuaInterpreter::setRoomBorderThickness);
+    lua_register(pGlobalLua, "getRoomBorderThickness", TLuaInterpreter::getRoomBorderThickness);
+    lua_register(pGlobalLua, "clearRoomBorderThickness", TLuaInterpreter::clearRoomBorderThickness);
     lua_register(pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler);
     lua_register(pGlobalLua, "saveMap", TLuaInterpreter::saveMap);
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);
@@ -7685,6 +7691,14 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
+    if (key == qsl("muteMediaAPI")) {
+        mudlet::self()->slot_muteAPI(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("muteMediaGame")) {
+        mudlet::self()->slot_muteGame(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
 
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
@@ -7950,6 +7964,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
         } },
         { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
         { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
+        { qsl("muteMediaAPI"), [&](){ lua_pushboolean(L, mudlet::self()->muteAPI()); } },
+        { qsl("muteMediaGame"), [&](){ lua_pushboolean(L, mudlet::self()->muteGame()); } },
         { qsl("ircHostName"), [&](){ lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData()); } },
         { qsl("ircHostPort"), [&](){ lua_pushnumber(L, dlgIRC::readIrcHostPort(&host)); } },
         { qsl("ircHostSecure"), [&](){ lua_pushboolean(L, dlgIRC::readIrcHostSecure(&host)); } },

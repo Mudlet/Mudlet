@@ -220,26 +220,7 @@ else
   git clone https://github.com/Mudlet/installers.git "${GITHUB_WORKSPACE}/installers"
   cd "${GITHUB_WORKSPACE}/installers/windows" || exit 1
 
-  echo "=== Setting up Java 21 for signing ==="
-  # Java is installed by default, we just need to select which version to use:
-  JAVA_HOME="$(cygpath -au "${JAVA_HOME_21_X64}")"
-  export JAVA_HOME
-  export PATH="${JAVA_HOME}/bin:${PATH}"
-  JAVA_JAR_WINPATHFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/jsign-7.0-SNAPSHOT.jar")"
-
-  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Code signing of Mudlet application and bundled libraries skipped - no Azure token provided ==="
-  else
-    echo "=== Signing Mudlet executable and bundled libraries ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${PACKAGE_EXE_WINPATHFILE}" "${PACKAGE_WINPATH}\\**\\*.dll"
-  fi
-
-  echo "=== Preparing an intermediate artifact of the (signed) code ==="
+  echo "=== Preparing an intermediate artifact of the code ==="
   # What will it be called:
   if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
     INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64"
@@ -345,19 +326,6 @@ else
   INSTALLER_EXE_PATHFILE="$(cygpath -au "${RELEASE_DIR}/${INSTALLER_EXE}")"
   echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
-
-  # Sign the final installer
-  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Code signing of Mudlet installer skipped - no Azure token provided ==="
-  else
-    echo "=== Signing installer ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${INSTALLER_EXE_WINPATHFILE}"
-  fi
 
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="

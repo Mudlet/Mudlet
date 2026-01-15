@@ -270,8 +270,15 @@ void Updater::setupOnWindows()
             return;
         }
 
+        auto* downloadFile = feed->getDownloadFile();
+        if (!downloadFile) {
+            qWarning() << "Download finished but no download file available - feed URL:" << feed->getUrl();
+            return;
+        }
+        const QString fileName = downloadFile->fileName();
+
         QFuture<void> future = QtConcurrent::run([=, this]() {
-            prepareSetupOnWindows(feed->getDownloadFile()->fileName());
+            prepareSetupOnWindows(fileName);
         });
 
         // replace current binary with the unzipped one
@@ -327,7 +334,14 @@ void Updater::setupOnLinux()
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run([&]() { untarOnLinux(feed->getDownloadFile()->fileName()); });
+        auto* downloadFile = feed->getDownloadFile();
+        if (!downloadFile) {
+            qWarning() << "Download finished but no download file available - feed URL:" << feed->getUrl();
+            return;
+        }
+        const QString fileName = downloadFile->fileName();
+
+        QFuture<void> future = QtConcurrent::run([=, this]() { untarOnLinux(fileName); });
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;

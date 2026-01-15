@@ -1300,6 +1300,18 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
         }
 
+        // Border properties are stored in userData (not binary stream) to avoid map bloat
+        if (pR->mBorderColor.isValid()) {
+            pR->userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
+        } else {
+            pR->userData.remove(ROOM_UI_BORDERCOLOR);
+        }
+        if (pR->mBorderThickness > 0) {
+            pR->userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
+        } else {
+            pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
+        }
+
         ofs << pR->userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
@@ -1712,6 +1724,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         int labelId = -1;
                         ifs >> labelId;
                         TMapLabel label;
+                        ifs >> label.pos;
                         ifs >> label.size;
                         ifs >> label.text;
                         ifs >> label.fgColor;

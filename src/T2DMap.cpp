@@ -955,8 +955,13 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     QRectF roomRectangle;
     QRectF roomNameRectangle;
     double realHeight;
-    const int borderWidth = 1 / eSize * mRoomWidth * rSize;
-    const bool shouldDrawBorder = mpHost->mMapperShowRoomBorders && !isGridMode;
+    int borderWidth;
+    if (pRoom->mBorderThickness > 0) {
+        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / eSize * mRoomWidth * rSize));
+    } else {
+        borderWidth = qMax(1, static_cast<int>(1 / eSize * mRoomWidth * rSize));
+    }
+    const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
     bool showThisRoomName = showRoomName;
     if (isGridMode) {
         realHeight = mRoomHeight;
@@ -1041,7 +1046,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     roomPen.setJoinStyle(Qt::MiterJoin);
     painter.setBrush(roomColor);
 
-    // Determine if we're actually drawing a border and calculate the inset
+    // Determine if we're actually drawing a border
     bool isDrawingBorder = false;
     qreal borderInset = 0.0;
 
@@ -1054,19 +1059,20 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         roomPen.setWidth(borderWidth);
         borderInset = borderWidth / 2.0;
         isDrawingBorder = true;
+        QColor borderColor = pRoom->mBorderColor.isValid() ? pRoom->mBorderColor : mpHost->mRoomBorderColor;
         if (mRoomWidth >= 12) {
-            roomPen.setColor(mpHost->mRoomBorderColor);
+            roomPen.setColor(borderColor);
         } else {
-            auto fadingColor = QColor(mpHost->mRoomBorderColor);
+            auto fadingColor = QColor(borderColor);
             fadingColor.setAlpha(255 * (mRoomWidth / 12));
             roomPen.setColor(fadingColor);
         }
     }
 
-    // Inset the room drawing rectangle by half the border width so the border
-    // is drawn completely inside the room bounds, making it clickable and not
-    // adding to the room's visual size
-    const QRectF roomDrawRectangle = roomRectangle.adjusted(borderInset, borderInset, -borderInset, -borderInset);
+    // Expand the drawing rectangle outward by half the border width so that
+    // after the stroke is drawn (centered on the edge), the visible fill area
+    // matches the original room size and the border grows purely outward
+    const QRectF roomDrawRectangle = roomRectangle.adjusted(-borderInset, -borderInset, borderInset, borderInset);
 
     if (isRoomSelected) {
         QLinearGradient selectionBg(roomDrawRectangle.topLeft(), roomDrawRectangle.bottomRight());
@@ -1081,8 +1087,8 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     painter.setPen(roomPen);
 
     if (mBubbleMode) {
-        // Calculate the room radius accounting for the border inset
-        const float roomRadius = (0.5 * rSize * mRoomWidth) - borderInset;
+        // Expand radius by half border width so visible fill stays at original size
+        const float roomRadius = (0.5 * rSize * mRoomWidth) + borderInset;
         const QPointF roomCenter = QPointF(rx, ry);
         if (!isRoomSelected) {
             // CHECK: The use of a gradient fill to a white center on round
@@ -3832,6 +3838,7 @@ void T2DMap::slot_showPropertiesDialog()
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
+    connect(mpDlgRoomProperties, &dlgRoomProperties::signal_preview_border, this, &T2DMap::slot_previewBorderProperties);
     connect(mpDlgRoomProperties, &QDialog::finished, this, [=, this]() {
         mpDlgRoomProperties = nullptr;
     });
@@ -3845,6 +3852,8 @@ void T2DMap::slot_setRoomProperties(
     bool changeSymbolColor, QColor newSymbolColor,
     bool changeWeight, int newWeight,
     bool changeLockStatus, std::optional<bool> newLockStatus,
+    bool changeBorderColor, QColor newBorderColor,
+    bool changeBorderThickness, int newBorderThickness,
     QSet<TRoom*> rooms)
 {
     if (newName.isEmpty()) {
@@ -3893,6 +3902,12 @@ void T2DMap::slot_setRoomProperties(
         if (changeLockStatus && newLockStatus.has_value()) {
             room->isLocked = newLockStatus.value();
         }
+        if (changeBorderColor) {
+            room->mBorderColor = newBorderColor;
+        }
+        if (changeBorderThickness) {
+            room->mBorderThickness = newBorderThickness;
+        }
     }
     if (changeWeight || changeLockStatus) {
         mpMap->mMapGraphNeedsUpdate = true;
@@ -3900,6 +3915,13 @@ void T2DMap::slot_setRoomProperties(
     repaint();
     update();
     mpMap->setUnsaved(__func__);
+}
+
+void T2DMap::slot_previewBorderProperties(QSet<TRoom*> rooms)
+{
+    Q_UNUSED(rooms)
+    repaint();
+    update();
 }
 
 void T2DMap::slot_setImage()

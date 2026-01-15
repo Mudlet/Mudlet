@@ -100,7 +100,34 @@ for f in "${FILES_TO_UPLOAD[@]}"; do
     ./sentry-cli debug-files upload "$f" --project "mudlet"
 done
 
-if [[ "$OS" == MINGW* ]] || [[ "$OS" == MSYS* ]] || [[ "$OS" == CYGWIN* ]]; then
+# Use MSYSTEM variable for MSYS2 detection (consistent with other CI scripts)
+# and MSYSTEM_PREFIX for the path (supports MINGW64, CLANG64, UCRT64, etc.)
+if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
+    MINGW_BIN="${MSYSTEM_PREFIX}/bin"
+    if [[ -d "$MINGW_BIN" ]]; then
+        echo ""
+        echo "=== Uploading Qt debug files for full stack traces ==="
+
+        QT_FILES=()
+        for dll in "$MINGW_BIN"/Qt6*.dll; do
+            if [[ -f "$dll" ]]; then
+                QT_FILES+=("$dll")
+                debug_file="${dll%.dll}.debug"
+                if [[ -f "$debug_file" ]]; then
+                    QT_FILES+=("$debug_file")
+                fi
+            fi
+        done
+
+        if [[ ${#QT_FILES[@]} -gt 0 ]]; then
+            echo "Found ${#QT_FILES[@]} Qt files to upload"
+            ./sentry-cli debug-files upload "${QT_FILES[@]}" --project "mudlet"
+            echo "Qt debug files uploaded successfully"
+        else
+            echo "No Qt debug files found in $MINGW_BIN"
+        fi
+    fi
+
     strip --strip-debug "$MUDLET_EXEC"
 fi
 
