@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath Artifact Configuration for Mudlet Windows Installer
+
+  This configuration defines the installer executable to be signed.
+  GitHub Actions packages artifacts as ZIP files, so zip-file is the root element.
+
+  The installer filename varies based on build type:
+  - Release: Mudlet-X.Y.Z-windows-64-installer.exe
+  - PTB: Mudlet-X.Y.Z-ptb-YYYY-MM-DD-COMMIT-windows-64-installer.exe
+
+  Using a wildcard pattern to match any installer filename.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <!-- Mudlet installer executable - matches any version pattern -->
+    <pe-file path="Mudlet-*-windows-64*.exe">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
