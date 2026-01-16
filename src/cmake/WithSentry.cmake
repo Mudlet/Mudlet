@@ -104,6 +104,7 @@ target_link_libraries(${LIB_MUDLET_TARGET}
     crashpad_tools
     crashpad_util
     mini_chromium
+    Qt6::Core
 )
 
 if(APPLE)
