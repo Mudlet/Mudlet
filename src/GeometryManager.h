@@ -103,7 +103,9 @@ struct GeometryData {
     }
 
     int vertexCount() const {
-        return vertices.size() / 6;
+        // If normals are stored separately, vertices has 3 floats per vertex
+        // If normals are interleaved, vertices has 6 floats per vertex (pos + normal)
+        return normals.isEmpty() ? vertices.size() / 6 : vertices.size() / 3;
     }
 
     int indexCount() const {

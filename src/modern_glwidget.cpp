@@ -1574,12 +1574,6 @@ void ModernGLWidget::renderBackgroundLabels()
 
     float pz = static_cast<float>(mMapCenterZ);
 
-    static bool debugOnce = false;
-    if (!debugOnce && !pArea->mMapLabels.isEmpty()) {
-        qDebug() << "ModernGLWidget: Area" << mAID << "has" << pArea->mMapLabels.size() << "labels";
-        debugOnce = true;
-    }
-
     for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
         const TMapLabel& label = it.value();
         int labelId = it.key();
@@ -1604,26 +1598,18 @@ void ModernGLWidget::renderBackgroundLabels()
 
         // Skip labels without a pixmap
         if (label.pix.isNull()) {
-            qDebug() << "ModernGLWidget: Label" << labelId << "has null pixmap, text:" << label.text;
             continue;
         }
 
         // Get or create texture for this label
         GLuint textureId = mLabelTextureCache.getTexture(mAID, labelId, label.pix);
         if (textureId == 0) {
-            qDebug() << "ModernGLWidget: Failed to create texture for label" << labelId;
             continue;
         }
 
         // Calculate label dimensions - size is in map coordinates
         float labelWidth = static_cast<float>(label.size.width());
         float labelHeight = static_cast<float>(label.size.height());
-
-        qDebug() << "ModernGLWidget: Rendering background label" << labelId
-                 << "at pos" << label.pos
-                 << "size" << labelWidth << "x" << labelHeight
-                 << "textureId" << textureId
-                 << "text:" << label.text;
 
         // Create render command for this label
         auto command = std::make_unique<RenderLabelCommand>(
@@ -1678,26 +1664,18 @@ void ModernGLWidget::renderForegroundLabels()
 
         // Skip labels without a pixmap
         if (label.pix.isNull()) {
-            qDebug() << "ModernGLWidget: Foreground label" << labelId << "has null pixmap, text:" << label.text;
             continue;
         }
 
         // Get or create texture for this label
         GLuint textureId = mLabelTextureCache.getTexture(mAID, labelId, label.pix);
         if (textureId == 0) {
-            qDebug() << "ModernGLWidget: Failed to create texture for foreground label" << labelId;
             continue;
         }
 
         // Calculate label dimensions
         float labelWidth = static_cast<float>(label.size.width());
         float labelHeight = static_cast<float>(label.size.height());
-
-        qDebug() << "ModernGLWidget: Rendering foreground label" << labelId
-                 << "at pos" << label.pos
-                 << "size" << labelWidth << "x" << labelHeight
-                 << "textureId" << textureId
-                 << "text:" << label.text;
 
         // Create render command for this label
         auto command = std::make_unique<RenderLabelCommand>(
