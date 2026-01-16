@@ -1844,6 +1844,13 @@ map.help.config = [[
             function name_search, a user-defined function called
             'mudlet.custom_name_search' is used instead. This may be true or false.
 
+        &lt;yellow&gt;use_description_matching&lt;reset&gt; - When this is set, room descriptions are used
+            in addition to room names and exits when matching rooms. The
+            description is captured from lines between the room name and the
+            prompt, and stored as room user data. This helps distinguish between
+            rooms that have the same name but different descriptions. This may
+            be true or false.
+
         &lt;yellow&gt;use_translation&lt;reset&gt; - When this is set, the lang_dirs table is used to
             translate movement and status commands in some other language
             into the English used by the script. This may be true or false.
@@ -2780,6 +2787,7 @@ local function check_room(roomID, name, exits, onlyName)
         local room_desc = getRoomUserData(roomID, "description")
         if room_desc and room_desc ~= "" then
             if room_desc ~= map.prompt.description then
+                map.echo("Room " .. roomID .. " rejected: description mismatch", true)
                 return false
             end
         end
@@ -2831,6 +2839,7 @@ local function create_room(name, exits, dir, coords)
         end
         if map.configs.use_description_matching and map.prompt.description then
             setRoomUserData(newID, "description", map.prompt.description)
+            map.echo("Stored description for room " .. newID, true)
         end
         for k,v in ipairs(exits) do
             if stubmap[v] then
@@ -3877,6 +3886,7 @@ local function name_search()
     -- store description for later use in room matching
     if map.configs.use_description_matching and #description_lines > 0 then
         map.prompt.description = table.concat(description_lines, "\n")
+        map.echo("Description captured: " .. map.prompt.description:sub(1, 100) .. (#map.prompt.description > 100 and "..." or ""), true)
     else
         map.prompt.description = nil
     end
