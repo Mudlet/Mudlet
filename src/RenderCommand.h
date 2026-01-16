@@ -196,6 +196,8 @@ public:
     enum StateType {
         ENABLE_DEPTH_TEST,
         DISABLE_DEPTH_TEST,
+        ENABLE_DEPTH_WRITE,
+        DISABLE_DEPTH_WRITE,
         ENABLE_BLEND,
         DISABLE_BLEND,
         CLEAR_BUFFERS

@@ -1568,9 +1568,12 @@ void ModernGLWidget::renderBackgroundLabels()
     }
 
     TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
-    if (!pArea) {
+    if (!pArea || pArea->mMapLabels.isEmpty()) {
         return;
     }
+
+    // Disable depth writing for transparent labels
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
 
     float pz = static_cast<float>(mMapCenterZ);
 
@@ -1632,6 +1635,9 @@ void ModernGLWidget::renderBackgroundLabels()
 
         mRenderCommandQueue.addCommand(std::move(command));
     }
+
+    // Re-enable depth writing for subsequent geometry
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
 
 void ModernGLWidget::renderForegroundLabels()
@@ -1641,9 +1647,12 @@ void ModernGLWidget::renderForegroundLabels()
     }
 
     TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
-    if (!pArea) {
+    if (!pArea || pArea->mMapLabels.isEmpty()) {
         return;
     }
+
+    // Disable depth writing for transparent labels
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
 
     float pz = static_cast<float>(mMapCenterZ);
 
@@ -1704,6 +1713,9 @@ void ModernGLWidget::renderForegroundLabels()
 
         mRenderCommandQueue.addCommand(std::move(command));
     }
+
+    // Re-enable depth writing
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
 
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)

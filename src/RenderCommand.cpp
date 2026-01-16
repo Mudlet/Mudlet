@@ -274,6 +274,12 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         case DISABLE_DEPTH_TEST:
             gl->glDisable(GL_DEPTH_TEST);
             break;
+        case ENABLE_DEPTH_WRITE:
+            gl->glDepthMask(GL_TRUE);
+            break;
+        case DISABLE_DEPTH_WRITE:
+            gl->glDepthMask(GL_FALSE);
+            break;
         case ENABLE_BLEND:
             gl->glEnable(GL_BLEND);
             break;
