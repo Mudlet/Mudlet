@@ -21,6 +21,8 @@
 #include "TEncodingTable.h"
 #include "TTextCodec.h"
 #include <QDebug>
+#include <QStringDecoder>
+#include <QStringEncoder>
 
 bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
 {
@@ -35,6 +37,14 @@ std::optional<QStringConverter::Encoding> TEncodingHelper::getQtEncoding(const Q
 {
     auto enc = QStringConverter::encodingForName(encoding.constData());
     return enc;
+}
+
+// Check if an encoding is available via ICU (for encodings like Big5, GBK, EUC-KR
+// that are not built-in to Qt6 but may be available through ICU support)
+bool TEncodingHelper::isIcuEncodingAvailable(const QByteArray& encoding)
+{
+    QStringDecoder decoder(encoding.constData());
+    return decoder.isValid();
 }
 
 bool TEncodingHelper::hasLookupTable(const QByteArray& encoding)
@@ -127,11 +137,19 @@ QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encod
     if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
         return TTextCodec_medievia::toUnicode(bytes);
     }
-    
+
+    // First try built-in Qt encodings (UTF-8, Latin1, etc.)
     auto qtEnc = getQtEncoding(encoding);
     if (qtEnc) {
         QStringDecoder decoder(*qtEnc);
         return decoder.decode(bytes);
+    }
+
+    // Then try ICU-based encodings (Big5, GBK, EUC-KR, etc.)
+    // These are not in Qt's built-in enum but may be available via ICU
+    QStringDecoder icuDecoder(encoding.constData());
+    if (icuDecoder.isValid()) {
+        return icuDecoder.decode(bytes);
     }
 
     if (hasLookupTable(encoding)) {
@@ -158,11 +176,19 @@ QByteArray TEncodingHelper::encode(const QString& str, const QByteArray& encodin
     if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
         return TTextCodec_medievia::fromUnicode(str);
     }
-    
+
+    // First try built-in Qt encodings (UTF-8, Latin1, etc.)
     auto qtEnc = getQtEncoding(encoding);
     if (qtEnc) {
         QStringEncoder encoder(*qtEnc);
         return encoder.encode(str);
+    }
+
+    // Then try ICU-based encodings (Big5, GBK, EUC-KR, etc.)
+    // These are not in Qt's built-in enum but may be available via ICU
+    QStringEncoder icuEncoder(encoding.constData());
+    if (icuEncoder.isValid()) {
+        return icuEncoder.encode(str);
     }
 
     if (hasLookupTable(encoding)) {
@@ -185,19 +211,26 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
     } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
         return TTextCodec_medievia::canEncode(str);
     }
-    
+
+    // First try built-in Qt encodings (UTF-8, Latin1, etc.)
     auto qtEnc = getQtEncoding(encoding);
     if (qtEnc) {
         QStringEncoder encoder(*qtEnc);
-        QByteArray encoded = encoder.encode(str);
-        return encoder.hasError() == false;
+        encoder.encode(str);
+        return !encoder.hasError();
+    }
+
+    // Then try ICU-based encodings (Big5, GBK, EUC-KR, etc.)
+    QStringEncoder icuEncoder(encoding.constData());
+    if (icuEncoder.isValid()) {
+        icuEncoder.encode(str);
+        return !icuEncoder.hasError();
     }
 
     if (hasLookupTable(encoding)) {
         return canEncodeWithLookupTable(str, encoding);
     }
 
-    // Unknown encoding - cannot encode
     return false;
 }
 
@@ -210,9 +243,16 @@ bool TEncodingHelper::isEncodingAvailable(const QByteArray& encoding)
     if (hasLookupTable(encoding)) {
         return true;
     }
-    
+
+    // Check built-in Qt encodings first
     auto qtEnc = getQtEncoding(encoding);
-    return qtEnc.has_value();
+    if (qtEnc.has_value()) {
+        return true;
+    }
+
+    // Then check ICU-based encodings (Big5, GBK, EUC-KR, etc.)
+    // These require Qt to be built with ICU support
+    return isIcuEncodingAvailable(encoding);
 }
 
 QList<QByteArray> TEncodingHelper::aliases(const QByteArray& encoding)
