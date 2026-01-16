@@ -133,10 +133,6 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
-    # ==========================================================================
-    # SignPath Code Signing - Sign binaries before packaging
-    # Only runs for release builds (tags) and PTB builds (scheduled)
-    # ==========================================================================
     - name: (Windows) Prepare binaries for signing
       id: prepare-signing
       if: |
@@ -147,11 +143,9 @@ jobs:
         SIGNING_DIR="${GITHUB_WORKSPACE}/signing-binaries"
         mkdir -p "${SIGNING_DIR}"
 
-        # Copy built executables that need signing
         cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/mudlet.exe" "${SIGNING_DIR}/"
         cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/MudletCrashReporter.exe" "${SIGNING_DIR}/"
 
-        # Copy crashpad files if Sentry is enabled
         if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" ]; then
           cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" "${SIGNING_DIR}/"
         fi
@@ -193,9 +187,6 @@ jobs:
         SIGNING_DIR="${GITHUB_WORKSPACE}/signing-binaries"
         BUILD_DIR="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
 
-        echo "Replacing unsigned binaries with signed versions..."
-
-        # Replace the built executables with signed versions
         cp -v "${SIGNING_DIR}/mudlet.exe" "${BUILD_DIR}/"
         cp -v "${SIGNING_DIR}/MudletCrashReporter.exe" "${BUILD_DIR}/"
 
@@ -231,10 +222,6 @@ jobs:
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
 
-    # ==========================================================================
-    # SignPath Code Signing - Sign installer after creation
-    # Only runs for PTB and release builds when SignPath is configured
-    # ==========================================================================
     - name: (Windows) Upload unsigned installer for signing
       id: upload-unsigned-installer
       if: |
@@ -268,23 +255,15 @@ jobs:
       shell: msys2 {0}
       run: |
         SIGNED_DIR="${GITHUB_WORKSPACE}/signed-installer"
-
-        echo "Replacing unsigned installer with signed version..."
-
-        # Find the signed installer in the output directory
         SIGNED_INSTALLER=$(find "${SIGNED_DIR}" -name "*.exe" -type f | head -1)
         if [ -n "${SIGNED_INSTALLER}" ]; then
-          # Get the original artifact path and replace the file
           ORIGINAL_PATH=$(cygpath -au "${ARTIFACT_WINPATHORFILE}")
-
-          # If ARTIFACT_WINPATHORFILE is a directory, find the exe inside
           if [ -d "${ORIGINAL_PATH}" ]; then
             ORIGINAL_EXE=$(find "${ORIGINAL_PATH}" -name "*.exe" -type f | head -1)
             cp -v "${SIGNED_INSTALLER}" "${ORIGINAL_EXE}"
           else
             cp -v "${SIGNED_INSTALLER}" "${ORIGINAL_PATH}"
           fi
-
           echo "Installer signing complete."
         else
           echo "Warning: No signed installer found in ${SIGNED_DIR}"
