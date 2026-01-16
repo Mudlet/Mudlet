@@ -3409,119 +3409,6 @@ you can use it but there could be issues with aligning columns of text</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_tab_chat">
        <item>
-        <widget class="QGroupBox" name="groupBox_ircOptions">
-         <property name="title">
-          <string>IRC client options</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0,0">
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblIrcHostName">
-            <property name="text">
-             <string>Server address:</string>
-            </property>
-            <property name="buddy">
-             <cstring>ircHostName</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="ircHostName">
-            <property name="inputMethodHints">
-             <set>Qt::InputMethodHint::ImhUrlCharactersOnly</set>
-            </property>
-            <property name="placeholderText">
-             <string>irc.example.net</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="lblIrcHostPort">
-            <property name="text">
-             <string>Port:</string>
-            </property>
-            <property name="buddy">
-             <cstring>ircHostPort</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QLineEdit" name="ircHostPort">
-            <property name="inputMethodHints">
-             <set>Qt::InputMethodHint::ImhDigitsOnly</set>
-            </property>
-            <property name="placeholderText">
-             <string>6667</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lblIrcNick">
-            <property name="text">
-             <string>Nickname:</string>
-            </property>
-            <property name="buddy">
-             <cstring>ircNick</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="ircNick">
-            <property name="placeholderText">
-             <string>MudletUser123</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLabel" name="lblIrcChannels">
-            <property name="text">
-             <string>Auto-join channels: </string>
-            </property>
-            <property name="buddy">
-             <cstring>ircChannels</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QLineEdit" name="ircChannels">
-            <property name="placeholderText">
-             <string>#channel1 #channel2 #etc...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="lblIrcPassword">
-            <property name="text">
-             <string>Server password: </string>
-            </property>
-            <property name="buddy">
-             <cstring>ircPassword</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="ircPassword">
-            <property name="echoMode">
-             <enum>QLineEdit::EchoMode::Password</enum>
-            </property>
-            <property name="placeholderText">
-             <string>password (optional)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="2">
-           <widget class="QCheckBox" name="ircHostSecure">
-            <property name="toolTip">
-             <string>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Use a secure connection</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
         <widget class="QGroupBox" name="groupBox_discordPrivacy">
          <property name="title">
           <string>Discord privacy</string>
@@ -4898,12 +4785,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_Lcyan_2</tabstop>
   <tabstop>pushButton_Lwhite_2</tabstop>
   <tabstop>reset_colors_button_2</tabstop>
-  <tabstop>ircHostName</tabstop>
-  <tabstop>ircNick</tabstop>
-  <tabstop>ircPassword</tabstop>
-  <tabstop>ircHostSecure</tabstop>
-  <tabstop>ircHostPort</tabstop>
-  <tabstop>ircChannels</tabstop>
   <tabstop>comboBox_discordLargeIconPrivacy</tabstop>
   <tabstop>comboBox_discordSmallIconPrivacy</tabstop>
   <tabstop>checkBox_discordServerAccessToPartyInfo</tabstop>

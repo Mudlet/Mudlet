@@ -120,22 +120,33 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
     TAlias* pOldParent = getAliasPrivate(oldParentID);
     TAlias* pNewParent = getAliasPrivate(newParentID);
     TAlias* pChild = getAliasPrivate(childID);
+
     if (!pChild) {
         return;
     }
+
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
         mAliasRootNodeList.remove(pChild);
     }
+
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
         pChild->setParent(pNewParent);
-        //cout << "dumping family of newParent:"<<endl;
-        //pNewParent->Dump();
     } else {
         pChild->Tree<TAlias>::setParent(nullptr);
         addAliasRootNode(pChild, parentPosition, childPosition, true);
+    }
+}
+
+void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentAlias(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentAlias(childID, oldParentID, newParentID, 0, position);
     }
 }
 

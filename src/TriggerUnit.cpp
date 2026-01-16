@@ -120,25 +120,43 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     }
 }
 
-void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
+// Enum-based reParentTrigger implementation
+void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
 {
     TTrigger* pOldParent = getTriggerPrivate(oldParentID);
     TTrigger* pNewParent = getTriggerPrivate(newParentID);
     TTrigger* pChild = getTriggerPrivate(childID);
+
     if (!pChild) {
         return;
     }
+
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
         mTriggerRootNodeList.remove(pChild);
     }
+
+    // Convert enum mode to the internal flags
+    int parentPosition = (mode == TreeItemInsertMode::AtPosition) ? 0 : -1;
+    int childPosition = (mode == TreeItemInsertMode::AtPosition) ? position : -1;
+
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
         pChild->setParent(pNewParent);
     } else {
         pChild->Tree<TTrigger>::setParent(nullptr);
         addTriggerRootNode(pChild, parentPosition, childPosition, true);
+    }
+}
+
+// Legacy integer-based reParentTrigger - delegates to enum-based version
+void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
+{
+    if (parentPosition == -1 || childPosition == -1) {
+        reParentTrigger(childID, oldParentID, newParentID, TreeItemInsertMode::Append, 0);
+    } else {
+        reParentTrigger(childID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, childPosition);
     }
 }
 
@@ -260,16 +278,14 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     const QByteArray utf8Data = data.toUtf8();
     const char* utf8Ptr = utf8Data.constData();
-    const int utf8Length = utf8Data.size();
+    const size_t utf8Length = utf8Data.size();
 
-#if defined(Q_OS_WINDOWS)
-    // strndup(3) - a safe strdup(3) does not seem to be available in the
-    // original mingw or the replacement mingw-w64 enmvironment we use:
     char* subject = static_cast<char*>(malloc(utf8Length + 1));
-    strcpy(subject, utf8Ptr);
-#else
-    char* subject = strndup(utf8Ptr, utf8Length);
-#endif
+    if (!subject) {
+        return;
+    }
+    memcpy(subject, utf8Ptr, utf8Length);
+    subject[utf8Length] = '\0';
 
     // Set processing flag to prevent re-entrant cleanup during trigger execution
     mIsProcessing = true;

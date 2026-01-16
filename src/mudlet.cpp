@@ -42,6 +42,7 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -58,7 +59,11 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "TMediaData.h"
 #include "VarUnit.h"
+
+#include "edbee/models/textautocompleteprovider.h"
+#include "edbee/views/texttheme.h"
 
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
@@ -96,6 +101,33 @@
 #include <QStyle>
 #if defined(Q_OS_WINDOWS)
 #include <QSettings>
+#endif
+
+// for system physical memory info
+#if defined(Q_OS_WINDOWS)
+#include <Windows.h>
+#include <Psapi.h>
+#elif defined(Q_OS_MACOS)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <array>
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_OPENBSD)
+// OpenBSD doesn't have a sysinfo.h
+#include <sys/sysctl.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
+#include <sys/resource.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
+#else
+// Any other OS?
 #endif
 
 // We are now using code that won't work with really old versions of libzip;
@@ -381,8 +413,7 @@ void mudlet::init()
     mpButtonDiscord = new QToolButton(this);
     mpButtonDiscord->setText(qsl("Discord"));
     mpButtonDiscord->setObjectName(qsl("discord"));
-    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
-    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonDiscord->setContextMenuPolicy(Qt::DefaultContextMenu);
     mpButtonDiscord->setAutoRaise(true);
     mpMainToolBar->addWidget(mpButtonDiscord);
 
@@ -398,12 +429,8 @@ void mudlet::init()
     mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
 
-    mpActionIRC = new QAction(tr("Open IRC"), this);
-    mpActionIRC->setIcon(QIcon(qsl(":/icons/internet-telephony.png")));
-    mpActionIRC->setObjectName(qsl("openIRC"));
 
     mpButtonDiscord->addAction(mpActionDiscord);
-    mpButtonDiscord->addAction(mpActionIRC);
     mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);
@@ -542,7 +569,6 @@ void mudlet::init()
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_showMapperDialog);
-    connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
     connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(mpActionMudletDiscord.data(), &QAction::triggered, this, &mudlet::slot_mudletDiscord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_packageManager);
@@ -569,7 +595,6 @@ void mudlet::init()
     connect(dactionHelp, &QAction::triggered, this, &mudlet::slot_showHelpDialog);
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_showHelpDialogVideo);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_showHelpDialogForum);
-    connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudletDiscord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_showHelpDialogIrc);
@@ -1686,10 +1711,7 @@ void mudlet::slot_reattachAllDetachedWindows()
     qDebug() << "slot_reattachAllDetachedWindows: Reattaching" << detachedWindowsCopy.size() << "detached windows";
 #endif
 
-    for (auto it = detachedWindowsCopy.begin(); it != detachedWindowsCopy.end(); ++it) {
-        const QString& profileName = it.key();
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (auto&& [profileName, detachedWindow] : detachedWindowsCopy.asKeyValueRange()) {
         if (detachedWindow) {
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "slot_reattachAllDetachedWindows: Reattaching profile" << profileName;
@@ -1791,9 +1813,7 @@ void mudlet::updateWindowMenu()
         // Collect unique detached windows to avoid duplicates
         QSet<TDetachedWindow*> uniqueDetachedWindows;
 
-        for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-            TDetachedWindow* detachedWindow = it.value();
-
+        for (const auto& detachedWindow : mDetachedWindows) {
             if (detachedWindow) {
                 uniqueDetachedWindows.insert(detachedWindow);
             }
@@ -1818,9 +1838,7 @@ void mudlet::updateWindowMenu()
     }
 
     // Also update window menus on all detached windows
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->updateWindowMenu();
         }
@@ -1903,9 +1921,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     QString profileName = action->data().toString();
 
     // Find which detached window contains this profile
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
             // Activate the detached window
             detachedWindow->raise();
@@ -2310,9 +2326,6 @@ void mudlet::updateMainWindowToolbarState()
     dactionToggleLogging->setEnabled(hasActiveProfileInMainWindow);
     dactionToggleEmergencyStop->setEnabled(hasActiveProfileInMainWindow);
 
-    mpActionIRC->setEnabled(true);
-    dactionIRC->setEnabled(true);
-
     dactionInputLine->setEnabled(hasActiveProfileInMainWindow);
 
     // Replay action has special logic
@@ -2417,8 +2430,6 @@ void mudlet::enableToolbarButtons()
     dactionToggleLogging->setEnabled(true);
     dactionToggleEmergencyStop->setEnabled(true);
 
-    mpActionIRC->setEnabled(true);
-    dactionIRC->setEnabled(true);
 
     dactionInputLine->setEnabled(true);
 
@@ -3734,9 +3745,7 @@ void mudlet::slot_showMapperDialog()
     // Close any existing map for this profile in detached windows first
     const auto& detachedWindows = getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow) {
             auto detachedMapDock = detachedWindow->getDockWidget(mapKey);
 
@@ -3998,22 +4007,6 @@ void mudlet::slot_notes()
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     utils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
-}
-
-// This opens a profile specific IRC client for that client so should only be
-// enabled when a profile is loaded.
-void mudlet::slot_irc()
-{
-    Host* pHost = getActiveHost();
-    if (!pHost) {
-        return;
-    }
-
-    if (!pHost->mpDlgIRC) {
-        pHost->mpDlgIRC = new dlgIRC(pHost);
-    }
-    pHost->mpDlgIRC->raise();
-    pHost->mpDlgIRC->show();
 }
 
 void mudlet::slot_profileDiscord()
@@ -4434,7 +4427,10 @@ void mudlet::installModulesList(Host* pHost, QStringList modules)
 {
     for (const auto& module : modules) {
         QStringList entry = pHost->mInstalledModules[module];
-        pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
+        auto [success, error] = pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
+        if (!success && !error.isEmpty()) {
+            qWarning() << "mudlet::installModulesList() WARNING - failed to load module" << module << ":" << error;
+        }
         //we repeat this step here b/c we use the same installPackage method for initial loading,
         //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
         pHost->mInstalledModules[module] = entry;
@@ -5464,12 +5460,14 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     } else {
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
         if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            pHost->mProfileLoadError = tr("Could not open profile file: %1").arg(file.errorString());
             qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
         }
         XMLimport importer(pHost);
 
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         if (auto [success, message] = importer.importPackage(&file); !success) {
+            pHost->mProfileLoadError = message;
             //: %1 is the path and file name (i.e. the location) of the problem fil
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
             "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
@@ -6107,9 +6105,8 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
-    aff.commit();
-    if (aff.error() != QFile::NoError) {
-        qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to completely write affix file: \"" << aff.fileName() << "\" status: " << aff.errorString();
+    if (!aff.commit()) {
+        qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to commit affix file: \"" << aff.fileName() << "\" reason: " << aff.errorString();
         return false;
     }
 
@@ -6636,9 +6633,7 @@ void mudlet::refreshTabBar()
     }
 
     // Also refresh all detached windows to ensure they show CDC identifiers
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->refreshTabBar();
         }
@@ -6934,8 +6929,7 @@ void mudlet::shutdownAI()
 
 void mudlet::saveDetachedWindowsGeometry()
 {
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
+    for (const auto& detachedWindow : mDetachedWindows) {
         if (detachedWindow) {
             detachedWindow->saveWindowGeometry();
         }
@@ -7492,10 +7486,8 @@ void mudlet::updateDetachedWindowToolbars()
     cleanupDetachedWindowsMap();
 
     // Update toolbars in all detached windows
-    for (auto it = mDetachedWindows.begin(); it != mDetachedWindows.end(); ++it) {
-        QPointer<TDetachedWindow> detachedWindow = it.value();
+    for (auto&& [profileName, detachedWindow] : mDetachedWindows.asKeyValueRange()) {
         if (detachedWindow) {
-            const QString& profileName = it.key();
             Host* pHost = mHostManager.getHost(profileName);
             detachedWindow->updateToolbarForProfile(pHost);
         }
@@ -7589,9 +7581,7 @@ void mudlet::updateDetachedWindowTabIndicators()
     // Update tab indicators for all detached windows
     const auto& detachedWindows = getDetachedWindows();
 
-    for (auto it = detachedWindows.begin(); it != detachedWindows.end(); ++it) {
-        TDetachedWindow* detachedWindow = it.value();
-
+    for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow) {
             // Update all tabs in this detached window
             detachedWindow->updateAllTabIndicators();
@@ -8068,15 +8058,15 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
     // Collect dock widgets to process to avoid iterator invalidation
     QList<QPair<QString, QPointer<QDockWidget>>> dockWidgetsToProcess;
 
-    for (auto it = mMainWindowDockWidgetMap.begin(); it != mMainWindowDockWidgetMap.end(); ++it) {
-        if (it.value()) {
-            dockWidgetsToProcess.append(qMakePair(it.key(), it.value()));
+    for (auto&& [key, dockWidget] : mMainWindowDockWidgetMap.asKeyValueRange()) {
+        if (dockWidget) {
+            dockWidgetsToProcess.append(qMakePair(key, dockWidget));
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Found main window dock widget in map:" << it.key() << "isVisible:" << it.value()->isVisible();
+            qDebug() << "mudlet: Found main window dock widget in map:" << key << "isVisible:" << dockWidget->isVisible();
 #endif
         } else {
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Found null main window dock widget in map for key:" << it.key();
+            qDebug() << "mudlet: Found null main window dock widget in map for key:" << key;
 #endif
         }
     }

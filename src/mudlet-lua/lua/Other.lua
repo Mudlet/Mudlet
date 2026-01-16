@@ -1273,6 +1273,8 @@ function getConfig(...)
       "mapRoundRooms",
       "mapShowGrid",
       "mapShowRoomBorders",
+      "muteMediaAPI",
+      "muteMediaGame",
       "promptForMXPProcessorOn",
       "promptForVersionInTTYPE",
       "show3dMapView",
