@@ -1,34 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  SignPath Artifact Configuration for Mudlet Windows Binaries
-
-  This configuration defines the files to be signed before packaging.
-  GitHub Actions packages artifacts as ZIP files, so zip-file is the root element.
-
-  Files signed:
-  - mudlet.exe: Main Mudlet application
-  - MudletCrashReporter.exe: Crash reporter utility
-  - crashpad_handler.exe: Crashpad crash handling executable
-  - crashpad_wer.dll: Crashpad Windows Error Reporting DLL
--->
+<!-- GitHub Actions packages artifacts as ZIP files, so zip-file is the root element -->
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
-    <!-- Main Mudlet executable -->
     <pe-file path="mudlet.exe">
       <authenticode-sign/>
     </pe-file>
-
-    <!-- Crash reporter executable -->
     <pe-file path="MudletCrashReporter.exe">
       <authenticode-sign/>
     </pe-file>
-
-    <!-- Crashpad handler executable -->
     <pe-file path="crashpad_handler.exe">
       <authenticode-sign/>
     </pe-file>
-
-    <!-- Crashpad WER DLL -->
     <pe-file path="crashpad_wer.dll">
       <authenticode-sign/>
     </pe-file>
