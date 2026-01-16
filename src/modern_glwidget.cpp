@@ -1611,9 +1611,16 @@ void ModernGLWidget::renderBackgroundLabels()
         float labelWidth = static_cast<float>(label.size.width());
         float labelHeight = static_cast<float>(label.size.height());
 
+        // In 2D, label.pos is the top-left corner and extends right and down
+        // (with Y inverted). For 3D billboard, we need the center position.
+        // Offset: center = pos + (width/2, -height/2, 0)
+        float centerX = label.pos.x() + labelWidth / 2.0f;
+        float centerY = label.pos.y() - labelHeight / 2.0f;
+        float centerZ = label.pos.z();
+
         // Create render command for this label
         auto command = std::make_unique<RenderLabelCommand>(
-            label.pos.x(), label.pos.y(), label.pos.z(),
+            centerX, centerY, centerZ,
             labelWidth, labelHeight,
             textureId,
             mCameraController.getRightVector(),
@@ -1677,9 +1684,15 @@ void ModernGLWidget::renderForegroundLabels()
         float labelWidth = static_cast<float>(label.size.width());
         float labelHeight = static_cast<float>(label.size.height());
 
+        // In 2D, label.pos is the top-left corner and extends right and down
+        // (with Y inverted). For 3D billboard, we need the center position.
+        float centerX = label.pos.x() + labelWidth / 2.0f;
+        float centerY = label.pos.y() - labelHeight / 2.0f;
+        float centerZ = label.pos.z();
+
         // Create render command for this label
         auto command = std::make_unique<RenderLabelCommand>(
-            label.pos.x(), label.pos.y(), label.pos.z(),
+            centerX, centerY, centerZ,
             labelWidth, labelHeight,
             textureId,
             mCameraController.getRightVector(),
