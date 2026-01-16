@@ -70,6 +70,7 @@ ModernGLWidget::~ModernGLWidget()
 void ModernGLWidget::cleanup()
 {
     makeCurrent();
+    mLabelTextureCache.cleanup();
     mResourceManager.cleanup();
     mRenderCommandQueue.cleanup();
     mGeometryManager.cleanup();
@@ -137,6 +138,9 @@ void ModernGLWidget::initializeGL()
 
     // Initialize resource manager
     mResourceManager.initialize();
+
+    // Initialize label texture cache
+    mLabelTextureCache.initialize();
 }
 
 
@@ -324,9 +328,15 @@ void ModernGLWidget::paintGL()
     // Enable room flattening
     zFlattening = 8.0f;
 
-    // Build up render commands - render connections first so rooms appear above them
+    // Build up render commands in correct order:
+    // 1. Connections (bottom layer)
+    // 2. Background labels (showOnTop=false)
+    // 3. Rooms
+    // 4. Foreground labels (showOnTop=true)
     renderConnections();
+    renderBackgroundLabels();
     renderRooms();
+    renderForegroundLabels();
 
     // Execute all queued commands
     mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer, mTexCoordBuffer);
@@ -1549,6 +1559,160 @@ QColor ModernGLWidget::getEnvironmentColor(TRoom* pRoom)
     }
 
     return roomColor;
+}
+
+void ModernGLWidget::renderBackgroundLabels()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
+    if (!pArea) {
+        return;
+    }
+
+    float pz = static_cast<float>(mMapCenterZ);
+
+    static bool debugOnce = false;
+    if (!debugOnce && !pArea->mMapLabels.isEmpty()) {
+        qDebug() << "ModernGLWidget: Area" << mAID << "has" << pArea->mMapLabels.size() << "labels";
+        debugOnce = true;
+    }
+
+    for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
+        const TMapLabel& label = it.value();
+        int labelId = it.key();
+
+        // Only render labels with showOnTop=false in this pass
+        if (label.showOnTop) {
+            continue;
+        }
+
+        // Z-level filtering - same logic as rooms
+        float labelZ = label.pos.z();
+        if (labelZ > pz) {
+            if (std::abs(labelZ - pz) > mShowTopLevels) {
+                continue;
+            }
+        }
+        if (labelZ < pz) {
+            if (std::abs(labelZ - pz) > mShowBottomLevels) {
+                continue;
+            }
+        }
+
+        // Skip labels without a pixmap
+        if (label.pix.isNull()) {
+            qDebug() << "ModernGLWidget: Label" << labelId << "has null pixmap, text:" << label.text;
+            continue;
+        }
+
+        // Get or create texture for this label
+        GLuint textureId = mLabelTextureCache.getTexture(mAID, labelId, label.pix);
+        if (textureId == 0) {
+            qDebug() << "ModernGLWidget: Failed to create texture for label" << labelId;
+            continue;
+        }
+
+        // Calculate label dimensions - size is in map coordinates
+        float labelWidth = static_cast<float>(label.size.width());
+        float labelHeight = static_cast<float>(label.size.height());
+
+        qDebug() << "ModernGLWidget: Rendering background label" << labelId
+                 << "at pos" << label.pos
+                 << "size" << labelWidth << "x" << labelHeight
+                 << "textureId" << textureId
+                 << "text:" << label.text;
+
+        // Create render command for this label
+        auto command = std::make_unique<RenderLabelCommand>(
+            label.pos.x(), label.pos.y(), label.pos.z(),
+            labelWidth, labelHeight,
+            textureId,
+            mCameraController.getRightVector(),
+            mCameraController.getUpVector(),
+            label.highlight,
+            mCameraController.getProjectionMatrix(),
+            mCameraController.getViewMatrix(),
+            mCameraController.getModelMatrix());
+
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+}
+
+void ModernGLWidget::renderForegroundLabels()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
+    if (!pArea) {
+        return;
+    }
+
+    float pz = static_cast<float>(mMapCenterZ);
+
+    for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
+        const TMapLabel& label = it.value();
+        int labelId = it.key();
+
+        // Only render labels with showOnTop=true in this pass
+        if (!label.showOnTop) {
+            continue;
+        }
+
+        // Z-level filtering - same logic as rooms
+        float labelZ = label.pos.z();
+        if (labelZ > pz) {
+            if (std::abs(labelZ - pz) > mShowTopLevels) {
+                continue;
+            }
+        }
+        if (labelZ < pz) {
+            if (std::abs(labelZ - pz) > mShowBottomLevels) {
+                continue;
+            }
+        }
+
+        // Skip labels without a pixmap
+        if (label.pix.isNull()) {
+            qDebug() << "ModernGLWidget: Foreground label" << labelId << "has null pixmap, text:" << label.text;
+            continue;
+        }
+
+        // Get or create texture for this label
+        GLuint textureId = mLabelTextureCache.getTexture(mAID, labelId, label.pix);
+        if (textureId == 0) {
+            qDebug() << "ModernGLWidget: Failed to create texture for foreground label" << labelId;
+            continue;
+        }
+
+        // Calculate label dimensions
+        float labelWidth = static_cast<float>(label.size.width());
+        float labelHeight = static_cast<float>(label.size.height());
+
+        qDebug() << "ModernGLWidget: Rendering foreground label" << labelId
+                 << "at pos" << label.pos
+                 << "size" << labelWidth << "x" << labelHeight
+                 << "textureId" << textureId
+                 << "text:" << label.text;
+
+        // Create render command for this label
+        auto command = std::make_unique<RenderLabelCommand>(
+            label.pos.x(), label.pos.y(), label.pos.z(),
+            labelWidth, labelHeight,
+            textureId,
+            mCameraController.getRightVector(),
+            mCameraController.getUpVector(),
+            label.highlight,
+            mCameraController.getProjectionMatrix(),
+            mCameraController.getViewMatrix(),
+            mCameraController.getModelMatrix());
+
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
 }
 
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)

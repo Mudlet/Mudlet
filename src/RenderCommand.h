@@ -220,4 +220,43 @@ private:
     StateType mStateType;
 };
 
+// Command to render a map label as a textured billboard
+class RenderLabelCommand : public RenderCommand
+{
+public:
+    RenderLabelCommand(float centerX, float centerY, float centerZ,
+                      float width, float height,
+                      GLuint textureId,
+                      const QVector3D& cameraRight,
+                      const QVector3D& cameraUp,
+                      bool highlight,
+                      const QMatrix4x4& projectionMatrix,
+                      const QMatrix4x4& viewMatrix,
+                      const QMatrix4x4& modelMatrix);
+
+    void execute(QOpenGLFunctions* gl,
+                QOpenGLShaderProgram* shader,
+                GeometryManager* geometryManager,
+                ResourceManager* resourceManager,
+                QOpenGLVertexArrayObject& vao,
+                QOpenGLBuffer& vertexBuffer,
+                QOpenGLBuffer& colorBuffer,
+                QOpenGLBuffer& normalBuffer,
+                QOpenGLBuffer& indexBuffer,
+                QOpenGLBuffer& texCoordBuffer) override;
+
+    const char* getCommandName() const override { return "RenderLabel"; }
+
+private:
+    float mCenterX, mCenterY, mCenterZ;
+    float mWidth, mHeight;
+    GLuint mTextureId;
+    QVector3D mCameraRight;
+    QVector3D mCameraUp;
+    bool mHighlight;
+    QMatrix4x4 mProjectionMatrix;
+    QMatrix4x4 mViewMatrix;
+    QMatrix4x4 mModelMatrix;
+};
+
 #endif // MUDLET_RENDER_COMMAND_H
