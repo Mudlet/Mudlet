@@ -242,7 +242,7 @@ bool dlgMapLabel::stretchImage()
 
 void dlgMapLabel::slot_updateControls()
 {
-    //: Font display format in map label dialog (excluding size since it auto-scales)
+    //: Font display format in map label dialog. %1 is font family name, %2 is style (e.g. "Bold", "Italic"). Size excluded since it auto-scales.
     lineEdit_font->setText(tr("%1 %2").arg(font.family(), font.styleName()));
     pushButton_fgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(fgColor.red()), QString::number(fgColor.green()), QString::number(fgColor.blue()), QString::number(fgColor.alpha())));
     pushButton_bgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(bgColor.red()), QString::number(bgColor.green()), QString::number(bgColor.blue()), QString::number(bgColor.alpha())));

@@ -47,6 +47,24 @@
 #include <QSizeF>
 
 
+namespace {
+// Restores font information from userData that was stored during binary serialization.
+// Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
+void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
+    if (userData.contains(fontKey)) {
+        const QStringList fontParts = userData.take(fontKey).split(QLatin1Char('|'));
+        if (fontParts.size() == 4) {
+            label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(),
+                               fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
+        } else {
+            qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
+        }
+    }
+}
+} // anonymous namespace
+
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
 , mUnnamedAreaName(tr("Unnamed Area"))
@@ -1149,6 +1167,10 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         for (const auto labelID : permanentLabelsList) {
             const auto label = pA->mMapLabels.value(labelID);
             if (!label.font.family().isEmpty()) {
+                if (label.font.family().contains(QLatin1Char('|'))) {
+                    qWarning("TMap::serialize() - Font family '%s' for label %d contains pipe character, font may not deserialize correctly",
+                             qUtf8Printable(label.font.family()), labelID);
+                }
                 const QString fontKey = qsl("system.labelFont_%1").arg(labelID);
                 const QString fontValue = qsl("%1|%2|%3|%4")
                     .arg(label.font.family())
@@ -1745,15 +1767,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         ifs >> label.pix;
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
-                        // Restore font from area userData
-                        const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
-                        if (pA->mUserData.contains(fontKey)) {
-                            const QStringList fontParts = pA->mUserData.take(fontKey).split(QLatin1Char('|'));
-                            if (fontParts.size() == 4) {
-                                label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(),
-                                                   fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
-                            }
-                        }
+                        restoreLabelFontFromUserData(label, labelId, pA->mUserData);
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
@@ -1822,15 +1836,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         ifs >> label.showOnTop;
                     }
                     if (pA) {
-                        // Restore font from area userData
-                        const QString fontKey = qsl("system.labelFont_%1").arg(labelID);
-                        if (pA->mUserData.contains(fontKey)) {
-                            const QStringList fontParts = pA->mUserData.take(fontKey).split(QLatin1Char('|'));
-                            if (fontParts.size() == 4) {
-                                label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(),
-                                                   fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
-                            }
-                        }
+                        restoreLabelFontFromUserData(label, labelID, pA->mUserData);
                         pA->mMapLabels.insert(labelID, label);
                     }
                     ++areaLabelCounter;

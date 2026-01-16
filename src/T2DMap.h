@@ -172,6 +172,7 @@ public:
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
     void flushTextLabelPixmapCache() {mTextLabelPixmapCache.clear();}
     void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
+    void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
     void clearSelection();
