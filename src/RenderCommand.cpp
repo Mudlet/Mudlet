@@ -350,6 +350,7 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uUseInstancing", false);
     shader->setUniformValue("uUsePBR", false);
     shader->setUniformValue("uUseTexture", true);
+    shader->setUniformValue("uDisableLighting", true);
     shader->setUniformValue("uTexture", 0);
 
     // Normal matrix (inverse transpose of model matrix)
@@ -358,4 +359,7 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
 
     // Use textured rendering method
     geometryManager->renderGeometry(labelGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer, resourceManager, GL_TRIANGLES);
+
+    // Reset lighting for subsequent draw calls
+    shader->setUniformValue("uDisableLighting", false);
 }
