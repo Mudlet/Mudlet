@@ -484,6 +484,7 @@ void T2DMap::init()
         slot_toggleMapViewOnly();
     }
     flushSymbolPixmapCache();
+    flushTextLabelPixmapCache();
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
 }
 
@@ -850,6 +851,51 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
 
     if (!mSymbolPixmapCache.insert(key, pixmap)) {
         qDebug("T2DMap::addSymbolToPixmapCache() ALERT: Map Room Symbol Pixmap cache is full...!");
+    }
+}
+
+void T2DMap::addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize)
+{
+    auto pixmap = new QPixmap(targetSize);
+    pixmap->fill(label.bgColor);
+
+    QPainter painter(pixmap);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing, mMapperUseAntiAlias);
+
+    QFont scaledFont = label.font;
+    QRectF targetRect(0, 0, targetSize.width(), targetSize.height());
+    if (!sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
+        // Font too small to be legible - fall back to smooth-scaled original pixmap
+        delete pixmap;
+        pixmap = new QPixmap(label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        if (!mTextLabelPixmapCache.insert(key, pixmap)) {
+            qDebug("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full...!");
+        }
+        return;
+    }
+
+    painter.setFont(scaledFont);
+
+    const int labelWidth = targetSize.width();
+    const int labelHeight = targetSize.height();
+
+    if (label.fgColor != label.outlineColor) {
+        QPen outlinePen(label.outlineColor);
+        outlinePen.setCosmetic(mMapperUseAntiAlias);
+        outlinePen.setWidth(1);
+        painter.setPen(outlinePen);
+
+        painter.drawText(QRect(-1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
+        painter.drawText(QRect(1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
+        painter.drawText(QRect(0, -1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
+        painter.drawText(QRect(0, 1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
+    }
+
+    painter.setPen(label.fgColor);
+    painter.drawText(QRect(0, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
+
+    if (!mTextLabelPixmapCache.insert(key, pixmap)) {
+        qDebug("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full...!");
     }
 }
 
@@ -1870,7 +1916,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
         if (!mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                const QSize targetSize = labelPaintRectangle.size().toSize();
+                if (!mapLabel.text.isEmpty() && !mapLabel.font.family().isEmpty()) {
+                    const QString cacheKey = qsl("%1_%2_%3x%4").arg(mAreaID).arg(itMapLabel.key()).arg(targetSize.width()).arg(targetSize.height());
+                    if (!mTextLabelPixmapCache.contains(cacheKey)) {
+                        addTextLabelToCache(cacheKey, mapLabel, targetSize);
+                    }
+                    if (auto* pix = mTextLabelPixmapCache.object(cacheKey)) {
+                        painter.drawPixmap(labelPosition, *pix);
+                    }
+                } else {
+                    painter.drawPixmap(labelPosition, mapLabel.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                }
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
@@ -1988,7 +2045,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
         if (mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                const QSize targetSize = labelPaintRectangle.size().toSize();
+                if (!mapLabel.text.isEmpty() && !mapLabel.font.family().isEmpty()) {
+                    const QString cacheKey = qsl("%1_%2_%3x%4").arg(mAreaID).arg(itMapLabel.key()).arg(targetSize.width()).arg(targetSize.height());
+                    if (!mTextLabelPixmapCache.contains(cacheKey)) {
+                        addTextLabelToCache(cacheKey, mapLabel, targetSize);
+                    }
+                    if (auto* pix = mTextLabelPixmapCache.object(cacheKey)) {
+                        painter.drawPixmap(labelPosition, *pix);
+                    }
+                } else {
+                    painter.drawPixmap(labelPosition, mapLabel.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                }
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
@@ -2891,6 +2959,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
         label.text = mpDlgMapLabel->getText();
         label.fgColor = mpDlgMapLabel->getFgColor();
         font = mpDlgMapLabel->getFont();
+        label.font = font;
     } else {
         label.text.clear();
         imagePath = mpDlgMapLabel->getImagePath();
@@ -4410,6 +4479,7 @@ void T2DMap::wheelEvent(QWheelEvent* e)
             mMapCenterY += dy * (oldZoom - xyzoom) / 2.0 * ys;
 
             flushSymbolPixmapCache();
+            flushTextLabelPixmapCache();
             update();
         }
         e->accept();
@@ -4462,6 +4532,7 @@ std::pair<bool, QString> T2DMap::setMapZoom(const qreal zoom, const int areaId)
 
     // We are adjusting the zoom for the currently viewed area so redraw it
     flushSymbolPixmapCache();
+    flushTextLabelPixmapCache();
     update();
     return {true, QString()};
 }
@@ -4473,6 +4544,7 @@ void T2DMap::setRoomSize(double f)
         mpHost->mRoomSize = f;
     }
     flushSymbolPixmapCache();
+    flushTextLabelPixmapCache();
     update();
     mpMap->setUnsaved(__func__);
 }
@@ -5239,7 +5311,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QRectF labelPaintRectangle = QRect(labelX, labelY, labelWidth, labelHeight);
         if (!mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
@@ -5756,7 +5828,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         if (mapLabel.showOnTop) {
             QPointF labelPosition(labelX, labelY);
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);

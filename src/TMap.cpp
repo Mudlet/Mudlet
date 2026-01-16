@@ -1144,12 +1144,25 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         } else {
             pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
         }
+        // Store font info for labels in userData (avoids binary format version change)
+        const auto permanentLabelsList{pA->getPermanentLabelIds()};
+        for (const auto labelID : permanentLabelsList) {
+            const auto label = pA->mMapLabels.value(labelID);
+            if (!label.font.family().isEmpty()) {
+                const QString fontKey = qsl("system.labelFont_%1").arg(labelID);
+                const QString fontValue = qsl("%1|%2|%3|%4")
+                    .arg(label.font.family())
+                    .arg(label.font.pointSize())
+                    .arg(label.font.weight())
+                    .arg(label.font.italic() ? 1 : 0);
+                pA->mUserData.insert(fontKey, fontValue);
+            }
+        }
         ofs << pA->mUserData;
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
             // Also we now have temporary labels, so we need to count the
             // permanent ones first to use as the count for ones to store:
-            const auto permanentLabelsList{pA->getPermanentLabelIds()};
             ofs << static_cast<qint32>(permanentLabelsList.size());
             QListIterator<int> itMapLabelId(permanentLabelsList);
             while (itMapLabelId.hasNext()) {
@@ -1732,6 +1745,15 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         ifs >> label.pix;
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
+                        // Restore font from area userData
+                        const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
+                        if (pA->mUserData.contains(fontKey)) {
+                            const QStringList fontParts = pA->mUserData.take(fontKey).split(QLatin1Char('|'));
+                            if (fontParts.size() == 4) {
+                                label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(),
+                                                   fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
+                            }
+                        }
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
@@ -1800,6 +1822,15 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         ifs >> label.showOnTop;
                     }
                     if (pA) {
+                        // Restore font from area userData
+                        const QString fontKey = qsl("system.labelFont_%1").arg(labelID);
+                        if (pA->mUserData.contains(fontKey)) {
+                            const QStringList fontParts = pA->mUserData.take(fontKey).split(QLatin1Char('|'));
+                            if (fontParts.size() == 4) {
+                                label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(),
+                                                   fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
+                            }
+                        }
                         pA->mMapLabels.insert(labelID, label);
                     }
                     ++areaLabelCounter;
@@ -2136,6 +2167,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     lp.setRenderHint(QPainter::Antialiasing);
 
     QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
+    label.font = font;
     lp.setFont(font);
 
     QPen outlinePen(label.outlineColor);
