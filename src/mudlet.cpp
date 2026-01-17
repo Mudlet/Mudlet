@@ -4465,13 +4465,14 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 // Main entry point for handling telnet:// URIs
 void mudlet::handleTelnetUri(const QString& uri)
 {
-    // Close and delete connection profiles dialog if it's open, as we are taking over connection handling
-    // We must explicitly delete it to avoid dangling signal connections that cause crashes during exit
+    // Close connection profiles dialog if it's open, as we are taking over connection handling
+    // The dialog has Qt::WA_DeleteOnClose set, so it will be automatically deleted when closed
+    // We only need to disconnect signals and hide it to avoid crashes from dangling connections
     if (mpConnectionDialog) {
-        // Disconnect all signals to prevent callbacks during/after deletion
+        // Disconnect all signals to prevent callbacks after dialog is hidden/closed
         disconnect(mpConnectionDialog, nullptr, this, nullptr);
-        // deleteLater() is safe here because we're not in the middle of exit()
-        mpConnectionDialog->deleteLater();
+        // Hide the dialog - Qt::WA_DeleteOnClose will handle cleanup automatically
+        mpConnectionDialog->hide();
         mpConnectionDialog = nullptr;
     }
 
