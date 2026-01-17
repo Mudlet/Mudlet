@@ -1555,11 +1555,16 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
     lua_remove(L, 1);
 
-    if (!lua_isfunction(L, 1)) {
-        lua_pushfstring(L, "%s: bad argument #2 type (function expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
+    int func = 0;
+    if (lua_isnil(L, 1)) {
+        // Passing nil clears the callback - see https://github.com/Mudlet/Mudlet/issues/823
+        lua_pop(L, 1);
+    } else if (lua_isfunction(L, 1)) {
+        func = luaL_ref(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pushfstring(L, "%s: bad argument #2 type (function or nil expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
     }
-    const int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
     if (funcName == qsl("setLabelClickCallback")) {
