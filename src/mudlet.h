@@ -351,6 +351,7 @@ public:
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
     QPointer<dlgConnectionProfiles> mpConnectionDialog;
+    bool mSuppressConnectionDialog = false;  // Set to true when handling telnet:// URI
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;

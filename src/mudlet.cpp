@@ -2965,6 +2965,11 @@ void mudlet::writeSettings()
 
 void mudlet::slot_showConnectionDialog()
 {
+    // Don't show dialog if we're handling a telnet:// URI
+    if (mSuppressConnectionDialog) {
+        return;
+    }
+    
     if (mpConnectionDialog) {
         // If dialog already exists, bring it to the front of the main window
         mpConnectionDialog->raise();
@@ -4465,14 +4470,13 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 // Main entry point for handling telnet:// URIs
 void mudlet::handleTelnetUri(const QString& uri)
 {
-    // Close connection profiles dialog if it's open, as we are taking over connection handling
-    // The dialog has Qt::WA_DeleteOnClose set, so it will be automatically deleted when closed
-    // We only need to disconnect signals and hide it to avoid crashes from dangling connections
+    // Suppress connection dialog - we're handling connection via URI
+    // This prevents the dialog from being shown even if it's scheduled via timer
+    mSuppressConnectionDialog = true;
+    
+    // Close connection profiles dialog if it's already open
     if (mpConnectionDialog) {
-        // Disconnect all signals to prevent callbacks after dialog is hidden/closed
-        disconnect(mpConnectionDialog, nullptr, this, nullptr);
-        // Hide the dialog - Qt::WA_DeleteOnClose will handle cleanup automatically
-        mpConnectionDialog->hide();
+        mpConnectionDialog->close();
         mpConnectionDialog = nullptr;
     }
 
@@ -4488,6 +4492,7 @@ void mudlet::handleTelnetUri(const QString& uri)
     if (!uriData.valid) {
         qWarning() << "mudlet::handleTelnetUri() - Invalid telnet URI (credentials redacted)";
         // Fall back to showing connection dialog
+        mSuppressConnectionDialog = false;
         slot_showConnectionDialog();
         return;
     }
@@ -4500,6 +4505,7 @@ void mudlet::handleTelnetUri(const QString& uri)
         profileName = createProfileForUri(uriData);
         if (profileName.isEmpty()) {
             qWarning() << "mudlet::handleTelnetUri() - Failed to create profile for URI:" << uri;
+            mSuppressConnectionDialog = false;
             slot_showConnectionDialog();
             return;
         }
@@ -4592,6 +4598,9 @@ void mudlet::handleTelnetUri(const QString& uri)
         raise();
         activateWindow();
     }
+    
+    // Reset suppression flag - user should be able to open connection dialog normally now
+    mSuppressConnectionDialog = false;
 }
 
 void mudlet::processEventLoopHack()
