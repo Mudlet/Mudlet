@@ -32,6 +32,8 @@
 #include <QProgressDialog>
 #include <QTimer>
 
+using namespace std::chrono_literals;
+
 
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 : QDialog(parent)
@@ -257,23 +259,21 @@ void dlgPackageManager::slot_installPackageFromFile()
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    int successCount = 0;
-    int failureCount = 0;
+    QStringList failedPackages;
 
     for (const QString& fileName : fileNames) {
         if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
-            ++successCount;
             mpHost->waitForProfileSave();
         } else {
-            ++failureCount;
+            failedPackages << QFileInfo(fileName).fileName();
         }
     }
 
     resetPackageList();
 
-    if (failureCount > 0) {
-        //: Package manager - status message shown when some packages failed to import
-        showImportStatus(tr("Failed to import %n package(s)", nullptr, failureCount));
+    if (!failedPackages.isEmpty()) {
+        //: Package manager - status message shown when some packages failed to import. %1 is a comma-separated list of package names
+        showImportStatus(tr("Failed to import: %1").arg(failedPackages.join(qsl(", "))));
     }
 }
 
@@ -708,7 +708,7 @@ void dlgPackageManager::showImportStatus(const QString& message, bool /*isError*
     label_importStatus->setText(message);
     label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
     label_importStatus->show();
-    QTimer::singleShot(4000, label_importStatus, &QWidget::hide);
+    QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
 }
 
 void dlgPackageManager::closeEvent(QCloseEvent* event)

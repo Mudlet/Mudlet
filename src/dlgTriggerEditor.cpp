@@ -12781,15 +12781,13 @@ void dlgTriggerEditor::slot_import()
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    int successCount = 0;
-    int failureCount = 0;
+    QStringList failedPackages;
 
     for (const QString& fileName : fileNames) {
         if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
-            ++successCount;
             mpHost->waitForProfileSave();
         } else {
-            ++failureCount;
+            failedPackages << QFileInfo(fileName).fileName();
         }
     }
 
@@ -12814,9 +12812,9 @@ void dlgTriggerEditor::slot_import()
 
     slot_showTriggers();
 
-    if (failureCount > 0) {
-        //: Trigger editor - status bar message shown when some packages failed to import
-        statusBar()->showMessage(tr("Failed to import %n package(s)", nullptr, failureCount), 4000);
+    if (!failedPackages.isEmpty()) {
+        //: Trigger editor - status bar message shown when some packages failed to import. %1 is a comma-separated list of package names
+        statusBar()->showMessage(tr("Failed to import: %1").arg(failedPackages.join(qsl(", "))), std::chrono::milliseconds(4s).count());
     }
 }
 
