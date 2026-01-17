@@ -147,6 +147,7 @@ void dlgModuleManager::slot_installModule()
     for (const QString& fileName : fileNames) {
         if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
             ++successCount;
+            mpHost->waitForProfileSave();
         } else {
             ++failureCount;
         }

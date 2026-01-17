@@ -12787,6 +12787,7 @@ void dlgTriggerEditor::slot_import()
     for (const QString& fileName : fileNames) {
         if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
             ++successCount;
+            mpHost->waitForProfileSave();
         } else {
             ++failureCount;
         }

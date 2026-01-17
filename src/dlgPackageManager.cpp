@@ -263,6 +263,7 @@ void dlgPackageManager::slot_installPackageFromFile()
     for (const QString& fileName : fileNames) {
         if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
             ++successCount;
+            mpHost->waitForProfileSave();
         } else {
             ++failureCount;
         }
