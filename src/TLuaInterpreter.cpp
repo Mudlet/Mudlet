@@ -1557,7 +1557,6 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 
     int func = 0;
     if (lua_isnil(L, 1)) {
-        // Passing nil clears the callback - see https://github.com/Mudlet/Mudlet/issues/823
         lua_pop(L, 1);
     } else if (lua_isfunction(L, 1)) {
         func = luaL_ref(L, LUA_REGISTRYINDEX);
