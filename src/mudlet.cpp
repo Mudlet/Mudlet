@@ -4474,10 +4474,11 @@ void mudlet::handleTelnetUri(const QString& uri)
     // This prevents the dialog from being shown even if it's scheduled via timer
     mSuppressConnectionDialog = true;
     
-    // Close connection profiles dialog if it's already open
+    // Hide connection profiles dialog if it's already open
+    // Use hide() instead of close() to avoid double-free during app exit
+    // Qt's parent-child cleanup will handle deletion properly
     if (mpConnectionDialog) {
-        mpConnectionDialog->close();
-        mpConnectionDialog = nullptr;
+        mpConnectionDialog->hide();
     }
 
     if (uri.isEmpty()) {
