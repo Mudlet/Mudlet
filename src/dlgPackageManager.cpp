@@ -30,6 +30,7 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QTimer>
 
 
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
@@ -247,26 +248,32 @@ void dlgPackageManager::slot_installPackageFromFile()
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
-    //: Package manager - import package from file dialog
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), lastDir);
-    if (fileName.isEmpty()) {
+    //: Package manager - import packages from file dialog (multi-select enabled)
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Import Mudlet Package"), lastDir);
+    if (fileNames.isEmpty()) {
         return;
     }
 
-    lastDir = QFileInfo(fileName).absolutePath();
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        //: Package manager - error when attempting to read a file to import
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
-        return;
+    int successCount = 0;
+    int failureCount = 0;
+
+    for (const QString& fileName : fileNames) {
+        if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
+            ++successCount;
+        } else {
+            ++failureCount;
+        }
     }
 
-    mpHost->installPackage(fileName, enums::PackageModuleType::Package);
-
-    // Refresh the package list to show newly installed package
     resetPackageList();
+
+    if (failureCount > 0) {
+        //: Package manager - status message shown when some packages failed to import
+        showImportStatus(tr("Failed to import %n package(s)", nullptr, failureCount));
+    }
 }
 
 void dlgPackageManager::slot_installPackageFromRepository()
@@ -693,6 +700,14 @@ void dlgPackageManager::slot_toggleRemoveButton()
         pushButton_remove->setText(tr("Remove"));
         pushButton_remove->setEnabled(false);
     }
+}
+
+void dlgPackageManager::showImportStatus(const QString& message, bool /*isError*/)
+{
+    label_importStatus->setText(message);
+    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
+    label_importStatus->show();
+    QTimer::singleShot(4000, label_importStatus, &QWidget::hide);
 }
 
 void dlgPackageManager::closeEvent(QCloseEvent* event)

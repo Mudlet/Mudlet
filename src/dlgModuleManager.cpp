@@ -27,6 +27,7 @@
 
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QTimer>
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
@@ -131,26 +132,36 @@ void dlgModuleManager::slot_installModule()
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), lastDir);
-    if (fileName.isEmpty()) {
+    //: Module manager - import modules from file dialog (multi-select enabled)
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Load Mudlet Module"), lastDir);
+    if (fileNames.isEmpty()) {
         return;
     }
 
-    lastDir = QFileInfo(fileName).absolutePath();
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Load Mudlet Module:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
-        return;
+    int successCount = 0;
+    int failureCount = 0;
+
+    for (const QString& fileName : fileNames) {
+        if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
+            ++successCount;
+        } else {
+            ++failureCount;
+        }
     }
 
-    mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
     }
 
     layoutModules();
+
+    if (failureCount > 0) {
+        //: Module manager - status message shown when some modules failed to import
+        showImportStatus(tr("Failed to import %n module(s)", nullptr, failureCount));
+    }
 }
 
 void dlgModuleManager::slot_uninstallModule()
@@ -252,6 +263,14 @@ void dlgModuleManager::slot_helpModule()
             }
         }
     }
+}
+
+void dlgModuleManager::showImportStatus(const QString& message, bool /*isError*/)
+{
+    label_importStatus->setText(message);
+    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
+    label_importStatus->show();
+    QTimer::singleShot(4000, label_importStatus, &QWidget::hide);
 }
 
 void dlgModuleManager::closeEvent(QCloseEvent* event)
