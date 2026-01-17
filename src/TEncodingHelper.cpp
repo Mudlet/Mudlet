@@ -33,14 +33,9 @@ bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
            encoding == "CP869";
 }
 
-std::optional<QStringConverter::Encoding> TEncodingHelper::getQtEncoding(const QByteArray& encoding)
-{
-    auto enc = QStringConverter::encodingForName(encoding.constData());
-    return enc;
-}
-
-// Check if an encoding is available via ICU (for encodings like Big5, GBK, EUC-KR
-// that are not built-in to Qt6 but may be available through ICU support)
+// Check if an encoding is available via Qt6's QStringDecoder
+// This handles both built-in Qt encodings (UTF-8, Latin1, etc.) and
+// ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
 bool TEncodingHelper::isIcuEncodingAvailable(const QByteArray& encoding)
 {
     QStringDecoder decoder(encoding.constData());
@@ -138,18 +133,11 @@ QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encod
         return TTextCodec_medievia::toUnicode(bytes);
     }
 
-    // First try built-in Qt encodings (UTF-8, Latin1, etc.)
-    auto qtEnc = getQtEncoding(encoding);
-    if (qtEnc) {
-        QStringDecoder decoder(*qtEnc);
+    // Try Qt6's QStringDecoder which handles both built-in encodings (UTF-8, Latin1, etc.)
+    // and ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
+    QStringDecoder decoder(encoding.constData());
+    if (decoder.isValid()) {
         return decoder.decode(bytes);
-    }
-
-    // Then try ICU-based encodings (Big5, GBK, EUC-KR, etc.)
-    // These are not in Qt's built-in enum but may be available via ICU
-    QStringDecoder icuDecoder(encoding.constData());
-    if (icuDecoder.isValid()) {
-        return icuDecoder.decode(bytes);
     }
 
     if (hasLookupTable(encoding)) {
@@ -177,18 +165,11 @@ QByteArray TEncodingHelper::encode(const QString& str, const QByteArray& encodin
         return TTextCodec_medievia::fromUnicode(str);
     }
 
-    // First try built-in Qt encodings (UTF-8, Latin1, etc.)
-    auto qtEnc = getQtEncoding(encoding);
-    if (qtEnc) {
-        QStringEncoder encoder(*qtEnc);
+    // Try Qt6's QStringEncoder which handles both built-in encodings (UTF-8, Latin1, etc.)
+    // and ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
+    QStringEncoder encoder(encoding.constData());
+    if (encoder.isValid()) {
         return encoder.encode(str);
-    }
-
-    // Then try ICU-based encodings (Big5, GBK, EUC-KR, etc.)
-    // These are not in Qt's built-in enum but may be available via ICU
-    QStringEncoder icuEncoder(encoding.constData());
-    if (icuEncoder.isValid()) {
-        return icuEncoder.encode(str);
     }
 
     if (hasLookupTable(encoding)) {
@@ -212,19 +193,12 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
         return TTextCodec_medievia::canEncode(str);
     }
 
-    // First try built-in Qt encodings (UTF-8, Latin1, etc.)
-    auto qtEnc = getQtEncoding(encoding);
-    if (qtEnc) {
-        QStringEncoder encoder(*qtEnc);
+    // Try Qt6's QStringEncoder which handles both built-in encodings (UTF-8, Latin1, etc.)
+    // and ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
+    QStringEncoder encoder(encoding.constData());
+    if (encoder.isValid()) {
         encoder.encode(str);
         return !encoder.hasError();
-    }
-
-    // Then try ICU-based encodings (Big5, GBK, EUC-KR, etc.)
-    QStringEncoder icuEncoder(encoding.constData());
-    if (icuEncoder.isValid()) {
-        icuEncoder.encode(str);
-        return !icuEncoder.hasError();
     }
 
     if (hasLookupTable(encoding)) {
@@ -244,14 +218,8 @@ bool TEncodingHelper::isEncodingAvailable(const QByteArray& encoding)
         return true;
     }
 
-    // Check built-in Qt encodings first
-    auto qtEnc = getQtEncoding(encoding);
-    if (qtEnc.has_value()) {
-        return true;
-    }
-
-    // Then check ICU-based encodings (Big5, GBK, EUC-KR, etc.)
-    // These require Qt to be built with ICU support
+    // Check Qt6's QStringDecoder which handles both built-in encodings (UTF-8, Latin1, etc.)
+    // and ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
     return isIcuEncodingAvailable(encoding);
 }
 

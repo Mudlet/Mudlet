@@ -42,7 +42,6 @@ public:
     
 private:
     static bool isCustomEncoding(const QByteArray& encoding);
-    static std::optional<QStringConverter::Encoding> getQtEncoding(const QByteArray& encoding);
     static bool isIcuEncodingAvailable(const QByteArray& encoding);
     static bool hasLookupTable(const QByteArray& encoding);
     static QString decodeWithLookupTable(const QByteArray& bytes, const QByteArray& encoding);
