@@ -36,7 +36,7 @@ bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
 // Check if an encoding is available via Qt6's QStringDecoder
 // This handles both built-in Qt encodings (UTF-8, Latin1, etc.) and
 // ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
-bool TEncodingHelper::isIcuEncodingAvailable(const QByteArray& encoding)
+bool TEncodingHelper::isQtEncodingAvailable(const QByteArray& encoding)
 {
     QStringDecoder decoder(encoding.constData());
     return decoder.isValid();
@@ -220,7 +220,7 @@ bool TEncodingHelper::isEncodingAvailable(const QByteArray& encoding)
 
     // Check Qt6's QStringDecoder which handles both built-in encodings (UTF-8, Latin1, etc.)
     // and ICU-based encodings (Big5, GBK, EUC-KR, etc.) when Qt is built with ICU support
-    return isIcuEncodingAvailable(encoding);
+    return isQtEncodingAvailable(encoding);
 }
 
 QList<QByteArray> TEncodingHelper::aliases(const QByteArray& encoding)
