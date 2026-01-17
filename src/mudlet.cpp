@@ -4456,10 +4456,9 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 // Main entry point for handling telnet:// URIs
 void mudlet::handleTelnetUri(const QString& uri)
 {
-    // Close connection profiles dialog if it's open, as we are taking over connection handling
-    // This prevents the dialog from remaining in the background and causing crashes on exit
+    // Hide connection profiles dialog if it's open, as we are taking over connection handling
     if (mpConnectionDialog) {
-        mpConnectionDialog->close();
+        mpConnectionDialog->hide();
     }
 
     if (uri.isEmpty()) {
