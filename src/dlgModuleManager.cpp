@@ -132,7 +132,7 @@ void dlgModuleManager::slot_installModule()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+    QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
     //: Module manager - import modules from file dialog (multi-select enabled)
     const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Load Mudlet Module"), lastDir);
@@ -141,15 +141,18 @@ void dlgModuleManager::slot_installModule()
     }
 
     lastDir = QFileInfo(fileNames.first()).absolutePath();
-    settings.setValue("lastFileDialogLocation", lastDir);
+    settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
     QStringList failedModules;
 
     for (const QString& fileName : fileNames) {
-        if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
+        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
+        if (success) {
             mpHost->waitForProfileSave();
         } else {
-            failedModules << QFileInfo(fileName).fileName();
+            const QString baseName = QFileInfo(fileName).fileName();
+            failedModules << baseName;
+            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName << ":" << errorMsg;
         }
     }
 
@@ -266,7 +269,7 @@ void dlgModuleManager::slot_helpModule()
     }
 }
 
-void dlgModuleManager::showImportStatus(const QString& message, bool /*isError*/)
+void dlgModuleManager::showImportStatus(const QString& message)
 {
     label_importStatus->setText(message);
     label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));

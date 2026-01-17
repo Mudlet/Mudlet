@@ -67,7 +67,7 @@ private:
     void downloadIcon(const QString &packageName);
     void downloadRepositoryIndex();
     void fillPackageDetails(const QString &name, const QString &title, const QString &author, const QString &version);
-    void showImportStatus(const QString& message, bool isError = false);
+    void showImportStatus(const QString& message);
 
     Host* mpHost = nullptr;
     PackageItemDelegate* mpPackageItemDelegate = nullptr;

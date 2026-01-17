@@ -12772,22 +12772,25 @@ void dlgTriggerEditor::slot_import()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
+    QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
     //: Trigger editor - import packages from file dialog (multi-select enabled)
     const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Import Mudlet Package"), lastDir);
     if (fileNames.isEmpty()) {
         return;
     }
     lastDir = QFileInfo(fileNames.first()).absolutePath();
-    settings.setValue("lastFileDialogLocation", lastDir);
+    settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
     QStringList failedPackages;
 
     for (const QString& fileName : fileNames) {
-        if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
+        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
+        if (success) {
             mpHost->waitForProfileSave();
         } else {
-            failedPackages << QFileInfo(fileName).fileName();
+            const QString baseName = QFileInfo(fileName).fileName();
+            failedPackages << baseName;
+            qWarning() << "dlgTriggerEditor::slot_import() ERROR - failed to import" << baseName << ":" << errorMsg;
         }
     }
 
@@ -12813,7 +12816,7 @@ void dlgTriggerEditor::slot_import()
     slot_showTriggers();
 
     if (!failedPackages.isEmpty()) {
-        //: Trigger editor - status bar message shown when some packages failed to import. %1 is a comma-separated list of package names
+        //: Trigger editor - status message shown when some packages failed to import. %1 is a comma-separated list of package names
         statusBar()->showMessage(tr("Failed to import: %1").arg(failedPackages.join(qsl(", "))), std::chrono::milliseconds(4s).count());
     }
 }
