@@ -74,6 +74,7 @@ public:
     qreal get2DMapZoom() const { return mLast2DMapZoom; }
     void set2DMapZoom(const qreal zoom);
     void clean();
+    bool isZLevelVisibleInViewport(int z, qreal viewMinX, qreal viewMaxX, qreal viewMinY, qreal viewMaxY) const;
 
 
     QSet<int> rooms; // rooms of this area
