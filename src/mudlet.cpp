@@ -2979,12 +2979,21 @@ void mudlet::slot_showConnectionDialog()
     QStringList packagesToInstall = mInstanceCoordinator->readPackageQueue();
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
-    connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
+    connect(mpConnectionDialog, &QDialog::accepted, this, [this]() { 
+        if (mpConnectionDialog) {
+            enableToolbarButtons(); 
+        }
+    });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
 
     // Use a timer to ensure the main window is ready before showing the dialog
     // This is especially important at startup when the main window might not be fully initialized
     QTimer::singleShot(0, this, [this]() {
+        // Check if dialog still exists (it may have been deleted by handleTelnetUri)
+        if (!mpConnectionDialog) {
+            return;
+        }
+        
         // Ensure the main window is visible and ready
         if (!isVisible()) {
             show();
@@ -4456,10 +4465,14 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 // Main entry point for handling telnet:// URIs
 void mudlet::handleTelnetUri(const QString& uri)
 {
-    // Close connection profiles dialog if it's open, as we are taking over connection handling
-    // This prevents the dialog from remaining in the background and causing crashes on exit
+    // Close and delete connection profiles dialog if it's open, as we are taking over connection handling
+    // We must explicitly delete it to avoid dangling signal connections that cause crashes during exit
     if (mpConnectionDialog) {
-        mpConnectionDialog->close();
+        // Disconnect all signals to prevent callbacks during/after deletion
+        disconnect(mpConnectionDialog, nullptr, this, nullptr);
+        // deleteLater() is safe here because we're not in the middle of exit()
+        mpConnectionDialog->deleteLater();
+        mpConnectionDialog = nullptr;
     }
 
     if (uri.isEmpty()) {
