@@ -17,7 +17,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "SentryWrapper.h"
+#include "utils.h"
+
 #ifdef WITH_SENTRY
+#include <QFile>
 #include <QStandardPaths>
 #include "sentry.h"
 #endif
@@ -36,8 +40,6 @@
 #include <cstdlib>
 #include <algorithm>
 
-#include "SentryWrapper.h"
-
 // Initializes Sentry options for crash/error reporting.
 // Crashes are first stored in a local cache folder, then automatically sent.
 //
@@ -55,8 +57,16 @@ void initSentry()
         if (!options) {
             return;
         }
+
+        QString appBuild;
+        QFile gitShaFile(qsl(":/app-build.txt"));
+        if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+        }
+        const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, appBuild).toStdString();
+
         sentry_options_set_database_path(options, path.toUtf8().constData());
-        sentry_options_set_release(options, "mudlet@" APP_VERSION);
+        sentry_options_set_release(options, release.c_str());
         sentry_options_set_handler_path(options, makeExecutablePath(runtimeAppDir, "crashpad_handler").c_str());
         sentry_options_set_external_crash_reporter_path(options, makeExecutablePath(runtimeAppDir, "MudletCrashReporter").c_str());
 
