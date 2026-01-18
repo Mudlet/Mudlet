@@ -34,17 +34,17 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
+      BOOST_URL: https://github.com/boostorg/boost/releases/download/boost-1.83.0/boost-1.83.0.7z
 
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         # We must fetch at least the immediate parents so that if this is
         # a pull request then we can checkout the head.
         fetch-depth: 2
-        submodules: true
+        submodules: recursive
 
     - name: (Windows) Install Qt
       uses: jurplel/install-qt-action@v4
@@ -66,7 +66,7 @@ jobs:
         modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -80,16 +80,15 @@ jobs:
           BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
         fi
         mkdir -p $BOOST_ROOT
-        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
-        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
-        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
-        cd $BOOST_ROOT && cp -r boost_*/* .
-        rm -rf boost_*/* download.tar.bz2 download.tar
+        curl --progress-bar --location --output $BOOST_ROOT/download.7z $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.7z -y -bd
+        cd $BOOST_ROOT && cp -r boost-*/* .
+        rm -rf boost-*/* download.7z
       shell: bash
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
@@ -101,27 +100,26 @@ jobs:
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v3.30.3
 
-    - name: (Linux) Install non-vcpkg dependencies (1/2)
+    - name: (Linux) Install Lua via GitHub Actions
+      uses: leafo/gh-actions-lua@v12
       if: runner.os == 'Linux'
-      run: |
-        # dependencies needed for vcpkg specifically
-        sudo apt-get install gettext -y
-
-    - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v7
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       with:
-        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
-        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
+        luaVersion: "5.1.5"
+        buildCache: false
 
-    - name: (Linux) Install non-vcpkg dependencies (2/2)
+    - name: (Linux) Install Luarocks via GitHub Actions
+      uses: leafo/gh-actions-luarocks@v6
+      if: runner.os == 'Linux'
+
+    - name: (Linux) Install dependencies
       if: runner.os == 'Linux'
       run: |
-        # Install from vcpkg everything we can for cross-platform consistency
-        # If not available, use other methods
-        sudo apt-get install libsecret-1-dev ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} -y
+        sudo apt-get update
+
+        # Install all required dependencies
+        # liblua5.1-0-dev is needed for CMake to find Lua headers/library
+        sudo apt-get install libsecret-1-dev ccache pkg-config pcre2-utils expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+          libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libboost-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
@@ -132,14 +130,7 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
-        # workaround https://github.com/lloyd/yajl/issues/209
-        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
-        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
-        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
-        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
+        luarocks install --local lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -149,25 +140,23 @@ jobs:
     - name: (Linux/macOS) Set build info
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{ matrix.language }}"
         upload: false
@@ -182,6 +171,6 @@ jobs:
         output: sarif-results/${{ matrix.language }}.sarif
 
     - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: sarif-results/${{ matrix.language }}.sarif

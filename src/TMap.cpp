@@ -27,27 +27,32 @@
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
+#include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
+#include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
+#include <QBuffer>
 #include <QElapsedTimer>
 #include <QFileDialog>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonParseError>
 #include <QMessageBox>
-#include <QProgressDialog>
 #include <QPainter>
-#include <QBuffer>
-#include "post_guard.h"
+#include <QPixmap>
+#include <QProgressDialog>
+#include <QSizeF>
 
 
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
 , mUnnamedAreaName(tr("Unnamed Area"))
 , mpRoomDB(new TRoomDB(this))
+, mpViewManager(new TMapViewManager(pH, this))
 , mpHost(pH)
 , mProfileName(profileName)
 {
@@ -97,6 +102,7 @@ void TMap::mapClear()
     mNewMove = true;
     mVersion = mDefaultVersion;
     mUserData.clear();
+
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
     // whatever version was previously set/deduced
 
@@ -104,6 +110,12 @@ void TMap::mapClear()
     // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
     if (mpMapper) {
         mpMapper->updateAreaComboBox();
+
+        auto map = mpMapper->mp2dMap;
+        if (map) {
+            map->mMultiSelectionListWidget.clear();
+            map->mMultiSelectionListWidget.hide();
+        }
     }
 }
 
@@ -541,6 +553,9 @@ void TMap::audit()
             itArea.next();
             const int areaID = itArea.key();
             TArea* pArea = mpRoomDB->getArea(areaID);
+            if (!pArea) {
+                continue;
+            }
             if (!pArea->mMapLabels.isEmpty()) {
                 QList<int> const labelIDList = pArea->mMapLabels.keys();
                 for (const int& i : labelIDList) {
@@ -595,11 +610,7 @@ void TMap::audit()
         appendErrorMsg(infoMsg);
     }
 
-    auto loadTime = mpHost->getLuaInterpreter()->condenseMapLoad();
-    if (loadTime != -1.0) {
-        const QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
-        postMessage(msg);
-    }
+    mpHost->getLuaInterpreter()->condenseMapLoad();
 }
 
 // This may be duplicating TArea class functionality:
@@ -672,6 +683,75 @@ bool TMap::gotoRoom(int r1, int r2)
     return findPath(r1, r2);
 }
 
+void TMap::addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+                               const QMap<QString, int>& exitWeights,
+                               unsigned int source,
+                               TRoom* pSourceR,
+                               int target,
+                               quint8 direction,
+                               const QString& exitKey,
+                               const QSet<unsigned int>& unUsableRoomSet)
+{
+    // Skip self-edges and any exits that lead to rooms already known to be unusable.
+    if (target <= 0 || static_cast<int>(source) == target) {
+        return;
+    }
+
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    TLuaInterpreter::ExitWeightFilterResult filterResult;
+    TLuaInterpreter::ExitWeightFilterResult* filterResultPtr = nullptr;
+    if (interpreter && interpreter->hasExitWeightFilter()) {
+        filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
+        if (filterResult.blocked) {
+            return;
+        }
+        filterResultPtr = &filterResult;
+    }
+
+    const bool filterOverridesBlocks = filterResultPtr && filterResultPtr->weightOverride.has_value();
+
+    if (pSourceR->isLocked && !filterOverridesBlocks) {
+        return;
+    }
+
+    const bool isSpecialExit = direction == DIR_OTHER;
+
+    if (!filterOverridesBlocks) {
+        if (isSpecialExit) {
+            if (pSourceR->hasSpecialExitLock(exitKey)) {
+                return;
+            }
+        } else if (pSourceR->hasExitLock(direction)) {
+            return;
+        }
+    }
+
+    TRoom* pTargetR = mpRoomDB->getRoom(target);
+    if (!pTargetR) {
+        return;
+    }
+
+    if (!filterOverridesBlocks && (pTargetR->isLocked || unUsableRoomSet.contains(target))) {
+        return;
+    }
+
+    route r;
+    r.direction = direction;
+    if (isSpecialExit) {
+        r.specialExitName = exitKey;
+    }
+
+    int cost = exitWeights.value(exitKey, pTargetR->getWeight());
+    if (filterOverridesBlocks) {
+        cost = filterResultPtr->weightOverride.value();
+    }
+    r.cost = cost;
+
+    if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
+        bestRoutes.insert(target, r);
+    }
+}
+
 void TMap::initGraph()
 {
     QElapsedTimer _time;
@@ -683,15 +763,24 @@ void TMap::initGraph()
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
     QSet<unsigned int> unUsableRoomSet;
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    const bool exitWeightFilterActive = interpreter && interpreter->hasExitWeightFilter();
     // Keep track of the unusable rather than the usable ones because that is
     // hopefully a MUCH smaller set in normal situations!
     QHashIterator<int, TRoom*> itRoom = mpRoomDB->getRoomMap();
     while (itRoom.hasNext()) {
         itRoom.next();
         TRoom* pR = itRoom.value();
-        if (itRoom.key() < 1 || !pR || pR->isLocked) {
+        if (itRoom.key() < 1 || !pR) {
             unUsableRoomSet.insert(itRoom.key());
             continue;
+        }
+
+        if (pR->isLocked) {
+            unUsableRoomSet.insert(itRoom.key());
+            if (!exitWeightFilterActive) {
+                continue;
+            }
         }
 
         location l;
@@ -704,6 +793,10 @@ void TMap::initGraph()
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 
+    for (unsigned int i = 0; i < roomCount; ++i) {
+        boost::add_vertex(g);
+    }
+
     // Now identify the routes between rooms, and pick out the best edges of parallel ones
     for (auto l : locations) {
         unsigned const int source = l.id;
@@ -713,198 +806,31 @@ void TMap::initGraph()
         // value is data we will need to store later,
         QMap<QString, int> const exitWeights = pSourceR->getExitWeights();
 
-        int target = pSourceR->getNorth();
-        TRoom* pTargetR;
-        quint8 direction = DIR_NORTH;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            // In above tests the second test is to eliminate self-edges (they
-            // are of no use).  The third test is to eliminate targets that we
-            // have already found to be unreachable because they are invalid or
-            // locked.
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) { // OK got something that is valid
-                route r;
-                r.cost = exitWeights.value(qsl("n"), pTargetR->getWeight());
-                r.direction = direction;
-                bestRoutes.insert(target, r);
-            }
-        }
-
-        target = pSourceR->getEast();
-        direction = DIR_EAST;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("e"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) { // Ah, this is a better route
-                    r.direction = direction;
-                    bestRoutes.insert(target, r); // If the second part of conditional is the truth this will replace previous best route to this target
-                }
-            }
-        }
-
-        target = pSourceR->getSouth();
-        direction = DIR_SOUTH;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("s"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getWest();
-        direction = DIR_WEST;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("w"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getUp();
-        direction = DIR_UP;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("up"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getDown();
-        direction = DIR_DOWN;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("down"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getNortheast();
-        direction = DIR_NORTHEAST;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("ne"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getSoutheast();
-        direction = DIR_SOUTHEAST;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("se"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getSouthwest();
-        direction = DIR_SOUTHWEST;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("sw"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getNorthwest();
-        direction = DIR_NORTHWEST;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("nw"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getIn();
-        direction = DIR_IN;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("in"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
-
-        target = pSourceR->getOut();
-        direction = DIR_OUT;
-        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
-            pTargetR = mpRoomDB->getRoom(target);
-            if (pTargetR && !pTargetR->isLocked) {
-                route r;
-                r.cost = exitWeights.value(qsl("out"), pTargetR->getWeight());
-                if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                    r.direction = direction;
-                    bestRoutes.insert(target, r);
-                }
-            }
-        }
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorth(), DIR_NORTH, qsl("n"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getEast(), DIR_EAST, qsl("e"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSouth(), DIR_SOUTH, qsl("s"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getWest(), DIR_WEST, qsl("w"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getUp(), DIR_UP, qsl("up"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getDown(), DIR_DOWN, qsl("down"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNortheast(), DIR_NORTHEAST, qsl("ne"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSoutheast(), DIR_SOUTHEAST, qsl("se"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSouthwest(), DIR_SOUTHWEST, qsl("sw"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorthwest(), DIR_NORTHWEST, qsl("nw"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getIn(), DIR_IN, qsl("in"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getOut(), DIR_OUT, qsl("out"), unUsableRoomSet);
 
         QMapIterator<QString, int> itSpecialExit(pSourceR->getSpecialExits());
         while (itSpecialExit.hasNext()) {
             itSpecialExit.next();
-            if (pSourceR->hasSpecialExitLock(itSpecialExit.key())) {
-                continue; // Is a locked exit so forget it...
-            }
 
-            target = itSpecialExit.value();
-            direction = DIR_OTHER;
-            if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target)) {
-                pTargetR = mpRoomDB->getRoom(target);
-                if (pTargetR && !pTargetR->isLocked) {
-                    route r;
-                    r.specialExitName = itSpecialExit.key();
-                    r.cost = exitWeights.value(r.specialExitName, pTargetR->getWeight());
-                    if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-                        r.direction = direction;
-                        bestRoutes.insert(target, r);
-                    }
-                }
-            }
+            addDirectionalRoute(bestRoutes,
+                                exitWeights,
+                                source,
+                                pSourceR,
+                                itSpecialExit.value(),
+                                DIR_OTHER,
+                                itSpecialExit.key(),
+                                unUsableRoomSet);
         } // End of while(itSpecialExit.hasNext())
 
         // Now we have eliminated possible duplicate and useless edges we can create and
@@ -1026,10 +952,23 @@ bool TMap::findPath(int from, int to)
     }
     vertex const goal = roomidToIndex.value(to);
 
-    std::vector<vertex> p(num_vertices(g));
+    const auto vertexCount = static_cast<std::size_t>(num_vertices(g));
+    if (vertexCount == 0) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: map graph has no vertices.";
+        return false;
+    }
+
+    if (static_cast<std::size_t>(start) >= vertexCount || static_cast<std::size_t>(goal) >= vertexCount) {
+        qWarning().nospace().noquote() << "TMap::findPath(" << from << "," << to
+                                       << ") FAIL: start or target vertex outside of graph range (vertexCount=" << vertexCount
+                                       << ").";
+        return false;
+    }
+
+    std::vector<vertex> p(vertexCount);
     // Somehow p is an ascending, monotonic series of numbers start at 0, it
     // seems we have a redundant indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
-    std::vector<cost> d(num_vertices(g));
+    std::vector<cost> d(vertexCount);
     try {
         astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
     } catch (found_goal) {
@@ -1361,6 +1300,18 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             if (pR->mSymbolColor.isValid()) {
                 pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
             }
+        }
+
+        // Border properties are stored in userData (not binary stream) to avoid map bloat
+        if (pR->mBorderColor.isValid()) {
+            pR->userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
+        } else {
+            pR->userData.remove(ROOM_UI_BORDERCOLOR);
+        }
+        if (pR->mBorderThickness > 0) {
+            pR->userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
+        } else {
+            pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
 
         ofs << pR->userData;
@@ -1775,6 +1726,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         int labelId = -1;
                         ifs >> labelId;
                         TMapLabel label;
+                        ifs >> label.pos;
                         ifs >> label.size;
                         ifs >> label.text;
                         ifs >> label.fgColor;
@@ -2204,7 +2156,8 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
 
     label.size = br.normalized().size();
-    label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
+    const QRect brRect = br.normalized().toRect();
+    label.pix = pix.copy(brRect.topLeft().x(), brRect.topLeft().y(), brRect.width(), brRect.height());
     const QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
@@ -2302,7 +2255,11 @@ void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, con
 {
 #if defined(INCLUDE_3DMAPPER)
     if (mpM) {
-        mpM->setViewCenter(areaId, xPos, yPos, zPos);
+        if (auto* glWidget = dynamic_cast<GLWidget*>(mpM.data())) {
+            glWidget->setViewCenter(areaId, xPos, yPos, zPos);
+        } else if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpM.data())) {
+            modernWidget->setViewCenter(areaId, xPos, yPos, zPos);
+        }
     }
 #else
     Q_UNUSED(areaId)
@@ -3409,17 +3366,12 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     return mpProgressDialog->wasCanceled();
 }
 
-/**
- * Update the the 2D and 3D map visually.
- *
- * It ensures debouncing internally to ensure that bulk calls are efficient.
- */
-void TMap::update()
+void TMap::updateArea(int areaId)
 {
     static bool debounce;
     if (!debounce) {
         debounce = true;
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0, this, [this, areaId]() {
             debounce = false;
 
 #if defined(INCLUDE_3DMAPPER)
@@ -3428,14 +3380,14 @@ void TMap::update()
             }
 #endif
             if (mpMapper) {
-                mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
-                mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
 
                 if (mpMapper->mp2dMap) {
                     mpMapper->mp2dMap->mNewMoveAction = true;
                     mpMapper->mp2dMap->update();
                 }
             }
+
+            emit signal_areaChanged(areaId);
         });
     }
 }
@@ -3526,6 +3478,14 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+}
+
+void TMap::setSaveError(bool state)
+{
+    if (mSaveError != state) {
+        mSaveError = state;
+        emit signal_saveErrorChanged(state);
+    }
 }
 
 void TMap::setDefaultAreaShown(bool state)

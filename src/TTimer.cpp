@@ -71,10 +71,14 @@ TTimer::~TTimer()
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
         }
-    }
 
-    mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
-    mpQTimer->deleteLater();
+        mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
+        // During normal operation, use deleteLater() for safety
+        mpQTimer->deleteLater();
+    } else {
+        // During shutdown (mpHost is null), delete immediately
+        delete mpQTimer;
+    }
 }
 
 void TTimer::setName(const QString& name)
@@ -248,12 +252,10 @@ bool TTimer::canBeUnlocked()
     if (shouldBeActive()) {
         if (!mpParent) {
             return true;
-        } else {
-            return mpParent->canBeUnlocked();
         }
-    } else {
-        return false;
+        return mpParent->canBeUnlocked();
     }
+    return false;
 }
 
 void TTimer::enableTimer(int id)

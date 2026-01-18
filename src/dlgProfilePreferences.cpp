@@ -4,6 +4,7 @@
  *   Copyright (C) 2014, 2016-2018, 2020-2023, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,11 +26,18 @@
 #include "dlgProfilePreferences.h"
 
 #include "Host.h"
+#include "TAction.h"
+#include "TAlias.h"
 #include "TConsole.h"
+#include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TTextEdit.h"
+#include "TTimer.h"
+#include "TTrigger.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -38,10 +46,12 @@
 #include "MMCP.h"
 #include "MMCPServer.h"
 
-#include "pre_guard.h"
 #include <chrono>
 #include <QtConcurrent>
+#include <QCloseEvent>
 #include <QColorDialog>
+#include <QDir>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>
@@ -53,7 +63,6 @@
 #include <QKeySequenceEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
-#include "post_guard.h"
 
 using namespace std::chrono_literals;
 
@@ -215,6 +224,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                               "will be run.</p>"
                                               "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
                                               "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                            "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                            "<p>This control has three settings:"
+                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                            "encodings of <b>Big5</b>/<b>Big5-HKSCS</b>, <b>GBK</b>, <b>GBK18030</b> or <b>EUC-KR</b> and 'narrow' for all others.</li></ul></p>"
+                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
+                                                            "full support for languages other than English.</i></p>"));
     checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
                                                "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
                                                "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
@@ -336,6 +357,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         }
     }
 
+    QSettings settings("Mudlet", "CrashReporter");
+    QVariant storedOption = settings.value("autoSendCrashReports", QVariant());
+    int option = 2;
+    if (storedOption.isValid()) {
+        option = storedOption.toInt() - 1;
+    }
+    comboBox_crashReportPolicy->setCurrentIndex(option);
+    connect(comboBox_crashReportPolicy,
+        qOverload<int>(&QComboBox::currentIndexChanged),
+        this,
+        &dlgProfilePreferences::slot_crashReportPolicyChanged);
+
     setupPasswordsMigration();
 
     connect(label_darkEditorPrompt, &QLabel::linkActivated, this, &dlgProfilePreferences::slot_enableDarkEditor);
@@ -415,6 +448,8 @@ void dlgProfilePreferences::disableHostDetails()
 
     groupBox_wrapping->setEnabled(false);
 
+    groupBox_consoleBuffer->setEnabled(false);
+
     groupBox_doubleClick->setEnabled(false);
 
     // Some of groupBox_displayOptions are usable, so must pick out and
@@ -423,6 +458,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
     label_controlCharacterHandling->setEnabled(false);
     comboBox_controlCharacterHandling->setEnabled(false);
 
@@ -476,9 +512,6 @@ void dlgProfilePreferences::disableHostDetails()
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
     checkBox_askTlsAvailable->setEnabled(false);
-
-    // ===== tab_chat =====
-    groupBox_ircOptions->setEnabled(false);
 
     groupBox_discordPrivacy->hide();
 
@@ -541,12 +574,15 @@ void dlgProfilePreferences::enableHostDetails()
 
     groupBox_wrapping->setEnabled(true);
 
+    groupBox_consoleBuffer->setEnabled(true);
+
     groupBox_doubleClick->setEnabled(true);
 
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
     label_controlCharacterHandling->setEnabled(true);
     comboBox_controlCharacterHandling->setEnabled(true);
 
@@ -591,7 +627,7 @@ void dlgProfilePreferences::enableHostDetails()
 #endif
 
     // ===== tab_chat =====
-    groupBox_ircOptions->setEnabled(true);
+    groupBox_discordPrivacy->show();
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(true);
@@ -639,21 +675,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     const int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
-    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     checkBox_mVersionInTTYPE->setChecked(pHost->mVersionInTTYPE);
     checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
-    mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
+    checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
-    ircHostName->setText(dlgIRC::readIrcHostName(pHost));
-    ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
-    ircHostSecure->setChecked(dlgIRC::readIrcHostSecure(pHost));
-    ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
-    ircNick->setText(dlgIRC::readIrcNickName(pHost));
-    ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
     comboBox_dictionary->clear();
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
@@ -669,6 +698,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         radioButton_userDictionary_common->setChecked(false);
     }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
@@ -789,8 +819,25 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
 
+    console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
+
+    // Set maximum buffer size based on system capabilities and update tooltip
+    if (pHost->mpConsole) {
+        const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+        console_buffer_size_spinBox->setMaximum(maxBufferSize);
+        checkBox_useMaxBufferSize->setToolTip(tr("<p>Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.</p>").arg(maxBufferSize));
+
+        // If using max buffer size, disable the spinbox and set it to max
+        if (pHost->getUseMaxConsoleBufferSize()) {
+            console_buffer_size_spinBox->setValue(maxBufferSize);
+            console_buffer_size_spinBox->setEnabled(false);
+        }
+    }
+
     show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
+    disable_password_masking_checkbox->setChecked(pHost->mDisablePasswordMasking);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
@@ -894,40 +941,55 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     protocolMenu->clear();
 
+    mEnableCHARSET = new QAction(tr("CHARSET: Character Encoding Standard"), nullptr);
+    mEnableCHARSET->setCheckable(true);
+    mEnableCHARSET->setChecked(pHost->mEnableCHARSET);
+    protocolMenu->addAction(mEnableCHARSET);
+
     mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), nullptr);
     mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     protocolMenu->addAction(mEnableGMCP);
+
+    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
+    mEnableMNES->setCheckable(true);
+    mEnableMNES->setChecked(pHost->mEnableMNES);
+    protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
     mEnableMSDP->setCheckable(true);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
     protocolMenu->addAction(mEnableMSDP);
 
-    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
-    mEnableMSSP->setCheckable(true);
-    mEnableMSSP->setChecked(pHost->mEnableMSSP);
-    protocolMenu->addAction(mEnableMSSP);
-
     mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), nullptr);
     mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
     protocolMenu->addAction(mEnableMSP);
 
-    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
-    mEnableMXP->setCheckable(true);
-    mEnableMXP->setChecked(pHost->mEnableMXP);
-    protocolMenu->addAction(mEnableMXP);
+    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
+    mEnableMSSP->setCheckable(true);
+    mEnableMSSP->setChecked(pHost->mEnableMSSP);
+    protocolMenu->addAction(mEnableMSSP);
 
     mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), nullptr);
     mEnableMTTS->setCheckable(true);
     mEnableMTTS->setChecked(pHost->mEnableMTTS);
     protocolMenu->addAction(mEnableMTTS);
 
-    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
-    mEnableMNES->setCheckable(true);
-    mEnableMNES->setChecked(pHost->mEnableMNES);
-    protocolMenu->addAction(mEnableMNES);
+    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
+    mEnableMXP->setCheckable(true);
+    mEnableMXP->setChecked(pHost->mEnableMXP);
+    protocolMenu->addAction(mEnableMXP);
+
+    mEnableNAWS = new QAction(tr("NAWS: Negotiate About Window Size"), nullptr);
+    mEnableNAWS->setCheckable(true);
+    mEnableNAWS->setChecked(pHost->mEnableNAWS);
+    protocolMenu->addAction(mEnableNAWS);
+
+    mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
+    mEnableNEWENVIRON->setCheckable(true);
+    mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
+    protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
 
@@ -981,7 +1043,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // FIXME: Check this each time that it is appropriate for THIS build version
     comboBox_mapFileSaveFormatVersion->clear();
     // Add default version:
-    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
+    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
     if (pHost->mpMap) {
@@ -993,9 +1055,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 comboBox_mapFileSaveFormatVersion->setEnabled(true);
                 label_mapFileSaveFormatVersion->setEnabled(true);
                 if (i > pHost->mpMap->mDefaultVersion) {
-                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Experimental}").arg(i), QVariant(i));
                 } else {
-                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {For older versions}").arg(i), QVariant(i));
                 }
             }
             const int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
@@ -1004,19 +1066,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
-        QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_mapViewOptions);
-        mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_mapViewOptions);
+        QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_mapSymbols);
+        mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_mapSymbols);
         mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
         mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(qsl("×"));
         mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
-        auto * pmapViewLayout = qobject_cast<QGridLayout*>(groupBox_mapViewOptions->layout());
-        if (pmapViewLayout) {
-            const int existingRows = pmapViewLayout->rowCount();
-            pmapViewLayout->addWidget(pLabel_mapSymbolFontFudge, existingRows, 0);
-            pmapViewLayout->addWidget(mpDoubleSpinBox_mapSymbolFontFudge, existingRows, 1);
+        auto * pSymbolsLayout = qobject_cast<QGridLayout*>(groupBox_mapSymbols->layout());
+        if (pSymbolsLayout) {
+            const int existingRows = pSymbolsLayout->rowCount();
+            pSymbolsLayout->addWidget(pLabel_mapSymbolFontFudge, existingRows, 0);
+            pSymbolsLayout->addWidget(mpDoubleSpinBox_mapSymbolFontFudge, existingRows, 1);
         } else {
-            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_mapViewOptions layout to expected QGridLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
+            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_mapSymbols layout to expected QGridLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
         }
 
         label_mapSymbolsFont->setEnabled(true);
@@ -1052,6 +1114,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
         connect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomOuterDiameter);
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter);
+
+        // Initialize room and exit size controls
+        spinBox_roomSize->setValue(pHost->mRoomSize * 10);
+        spinBox_exitSize->setValue(pHost->mLineSize);
+        doubleSpinBox_gridSize->setValue(pHost->mMapGridLineSize);
+        connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_roomSizeChanged);
+        connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_exitSizeChanged);
+        connect(doubleSpinBox_gridSize, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_gridSizeChanged);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -1100,7 +1170,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     notificationAreaMessageBox->hide();
 
 #if !defined(QT_NO_SSL)
-    if (QSslSocket::supportsSsl() && pHost->mSslTsl) {
+    if (QSslSocket::supportsSsl() && pHost->mTelnet.currentlySecure()) {
         const QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
         if (cert.isNull()) {
             groupBox_ssl_certificate->hide();
@@ -1114,53 +1184,73 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             ssl_issuer_label->setStyleSheet(QString());
             ssl_expires_label->setStyleSheet(QString());
 
-            if (!pHost->mTelnet.getSslErrors().empty()) {
+            const QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
+            if (sslErrors.count()) {
                 // handle ssl errors
                 notificationAreaIconLabelWarning->show();
                 frame_notificationArea->show();
                 notificationAreaMessageBox->show();
-                //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
 
-                QList<QSslError> const sslErrors = pHost->mTelnet.getSslErrors();
-
-                for (int a = 0; a < sslErrors.count(); a++) {
-                    const QString thisError = qsl("<li>%1</li>").arg(sslErrors.at(a).errorString());
-                    notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
-
-                    if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
+                QStringList errorTexts;
+                for (const auto& sslError : sslErrors) {
+                    errorTexts.append(qsl("<li>%1</li>").arg(sslError.errorString()));
+                    if (QSslError::SelfSignedCertificate == sslError.error()) {
                         checkBox_self_signed->setStyleSheet(qsl("font-weight: bold; background: yellow"));
                         ssl_issuer_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
                     }
-                    if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
+                    if (QSslError::CertificateExpired == sslError.error()) {
                         checkBox_expired->setStyleSheet(qsl("font-weight: bold; background: yellow"));
                         ssl_expires_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
                     }
                 }
+                notificationAreaMessageBox->setText(qsl("<ul>%1</ul>").arg(errorTexts.join(QChar::LineFeed)));
 
-            } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
-                // handle failed handshake, likely not ssl socket
-                notificationAreaIconLabelError->show();
-                frame_notificationArea->show();
-                notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
-            }
-            if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
-                // handle ssl library error
-                notificationAreaIconLabelError->show();
-                frame_notificationArea->show();
-                notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
-            }
-            if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
-                // handle invalid data (certificate, key, cypher, etc.)
-                notificationAreaIconLabelError->show();
-                frame_notificationArea->show();
-                notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+            } else {
+                // Check for other errors
+                if (pHost->mTelnet.error().has_value()) {
+                    switch (pHost->mTelnet.error().value()) {
+                    case QAbstractSocket::SslHandshakeFailedError:
+                        // handle failed handshake, likely not ssl socket
+                        notificationAreaIconLabelError->show();
+                        frame_notificationArea->show();
+                        notificationAreaMessageBox->show();
+                        notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+                        break;
+                    case QAbstractSocket::SslInternalError:
+                        // handle ssl library error
+                        notificationAreaIconLabelError->show();
+                        frame_notificationArea->show();
+                        notificationAreaMessageBox->show();
+                        notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+                        break;
+                    case QAbstractSocket::SslInvalidUserDataError:
+                        // handle invalid data (certificate, key, cypher, etc.)
+                        notificationAreaIconLabelError->show();
+                        frame_notificationArea->show();
+                        notificationAreaMessageBox->show();
+                        notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+                        break;
+                    default:
+                        {} // There are a significant number of other errors
+                           // that are not handled here!
+                    }
+                }
             }
         }
     }
 #endif
+
+    if (!pHost->mLoadedOk) {
+        notificationAreaIconLabelWarning->show();
+        frame_notificationArea->show();
+        notificationAreaMessageBox->show();
+        QString errorDetails = pHost->mProfileLoadError.isEmpty()
+            ? tr("unknown error")
+            : pHost->mProfileLoadError;
+        notificationAreaMessageBox->setText(tr("This profile could not be loaded correctly (%1). "
+                                               "Settings cannot be saved. Close the profile and try loading an older version from "
+                                               "'Connect - Options - Profile history'.").arg(errorDetails));
+    }
 
     groupBox_ssl->setChecked(pHost->mSslTsl);
     checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
@@ -1183,6 +1273,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
     comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
+    checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
     // Enable the controls that would be disabled if there wasn't a Host instance
@@ -1246,6 +1337,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomBorderColor);
     connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapInfoBgColor);
     connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor);
+    connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor);
 
     connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1254,6 +1346,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableMXP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMTTS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMNES, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableNAWS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableCHARSET, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableNEWENVIRON, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1270,6 +1365,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
     connect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeLargeAreaExitArrows);
+    connect(checkBox_invertMapZoom, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeInvertMapZoom);
+
+    // Console buffer settings
+    connect(checkBox_useMaxBufferSize, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleUseMaxBufferSize);
 
     //Shortcuts tab
     auto shortcutKeys = mudlet::self()->mpShortcutsManager->iterator();
@@ -1376,6 +1475,9 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(mEnableMXP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMTTS, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMNES, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableNAWS, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableCHARSET, &QAction::toggled, nullptr, nullptr);
+    disconnect(mEnableNEWENVIRON, &QAction::toggled, nullptr, nullptr);
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1397,7 +1499,14 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(doubleSpinBox_gridSize, qOverload<double>(&QDoubleSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
+
+    // Console buffer settings
+    disconnect(checkBox_useMaxBufferSize, &QCheckBox::toggled, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -1406,22 +1515,14 @@ void dlgProfilePreferences::clearHostDetails()
     script_preview_combobox->clear();
     edbeePreviewWidget->textDocument()->setText(QString());
 
-    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     checkBox_mVersionInTTYPE->setChecked(false);
     checkBox_mForceMXPProcessorOn->setChecked(false);
-    mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
+    checkBox_drawUpperLowerLevels->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
-    // Given that the IRC sub-system can handle there NOT being an active host
-    // this may need revising
-    ircHostName->clear();
-    ircHostPort->clear();
-    ircChannels->clear();
-    ircNick->clear();
-    ircPassword->clear();
 
     comboBox_dictionary->clear();
     checkBox_spellCheck->setChecked(false);
@@ -1664,6 +1765,7 @@ void dlgProfilePreferences::setColors2()
         setButtonColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
         setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
         setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
+        setButtonColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
     } else {
         // Using QColor() gives an "invalid" color:
         setButtonColor(pushButton_black_2, QColor());
@@ -1690,6 +1792,7 @@ void dlgProfilePreferences::setColors2()
         setButtonColor(pushButton_roomBorderColor, QColor());
         setButtonColor(pushButton_mapInfoBg, QColor());
         setButtonColor(pushButton_roomCollisionBorderColor, QColor());
+        setButtonColor(pushButton_mapGridColor, QColor());
     }
 }
 
@@ -1786,12 +1889,13 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mWhite_2 = QColorConstants::LightGray;
     pHost->mLightWhite_2 = QColorConstants::White;
     pHost->mMapInfoBg = QColor(150, 150, 150, 120);
+    pHost->mMapGridColor = QColor(211, 211, 211, 64);
 
     // This aplies the above colors to the buttons on display:
     setColors2();
 
     if (pHost->mpMap) {
-        pHost->mpMap->update();
+        pHost->mpMap->updateArea(-1);
     }
 }
 
@@ -1857,7 +1961,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
                     pHost->mpMap->restore16ColorSet();
                 }
                 // Redraw the map with the modified color:
-                pHost->mpMap->update();
+                pHost->mpMap->updateArea(-1);
             }
         }
 
@@ -2062,7 +2166,7 @@ void dlgProfilePreferences::slot_setMapBgColor()
 // if 3D map, update transparency flags
 #if defined(INCLUDE_3DMAPPER)
         if (pHost->mpMap->mpMapper->glWidget) {
-            GLWidget* map = pHost->mpMap->mpMapper->glWidget;
+            QOpenGLWidget* map = pHost->mpMap->mpMapper->glWidget;
             if (pHost->mBgColor_2.alpha() < 255) {
             map->setAttribute(Qt::WA_OpaquePaintEvent, false);
             map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
@@ -2104,6 +2208,14 @@ void dlgProfilePreferences::slot_setMapRoomCollisionBorderColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
+    }
+}
+
+void dlgProfilePreferences::slot_setMapGridColor()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setButtonAndProfileColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
     }
 }
 
@@ -2859,8 +2971,33 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mWrapHangingIndentCount = hanging_indent_wrapped_spinBox->value();
+
+        // Save console buffer settings and apply them
+        const bool useMaxBuffer = checkBox_useMaxBufferSize->isChecked();
+        int newBufferSize;
+
+        if (useMaxBuffer && pHost->mpConsole) {
+            newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+        } else {
+            newBufferSize = console_buffer_size_spinBox->value();
+        }
+
+        // Calculate batch delete size as 5% of buffer size (minimum 100)
+        const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
+
+        if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
+            pHost->setConsoleBufferSize(newBufferSize);
+            pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
+
+            // Apply the new buffer size to the main console
+            if (pHost->mpConsole) {
+                pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
+            }
+        }
+
         pHost->mCommandEchoMode = static_cast<Host::CommandEchoMode>(show_sent_text_combobox->currentIndex());
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
+        pHost->mDisablePasswordMasking = disable_password_masking_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
@@ -2880,8 +3017,12 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMXP = mEnableMXP->isChecked();
         pHost->mEnableMTTS = mEnableMTTS->isChecked();
         pHost->mEnableMNES = mEnableMNES->isChecked();
+        pHost->mEnableNAWS = mEnableNAWS->isChecked();
+        pHost->mEnableCHARSET = mEnableCHARSET->isChecked();
+        pHost->mEnableNEWENVIRON = mEnableNEWENVIRON->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
+        mudlet::self()->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
         if (pHost->mpMap) {
             // Need to save the original value in case we change it in the line
             // following this one:
@@ -2909,10 +3050,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
-        pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
         pHost->mVersionInTTYPE = checkBox_mVersionInTTYPE->isChecked();
         pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
-        pHost->mForceNewEnvironNegotiationOff = mForceNewEnvironNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
@@ -2946,91 +3085,6 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
-        const QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
-        const QString oldIrcPass = dlgIRC::readIrcPassword(pHost);
-        const QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
-        const QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
-        const bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
-        const QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
-
-        QString newIrcNick = ircNick->text();
-        const QString newIrcPass = ircPassword->text();
-        QString newIrcHost = ircHostName->text();
-        QString newIrcPort = ircHostPort->text();
-        const bool newIrcSecure = ircHostSecure->isChecked();
-        QString newIrcChannels = ircChannels->text();
-        QStringList newChanList;
-        int nIrcPort = dlgIRC::DefaultHostPort;
-        bool restartIrcClient = false;
-
-        if (newIrcHost.isEmpty()) {
-            newIrcHost = dlgIRC::DefaultHostName;
-        }
-
-        if (!newIrcPort.isEmpty()) {
-            bool ok;
-            nIrcPort = newIrcPort.toInt(&ok);
-            if (!ok) {
-                nIrcPort = dlgIRC::DefaultHostPort;
-            } else if (nIrcPort > 65535 || nIrcPort < 1) {
-                nIrcPort = dlgIRC::DefaultHostPort;
-            }
-            newIrcPort = QString::number(nIrcPort);
-        }
-
-        if (newIrcNick.isEmpty()) {
-            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(QRandomGenerator::global()->bounded(10000)));
-        }
-
-        if (!newIrcChannels.isEmpty()) {
-            const QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-            for (const QString& s : tL) {
-                if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
-                    newChanList << s;
-                }
-            }
-        } else {
-            newChanList = dlgIRC::DefaultChannels;
-        }
-        newIrcChannels = newChanList.join(" ");
-
-        if (oldIrcNick != newIrcNick) {
-            dlgIRC::writeIrcNickName(pHost, newIrcNick);
-
-            // if the client is active, update our client nickname.
-            if (pHost->mpDlgIRC) {
-                pHost->mpDlgIRC->connection->setNickName(newIrcNick);
-            }
-        }
-
-        if (oldIrcPass != newIrcPass) {
-            dlgIRC::writeIrcPassword(pHost, newIrcPass);
-            restartIrcClient = true;
-        }
-
-        if (oldIrcChannels != newIrcChannels) {
-            dlgIRC::writeIrcChannels(pHost, newChanList);
-        }
-
-        if (oldIrcHost != newIrcHost) {
-            dlgIRC::writeIrcHostName(pHost, newIrcHost);
-            restartIrcClient = true;
-        }
-
-        if (oldIrcPort != newIrcPort) {
-            dlgIRC::writeIrcHostPort(pHost, nIrcPort);
-            restartIrcClient = true;
-        }
-
-        if (oldIrcSecure != newIrcSecure) {
-            dlgIRC::writeIrcHostSecure(pHost, newIrcSecure);
-            restartIrcClient = true;
-        }
-
-        // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && pHost->mpDlgIRC) {
-            pHost->mpDlgIRC->ircRestart();
-        }
 
         if (console) {
             const int x = console->width();
@@ -3041,7 +3095,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
+        pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
@@ -3194,6 +3248,10 @@ void dlgProfilePreferences::slot_saveAndClose()
 
     mudlet::self()->mDiscord.UpdatePresence();
 
+    if (pHost && pHost->mFORCE_SAVE_ON_EXIT) {
+        pHost->saveProfile();
+    }
+
     emit signal_preferencesSaved();
 
     close();
@@ -3243,17 +3301,12 @@ void dlgProfilePreferences::slot_setEncoding(const int newEncodingIndex)
     if (pHost) {
         pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
 
-        // When this was a tri-state checkbox setting we would store the
-        // partially checked setting (only, not the checked or unchecked values)
-        // into the Host class in order to cause the encoding to be checked so
-        // that it would determine what the (bool) Host::mWideAmbigousWidthGlyphs
-        // value should be.
-        // Since the control has been removed we now need to examine the value
-        // stored and if THAT equates to "Qt::PartiallyChecked" then do the same:
-        if (pHost->getWideAmbiguousEAsianGlyphsControlState()  == Qt::PartiallyChecked) {
-            // We are linking the Server encoding to this setting but we only
-            // need to refresh the setting for this if it is set to be automatic
-            // changed as necessary:
+        if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
+            // We are linking the Server encoding to this setting currently
+            // - eventually it would move to the locale/language control when it
+            // goes in, but we only need to change the setting for this if it is
+            // set to be automatic changed as necessary:
+
             pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
         }
     }
@@ -3535,13 +3588,21 @@ void dlgProfilePreferences::populateThemesList()
     QJsonArray unsortedThemes;
 
     if (themesFile.open(QIODevice::ReadOnly)) {
-        unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-        for (auto theme : std::as_const(unsortedThemes)) {
-            const QString themeText = theme.toObject()["Title"].toString();
-            const QString themeFileName = theme.toObject()["FileName"].toString();
+        QJsonParseError parseError;
+        const QJsonDocument doc = QJsonDocument::fromJson(themesFile.readAll(), &parseError);
+        if (parseError.error != QJsonParseError::NoError) {
+            qWarning() << "dlgProfilePreferences::populateThemesList() ERROR - failed to parse themes JSON file:" << themesFile.fileName() << "reason:" << parseError.errorString();
+        } else if (!doc.isArray()) {
+            qWarning() << "dlgProfilePreferences::populateThemesList() ERROR - themes JSON file does not contain an array:" << themesFile.fileName();
+        } else {
+            unsortedThemes = doc.array();
+            for (auto theme : std::as_const(unsortedThemes)) {
+                const QString themeText = theme.toObject()["Title"].toString();
+                const QString themeFileName = theme.toObject()["FileName"].toString();
 
-            if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
-                sortedThemes << std::make_pair(themeText, themeFileName);
+                if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
+                    sortedThemes << std::make_pair(themeText, themeFileName);
+                }
             }
         }
     }
@@ -3958,7 +4019,10 @@ void dlgProfilePreferences::slot_showMapGlyphUsage()
 
     QUiLoader loader;
     QFile file(qsl(":/ui/glyph_usage.ui"));
-    file.open(QFile::ReadOnly);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "dlgProfilePreferences: failed to open UI file for reading:" << file.errorString();
+        return;
+    }
     mpDialogMapGlyphUsage = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!mpDialogMapGlyphUsage) {
@@ -4526,6 +4590,8 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     }
 }
 
+
+
 void dlgProfilePreferences::slot_changeWrapAt()
 {
     Host* pHost = mpHost;
@@ -4535,6 +4601,27 @@ void dlgProfilePreferences::slot_changeWrapAt()
     }
 
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
+}
+
+void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    if (checked) {
+        // When max is enabled, set spinbox to max value and disable it
+        if (pHost->mpConsole) {
+            const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+            console_buffer_size_spinBox->setValue(maxBufferSize);
+        }
+        console_buffer_size_spinBox->setEnabled(false);
+    } else {
+        // When max is disabled, enable the spinbox and set to stored value
+        console_buffer_size_spinBox->setEnabled(true);
+        console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    }
 }
 
 void dlgProfilePreferences::slot_deleteMap()
@@ -4557,7 +4644,7 @@ void dlgProfilePreferences::slot_deleteMap()
     label_mapFileActionResult->setText(tr("Deleting map - please wait..."));
     qApp->processEvents(); // Allow the above message to show up when erasing big maps
     pHost->mpMap->mapClear();
-    pHost->mpMap->update();
+    pHost->mpMap->updateArea(-1);
 
     // Reset the button but leave it disabled
     pushButton_deleteMap->setChecked(false);
@@ -4577,6 +4664,11 @@ void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
     }
 
     pHost->setLargeAreaExitArrows(state);
+}
+
+void dlgProfilePreferences::slot_changeInvertMapZoom(const bool state)
+{
+    mudlet::self()->setInvertMapZoom(state);
 }
 
 bool dlgProfilePreferences::updateDisplayFont()
@@ -4610,9 +4702,12 @@ bool dlgProfilePreferences::updateDisplayFont()
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
     QFont::insertSubstitution(mpHost->getDisplayFont().family(), qsl("Noto Color Emoji"));
+#endif
+    // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
 
     // update the display properly when font or size or antiAliasing selections
@@ -4625,6 +4720,22 @@ bool dlgProfilePreferences::updateDisplayFont()
     config->endChanges();
 
     return true;
+}
+
+void dlgProfilePreferences::cancelShortcutCaptures()
+{
+    const auto sequenceEdits = findChildren<QKeySequenceEdit*>();
+    for (auto* sequenceEdit : sequenceEdits) {
+        if (!sequenceEdit) {
+            continue;
+        }
+
+        if (sequenceEdit->hasFocus()) {
+            sequenceEdit->clearFocus();
+        }
+
+        sequenceEdit->releaseKeyboard();
+    }
 }
 
 void dlgProfilePreferences::slot_displayFontChanged()
@@ -4651,4 +4762,52 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
     if (checkBox_showTabConnectionIndicators->isChecked() != state) {
         checkBox_showTabConnectionIndicators->setChecked(state);
     }
+}
+
+void dlgProfilePreferences::slot_roomSizeChanged(int size)
+{
+    if (mpHost) {
+        mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
+            mpHost->mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_crashReportPolicyChanged(int index)
+{
+    QSettings settings("Mudlet", "CrashReporter");
+    settings.setValue("autoSendCrashReports", index + 1);
+}
+
+void dlgProfilePreferences::slot_exitSizeChanged(int size)
+{
+    if (mpHost) {
+        mpHost->mLineSize = size;
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->setExitSize(size);
+            mpHost->mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_gridSizeChanged(double size)
+{
+    if (mpHost) {
+        mpHost->mMapGridLineSize = size;
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void dlgProfilePreferences::closeEvent(QCloseEvent* event)
+{
+    cancelShortcutCaptures();
+
+    if (mpHost) {
+        emit preferencesClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
 }

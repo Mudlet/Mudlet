@@ -25,6 +25,29 @@
 #include "Host.h"
 #include "TAlias.h"
 
+#include <functional>
+
+AliasUnit::~AliasUnit()
+{
+    // Set mpHost to null on all aliases (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto alias : mAliasRootNodeList) {
+        alias->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TAlias*)> nullifyChildren = [&nullifyChildren](TAlias* a) {
+            for (auto child : *a->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(alias);
+    }
+    for (auto alias : mAliasRootNodeList) {
+        delete alias;
+    }
+}
+
 void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
     std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
@@ -97,22 +120,33 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
     TAlias* pOldParent = getAliasPrivate(oldParentID);
     TAlias* pNewParent = getAliasPrivate(newParentID);
     TAlias* pChild = getAliasPrivate(childID);
+
     if (!pChild) {
         return;
     }
+
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
         mAliasRootNodeList.remove(pChild);
     }
+
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
         pChild->setParent(pNewParent);
-        //cout << "dumping family of newParent:"<<endl;
-        //pNewParent->Dump();
     } else {
         pChild->Tree<TAlias>::setParent(nullptr);
         addAliasRootNode(pChild, parentPosition, childPosition, true);
+    }
+}
+
+void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentAlias(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentAlias(childID, oldParentID, newParentID, 0, position);
     }
 }
 
@@ -144,18 +178,16 @@ TAlias* AliasUnit::getAlias(int id)
 {
     if (mAliasMap.find(id) != mAliasMap.end()) {
         return mAliasMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TAlias* AliasUnit::getAliasPrivate(int id)
 {
     if (mAliasMap.find(id) != mAliasMap.end()) {
         return mAliasMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool AliasUnit::registerAlias(TAlias* pT)
@@ -228,12 +260,21 @@ bool AliasUnit::processDataStream(const QString& data)
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
     auto copyOfNodeList = mAliasRootNodeList;
+
+    // Set processing flag to prevent re-entrant cleanup during alias execution
+    mIsProcessing = true;
+
     for (auto alias : copyOfNodeList) {
         // = data.replace( "\n", "" );
         if (alias->match(data)) {
             state = true;
         }
     }
+
+    // Clear processing flag and perform any deferred cleanup
+    mIsProcessing = false;
+    doCleanup();
+
     // the idea to get "command" after alias processing is finished and send its value
     // was too difficult for users because if multiple alias change the value of command it becomes too difficult to handle for many users
     // it's easier if we simply intercepts the command and hand responsibility for
@@ -372,18 +413,21 @@ std::tuple<QString, int, int, int> AliasUnit::assembleReport()
 
 void AliasUnit::doCleanup()
 {
-    for (auto alias : mCleanupList) {
-        delete alias;
+    // Skip cleanup if we're currently processing aliases to prevent iterator invalidation
+    // Cleanup will be performed when processDataStream() completes
+    if (mIsProcessing) {
+        return;
     }
-    mCleanupList.clear();
+
+    QMutableSetIterator<TAlias*> itAlias(mCleanupSet);
+    while (itAlias.hasNext()) {
+        auto pAlias = itAlias.next();
+        itAlias.remove();
+        delete pAlias;
+    }
 }
 
 void AliasUnit::markCleanup(TAlias* pT)
 {
-    for (auto alias : mCleanupList) {
-        if (alias == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }

@@ -23,6 +23,11 @@
 #include "TConsole.h"
 #include "TLinkStore.h"
 
+#include <QSet>
+#include <QStack>
+
+static const QString PLACEHOLDER_TEXT = QLatin1String("&text;");
+
 
 QString TMxpMudlet::getVersion()
 {
@@ -68,6 +73,16 @@ int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
     return getLinkStore().addLinks(links, hints, mpHost);
 }
 
+int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints, const QString& expireName)
+{
+    return getLinkStore().addLinks(links, hints, mpHost, QVector<int>(), expireName);
+}
+
+void TMxpMudlet::expireLinks(const QString& expireName)
+{
+    getLinkStore().expireLinks(expireName, mpHost);
+}
+
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
 {
     *links = &getLinkStore().getLinks(id);
@@ -92,7 +107,16 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
         if (mpContext->getElementRegistry().containsElement(tag->getName())) {
             enqueueMxpEvent(tag->asStartTag());
         } else if (tag->isNamed("SEND")) {
-            enqueueMxpEvent(tag->asStartTag());
+            // send events are queued on closing tag so the caption is available
+            TMxpEvent event;
+            event.name = tag->getName();
+            auto* startTag = tag->asStartTag();
+            for (const auto& attrName : startTag->getAttributesNames()) {
+                event.attrs[attrName] = startTag->getAttributeValue(attrName);
+            }
+            event.actions = getLinkStore().getCurrentLinks();
+            event.caption.clear();
+            mPendingSendEvents.push(event);
         }
     }
 
@@ -107,7 +131,23 @@ void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
         mxpEvent.attrs[attrName] = tag->getAttributeValue(attrName);
     }
     mxpEvent.actions = getLinkStore().getCurrentLinks();
+    mxpEvent.caption.clear();
     mMxpEvents.enqueue(mxpEvent);
+}
+
+void TMxpMudlet::setCaptionForSendEvent(const QString& caption)
+{
+    if (!mPendingSendEvents.isEmpty()) {
+        TMxpEvent event = mPendingSendEvents.pop();
+        event.caption = caption;
+        for (QString& act : event.actions) {
+            act.replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
+        }
+        for (auto it = event.attrs.begin(); it != event.attrs.end(); ++it) {
+            it.value().replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
+        }
+        mMxpEvents.enqueue(event);
+    }
 }
 
 TLinkStore& TMxpMudlet::getLinkStore()
@@ -171,4 +211,128 @@ void TMxpMudlet::resetTextProperties()
     while (!bgColors.isEmpty()) {
         bgColors.pop_back();
     }
+}
+
+bool TMxpMudlet::startTagReceived(MxpStartTag* startTag)
+{
+    // Get the current MXP mode from the processor
+    TMXPMode currentMode = mpHost->mMxpProcessor.mode();
+    const QString tagName = startTag->getName().toUpper();
+    
+    // In LOCKED mode, no tags are allowed
+    if (currentMode == MXP_MODE_LOCKED) {
+        return false;
+    }
+    
+    // Check if this tag is allowed in the current mode
+    if (!isTagAllowedInMode(tagName, currentMode)) {
+        return false;
+    }
+    
+    return true;
+}
+
+bool TMxpMudlet::isTagAllowedInMode(const QString& tagName, TMXPMode mode) const
+{
+    // In SECURE or TEMP_SECURE mode, all tags are allowed
+    if (mode == MXP_MODE_SECURE || mode == MXP_MODE_TEMP_SECURE) {
+        return true;
+    }
+    
+    // In LOCKED mode, no tags are allowed (handled in startTagReceived)
+    if (mode == MXP_MODE_LOCKED) {
+        return false;
+    }
+    
+    // In OPEN mode, only specific formatting tags are allowed
+    // According to MXP spec: https://www.zuggsoft.com/zmud/mxp.htm
+    // OPEN tags are: B, I, U, S, C (color), H (high), FONT, NOBR, P, BR, SBR
+    // Plus their variations: BOLD, ITALIC, UNDERLINE, STRIKEOUT, EM, STRONG, HIGH
+    static const QSet<QString> openModeTags = {
+        qsl("B"), qsl("BOLD"), qsl("STRONG"),
+        qsl("I"), qsl("ITALIC"), qsl("EM"),
+        qsl("U"), qsl("UNDERLINE"),
+        qsl("S"), qsl("STRIKEOUT"),
+        qsl("C"), qsl("COLOR"),
+        qsl("H"), qsl("HIGH"),
+        qsl("FONT"),
+        qsl("NOBR"),
+        qsl("P"),
+        qsl("BR"), qsl("SBR")
+    };
+    
+    return openModeTags.contains(tagName);
+}
+
+QByteArray TMxpMudlet::getEncoding() const
+{
+    return mpHost->mTelnet.getEncoding();
+}
+
+int TMxpMudlet::getWrapWidth() const
+{
+    // Return the host's configured wrap width, with a sensible minimum
+    return qMax(mpHost->mWrapAt, 40);
+}
+
+void TMxpMudlet::insertText(const QString& text)
+{
+    // Insert text by feeding it back through the MXP processing pipeline
+    // This ensures it respects the current line buffer state
+    if (mpHost && mpHost->mpConsole) {
+        std::string textToInsert = text.toStdString();
+        mpHost->mpConsole->buffer.translateToPlainText(textToInsert, false);
+    }
+}
+
+bool TMxpMudlet::shouldLockModeToSecure() const
+{
+    return mpHost && mpHost->getForceMXPProcessorOn();
+}
+
+bool TMxpMudlet::createMxpFrame(const QString& name, const QMap<QString, QString>& attributes)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    return mpHost->mMxpFrameManager.createFrame(name, attributes);
+}
+
+bool TMxpMudlet::closeMxpFrame(const QString& name)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    return mpHost->mMxpFrameManager.closeFrame(name);
+}
+
+bool TMxpMudlet::setMxpDestination(const QString& frameName, bool eol, bool eof)
+{
+    if (!mpHost) {
+        return false;
+    }
+
+    mpHost->mMxpFrameManager.setDestination(frameName, eol, eof);
+    return true;
+}
+
+void TMxpMudlet::clearMxpDestination()
+{
+    if (mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->buffer.flushPendingDestinationContent();
+        // Reset text formatting to prevent color bleeding from frame content to main console
+        mpHost->mpConsole->buffer.resetCurrentTextFormat();
+        mpHost->mMxpFrameManager.clearDestination();
+    }
+}
+
+QString TMxpMudlet::getMxpCurrentDestination() const
+{
+    if (!mpHost) {
+        return QString();
+    }
+
+    return mpHost->mMxpFrameManager.getCurrentDestination();
 }

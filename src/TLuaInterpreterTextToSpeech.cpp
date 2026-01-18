@@ -41,6 +41,7 @@
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -55,13 +56,12 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
-#include "glwidget.h"
+#include "glwidget_integration.h"
 #endif
 
 #include <limits>
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -75,7 +75,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 #ifdef QT_TEXTTOSPEECH_LIB
 QPointer<QTextToSpeech> speechUnit;

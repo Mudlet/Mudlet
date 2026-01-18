@@ -2,7 +2,7 @@
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *   Copyright (C) 2022-2023, 2025 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2022-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,11 +26,9 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QColorDialog>
 #include <QMenu>
 #include <QPainter>
-#include "post_guard.h"
 
 
 dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
@@ -47,6 +45,9 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     connect(pushButton_setSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openSymbolColorSelector);
     connect(pushButton_resetSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetSymbolColor);
     connect(pushButton_setRoomColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openRoomColorSelector);
+    connect(pushButton_setBorderColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openBorderColorSelector);
+    connect(pushButton_resetBorderColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetBorderColor);
+    connect(spinBox_borderThickness, qOverload<int>(&QSpinBox::valueChanged), this, &dlgRoomProperties::slot_borderThicknessChanged);
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -74,6 +75,13 @@ void dlgRoomProperties::init(
     // Configure symbols display
     mpSymbols = pSymbols;
     mpRooms = pRooms;
+
+    // Store original border values for live preview restoration on cancel
+    for (TRoom* room : mpRooms) {
+        mOriginalBorderColors[room] = room->mBorderColor;
+        mOriginalBorderThicknesses[room] = room->mBorderThickness;
+    }
+
     if (mpSymbols.isEmpty()) {
         // show simple text-entry box empty
         lineEdit_roomSymbol->setText(QString());
@@ -92,11 +100,13 @@ void dlgRoomProperties::init(
             comboBox_roomSymbol->lineEdit()->selectAll();
         }
     }
+    auto mapSymbolFont = mpHost->mpMap->mMapSymbolFont;
+    mapSymbolFont.setPointSize(qApp->font().pointSize());
     if (!lineEdit_roomSymbol->isHidden()) {
-        lineEdit_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+        lineEdit_roomSymbol->setFont(mapSymbolFont);
     }
     if (!comboBox_roomSymbol->isHidden()) {
-        comboBox_roomSymbol->setFont(mpHost->mpMap->mMapSymbolFont);
+        comboBox_roomSymbol->setFont(mapSymbolFont);
     }
     initSymbolInstructions();
 
@@ -146,6 +156,19 @@ void dlgRoomProperties::init(
         checkBox_locked->setCheckState(Qt::Unchecked);
     }
     initLockInstructions();
+
+    // Configure border display
+    selectedBorderColor = pFirstRoom->mBorderColor;
+    mBorderThickness = pFirstRoom->mBorderThickness;
+
+    // Set button background to show current color
+    if (selectedBorderColor.isValid()) {
+        pushButton_setBorderColor->setStyleSheet(qsl("background-color: %1").arg(selectedBorderColor.name()));
+    }
+
+    // Set thickness spinbox
+    spinBox_borderThickness->setValue(mBorderThickness);
+    initBorderInstructions();
 
     // Configure dialog display
     adjustSize();
@@ -199,16 +222,17 @@ void dlgRoomProperties::initSymbolInstructions()
 
     QString instructions;
     if (mpSymbols.size() == 1) {
-        instructions = tr("Type one or more graphemes (\"visible characters\") to use as a symbol "
-                          "for all of the %n selected room(s), or enter a space to clear the symbol:",
+        //: room properties dialog, setting symbols
+        instructions = tr("Enter one or more characters to set a new symbol for %n room(s).  Clear to unset.",
                           // Intentional comment to separate arguments!
                           "%n is the total number of rooms involved.",
                           mpRooms.size());
     } else {
-        instructions = tr("To change the symbol for all of the %n selected room(s), please choose:\n"
-                          " • an existing symbol from the list below (sorted by most commonly used first)\n"
-                          " • enter one or more graphemes (\"visible characters\") as a new symbol\n"
-                          " • enter a space to clear any existing symbols",
+        //: room properties dialog, setting symbols
+        instructions = tr("To set the symbol for all %n room(s), please choose:\n"
+                          " • an existing symbol from the list,\n"
+                          " • enter one or more characters to set a new symbol,\n"
+                          " • clear to unset.",
                           // Intentional comment to separate arguments!
                           "This is for when applying a new room symbol to one or more rooms "
                           "and some have different symbols or no symbol at present. "
@@ -243,15 +267,13 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         while (itSymbolUsed.hasNext()) {
             itSymbolUsed.next();
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                displayStrings.append(qsl("%1 {%2:%3}")
-                    .arg(itSymbolUsed.key())
-                    /*:
-                    This text will be part of a list of room values shown, which will show the value
-                    itself, followed by the counted number of rooms with this very value like:
-                    grey {count:2} - so please translate like counted ammount, number of, etc.
-                    */
-                    .arg(tr("count"))
-                    .arg(QString::number(itSymbolUsed.value())));
+                /*:
+                Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., "★" or "!"),
+                %2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
+                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
+                */
+                displayStrings.append(tr("%1 (count: %2)")
+                    .arg(itSymbolUsed.key(), QString::number(itSymbolUsed.value())));
             }
         }
     }
@@ -283,15 +305,13 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
         while (itWeightUsed.hasNext()) {
             itWeightUsed.next();
             if (itWeightUsed.value() == weightCountsList.at(i)) {
-                displayStrings.append(qsl("%1 {%2:%3}")
-                    .arg(QString::number(itWeightUsed.key()))
-                    /*:
-                    This text will be part of a list of room values shown, which will name the value
-                    itself, followed by the counted number of rooms with that very value like:
-                    grey {count: 2} - So please translate like counted amount, number of, etc.
-                    */
-                    .arg(tr("count"))
-                    .arg(QString::number(itWeightUsed.value())));
+                /*:
+                Format for showing a room weight with its usage count. %1 is the weight value (e.g., "1" or "50"),
+                %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
+                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
+                */
+                displayStrings.append(tr("%1 (count: %2)")
+                    .arg(QString::number(itWeightUsed.key()), QString::number(itWeightUsed.value())));
             }
         }
     }
@@ -321,11 +341,10 @@ void dlgRoomProperties::accept()
     const QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
     const QColor newSymbolColor = selectedSymbolColor;
-    bool changeSymbolColor = true;
+    bool changeSymbolColor = mSymbolColorWasChanged;
     if (newSymbol == multipleValuesPlaceholder) {
         // We don't want to change then
         changeSymbol = false;
-        changeSymbolColor = false;
     }
 
     // Find weight to return back
@@ -351,6 +370,12 @@ void dlgRoomProperties::accept()
         }
     }
 
+    // Find border settings to return back
+    bool changeBorderColor = mBorderColorWasChanged;
+    QColor newBorderColor = selectedBorderColor;
+    bool changeBorderThickness = mBorderThicknessWasChanged;
+    int newBorderThickness = mBorderThickness;
+
     emit signal_save_symbol(
         changeName, newName,
         mChangeRoomColor, mRoomColorNumber,
@@ -358,6 +383,8 @@ void dlgRoomProperties::accept()
         changeSymbolColor, newSymbolColor,
         changeWeight, newWeight,
         changeLockStatus, newLockStatus,
+        changeBorderColor, newBorderColor,
+        changeBorderThickness, newBorderThickness,
         mpRooms);
 }
 
@@ -368,8 +395,8 @@ QString dlgRoomProperties::getNewSymbol()
         return lineEdit_roomSymbol->text();
     }
     QString newSymbolText = comboBox_roomSymbol->currentText();
-    // Parse the initial text before the curly braces containing count
-    const QRegularExpression countStripper(qsl("^(.*) {.*}$"));
+    // Parse the initial text before the parentheses containing count
+    const QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
     const QRegularExpressionMatch match = countStripper.match(newSymbolText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1);
@@ -429,8 +456,8 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
         const QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
         const QVector<quint32> codePoints = symbolString.toUcs4();
         QVector<bool> isUsable;
-        for (int i = 0; i < codePoints.size(); ++i) {
-            isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
+        for (const auto point : codePoints) {
+            isUsable.append(mapSymbolFontMetrics.inFontUcs4(point));
         }
         const bool needToFallback = isUsable.contains(false);
         if (needToFallback) {
@@ -454,6 +481,7 @@ void dlgRoomProperties::slot_openSymbolColorSelector()
 void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 {
     selectedSymbolColor = color;
+    mSymbolColorWasChanged = true;
     slot_updatePreview();
 }
 
@@ -461,6 +489,7 @@ void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 void dlgRoomProperties::slot_resetSymbolColor()
 {
     selectedSymbolColor = QColor();
+    mSymbolColorWasChanged = true;
     slot_updatePreview();
 }
 
@@ -599,4 +628,78 @@ void dlgRoomProperties::slot_weightComboBoxItemChanged(const int index)
     }
 
     comboBox_weight->lineEdit()->selectAll();
+}
+
+void dlgRoomProperties::initBorderInstructions()
+{
+    //: Instruction text shown in room properties dialog for the border customization section
+    QString instructions = tr("Set a custom border color and thickness for the selected room(s). "
+                              "Leave at default to use the global map settings.");
+    label_borderInstructions->setText(instructions);
+    label_borderInstructions->setWordWrap(true);
+}
+
+void dlgRoomProperties::slot_openBorderColorSelector()
+{
+    QColor initialColor = selectedBorderColor.isValid() ? selectedBorderColor : mpHost->mRoomBorderColor;
+    auto* dialog = new QColorDialog(initialColor, this);
+    dialog->setOption(QColorDialog::ShowAlphaChannel, true);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    //: Title for the color picker dialog when selecting a room border color
+    dialog->setWindowTitle(tr("Set border color"));
+    connect(dialog, &QColorDialog::currentColorChanged, this, &dlgRoomProperties::slot_borderColorSelected);
+    connect(dialog, &QColorDialog::colorSelected, this, &dlgRoomProperties::slot_borderColorSelected);
+    dialog->open();
+}
+
+void dlgRoomProperties::slot_borderColorSelected(const QColor& color)
+{
+    selectedBorderColor = color;
+    mBorderColorWasChanged = true;
+    pushButton_setBorderColor->setStyleSheet(qsl("background-color: %1").arg(color.name()));
+    emitBorderPreview();
+}
+
+void dlgRoomProperties::slot_resetBorderColor()
+{
+    selectedBorderColor = QColor();
+    mBorderColorWasChanged = true;
+    pushButton_setBorderColor->setStyleSheet(QString());
+    emitBorderPreview();
+}
+
+void dlgRoomProperties::slot_borderThicknessChanged(int value)
+{
+    mBorderThickness = value;
+    mBorderThicknessWasChanged = true;
+    emitBorderPreview();
+}
+
+void dlgRoomProperties::emitBorderPreview()
+{
+    // Apply current border settings directly to rooms for live preview
+    for (TRoom* room : mpRooms) {
+        if (mBorderColorWasChanged) {
+            room->mBorderColor = selectedBorderColor;
+        }
+        if (mBorderThicknessWasChanged) {
+            room->mBorderThickness = mBorderThickness;
+        }
+    }
+    emit signal_preview_border(mpRooms);
+}
+
+void dlgRoomProperties::restoreOriginalBorders()
+{
+    for (TRoom* room : mpRooms) {
+        room->mBorderColor = mOriginalBorderColors.value(room);
+        room->mBorderThickness = mOriginalBorderThicknesses.value(room);
+    }
+}
+
+void dlgRoomProperties::reject()
+{
+    restoreOriginalBorders();
+    emit signal_preview_border(mpRooms);
+    QDialog::reject();
 }

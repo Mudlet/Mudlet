@@ -37,6 +37,7 @@
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -51,13 +52,12 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
-#include "glwidget.h"
+#include "glwidget_integration.h"
 #endif
 
 #include <limits>
 #include <math.h>
 
-#include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
@@ -71,7 +71,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#connectToServer
@@ -323,13 +322,18 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
+    // Check connection status first (most common issue)
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending ATCP"));
+    }
+
     if (!host.mTelnet.isATCPEnabled()) {
-        return warnArgumentValue(L, __func__, "ATCP is not currently enabled");
+        return warnArgumentValue(L, __func__, qsl("ATCP is not currently enabled"));
     }
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
-        return warnArgumentValue(L, __func__, "unable to send all of the ATCP message");
+        return warnArgumentValue(L, __func__, qsl("failed to send ATCP message - connection may have been lost or a socket write error occurred"));
     }
 
     lua_pushboolean(L, true);
@@ -367,13 +371,18 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
+    // Check connection status first (most common issue)
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending GMCP"));
+    }
+
     if (!host.mTelnet.isGMCPEnabled()) {
-        return warnArgumentValue(L, __func__, "GMCP is not currently enabled");
+        return warnArgumentValue(L, __func__, qsl("GMCP is not currently enabled"));
     }
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
-        return warnArgumentValue(L, __func__, "unable to send all of the GMCP message");
+        return warnArgumentValue(L, __func__, qsl("failed to send GMCP message - connection may have been lost or a socket write error occurred"));
     }
 
     lua_pushboolean(L, true);
@@ -404,6 +413,24 @@ int TLuaInterpreter::sendIrc(lua_State* L)
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
 
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openIRC
+int TLuaInterpreter::openIRC(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost) {
+        return warnArgumentValue(L, __func__, "no host found");
+    }
+    
+    if (!pHost->mpDlgIRC) {
+        pHost->mpDlgIRC = new dlgIRC(pHost);
+    }
+    pHost->mpDlgIRC->raise();
+    pHost->mpDlgIRC->show();
+    
     lua_pushboolean(L, true);
     return 1;
 }

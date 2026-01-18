@@ -37,51 +37,28 @@
  */
 
 TVar::TVar()
-: hidden(false)
-, pKey(nullptr)
-, pValue(nullptr)
-, saved(false)
-, reference(false)
-, parent(nullptr)
-, name(QString())
-, keyType(LUA_TNONE)
-, value(QString())
-, valueType(LUA_TNONE)
-, newKeyType(LUA_TNONE)
-, nName(QString())
 {
 }
 
 TVar::TVar(TVar* p)
-: hidden(false)
-, pKey(nullptr)
-, pValue(nullptr)
-, saved(false)
-, reference(false)
-, parent(p)
-, name(QString())
-, keyType(LUA_TNONE)
-, value(QString())
-, valueType(LUA_TNONE)
-, newKeyType(LUA_TNONE)
-, nName(QString())
+: parent(p)
 {
 }
 
 TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, const int vt)
-: hidden(false)
-, pKey(nullptr)
-, pValue(nullptr)
-, saved(false)
-, reference(false)
-, parent(p)
+: parent(p)
 , name(kName)
 , keyType(kt)
 , value(val)
 , valueType(vt)
-, newKeyType(LUA_TNONE)
-, nName(QString())
 {
+}
+
+TVar::~TVar()
+{
+    // Delete all children recursively
+    qDeleteAll(children);
+    children.clear();
 }
 
 void TVar::setReference(const bool s)
@@ -112,9 +89,8 @@ bool TVarLessThan(TVar* varA, TVar* varB)
     // of whether one or both of the QStrings was NOT actually a number
     if (a.toInt(&isAOk) && b.toInt(&isBOk) && isAOk && isBOk) {
         return a.toInt() < b.toInt();
-    } else {
-        return a.toLower() < b.toLower();
     }
+    return a.toLower() < b.toLower();
 }
 
 QList<TVar*> TVar::getChildren(const bool isToSort)

@@ -23,11 +23,10 @@
 #include "FontManager.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QDesktopServices>
-#include "post_guard.h"
+#include <QFontDatabase>
 
 void FontManager::addFonts()
 {
@@ -108,4 +107,17 @@ void FontManager::unloadFonts(const QString& belongsTo)
         QFontDatabase::removeApplicationFont(id);
     }
     loadedFontAffiliation.remove(belongsTo);
+}
+
+void FontManager::addEmojiFont()
+{
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    // Use the new Qt 6.9 function for emoji fonts
+    QFontDatabase::addApplicationEmojiFontFamily(qsl("Noto Color Emoji"));
+#else
+    // Fallback for older Qt versions - this will be handled by individual components
+    // using QFont::insertSubstitution as before
+#endif
+#endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 }

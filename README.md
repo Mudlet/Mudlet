@@ -107,11 +107,15 @@ Mudlet's [vision](https://www.mudlet.org/about/vision/) is to build the best tex
 
 ## Roadmap
 
-See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed, as well as contribute!
+See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed
+
+## Contribute
+
+Join in, contributions are welcome! Find out how you can start [Contributing](docs/CONTRIBUTING.md).
 
 ## Credits
 
-Author: [Mudlet Makers](https://github.com/Mudlet/Mudlet/graphs/contributors). Join in, contributions are welcome!
+Author: [Mudlet Makers](https://github.com/Mudlet/Mudlet/graphs/contributors). 
 
 This software wouldnt've been possible without these open source packages:
 
@@ -135,7 +139,6 @@ This software wouldnt've been possible without these open source packages:
 - [luautf8](https://github.com/starwing/luautf8)
 - [pugixml](https://pugixml.org/)
 - [SQLite](https://sqlite.org/index.html)
-- [vcpkg](https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=msvc-160)
 - [yajl](http://lloyd.github.io/yajl/)
 
 Credit to [Markdownify](https://github.com/amitmerchant1990/electron-markdownify) for the README inspiration.

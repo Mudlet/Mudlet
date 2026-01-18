@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019, 2021-2022 by Stephen Lyons             *
+ *   Copyright (C) 2015, 2017-2019, 2021-2022, 2025 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -32,7 +32,6 @@
 #include <winsock2.h>
 #endif
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
@@ -44,7 +43,6 @@
 #include <QSslSocket>
 #endif
 #include <QTime>
-#include "post_guard.h"
 
 #include <zlib.h>
 
@@ -72,9 +70,6 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
-class QTextCodec;
-class QTextDecoder;
-class QTextEncoder;
 class QTimer;
 
 class Host;
@@ -121,8 +116,8 @@ const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char OPT_102 = 102;
-const char OPT_ATCP = static_cast<char>(200);
-const char OPT_GMCP = static_cast<char>(201);
+const auto OPT_ATCP = static_cast<unsigned char>(200);
+const auto OPT_GMCP = static_cast<unsigned char>(201);
 
 const char CHARSET_REQUEST = 1;
 const char CHARSET_ACCEPTED = 2;
@@ -187,7 +182,7 @@ public:
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
-    bool isIPAddress(QString&);
+    bool isIPAddress(const QString&);
     bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
@@ -206,7 +201,7 @@ public:
     QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
     const QByteArrayList & getEncodingsList() const { return mAcceptableEncodings; }
-    QAbstractSocket::SocketError error();
+    std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
 #if !defined(QT_NO_SSL)
     QSslCertificate getPeerCertificate();
@@ -226,12 +221,23 @@ public:
     void trackMXPElementDetection(const std::string&);
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
-    QAbstractSocket::SocketState getConnectionState() const { return mpSocket.state(); }
+    QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
+    QAbstractSocket::SocketState getConnectionState() const;
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
     void cancelLoginTimers();
+    void terminateConnection();
+    bool currentlySecure() const {
+#if defined(QT_NO_SSL)
+        return false;
+#else
+        return mCurrent_sslTsl;
+#endif
+    }
+    static bool isRawIPv4Address(const QString&);
+    static bool isRawIPv6Address(const QString&);
 
 
     QMap<int, bool> supportedTelnetOptions;
@@ -242,7 +248,7 @@ public:
     bool mFORCE_GA_OFF = false;
     QPointer<dlgComposer> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
-    QProgressDialog* mpProgressDialog = nullptr;
+    QPointer<QProgressDialog> mpProgressDialog;
     QString mServerPackage;
     QString mProfileName;
 
@@ -268,10 +274,19 @@ signals:
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
+    // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
+    // Used by hyperlink visibility manager to trigger expire actions
+    void signal_promptReceived();
 
 
 private:
     cTelnet() = default;
+
+#if defined(QT_NO_SSL)
+    void abortLosingSocket(QTcpSocket* losingSocket);
+#else
+    void abortLosingSocket(QSslSocket* losingSocket);
+#endif
 
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
@@ -294,6 +309,19 @@ private:
     QString getNewEnviron256Colors();
     QString getNewEnvironUTF8();
     QString getNewEnvironOSCColorPalette();
+    QString getNewEnvironOSCHyperlinks();
+    QString getNewEnvironOSCHyperlinksSend();
+    QString getNewEnvironOSCHyperlinksPrompt();
+    QString getNewEnvironOSCHyperlinksStyleBasic();
+    QString getNewEnvironOSCHyperlinksStyleStates();
+    QString getNewEnvironOSCHyperlinksTooltip();
+    QString getNewEnvironOSCHyperlinksMenu();
+    QString getNewEnvironOSCHyperlinksCompact();
+    QString getNewEnvironOSCHyperlinksPresets();
+    QString getNewEnvironOSCHyperlinksVisibility();
+    QString getNewEnvironOSCHyperlinksSelection();
+    QString getNewEnvironOSCHyperlinksSpoiler();
+    QString getNewEnvironOSCHyperlinksDisabled();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();
@@ -309,7 +337,7 @@ private:
     void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
-    void sendTelnetOption(char type, char option);
+    void sendTelnetOption(char type, unsigned char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
     void postData();
@@ -332,18 +360,25 @@ private:
     void autoEnableTTYPEVersion();
 
     QPointer<Host> mpHost;
+    // The first one will point to one of the two instances following one of
+    // them having been connected - or will be a nullptr otherwise
 #if defined(QT_NO_SSL)
-    QTcpSocket mpSocket;
+    QTcpSocket* mpSocket = nullptr;
+    QTcpSocket mSocket_ipV4;
+    QTcpSocket mSocket_ipV6;
 #else
-    QSslSocket mpSocket;
+    QSslSocket* mpSocket = nullptr;
+    QSslSocket mSocket_ipV4;
+    QSslSocket mSocket_ipV6;
+    // This copies the state of Host::mSslTsl at the point that connection(s)
+    // is/are attempted but at no other time so that the signals/slots
+    // interconnections are not switched between the different patterns until
+    // it is safe to do so:
+    bool mCurrent_sslTsl = false;
 #endif
-    QHostAddress mHostAddress;
-//    QTextCodec* incomingDataCodec;
-    QTextCodec* mpOutOfBandDataIncomingCodec = nullptr;
-    QTextCodec* outgoingDataCodec = nullptr;
-//    QTextDecoder* incomingDataDecoder;
-    QTextEncoder* outgoingDataEncoder = nullptr;
-    QString mHostName;
+    // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
+    // IPv6 address ("2001:db8::1"):
+    QString mHostUrl;
     int mHostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;
@@ -389,6 +424,7 @@ private:
     bool mIsTimerPosting = false;
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    QTimer* mTimerPasswordModeTimeout = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
@@ -405,6 +441,8 @@ private:
     bool enableMSP = false;
     bool enableMXP = false;
     bool enableChannel102 = false;
+    // Inhibit mAutoReconnect from taking effect for one connection cycle,
+    // either because the user wanted to disconnect or an SSL/TLS error occurred:
     bool mDontReconnect = false;
     bool mAutoReconnect = false;
     QStringList messageStack;

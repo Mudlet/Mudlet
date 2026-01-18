@@ -20,10 +20,14 @@
 
 #include "TLinkStore.h"
 #if !defined(LinkStore_Test)
+#include "TBuffer.h"  // For Mudlet::HyperlinkStyling definition
 #include "Host.h"
+#include "utils.h"    // For qsl() macro
 #endif
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference)
+#include <QSet>
+
+int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference, const QString& expireName)
 {
     if (++mLinkID > mMaxLinks) {
         mLinkID = 1;
@@ -32,9 +36,21 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
     // Used to unref lua objects in the registry to avoid memory leaks
     freeReference(pH, mReferenceStore.value(mLinkID, QVector<int>()));
 
+    // Remove old expire mapping if it exists (when wrapping around)
+    QString oldExpireName = mExpireStore.value(mLinkID);
+    if (!oldExpireName.isEmpty()) {
+        mExpireToLinks.remove(oldExpireName, mLinkID);
+    }
+
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
     mReferenceStore[mLinkID] = luaReference;
+
+    // Store expire name if provided
+    if (!expireName.isEmpty()) {
+        mExpireStore[mLinkID] = expireName;
+        mExpireToLinks.insert(expireName, mLinkID);
+    }
 
     return mLinkID;
 }
@@ -53,3 +69,98 @@ void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
         }
     }
 }
+
+void TLinkStore::removeLinkById(int id, Host* pH)
+{
+    freeReference(pH, mReferenceStore.value(id));
+
+#if !defined(LinkStore_Test)
+    if (mStylingStore.contains(id)) {
+        const Mudlet::HyperlinkStyling& styling = mStylingStore[id];
+        if (styling.selection.hasSelectionSettings) {
+            QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
+            mSelectionGroupIndex.remove(key, id);
+        }
+    }
+#endif
+
+    mLinkStore.remove(id);
+    mHintStore.remove(id);
+    mReferenceStore.remove(id);
+
+    QString expireName = mExpireStore.value(id);
+    if (!expireName.isEmpty()) {
+        mExpireToLinks.remove(expireName, id);
+        mExpireStore.remove(id);
+    }
+
+#if !defined(LinkStore_Test)
+    mStylingStore.remove(id);
+#endif
+}
+
+void TLinkStore::expireLinks(const QString& expireName, Host* pH)
+{
+    if (expireName.isEmpty()) {
+        return;
+    }
+
+    QList<int> linkIds = mExpireToLinks.values(expireName);
+
+    for (int linkId : linkIds) {
+        removeLinkById(linkId, pH);
+    }
+}
+
+void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH)
+{
+    QList<int> idsToRemove;
+
+    for (auto&& [id, links] : mLinkStore.asKeyValueRange()) {
+        if (!referencedIds.contains(id)) {
+            idsToRemove.append(id);
+        }
+    }
+
+    for (int id : idsToRemove) {
+        removeLinkById(id, pH);
+    }
+}
+
+#if !defined(LinkStore_Test)
+void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
+{
+    // Remove old selection group index entry if it exists
+    if (mStylingStore.contains(id)) {
+        const Mudlet::HyperlinkStyling& oldStyling = mStylingStore[id];
+        if (oldStyling.selection.hasSelectionSettings) {
+            QPair<QString, QString> oldKey = qMakePair(oldStyling.selection.group, oldStyling.selection.value);
+            mSelectionGroupIndex.remove(oldKey, id);
+        }
+    }
+    
+    mStylingStore[id] = styling;
+    
+    // Add new selection group index entry if applicable
+    if (styling.selection.hasSelectionSettings) {
+        QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);
+        mSelectionGroupIndex.insert(key, id);
+    }
+}
+
+Mudlet::HyperlinkStyling TLinkStore::getStyling(int id) const
+{
+    return mStylingStore.value(id, Mudlet::HyperlinkStyling());
+}
+
+bool TLinkStore::hasStyling(int id) const
+{
+    return mStylingStore.contains(id);
+}
+
+QList<int> TLinkStore::getLinkIdsByGroupValue(const QString& group, const QString& value) const
+{
+    QPair<QString, QString> key = qMakePair(group, value);
+    return mSelectionGroupIndex.values(key);
+}
+#endif

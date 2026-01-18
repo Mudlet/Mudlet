@@ -25,21 +25,19 @@
  ***************************************************************************/
 
 
-#include "TConsole.h"
+#include "utils.h"
 
-#include "pre_guard.h"
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
-#include <QTextDecoder>
+#include <QStringDecoder>
 #include <QToolButton>
 #include <QResizeEvent>
-#include "post_guard.h"
 
-
-class KeyUnit;
 class Host;
+class KeyUnit;
+class TConsole;
 
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {
@@ -91,6 +89,12 @@ public:
     // end of the session:
     bool mSaveCommands = true;
 
+
+signals:
+    // Emitted when a command is submitted (Enter pressed)
+    void commandSubmitted();
+    // Emitted when the command line text changes (for hyperlink visibility triggers)
+    void commandLineTextChanged();
 
 public slots:
     void slot_popupMenu();
@@ -157,6 +161,8 @@ private:
     QString mTextToRestoreAfterEchoSuppression;
     // Track whether the preserved text was originally selected (for auto-clear OFF)
     bool mRestoredTextShouldBeSelected = false;
+    // Track whether user typed anything during echo suppression mode
+    bool mUserTypedDuringEchoSuppression = false;
 
 private slots:
     void slot_togglePasswordVisibility();

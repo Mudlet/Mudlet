@@ -1238,10 +1238,14 @@ function getConfig(...)
 
   if #args == 0 then
     -- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
+    -- This list contains all configuration options that are available in both getConfig and setConfig
+    -- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
+    -- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations  
     local list = {
+      "advertiseScreenReader",
       "ambiguousEAsianWidthCharacters",
       "announceIncomingText",
-      "askTlsAvailable",
+      "askTlsAvailable", 
       "autoClearInputLine",
       "blankLinesBehaviour",
       "caretShortcut",
@@ -1249,9 +1253,10 @@ function getConfig(...)
       "compactInputLine",
       "controlCharacterHandling",
       "editorAutoComplete",
+      "enableClosedCaption",
       "enableGMCP",
       "enableMNES",
-      "enableMSDP",
+      "enableMSDP", 
       "enableMSP",
       "enableMSSP",
       "enableMTTS",
@@ -1260,23 +1265,29 @@ function getConfig(...)
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
-      "logDirectory",
+      "logDirectory",                    -- read-only in getConfig
       "logInHTML",
       "mapExitSize",
-      "mapperPanelVisible",
+      "mapInfoColor",
+      "mapperPanelVisible", 
       "mapRoomSize",
       "mapRoundRooms",
+      "mapShowGrid",
       "mapShowRoomBorders",
+      "muteMediaAPI",
+      "muteMediaGame",
       "promptForMXPProcessorOn",
       "promptForVersionInTTYPE",
       "show3dMapView",
-      "showRoomIdsOnMap",
+      "showRoomIdsOnMap", 
       "showSentText",
       "showTabConnectionIndicators",
-      "specialForceCompressionOff",
+      "showUpperLowerLevels",
       "specialForceCharsetNegotiationOff",
+      "specialForceCompressionOff",
       "specialForceGAOff",
-      "specialForceMXPProcessorOn",
+      "specialForceMxpNegotiationOff",
+      "specialForceMXPProcessorOn",      -- read-only in getConfig
       "versionInTTYPE",
     }
     for _,v in ipairs(list) do
@@ -1292,7 +1303,8 @@ function getConfig(...)
     return result
   end
 
-  return oldgetConfig(args[1])
+  -- Pass all arguments to the C++ function to support enhanced API
+  return oldgetConfig(unpack(args))
 end
 
 function openMudletHomeDir()

@@ -21,6 +21,10 @@
 
 #include "TDockWidget.h"
 
+#include "Host.h"
+#include "mudlet.h"
+#include "TConsole.h"
+
 TDockWidget::TDockWidget(Host* pH, const QString& consoleName)
 : QDockWidget()
 , mWidgetConsoleName(consoleName)
@@ -40,7 +44,7 @@ void TDockWidget::setTConsole(TConsole* pC)
 
 void TDockWidget::closeEvent(QCloseEvent* event)
 {
-    if (!mpHost->isClosingDown()) {
+    if (mpHost && !mpHost->isClosingDown()) {
         mpHost->hideWindow(mWidgetConsoleName);
         event->ignore();
         return;

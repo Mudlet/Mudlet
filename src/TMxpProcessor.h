@@ -31,7 +31,7 @@
 class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
-enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE, HANDLER_INSERT_ENTITY_CUST, HANDLER_INSERT_ENTITY_SYS, HANDLER_INSERT_ENTITY_LIT };
+enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE, HANDLER_INSERT_ENTITY_CUST, HANDLER_INSERT_ENTITY_SYS, HANDLER_INSERT_ENTITY_LIT, HANDLER_INSERT_AND_REPROCESS };
 
 // handles the MXP protocol
 class TMxpProcessor
@@ -56,7 +56,10 @@ public:
 
     TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);
-    inline QString getEntityValue() { return lastEntityValue;}
+    QString getEntityValue() { return lastEntityValue; }
+    void setLastEntityValue(const QString& value) { lastEntityValue = value; }
+    TMxpTagProcessor& getMxpTagProcessor() { return mMxpTagProcessor; }
+    TMxpNodeBuilder& getMxpTagBuilder() { return mMxpTagBuilder; }
 
 private:
     // State of MXP system:

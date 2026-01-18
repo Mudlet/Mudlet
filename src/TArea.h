@@ -28,12 +28,10 @@
 
 #include "TMapLabel.h"
 
-#include "pre_guard.h"
 #include <QList>
 #include <QMap>
 #include <QPair>
 #include <QVector3D>
-#include "post_guard.h"
 
 class TRoomDB;
 

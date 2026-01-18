@@ -21,10 +21,8 @@
 
 #include "utils.h" // For qsl(...)
 
-#include "pre_guard.h"
 #include <QString>
 #include <QList>
-#include "post_guard.h"
 
 struct GameDetail
 {
@@ -62,8 +60,20 @@ public:
     }
 
     // clang-format off
-    // games are to be added here in alphabetical order
+    // games are to be added here in alphabetical order, except the tutorial which should be first
     inline static const QList<GameDetail> scmDefaultGames = {
+            { qsl("Mudlet Tutorial"),
+            qsl("localhost"),
+            0,
+            false,
+            qsl("<a href='https://mudlet.org'>Website</a><br>"
+                "<a href='https://wiki.mudlet.org'>Wiki</a>"),
+            qsl(":/icons/mudlet-tutorial.png"),
+            qsl("Mudlet provides a simple tutorial to help you get familiar with playing MUDs using Mudlet."
+                 "\n\n"
+                 "You play a young adventurer who has recently graduated from the adventuring school.  "
+                 "You must aid the Sheriff in a series of tasks for the townfolk and become a local hero.")
+            },
             { qsl("Abandoned Realms"),
             qsl("abandonedrealms.com"),
             9000,
@@ -217,6 +227,28 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。")},
 
+            {qsl("Petria"),
+             qsl("game.petriamud.com"),
+             6600,
+             false,
+             qsl("<a href='http://www.petriamud.com'>www.petriamud.com</a><br>"
+                 "<a href='https://www.youtube.com/channel/UCqXqG9qG6L1q3Q3F4F6Q6Nw'>Petria - YouTube</a>"),
+             qsl(":/icons/banner_petria.jpg"),
+             /* English translation, provided by game:
+*              "Petria MUD, active since 1996, is one of the longest-running Spanish-language games with an active community to this day.
+*               A free fantasy world where you can play different races and classes, join clans, explore, participate in tournaments, and live epic adventures.
+*               • Free and in Spanish.
+*               • Dynamic events: Tournaments, Clan Raids, BattleGrounds (War of Flags), Quests, among others.
+*               • Over two decades of history, with constant improvements and new content.
+*               In Petria, you can forge your own path, defend your clan, and write your own legend."
+*/
+             qsl("Petria MUD Activo desde 1996, es uno de los juegos en Español más longevos y con comunidad activa hasta hoy. "
+                 "Un mundo de fantasía gratuito donde podrás jugar distintas razas y clases, unirte a clanes, explorar, participar en torneos y vivir aventuras épicas.\n\n"
+                 "• Gratis y en Español.\n"
+                 "• Eventos dinámicos: Torneos, Asaltos de Clanes, BattleGrounds (War of Flags), Quests, entre otros.\n"
+                 "• Más de dos décadas de historia, con constantes mejoras y nuevos contenidos.\n\n"
+                 "En Petria podrás forjar tu camino, defender a tu clan y escribir tu propia leyenda.")},
+
             {qsl("Realms of Despair"),
              qsl("realmsofdespair.com"),
              4000,
@@ -259,6 +291,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("<a href='http://www.aetolia.com/'>http://www.aetolia.com</a>"),
              qsl(":/icons/aetolia_120_30.png"),
              QString()},
+
+            {qsl("Astaria"),
+             qsl("astaria.net"),
+             5000,
+             false,
+             qsl("<a href='https://astariamud.com'>astariamud.com</a>"),
+             qsl(":/icons/banner_astaria.png"),
+             qsl("Once more unto the breach, dear friends...\n\n"
+                 "Welcome Traveller, your sojourn awaits. Only one step remains between you and a realm where your mind can soar, unbound from the fetters of the mundane world.\n\n"
+                 "Let your spirit take shape in one of fifteen races, cast your will into one of nine guilds and begin your journey towards destiny. Forge friendships. Gain power. Vanquish enemies. Work with your allies toward goals greater than yourself. Become part of the rich history of adventurers who have made their home in a world that is immediately fun and will continue to challenge and stimulate for years to come. Step through the portal, and immerse yourself in the mythical world, Astaria.\n\n"
+                 "Astaria is a free-to-play MUD with an RP-optional atmosphere, set in a medieval fantasy world with a touch of cosmic horror. Active since 1994, it's a realm where dragons still roam, adventures await around every corner, and new heroes are always welcome.")},
 
             {qsl("Imperian"),
              qsl("imperian.com"),
@@ -555,39 +598,6 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "What role will you play? The legend awaits!")},
 
-            {qsl("CoreMUD"),
-             qsl("coremud.org"),
-             4020,
-             true,
-             qsl("<a href='https://coremud.org/'>coremud.org</a>"),
-             qsl(":/icons/coremud_icon.jpg"),
-             qsl("Welcome to Core Mud, an interactive text MUD set on the planet formal star-charts "
-                 "refer to as Hermes 571-G, but that everyone in the know refers to simply as \"Core\"."
-                 "\n\n"
-                 "Core is one of the most distant settlements known to mankind, most famous for its "
-                 "lucrative yet oppressive mines, but more than mankind can be found here..."
-                 "\n\n"
-                 "Core is a diverse group of 9 races in total, all vying for recognition or profits, "
-                 "or both, working for The Company, the megalithic entity running the colony itself."
-                 "\n\n"
-                 "To The Company, everything is secondary to profits."
-                 "\n\n"
-                 "It is up to you to determine how best to survive in this environment, whether that "
-                 "be through combat training, superior mining skills, or technical prowess."
-                 "\n\n"
-                 "Core MUD is always free to play and features a fun and supportive atmosphere. "
-                 "Roleplaying is encouraged but not mandatory."
-                 "\n\n"
-                 "Mining is your primary source of income, but there are multiple ways to scrape "
-                 "together a few credits... or a few million."
-                 "\n\n"
-                 "Core Mud also features an economy which is player-driven.  Players own "
-                 "merchandise shops featuring energy weaponry or useful tools, pubs featuring "
-                 "assorted alcoholic (of course) and non-alcoholic beverages, and clinics for "
-                 "healing, to name a few."
-                 "\n\n"
-                 "Come join us today!")},
-
             {qsl("Multi-Users in Middle-earth"),
              qsl("mume.org"),
              4242,
@@ -605,10 +615,10 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "inception in the fall of 1991.")},
 
             {qsl("MorgenGrauen"),
-             qsl("mg.mud.de"),
-             4711,
-             false,
-             qsl("<a href='http://mg.mud.de/'>MorgenGrauen Webseite</a><br>"
+             qsl("mud.morgengrauen.info"),
+             4712,
+             true,
+             qsl("<a href='http://morgengrauen.info/'>MorgenGrauen Webseite</a><br>"
                  "<a href='https://www.youtube.com/MorgenGrauen'>YouTube Kanal</a><br>"
                  "<a href='https://discord.gg/nHJnYHk'>Discord Server</a>"),
              qsl(":/icons/morgengrauen_480x120.png"),

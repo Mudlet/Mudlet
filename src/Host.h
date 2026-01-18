@@ -36,24 +36,23 @@
 #include "TimerUnit.h"
 #include "TMainConsole.h"
 #include "TriggerUnit.h"
-#include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgTriggerEditor.h"
 #include "enums.h"
 
-#include "pre_guard.h"
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QFuture>
 #include <QList>
 #include <QMargins>
 #include <QPointer>
 #include <QStack>
 #include <QTextStream>
-#include "post_guard.h"
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
+#include "TMxpFrameManager.h"
 
 class QDialog;
 class QDockWidget;
@@ -63,6 +62,7 @@ class QListWidget;
 class TEvent;
 class TArea;
 class LuaInterface;
+class XMLexport;
 class TMedia;
 class GMCPAuthenticator;
 class TRoom;
@@ -185,6 +185,7 @@ public:
     void            setLogin(const QString& login)       { mLogin = login; }
     QString &       getPass()                        { return mPass; }
     void            setPass(const QString& password) { mPass = password; }
+    bool            hasAutoLoginCredentials() const  { return !mLogin.isEmpty() && !mPass.isEmpty(); }
     int             getRetries()                     { return mRetries;}
     void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
@@ -215,6 +216,14 @@ public:
     ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
     bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void            setLargeAreaExitArrows(const bool);
+    bool            getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
+
+    // Experiment system methods
+    bool            experimentEnabled(const QString& experimentKey) const;
+    std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
+    QString         getActiveExperimentInGroup(const QString& group) const;
+    QStringList     getAllExperiments() const;
+    QStringList     getValidExperiments() const;
 
     void            forceClose();
     bool            isClosingDown() const { return mIsClosingDown; }
@@ -356,15 +365,29 @@ public:
     std::pair<bool, QString> setDisplayFont(const QFont&);
     void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
+    QFont createFontWithSettings(const QString& fontName, int pointSize) const;
+    std::pair<QString, QFont::Weight> parseFontNameAndStyle(const QString& fontName) const;
+    int getConsoleBufferSize() const { return mConsoleBufferSize; }
+    void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
+    bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
+    void setUseMaxConsoleBufferSize(bool useMax) { mUseMaxConsoleBufferSize = useMax; }
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
     void updateAnsi16ColorsInTable();
+    void updateExtendedAnsiColorsInTable();
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+
+    // Multiple map views support
+    std::pair<int, QString> createMapView(int areaId = 0);
+    std::pair<bool, QString> closeMapView(int viewId);
+    std::pair<int, QString> closeAllMapViews();
+    QList<int> getMapViewIds() const;
+
     void setDebugShowAllProblemCodepoints(const bool);
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
     void setCompactInputLine(const bool state);
@@ -377,6 +400,10 @@ public:
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool setClickthrough(const QString& name, bool clickthrough);
+    bool setLabelStyleSheet(const QString& name, const QString& styleSheet);
+    bool setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
+    bool resetLinkStyle(const QString& name);
+    bool clearVisitedLinks(const QString& name);
     void hideMudletsVariables();
     bool createBuffer(const QString& name);
     QSize calcFontSize(const QString& windowName);
@@ -472,19 +499,21 @@ public:
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
-    int commandLineMinimumHeight;
-    bool mAlertOnNewData;
-    bool mAllowToSendCommand;
-    bool mAutoClearCommandLineAfterSend;
-    bool mHighlightHistory;
+    bool mDisablePasswordMasking;
+    int commandLineMinimumHeight = 30;
+    bool mAlertOnNewData = true;
+    bool mAllowToSendCommand = true;
+    bool mAutoClearCommandLineAfterSend = false;
+    bool mHighlightHistory = true;
+
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared
     // after the main TConsole for a new profile has been created during the
     // period when mIsProfileLoadingSequence has been set:
-    bool mBlockScriptCompile;
-    bool mBlockStopWatchCreation;
-    bool mEchoLuaErrors;
-    QString mCommandSeparator;
+    bool mBlockScriptCompile = true;
+    bool mBlockStopWatchCreation = true;
+    bool mEchoLuaErrors = false;
+    QString mCommandSeparator = qsl(";;");
     bool mEnableGMCP = true;
     bool mEnableMSSP = true;
     bool mEnableMSDP = false;
@@ -492,6 +521,9 @@ public:
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
     bool mEnableMXP = true;
+    bool mEnableCHARSET = true;
+    bool mEnableNAWS = true;
+    bool mEnableNEWENVIRON = true;
     bool mPromptedForMXPProcessorOn = false;
     bool mAskTlsAvailable = true;
     bool mPromptedForVersionInTTYPE = false;
@@ -501,22 +533,23 @@ public:
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
+    TMxpFrameManager mMxpFrameManager;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
-    bool mFORCE_GA_OFF;
-    bool mFORCE_NO_COMPRESSION;
-    bool mFORCE_SAVE_ON_EXIT;
+    bool mFORCE_GA_OFF = false;
+    bool mFORCE_NO_COMPRESSION = false;
+    bool mFORCE_SAVE_ON_EXIT = true;
 
-    bool mSslTsl;
-    bool mSslIgnoreExpired;
-    bool mSslIgnoreSelfSigned;
-    bool mSslIgnoreAll;
+    bool mSslTsl = false;
+    bool mSslIgnoreExpired = false;
+    bool mSslIgnoreSelfSigned = false;
+    bool mSslIgnoreAll = false;
 
-    bool mUseProxy;
+    bool mUseProxy = false;
     QString mProxyAddress;
-    quint16 mProxyPort;
+    quint16 mProxyPort = 0;
     QString mProxyUsername;
     QString mProxyPassword;
 
@@ -524,14 +557,14 @@ public:
     // that are pushdown buttons that run when they are "pushed down" during
     // loading even though the buttons start out with themselves NOT being
     // pushed down:
-    bool mIsProfileLoadingSequence;
+    bool mIsProfileLoadingSequence = false;
 
 
-    dlgTriggerEditor* mpEditorDialog;
+    QPointer<dlgTriggerEditor> mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
-    dlgNotepad* mpNotePad;
+    QPointer<dlgNotepad> mpNotePad;
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {
@@ -539,7 +572,7 @@ public:
         ScriptControl = 1, // Let scripts control via send() wantPrint parameter (default)
         Always = 2       // Always show sent commands regardless of script preferences
     };
-    CommandEchoMode mCommandEchoMode;
+    CommandEchoMode mCommandEchoMode = CommandEchoMode::ScriptControl;
 
     /*
      * This is set when the Server is remote echoing what WE send to it,
@@ -556,11 +589,11 @@ public:
     // Command echo mode getters and setters
     CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
     void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
-    
+
     // Backward compatibility methods - for existing code that expects boolean behavior
     bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
-    void setPrintCommand(bool print) { 
-        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; 
+    void setPrintCommand(bool print) {
+        mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never;
     }
 
 public:
@@ -571,15 +604,15 @@ public:
     // while a log is being written, this stores the mode of
     // the current log file and is set from
     // mIsNextLogFileInHtmlFormat at the point that a log is started.
-    bool mIsCurrentLogFileInHtmlFormat;
+    bool mIsCurrentLogFileInHtmlFormat = false;
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
     // future logs file as set in the profile preferences. See
     // also mIsCurrentLogFileInHtmlFormat.
-    bool mIsNextLogFileInHtmlFormat;
+    bool mIsNextLogFileInHtmlFormat = false;
 
-    bool mIsLoggingTimestamps;
+    bool mIsLoggingTimestamps = false;
 
     // Where to put HTML/text logfile (default is the "Logs" under the profile's
     // one):
@@ -589,19 +622,19 @@ public:
     // The first argument to QDateTime::toString(...) to generate a date/time
     // dependent filename unless it is empty in which case the above value is
     // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" has been
-    // changed to "yyyy-MM-dd#HH-mm-ss" and is set as a default in the
-    // constructor:
-    QString mLogFileNameFormat;
+    // changed to "yyyy-MM-dd#HH-mm-ss" as we always want a 24-hour clock.
+    QString mLogFileNameFormat = QLatin1String("yyyy-MM-dd#HH-mm-ss");
 
-    bool mResetProfile;
-    int mScreenHeight;
-    int mScreenWidth;
+    bool mResetProfile = false;
+    int mScreenHeight = 25;
+    int mScreenWidth = 90;
 
     // has the profile save data been loaded without issues?
     // if there were issues during loading, we should not save anything on close
     bool mLoadedOk = false;
+    QString mProfileLoadError;
 
-    int mTimeout;
+    int mTimeout = 60;
 
     QString mUrl;
 
@@ -609,19 +642,22 @@ public:
     int mBackupPort = 23;
     QString mBackupUrl;
 
-    bool mUSE_FORCE_LF_AFTER_PROMPT;
-    bool mUSE_IRE_DRIVER_BUGFIX;
-    bool mUSE_UNIX_EOL;
-    int mWrapAt;
-    int mWrapIndentCount;
-    int mWrapHangingIndentCount;
+    bool mUSE_FORCE_LF_AFTER_PROMPT = false;
+    bool mUSE_IRE_DRIVER_BUGFIX = false;
+    bool mUSE_UNIX_EOL = false;
+    int mWrapAt = 100;
+    int mWrapIndentCount = 0;
+    int mWrapHangingIndentCount = 0;
 
-    bool mEditorAutoComplete;
+    int mConsoleBufferSize = 100000;
+    bool mUseMaxConsoleBufferSize = false;
+
+    bool mEditorAutoComplete = true;
 
     // code editor theme (human-friendly name)
-    QString mEditorTheme;
+    QString mEditorTheme = QLatin1String("Mudlet");
     // code editor theme file on disk for edbee to load
-    QString mEditorThemeFile;
+    QString mEditorThemeFile = QLatin1String("Mudlet.tmTheme");
     void editorThemeChanged();
 
     // search engine URL prefix to search query
@@ -635,7 +671,7 @@ public:
     // flaws in case of items getting created/deleted, but this is just a
     // convenience feature and if it gets the item wrong, it's no worse
     // than the feature not being there.
-    int mThemePreviewItemID;
+    int mThemePreviewItemID = -1;
     // the type of item (a trigger, an alias, etc) that's previewed
     QString mThemePreviewType;
 
@@ -682,16 +718,19 @@ public:
     QColor mUpperLevelColor{QColorConstants::White};
     QColor mRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
+    QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
-    bool mMapStrongHighlight;
+    bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
     bool mTimeStampStatus = false;
-    bool mEnableSpellCheck;
+    bool mEnableSpellCheck = true;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
+    // modules that loaded successfully - used to prevent saving modules that failed to load
+    QSet<QString> mModulesLoadedOk;
     // module name = priority
     QMap<QString, int> mModulePriorities;
     // module name = location on disk, sync to other profiles?, priority
@@ -700,33 +739,34 @@ public:
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
     // Privacy option to allow the game to set Discord Rich Presence information
-    bool mDiscordDisableServerSide;
+    bool mDiscordDisableServerSide = true;
 
     // Discord privacy options to give the user control over what data a Server
     // can set over OOB protocols (MSDP & GMCP) and the user via Lua API:
-    DiscordOptionFlags mDiscordAccessFlags;
+    DiscordOptionFlags mDiscordAccessFlags{DiscordLuaAccessEnabled | DiscordSetSubMask};
 
-    double mLineSize;
-    double mRoomSize;
-    QSet<QString> mMapInfoContributors;
-    bool mBubbleMode;
+    double mLineSize = 10.0;
+    double mRoomSize = 0.5;
+    double mMapGridLineSize = 0.5;
+    QSet<QString> mMapInfoContributors{qsl("Short")};
+    bool mBubbleMode = false;
     bool mMapViewOnly = true;
-    bool mShowRoomID;
-    bool mShowPanel;
-    QString mServerGUI_Package_version;
-    QString mServerGUI_Package_name;
-    bool mAcceptServerGUI;
-    bool mAcceptServerMedia;
-    QColor mCommandLineFgColor;
-    QColor mCommandLineBgColor;
-    bool mMapperUseAntiAlias;
-    bool mMapperShowRoomBorders;
-    bool mFORCE_CHARSET_NEGOTIATION_OFF;
-    bool mForceNewEnvironNegotiationOff = false;
+    bool mShowRoomID = false;
+    bool mShowPanel = true;
+    bool mShow3DView = false;
+    QString mServerGUI_Package_version = QLatin1String("-1");
+    QString mServerGUI_Package_name = QLatin1String("nothing");
+    bool mAcceptServerGUI = true;
+    bool mAcceptServerMedia = true;
+    QColor mCommandLineFgColor{Qt::darkGray};
+    QColor mCommandLineBgColor{Qt::black};
+    bool mMapperUseAntiAlias = true;
+    bool mMapperShowRoomBorders = true;
+    bool mMapperShowGrid = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
-    bool mEnableTextAnalyzer;
+    bool mEnableTextAnalyzer = false;
     bool mWritingHostAndModules = false;
     // Set from profile preferences, if the timer interval is less
     // than this then the normal reoccuring debug output of the entire command
@@ -737,8 +777,8 @@ public:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpConnectionProxy;
     QString mProfileStyleSheet;
-    dlgTriggerEditor::SearchOptions mSearchOptions;
-    TConsole::SearchOptions mBufferSearchOptions;
+    dlgTriggerEditor::SearchOptions mSearchOptions = dlgTriggerEditor::SearchOptionNone;
+    TConsole::SearchOptions mBufferSearchOptions = TConsole::SearchOption::SearchOptionNone;
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<MMCPServer> mmcpServer;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
@@ -750,7 +790,7 @@ public:
 
     QMap<QString, QKeySequence*> profileShortcuts;
 
-    bool mTutorialForCompactLineAlreadyShown;
+    bool mTutorialForCompactLineAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
@@ -829,6 +869,12 @@ private:
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;
 
+    // Experiment system storage: key -> enabled state
+    QMap<QString, bool> mExperiments;
+
+    // Static whitelist of valid experiments
+    static const QSet<QString> mValidExperiments;
+
     TriggerUnit mTriggerUnit;
     TimerUnit mTimerUnit;
     ScriptUnit mScriptUnit;
@@ -854,8 +900,8 @@ private:
 
     int mPort;
 
-    int mRetries;
-    bool mSaveProfileOnExit;
+    int mRetries = 5;
+    bool mSaveProfileOnExit = false;
 
     // To keep things simple for Lua the first stopwatch will be allocated a key
     // of 1 - and anything less that that will be rejected - and we force
@@ -868,20 +914,20 @@ private:
 
     QStringList mActiveModules;
 
-    bool mHaveMapperScript;
+    bool mHaveMapperScript = false;
     // This option makes the control on the preferences tristated so the value
     // used depends - currently - on what the MUD Server encoding is (only set
     // true for GBK, GB18030, Big5/Big-HKCS, EUC-KR ones) - however this was
     // due for revision once locale/language support is brought in - when it
     // could be made dependent on that instead.
-    bool mAutoAmbigousWidthGlyphsSetting;
+    bool mAutoAmbigousWidthGlyphsSetting = true;
     // If above is true is the value deduced from the MUD server encoding, if
     // the above is false is the user's direct setting - this is so that changes
     // in the TTextEdit classes are only made when necessary:
-    bool mWideAmbigousWidthGlyphs;
+    bool mWideAmbigousWidthGlyphs = false;
 
     // keeps track of all of the array writers we're currently operating with
-    QHash<QString, XMLexport*> writers;
+    QHash<QString, std::shared_ptr<XMLexport>> writers;
 
     QFuture<void> mModuleFuture;
 
@@ -912,11 +958,11 @@ private:
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter
     // (true) or not (false):
-    bool mSGRCodeHasColSpaceId;
+    bool mSGRCodeHasColSpaceId = false;
 
     // Flag whether the Server can use ANSI OSC "P#RRGGBB\" to redefine the
     // 16 basic colors (and OSC "R\" to reset them).
-    bool mServerMayRedefineColors;
+    bool mServerMayRedefineColors = false;
 
     // Was public but hidden to prevent it being changed without going through
     // the process to signal to users that they need to change dictionaries:
@@ -924,8 +970,8 @@ private:
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be
     // looked up directly by that class:
-    bool mEnableUserDictionary;
-    bool mUseSharedDictionary;
+    bool mEnableUserDictionary = true;
+    bool mUseSharedDictionary = false;
 
     // These hold values that are needed in the TMap class which are saved with
     // the profile - but which cannot be kept there as that class is not
@@ -936,25 +982,24 @@ private:
     // 1 is Fixed red color ring with adjustable outer/inner diameter
     // 2 is fixed blue/yellow colors ring with adjustable outer/inner diameter
     // 3 is adjustable outer(primary)/inner(secondary) colors ring with adjustable outer/inner diameter
-    quint8 mPlayerRoomStyle;
-    QColor mPlayerRoomOuterColor;
-    QColor mPlayerRoomInnerColor;
+    quint8 mPlayerRoomStyle = 0;
+    QColor mPlayerRoomOuterColor{Qt::red};
+    QColor mPlayerRoomInnerColor{Qt::white};
     // Percentage of the room size (actually width) for the outer diameter of
     // the circular marking, integer percentage clamped in the preferences
-    // between 200 and 50 - default 120:
-    quint8 mPlayerRoomOuterDiameterPercentage;
+    // between 200 and 50:
+    quint8 mPlayerRoomOuterDiameterPercentage = 120;
     // Percentage of the outer size for the inner diameter of the circular
-    // marking, integer percentage clamped in the preferences between 83 and 0,
-    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
-    // one):
-    quint8 mPlayerRoomInnerDiameterPercentage;
+    // marking, integer percentage clamped in the preferences between 83 and 0.
+    // NOT USED FOR "Original" style marking (the 0'th one):
+    quint8 mPlayerRoomInnerDiameterPercentage = 70;
     // Whether the TTextEditor class should immediately report to debug output
     // any dodgy codepoints that it has problems with - if false it only reports
     // each codepoint the first time it encounters itL
-    bool mDebugShowAllProblemCodepoints;
+    bool mDebugShowAllProblemCodepoints = false;
 
     // Now a per profile option this one represents the state of this profile:
-    bool mCompactInputLine;
+    bool mCompactInputLine = false;
 
     QTimer purgeTimer;
 

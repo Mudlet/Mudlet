@@ -23,7 +23,7 @@
 
 message(STATUS "Building translations")
 
-find_package(Qt6LinguistTools 6.4.0 REQUIRED)
+find_package(Qt6LinguistTools 6.8.2 REQUIRED)
 get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
 
 file(GLOB TS_FILES *.ts)

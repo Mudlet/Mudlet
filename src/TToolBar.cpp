@@ -33,12 +33,8 @@
 TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget(pW)
 , mpTAction(pA)
-, mVerticalOrientation(false)
 , mpWidget( new QWidget( this ) )
 , mpHost(pHost)
-, mRecordMove(false)
-, mpLayout(nullptr)
-, mItemCount(0)
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);
@@ -147,15 +143,13 @@ void TToolBar::addButton(TFlipButton* pB)
         if (columns <= 0) {
             columns = 1;
         }
-        if (columns > 0) {
-            mItemCount++;
-            const int row = mItemCount / columns;
-            const int col = mItemCount % columns;
-            if (mVerticalOrientation) {
-                mpLayout->addWidget(pB, row, col);
-            } else {
-                mpLayout->addWidget(pB, col, row);
-            }
+        mItemCount++;
+        const int row = mItemCount / columns;
+        const int col = mItemCount % columns;
+        if (mVerticalOrientation) {
+            mpLayout->addWidget(pB, row, col);
+        } else {
+            mpLayout->addWidget(pB, col, row);
         }
     } else {
         pB->move(pB->mpTAction->mPosX, pB->mpTAction->mPosY);

@@ -23,9 +23,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_actions_main_area.h"
-#include "post_guard.h"
 
 
 class dlgActionMainArea : public QWidget, public Ui::actions_main_area

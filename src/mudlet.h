@@ -26,15 +26,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Announcer.h"
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
 #include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
-#include "TDetachedWindow.h"
-#include "TMediaData.h"
 #include "utils.h"
 #include <memory>
 
@@ -42,9 +39,7 @@
 #include "updater.h"
 #endif
 
-#include "pre_guard.h"
 #include "ui_main_window.h"
-#include "edbee/views/texttheme.h"
 #include <QAction>
 #include <QDir>
 #include <QFlags>
@@ -58,43 +53,14 @@
 #include <QTime>
 #include <QVersionNumber>
 #include <QWindow>
-#include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include <../3rdparty/qtkeychain/keychain.h>
+#include <qtkeychain/keychain.h>
 #else
 #include <qt6keychain/keychain.h>
 #endif
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
-
-// for system physical memory info
-#if defined(Q_OS_WINDOWS)
-#include <Windows.h>
-#include <Psapi.h>
-#elif defined(Q_OS_MACOS)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <array>
-#elif defined(Q_OS_HURD)
-#include <errno.h>
-#include <unistd.h>
-#elif defined(Q_OS_OPENBSD)
-// OpenBSD doesn't have a sysinfo.h
-#include <sys/sysctl.h>
-#include <unistd.h>
-#elif defined(Q_OS_UNIX)
-// Including both GNU/Linux and FreeBSD
-#include <sys/resource.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// Any other OS?
-#endif
-#include "post_guard.h"
 
 class QCloseEvent;
 class QMediaPlayer;
@@ -113,10 +79,16 @@ class QTimer;
 class dlgAboutDialog;
 class dlgConnectionProfiles;
 class dlgIRC;
+class dlgNotepad;
+class dlgPackageManager;
+class dlgModuleManager;
+class dlgPackageExporter;
 class dlgProfilePreferences;
+class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
 class TConsole;
+class TDetachedWindow;
 class TDockWidget;
 class TEvent;
 class TLabel;
@@ -239,6 +211,7 @@ public:
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
+    void updateMainWindowTitle();
     void forceClose();
     void armForceClose();
     Host* getActiveHost();
@@ -246,6 +219,7 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     HostManager& getHostManager() { return mHostManager; }
+    ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
@@ -268,7 +242,7 @@ public:
     bool isVersionAtLeast(const QString& minVersion);
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
-    
+
     // Profile validation and orphan detection
     bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
@@ -313,19 +287,22 @@ public:
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
+    void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
-    void setupPreInstallPackages(const QString&);
+    void setupPreInstallPackages(const QString&, const QString&);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
+    bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
     void showOptionsDialog(const QString&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
@@ -436,7 +413,6 @@ public slots:
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
-    void slot_irc();
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
     void slot_showFullChangelog();
@@ -460,6 +436,7 @@ public slots:
     void slot_reattachAllDetachedWindows();
     void slot_toggleAlwaysOnTop();
     void slot_minimize();
+    void slot_newMapWindow();
     void updateWindowMenu();
     void slot_activateMainWindow();
     void slot_activateDetachedWindow();
@@ -500,6 +477,13 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    static void restoreProfileFocus(const QString& profileName);
+    static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
+    void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
+    void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
+    void setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager);
+    void setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter);
+    void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
     void slot_toggleMainToolBar();
@@ -542,7 +526,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
-
+    void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
@@ -566,11 +550,11 @@ private slots:
 
 
 private:
-    static bool desktopInDarkMode();
 
 
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+    static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString &dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
@@ -651,7 +635,6 @@ private:
     QPointer<QAction> mpActionDiscord;
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
-    QPointer<QAction> mpActionIRC;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
     QPointer<QAction> mpActionModuleManager;
@@ -676,7 +659,6 @@ private:
     QPointer<QAction> mpActionToggleMainToolBar;
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
-    Announcer* mpAnnouncer = nullptr;
     // This pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsequent
     // loadTranslators(...) call
@@ -690,6 +672,7 @@ private:
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
     QPointer<QLabel> mpLabelReplayTime;
+    QPointer<QWidget> mpFocusWidgetBeforeDeactivate;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
     // a list of character passwords currently being migrated to secure storage
@@ -717,6 +700,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mShowMapAuditErrors = false;
+    bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
     QSplitter* mpSplitter_profileContainer = nullptr;
     bool mStorePasswordsSecurely = true;
     // Argument to QDateTime::toString(...) to format the elapsed time display
@@ -752,6 +736,9 @@ private:
     void shutdownAI();
     bool findAIModel();
     void setupAIConfig();
+
+    // Helper method for detached windows cleanup
+    void saveDetachedWindowsGeometry();
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
