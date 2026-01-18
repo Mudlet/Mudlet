@@ -25,8 +25,8 @@
 
 #include <QProcess>
 
-#include "TLuaInterpreter.h"
-
+class TLuaInterpreter;
+struct lua_State;
 
 class TForkedProcess : public QProcess
 {

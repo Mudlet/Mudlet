@@ -107,7 +107,6 @@ private slots:
             << false
             << false
             << 0;
-        
         QStringList attrs8;
         QTest::newRow("Test8_FlagWithChevronsAndAmpersand")
             << "Weird"

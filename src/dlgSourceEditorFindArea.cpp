@@ -22,6 +22,7 @@
 #include "ui_dlgPackageExporter.h"
 
 #include <QDebug>
+#include <QKeyEvent>
 
 dlgSourceEditorFindArea::dlgSourceEditorFindArea(QWidget* pParentWidget)
 : QWidget(pParentWidget)

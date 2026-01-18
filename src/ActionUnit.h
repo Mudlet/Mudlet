@@ -24,6 +24,8 @@
  ***************************************************************************/
 
 
+#include "utils.h"
+
 #include <QMap>
 #include <QPointer>
 #include <QString>
@@ -35,7 +37,6 @@ class TAction;
 class TEasyButtonBar;
 class TToolBar;
 
-
 class ActionUnit
 {
     friend class XMLexport;
@@ -45,6 +46,7 @@ public:
     explicit ActionUnit(Host* pHost)
     : mpHost(pHost)
     {}
+    ~ActionUnit();
 
     std::list<TAction*> getActionRootNodeList()
     {
@@ -63,6 +65,7 @@ public:
     bool registerAction(TAction* pT);
     void unregisterAction(TAction* pT);
     void reParentAction(int childID, int oldParentID, int newParentID, int parentPostion = -1, int childPosition = -1);
+    void reParentAction(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);

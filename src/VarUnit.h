@@ -23,12 +23,10 @@
  ***************************************************************************/
 
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QMap>
 #include <QSet>
 #include <QStringList>
-
-#include "utils.h"
 
 
 class TVar;
@@ -42,6 +40,7 @@ class VarUnit
 
 public:
     VarUnit();
+    ~VarUnit();
     QStringList varName(TVar*);
     QStringList shortVarName(TVar*);
     bool varExists(TVar*);
@@ -68,11 +67,13 @@ public:
     void removeHidden(const QString &name);
     bool isSaved(TVar*);
     void addPointer(const void*);
+    QString getUnsaveableReason(TVar*);
     QSet<QString> hidden;
     QSet<QString> hiddenByUser;
     QSet<QString> savedVars;
 
 private:
+    int countTableItems(TVar*);
     TVar* base;
     QSet<QString> variableSet;
     // ?? variables

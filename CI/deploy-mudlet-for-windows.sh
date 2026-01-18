@@ -21,7 +21,9 @@
 
 set -x
 
-# Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
+# Version: 2.3.0    Add build counter suffix for multiple builds from same commit
+#          2.2.0    Skip commit date check when build is manually forced
+#          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 
 # Exit codes:
@@ -89,14 +91,42 @@ fi
 export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
-# Extract version from the mudlet.pro file
-VERSION_LINE=$(grep "VERSION =" "${GITHUB_WORKSPACE}/src/mudlet.pro")
-VERSION_REGEX='= {1}(.+)$'
+# Extract version from CMakeLists.txt
+VERSION_LINE=$(grep "set(APP_VERSION" "${GITHUB_WORKSPACE}/CMakeLists.txt")
+VERSION_REGEX='set\(APP_VERSION (.+)\)'
 
 # Use Bash regex matching to extract version - don't double-quote these as that
 # can mess things up!
 if [[ ${VERSION_LINE} =~ ${VERSION_REGEX} ]]; then
   VERSION="${BASH_REMATCH[1]}"
+fi
+
+# For PTB builds, check if we need a build counter suffix
+# This allows multiple builds from the same commit
+BUILD_COUNTER_SUFFIX=""
+if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]] && [[ -n "${BUILD_COMMIT}" ]]; then
+  # Query the dblsqd feed for existing versions with this commit
+  EXISTING_VERSIONS=$(curl --silent "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86_64" | \
+    jq --raw-output ".releases[].version" | \
+    grep -E "${BUILD_COMMIT}(rebuild[0-9]+)?$" || true)
+
+  if [[ -n "${EXISTING_VERSIONS}" ]]; then
+    # Count existing versions and find the highest build number
+    HIGHEST_BUILD=1
+    while IFS= read -r ver; do
+      if [[ "${ver}" =~ rebuild([0-9]+)$ ]]; then
+        NUM="${BASH_REMATCH[1]}"
+        if [[ "${NUM}" -gt "${HIGHEST_BUILD}" ]]; then
+          HIGHEST_BUILD="${NUM}"
+        fi
+      fi
+    done <<< "${EXISTING_VERSIONS}"
+
+    # Next build number
+    NEXT_BUILD=$((HIGHEST_BUILD + 1))
+    BUILD_COUNTER_SUFFIX="rebuild${NEXT_BUILD}"
+    echo "=== Found existing PTB builds for commit ${BUILD_COMMIT}, using build counter: ${NEXT_BUILD} ==="
+  fi
 fi
 
 # Check if MUDLET_VERSION_BUILD is empty and print accordingly
@@ -108,7 +138,8 @@ else
   # Include Git SHA1 in the build information
   # Probably a PTB - so typical output could be:
   #    "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678
-  echo "BUILDING MUDLET ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+  # Or with build counter: "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678rebuild2
+  echo "BUILDING MUDLET ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}"
 fi
 
 # Check if we're building from the Mudlet/Mudlet repository and not a fork
@@ -150,16 +181,21 @@ else
   # Check if it's a Public Test Build
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
 
-    # Get the commit date of the last commit
-    COMMIT_DATE=$(git show -s --format="%cs")
-    # Get yesterday's date in the same format
-    YESTERDAY_DATE=$(date --date="yesterday" +%Y-%m-%d)
-
-    if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
-      echo "=== No new commits, aborting public test build generation ==="
-      exit 0
+    # Skip commit check if this is a manually forced build
+    if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
+      echo "=== Forced build requested, skipping commit date check ==="
     else
-      echo "=== New commits, continuing to create a public test build ==="
+      # Get the commit date of the last commit
+      COMMIT_DATE=$(git show -s --format="%cs")
+      # Get yesterday's date in the same format
+      YESTERDAY_DATE=$(date --date="yesterday" +%Y-%m-%d)
+
+      if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
+        echo "=== No new commits, aborting public test build generation ==="
+        exit 0
+      else
+        echo "=== New commits, continuing to create a public test build ==="
+      fi
     fi
 
     # Squirrel uses the name of the binary for the Start menu, so need to rename
@@ -172,6 +208,11 @@ else
 
   echo "Renaming mudlet.exe to ${PACKAGE_EXE}"
   mv "${PACKAGE_PATH}/mudlet.exe" "${PACKAGE_PATH}/${PACKAGE_EXE}"
+
+  # Create squirrel sidecar file to mark only the main exe for Start Menu shortcut
+  # This prevents crashpad_handler.exe from getting its own Start Menu entry
+  echo "1" > "${PACKAGE_PATH}/${PACKAGE_EXE}.squirrel"
+
   PACKAGE_EXE_PATHFILE="$(cygpath -au "${PACKAGE_PATH}/${PACKAGE_EXE}")"
   PACKAGE_EXE_WINPATHFILE="$(cygpath -aw "${PACKAGE_EXE_PATHFILE}")"
 
@@ -179,31 +220,12 @@ else
   git clone https://github.com/Mudlet/installers.git "${GITHUB_WORKSPACE}/installers"
   cd "${GITHUB_WORKSPACE}/installers/windows" || exit 1
 
-  echo "=== Setting up Java 21 for signing ==="
-  # Java is installed by default, we just need to select which version to use:
-  JAVA_HOME="$(cygpath -au "${JAVA_HOME_21_X64}")"
-  export JAVA_HOME
-  export PATH="${JAVA_HOME}/bin:${PATH}"
-  JAVA_JAR_WINPATHFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/jsign-7.0-SNAPSHOT.jar")"
-
-  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Code signing of Mudlet application and bundled libraries skipped - no Azure token provided ==="
-  else
-    echo "=== Signing Mudlet executable and bundled libraries ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${PACKAGE_EXE_WINPATHFILE}" "${PACKAGE_WINPATH}\\**\\*.dll"
-  fi
-
-  echo "=== Preparing an intermediate artifact of the (signed) code ==="
+  echo "=== Preparing an intermediate artifact of the code ==="
   # What will it be called:
   if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
     INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64"
   else
-    INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64"
+    INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64"
   fi
   # This intermediate will NOT be uploaded but will remain on the GH server as
   # an artifact for a default (90?) days
@@ -245,14 +267,15 @@ else
     # which cannot handle dotted numbers. So revert to original methodology that
     # appended the short commit SHA1 - and just not worry about any sort of
     # sorting:
-    INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}"
+    INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The name we want to use for the installer;
     # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
-    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64.exe"
-    DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
+    DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The name that has to be passed as the artifact so that the Mudlet website
     # will accept it as a PTB:
-    ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64-installer.exe"
+    ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
   else
     NAME_SUFFIX='_64_'
     INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet.ico")
@@ -303,19 +326,6 @@ else
   INSTALLER_EXE_PATHFILE="$(cygpath -au "${RELEASE_DIR}/${INSTALLER_EXE}")"
   echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
-
-  # Sign the final installer
-  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Code signing of Mudlet installer skipped - no Azure token provided ==="
-  else
-    echo "=== Signing installer ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${INSTALLER_EXE_WINPATHFILE}"
-  fi
 
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="
@@ -523,7 +533,7 @@ if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
   echo "Finished deploying Mudlet ${VERSION}"
 else
   # Not a release build so include the Git SHA1 in the message
-  echo "Finished deploying Mudlet ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+  echo "Finished deploying Mudlet ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}"
 fi
 
 if [[ -n "${DEPLOY_URL}" ]]; then

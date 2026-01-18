@@ -22,8 +22,8 @@
 
 
 #include "ui_source_editor_find_area.h"
-#include <QTextEdit>
-#include <QKeyEvent>
+
+class QEvent;
 
 /*namespace Ui {
 class dlgSourceEditorFindArea;

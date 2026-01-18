@@ -48,6 +48,10 @@ bool RoomMoveDragHandler::matches(const T2DMap::MapInteractionContext& context) 
         return false;
     }
 
+    if (!context.buttons.testFlag(Qt::LeftButton) && !mMapWidget.mRoomMoveViaContextMenu) {
+        return false;
+    }
+
     return context.event->type() == QEvent::MouseMove;
 }
 
@@ -58,6 +62,10 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
     }
 
     if (!context.isRoomBeingMoved || context.isSizingLabel || !context.multiSelectionSet || context.multiSelectionSet->isEmpty()) {
+        return false;
+    }
+
+    if (!context.buttons.testFlag(Qt::LeftButton) && !mMapWidget.mRoomMoveViaContextMenu) {
         return false;
     }
 
@@ -76,18 +84,25 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
         return false;
     }
 
-    if (!mMapWidget.getCenterSelection()) {
-        return false;
+    if (!mMapWidget.mHasRoomMoveLastMapPoint) {
+        mMapWidget.mRoomMoveLastMapPoint = QPointF(qRound(context.mapX), qRound(context.mapY));
+        mMapWidget.mHasRoomMoveLastMapPoint = true;
     }
 
-    TRoom* referenceRoom = roomDb->getRoom(mMapWidget.mMultiSelectionHighlightRoomId);
-    if (!referenceRoom) {
-        return false;
+    const qreal deltaX = context.mapPoint.x() - mMapWidget.mRoomMoveLastMapPoint.x();
+    const qreal deltaY = context.mapPoint.y() - mMapWidget.mRoomMoveLastMapPoint.y();
+
+    const int dx = qRound(deltaX);
+    const int dy = qRound(deltaY);
+
+    if (!dx && !dy) {
+        return true;
     }
 
-    const int dx = qRound(context.mapX) - referenceRoom->x();
-    const int dy = qRound(context.mapY) - referenceRoom->y();
+    mMapWidget.mRoomMoveLastMapPoint.setX(mMapWidget.mRoomMoveLastMapPoint.x() + dx);
+    mMapWidget.mRoomMoveLastMapPoint.setY(mMapWidget.mRoomMoveLastMapPoint.y() + dy);
 
+    QSet<int> dirtyAreas;
     QSetIterator<int> roomIterator = mMapWidget.mMultiSelectionSet;
     while (roomIterator.hasNext()) {
         TRoom* room = roomDb->getRoom(roomIterator.next());
@@ -96,6 +111,7 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
         }
 
         room->offset(dx, dy, 0);
+        dirtyAreas.insert(room->getArea());
 
         QMapIterator<QString, QList<QPointF>> customLineIterator(room->customLines);
         QMap<QString, QList<QPointF>> updatedLines;
@@ -111,6 +127,13 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
         }
         room->customLines = updatedLines;
         room->calcRoomDimensions();
+    }
+
+    QSetIterator<int> areaIterator(dirtyAreas);
+    while (areaIterator.hasNext()) {
+        if (auto* area = roomDb->getArea(areaIterator.next())) {
+            area->calcSpan();
+        }
     }
 
     mMapWidget.repaint();

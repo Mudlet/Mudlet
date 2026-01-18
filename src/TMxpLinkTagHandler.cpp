@@ -74,13 +74,14 @@ QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)
         // <A>http://someurl.com/<A>
         mIsHrefInContent = true;
         return "&text;";
-    } else if (tag->hasAttribute("href")) {
-        return tag->getAttributeValue("href");
-    } else if (!tag->getAttribute(0).hasValue()) {
-        return tag->getAttribute(0).getName();
-    } else {
-        return "";
     }
+    if (tag->hasAttribute("href")) {
+        return tag->getAttributeValue("href");
+    }
+    if (!tag->getAttribute(0).hasValue()) {
+        return tag->getAttribute(0).getName();
+    }
+    return "";
 }
 void TMxpLinkTagHandler::handleContent(char ch)
 {
