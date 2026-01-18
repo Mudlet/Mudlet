@@ -24,12 +24,10 @@
 #include "TEvent.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QHostAddress>
 #include <QTcpSocket>
 #include <QRegularExpression>
 #include <QtGlobal>
-#include "post_guard.h"
 
 QString convertToIPv4(QHostAddress addr)
 {

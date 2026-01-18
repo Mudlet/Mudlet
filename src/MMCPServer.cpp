@@ -27,7 +27,6 @@
 
 #include <string>
 
-#include "pre_guard.h"
 #include <QTcpServer>
 #include <QHostAddress>
 #include <QListIterator>
@@ -35,7 +34,6 @@
 #include <QString>
 #include <QStringList>
 #include <QVariant>
-#include "post_guard.h"
 
 MMCPServer::MMCPServer(Host* pHost)
 : QTcpServer()
