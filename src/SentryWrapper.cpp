@@ -17,6 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "SentryWrapper.h"
+#include "utils.h"
+
 #ifdef WITH_SENTRY
 #include <QFile>
 #include <QStandardPaths>
@@ -36,9 +39,6 @@
 #include <string>
 #include <cstdlib>
 #include <algorithm>
-
-#include "SentryWrapper.h"
-#include "utils.h"
 
 // Initializes Sentry options for crash/error reporting.
 // Crashes are first stored in a local cache folder, then automatically sent.
