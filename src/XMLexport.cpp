@@ -158,12 +158,18 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     }
 }
 
-void XMLexport::exportHost(const QString& filename_pugi_xml)
+bool XMLexport::exportHost(const QString& filename_pugi_xml)
 {
+    if (!mpHost) {
+        qCritical() << "XMLexport::exportHost() ERROR - Host is null, cannot export";
+        return false;
+    }
+
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
 
     runAsyncSave(filename_pugi_xml, qsl("profile"));
+    return true;
 }
 
 // Helper to encapsulate async save pattern: clone document, save in background thread,
@@ -436,7 +442,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
     bool enableUserDictionary;
     bool useSharedDictionary;
-    mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     if (pHost->mMapInfoContributors.isEmpty()) {
