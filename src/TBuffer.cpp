@@ -877,12 +877,33 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 localBufferPosition = spanEnd + 1; // Skip past backslash
                 continue;
             } else if (exceededLength) {
-                // Length limit exceeded - abort OSC mode to prevent infinite buffering
-                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - OSC sequence exceeded "
-                                             << MAX_OSC_SEQUENCE_LENGTH << " bytes without terminator, aborting.";
-                mGotOSC = false;
-                // Don't advance localBufferPosition - let the content be processed as normal text
-                continue;
+                // Length limit exceeded - scan forward for a terminator to skip the malformed sequence
+                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - OSC sequence exceeded "
+                                               << MAX_OSC_SEQUENCE_LENGTH << " bytes without terminator, scanning for terminator to recover.";
+                // Continue scanning from where we left off to find a terminator
+                while (spanEnd < localBufferLength
+                       && localBuffer[spanEnd] != '\x07'
+                       && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
+                    ++spanEnd;
+                }
+                // Check if we found a terminator
+                if (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07') {
+                    // Found BEL - skip to after it
+                    mGotOSC = false;
+                    localBufferPosition = spanEnd + 1;
+                    continue;
+                } else if (spanEnd < localBufferLength && spanEnd > 0
+                           && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\') {
+                    // Found ST - skip to after it
+                    mGotOSC = false;
+                    localBufferPosition = spanEnd + 1;
+                    continue;
+                } else {
+                    // No terminator found yet - wait for more data
+                    // Store from current position to avoid re-scanning the entire sequence
+                    mIncompleteSequenceBytes = localBuffer.substr(spanEnd);
+                    return;
+                }
             } else {
                 // Incomplete sequence - not enough data yet, wait for more
                 // (This is safe because we're under the length limit)
@@ -2589,6 +2610,11 @@ void TBuffer::decodeSGR(const QString& sequence)
 
 void TBuffer::decodeOSC(const QString& sequence)
 {
+    if (sequence.isEmpty()) {
+        qWarning() << "TBuffer::decodeOSC(...) WARNING - Received empty OSC sequence, ignoring.";
+        return;
+    }
+
     Host* pHost = mpHost;
     if (!pHost) {
         qWarning() << "TBuffer::decodeOSC(...) ERROR - Called when mpHost pointer is nullptr";

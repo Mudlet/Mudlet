@@ -117,6 +117,57 @@ private slots:
                  qPrintable(QString("Expected text to contain '%1' but got '%2'").arg(expectedContains, actualText)));
     }
 
+    // Test that BEL-terminated OSC P (color redefinition) works
+    void test_BelTerminatedOscP_TextDisplayed()
+    {
+        // OSC P redefines color palette, with BEL terminator, followed by text
+        // ESC ] P 0 F F 0 0 0 0 BEL Hello
+        QString messageFromMud = QString("\x1b]P0FF0000\x07Hello");
+        QString expectedText = "Hello";
+
+        mpServer->setWelcomeMessage(messageFromMud);
+        startProfile(mHostname, mLocalhost, mPort);
+        QSignalSpy(mudlet::self()->getActiveHost()->mpConsole, &TMainConsole::signal_newDataAlert).wait(200);
+
+        QString actualText = mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
+        QCOMPARE(actualText, expectedText);
+    }
+
+    // Test that empty OSC sequence doesn't crash (edge case)
+    void test_EmptyOscSequence_DoesNotCrash()
+    {
+        // OSC with immediate BEL terminator (empty content)
+        // ESC ] BEL Normal text
+        QString messageFromMud = QString("\x1b]\x07Normal text");
+        QString expectedText = "Normal text";
+
+        mpServer->setWelcomeMessage(messageFromMud);
+        startProfile(mHostname, mLocalhost, mPort);
+        QSignalSpy(mudlet::self()->getActiveHost()->mpConsole, &TMainConsole::signal_newDataAlert).wait(200);
+
+        QString actualText = mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
+        QCOMPARE(actualText, expectedText);
+    }
+
+    // Test that OSC sequence exceeding length limit doesn't hang and recovers gracefully
+    void test_OscExceedsLengthLimit_DoesNotHang()
+    {
+        // Create an OSC sequence longer than 4096 bytes, followed by a BEL and normal text
+        QString longContent = QString(5000, 'A');
+        // ESC ] 2 ; <5000 A's> BEL Normal text
+        QString messageFromMud = QString("\x1b]2;") + longContent + QString("\x07Normal text");
+        QString expectedText = "Normal text";
+
+        mpServer->setWelcomeMessage(messageFromMud);
+        startProfile(mHostname, mLocalhost, mPort);
+        QSignalSpy(mudlet::self()->getActiveHost()->mpConsole, &TMainConsole::signal_newDataAlert).wait(200);
+
+        QString actualText = mudlet::self()->getActiveHost()->mpConsole->getCurrentLine("");
+        // When length limit is exceeded, the parser scans forward for a terminator and
+        // skips the malformed sequence. Text after the terminator should display normally.
+        QCOMPARE(actualText, expectedText);
+    }
+
     void cleanup()
     {
         delete mpServer;
