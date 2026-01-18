@@ -9396,13 +9396,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="636"/>
       <source>Set a custom border color and thickness for the selected room(s). Leave at default to use the global map settings.</source>
       <extracomment>Instruction text shown in room properties dialog for the border customization section</extracomment>
-      <translation type="unfinished"/>
+      <translation>Imposta un colore del bordo e lo spessore per la stanza/e selezionata/e. Lascia il valore predefinito per utilizzare le impostazioni globali della mappa.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="649"/>
       <source>Set border color</source>
       <extracomment>Title for the color picker dialog when selecting a room border color</extracomment>
-      <translation type="unfinished"/>
+      <translation>Imposta colore bordo</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="476"/>
@@ -10081,12 +10081,12 @@ Help contents of a selectable option for the Trigger intro</extracomment>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1258"/>
       <source>Whole word</source>
-      <translation type="unfinished"/>
+      <translation>Parola intera</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1260"/>
       <source>Only match whole words</source>
-      <translation type="unfinished"/>
+      <translation>Corrispondenza solo parole intere</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1762"/>
@@ -16997,27 +16997,27 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
       <source>Border</source>
-      <translation type="unfinished"/>
+      <translation>Bordo</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
       <source>Color of the room border</source>
-      <translation type="unfinished"/>
+      <translation>Colore del bordo della stanza</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="294"/>
       <source>Set border color</source>
-      <translation type="unfinished"/>
+      <translation>Imposta colore bordo</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="332"/>
       <source>Thickness:</source>
-      <translation type="unfinished"/>
+      <translation>Spessore:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="345"/>
       <source>(use global)</source>
-      <translation type="unfinished"/>
+      <translation>(usa globale)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="364"/>
