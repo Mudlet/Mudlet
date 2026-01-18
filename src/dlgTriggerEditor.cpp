@@ -2930,8 +2930,9 @@ void dlgTriggerEditor::delete_alias()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
-        
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TAlias* pT = mpHost->getAliasUnit()->getAlias(itemId);
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -2939,11 +2940,11 @@ void dlgTriggerEditor::delete_alias()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmAliasView, itemId);
             delete pT;
         }
     }
 
-    // Set new selection
     if (newSelection) {
         mpCurrentAliasItem = newSelection;
         treeWidget_aliases->setCurrentItem(newSelection);
@@ -3003,14 +3004,13 @@ void dlgTriggerEditor::delete_action()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
-        
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TAction* pT = mpHost->getActionUnit()->getAction(itemId);
+
         if (pT) {
-            // if active, deactivate.
             if (pT->isActive()) {
                 pT->deactivate();
             }
-            // set this and the parent TActions as changed so the toolbar is updated.
             pT->setDataChanged();
 
             if (pParentItem && !newSelection) {
@@ -3019,11 +3019,11 @@ void dlgTriggerEditor::delete_action()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmActionView, itemId);
             delete pT;
         }
     }
 
-    // Set new selection
     if (newSelection) {
         mpCurrentActionItem = newSelection;
         treeWidget_actions->setCurrentItem(newSelection);
@@ -3032,7 +3032,7 @@ void dlgTriggerEditor::delete_action()
         mpCurrentActionItem = nullptr;
         clearActionForm();
     }
-    
+
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -3167,8 +3167,9 @@ void dlgTriggerEditor::delete_script()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
-        
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TScript* pT = mpHost->getScriptUnit()->getScript(itemId);
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3176,11 +3177,11 @@ void dlgTriggerEditor::delete_script()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmScriptView, itemId);
             delete pT;
         }
     }
 
-    // Set new selection
     if (newSelection) {
         mpCurrentScriptItem = newSelection;
         treeWidget_scripts->setCurrentItem(newSelection);
@@ -3240,8 +3241,9 @@ void dlgTriggerEditor::delete_key()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
-        
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TKey* pT = mpHost->getKeyUnit()->getKey(itemId);
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3249,11 +3251,11 @@ void dlgTriggerEditor::delete_key()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmKeysView, itemId);
             delete pT;
         }
     }
 
-    // Set new selection
     if (newSelection) {
         mpCurrentKeyItem = newSelection;
         treeWidget_keys->setCurrentItem(newSelection);
@@ -3313,8 +3315,9 @@ void dlgTriggerEditor::delete_trigger()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
-        
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(itemId);
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3322,11 +3325,11 @@ void dlgTriggerEditor::delete_trigger()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmTriggerView, itemId);
             delete pT;
         }
     }
 
-    // Set new selection
     if (newSelection) {
         mpCurrentTriggerItem = newSelection;
         treeWidget_triggers->setCurrentItem(newSelection);
@@ -3386,8 +3389,9 @@ void dlgTriggerEditor::delete_timer()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
-        
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TTimer* pT = mpHost->getTimerUnit()->getTimer(itemId);
+
         if (pT) {
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3395,11 +3399,11 @@ void dlgTriggerEditor::delete_timer()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmTimerView, itemId);
             delete pT;
         }
     }
 
-    // Set new selection
     if (newSelection) {
         mpCurrentTimerItem = newSelection;
         treeWidget_timers->setCurrentItem(newSelection);
@@ -6423,12 +6427,9 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current trigger before switching to the new one
     if (pItem != mpCurrentTriggerItem) {
-        // Save the editor state of the current trigger before switching
         if (mpCurrentTriggerItem) {
-            const int currentID = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
-            saveEditorState(EditorViewType::cmTriggerView, currentID);
+            saveEditorState(EditorViewType::cmTriggerView, mpCurrentTriggerItem->data(0, Qt::UserRole).toInt());
         }
         saveTrigger();
     }
@@ -6587,17 +6588,12 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         checkForMoreThanOneTriggerItem();
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
-
-        // Restore the editor state (cursor and scroll position) if previously saved
         restoreEditorState(EditorViewType::cmTriggerView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
         }
-
     } else {
-        // No details to show - as will be the case if the top item (ID = 0) is
-        // selected - so show the help message:
         clearTriggerForm();
     }
 }
@@ -6610,12 +6606,9 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current alias before switching to the new one
     if (pItem != mpCurrentAliasItem) {
-        // Save the editor state of the current alias before switching
         if (mpCurrentAliasItem) {
-            const int currentID = mpCurrentAliasItem->data(0, Qt::UserRole).toInt();
-            saveEditorState(EditorViewType::cmAliasView, currentID);
+            saveEditorState(EditorViewType::cmAliasView, mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
         }
         saveAlias();
     }
@@ -6644,8 +6637,6 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         mpAliasMainArea->label_idNumber->setText(QString::number(ID));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
-
-        // Restore the editor state (cursor and scroll position) if previously saved
         restoreEditorState(EditorViewType::cmAliasView, ID);
 
         if (!pT->state()) {
@@ -6667,12 +6658,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current key before switching to the new one
     if (pItem != mpCurrentKeyItem) {
-        // Save the editor state of the current key before switching
         if (mpCurrentKeyItem) {
-            const int currentID = mpCurrentKeyItem->data(0, Qt::UserRole).toInt();
-            saveEditorState(EditorViewType::cmKeysView, currentID);
+            saveEditorState(EditorViewType::cmKeysView, mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
         }
         saveKey();
     }
@@ -6700,16 +6688,12 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
         mpKeysMainArea->lineEdit_key_binding->setText(keyName);
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
-
-        // Restore the editor state (cursor and scroll position) if previously saved
         restoreEditorState(EditorViewType::cmKeysView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
         }
     } else {
-        // No details to show - as will be the case if the top item (ID = 0) is
-        // selected - so show the help message:
         clearKeyForm();
     }
 }
@@ -7010,12 +6994,9 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current action before switching to the new one
     if (pItem != mpCurrentActionItem) {
-        // Save the editor state of the current action before switching
         if (mpCurrentActionItem) {
-            const int currentID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
-            saveEditorState(EditorViewType::cmActionView, currentID);
+            saveEditorState(EditorViewType::cmActionView, mpCurrentActionItem->data(0, Qt::UserRole).toInt());
         }
         saveAction();
     }
@@ -7058,8 +7039,6 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         mpActionsMainArea->lineEdit_action_button_command_up->setText(pT->getCommandButtonUp());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
-
-        // Restore the editor state (cursor and scroll position) if previously saved
         restoreEditorState(EditorViewType::cmActionView, ID);
 
         // location = 1 = location = bottom is no longer supported
@@ -7174,12 +7153,9 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
 
-    // save the current script before switching to the new one
     if (pItem != mpCurrentScriptItem) {
-        // Save the editor state of the current script before switching
         if (mpCurrentScriptItem) {
-            const int currentID = mpCurrentScriptItem->data(0, Qt::UserRole).toInt();
-            saveEditorState(EditorViewType::cmScriptView, currentID);
+            saveEditorState(EditorViewType::cmScriptView, mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
         }
         saveScript();
     }
@@ -7204,8 +7180,6 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
         }
         const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
-
-        // Restore the editor state (cursor and scroll position) if previously saved
         restoreEditorState(EditorViewType::cmScriptView, ID);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
@@ -7232,12 +7206,9 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current timer before switching to the new one
     if (pItem != mpCurrentTimerItem) {
-        // Save the editor state of the current timer before switching
         if (mpCurrentTimerItem) {
-            const int currentID = mpCurrentTimerItem->data(0, Qt::UserRole).toInt();
-            saveEditorState(EditorViewType::cmTimerView, currentID);
+            saveEditorState(EditorViewType::cmTimerView, mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
         }
         saveTimer();
     }
@@ -7271,16 +7242,12 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, time.msec()));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
-
-        // Restore the editor state (cursor and scroll position) if previously saved
         restoreEditorState(EditorViewType::cmTimerView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
         }
     } else {
-        // No details to show - as will be the case if the top item (ID = 0) is
-        // selected - so show the help message:
         clearTimerForm();
     }
 }
@@ -11001,157 +10968,76 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
 }
 
-// saveEditorState( EditorViewType viewType, int itemId )
-//
-// Saves the current editor state (caret position and scroll position) for the given item.
-// This allows restoring the user's position when they return to a previously edited item.
 void dlgTriggerEditor::saveEditorState(EditorViewType viewType, int itemId)
 {
     if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
+        qDebug().nospace() << "dlgTriggerEditor::saveEditorState() - editor not initialized for item " << itemId;
         return;
     }
 
     EditorState state;
 
-    // Get the current caret position
-    auto controller = mpSourceEditorEdbee->controller();
-    if (controller && controller->textSelection()) {
-        // Get the caret offset (position in the document)
-        int caretOffset = controller->textSelection()->range(0).anchor();
-
-        // Convert offset to line and column
+    if (auto* controller = mpSourceEditorEdbee->controller(); controller && controller->textSelection()) {
+        const int caretOffset = controller->textSelection()->range(0).anchor();
         state.caretLine = mpSourceEditorEdbeeDocument->lineFromOffset(caretOffset);
-        int lineStart = mpSourceEditorEdbeeDocument->offsetFromLine(state.caretLine);
+        const int lineStart = mpSourceEditorEdbeeDocument->offsetFromLine(state.caretLine);
         state.caretColumn = caretOffset - lineStart;
     }
 
-    // Get the current scroll positions
-    if (mpSourceEditorEdbee->verticalScrollBar()) {
-        state.verticalScrollPos = mpSourceEditorEdbee->verticalScrollBar()->value();
+    if (auto* scrollBar = mpSourceEditorEdbee->verticalScrollBar()) {
+        state.verticalScrollPos = scrollBar->value();
     }
-    if (mpSourceEditorEdbee->horizontalScrollBar()) {
-        state.horizontalScrollPos = mpSourceEditorEdbee->horizontalScrollBar()->value();
+    if (auto* scrollBar = mpSourceEditorEdbee->horizontalScrollBar()) {
+        state.horizontalScrollPos = scrollBar->value();
     }
 
-    // Store the state in the appropriate map based on view type
-    switch (viewType) {
-    case EditorViewType::cmTriggerView:
-        mTriggerEditorStates[itemId] = state;
-        break;
-    case EditorViewType::cmAliasView:
-        mAliasEditorStates[itemId] = state;
-        break;
-    case EditorViewType::cmScriptView:
-        mScriptEditorStates[itemId] = state;
-        break;
-    case EditorViewType::cmTimerView:
-        mTimerEditorStates[itemId] = state;
-        break;
-    case EditorViewType::cmActionView:
-        mActionEditorStates[itemId] = state;
-        break;
-    case EditorViewType::cmKeysView:
-        mKeyEditorStates[itemId] = state;
-        break;
-    default:
-        break;
-    }
+    mEditorStates[viewType][itemId] = state;
 }
 
-// restoreEditorState( EditorViewType viewType, int itemId )
-//
-// Restores the editor state (caret position and scroll position) for the given item,
-// if it was previously saved. This allows users to return to their previous editing
-// position when switching between items.
-//
-// Note: The restoration is deferred using QTimer::singleShot to ensure the document
-// and scroll bars are fully initialized after clearDocument() creates a new document.
+// Defers restoration using QTimer::singleShot to ensure the document and scroll bars
+// are fully initialized after clearDocument().
 void dlgTriggerEditor::restoreEditorState(EditorViewType viewType, int itemId)
 {
     if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
+        qDebug().nospace() << "dlgTriggerEditor::restoreEditorState() - editor not initialized for item " << itemId;
         return;
     }
 
-    // Retrieve the state from the appropriate map based on view type
-    EditorState state;
-    bool hasState = false;
-
-    switch (viewType) {
-    case EditorViewType::cmTriggerView:
-        if (mTriggerEditorStates.contains(itemId)) {
-            state = mTriggerEditorStates[itemId];
-            hasState = true;
-        }
-        break;
-    case EditorViewType::cmAliasView:
-        if (mAliasEditorStates.contains(itemId)) {
-            state = mAliasEditorStates[itemId];
-            hasState = true;
-        }
-        break;
-    case EditorViewType::cmScriptView:
-        if (mScriptEditorStates.contains(itemId)) {
-            state = mScriptEditorStates[itemId];
-            hasState = true;
-        }
-        break;
-    case EditorViewType::cmTimerView:
-        if (mTimerEditorStates.contains(itemId)) {
-            state = mTimerEditorStates[itemId];
-            hasState = true;
-        }
-        break;
-    case EditorViewType::cmActionView:
-        if (mActionEditorStates.contains(itemId)) {
-            state = mActionEditorStates[itemId];
-            hasState = true;
-        }
-        break;
-    case EditorViewType::cmKeysView:
-        if (mKeyEditorStates.contains(itemId)) {
-            state = mKeyEditorStates[itemId];
-            hasState = true;
-        }
-        break;
-    default:
-        break;
+    if (!mEditorStates.contains(viewType) || !mEditorStates[viewType].contains(itemId)) {
+        return;
     }
 
-    if (!hasState) {
-        return; // No saved state for this item
-    }
+    const EditorState state = mEditorStates[viewType][itemId];
 
-    // Defer the actual restoration to ensure the document and scrollbars are ready
-    // This is especially important when using keyboard navigation which can trigger
-    // rapid selection changes
-    QTimer::singleShot(0, this, [this, state]() {
+    QTimer::singleShot(0, this, [this, state, itemId]() {
         if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
+            qDebug().nospace() << "dlgTriggerEditor::restoreEditorState() - editor changed before deferred restore for item " << itemId;
             return;
         }
 
-        // Restore the caret position
-        auto controller = mpSourceEditorEdbee->controller();
-        if (controller) {
-            // Clamp the line to valid range
-            int maxLine = qMax(0, mpSourceEditorEdbeeDocument->lineCount() - 1);
-            int line = qMin(state.caretLine, maxLine);
-
-            // Clamp the column to valid range for the line
-            int lineLength = mpSourceEditorEdbeeDocument->lineLength(line);
-            int column = qMin(state.caretColumn, lineLength);
-
-            // Move the caret to the saved position
+        if (auto* controller = mpSourceEditorEdbee->controller()) {
+            const auto lineCount = mpSourceEditorEdbeeDocument->lineCount();
+            const auto maxLine = lineCount > 0 ? lineCount - 1 : 0;
+            const auto line = std::min(static_cast<decltype(maxLine)>(state.caretLine), maxLine);
+            const auto lineLength = mpSourceEditorEdbeeDocument->lineLength(line);
+            const auto column = std::min(static_cast<decltype(lineLength)>(state.caretColumn), lineLength);
             controller->moveCaretTo(line, column, false);
         }
 
-        // Restore the scroll positions
-        if (mpSourceEditorEdbee->verticalScrollBar()) {
-            mpSourceEditorEdbee->verticalScrollBar()->setValue(state.verticalScrollPos);
+        if (auto* scrollBar = mpSourceEditorEdbee->verticalScrollBar()) {
+            scrollBar->setValue(state.verticalScrollPos);
         }
-        if (mpSourceEditorEdbee->horizontalScrollBar()) {
-            mpSourceEditorEdbee->horizontalScrollBar()->setValue(state.horizontalScrollPos);
+        if (auto* scrollBar = mpSourceEditorEdbee->horizontalScrollBar()) {
+            scrollBar->setValue(state.horizontalScrollPos);
         }
     });
+}
+
+void dlgTriggerEditor::clearEditorState(EditorViewType viewType, int itemId)
+{
+    if (mEditorStates.contains(viewType)) {
+        mEditorStates[viewType].remove(itemId);
+    }
 }
 
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
