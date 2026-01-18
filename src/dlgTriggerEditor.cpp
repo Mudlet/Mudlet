@@ -12874,7 +12874,7 @@ void dlgTriggerEditor::slot_profileSaveAction()
 
     auto [ok, filename, error] = mpHost->saveProfile(QString(), QString(), true);
 
-    if (!ok) {
+    if (!ok && !error.isEmpty()) {
         QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
     }
 }

@@ -903,7 +903,10 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
-    writer->exportHost(filename_xml);
+    if (!writer->exportHost(filename_xml)) {
+        writers.remove(qsl("profile"));
+        return {false, filename_xml, QString()};
+    }
     mWritingHostAndModules = true;
 
     // emit signal to notify the UI that the save button should get disabled momentarily

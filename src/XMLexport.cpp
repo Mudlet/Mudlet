@@ -158,17 +158,18 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     }
 }
 
-void XMLexport::exportHost(const QString& filename_pugi_xml)
+bool XMLexport::exportHost(const QString& filename_pugi_xml)
 {
     if (!mpHost) {
-        qWarning() << "XMLexport::exportHost() ERROR - Host is null, cannot export";
-        return;
+        qCritical() << "XMLexport::exportHost() ERROR - Host is null, cannot export";
+        return false;
     }
 
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
 
     runAsyncSave(filename_pugi_xml, qsl("profile"));
+    return true;
 }
 
 // Helper to encapsulate async save pattern: clone document, save in background thread,
