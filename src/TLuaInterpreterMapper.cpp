@@ -4193,7 +4193,7 @@ int TLuaInterpreter::setRoomBorderColor(lua_State* L)
     pR->mBorderColor = QColor(r, g, b, a);
 
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4240,7 +4240,7 @@ int TLuaInterpreter::clearRoomBorderColor(lua_State* L)
     pR->mBorderColor = QColor();
 
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4265,7 +4265,7 @@ int TLuaInterpreter::setRoomBorderThickness(lua_State* L)
 
     pR->mBorderThickness = thickness;
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4308,7 +4308,7 @@ int TLuaInterpreter::clearRoomBorderThickness(lua_State* L)
 
     pR->mBorderThickness = 0;
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
