@@ -221,13 +221,6 @@ int main(int argc, char* argv[])
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
 
-#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
-    auto abortLaunch = runUpdate();
-    if (abortLaunch) {
-        return 0;
-    }
-#endif
-
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
@@ -256,6 +249,13 @@ int main(int argc, char* argv[])
     mudlet::start();
     // Detect config path before any files are read
     mudlet::self()->setupConfig();
+
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+    auto abortLaunch = runUpdate();
+    if (abortLaunch) {
+        return 0;
+    }
+#endif
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
@@ -846,6 +846,13 @@ bool runUpdate()
     QDir updateDir;
 
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
+        QSettings* settings = mudlet::getQSettings();
+        if (!settings->value(qsl("DBLSQD/autoDownload"), true).toBool()) {
+            qDebug() << "Auto-download disabled, removing downloaded installer:" << updatedInstaller.absoluteFilePath();
+            updateDir.remove(updatedInstaller.absoluteFilePath());
+            return false;
+        }
+
         // Verify the new installer is accessible before trying to move it
         if (!isFileAccessible(updatedInstaller.absoluteFilePath())) {
             qWarning() << "New installer exists but is locked, cannot proceed with update:" << updatedInstaller.absoluteFilePath();
