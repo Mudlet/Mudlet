@@ -600,6 +600,12 @@ void dlgMapper::slot_setupMapperMenu()
     mpInfoMenu = menu->addMenu(tr("Info overlays"));
     updateInfoMenu();
 
+    menu->addSeparator();
+    auto* newMapWindowAction = new QAction(tr("New map window"), this);
+    newMapWindowAction->setToolTip(tr("Open an additional map view"));
+    connect(newMapWindowAction, &QAction::triggered, mudlet::self(), &mudlet::slot_newMapWindow);
+    menu->addAction(newMapWindowAction);
+
     menu->exec(toolButton_mapperMenu->mapToGlobal(toolButton_mapperMenu->rect().bottomLeft()));
 }
 

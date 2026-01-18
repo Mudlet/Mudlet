@@ -591,6 +591,7 @@ void mudlet::init()
     connect(dactionReattachDetachedWindows, &QAction::triggered, this, &mudlet::slot_reattachAllDetachedWindows);
     connect(dactionToggleAlwaysOnTop, &QAction::triggered, this, &mudlet::slot_toggleAlwaysOnTop);
     connect(dactionMinimize, &QAction::triggered, this, &mudlet::slot_minimize);
+    connect(dactionNewMapWindow, &QAction::triggered, this, &mudlet::slot_newMapWindow);
 
     connect(dactionHelp, &QAction::triggered, this, &mudlet::slot_showHelpDialog);
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_showHelpDialogVideo);
@@ -1753,6 +1754,19 @@ void mudlet::slot_minimize()
     showMinimized();
 }
 
+void mudlet::slot_newMapWindow()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
+    auto [viewId, errorMsg] = pHost->createMapView(0);
+    if (viewId == 0) {
+        qWarning() << "mudlet::slot_newMapWindow() - failed to create map view:" << errorMsg;
+    }
+}
+
 void mudlet::updateWindowMenu()
 {
     // Clean up existing window list actions
@@ -2233,6 +2247,7 @@ void mudlet::disableToolbarButtons()
 
     mpActionMapper->setEnabled(false);
     dactionShowMap->setEnabled(false);
+    dactionNewMapWindow->setEnabled(false);
 
     mpActionNotes->setEnabled(false);
     dactionNotepad->setEnabled(false);
@@ -2312,6 +2327,7 @@ void mudlet::updateMainWindowToolbarState()
 
     mpActionMapper->setEnabled(hasActiveProfileInMainWindow);
     dactionShowMap->setEnabled(hasActiveProfileInMainWindow);
+    dactionNewMapWindow->setEnabled(hasActiveProfileInMainWindow);
 
     mpActionNotes->setEnabled(hasActiveProfileInMainWindow);
     dactionNotepad->setEnabled(hasActiveProfileInMainWindow);
@@ -2416,6 +2432,7 @@ void mudlet::enableToolbarButtons()
 
     mpActionMapper->setEnabled(true);
     dactionShowMap->setEnabled(true);
+    dactionNewMapWindow->setEnabled(true);
 
     mpActionNotes->setEnabled(true);
     dactionNotepad->setEnabled(true);
@@ -3986,13 +4003,9 @@ void mudlet::slot_notes()
         pHost->mpNotePad = new dlgNotepad(pHost);
         pNotes = pHost->mpNotePad;
 
-        QTextCharFormat format;
-        format.setFont(pHost->getDisplayFont());
-        pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(qsl(":/icons/mudlet_notepad.png")));
         pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
-        pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
 
         // Set up focus restoration for the notepad
         setupNotepadFocusRestoration(pNotes);
