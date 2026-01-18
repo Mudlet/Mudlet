@@ -4475,9 +4475,11 @@ void mudlet::handleTelnetUri(const QString& uri)
     mSuppressConnectionDialog = true;
     
     // Hide connection profiles dialog if it's already open
+    // Disconnect all signals first to prevent any callbacks during app exit cleanup
     // Use hide() instead of close() to avoid double-free during app exit
     // Qt's parent-child cleanup will handle deletion properly
     if (mpConnectionDialog) {
+        mpConnectionDialog->disconnect();
         mpConnectionDialog->hide();
     }
 
