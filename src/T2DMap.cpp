@@ -55,7 +55,6 @@
 
 
 #include <QAction>
-#include <QApplication>
 #include <QCoreApplication>
 #include <QCursor>
 #include <QMap>
@@ -766,6 +765,70 @@ void T2DMap::switchArea(const QString& newAreaName)
     }
 }
 
+void T2DMap::switchArea(int areaId)
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        qWarning() << "T2DMap::switchArea(int) - cannot switch to area" << areaId << "- map or roomDB is null";
+        return;
+    }
+
+    const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+    if (areaName.isEmpty()) {
+        qWarning() << "T2DMap::switchArea(int) - area" << areaId << "not found in area names map";
+        return;
+    }
+    switchArea(areaName);
+}
+
+std::pair<bool, QString> T2DMap::centerview(int roomId)
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return {false, qsl("map or roomDB is null")};
+    }
+
+    TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+    if (!pR) {
+        return {false, qsl("room %1 not found").arg(roomId)};
+    }
+
+    const int areaId = pR->getArea();
+    TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
+    if (!pArea) {
+        return {false, qsl("room %1 references non-existent area %2").arg(roomId).arg(areaId)};
+    }
+
+    // For secondary views, don't raise sysMapAreaChanged event
+    if (!mIsSecondaryView) {
+        TEvent areaViewedChangedEvent{};
+        if (mAreaID != areaId) {
+            areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
+            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            areaViewedChangedEvent.mArgumentList.append(QString::number(areaId));
+            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            areaViewedChangedEvent.mArgumentList.append(QString::number(mAreaID));
+            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        }
+
+        if (!areaViewedChangedEvent.mArgumentList.isEmpty() && mpHost) {
+            mpHost->raiseEvent(areaViewedChangedEvent);
+        }
+    }
+
+    mAreaID = areaId;
+    mLastViewedAreaID = areaId;
+    mRoomID = roomId;
+    mMapCenterX = pR->x();
+    mMapCenterY = -pR->y();  // Map y coordinates are reversed
+    mMapCenterZ = pR->z();
+    xyzoom = mpMap->mpRoomDB->get2DMapZoom(areaId);
+
+    isCenterViewCall = true;
+    update();
+    isCenterViewCall = false;
+
+    return {true, QString()};
+}
+
 // key format: <QColor.name()><QString of one or more QChars>
 void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
 {
@@ -959,8 +1022,13 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     QRectF roomRectangle;
     QRectF roomNameRectangle;
     double realHeight;
-    const int borderWidth = 1 / eSize * mRoomWidth * rSize;
-    const bool shouldDrawBorder = mpHost->mMapperShowRoomBorders && !isGridMode;
+    int borderWidth;
+    if (pRoom->mBorderThickness > 0) {
+        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / eSize * mRoomWidth * rSize));
+    } else {
+        borderWidth = qMax(1, static_cast<int>(1 / eSize * mRoomWidth * rSize));
+    }
+    const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
     bool showThisRoomName = showRoomName;
     if (isGridMode) {
         realHeight = mRoomHeight;
@@ -1045,7 +1113,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     roomPen.setJoinStyle(Qt::MiterJoin);
     painter.setBrush(roomColor);
 
-    // Determine if we're actually drawing a border and calculate the inset
+    // Determine if we're actually drawing a border
     bool isDrawingBorder = false;
     qreal borderInset = 0.0;
 
@@ -1058,19 +1126,20 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         roomPen.setWidth(borderWidth);
         borderInset = borderWidth / 2.0;
         isDrawingBorder = true;
+        QColor borderColor = pRoom->mBorderColor.isValid() ? pRoom->mBorderColor : mpHost->mRoomBorderColor;
         if (mRoomWidth >= 12) {
-            roomPen.setColor(mpHost->mRoomBorderColor);
+            roomPen.setColor(borderColor);
         } else {
-            auto fadingColor = QColor(mpHost->mRoomBorderColor);
+            auto fadingColor = QColor(borderColor);
             fadingColor.setAlpha(255 * (mRoomWidth / 12));
             roomPen.setColor(fadingColor);
         }
     }
 
-    // Inset the room drawing rectangle by half the border width so the border
-    // is drawn completely inside the room bounds, making it clickable and not
-    // adding to the room's visual size
-    const QRectF roomDrawRectangle = roomRectangle.adjusted(borderInset, borderInset, -borderInset, -borderInset);
+    // Expand the drawing rectangle outward by half the border width so that
+    // after the stroke is drawn (centered on the edge), the visible fill area
+    // matches the original room size and the border grows purely outward
+    const QRectF roomDrawRectangle = roomRectangle.adjusted(-borderInset, -borderInset, borderInset, borderInset);
 
     if (isRoomSelected) {
         QLinearGradient selectionBg(roomDrawRectangle.topLeft(), roomDrawRectangle.bottomRight());
@@ -1085,8 +1154,8 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     painter.setPen(roomPen);
 
     if (mBubbleMode) {
-        // Calculate the room radius accounting for the border inset
-        const float roomRadius = (0.5 * rSize * mRoomWidth) - borderInset;
+        // Expand radius by half border width so visible fill stays at original size
+        const float roomRadius = (0.5 * rSize * mRoomWidth) + borderInset;
         const QPointF roomCenter = QPointF(rx, ry);
         if (!isRoomSelected) {
             // CHECK: The use of a gradient fill to a white center on round
@@ -1625,7 +1694,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
     // it at the end of the paintEvent:
     TEvent areaViewedChangedEvent{};
 
-    if ((!mPick && !mShiftMode) || mpMap->mNewMove) {
+    // Secondary views don't follow the player - they maintain their own independent view
+    if (!mIsSecondaryView && ((!mPick && !mShiftMode) || mpMap->mNewMove)) {
         mShiftMode = true;
         // that's of interest only here because the map editor is here ->
         // map might not be updated, thus I force a map update on centerview()
@@ -2723,6 +2793,16 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 areaExitsMap[k] = clickPoint;
                 // line ENDS at the center of the room, and the START sticks out
                 // in the appropriate direction
+
+                // Draw outline first for visibility on matching backgrounds
+                QPen outlinePen = pen;
+                outlinePen.setWidthF(exitWidth + 2.0);
+                outlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+                painter.setPen(outlinePen);
+                painter.drawLine(line);
+
+                // Draw colored line on top
+                painter.setPen(pen);
                 painter.drawLine(line);
                 QLineF l0 = QLineF(line);
                 if (mLargeAreaExitArrows) {
@@ -2756,7 +2836,17 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 arrowPen.setJoinStyle(Qt::RoundJoin);
                 arrowPen.setCapStyle(Qt::RoundCap);
                 arrowPen.setCosmetic(mMapperUseAntiAlias);
-                painter.setPen(arrowPen);
+
+                // Draw outline first for visibility
+                QPen arrowOutlinePen = arrowPen;
+                arrowOutlinePen.setWidthF(2.0);
+                arrowOutlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+                painter.setPen(arrowOutlinePen);
+                painter.setBrush(Qt::NoBrush);
+                painter.drawPolygon(polygon);
+
+                // Draw filled arrow head on top
+                painter.setPen(Qt::NoPen);
                 painter.setBrush(brush);
                 painter.drawPolygon(polygon);
                 painter.restore();
@@ -2950,7 +3040,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
 
     if (Q_LIKELY(labelId >= 0)) {
         pArea->mMapLabels.insert(labelId, label);
-        update();
+        mpMap->updateArea(mAreaID);
         if (!label.temporary) {
             mpMap->setUnsaved(__func__);
         }
@@ -3150,13 +3240,8 @@ void T2DMap::slot_createRoom()
     mpMap->setRoomCoordinates(roomID, mContextMenuClickPosition.x, mContextMenuClickPosition.y, mMapCenterZ);
 
     mpMap->mMapGraphNeedsUpdate = true;
-#if defined(INCLUDE_3DMAPPER)
-    if (mpMap->mpM) {
-        mpMap->mpM->update();
-    }
-#endif
     isCenterViewCall = true;
-    update();
+    mpMap->updateArea(mAreaID);
     isCenterViewCall = false;
     mpMap->setUnsaved(__func__);
 }
@@ -3441,7 +3526,7 @@ void T2DMap::slot_doneCustomLine()
             room->calcRoomDimensions();
         }
     }
-    update();
+    mpMap->updateArea(mAreaID);
     mpMap->setUnsaved(__func__);
 }
 
@@ -3503,7 +3588,7 @@ void T2DMap::slot_deleteLabel()
     }
 
     if (updateNeeded) {
-        update();
+        mpMap->updateArea(mAreaID);
         if (saveNeeded) {
             mpMap->setUnsaved(__func__);
         }
@@ -3521,7 +3606,7 @@ void T2DMap::slot_setPlayerLocation()
     }
 
     const int _newRoomId = *(mMultiSelectionSet.constBegin());
-    if (mpMap->mpRoomDB->getRoom(_newRoomId)) {
+    if (auto* pR = mpMap->mpRoomDB->getRoom(_newRoomId)) {
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
@@ -3531,9 +3616,7 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
-        update();
-        // don't update map on player location change, as this would cause unnecessary
-        // autosaves while just speedwalking around
+        mpMap->updateArea(pR->getArea());
     }
 }
 
@@ -3848,6 +3931,7 @@ void T2DMap::slot_showPropertiesDialog()
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
+    connect(mpDlgRoomProperties, &dlgRoomProperties::signal_preview_border, this, &T2DMap::slot_previewBorderProperties);
     connect(mpDlgRoomProperties, &QDialog::finished, this, [=, this]() {
         mpDlgRoomProperties = nullptr;
     });
@@ -3862,6 +3946,8 @@ void T2DMap::slot_setRoomProperties(
     bool changeWeight, int newWeight,
     bool changeLockStatus, std::optional<bool> newLockStatus,
     bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
+    bool changeBorderColor, QColor newBorderColor,
+    bool changeBorderThickness, int newBorderThickness,
     QSet<TRoom*> rooms)
 {
     if (newName.isEmpty()) {
@@ -3913,13 +3999,25 @@ void T2DMap::slot_setRoomProperties(
         if (changeHiddenStatus && newHiddenStatus.has_value()) {
             room->setHidden(newHiddenStatus.value());
         }
+        if (changeBorderColor) {
+            room->mBorderColor = newBorderColor;
+        }
+        if (changeBorderThickness) {
+            room->mBorderThickness = newBorderThickness;
+        }
     }
     if (changeWeight || changeLockStatus) {
         mpMap->mMapGraphNeedsUpdate = true;
     }
+    mpMap->updateArea(mAreaID);
+    mpMap->setUnsaved(__func__);
+}
+
+void T2DMap::slot_previewBorderProperties(QSet<TRoom*> rooms)
+{
+    Q_UNUSED(rooms)
     repaint();
     update();
-    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_setImage()
@@ -4151,14 +4249,8 @@ void T2DMap::slot_newMap()
     mpMap->mNewMove = true;
     slot_toggleMapViewOnly();
 
-#if defined(INCLUDE_3DMAPPER)
-    if (mpMap->mpM) {
-        mpMap->mpM->update();
-    }
-#endif
-
     isCenterViewCall = true;
-    update();
+    mpMap->updateArea(-1);
     isCenterViewCall = false;
     mpMap->setUnsaved(__func__);
     mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
@@ -5640,9 +5732,16 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                     areaPen.setCapStyle(Qt::RoundCap);
                     areaPen.setCosmetic(mMapperUseAntiAlias);
                     areaPen.setColor(mpMap->getColor(exitRoomId));
-                    painter.setPen(areaPen);
 
-                    // Draw the area exit stub line
+                    // Draw outline first for visibility on matching backgrounds
+                    QPen outlinePen = areaPen;
+                    outlinePen.setWidthF(exitWidth + 2.0);
+                    outlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+                    painter.setPen(outlinePen);
+                    painter.drawLine(exitLine);
+
+                    // Draw colored line on top
+                    painter.setPen(areaPen);
                     painter.drawLine(exitLine);
 
                     // Draw arrow head (same logic as original paintRoomExits lines 2298-2333)
@@ -5681,7 +5780,17 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                     arrowPen.setJoinStyle(Qt::RoundJoin);
                     arrowPen.setCapStyle(Qt::RoundCap);
                     arrowPen.setCosmetic(mMapperUseAntiAlias);
-                    painter.setPen(arrowPen);
+
+                    // Draw outline first for visibility
+                    QPen arrowOutlinePen = arrowPen;
+                    arrowOutlinePen.setWidthF(2.0);
+                    arrowOutlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+                    painter.setPen(arrowOutlinePen);
+                    painter.setBrush(Qt::NoBrush);
+                    painter.drawPolygon(arrowHead);
+
+                    // Draw filled arrow head on top
+                    painter.setPen(Qt::NoPen);
                     painter.setBrush(arrowBrush);
                     painter.drawPolygon(arrowHead);
                     painter.restore();

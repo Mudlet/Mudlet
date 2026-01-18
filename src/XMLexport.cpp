@@ -363,7 +363,15 @@ bool XMLexport::saveXmlFile(QSaveFile& file)
     sanitizeForQxml(output);
     // Now we can use Qt's file handling which does handle non-Latin1 named
     // files - which MinGW's STL file handling (on Windows platform) does not:
-    file.write(output.data());
+    const qint64 bytesWritten = file.write(output.data(), static_cast<qint64>(output.size()));
+    if (bytesWritten == -1) {
+        qWarning() << "XMLexport::saveXmlFile() ERROR - failed to write XML data:" << file.errorString();
+        return false;
+    }
+    if (bytesWritten != static_cast<qint64>(output.size())) {
+        qWarning() << "XMLexport::saveXmlFile() ERROR - incomplete write: wrote" << bytesWritten << "of" << output.size() << "bytes";
+        return false;
+    }
     return file.error() == QFileDevice::NoError;
 }
 

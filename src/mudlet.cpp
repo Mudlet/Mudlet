@@ -42,6 +42,7 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -58,7 +59,11 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "TMediaData.h"
 #include "VarUnit.h"
+
+#include "edbee/models/textautocompleteprovider.h"
+#include "edbee/views/texttheme.h"
 
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
@@ -96,6 +101,33 @@
 #include <QStyle>
 #if defined(Q_OS_WINDOWS)
 #include <QSettings>
+#endif
+
+// for system physical memory info
+#if defined(Q_OS_WINDOWS)
+#include <Windows.h>
+#include <Psapi.h>
+#elif defined(Q_OS_MACOS)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <array>
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_OPENBSD)
+// OpenBSD doesn't have a sysinfo.h
+#include <sys/sysctl.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
+#include <sys/resource.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
+#else
+// Any other OS?
 #endif
 
 // We are now using code that won't work with really old versions of libzip;
@@ -381,8 +413,7 @@ void mudlet::init()
     mpButtonDiscord = new QToolButton(this);
     mpButtonDiscord->setText(qsl("Discord"));
     mpButtonDiscord->setObjectName(qsl("discord"));
-    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
-    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonDiscord->setContextMenuPolicy(Qt::DefaultContextMenu);
     mpButtonDiscord->setAutoRaise(true);
     mpMainToolBar->addWidget(mpButtonDiscord);
 
@@ -398,12 +429,8 @@ void mudlet::init()
     mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
 
-    mpActionIRC = new QAction(tr("Open IRC"), this);
-    mpActionIRC->setIcon(QIcon(qsl(":/icons/internet-telephony.png")));
-    mpActionIRC->setObjectName(qsl("openIRC"));
 
     mpButtonDiscord->addAction(mpActionDiscord);
-    mpButtonDiscord->addAction(mpActionIRC);
     mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);
@@ -542,7 +569,6 @@ void mudlet::init()
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_showMapperDialog);
-    connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
     connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(mpActionMudletDiscord.data(), &QAction::triggered, this, &mudlet::slot_mudletDiscord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_packageManager);
@@ -565,11 +591,11 @@ void mudlet::init()
     connect(dactionReattachDetachedWindows, &QAction::triggered, this, &mudlet::slot_reattachAllDetachedWindows);
     connect(dactionToggleAlwaysOnTop, &QAction::triggered, this, &mudlet::slot_toggleAlwaysOnTop);
     connect(dactionMinimize, &QAction::triggered, this, &mudlet::slot_minimize);
+    connect(dactionNewMapWindow, &QAction::triggered, this, &mudlet::slot_newMapWindow);
 
     connect(dactionHelp, &QAction::triggered, this, &mudlet::slot_showHelpDialog);
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_showHelpDialogVideo);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_showHelpDialogForum);
-    connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudletDiscord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_showHelpDialogIrc);
@@ -1728,6 +1754,19 @@ void mudlet::slot_minimize()
     showMinimized();
 }
 
+void mudlet::slot_newMapWindow()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
+    auto [viewId, errorMsg] = pHost->createMapView(0);
+    if (viewId == 0) {
+        qWarning() << "mudlet::slot_newMapWindow() - failed to create map view:" << errorMsg;
+    }
+}
+
 void mudlet::updateWindowMenu()
 {
     // Clean up existing window list actions
@@ -2208,6 +2247,7 @@ void mudlet::disableToolbarButtons()
 
     mpActionMapper->setEnabled(false);
     dactionShowMap->setEnabled(false);
+    dactionNewMapWindow->setEnabled(false);
 
     mpActionNotes->setEnabled(false);
     dactionNotepad->setEnabled(false);
@@ -2287,6 +2327,7 @@ void mudlet::updateMainWindowToolbarState()
 
     mpActionMapper->setEnabled(hasActiveProfileInMainWindow);
     dactionShowMap->setEnabled(hasActiveProfileInMainWindow);
+    dactionNewMapWindow->setEnabled(hasActiveProfileInMainWindow);
 
     mpActionNotes->setEnabled(hasActiveProfileInMainWindow);
     dactionNotepad->setEnabled(hasActiveProfileInMainWindow);
@@ -2300,9 +2341,6 @@ void mudlet::updateMainWindowToolbarState()
     dactionToggleReplay->setEnabled(hasActiveProfileInMainWindow);
     dactionToggleLogging->setEnabled(hasActiveProfileInMainWindow);
     dactionToggleEmergencyStop->setEnabled(hasActiveProfileInMainWindow);
-
-    mpActionIRC->setEnabled(true);
-    dactionIRC->setEnabled(true);
 
     dactionInputLine->setEnabled(hasActiveProfileInMainWindow);
 
@@ -2394,6 +2432,7 @@ void mudlet::enableToolbarButtons()
 
     mpActionMapper->setEnabled(true);
     dactionShowMap->setEnabled(true);
+    dactionNewMapWindow->setEnabled(true);
 
     mpActionNotes->setEnabled(true);
     dactionNotepad->setEnabled(true);
@@ -2408,8 +2447,6 @@ void mudlet::enableToolbarButtons()
     dactionToggleLogging->setEnabled(true);
     dactionToggleEmergencyStop->setEnabled(true);
 
-    mpActionIRC->setEnabled(true);
-    dactionIRC->setEnabled(true);
 
     dactionInputLine->setEnabled(true);
 
@@ -3966,13 +4003,9 @@ void mudlet::slot_notes()
         pHost->mpNotePad = new dlgNotepad(pHost);
         pNotes = pHost->mpNotePad;
 
-        QTextCharFormat format;
-        format.setFont(pHost->getDisplayFont());
-        pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(qsl(":/icons/mudlet_notepad.png")));
         pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
-        pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
 
         // Set up focus restoration for the notepad
         setupNotepadFocusRestoration(pNotes);
@@ -3987,22 +4020,6 @@ void mudlet::slot_notes()
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     utils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
-}
-
-// This opens a profile specific IRC client for that client so should only be
-// enabled when a profile is loaded.
-void mudlet::slot_irc()
-{
-    Host* pHost = getActiveHost();
-    if (!pHost) {
-        return;
-    }
-
-    if (!pHost->mpDlgIRC) {
-        pHost->mpDlgIRC = new dlgIRC(pHost);
-    }
-    pHost->mpDlgIRC->raise();
-    pHost->mpDlgIRC->show();
 }
 
 void mudlet::slot_profileDiscord()
@@ -5456,12 +5473,14 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     } else {
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
         if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            pHost->mProfileLoadError = tr("Could not open profile file: %1").arg(file.errorString());
             qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
         }
         XMLimport importer(pHost);
 
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         if (auto [success, message] = importer.importPackage(&file); !success) {
+            pHost->mProfileLoadError = message;
             //: %1 is the path and file name (i.e. the location) of the problem fil
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
             "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
@@ -6099,9 +6118,8 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
-    aff.commit();
-    if (aff.error() != QFile::NoError) {
-        qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to completely write affix file: \"" << aff.fileName() << "\" status: " << aff.errorString();
+    if (!aff.commit()) {
+        qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to commit affix file: \"" << aff.fileName() << "\" reason: " << aff.errorString();
         return false;
     }
 

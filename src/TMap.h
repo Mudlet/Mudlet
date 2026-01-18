@@ -30,18 +30,13 @@
 #endif
 #include "utils.h"
 
-#include <QApplication>
 #include <QColor>
 #include <QFont>
-#include <QJsonArray>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
 #include <QNetworkReply>
-#include <QPixmap>
 #include <QPointer>
 #include <QSet>
-#include <QSizeF>
 #include <QVector3D>
 #include <stdlib.h>
 #include <optional>
@@ -66,6 +61,7 @@ class Host;
 class QOpenGLWidget;
 #endif
 class TArea;
+class TMapViewManager;
 class TRoom;
 class TRoomDB;
 class QFile;
@@ -79,6 +75,7 @@ class TMap : public QObject
 
 signals:
     void signal_saveErrorChanged(bool hasError);
+    void signal_areaChanged(int areaId);
 
 private:
     QString mDefaultAreaName;
@@ -121,7 +118,7 @@ public:
     void logError(QString& msg);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
-    void update();
+    void updateArea(int areaId);
 
     void audit();
 
@@ -207,9 +204,12 @@ public:
 
 
     TRoomDB* mpRoomDB = nullptr;
+    TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
     QPointer<Host> mpHost;
     QString mProfileName;
+
+    TMapViewManager* getViewManager() { return mpViewManager; }
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name

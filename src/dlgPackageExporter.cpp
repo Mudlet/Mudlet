@@ -24,6 +24,7 @@
 #include "dlgPackageExporter.h"
 #include "ui_dlgPackageExporter.h"
 
+#include "Host.h"
 #include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -31,6 +32,7 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "XMLexport.h"
 
 #include <QtConcurrent>
 #include <QDesktopServices>
@@ -1907,8 +1909,8 @@ void dlgPackageExporter::listTimers()
 void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
-        // Big RED error message
-        ui->infoLabel->setText(qsl("<p><font color='red'><b><big>%1</big><b></font></p>").arg(html));
+        // Light coral red error message - #FF6B6B has good contrast on both light and dark backgrounds
+        ui->infoLabel->setText(qsl("<p><font color='#FF6B6B'><b><big>%1</big><b></font></p>").arg(html));
         return;
     }
 

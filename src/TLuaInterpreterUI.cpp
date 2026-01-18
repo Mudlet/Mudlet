@@ -29,17 +29,17 @@
 
 #include "TLuaInterpreter.h"
 
+#include <QClipboard>
+
 #include "EAction.h"
 #include "Host.h"
-#include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
-#include "TForkedProcess.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -2772,11 +2772,16 @@ int TLuaInterpreter::setLabelReleaseCallback(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelStyleSheet
 int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
 {
-    std::string label = getVerifiedString(L, __func__, 1, "label").toStdString();
-    std::string markup = getVerifiedString(L, __func__, 2, "markup").toStdString();
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    const QString stylesheet = getVerifiedString(L, __func__, 2, "stylesheet");
     const Host& host = getHostFromLua(L);
-    host.mpConsole->setLabelStyleSheet(label, markup);
-    return 0;
+
+    if (auto [success, message] = host.mpConsole->setLabelStyleSheet(labelName, stylesheet); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelCursor

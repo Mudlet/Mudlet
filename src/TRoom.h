@@ -24,9 +24,7 @@
  ***************************************************************************/
 
 
-#include "TMap.h"
-
-#include <QApplication>
+#include <QCoreApplication>
 #include <QColor>
 #include <QDebug>
 #include <QHash>
@@ -150,6 +148,8 @@ public:
     qreal max_y = 0.0;
     QString mSymbol;
     QColor mSymbolColor;
+    QColor mBorderColor;      // Per-room border color (invalid = use global)
+    int mBorderThickness = 0; // Per-room border thickness (0 = use global)
     QString name;
 
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
@@ -180,6 +180,7 @@ private:
     void readJsonDoor(const QJsonObject&, const QString&);
     void readJsonHighlight(const QJsonObject&);
     void readJsonSymbol(const QJsonObject&);
+    void readJsonBorder(const QJsonObject&);
 
     void writeJsonExits(QJsonObject&) const;
     void writeJsonExitStubs(QJsonObject&) const;
@@ -190,6 +191,7 @@ private:
     void writeJsonDoor(QJsonObject&, const QString&) const;
     void writeJsonHighlight(QJsonObject&) const;
     void writeJsonSymbol(QJsonObject&) const;
+    void writeJsonBorder(QJsonObject&) const;
 
 
     int id = 0;

@@ -86,7 +86,7 @@ else()
     message(STATUS "Git SHA1 used: ${GIT_SHA1}")
 endif()
 
-# Set APP_VERSION (update in mudlet.pro as well)
+# Set APP_VERSION
 set(APP_VERSION 4.19.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default

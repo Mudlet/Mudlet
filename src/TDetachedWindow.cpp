@@ -327,13 +327,6 @@ void TDetachedWindow::createMenus()
     toolboxMenu->addAction(mpMenuNotepadAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    auto ircAction = new QAction(tr("&IRC"), this);
-    //: This explains the "IRC" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    ircAction->setStatusTip(tr("Opens a built-in IRC chat."));
-    connect(ircAction, &QAction::triggered, mudlet::self(), &mudlet::slot_irc);
-    toolboxMenu->addAction(ircAction);
-
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuPackageManagerAction = new QAction(tr("&Package manager"), this);
     //: This explains the "Package manager" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuPackageManagerAction->setStatusTip(tr("Install and remove collections of Mudlet lua items (packages)."));
@@ -948,8 +941,7 @@ void TDetachedWindow::createToolBar()
     mpButtonDiscord = new QToolButton(this);
     mpButtonDiscord->setText(qsl("Discord"));
     mpButtonDiscord->setObjectName(qsl("discord"));
-    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
-    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonDiscord->setContextMenuPolicy(Qt::DefaultContextMenu);
     mpButtonDiscord->setAutoRaise(true);
     mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonDiscord);
@@ -966,13 +958,8 @@ void TDetachedWindow::createToolBar()
     mpToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
 
-    mpActionIRC = new QAction(tr("Open IRC"), this);
-    mpActionIRC->setIcon(QIcon(qsl(":/icons/internet-telephony.png")));
-    mpActionIRC->setObjectName(qsl("openIRC"));
 
     mpButtonDiscord->addAction(mpActionDiscord);
-    mpButtonDiscord->addAction(mpActionIRC);
-    mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     // Map and other tools
     mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);
@@ -1107,7 +1094,6 @@ void TDetachedWindow::connectToolBarActions()
     // Discord/IRC actions - use our custom slots to ensure correct profile context
     connect(mpActionDiscord, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
     connect(mpActionMudletDiscord, &QAction::triggered, this, &TDetachedWindow::slot_mudletDiscord);
-    connect(mpActionIRC, &QAction::triggered, this, &TDetachedWindow::slot_irc);
 }
 
 QKeySequence TDetachedWindow::resolveShortcut(const QString& key, const QKeySequence& fallback) const
@@ -3010,10 +2996,6 @@ void TDetachedWindow::slot_mudletDiscord()
     }
 }
 
-void TDetachedWindow::slot_irc()
-{
-    mudlet::self()->slot_irc();
-}
 
 void TDetachedWindow::slot_muteMedia()
 {

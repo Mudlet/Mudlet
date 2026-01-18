@@ -134,11 +134,22 @@ void dlgPackageManager::downloadRepositoryIndex()
     }
 
     QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
-        file->write(reply->readAll());
+        const QByteArray data = reply->readAll();
+        if (file->write(data) != data.size()) {
+            qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write downloaded data:" << file->errorString();
+            reply->abort();
+        }
     });
 
     QObject::connect(reply, &QNetworkReply::finished, [reply, file, manager, this]() {
-        file->write(reply->readAll());
+        if (reply->error() != QNetworkReply::NoError) {
+            qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - network request failed:" << reply->errorString();
+        } else {
+            const QByteArray data = reply->readAll();
+            if (!data.isEmpty() && file->write(data) != data.size()) {
+                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write final data:" << file->errorString();
+            }
+        }
         file->close();
         reply->deleteLater();
         file->deleteLater();
@@ -337,13 +348,20 @@ void dlgPackageManager::slot_installPackageFromRepository()
         }
 
         QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
-            file->write(reply->readAll());
+            const QByteArray data = reply->readAll();
+            if (file->write(data) != data.size()) {
+                qWarning() << "dlgPackageManager::slot_installMultiple() ERROR - failed to write downloaded data:" << file->errorString();
+                reply->abort();
+            }
         });
 
         pendingDownloads->insert(packageName, outPath);
 
         QObject::connect(reply, &QNetworkReply::finished, this, [reply, file, this, outPath, packageName, pendingDownloads, remainingDownloads, manager, progress, cancelled, activeReplies]() {
-            file->write(reply->readAll());
+            const QByteArray data = reply->readAll();
+            if (!data.isEmpty() && file->write(data) != data.size()) {
+                qWarning() << "dlgPackageManager::slot_installMultiple() ERROR - failed to write final data:" << file->errorString();
+            }
             file->close();
             reply->deleteLater();
             file->deleteLater();

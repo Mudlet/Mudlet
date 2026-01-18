@@ -42,9 +42,10 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QJsonValue>
-#include <QTextBoundaryFinder>
-#include <QTimer>
 #include <QRegularExpression>
+#include <QTextBoundaryFinder>
+#include <QTime>
+#include <QTimer>
 #include <QUrlQuery>
 
 namespace {
@@ -188,6 +189,9 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 
 TBuffer::~TBuffer()
 {
+    if (mTagWatchdog) {
+        mTagWatchdog->stop();
+    }
 }
 
 TBuffer::TBuffer(const TBuffer& other)
@@ -1425,6 +1429,11 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 
 void TBuffer::processMxpWatchdogCallback()
 {
+    if (!mpHost) {
+        mWatchdogPhase = WatchdogPhase::None;
+        return;
+    }
+
     TMxpNodeBuilder&    tagBuilder = mpHost->mMxpProcessor.getMxpTagBuilder();
     std::string         currentTagContent = tagBuilder.getRawTagContent();
     bool                isMxpParserFrozen = !currentTagContent.empty()
@@ -1436,11 +1445,16 @@ void TBuffer::processMxpWatchdogCallback()
         mWatchdogPhase = WatchdogPhase::Phase2_Unfreeze;
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
-        if (isMxpParserFrozen) {
+        if (isMxpParserFrozen && mpConsole) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
-            QTimer::singleShot(0, [this] () {
-                const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
-                QString     lastEntityValue = mpHost->mMxpProcessor.getEntityValue();
+            const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+            QPointer<Host> hostGuard = mpHost;
+            QPointer<TConsole> consoleGuard = mpConsole;
+            QTimer::singleShot(0, mpConsole, [this, style, hostGuard, consoleGuard] () {
+                if (!hostGuard || !consoleGuard) {
+                    return;
+                }
+                QString     lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
                 size_t      unusedBufferPosition = 0;
 
                 mMudLine.append(lastEntityValue);
@@ -1448,8 +1462,8 @@ void TBuffer::processMxpWatchdogCallback()
                     mMudBuffer.push_back(style);
                 }
                 commitLine('\r', unusedBufferPosition);
-                mpHost->mMxpProcessor.getMxpTagBuilder().reset();
-                mpHost->mpConsole->finalize();
+                hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
+                hostGuard->mpConsole->finalize();
             });
         }
         mWatchdogPhase = WatchdogPhase::None;
@@ -2996,7 +3010,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             }
 
             // Handle menu functionality by extending commands and hints
-            if (!mCurrentHyperlinkMenu.isEmpty() && mCurrentHyperlinkMenu.size() >= 1) {
+            if (!mCurrentHyperlinkMenu.isEmpty()) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
 #endif
@@ -4619,7 +4633,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         QString newLineText;
         const QString time = timeBuffer[i];
         // trivial case
-        if (buffer[i].size() == 0) {
+        if (buffer[i].empty()) {
             tempList.append(newLineText);
             queue.push(newBufferLine);
             timeList.append(time);
@@ -4694,7 +4708,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     const int insertedLines = queue.size() - 1;
     for (int i = 0; i <= insertedLines; ++i) {
-        if (tempList[i].size() < 1) {
+        if (tempList[i].isEmpty()) {
             queue.pop();
             appendEmptyLine();
         } else {

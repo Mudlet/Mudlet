@@ -38,18 +38,19 @@
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
-#include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMapViewManager.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
+#include "XMLexport.h"
 #include "XMLimport.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
@@ -303,8 +304,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     setAutoReconnect(!val.isEmpty() && val.toInt() == Qt::Checked);
 
     // This settings also need to be configured, note that the only time not to
-    // save the setting is on profile loading:
-    mTelnet.setEncoding(readProfileData(qsl("encoding")).toUtf8(), false);
+    // save the setting is on profile loading. Only override the default UTF-8
+    // encoding if a saved encoding exists:
+    const QByteArray savedEncoding = readProfileData(qsl("encoding")).toUtf8();
+    if (!savedEncoding.isEmpty()) {
+        mTelnet.setEncoding(savedEncoding, false);
+    }
 
     auto optin = readProfileData(qsl("discordserveroptin"));
     if (!optin.isEmpty()) {
@@ -615,6 +620,10 @@ void Host::saveModules(bool backup)
         QStringList entry = it.value();
         const QString moduleName = it.key();
         const QString filename = entry[0];
+
+        if (!mModulesLoadedOk.contains(moduleName)) {
+            continue;
+        }
 
         if (backup) {
             createModuleBackup(filename, savePath + moduleName);
@@ -1912,6 +1921,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 // Module files don't exist, clean up stale references
                 mInstalledModules.remove(packageName);
                 mActiveModules.removeAll(packageName);
+                mModulesLoadedOk.remove(packageName);
             } else {
                 // Module actually exists, show duplicate error
                 return {false, tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName)};
@@ -2030,7 +2040,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 mInstalledPackages.append(packageName);
             }
-            reader.importPackage(&file2, packageName, static_cast<int>(thing));
+            auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
+            if (thing != enums::PackageModuleType::Package) {
+                if (success) {
+                    mModulesLoadedOk.insert(packageName);
+                } else {
+                    qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
+                    postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
+                }
+            }
             file2.close();
         }
     } else {
@@ -2049,7 +2067,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         } else {
             mInstalledPackages.append(packageName);
         }
-        reader.importPackage(&file2, packageName, static_cast<int>(thing));
+        auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
+        if (thing != enums::PackageModuleType::Package) {
+            if (success) {
+                mModulesLoadedOk.insert(packageName);
+            } else {
+                qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
+                postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
+            }
+        }
         file2.close();
     }
     if (mpEditorDialog) {
@@ -2072,6 +2098,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QTimer::singleShot(0, this, [this, thing, packageName, fileName]() {
         // Don't raise events if Host is shutting down to avoid handlers executing during teardown
         if (isClosingDown()) {
+            return;
+        }
+
+        // Don't raise install events for modules that failed to load
+        if (thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName)) {
             return;
         }
 
@@ -2252,6 +2283,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         //if ModuleSync, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
         mInstalledModules.remove(packageName);
+        mModulesLoadedOk.remove(packageName);
         mActiveModules.removeAll(packageName);
         if (thing == enums::PackageModuleType::ModuleSync) {
             return true;
@@ -3202,6 +3234,64 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     return {true, QString()};
 }
 
+std::pair<int, QString> Host::createMapView(int areaId)
+{
+    if (!mpMap) {
+        return {0, qsl("no map present or loaded")};
+    }
+
+    auto* viewManager = mpMap->getViewManager();
+    if (!viewManager) {
+        return {0, qsl("no view manager available")};
+    }
+
+    return viewManager->createView(areaId);
+}
+
+std::pair<bool, QString> Host::closeMapView(int viewId)
+{
+    if (!mpMap) {
+        return {false, qsl("no map present or loaded")};
+    }
+
+    auto* viewManager = mpMap->getViewManager();
+    if (!viewManager) {
+        return {false, qsl("no view manager available")};
+    }
+
+    return viewManager->closeView(viewId);
+}
+
+std::pair<int, QString> Host::closeAllMapViews()
+{
+    if (!mpMap) {
+        return {0, qsl("no map present or loaded")};
+    }
+
+    auto* viewManager = mpMap->getViewManager();
+    if (!viewManager) {
+        return {0, qsl("no view manager available")};
+    }
+
+    return {viewManager->closeAllViews(), QString()};
+}
+
+QList<int> Host::getMapViewIds() const
+{
+    if (!mpMap) {
+        qWarning() << "Host::getMapViewIds() - no map present or loaded";
+        return {};
+    }
+
+    auto* viewManager = mpMap->getViewManager();
+    if (!viewManager) {
+        qWarning() << "Host::getMapViewIds() - no view manager available";
+        return {};
+    }
+
+    return viewManager->getViewIds();
+}
+
 void Host::setDebugShowAllProblemCodepoints(const bool state)
 {
     if (mDebugShowAllProblemCodepoints != state) {
@@ -4117,7 +4207,7 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     }
     if (mpNotePad) {
         mpNotePad->setStyleSheet(styleSheet);
-        mpNotePad->notesEdit->setStyleSheet(styleSheet);
+        mpNotePad->setTabsStyleSheet(styleSheet);
     }
     if (mpDockableMapWidget) {
         mpDockableMapWidget->setStyleSheet(styleSheet);
@@ -4287,15 +4377,24 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 void Host::toggleMapperVisibility()
 {
     auto pMap = mpMap.data();
-    const bool visStatus = mpMap->mpMapper->isVisible();
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks
         // to a minimal size} the mapper inside the container QDockWidget). This
         // is the same as the case for a TConsole inside a TDockWidget in
         // (void) TDockWidget::setVisible(bool).
-        pMap->mpMapper->parentWidget()->setVisible(!visStatus);
+        // When in a dock widget, check the parent's visibility, not the child's,
+        // to correctly handle the case where the dock widget was closed via X button.
+        const bool isCurrentlyVisible = pMap->mpMapper->parentWidget()->isVisible();
+        if (isCurrentlyVisible) {
+            pMap->mpMapper->parentWidget()->setVisible(false);
+        } else {
+            // When showing, show child first then parent - same pattern as TDockWidget
+            pMap->mpMapper->show();
+            pMap->mpMapper->parentWidget()->setVisible(true);
+        }
     } else {
+        const bool visStatus = pMap->mpMapper->isVisible();
         pMap->mpMapper->setVisible(!visStatus);
     }
 }
@@ -4345,6 +4444,12 @@ void Host::createMapper(const bool loadDefaultMap)
 
     // XXX: should this be called multiple times?
     mudlet::self()->loadWindowLayout();
+
+    // Ensure the mapper is visible after creation - loadWindowLayout() may have
+    // restored a previous hidden state, but when first creating the mapper, we
+    // always want it to be visible.
+    pMap->mpMapper->show();
+    mpDockableMapWidget->show();
 
     check_for_mappingscript();
     TEvent mapOpenEvent {};

@@ -46,13 +46,18 @@
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
+#include <QFile>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QPainter>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSplitter>
 #include <QTextBoundaryFinder>
-#include <QPainter>
+#include <QVideoWidget>
 
 const QString TConsole::cmLuaLineVariable("line");
 
