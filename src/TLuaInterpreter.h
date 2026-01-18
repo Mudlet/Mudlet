@@ -297,6 +297,11 @@ public:
     static int setMapPerspective(lua_State*);
 #endif
     static int centerview(lua_State*);
+    static int createMapView(lua_State*);
+    static int closeMapView(lua_State*);
+    static int closeAllMapViews(lua_State*);
+    static int getMapViewIds(lua_State*);
+    static int getMapViewInfo(lua_State*);
     static int getAreaTable(lua_State*);
     static int getAreaTableSwap(lua_State*);
     static int getPath(lua_State*);

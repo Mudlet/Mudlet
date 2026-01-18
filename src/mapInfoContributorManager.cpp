@@ -59,7 +59,7 @@ bool MapInfoContributorManager::enableContributor(const QString &name)
         return false;
     }
     mpHost->mMapInfoContributors.insert(name);
-    mpHost->mpMap->update();
+    mpHost->mpMap->updateArea(-1);
     emit signal_contributorsUpdated();
     return true;
 }
@@ -70,7 +70,7 @@ bool MapInfoContributorManager::disableContributor(const QString &name)
         return false;
     }
     mpHost->mMapInfoContributors.remove(name);
-    mpHost->mpMap->update();
+    mpHost->mpMap->updateArea(-1);
     emit signal_contributorsUpdated();
     return true;
 }

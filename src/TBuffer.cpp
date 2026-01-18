@@ -189,6 +189,9 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 
 TBuffer::~TBuffer()
 {
+    if (mTagWatchdog) {
+        mTagWatchdog->stop();
+    }
 }
 
 TBuffer::TBuffer(const TBuffer& other)
@@ -1426,6 +1429,11 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 
 void TBuffer::processMxpWatchdogCallback()
 {
+    if (!mpHost) {
+        mWatchdogPhase = WatchdogPhase::None;
+        return;
+    }
+
     TMxpNodeBuilder&    tagBuilder = mpHost->mMxpProcessor.getMxpTagBuilder();
     std::string         currentTagContent = tagBuilder.getRawTagContent();
     bool                isMxpParserFrozen = !currentTagContent.empty()
@@ -1437,11 +1445,16 @@ void TBuffer::processMxpWatchdogCallback()
         mWatchdogPhase = WatchdogPhase::Phase2_Unfreeze;
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
-        if (isMxpParserFrozen) {
+        if (isMxpParserFrozen && mpConsole) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
-            QTimer::singleShot(0, [this] () {
-                const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
-                QString     lastEntityValue = mpHost->mMxpProcessor.getEntityValue();
+            const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+            QPointer<Host> hostGuard = mpHost;
+            QPointer<TConsole> consoleGuard = mpConsole;
+            QTimer::singleShot(0, mpConsole, [this, style, hostGuard, consoleGuard] () {
+                if (!hostGuard || !consoleGuard) {
+                    return;
+                }
+                QString     lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
                 size_t      unusedBufferPosition = 0;
 
                 mMudLine.append(lastEntityValue);
@@ -1449,8 +1462,8 @@ void TBuffer::processMxpWatchdogCallback()
                     mMudBuffer.push_back(style);
                 }
                 commitLine('\r', unusedBufferPosition);
-                mpHost->mMxpProcessor.getMxpTagBuilder().reset();
-                mpHost->mpConsole->finalize();
+                hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
+                hostGuard->mpConsole->finalize();
             });
         }
         mWatchdogPhase = WatchdogPhase::None;

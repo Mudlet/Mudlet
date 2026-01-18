@@ -43,6 +43,7 @@ public:
     explicit ScriptUnit(Host* pHost)
     : mpHost(pHost)
     {}
+    ~ScriptUnit();
 
     std::list<TScript*> getScriptRootNodeList()
     {
