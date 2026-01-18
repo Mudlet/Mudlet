@@ -50,6 +50,7 @@ QString displayText = tr("Connection failed: %1").arg(errorMessage);
 
 * minimise use of HTML styling tags in strings to be translated
 * enable users to use language-specific Mudlet object names (triggers, aliases, labels, etc)
+* .ui files are always enabled for translation. To disable a string, use notr: `<string notr="true">text</string>`
 
 Don't:
 * translate the Mudlet API: functions, events, error messages or constants (e.g. `main` console)

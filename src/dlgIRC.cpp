@@ -27,13 +27,14 @@
 #include "Host.h"
 #include "ircmessageformatter.h"
 
+#include <IrcTextFormat>
+#include <IrcUser>
+
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QDesktopServices>
 #include <QScrollBar>
 #include <QShortcut>
-#include "post_guard.h"
 
 
 dlgIRC::dlgIRC(Host* pHost)

@@ -14,11 +14,11 @@ BasedOnStyle: LLVM
 
 # language
 Language: Cpp
-Standard: c++17
+Standard: c++20
 DisableFormat: false
 
 # line length
-ColumnLimit: 200 # revisit when tuning.
+ColumnLimit: 200
 
 # indentation
 IndentWidth: 4
@@ -50,9 +50,9 @@ BraceWrapping:
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: true
-BreakConstructorInitializersBeforeComma: true
+BreakConstructorInitializers: BeforeComma
 # BreakStringLiterals: true
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
+PackConstructorInitializers: Never
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 2
 
@@ -67,6 +67,7 @@ SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
+SpaceBeforeCpp11BracedList: false
 
 # parameters/arguments
 AllowAllParametersOfDeclarationOnNextLine: true
@@ -85,6 +86,7 @@ AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Empty
 AllowShortLoopsOnASingleLine: false
 
 # alignment
@@ -105,10 +107,6 @@ PenaltyReturnTypeOnItsOwnLine: 60
 
 # includes
 IncludeCategories:
-  - Regex: '^"post_guard.h"$'
-    Priority: 7
-  - Regex: '^"pre_guard.h"$'
-    Priority: 2
   - Regex: '^"ui_.*'
     Priority: 3
   - Regex: '^<Qt.*'
@@ -122,7 +120,7 @@ IncludeCategories:
   - Regex: '^"'
     Priority: 1
 # IncludeIsMainRegex: '$'
-SortIncludes: true
+SortIncludes: false
 
 # macros
 ForEachMacros: [ foreach, Q_FOREACH, BOOST_FOREACH ]
@@ -131,4 +129,5 @@ MacroBlockEnd:   ''
 
 # comments
 CommentPragmas: ''
+FixNamespaceComments: false
 ReflowComments: false # revisit

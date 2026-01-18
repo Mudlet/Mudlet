@@ -20,10 +20,8 @@
 #ifndef MUDLET_TSTRINGUTILS_H
 #define MUDLET_TSTRINGUTILS_H
 
-#include "pre_guard.h"
 #include <QString>
 #include <QStringList>
-#include "post_guard.h"
 #include <functional>
 #include "utils.h"
 

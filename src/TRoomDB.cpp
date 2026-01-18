@@ -27,15 +27,15 @@
 #include "T2DMap.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QRegularExpression>
-#include "post_guard.h"
 
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
 const QString ROOM_UI_NAMEFONT = qsl("room.ui_nameFont");
 const QString ROOM_UI_NAMESIZE = qsl("room.ui_nameSize");
+const QString ROOM_UI_BORDERCOLOR = qsl("room.ui_borderColor");
+const QString ROOM_UI_BORDERTHICKNESS = qsl("room.ui_borderThickness");
 
 TRoomDB::TRoomDB(TMap* pMap)
 : mpMap(pMap)
@@ -48,11 +48,11 @@ TRoomDB::TRoomDB(TMap* pMap)
 TRoomDB::~TRoomDB()
 {
     mBulkDeletionMode = true;
-    
+
     // Get all pointers before clearing containers to prevent lookup issues
     QList<TRoom*> const roomList = getRoomPtrList();
     QList<TArea*> const areaList = getAreaPtrList();
-    
+
     // Clear all containers first - this prevents individual destructors
     // from trying to remove themselves from the containers (O(n²) behavior)
     rooms.clear();
@@ -61,7 +61,7 @@ TRoomDB::~TRoomDB()
     areaNamesMap.clear();
     hashToRoomID.clear();
     roomIDToHash.clear();
-    
+
     // Now delete all objects - their destructors will see mBulkDeletionMode=true
     // and skip the expensive cleanup operations
     for (auto room : roomList) {
@@ -107,6 +107,15 @@ bool TRoomDB::addRoom(int id, TRoom* pR, bool isMapLoading)
         pR->setId(id);
         updateEntranceMap(pR, isMapLoading);
         return true;
+    }
+    if (rooms.contains(id)) {
+        qWarning() << "TRoomDB::addRoom() - Room" << id << "already exists";
+    }
+    if (id <= 0) {
+        qWarning() << "TRoomDB::addRoom() - Invalid room id:" << id;
+    }
+    if (!pR) {
+        qWarning() << "TRoomDB::addRoom() - Null room pointer for id:" << id;
     }
     return false;
 }
@@ -317,12 +326,15 @@ bool TRoomDB::removeRoom(int id)
             for (const auto& key : profilesWithUserInThisRoom) {
                 mpMap->mRoomIdHash[key] = 0;
             }
+            mpMap->updateArea(-1);
         }
         if (mpMap->mTargetID == id) {
             mpMap->mTargetID = 0;
         }
         TRoom* pR = getRoom(id);
-        delete pR;
+        if (pR) {
+            delete pR;
+        }
         return true;
     }
     return false;
@@ -389,9 +401,8 @@ bool TRoomDB::removeArea(const QString& name)
 {
     if (areaNamesMap.values().contains(name)) {
         return removeArea(areaNamesMap.key(name)); // i.e. call the removeArea(int) method
-    } else {
-        return false;
     }
+    return false;
 }
 
 void TRoomDB::removeArea(TArea* pA)
@@ -462,9 +473,8 @@ TArea* TRoomDB::getArea(int id)
     //area id of -1 is a room in the "void", 0 is a failure
     if (id > 0 || id == -1) {
         return areas.value(id, nullptr);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 // Used by TMap::audit() - can detect and return areas with normally invalids Id (less than -1 or zero)!
@@ -582,9 +592,8 @@ bool TRoomDB::addArea(int id, QString name)
             areaNamesMap[id] = name;
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 // Used by TMap::readJsonMapFile(...) to insert an already populated area in:
@@ -1116,13 +1125,13 @@ void TRoomDB::clearMapDB()
 {
     QElapsedTimer timer;
     timer.start();
-    
+
     // Set bulk deletion mode to prevent expensive individual cleanup
     mBulkDeletionMode = true;
-    
+
     QList<TRoom*> const rPtrL = getRoomPtrList();
     QList<TArea*> const areaList = getAreaPtrList();
-    
+
     // Clear all containers first - this prevents individual destructors
     // from trying to remove themselves from the containers (O(n²) behavior)
     rooms.clear(); // Prevents any further use of TRoomDB::getRoom(int) !!!
@@ -1131,7 +1140,7 @@ void TRoomDB::clearMapDB()
     areaNamesMap.clear();
     hashToRoomID.clear();
     roomIDToHash.clear();
-    
+
     // Now delete all objects - their destructors will see mBulkDeletionMode=true
     // and skip the expensive cleanup operations
     for (auto room : rPtrL) {
@@ -1142,9 +1151,9 @@ void TRoomDB::clearMapDB()
         delete area;
     }
     assert(areas.empty());
-    
+
     mBulkDeletionMode = false;
-    
+
     // Must now reinsert areaId -1 name = "Default Area"
     addArea(-1, mpMap->getDefaultAreaName());
     qDebug() << "TRoomDB::clearMapDB() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
@@ -1297,9 +1306,9 @@ void TRoomDB::restoreSingleArea(int areaID, TArea* pA)
     areas[areaID] = pA;
 }
 
-void TRoomDB::restoreSingleRoom(int i, TRoom* pT)
+bool TRoomDB::restoreSingleRoom(int i, TRoom* pT)
 {
-    addRoom(i, pT, true);
+    return addRoom(i, pT, true);
 }
 
 // Used by XMLimport to fix TArea::rooms data after import

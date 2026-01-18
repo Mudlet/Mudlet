@@ -379,6 +379,50 @@ function Geyser.Container:new(cons, container)
   return me
 end
 
+--- Deletes this window and removes it from its container's tracking.
+-- Recursively deletes all child windows first.
+-- Properly unregisters from all tracking structures including:
+-- - Parent container's windowList and windows array
+-- - Geyser.parentWindows (for UserWindows and ScrollBoxes)
+-- - Geyser.windowList (for top-level Geyser objects)
+function Geyser.Container:delete()
+  -- Delete all children first
+  for _, child in pairs(self.windowList) do
+    if child and child.delete then
+      child:delete()
+    end
+  end
+  
+  -- Clear references
+  self.windowList = {}
+  self.windows = {}
+  
+  -- Remove from parent's window list
+  if self.container then
+    self.container:remove(self)
+  end
+  
+  -- Remove from Geyser.parentWindows if this is a UserWindow or ScrollBox
+  if Geyser.parentWindows and Geyser.parentWindows[self.name] then
+    Geyser.parentWindows[self.name] = nil
+  end
+  
+  -- Remove from root Geyser.windowList if present
+  if Geyser.windowList and Geyser.windowList[self.name] then
+    Geyser.windowList[self.name] = nil
+    -- Also remove from the windows array
+    local index = table.index_of(Geyser.windows, self.name)
+    if index then
+      table.remove(Geyser.windows, index)
+    end
+  end
+  
+  -- Call type-specific delete if available
+  if self.type_delete then
+    self:type_delete()
+  end
+end
+
 --- Overridden constructor to use add2
 function Geyser.Container:new2 (cons, container)
   cons = cons or {}

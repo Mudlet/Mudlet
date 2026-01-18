@@ -23,17 +23,16 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "utils.h"
+
 #include <QMap>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
 class Host;
 class TScript;
-
 
 class ScriptUnit
 {
@@ -44,6 +43,7 @@ public:
     explicit ScriptUnit(Host* pHost)
     : mpHost(pHost)
     {}
+    ~ScriptUnit();
 
     std::list<TScript*> getScriptRootNodeList()
     {
@@ -60,6 +60,7 @@ public:
     bool registerScript(TScript* pT);
     void unregisterScript(TScript* pT);
     void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     void stopAllTriggers();
     void uninstall(const QString&);
     void _uninstall(TScript* pChild, const QString& packageName);

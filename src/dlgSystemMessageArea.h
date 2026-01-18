@@ -23,9 +23,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_system_message_area.h"
-#include "post_guard.h"
 
 
 class dlgSystemMessageArea : public QWidget, public Ui::system_message_area

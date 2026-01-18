@@ -22,11 +22,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TrailingWhitespaceMarker.h"
-
-#include "pre_guard.h"
 #include "ui_aliases_main_area.h"
-#include "post_guard.h"
 
 
 class dlgAliasMainArea : public QWidget, public Ui::aliases_main_area

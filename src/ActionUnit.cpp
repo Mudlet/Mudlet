@@ -30,6 +30,24 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
+#include <functional>
+
+ActionUnit::~ActionUnit()
+{
+    for (auto action : mActionRootNodeList) {
+        action->mpHost = nullptr;
+        std::function<void(TAction*)> nullifyChildren = [&nullifyChildren](TAction* a) {
+            for (auto child : *a->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(action);
+    }
+    for (auto action : mActionRootNodeList) {
+        delete action;
+    }
+}
 
 void ActionUnit::_uninstall(TAction* pChild, const QString& packageName)
 {
@@ -187,6 +205,16 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     }
 }
 
+void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentAction(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentAction(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void ActionUnit::removeActionRootNode(TAction* pT)
 {
     if (!pT) {
@@ -199,18 +227,16 @@ TAction* ActionUnit::getAction(int id)
 {
     if (mActionMap.contains(id)) {
         return mActionMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TAction* ActionUnit::getActionPrivate(int id)
 {
     if (mActionMap.find(id) != mActionMap.end()) {
         return mActionMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool ActionUnit::registerAction(TAction* pT)
