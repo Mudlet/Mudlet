@@ -905,7 +905,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     writers.insert(qsl("profile"), writer);
     if (!writer->exportHost(filename_xml)) {
         writers.remove(qsl("profile"));
-        return {false, filename_xml, QString()};
+        return {false, filename_xml, tr("the profile is no longer available")};
     }
     mWritingHostAndModules = true;
 
