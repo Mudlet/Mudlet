@@ -205,8 +205,20 @@ int main(int argc, char* argv[])
 
 
     #ifdef WITH_SENTRY
-        initSentry();
-        auto sentryClose = qScopeGuard([] { sentry_close(); });
+        // Save the current Qt message handler before Sentry installs its own.
+        // We need to restore it before sentry_close() because Qt may log warnings
+        // during shutdown cleanup (e.g., in QThreadStorageData::finish()) after
+        // Sentry has freed its resources, causing a use-after-free crash.
+        QtMessageHandler originalQtMessageHandler = qInstallMessageHandler(nullptr);
+        qInstallMessageHandler(originalQtMessageHandler);  // Re-install it temporarily
+        
+        initSentry();  // Sentry will now install its handler
+        
+        auto sentryClose = qScopeGuard([originalQtMessageHandler] { 
+            // Restore original Qt message handler BEFORE closing Sentry
+            qInstallMessageHandler(originalQtMessageHandler);
+            sentry_close(); 
+        });
     #endif
 
 #ifdef Q_OS_WINDOWS
