@@ -2782,6 +2782,16 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 areaExitsMap[k] = clickPoint;
                 // line ENDS at the center of the room, and the START sticks out
                 // in the appropriate direction
+
+                // Draw outline first for visibility on matching backgrounds
+                QPen outlinePen = pen;
+                outlinePen.setWidthF(exitWidth + 2.0);
+                outlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+                painter.setPen(outlinePen);
+                painter.drawLine(line);
+
+                // Draw colored line on top
+                painter.setPen(pen);
                 painter.drawLine(line);
                 QLineF l0 = QLineF(line);
                 if (mLargeAreaExitArrows) {
@@ -2815,7 +2825,17 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 arrowPen.setJoinStyle(Qt::RoundJoin);
                 arrowPen.setCapStyle(Qt::RoundCap);
                 arrowPen.setCosmetic(mMapperUseAntiAlias);
-                painter.setPen(arrowPen);
+
+                // Draw outline first for visibility
+                QPen arrowOutlinePen = arrowPen;
+                arrowOutlinePen.setWidthF(2.0);
+                arrowOutlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+                painter.setPen(arrowOutlinePen);
+                painter.setBrush(Qt::NoBrush);
+                painter.drawPolygon(polygon);
+
+                // Draw filled arrow head on top
+                painter.setPen(Qt::NoPen);
                 painter.setBrush(brush);
                 painter.drawPolygon(polygon);
                 painter.restore();
@@ -5678,9 +5698,16 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                     areaPen.setCapStyle(Qt::RoundCap);
                     areaPen.setCosmetic(mMapperUseAntiAlias);
                     areaPen.setColor(mpMap->getColor(exitRoomId));
-                    painter.setPen(areaPen);
 
-                    // Draw the area exit stub line
+                    // Draw outline first for visibility on matching backgrounds
+                    QPen outlinePen = areaPen;
+                    outlinePen.setWidthF(exitWidth + 2.0);
+                    outlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+                    painter.setPen(outlinePen);
+                    painter.drawLine(exitLine);
+
+                    // Draw colored line on top
+                    painter.setPen(areaPen);
                     painter.drawLine(exitLine);
 
                     // Draw arrow head (same logic as original paintRoomExits lines 2298-2333)
@@ -5719,7 +5746,17 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                     arrowPen.setJoinStyle(Qt::RoundJoin);
                     arrowPen.setCapStyle(Qt::RoundCap);
                     arrowPen.setCosmetic(mMapperUseAntiAlias);
-                    painter.setPen(arrowPen);
+
+                    // Draw outline first for visibility
+                    QPen arrowOutlinePen = arrowPen;
+                    arrowOutlinePen.setWidthF(2.0);
+                    arrowOutlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
+                    painter.setPen(arrowOutlinePen);
+                    painter.setBrush(Qt::NoBrush);
+                    painter.drawPolygon(arrowHead);
+
+                    // Draw filled arrow head on top
+                    painter.setPen(Qt::NoPen);
                     painter.setBrush(arrowBrush);
                     painter.drawPolygon(arrowHead);
                     painter.restore();
