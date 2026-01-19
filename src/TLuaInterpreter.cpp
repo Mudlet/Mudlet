@@ -5294,6 +5294,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapPerspective", TLuaInterpreter::setMapPerspective);
 #endif
     lua_register(pGlobalLua, "centerview", TLuaInterpreter::centerview);
+    lua_register(pGlobalLua, "createMapView", TLuaInterpreter::createMapView);
+    lua_register(pGlobalLua, "closeMapView", TLuaInterpreter::closeMapView);
+    lua_register(pGlobalLua, "closeAllMapViews", TLuaInterpreter::closeAllMapViews);
+    lua_register(pGlobalLua, "getMapViewIds", TLuaInterpreter::getMapViewIds);
+    lua_register(pGlobalLua, "getMapViewInfo", TLuaInterpreter::getMapViewInfo);
     lua_register(pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend);
     lua_register(pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger);
     lua_register(pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger);

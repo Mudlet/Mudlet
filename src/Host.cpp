@@ -43,6 +43,7 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMapViewManager.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
@@ -903,7 +904,10 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
-    writer->exportHost(filename_xml);
+    if (!writer->exportHost(filename_xml)) {
+        writers.remove(qsl("profile"));
+        return {false, filename_xml, tr("the profile is no longer available")};
+    }
     mWritingHostAndModules = true;
 
     // emit signal to notify the UI that the save button should get disabled momentarily
@@ -3233,6 +3237,64 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     return {true, QString()};
 }
 
+std::pair<int, QString> Host::createMapView(int areaId)
+{
+    if (!mpMap) {
+        return {0, qsl("no map present or loaded")};
+    }
+
+    auto* viewManager = mpMap->getViewManager();
+    if (!viewManager) {
+        return {0, qsl("no view manager available")};
+    }
+
+    return viewManager->createView(areaId);
+}
+
+std::pair<bool, QString> Host::closeMapView(int viewId)
+{
+    if (!mpMap) {
+        return {false, qsl("no map present or loaded")};
+    }
+
+    auto* viewManager = mpMap->getViewManager();
+    if (!viewManager) {
+        return {false, qsl("no view manager available")};
+    }
+
+    return viewManager->closeView(viewId);
+}
+
+std::pair<int, QString> Host::closeAllMapViews()
+{
+    if (!mpMap) {
+        return {0, qsl("no map present or loaded")};
+    }
+
+    auto* viewManager = mpMap->getViewManager();
+    if (!viewManager) {
+        return {0, qsl("no view manager available")};
+    }
+
+    return {viewManager->closeAllViews(), QString()};
+}
+
+QList<int> Host::getMapViewIds() const
+{
+    if (!mpMap) {
+        qWarning() << "Host::getMapViewIds() - no map present or loaded";
+        return {};
+    }
+
+    auto* viewManager = mpMap->getViewManager();
+    if (!viewManager) {
+        qWarning() << "Host::getMapViewIds() - no view manager available";
+        return {};
+    }
+
+    return viewManager->getViewIds();
+}
+
 void Host::setDebugShowAllProblemCodepoints(const bool state)
 {
     if (mDebugShowAllProblemCodepoints != state) {
@@ -4148,7 +4210,7 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     }
     if (mpNotePad) {
         mpNotePad->setStyleSheet(styleSheet);
-        mpNotePad->notesEdit->setStyleSheet(styleSheet);
+        mpNotePad->setTabsStyleSheet(styleSheet);
     }
     if (mpDockableMapWidget) {
         mpDockableMapWidget->setStyleSheet(styleSheet);
@@ -4318,15 +4380,24 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 void Host::toggleMapperVisibility()
 {
     auto pMap = mpMap.data();
-    const bool visStatus = mpMap->mpMapper->isVisible();
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks
         // to a minimal size} the mapper inside the container QDockWidget). This
         // is the same as the case for a TConsole inside a TDockWidget in
         // (void) TDockWidget::setVisible(bool).
-        pMap->mpMapper->parentWidget()->setVisible(!visStatus);
+        // When in a dock widget, check the parent's visibility, not the child's,
+        // to correctly handle the case where the dock widget was closed via X button.
+        const bool isCurrentlyVisible = pMap->mpMapper->parentWidget()->isVisible();
+        if (isCurrentlyVisible) {
+            pMap->mpMapper->parentWidget()->setVisible(false);
+        } else {
+            // When showing, show child first then parent - same pattern as TDockWidget
+            pMap->mpMapper->show();
+            pMap->mpMapper->parentWidget()->setVisible(true);
+        }
     } else {
+        const bool visStatus = pMap->mpMapper->isVisible();
         pMap->mpMapper->setVisible(!visStatus);
     }
 }
@@ -4376,6 +4447,12 @@ void Host::createMapper(const bool loadDefaultMap)
 
     // XXX: should this be called multiple times?
     mudlet::self()->loadWindowLayout();
+
+    // Ensure the mapper is visible after creation - loadWindowLayout() may have
+    // restored a previous hidden state, but when first creating the mapper, we
+    // always want it to be visible.
+    pMap->mpMapper->show();
+    mpDockableMapWidget->show();
 
     check_for_mappingscript();
     TEvent mapOpenEvent {};

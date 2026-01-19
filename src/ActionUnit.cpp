@@ -30,6 +30,24 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
+#include <functional>
+
+ActionUnit::~ActionUnit()
+{
+    for (auto action : mActionRootNodeList) {
+        action->mpHost = nullptr;
+        std::function<void(TAction*)> nullifyChildren = [&nullifyChildren](TAction* a) {
+            for (auto child : *a->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(action);
+    }
+    for (auto action : mActionRootNodeList) {
+        delete action;
+    }
+}
 
 void ActionUnit::_uninstall(TAction* pChild, const QString& packageName)
 {

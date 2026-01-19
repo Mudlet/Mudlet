@@ -38,6 +38,7 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "TRoomDB.h"
 #include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
@@ -3670,14 +3671,12 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
     mpHost->mLuaInterpreter.setAtcpTable(var, arg);
     if (var.startsWith(QLatin1String("RoomNum"))) {
         if (mpHost->mpMap) {
-            mpHost->mpMap->mRoomIdHash[mProfileName] = arg.toInt();
-#if defined(INCLUDE_3DMAPPER)
-            if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
-                mpHost->mpMap->mpM->update();
-            }
-#endif
-            if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-                mpHost->mpMap->mpMapper->mp2dMap->update();
+            const int roomId = arg.toInt();
+            mpHost->mpMap->mRoomIdHash[mProfileName] = roomId;
+            if (auto* pR = mpHost->mpMap->mpRoomDB->getRoom(roomId)) {
+                mpHost->mpMap->updateArea(pR->getArea());
+            } else {
+                mpHost->mpMap->updateArea(-1);
             }
         }
     }
