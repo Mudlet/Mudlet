@@ -21,7 +21,9 @@
 
 set -x
 
-# Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
+# Version: 2.3.0    Add build counter suffix for multiple builds from same commit
+#          2.2.0    Skip commit date check when build is manually forced
+#          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 
 # Exit codes:
@@ -82,15 +84,91 @@ cd "${GITHUB_WORKSPACE}" || exit 1
 PATH="/c/ProgramData/Chocolatey/bin:${PATH}"
 export PATH
 
-if [ "${BUILD_ACTION}" == "Release" ]; then
-  # Release build - so typical output could be:
+# Check if GITHUB_REPO_TAG is "false"
+if [[ "${GITHUB_REPO_TAG}" == "false" ]]; then
+  echo "=== GITHUB_REPO_TAG is FALSE ==="
+
+  # Check if this is a scheduled build
+  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
+    echo "=== GITHUB_SCHEDULED_BUILD is TRUE, this is a PTB ==="
+    MUDLET_VERSION_BUILD="-ptb"
+  else
+    MUDLET_VERSION_BUILD="-testing"
+    echo "=== GITHUB_SCHEDULED_BUILD is FALSE, this is NOT a PTB ==="
+  fi
+
+  # Check if this is a pull request
+  if [[ -n "${GITHUB_PULL_REQUEST_NUMBER}" ]]; then
+    # Use the specific commit SHA from the pull request head, since GitHub Actions merges the PR
+    BUILD_COMMIT=$(git rev-parse --short "${GITHUB_PULL_REQUEST_HEAD_SHA}")
+    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${GITHUB_PULL_REQUEST_NUMBER}"
+  else
+    BUILD_COMMIT=$(git rev-parse --short HEAD)
+
+    if [[ "${MUDLET_VERSION_BUILD}" == "-ptb" ]]; then
+      # Get current date in YYYY-MM-DD format
+      CURRENT_DATE=$(date +%F)
+      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${CURRENT_DATE}"
+    fi
+  fi
+else
+  echo "=== GITHUB_REPO_TAG is TRUE ==="
+fi
+
+# Convert to lowercase, not all systems deal with uppercase ASCII characters
+# This will still be empty for a Release build
+export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
+export BUILD_COMMIT="${BUILD_COMMIT,,}"
+
+# Extract version from CMakeLists.txt
+VERSION_LINE=$(grep "set(APP_VERSION" "${GITHUB_WORKSPACE}/CMakeLists.txt")
+VERSION_REGEX='set\(APP_VERSION (.+)\)'
+
+# Use Bash regex matching to extract version - don't double-quote these as that
+# can mess things up!
+if [[ ${VERSION_LINE} =~ ${VERSION_REGEX} ]]; then
+  VERSION="${BASH_REMATCH[1]}"
+fi
+
+# For PTB builds, check if we need a build counter suffix
+# This allows multiple builds from the same commit
+BUILD_COUNTER_SUFFIX=""
+if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]] && [[ -n "${BUILD_COMMIT}" ]]; then
+  # Query the dblsqd feed for existing versions with this commit
+  EXISTING_VERSIONS=$(curl --silent "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86_64" | \
+    jq --raw-output ".releases[].version" | \
+    grep -E "${BUILD_COMMIT}(rebuild[0-9]+)?$" || true)
+
+  if [[ -n "${EXISTING_VERSIONS}" ]]; then
+    # Count existing versions and find the highest build number
+    HIGHEST_BUILD=1
+    while IFS= read -r ver; do
+      if [[ "${ver}" =~ rebuild([0-9]+)$ ]]; then
+        NUM="${BASH_REMATCH[1]}"
+        if [[ "${NUM}" -gt "${HIGHEST_BUILD}" ]]; then
+          HIGHEST_BUILD="${NUM}"
+        fi
+      fi
+    done <<< "${EXISTING_VERSIONS}"
+
+    # Next build number
+    NEXT_BUILD=$((HIGHEST_BUILD + 1))
+    BUILD_COUNTER_SUFFIX="rebuild${NEXT_BUILD}"
+    echo "=== Found existing PTB builds for commit ${BUILD_COMMIT}, using build counter: ${NEXT_BUILD} ==="
+  fi
+fi
+
+# Check if MUDLET_VERSION_BUILD is empty and print accordingly
+if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
+  # Probably a release build - so typical output could be:
   #    "BUILDING MUDLET 4.19.1
   echo "BUILDING MUDLET ${VERSION}"
 else
   # Include Git SHA1 in the display of the build information
   # Probably a PTB - so typical output could be:
   #    "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678
-  echo "BUILDING MUDLET ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+  # Or with build counter: "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678rebuild2
+  echo "BUILDING MUDLET ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}"
 fi
 if [ "${MAKE_PORTABLE}" == 'true' ]; then
   echo "Also producing a portable version of the above."
@@ -175,10 +253,26 @@ if [ "${BUILD_ACTION}" == "PullRequest" ] || [ "${BUILD_ACTION}" == "Testing" ];
   } >> "${GITHUB_ENV}"
 
 else
-  # Either a Public Test or a Release build:
-  echo "=== Cloning installer project ==="
-  git clone https://github.com/Mudlet/installers.git "${GITHUB_WORKSPACE}/installers"
-  cd "${GITHUB_WORKSPACE}/installers/windows" || exit 1
+  # A Public Test Build or a Release
+  # Check if it's a Public Test Build
+  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
+
+    # Skip commit check if this is a manually forced build
+    if [[ "${GITHUB_FORCE_BUILD}" == "true" ]]; then
+      echo "=== Forced build requested, skipping commit date check ==="
+    else
+      # Get the commit date of the last commit
+      COMMIT_DATE=$(git show -s --format="%cs")
+      # Get yesterday's date in the same format
+      YESTERDAY_DATE=$(date --date="yesterday" +%Y-%m-%d)
+
+      if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
+        echo "=== No new commits, aborting public test build generation ==="
+        exit 0
+      else
+        echo "=== New commits, continuing to create a public test build ==="
+      fi
+    fi
 
   # Set parameters for Clowd.Squirrel and other stages
   if [ "${BUILD_ACTION}" == "PublicTest" ]; then
@@ -227,69 +321,24 @@ else
 
   echo "Renaming mudlet.exe to ${PACKAGE_EXE}"
   mv "${PACKAGE_PATH}/mudlet.exe" "${PACKAGE_PATH}/${PACKAGE_EXE}"
+
+  # Create squirrel sidecar file to mark only the main exe for Start Menu shortcut
+  # This prevents crashpad_handler.exe from getting its own Start Menu entry
+  echo "1" > "${PACKAGE_PATH}/${PACKAGE_EXE}.squirrel"
+
   PACKAGE_EXE_PATHFILE="$(cygpath -au "${PACKAGE_PATH}/${PACKAGE_EXE}")"
   PACKAGE_EXE_WINPATHFILE="$(cygpath -aw "${PACKAGE_EXE_PATHFILE}")"
 
-  echo "=== Setting up Java 21 for signing ==="
-  # Java is installed by default, we just need to select which version to use:
-  JAVA_HOME="$(cygpath -au "${JAVA_HOME_21_X64}")"
-  export JAVA_HOME
-  export PATH="${JAVA_HOME}/bin:${PATH}"
-  JAVA_JAR_WINPATHFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/jsign-7.0-SNAPSHOT.jar")"
+  echo "=== Cloning installer project ==="
+  git clone https://github.com/Mudlet/installers.git "${GITHUB_WORKSPACE}/installers"
+  cd "${GITHUB_WORKSPACE}/installers/windows" || exit 1
 
-  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Code signing of Mudlet application and bundled libraries skipped - no Azure token provided ==="
+  echo "=== Preparing an intermediate artifact of the code ==="
+  # What will it be called:
+  if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
+    INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64"
   else
-    echo "=== Signing Mudlet executable and bundled libraries ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${PACKAGE_EXE_WINPATHFILE}" "${PACKAGE_WINPATH}\\**\\*.dll"
-  fi
-
-  if [ "${MAKE_PORTABLE}" == 'true' ]; then
-    echo "=== Preparing (signed) portable artifact for upload to make.mudlet.org ==="
-
-    # Create portable.txt file to enable portable mode (empty file) - meaning
-    # store the game data and settings under the directory where the executable
-    # is located when it is extracted:
-    touch "${PACKAGE_PATH}/portable.txt"
-    echo "Created empty portable.txt file: ${PACKAGE_PATH}/portable.txt"
-
-    PORTABLE_ARTIFACT_PATHORFILE="$(cygpath -au "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
-    PORTABLE_ARTIFACT_WINPATHORFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
-
-    echo "Creating self-extracting archive from directory: $(basename "${PACKAGE_PATH}")"
-    # Actually create the portable ZIP archive - put it in the root of our
-    # working area:
-    7z a -mx9 -bt -sfx "$(cygpath -au "${PORTABLE_ARTIFACT_WINPATHORFILE}")"
-
-    if [ -n "${AZURE_ACCESS_TOKEN}" ]; then
-      echo "=== Signing Mudlet portable self-extracting archive ==="
-      java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-        --storetype TRUSTEDSIGNING \
-        --keystore eus.codesigning.azure.net \
-        --storepass "${AZURE_ACCESS_TOKEN}" \
-        --alias Mudlet/Mudlet \
-        "${PORTABLE_ARTIFACT_WINPATHORFILE}"
-    fi
-
-    # Make the detail available to the workflow file so it can be passed to the
-    # upload action
-    {
-      echo "PORTABLE_ARTIFACT_NAME=${PORTABLE_ARTIFACT_NAME}"
-      echo "PORTABLE_ARTIFACT_WINPATHORFILE=${PORTABLE_ARTIFACT_WINPATHORFILE}"
-    } >> "${GITHUB_ENV}"
-
-    echo ""
-    echo "Created portable self-extracting archive: ${PORTABLE_FILENAME}"
-
-    # Remove sentinel file:
-    rm "${PACKAGE_PATH}/portable.txt"
-    echo ""
-    echo "Removed portable.txt sentinel file"
+    INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64"
   fi
 
   echo "=== Preparing an intermediate artifact of the (signed) code ==="
@@ -311,6 +360,48 @@ else
   RELEASE_WINDIR="$(cygpath -aw "${RELEASE_DIR}")"
 
   echo "=== Preparing to create installer ==="
+  # Set parameters for Clowd.Squirrel and other stages
+  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
+    # Allow public test builds to be installed side by side with the release
+    # builds by renaming the app
+    # No dots in the <id>: Guidelines by Squirrel
+    NAME_SUFFIX='_64_-PublicTestBuild'
+    INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet_ptb.ico")
+    ID='Mudlet_64_-PublicTestBuild'
+    TITLE='Mudlet x64 (Public Test Build)'
+    LOADING_GIF="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/splash-installing-ptb-2x.png")"
+    # Because the packaging tools use "Semantic Versioning" it makes sense
+    # use the date in a number year-first form rather than the SHA1 as
+    # that enables chonological ordering - although we do not seem to rely on it
+    # https://learn.microsoft.com/en-us/nuget/concepts/package-versioning?tabs=semver20sort
+    # This suggested that "4.19.1-ptb.20250811" would work and be sorted.
+    # However it is rejected as invalid. This would seem to suggest that it is
+    # using the older:
+    # https://learn.microsoft.com/en-us/nuget/concepts/package-versioning?tabs=semver10sort
+    # which cannot handle dotted numbers. So revert to original methodology that
+    # appended the short commit SHA1 - and just not worry about any sort of
+    # sorting:
+    INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
+    # The name we want to use for the installer;
+    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
+    # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
+    DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
+    # The name that has to be passed as the artifact so that the Mudlet website
+    # will accept it as a PTB:
+    ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
+  else
+    NAME_SUFFIX='_64_'
+    INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet.ico")
+    ID='Mudlet_64_'
+    TITLE='Mudlet x64'
+    LOADING_GIF=$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/splash-installing-2x.png")
+    # Typically       '4.19.1'
+    INSTALLER_VERSION="${VERSION}"
+    # Typically of form: 'Mudlet-4.19.1-windows-64-installer.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}-windows-64-installer.exe"
+    DBLSQD_VERSION_STRING="${VERSION}"
+  fi
   ./Clowd.Squirrel/tools/Squirrel.exe pack \
     --allowUnaware \
     --noDelta \
@@ -350,20 +441,7 @@ else
   echo "Renaming \"Mudlet${NAME_SUFFIX}Setup.exe\" to \"${INSTALLER_EXE}\""
   mv "${RELEASE_DIR}/Mudlet${NAME_SUFFIX}Setup.exe" "${INSTALLER_EXE_PATHFILE}"
 
-  # Sign the final installer
-  if [ -z "${AZURE_ACCESS_TOKEN}" ]; then
-    echo "=== Code signing of Mudlet installer skipped - no Azure token provided ==="
-  else
-    echo "=== Signing installer ==="
-    java.exe -jar "${JAVA_JAR_WINPATHFILE}" \
-      --storetype TRUSTEDSIGNING \
-      --keystore eus.codesigning.azure.net \
-      --storepass "${AZURE_ACCESS_TOKEN}" \
-      --alias Mudlet/Mudlet \
-      "${INSTALLER_EXE_WINPATHFILE}"
-  fi
-
-  if [[ "${BUILD_ACTION}" == "PublicTest" ]]; then
+  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="
     # Append these variables to the GITHUB_ENV to make them available in
     # subsequent steps, the fourth one being 1 means "unzip the archive when
@@ -551,7 +629,7 @@ if [[ "${BUILD_ACTION}" == "Release" ]]; then
   echo "Finished deploying Mudlet ${VERSION}"
 else
   # Not a release build so include the Git SHA1 in the message
-  echo "Finished deploying Mudlet ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+  echo "Finished deploying Mudlet ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}"
 fi
 
 if [[ -n "${DEPLOY_URL}" ]]; then

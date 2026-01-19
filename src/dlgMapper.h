@@ -25,8 +25,6 @@
 
 
 #include "ui_mapper.h"
-#include <QDir>
-#include <QMainWindow>
 #include <QPointer>
 
 class Host;
@@ -50,8 +48,8 @@ public:
 #endif
     void updateAreaComboBox();
     void resetAreaComboBoxToPlayerRoomArea();
-    // The button is the goto source for this bit of information:
-    bool isIn3DMode() const { return pushButton_3D->isDown(); }
+    // The member variable is the source for this bit of information:
+    bool isIn3DMode() const { return mIs3DMode; }
     bool isFloatAndDockable() const;
     int getCurrentShownAreaIndex();
     void setFont(const QFont&);
@@ -67,11 +65,16 @@ public slots:
     void slot_setMapperPanelVisible(bool panelVisible);
     void slot_roomSize(int size);
     void slot_exitSize(int size);
-    void slot_setRoomSize(int size);
-    void slot_setExitSize(int size);
     void slot_setShowRoomIds(bool showRoomIds);
+    void slot_setShowGrid(bool showGrid);
     void slot_updateInfoContributors();
     void slot_switchArea(const int);
+    void slot_setupMapperMenu();
+    void slot_toggleUpperLowerLevels(bool enabled);
+    void slot_toggleShowRoomIDsFromMenu(bool enabled);
+    void updateInfoMenu();
+    void slot_showSaveWarningMenu();
+    void slot_saveErrorChanged(bool hasError);
 
     static void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
                             int roomID, int displayAreaId, int selectionSize, QColor& infoColor,
@@ -83,6 +86,8 @@ public slots:
 private:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
+    QPointer<QMenu> mpInfoMenu;
+    bool mIs3DMode = false;
 };
 
 #endif // MUDLET_DLGMAPPER_H

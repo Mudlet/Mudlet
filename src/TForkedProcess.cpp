@@ -24,6 +24,10 @@
 
 #include "TForkedProcess.h"
 
+#include "TLuaInterpreter.h"
+
+#include <QDir>
+
 
 TForkedProcess::~TForkedProcess()
 {
@@ -66,7 +70,12 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 
     setProcessChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
-    waitForStarted();
+    if (!waitForStarted()) {
+        const QString errorMessage = qsl("Failed to start process '%1': %2. Working directory: '%3'. PATH: '%4'").arg(prog, errorString(), QDir::currentPath(), qEnvironmentVariable("PATH"));
+        lua_pushstring(L, errorMessage.toUtf8().constData());
+        lua_error(L);
+        return;
+    }
     running = true;
 }
 
@@ -150,7 +159,7 @@ int TForkedProcess::startProcess(TLuaInterpreter* pInterpreter, lua_State* L)
     auto process = new TForkedProcess(pInterpreter, L);
 
     // The userdata for the closures.
-    auto ** luaMemory = (QPointer<TForkedProcess>**)lua_newuserdata(L, sizeof(QPointer<TForkedProcess>*));
+    auto** luaMemory = (QPointer<TForkedProcess>**)lua_newuserdata(L, sizeof(QPointer<TForkedProcess>*));
     int userDataIndex = lua_gettop(L);
     if (lua_getmetatable(L, userDataIndex) != 0) {
         lua_pushstring(L, "Error: new user data should not have any metatable.");

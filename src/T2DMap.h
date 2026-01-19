@@ -47,6 +47,7 @@
 class Host;
 class TArea;
 class TMap;
+class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
 class CustomLineDrawContextMenuHandler;
@@ -54,6 +55,7 @@ class CustomLineDrawHandler;
 class CustomLineEditContextMenuHandler;
 class CustomLineEditHandler;
 class CustomLineSession;
+class MiddleMousePanHandler;
 class RoomMoveActivationHandler;
 class RoomMoveDragHandler;
 class RoomContextMenuHandler;
@@ -96,6 +98,8 @@ public:
     friend class RoomContextMenuHandler;
     friend class RoomMoveDragHandler;
     friend class SelectionRectangleHandler;
+    friend class PanInteractionHandler;
+    friend class MiddleMousePanHandler;
 
     struct MapInteractionContext {
         QMouseEvent* event = nullptr;
@@ -149,6 +153,7 @@ public:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void prepareSingleClickSelection(MapInteractionContext& context);
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
+    QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
@@ -165,9 +170,26 @@ public:
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
+    void flushTextLabelPixmapCache() {mTextLabelPixmapCache.clear();}
+    void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
+    void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
+    void switchArea(int areaId);
     void clearSelection();
+
+    // Secondary view support (for multiple map views feature)
+    void setSecondaryView(bool isSecondary) { mIsSecondaryView = isSecondary; }
+    bool isSecondaryView() const { return mIsSecondaryView; }
+
+    // View state getters
+    int getAreaId() const { return mAreaID; }
+    int getCenterRoomId() const { return mRoomID; }
+    qreal getZoom() const { return xyzoom; }
+    int getZLevel() const { return mMapCenterZ; }
+
+    // Center view on a room. For secondary views, skips raising sysMapAreaChanged events.
+    std::pair<bool, QString> centerview(int roomId);
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
 
@@ -224,6 +246,7 @@ public:
     QRect mMapInfoRect;
     int mFontHeight = 20;
     bool mShowRoomID = false;
+    bool mShowGrid = false;
     QMap<int, QPixmap> mPixMap;
     double rSize = 0.5;
     double eSize = 3.0;
@@ -243,7 +266,7 @@ public:
     // centered on mRoomID - it seems to be needed if the room concerned
     // is being moved by the mouse as part of a selection:
     bool mShiftMode = false;
-    QComboBox* arealist_combobox = nullptr;
+    QPointer<QComboBox> arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom = 0;
     int mCustomLinesRoomTo = 0;
@@ -306,7 +329,10 @@ public slots:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, std::optional<bool> newLockStatus,
+        bool changeBorderColor, QColor newBorderColor,
+        bool changeBorderThickness, int newBorderThickness,
         QSet<TRoom*> rooms);
+    void slot_previewBorderProperties(QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_moveRoom();
@@ -361,6 +387,7 @@ private:
     std::unique_ptr<IInteractionHandler> mRoomMoveDragHandler;
     std::unique_ptr<IInteractionHandler> mSelectionRectangleInteractionHandler;
     std::unique_ptr<IInteractionHandler> mLabelInteractionHandler;
+    std::unique_ptr<MiddleMousePanHandler> mMiddleMousePanHandler;
     std::unique_ptr<IInteractionHandler> mPanInteractionHandler;
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
@@ -399,6 +426,7 @@ private:
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames = false;
     QCache<QString, QPixmap> mSymbolPixmapCache;
+    QCache<QString, QPixmap> mTextLabelPixmapCache;
     ushort mSymbolFontSize = 1;
     QFont mMapSymbolFont;
     QPointer<QAction> mpCreateRoomAction;
@@ -408,13 +436,15 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
 
-    dlgRoomProperties* mpDlgRoomProperties = nullptr;
-    dlgMapLabel* mpDlgMapLabel = nullptr;
+    QPointer<dlgRoomProperties> mpDlgRoomProperties;
+    QPointer<dlgMapLabel> mpDlgMapLabel;
     // Track the area last viewed so we can raise an event when it changes,
     // initialised to an invalid area that is different to the one that mAreaID
     // is initialised to - so that the xyzoom gets read for the first area that
     // is shown - because the value of these two are different:
     int mLastViewedAreaID = -2;
+
+    bool mIsSecondaryView = false;
 
 private slots:
     void slot_createRoom();

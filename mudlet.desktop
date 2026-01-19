@@ -8,4 +8,5 @@ Terminal=false
 Type=Application
 MimeType=application/zip;
 Icon=mudlet
+StartupWMClass=Mudlet
 Categories=Game;AdventureGame;RolePlaying;ActionGame;

@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.1.0    Remove MINGW32 since upstream no longer supports it
+# Version: 2.2.0    Add CMake package for CMake-based builds
+#          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    No change
 #          1.4.0    No change
@@ -86,39 +87,46 @@ echo "=== Installing needed packages ==="
 pacman_attempts=0
 while true; do
   if /usr/bin/pacman -Su --needed --noconfirm \
-    "${MINGW_PACKAGE_PREFIX}-qt6-base" \
-    "${MINGW_PACKAGE_PREFIX}-qt6-multimedia" \
-    "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-wmf" \
-    "${MINGW_PACKAGE_PREFIX}-qt6-svg" \
-    "${MINGW_PACKAGE_PREFIX}-qt6-speech" \
-    "${MINGW_PACKAGE_PREFIX}-qt6-imageformats" \
-    "${MINGW_PACKAGE_PREFIX}-qt6-translations" \
-    "${MINGW_PACKAGE_PREFIX}-qt6-tools" \
-    "${MINGW_PACKAGE_PREFIX}-qt6-5compat" \
-    "${MINGW_PACKAGE_PREFIX}-angleproject" \
-    "${MINGW_PACKAGE_PREFIX}-qtkeychain-qt6" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-wmf" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia-ffmpeg" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-translations" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
+    "mingw-w64-${BUILDCOMPONENT}-angleproject" \
+    "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6" \
     git \
     man \
     rsync \
-    "${MINGW_PACKAGE_PREFIX}-ccache" \
-    "${MINGW_PACKAGE_PREFIX}-toolchain" \
-    "${MINGW_PACKAGE_PREFIX}-pcre" \
-    "${MINGW_PACKAGE_PREFIX}-libzip" \
-    "${MINGW_PACKAGE_PREFIX}-ntldd" \
-    "${MINGW_PACKAGE_PREFIX}-pugixml" \
-    "${MINGW_PACKAGE_PREFIX}-lua51" \
-    "${MINGW_PACKAGE_PREFIX}-lua51-lpeg" \
-    "${MINGW_PACKAGE_PREFIX}-lua51-lsqlite3" \
-    "${MINGW_PACKAGE_PREFIX}-hunspell" \
-    "${MINGW_PACKAGE_PREFIX}-zlib" \
-    "${MINGW_PACKAGE_PREFIX}-boost" \
-    "${MINGW_PACKAGE_PREFIX}-yajl" \
-    "${MINGW_PACKAGE_PREFIX}-lua-luarocks" \
-    "${MINGW_PACKAGE_PREFIX}-meson" \
-    "${MINGW_PACKAGE_PREFIX}-ninja" \
-    "${MINGW_PACKAGE_PREFIX}-7zip" \
-    "${MINGW_PACKAGE_PREFIX}-assimp" \
-    "${MINGW_PACKAGE_PREFIX}-jq"; then
+    "mingw-w64-${BUILDCOMPONENT}-ccache" \
+    "mingw-w64-${BUILDCOMPONENT}-toolchain" \
+    "mingw-w64-${BUILDCOMPONENT}-pcre2" \
+    "mingw-w64-${BUILDCOMPONENT}-libzip" \
+    "mingw-w64-${BUILDCOMPONENT}-ntldd" \
+    "mingw-w64-${BUILDCOMPONENT}-pugixml" \
+    "mingw-w64-${BUILDCOMPONENT}-lua51" \
+    "mingw-w64-${BUILDCOMPONENT}-lua51-lpeg" \
+    "mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3" \
+    "mingw-w64-${BUILDCOMPONENT}-hunspell" \
+    "mingw-w64-${BUILDCOMPONENT}-zlib" \
+    "mingw-w64-${BUILDCOMPONENT}-boost" \
+    "mingw-w64-${BUILDCOMPONENT}-yajl" \
+    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-ffmpeg" \
+    "mingw-w64-${BUILDCOMPONENT}-cmake" \
+    "mingw-w64-${BUILDCOMPONENT}-meson" \
+    "mingw-w64-${BUILDCOMPONENT}-ninja" \
+    "mingw-w64-${BUILDCOMPONENT}-assimp" \
+    "mingw-w64-${BUILDCOMPONENT}-curl" \
+    "mingw-w64-${BUILDCOMPONENT}-uasm" \
+    "mingw-w64-${BUILDCOMPONENT}-clang" \
+    "mingw-w64-${BUILDCOMPONENT}-lld" \
+    "mingw-w64-${BUILDCOMPONENT}-cmake" \
+    "mingw-w64-${BUILDCOMPONENT}-jq"; then
       break
   fi
 
@@ -133,27 +141,39 @@ while true; do
   sleep 10
 done
 
-# Needed until https://github.com/msys2/MINGW-packages/pull/25876 or equivalent
-# gets merged:
-if [ -f "${MINGW_PREFIX}/lib/7zip/7zCon.sfx" ] && [ ! -f "${MINGW_PREFIX}/bin/7zCon.sfx" ]; then
-  echo "Fixing 7z so it can make self-extracting archives"
-  cp -pv "${MINGW_PREFIX}/lib/7zip/7zCon.sfx" "${MINGW_PREFIX}/bin"
-fi
-
-echo "Removing harfbuzz installed by qt"
-pacman -Rdd --noconfirm ${MINGW_PACKAGE_PREFIX}-harfbuzz
-
-echo "Building harfbuzz without graphite2"
-git clone https://github.com/harfbuzz/harfbuzz.git
-cd harfbuzz || exit 1
-meson setup build --prefix=${MINGW_PREFIX} --buildtype=release -Dgraphite=disabled -Dtests=disabled
-meson compile -C build
-meson install -C build
-
 echo ""
 echo "    Completed"
 echo ""
 
+if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
+  echo "=== Installing Qt debug packages for Sentry ==="
+  pacman_attempts=0
+  while true; do
+    if /usr/bin/pacman -S --needed --noconfirm \
+      "${MINGW_PACKAGE_PREFIX}-qt6-base-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-svg-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-speech-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-imageformats-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-tools-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-5compat-debug"; then
+        break
+    fi
+
+    pacman_attempts=$((pacman_attempts +1))
+
+    if [ ${pacman_attempts} -lt 10 ]; then
+      echo "=== Some Qt debug packages failed to install, waiting and trying again ==="
+      sleep 10
+    else
+      echo "=== Some Qt debug packages failed to install after ${pacman_attempts} attempts, giving up ==="
+      exit 7
+    fi
+  done
+  echo ""
+  echo "    Qt debug packages installed"
+  echo ""
+fi
 
 if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_PREFIX}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
   # The luarocks config file has not been tweaked to put the compiled rocks in
@@ -180,7 +200,7 @@ ROCKCOMMAND="${MINGW_PREFIX}/bin/luarocks --lua-version 5.1"
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
-WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre" "luasql-sqlite3" "argparse" "lunajson" "busted")
+WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre2" "luasql-sqlite3" "argparse" "lunajson" "busted")
 
 success="true"
 for ROCK in "${WANTED_ROCKS[@]}"; do

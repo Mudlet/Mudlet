@@ -25,11 +25,12 @@ AltFocusMenuBarDisable::AltFocusMenuBarDisable()
     setObjectName(baseStyle()->objectName());
 }
 
-AltFocusMenuBarDisable::AltFocusMenuBarDisable(const QString &style)
+AltFocusMenuBarDisable::AltFocusMenuBarDisable(const QString& style)
 : QProxyStyle(QStyleFactory::create(style))
-{}
+{
+}
 
-int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
+int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
         return 0;

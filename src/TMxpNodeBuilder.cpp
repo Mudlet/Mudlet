@@ -82,7 +82,7 @@ bool TMxpNodeBuilder::acceptTag(char ch)
 
     if (ch == '<') { // reset
         if (!mIsInsideTag) {
-        resetCurrentTag();
+            resetCurrentTag();
         }
         if (!mRawTagContent.empty() && mRawTagContent.back() == '<') {
             mRawTagContent.pop_back();
@@ -142,9 +142,8 @@ bool TMxpNodeBuilder::acceptAttribute(char ch)
     if (ch == '=' && !mReadingAttrValue) {
         mReadingAttrValue = true;
         return false;
-    } else {
-        return true;
     }
+    return true;
 }
 void TMxpNodeBuilder::resetCurrentAttribute()
 {

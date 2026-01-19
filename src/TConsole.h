@@ -29,26 +29,20 @@
 
 #include "TBuffer.h"
 
-
-#include "TTextCodec.h"
-
 #include <QDataStream>
 #include <QElapsedTimer>
-#include <QFile>
 #include <QFont>
-#include <QHBoxLayout>
 #include <QIcon>
-#include <QLabel>
 #include <QPointer>
 #include <QSaveFile>
-#include <QSplitter>
-#include <QVideoWidget>
 #include <QWidget>
 
 #include <hunspell/hunspell.h>
 
+#include <deque>
 #include <list>
 #include <map>
+#include <memory>
 
 // This contains the details of a font that we might want to maintain a record
 // of, independently of a QFont instance:
@@ -146,16 +140,22 @@ enum class ControlCharacterMode {
 Q_DECLARE_METATYPE(ControlCharacterMode)
 
 class QCloseEvent;
+class QHBoxLayout;
 class QLineEdit;
 class QScrollBar;
 class QShortcut;
+class QSplitter;
 class QToolButton;
+class QVideoWidget;
 
 class dlgMapper;
 class Host;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
+class THyperlinkCompactManager;
+class THyperlinkSelectionManager;
+class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
@@ -256,6 +256,11 @@ public:
     void setHorizontalScrollBar(bool);
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
+    
+    THyperlinkCompactManager& getHyperlinkCompactManager() { Q_ASSERT(mpHyperlinkCompactManager); return *mpHyperlinkCompactManager; }
+    THyperlinkSelectionManager& getHyperlinkSelectionManager() { Q_ASSERT(mpHyperlinkSelectionManager); return *mpHyperlinkSelectionManager; }
+    THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { Q_ASSERT(mpHyperlinkVisibilityManager); return *mpHyperlinkVisibilityManager; }
+    
     void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
@@ -263,6 +268,7 @@ public:
     void print(const QString& msg);
     void print(const char*);
     void print(const QString& msg, QColor fgColor, QColor bgColor);
+    void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
@@ -369,7 +375,7 @@ public:
     QWidget* mpRightToolBar = nullptr;
     QWidget* mpMainDisplay = nullptr;
 
-    dlgMapper* mpMapper = nullptr;
+    QPointer<dlgMapper> mpMapper;
 
     QScrollBar* mpScrollBar = nullptr;
     QScrollBar* mpHScrollBar = nullptr;
@@ -444,6 +450,18 @@ private:
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
+    void initializeOSC8StyleFeature();
+    void initializeOSC8MenuFeature();
+    void initializeOSC8TooltipFeature();
+    void initializeOSC8VisibilityFeature();
+    void initializeOSC8SelectionFeature();
+    void initializeOSC8SpoilerFeature();
+    void initializeOSC8DisabledFeature();
+
+    // OSC 8 hyperlink managers
+    std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;
+    std::unique_ptr<THyperlinkSelectionManager> mpHyperlinkSelectionManager;
+    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;

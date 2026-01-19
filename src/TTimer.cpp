@@ -241,7 +241,6 @@ void TTimer::execute()
         }
 
         if (!mpHost->mLuaInterpreter.call(mFuncName, mName, (mTime < mpHost->mTimerDebugOutputSuppressionInterval))) {
-
             mpQTimer->stop();
         }
     }
@@ -252,12 +251,10 @@ bool TTimer::canBeUnlocked()
     if (shouldBeActive()) {
         if (!mpParent) {
             return true;
-        } else {
-            return mpParent->canBeUnlocked();
         }
-    } else {
-        return false;
+        return mpParent->canBeUnlocked();
     }
+    return false;
 }
 
 void TTimer::enableTimer(int id)

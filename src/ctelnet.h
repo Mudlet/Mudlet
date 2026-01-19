@@ -70,9 +70,6 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
-class QTextCodec;
-class QTextDecoder;
-class QTextEncoder;
 class QTimer;
 
 class Host;
@@ -251,7 +248,7 @@ public:
     bool mFORCE_GA_OFF = false;
     QPointer<dlgComposer> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
-    QProgressDialog* mpProgressDialog = nullptr;
+    QPointer<QProgressDialog> mpProgressDialog;
     QString mServerPackage;
     QString mProfileName;
 
@@ -277,10 +274,19 @@ signals:
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
+    // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
+    // Used by hyperlink visibility manager to trigger expire actions
+    void signal_promptReceived();
 
 
 private:
     cTelnet() = default;
+
+#if defined(QT_NO_SSL)
+    void abortLosingSocket(QTcpSocket* losingSocket);
+#else
+    void abortLosingSocket(QSslSocket* losingSocket);
+#endif
 
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
@@ -310,6 +316,12 @@ private:
     QString getNewEnvironOSCHyperlinksStyleStates();
     QString getNewEnvironOSCHyperlinksTooltip();
     QString getNewEnvironOSCHyperlinksMenu();
+    QString getNewEnvironOSCHyperlinksCompact();
+    QString getNewEnvironOSCHyperlinksPresets();
+    QString getNewEnvironOSCHyperlinksVisibility();
+    QString getNewEnvironOSCHyperlinksSelection();
+    QString getNewEnvironOSCHyperlinksSpoiler();
+    QString getNewEnvironOSCHyperlinksDisabled();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();
@@ -367,11 +379,6 @@ private:
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):
     QString mHostUrl;
-//    QTextCodec* incomingDataCodec;
-    QTextCodec* mpOutOfBandDataIncomingCodec = nullptr;
-    QTextCodec* outgoingDataCodec = nullptr;
-//    QTextDecoder* incomingDataDecoder;
-    QTextEncoder* outgoingDataEncoder = nullptr;
     int mHostPort = 0;
     bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;
@@ -417,6 +424,7 @@ private:
     bool mIsTimerPosting = false;
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    QTimer* mTimerPasswordModeTimeout = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;

@@ -19,6 +19,7 @@
 
 #include "RoomMoveActivationHandler.h"
 
+#include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include <QMouseEvent>
@@ -50,8 +51,7 @@ bool RoomMoveActivationHandler::matches(const T2DMap::MapInteractionContext& con
             return false;
         }
 
-        if (context.modifiers.testFlag(Qt::ShiftModifier) || context.modifiers.testFlag(Qt::ControlModifier)
-            || context.modifiers.testFlag(Qt::AltModifier)) {
+        if (context.modifiers.testFlag(Qt::ShiftModifier) || context.modifiers.testFlag(Qt::ControlModifier) || context.modifiers.testFlag(Qt::AltModifier)) {
             return false;
         }
 
@@ -77,16 +77,16 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
             return false;
         }
 
-        const auto clickedRoomId = mMapWidget.roomIdAtWidgetPosition(context.widgetPosition, context.area);
-        if (!clickedRoomId.has_value()) {
+        const auto clickedRoomIds = mMapWidget.roomIdsAtWidgetPosition(context.widgetPosition, context.area);
+        if (clickedRoomIds.isEmpty()) {
             return false;
         }
 
-        const int roomId = clickedRoomId.value();
+        const int roomId = *clickedRoomIds.constBegin();
 
         if (!mMapWidget.mMultiSelectionSet.contains(roomId)) {
             mMapWidget.mMultiSelectionSet.clear();
-            mMapWidget.mMultiSelectionSet.insert(roomId);
+            mMapWidget.mMultiSelectionSet.unite(clickedRoomIds);
             mMapWidget.mMultiSelectionHighlightRoomId = roomId;
             mMapWidget.mMultiSelection = false;
         } else {

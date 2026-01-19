@@ -161,6 +161,16 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
     pChild->enableTimer(childID);
 }
 
+void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentTimer(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentTimer(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void TimerUnit::removeAllTempTimers()
 {
     mCleanupSet.clear();
@@ -379,7 +389,7 @@ bool TimerUnit::killTimer(const QString& name)
 int TimerUnit::remainingTime(const QString& name) const
 {
     auto pTimer = findFirstTimer(name);
-    if (pTimer){
+    if (pTimer) {
         return pTimer->remainingTime();
     }
 
@@ -447,16 +457,10 @@ std::tuple<QString, int, int, int> TimerUnit::assembleReport()
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("Timers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("tempTimers current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active Timers: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    msg << QLatin1String("Timers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("tempTimers current total: ") << QString::number(statsTempItems)
+        << QLatin1String("\n") << QLatin1String("active Timers: ") << QString::number(statsActiveItems) << QLatin1String("\n");
 
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsTempItems,
-        statsActiveItems
-    };
+    return {msg.join(QString()), statsItemsTotal, statsTempItems, statsActiveItems};
 }
 
 void TimerUnit::changeHostName(const QString& newName)

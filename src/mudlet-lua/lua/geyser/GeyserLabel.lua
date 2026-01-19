@@ -263,6 +263,11 @@ function Geyser.Label:setFont(font)
     debugc(err)
   end
   self.font = font
+  -- Apply the profile's antialiasing settings to the label for static font compatibility
+  -- Use existing setFont() function with label name - this handles static fonts and antialiasing
+  if font ~= "" then
+    setFont(self.name, font)
+  end
   self:echo()
 end
 
@@ -434,6 +439,11 @@ function Geyser.Label:setFontSize(fontSize)
   self.formatTable.fontSize = fontSize
   self.format = self.format:gsub("%d", "")
   self.format = self.format .. fontSize
+  -- Apply the profile's antialiasing settings to the label when font size changes
+  -- Use existing setFont() function - it will preserve the font family and apply antialiasing
+  if self.font and self.font ~= "" then
+    setFont(self.name, self.font)
+  end
   self:echo()
 end
 
@@ -568,6 +578,28 @@ function Geyser.Label:setStyleSheet(css)
   self.stylesheet = css
   self:autoAdjustSize()
 end
+
+--- Sets the hyperlink styling for the label
+-- @param linkColor Color for normal links (e.g., "cyan", "#00ffff")
+-- @param visitedColor Color for visited links (e.g., "purple", "#ff00ff")
+-- @param underline Whether links should be underlined (default: true)
+function Geyser.Label:setLinkStyle(linkColor, visitedColor, underline)
+  if underline == nil then
+    underline = true
+  end
+  setLinkStyle(self.name, linkColor, visitedColor, underline)
+end
+
+--- Resets the hyperlink styling to Qt defaults
+function Geyser.Label:resetLinkStyle()
+  resetLinkStyle(self.name)
+end
+
+--- Clears the visited links history for this label
+function Geyser.Label:clearVisitedLinks()
+  clearVisitedLinks(self.name)
+end
+
 --- Sets the tooltip of the label
 -- @param txt the tooltip txt
 -- @param duration the duration of the tooltip
@@ -931,7 +963,7 @@ function doNestLeave(label)
   if Geyser.Label.closeAllTimer then
     killTimer(Geyser.Label.closeAllTimer)
   end
-  Geyser.Label.closeAllTimer = tempTimer(2, function() closeAllLevels(label) end)
+  Geyser.Label.closeAllTimer = tempTimer(.5, function() closeAllLevels(label) end)
 end
 
 -- Save a reference to our parent constructor
@@ -1086,9 +1118,6 @@ function Geyser.Label:new2 (cons, container)
   return me
 end
 
-function fakeFunction()
-end
-
 --- internal function that adds the "More..." scrollbars
 function Geyser.Label:addScrollbars(parent, layout)
   local label = parent.nestedLabels[1]
@@ -1150,19 +1179,6 @@ function Geyser.Label:addChild(cons, container)
   me.nestParent = self
   me:setOnEnter("doNestEnter", me)
   me:setOnLeave("doNestLeave", me)
-
-  if not me.clickCallback then
-    --used in instances where an element only meant to serve as
-    --a nest container is clicked on.  Without this, we get
-    --seg faults
-    me:setClickCallback("fakeFunction")
-  end
-  if not me.releaseCallback then
-    --used in instances where an element only meant to serve as
-    --a nest container is released over.  Without this, we get
-    --seg faults
-    me:setReleaseCallback("fakeFunction")
-  end
 
   me.flyDir = flyDir
   me.layoutDir = layoutDir

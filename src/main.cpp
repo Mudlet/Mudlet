@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2021, 2023-2025 by Stephen Lyons        *
+ *   Copyright (C) 2013-2014, 2016-2021, 2023-2026 by Stephen Lyons        *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -43,6 +43,7 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
+#include "SentryWrapper.h"
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -56,9 +57,9 @@ extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
-void        initializeQRCResources();
+void initializeQRCResources();
 
-#if defined(Q_OS_WINDOWS)
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 bool runUpdate();
 #endif
 
@@ -98,6 +99,8 @@ void removeOldNoteColorEmojiFonts()
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.1, take 3"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    // Release: "Unicode 16.0"
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(mudlet::getMudletPath(enums::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -158,6 +161,35 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
+
+#ifdef Q_OS_WINDOWS
+    // Handle Squirrel installer commands - must exit quickly for install/update/uninstall
+    // https://github.com/clowd/Clowd.Squirrel/blob/master/docs/using/custom-squirrel-events-non-cs.md
+    for (int i = 1; i < argc; ++i) {
+        const QString arg = QString::fromLocal8Bit(argv[i]);
+        if (arg.startsWith(qsl("--squirrel-")) && arg != qsl("--squirrel-firstrun")) {
+            // Use argv[0] directly since QCoreApplication isn't instantiated yet
+            const QFileInfo appInfo(QString::fromLocal8Bit(argv[0]));
+            const QString updateExe = QDir(appInfo.absolutePath()).filePath(qsl("../Update.exe"));
+            const QString exeName = appInfo.fileName();
+
+            if (arg.startsWith(qsl("--squirrel-install")) || arg.startsWith(qsl("--squirrel-updated"))) {
+                QProcess::execute(updateExe, {qsl("--createShortcut"), exeName, qsl("--shortcut-locations"), qsl("StartMenu")});
+            } else if (arg.startsWith(qsl("--squirrel-uninstall"))) {
+                QProcess::execute(updateExe, {qsl("--removeShortcut"), exeName});
+            }
+            return 0;
+        }
+    }
+#endif
+
+#ifdef WITH_SENTRY
+    initSentry();
+    auto sentryClose = qScopeGuard([] {
+        sentry_close();
+    });
+#endif
+
 #ifdef Q_OS_WINDOWS
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         if (qgetenv("MSYSTEM").isNull()) {
@@ -191,13 +223,6 @@ int main(int argc, char* argv[])
     QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
 
-#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
-    auto abortLaunch = runUpdate();
-    if (abortLaunch) {
-        return 0;
-    }
-#endif
-
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
@@ -226,6 +251,13 @@ int main(int argc, char* argv[])
     mudlet::start();
     // Detect config path before any files are read
     mudlet::self()->setupConfig();
+
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+    auto abortLaunch = runUpdate();
+    if (abortLaunch) {
+        return 0;
+    }
+#endif
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
@@ -257,13 +289,15 @@ int main(int argc, char* argv[])
     beQuiet.setFlags(QCommandLineOption::HiddenFromHelp);
     parser.addOption(beQuiet);
 
-    const QCommandLineOption onlyPredefinedProfileToShow(QStringList() << qsl("o") << qsl("only"),
-                                                   qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
-                                                   qsl("predefined_game"));
+    const QCommandLineOption onlyPredefinedProfileToShow(
+            QStringList() << qsl("o") << qsl("only"), qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."), qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
+
+    const QCommandLineOption runUndoTests(QStringList() << qsl("run-undo-tests"), qsl("Run internal undo/redo tests (requires 'Mudlet self-test' profile) and exit."));
+    parser.addOption(runUndoTests);
 
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
@@ -287,64 +321,77 @@ int main(int argc, char* argv[])
 
     if (parser.isSet(showHelp)) {
         // Do "help" action
-        texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...] [FILE] ",
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "Usage: %1 [OPTION...] [FILE] ",
                                                           // Comment to separate arguments
                                                           "%1 is the name of the executable as it is on this OS.")
-                                         .arg(QLatin1String(APP_TARGET)));
+                                      .arg(QLatin1String(APP_TARGET)));
         texts << appendLF.arg(QCoreApplication::translate("main", "Options:"));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -s, --splashscreen           show splashscreen on startup."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open, may be\n"
-                                                                  "                                    repeated."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
-                                                                  "                                    predefined game, may be repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       -p, --profile=<profile>      additional profile to open, may be\n"
+                                                          "                                    repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       -o, --only=<predefined>      make Mudlet only show the specific\n"
+                                                          "                                    predefined game, may be repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -f, --fullscreen             start Mudlet in fullscreen mode."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --steammode                  adjusts Mudlet settings to match\n"
-                                                                  "                                    Steam's requirements."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
-                                                                  "less likely to be useful for normal use of this application:"));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --steammode                  adjusts Mudlet settings to match\n"
+                                                          "                                    Steam's requirements."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "There are other inherited options that arise from the Qt Libraries which are\n"
+                                                          "less likely to be useful for normal use of this application:"));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --dograb                     ignore any implicit or explicit -nograb.\n"
-                                                                  "                                    --dograb wins over --nograb even when --nograb is last on\n"
-                                                                  "                                    the command line."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --dograb                     ignore any implicit or explicit -nograb.\n"
+                                                          "                                    --dograb wins over --nograb even when --nograb is last on\n"
+                                                          "                                    the command line."));
 #if defined(Q_OS_LINUX)
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --nograb                     the application should never grab the mouse or the\n"
-                                                                  "                                    keyboard. This option is set by default when Mudlet is\n"
-                                                                  "                                    running in the gdb debugger under Linux."));
-#else // ! defined(Q_OS_LINUX)
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --nograb                     the application should never grab the mouse or the\n"
-                                                                  "                                    keyboard."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --nograb                     the application should never grab the mouse or the\n"
+                                                          "                                    keyboard. This option is set by default when Mudlet is\n"
+                                                          "                                    running in the gdb debugger under Linux."));
+#else  // ! defined(Q_OS_LINUX)
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --nograb                     the application should never grab the mouse or the\n"
+                                                          "                                    keyboard."));
 #endif // ! defined(Q_OS_LINUX)
         texts << appendLF.arg(QCoreApplication::translate("main", "       --reverse                    sets the application's layout direction to right to left."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --style=style                sets the application GUI style. Possible values depend on\n"
-                                                                  "                                    your system configuration. If Qt was compiled with\n"
-                                                                  "                                    additional styles or has additional styles as plugins\n"
-                                                                  "                                    these will be available to the -style command line\n"
-                                                                  "                                    option. You can also set the style for all Qt\n"
-                                                                  "                                    applications by setting the QT_STYLE_OVERRIDE environment\n"
-                                                                  "                                    variable."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --style=style                sets the application GUI style. Possible values depend on\n"
+                                                          "                                    your system configuration. If Qt was compiled with\n"
+                                                          "                                    additional styles or has additional styles as plugins\n"
+                                                          "                                    these will be available to the -style command line\n"
+                                                          "                                    option. You can also set the style for all Qt\n"
+                                                          "                                    applications by setting the QT_STYLE_OVERRIDE environment\n"
+                                                          "                                    variable."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       --style style                is the same as listed above."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --stylesheet=stylesheet      sets the application styleSheet.\n"
-                                                                  "                                    The value must be a path to a file that contains the\n"
-                                                                  "                                    Style Sheet. Note: Relative URLs in the Style Sheet file\n"
-                                                                  "                                    are relative to the Style Sheet file's path."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --stylesheet=stylesheet      sets the application styleSheet.\n"
+                                                          "                                    The value must be a path to a file that contains the\n"
+                                                          "                                    Style Sheet. Note: Relative URLs in the Style Sheet file\n"
+                                                          "                                    are relative to the Style Sheet file's path."));
 
         texts << appendLF.arg(QCoreApplication::translate("main", "       --stylesheet stylesheet      is the same as listed above."));
 // Not sure about MacOS case as that does not use X
-#if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --sync                       forces the X server to perform each X client request\n"
-                                                                  "                                    immediately and not use buffer optimization. It makes the\n"
-                                                                  "                                    program easier to debug and often much slower. The --sync\n"
-                                                                  "                                    option is only valid for the X11 version of Qt."));
+#if defined(Q_OS_UNIX) && (!defined(Q_OS_MACOS))
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --sync                       forces the X server to perform each X client request\n"
+                                                          "                                    immediately and not use buffer optimization. It makes the\n"
+                                                          "                                    program easier to debug and often much slower. The --sync\n"
+                                                          "                                    option is only valid for the X11 version of Qt."));
 #endif // defined(Q_OS_UNIX) and not defined(Q_OS_MACOS)
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --widgetcount                prints debug message at the end about number of widgets\n"
-                                                                  "                                    left undestroyed and maximum number of widgets existing\n"
-                                                                  "                                    at the same time."));
-        texts << append2LF.arg(QCoreApplication::translate("main", "       --qmljsdebugger=1234[,block] activates the QML/JS debugger with a\n"
-                                                                   "                                    specified port. The number is the port value and block is\n"
-                                                                   "                                    optional and will make the application wait until a\n"
-                                                                   "                                    debugger connects to it."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --widgetcount                prints debug message at the end about number of widgets\n"
+                                                          "                                    left undestroyed and maximum number of widgets existing\n"
+                                                          "                                    at the same time."));
+        texts << append2LF.arg(QCoreApplication::translate("main",
+                                                           "       --qmljsdebugger=1234[,block] activates the QML/JS debugger with a\n"
+                                                           "                                    specified port. The number is the port value and block is\n"
+                                                           "                                    optional and will make the application wait until a\n"
+                                                           "                                    debugger connects to it."));
         texts << appendLF.arg(QCoreApplication::translate("main", "Arguments:"));
         texts << appendLF.arg(QCoreApplication::translate("main", "        [FILE]                       File to install as a package"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
@@ -356,19 +403,20 @@ int main(int argc, char* argv[])
     if (parser.isSet(showVersion)) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
-        texts << appendLF.arg(QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)",
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "%1 %2%3 (with debug symbols, without optimisations)",
                                                           "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), appBuild));
-#else // ! defined(QT_DEBUG)
+                                      .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), appBuild));
+#else  // ! defined(QT_DEBUG)
         texts << QString::fromStdString(APP_TARGET " " APP_VERSION " " + appBuild.toStdString() + " \n");
 #endif // ! defined(QT_DEBUG)
-        texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
-             "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)", "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2025  Mudlet developers"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2026  Mudlet developers"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
-        texts << appendLF.arg(QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
-                                                                  "There is NO WARRANTY, to the extent permitted by law."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "This is free software: you are free to change and redistribute it.\n"
+                                                          "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
@@ -397,9 +445,8 @@ int main(int argc, char* argv[])
             const bool successful = instanceCoordinator->installPackagesRemotely();
             if (successful) {
                 return 0;
-            } else {
-                return 1;
             }
+            return 1;
         }
     }
 
@@ -417,11 +464,13 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_WINDOWS)
     if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
         // This variable is not set - and later versions of Qt 6.x need it for
-        // sound to work:
-        if (qputenv("QT_MEDIA_BACKEND", QByteArray("windows"))) {
-            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"windows\".";
+        // sound to work - the alternative to "ffmpeg" is "windows" but that
+        // is a less capable backend (it doesn't support ".ogg" or ".opus"
+        // audio files):
+        if (qputenv("QT_MEDIA_BACKEND", QByteArray("ffmpeg"))) {
+            qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\".";
         } else {
-            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"windows\", sound may not work.";
+            qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND enviromental variable to: \"ffmpeg\", sound may not work.";
         }
     } else {
         qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND enviromental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
@@ -485,7 +534,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2026");
         QFont font(qsl("Bitstream Vera Serif"), 16, 75);
         font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
@@ -532,8 +581,8 @@ int main(int argc, char* argv[])
     // Only needed/works on GNU/Linux and FreeBSD to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
-    // Release: "Unicode 16.0"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(mudlet::getMudletPath(enums::mainFontsPath))};
+    // Release: "Unicode 17.0 update mk1"
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2025-09-15-v2.051").arg(mudlet::getMudletPath(enums::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -589,8 +638,8 @@ int main(int argc, char* argv[])
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     // PLACEMARKER: current Noto Color Emoji font version file extraction
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2024-10-03-v2.047"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2024-10-03-v2.047"), qsl("LICENSE"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("LICENSE"));
 #endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 #endif // defined(INCLUDE_FONTS)
 
@@ -665,6 +714,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::smSteamMode = parser.isSet(steamMode);
+    const bool shouldRunUndoTests = parser.isSet(runUndoTests);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
@@ -676,9 +726,45 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles]() {
+    QTimer::singleShot(0, qApp, [cliProfiles, shouldRunUndoTests]() {
         // ensure Mudlet singleton is initialised before calling profile loading
         mudlet::self()->startAutoLogin(cliProfiles);
+
+        // If --run-undo-tests was specified, run tests after profile loads
+        if (shouldRunUndoTests) {
+            QTimer::singleShot(3000, qApp, []() {
+                // Find the first loaded host and run tests on its trigger editor
+                Host* firstHost = nullptr;
+                for (auto host : mudlet::self()->getHostManager()) {
+                    if (host) {
+                        firstHost = host.data();
+                        break;
+                    }
+                }
+
+                if (firstHost && firstHost->mpEditorDialog) {
+                    // Verify we're running in the test profile
+                    if (firstHost->getName() != qsl("Mudlet self-test")) {
+                        qDebug() << "ERROR: Undo/Redo tests can only be run in the 'Mudlet self-test' profile";
+                        qDebug() << "Current profile:" << firstHost->getName();
+                        QCoreApplication::exit(1);
+                        return;
+                    }
+
+                    qDebug() << "Running undo/redo tests via --run-undo-tests flag";
+                    firstHost->mpEditorDialog->slot_runUndoRedoTests();
+
+                    // Exit after tests complete
+                    QTimer::singleShot(1000, qApp, []() {
+                        qDebug() << "Tests complete, exiting...";
+                        QCoreApplication::exit(0);
+                    });
+                } else {
+                    qDebug() << "ERROR: No profile loaded or editor not available for undo tests";
+                    QCoreApplication::exit(1);
+                }
+            });
+        }
     });
 
 #if defined(INCLUDE_UPDATER)
@@ -711,14 +797,13 @@ int main(int argc, char* argv[])
 static bool isFileAccessible(const QString& filePath)
 {
     // Try opening file with exclusive write access
-    HANDLE hFile = CreateFileW(
-        reinterpret_cast<const wchar_t*>(filePath.utf16()),
-        GENERIC_WRITE,
-        0, // No sharing - exclusive access
-        nullptr,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr);
+    HANDLE hFile = CreateFileW(reinterpret_cast<const wchar_t*>(filePath.utf16()),
+                               GENERIC_WRITE,
+                               0, // No sharing - exclusive access
+                               nullptr,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               nullptr);
 
     if (hFile == INVALID_HANDLE_VALUE) {
         DWORD error = GetLastError();
@@ -742,8 +827,7 @@ static bool tryFileOperationWithRetry(const std::function<bool()>& operation, co
 
     for (int attempt = 0; attempt < maxAttempts; ++attempt) {
         if (attempt > 0) {
-            qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts
-                      << "after" << retryDelays[attempt - 1].count() << "ms delay";
+            qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts << "after" << retryDelays[attempt - 1].count() << "ms delay";
             QThread::msleep(retryDelays[attempt - 1].count());
         }
 
@@ -769,10 +853,19 @@ static bool tryFileOperationWithRetry(const std::function<bool()>& operation, co
 bool runUpdate()
 {
     QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
-    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
+    // Keep the installer in temp directory - placing it in the app directory causes the Squirrel
+    // installer to delete itself while running, as it updates/replaces the application directory
+    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)));
     QDir updateDir;
 
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
+        QSettings* settings = mudlet::getQSettings();
+        if (!settings->value(qsl("DBLSQD/autoDownload"), true).toBool()) {
+            qDebug() << "Auto-download disabled, removing downloaded installer:" << updatedInstaller.absoluteFilePath();
+            updateDir.remove(updatedInstaller.absoluteFilePath());
+            return false;
+        }
+
         // Verify the new installer is accessible before trying to move it
         if (!isFileAccessible(updatedInstaller.absoluteFilePath())) {
             qWarning() << "New installer exists but is locked, cannot proceed with update:" << updatedInstaller.absoluteFilePath();
@@ -782,10 +875,11 @@ bool runUpdate()
 
         // Try to remove old installer if it exists
         if (seenUpdatedInstaller.exists()) {
-            bool removed = tryFileOperationWithRetry([&]() {
-                return isFileAccessible(seenUpdatedInstaller.absoluteFilePath()) &&
-                       updateDir.remove(seenUpdatedInstaller.absoluteFilePath());
-            }, qsl("Delete previous installer"));
+            bool removed = tryFileOperationWithRetry(
+                    [&]() {
+                        return isFileAccessible(seenUpdatedInstaller.absoluteFilePath()) && updateDir.remove(seenUpdatedInstaller.absoluteFilePath());
+                    },
+                    qsl("Delete previous installer"));
 
             if (!removed) {
                 qWarning() << "Couldn't delete previous installer after retries:" << seenUpdatedInstaller;
@@ -795,14 +889,14 @@ bool runUpdate()
         }
 
         // Try to move the installer with retry logic
-        bool moved = tryFileOperationWithRetry([&]() {
-            return isFileAccessible(updatedInstaller.absoluteFilePath()) &&
-                   updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath());
-        }, qsl("Move installer to application directory"));
+        bool moved = tryFileOperationWithRetry(
+                [&]() {
+                    return isFileAccessible(updatedInstaller.absoluteFilePath()) && updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath());
+                },
+                qsl("Rename installer to mark as ready"));
 
         if (!moved) {
-            qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath()
-                      << "to" << seenUpdatedInstaller.absoluteFilePath() << "after all retries";
+            qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath() << "to" << seenUpdatedInstaller.absoluteFilePath() << "after all retries";
             qWarning() << "Update will be attempted on next Mudlet restart";
             return false;
         }
@@ -829,19 +923,20 @@ bool runUpdate()
 }
 #endif // defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 
+// Force usage of Qt Resource Collections (QRC) used by Mudlet.
+// Ensures QRC symbols from the static library reach the executable.
+// without this, the linker might discard them and the QRC would not be accessible at runtime.
 void initializeQRCResources()
 {
-    #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-        qInitResources_additional_splash_screens();
-    #endif
-
-    #ifdef INCLUDE_FONTS
-        qInitResources_mudlet_fonts_common();
-        #if defined(__linux__) || defined(__FreeBSD__)
-            qInitResources_mudlet_fonts_posix();
-        #endif
-    #endif
-
+#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
+    qInitResources_additional_splash_screens();
+#endif
+#ifdef INCLUDE_FONTS
+    qInitResources_mudlet_fonts_common();
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    qInitResources_mudlet_fonts_posix();
+#endif
+#endif
     qInitResources_mudlet();
     qInitResources_qm();
 }
