@@ -23,9 +23,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QWidget>
-#include "post_guard.h"
 
 #include <list>
 

@@ -23,12 +23,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QProcess>
-#include "post_guard.h"
 
-#include "TLuaInterpreter.h"
-
+class TLuaInterpreter;
+struct lua_State;
 
 class TForkedProcess : public QProcess
 {

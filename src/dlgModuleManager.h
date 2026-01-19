@@ -23,13 +23,11 @@
  ***************************************************************************/
 
 
-#include "Host.h"
-
-#include "pre_guard.h"
 #include "ui_module_manager.h"
 #include <QDialog>
-#include <QCloseEvent>
-#include "post_guard.h"
+
+class Host;
+class QCloseEvent;
 
 class dlgModuleManager : public QDialog, public Ui::module_manager
 {

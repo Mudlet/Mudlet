@@ -36,9 +36,7 @@
  * LUA_TTHREAD          8
  */
 
-TVar::TVar()
-{
-}
+TVar::TVar() {}
 
 TVar::TVar(TVar* p)
 : parent(p)
@@ -52,6 +50,13 @@ TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, cons
 , value(val)
 , valueType(vt)
 {
+}
+
+TVar::~TVar()
+{
+    // Delete all children recursively
+    qDeleteAll(children);
+    children.clear();
 }
 
 void TVar::setReference(const bool s)
@@ -82,9 +87,8 @@ bool TVarLessThan(TVar* varA, TVar* varB)
     // of whether one or both of the QStrings was NOT actually a number
     if (a.toInt(&isAOk) && b.toInt(&isBOk) && isAOk && isBOk) {
         return a.toInt() < b.toInt();
-    } else {
-        return a.toLower() < b.toLower();
     }
+    return a.toLower() < b.toLower();
 }
 
 QList<TVar*> TVar::getChildren(const bool isToSort)

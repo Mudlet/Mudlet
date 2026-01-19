@@ -101,88 +101,66 @@ if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet
   exit 6
 fi
 
-cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
+
+FILES_TO_COPY=("mudlet.exe")
+
 if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+    FILES_TO_COPY+=("mudlet.exe.debug")
 fi
 
-# The location that windeployqt6 puts the Qt translation files by default is "./translations"
-# unfortunately this is not what
-# "QLibraryInfo::path(QLibraryInfo::TranslationsPath)" in the calls to
-# "QString mudlet::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
+if [ "${WITH_SENTRY}" = "ON" ]; then
+    FILES_TO_COPY+=("crashpad_handler.exe" "crashpad_wer.dll" "MudletCrashReporter.exe")
+fi
+
+for f in "${FILES_TO_COPY[@]}"; do
+    cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/$f" "${PACKAGE_DIR}/"
+done
+
+# The location that windeployqt6 puts the Qt translation files by default is
+# "./translations" unfortunately "QLibraryInfo::path(QLibraryInfo::TranslationsPath)"
+# in the calls to "QString mudlet::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "--translationdir" "./share/qt6/translations" "./mudlet.exe"
+# Also the --debug / --release flags don't work or are not needed for Qt6
+# (or even Qt5) as the debug information is shipped separatly rather than
+# being included in the Qt6 dll files.
 
-# To determine which system libraries have to be copied in it requires
-# continually trying to run the executable on the target type system
-# and adding in the libraries to the same directory and repeating that
-# until the executable actually starts to run. Alternatively running
-# ntldd ./mudlet.exe | grep "/mingw64" inside an Mingw63 shell as appropriate 
-# will produce the libraries that are likely to be needed below. Unfortunately
-# this process is a little recursive in that you may have to repeat the
-# process for individual librarys. For ones used by lua modules this
-# can manifest as being unable to "require" the library within lua
-# and doing the above "ntldd" check revealed that, for instance,
-# "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
-#
+WINDEPLOY_ARGS=( \
+  "--translationdir" \
+  "./share/qt6/translations" \
+  "--compiler-runtime" \
+  "--no-system-dxc-compiler" \
+  "--force-openssl")
+
+echo "Running ${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt-qt6.exe..."
+echo "  With options: \"" "${WINDEPLOY_ARGS[@]}" "\""
 echo ""
-echo "Examining Mudlet application to identify other needed libraries..."
-NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
-  | /usr/bin/grep -v "Qt6" \
-  | /usr/bin/grep -i "mingw" \
-  | /usr/bin/cut -d ">" -f2 \
-  | /usr/bin/cut -d "(" -f1 \
-  | /usr/bin/sort \
-  | /usr/bin/uniq)
 
-echo ""
-echo "Copying these identified libraries..."
-for LIB in ${NEEDED_LIBS} ; do
-  cp -v -p "${LIB}" . ;
-done
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" "${WINDEPLOY_ARGS[@]}" "./mudlet.exe"
 
-echo ""
-echo "Copying other, known to be needed, libraries in..."
-# libjasper to libwebpdemux-2 are additional image format handlers that Qt can
-# use if they are present.
-# libsqlite3 and libyajl are needed by lua modules (luasql-sqlite3) and at Mudlet run time.
-cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libjasper.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libjpeg-8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libtiff-6.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libwebp-7.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libwebpdemux-2.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll"
-
-echo ""
-echo "Copying OpenSSL libraries in..."
-# The openSSL libraries has a different name depending on the bitness - but we
-# only do 64-bits now:
-cp -v -p -t . \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
-
-
+# Copy in all the other known to be needed .dlls BEFORE we analyse the WHOLE lot
+# for any dependencies - otherwise we'd have to add any of the dependencies for
+# those others manually after dealing with the ones we can detect from the
+# Mudlet executable and the Qt plugins...
 echo ""
 echo "Copying discord-rpc library in..."
 cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc64.dll"  .
-echo ""
+
 
 # Lua libraries:
 # If there is a demand for other rocks in the Windows installer because of
 # revisions to the mappers or geyser framework or popular demand otherwise then
 # the rock for those will also have to be installed and their C(.dll)/Lua (.lua)
 # files included here:
+echo ""
 echo "Copying lua C libraries in..."
 cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lfs.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lua-utf8.dll" \
-    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre2.dll" \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll"
 
 mkdir ./luasql
@@ -191,6 +169,65 @@ mkdir ./brimworks
 cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
 echo ""
 
+echo "Copying OpenSSL libraries in..."
+# The openSSL libraries has a different name depending on the bitness - but we
+# only do 64-bits now:
+cp -v -p -t . \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-3-x64.dll" \
+    "${MINGW_INTERNAL_BASE_DIR}/bin/libssl-3-x64.dll"
+
+echo ""
+echo "Examining the Mudlet application and all the libraries and Qt plugins to identify other needed libraries..."
+
+# The greps filter means we only get paths that:
+# * do not contain "Qt6"
+# * include the "root" directory of the particular bash terminal in use (to
+#   capture those with "mingw64", "ucrt64" or "clang64" in them)
+# * include "bin" for the path where the above keep their main library files
+# The cuts ensures we only get the file and path to the library after the =>
+# in the lines that match:
+case "${MSYSTEM}" in
+  *MINGW64*)
+    NEEDED_LIBS_ARG=mingw64
+    ;;
+  *CLANG64*)
+    NEEDED_LIBS_ARG=clang64
+    ;;
+  *UCRT64*)
+    NEEDED_LIBS_ARG=ucrt64
+    ;;
+  *)
+    echo "Uh, oh! Failed to work out what to use to identify the libraries we need to bundle!"
+    exit 2
+    ;;
+esac
+
+mapfile -t NEEDED_LIBS < <(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive \
+  ./mudlet.exe \
+  ./*.dll \
+  ./*/*.dll \
+  | /usr/bin/grep -v 'Qt6' \
+  | /usr/bin/grep "${NEEDED_LIBS_ARG}" \
+  | /usr/bin/grep 'bin' \
+  | /usr/bin/cut -d '>' -f2 \
+  | /usr/bin/cut -d '(' -f1 \
+  | /usr/bin/sort -u)
+
+# echo ""
+# echo "  In summary, the needed libraries are:"
+# echo "${NEEDED_LIBS[@]}"
+
+echo ""
+echo "Copying identified libraries from Mudlet executable and plugins..."
+# Note: DON'T double quote the array here - somehow extra leading or trailing
+# spaces get into the call of `cygpath -au ${LIB}` which breaks things.
+for LIB in ${NEEDED_LIBS[@]}; do
+  # The ntldd above returns "Windows style pathFileNames"
+  cp -p -v -t . "$(/usr/bin/cygpath -au "${LIB}")"
+done
+echo "    ... done copying identified libraries."
+
+echo ""
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # Using the '/./' notation provides the point at which rsync reproduces the
 # directory structure from the source into the target and avoids the need

@@ -31,7 +31,6 @@ bool GifTracker::registerGif(QMovie* pT)
 
     mMovieList.push_back(pT);
     return true;
-
 }
 
 void GifTracker::unregisterGif(QMovie* pT)
@@ -42,7 +41,6 @@ void GifTracker::unregisterGif(QMovie* pT)
 
     mMovieList.remove(pT);
     return;
-
 }
 
 std::tuple<QString, int, int> GifTracker::assembleReport()
@@ -56,12 +54,7 @@ std::tuple<QString, int, int> GifTracker::assembleReport()
         }
     }
     QStringList msg;
-    msg << QLatin1String("Gifs current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("active Gifs: ") << QString::number(statsActiveItems) << QLatin1String("\n");
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsActiveItems
-    };
+    msg << QLatin1String("Gifs current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("active Gifs: ") << QString::number(statsActiveItems)
+        << QLatin1String("\n");
+    return {msg.join(QString()), statsItemsTotal, statsActiveItems};
 }
-

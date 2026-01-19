@@ -19,9 +19,7 @@
 
 #include "CameraController.h"
 
-#include "pre_guard.h"
 #include <QtGlobal>
-#include "post_guard.h"
 
 using namespace std::numbers;
 
@@ -38,16 +36,16 @@ void CameraController::setPosition(float r, float theta, float phi)
 {
     // convert from degrees into radians
     theta = qBound(2.0f, theta, 82.0f);
-    theta = theta/360 * 2 * pi;
-    phi = phi/360 * 2 * pi;
+    theta = theta / 360 * 2 * pi;
+    phi = phi / 360 * 2 * pi;
 
     mDistance = r;
     mPositionVector.setX(std::sin(theta) * std::cos(phi));
     mPositionVector.setY(std::sin(theta) * std::sin(phi));
     mPositionVector.setZ(std::cos(theta));
-    mUpVector.setX(std::sin(theta - pi/2) * std::cos(phi));
-    mUpVector.setY(std::sin(theta - pi/2) * std::sin(phi));
-    mUpVector.setZ(std::cos(theta - pi/2));
+    mUpVector.setX(std::sin(theta - pi / 2) * std::cos(phi));
+    mUpVector.setY(std::sin(theta - pi / 2) * std::sin(phi));
+    mUpVector.setZ(std::cos(theta - pi / 2));
     mRightVector = QVector3D::crossProduct(mPositionVector, mUpVector);
 }
 
@@ -134,9 +132,8 @@ QVector3D CameraController::rotateAround(QVector3D currentVector, QVector3D rota
     // convert degrees to radians
     rotationAngle = rotationAngle / 360 * 2 * pi;
     // Apply Rodrigues rotation formula
-    return std::cos(rotationAngle) * currentVector 
-        + std::sin(rotationAngle) * QVector3D::crossProduct(rotationAxis, currentVector)
-        + QVector3D::dotProduct(rotationAxis, currentVector) * (1 - std::cos(rotationAngle)) * rotationAxis;
+    return std::cos(rotationAngle) * currentVector + std::sin(rotationAngle) * QVector3D::crossProduct(rotationAxis, currentVector)
+           + QVector3D::dotProduct(rotationAxis, currentVector) * (1 - std::cos(rotationAngle)) * rotationAxis;
 }
 
 QVector3D CameraController::getPosition()
@@ -144,11 +141,8 @@ QVector3D CameraController::getPosition()
     if (mPositionVector.x() == 0 && mPositionVector.y() == 0) {
         return QVector3D(mDistance, 0.0f, 0.0f);
     }
-    
+
     const float toDegrees = 180.0f / pi;
-    const float x = mPositionVector.x();
-    const float y = mPositionVector.y();
-    const float z = mPositionVector.z();
     const float theta = toDegrees * std::acos(mPositionVector.z());
     const float phi = toDegrees * std::atan2(mPositionVector.y(), mPositionVector.x());
     return QVector3D(mDistance, theta, phi);

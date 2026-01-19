@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024-2025 by Stephen Lyons  *
+ *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024-2026 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -28,11 +28,9 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QPainter>
 #include <QTextLayout>
 #include <QDebug>
-#include "post_guard.h"
 
 #if defined(Q_OS_WINDOWS)
 #include <wow64apiset.h>
@@ -88,7 +86,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2026");
         QFont font(qsl("Bitstream Vera Serif"), 16, 75);
         font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
@@ -139,7 +137,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 }
 
 void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
-{   // TAB 1 - "About Mudlet"
+{ // TAB 1 - "About Mudlet"
     // clang-format off
     QString aboutMudletHeader(
         tr("<tr><td><span style=\"color:#bc8942;\"><b>Homepage</b></span></td><td><a href=\"http://www.mudlet.org/\">www.mudlet.org</a></td></tr>\n"
@@ -276,15 +274,13 @@ QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
     }
 
     return qsl("<p>%1%2 %3</p>\n") // name (big?), contacts (if any?), description
-        .arg(coloredText.arg(qsl("bc8942"), qsl("<b>%1</b>")
-             .arg((maker.big) ? qsl("<big>%1</big>").arg(maker.name) : maker.name)),
-        (contactDetails.isEmpty()) ? QString() :
-             qsl(" (%1)").arg(contactDetails.join(QChar::Space)),
-        maker.description);
+            .arg(coloredText.arg(qsl("bc8942"), qsl("<b>%1</b>").arg((maker.big) ? qsl("<big>%1</big>").arg(maker.name) : maker.name)),
+                 (contactDetails.isEmpty()) ? QString() : qsl(" (%1)").arg(contactDetails.join(QChar::Space)),
+                 maker.description);
 }
 
 void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
-{   // TAB 2 - "License"
+{ // TAB 2 - "License"
     // clang-format off
     // Only the introductory text at the top is to be translated - the Licence
     // itself MUST NOT be translated as only the English Language version is
@@ -581,7 +577,7 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
 }
 
 void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
-{   // TAB 3 - Third party items
+{ // TAB 3 - Third party items
     // clang-format off
     // Only the introductory text at the top and interspersed between items are
     // to be translated - the Licences themselves MUST NOT be translated:
@@ -853,9 +849,9 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString luaSql_Sqlite3Header(tr("<h2><u>LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).</u></h2>"
                                     "<h3>Copyright © 2003-2019, The Kepler Project</h3>"));
 
-    QString lrexlib_pcreHeader(tr("<h2><u>Lrexlib-pcre -  Regular expression library binding (PCRE flavour).</u></h2>"
-                                  "<h3>Copyright © Reuben Thomas 2000-2020<br>"
-                                  "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
+    QString lrexlib_pcre2Header(tr("<h2><u>Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).</u></h2>"
+                                   "<h3>Copyright © Reuben Thomas 2000-2020<br>"
+                                   "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
@@ -926,6 +922,12 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                     "<a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a></h2>"
                                     "<h3>Copyright © 2019 Egor-Skriptunoff</h3>"));
 
+#if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
+    QString SentryHeader(tr("<h2><u>Sentry Native - Crash reporting SDK</u></h2>"
+                            "<h3>Copyright © 2019 Sentry (https://sentry.io) and individual contributors.<br>"
+                            "All rights reserved.</h3>"));
+#endif
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(qsl("<html>%1<body>%2<hr>")
@@ -946,7 +948,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                luaYajlHeader,                  //  8 - lua_yajl header - translatable
                                                luaUTF8Header,                  //  9 - luautf8 header - translatable
                                                luaSql_Sqlite3Header,           // 10 - luaSql_Sqlite3 header - translatable
-                                               lrexlib_pcreHeader,             // 11 - lrexlib_pcre header - translatable
+                                               lrexlib_pcre2Header,            // 11 - lrexlib_pcre2 header - translatable
                                                MIT_Body));                     // 12 - six copies of the body MIT for all of the above - not translatable
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
@@ -1026,6 +1028,20 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(Utf8_filenamesHeader,                   // 41 - utf8_filename header - translatable
                                        MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
 
+#if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
+    license_3rdParty_texts.append(qsl("<hr>%1%2")
+                                  .arg(SentryHeader,                           // Sentry header - translatable
+                                       MIT_Body));                             // Sentry body MIT - not translatable
+#endif
+
+    QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
+                               "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
+                               "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
+                               "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
+
+    license_3rdParty_texts.append(qsl("<hr>%43")
+                                  .arg(swordModelHeader));                      // 43 - sword model attribution - translatable
+
     license_3rdParty_texts.append(qsl("</body></html>"));
 
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));
@@ -1035,7 +1051,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
-    QStringList mightier_than_swords = {/* active */"Joshua C. Burt", "StickMUD", "Medievia", /* inactive */ "Qwindor Rousseau", "Maiyannah Bishop", "Stick In the MUD 🎙"};
+    QStringList mightier_than_swords = {/* active */ "Joshua C. Burt", "StickMUD", "Medievia", /* inactive */ "Qwindor Rousseau", "Maiyannah Bishop", "Stick In the MUD 🎙"};
     QStringList on_a_plaque = {"demonnic", "Henry Hsiao"};
     int image_counter{1};
 
@@ -1047,7 +1063,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     nameFont.setPixelSize(32);
     nameFont.setFamily(qsl("Bitstream Vera Sans"));
 
-    for (const auto& name: std::as_const(mightier_than_swords)) {
+    for (const auto& name : std::as_const(mightier_than_swords)) {
         QImage background(qsl(":/icons/frame_swords.png"));
         QPainter painter(&background);
         painter.setFont(nameFont);
@@ -1056,7 +1072,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
         image_counter++;
     }
 
-    for (const auto& name: std::as_const(on_a_plaque)) {
+    for (const auto& name : std::as_const(on_a_plaque)) {
         QImage background(qsl(":/icons/frame_plaque.png"));
         QPainter painter(&background);
         painter.setFont(nameFont);
@@ -1083,17 +1099,19 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
                 <p align="center"><br>%1<br></p>
                 %2
                 )")
-                    .arg(tr(R"(
+                                  .arg(tr(R"(
                             These formidable folks will be fondly remembered forever<br>for their generous financial support on Mudlet's patreon:
-                            )"), supporters_image_html);
+                            )"),
+                                       supporters_image_html);
     } else {
         supporters_text = qsl(R"(
                 <p align="center"><br>%1<br></p>
                 %2
                 )")
-                    .arg(tr(R"(
+                                  .arg(tr(R"(
                             These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
-                            )"), supporters_image_html);
+                            )"),
+                                       supporters_image_html);
     }
 
     supportersDocument->setHtml(qsl("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
@@ -1143,41 +1161,41 @@ QString dlgAboutDialog::createBuildInfo() const
                    "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
                    "%12"
                    "</table>")
-                .arg(tr("Technical information:"), // %1
-                     tr("Version"), // %2
-                     mudlet::self()->scmVersion, // %3
-                     tr("OS"), // %4
+                .arg(tr("Technical information:"),  // %1
+                     tr("Version"),                 // %2
+                     mudlet::self()->scmVersion,    // %3
+                     tr("OS"),                      // %4
                      QSysInfo::prettyProductName(), // %5
                      /*: This is shown for 32-Bit Windows builds when run on a
                       *64-Bit OS. \"WoW64\" stands for WindowOnWindows64.
                       */
                      isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
-                     /*: This is shown for 32-Bit or 64-Bit Windows builds when
+                                                                          /*: This is shown for 32-Bit or 64-Bit Windows builds when
                       *run on a Windows OS of the same bitness. It is the
                       *opposite case to that when \"WoW64\" is included - in
                       *those cases a 32-Bit application is run on 64-Bit
                       *hardware via an extra WindowOnWindows64 software layer.
                       */
                                                                           : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
-                     /*: This is shown for 32-Bit or 64-Bit Windows builds if
+                                                /*: This is shown for 32-Bit or 64-Bit Windows builds if
                       *the Windows API call to detect whether the WoW64 system
                       *is in use fails to work.
                       */
                                                 : tr("CPU"), // %6
-                     QSysInfo::currentCpuArchitecture(), // %7
+                     QSysInfo::currentCpuArchitecture(),     // %7
                      /*: This is shown when the Qt version used at run-time
                       *is different to that used during compilation - it not
                       *the usual case.
                       */
                      tr("Qt version (compilation)"), // %8
-                     QLatin1String(QT_VERSION_STR)) // %9
-                     /*: This is shown when the Qt version used at run-time
+                     QLatin1String(QT_VERSION_STR))  // %9
+                                                     /*: This is shown when the Qt version used at run-time
                       *is different to that used during compilation - it not
                       *the usual case.
                       */
-                .arg(tr("Qt version (run-time)"), // %10
-                     qVersion(), // %11
-                     upgradeTo64Bits); // %12
+                .arg(tr("Qt version (run-time)"),    // %10
+                     qVersion(),                     // %11
+                     upgradeTo64Bits);               // %12
     }
 
     // Else they are the same:
@@ -1189,35 +1207,35 @@ QString dlgAboutDialog::createBuildInfo() const
                "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
                "%10"
                "</table>")
-            .arg(tr("Technical information:"), // %1
-                 tr("Version"), // %2
-                 mudlet::self()->scmVersion, // %3
-                 tr("OS"), // %4
+            .arg(tr("Technical information:"),  // %1
+                 tr("Version"),                 // %2
+                 mudlet::self()->scmVersion,    // %3
+                 tr("OS"),                      // %4
                  QSysInfo::prettyProductName(), // %5
                  /*: This is shown for 32-Bit Windows builds when run on a
                   *64-Bit OS. \"WoW64\" stands for WindowOnWindows64.
                   */
                  isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
-                 /*: This is shown for 32-Bit or 64-Bit Windows builds when
+                                                                      /*: This is shown for 32-Bit or 64-Bit Windows builds when
                   *a Windows OS of the same size. It is the opposite case
                   *to that when \"WoW64\" is included - in those cases a
                   *32-Bit application is run on 64-Bit hardware via an
                   *extra WindowOnWindows64 software layer.
                   */
                                                                       : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
-                 /*: This is shown when something has gone wrong and it is not
+                                            /*: This is shown when something has gone wrong and it is not
                   *possible to correctly determine whether there is an extra
                   *software layer being used to run a 32-Bit Windows build
                   *on 64-Bit hardware/OS.
                   */
                                             : tr("CPU"), // %6
-                 QSysInfo::currentCpuArchitecture(), // %7
+                 QSysInfo::currentCpuArchitecture(),     // %7
                  /*: This is shown when the same Qt version is used at run-time
                   *as was used during compilation - it is the usual case.
                   */
-                 tr("Qt version"), // %8
+                 tr("Qt version"),              // %8
                  QLatin1String(QT_VERSION_STR), // %9
-                 upgradeTo64Bits); // %10
+                 upgradeTo64Bits);              // %10
 #else
 
     // Anything else
@@ -1230,26 +1248,26 @@ QString dlgAboutDialog::createBuildInfo() const
                    "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
                    "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
                    "</table>")
-                .arg(tr("Technical information:"), // %1
-                     tr("Version"), // %2
-                     mudlet::self()->scmVersion, // %3
-                     tr("OS"), // %4
+                .arg(tr("Technical information:"),  // %1
+                     tr("Version"),                 // %2
+                     mudlet::self()->scmVersion,    // %3
+                     tr("OS"),                      // %4
                      QSysInfo::prettyProductName(), // %5
                      //: This is shown for all other OSes than Windows.
-                     tr("CPU"), // %6
+                     tr("CPU"),                          // %6
                      QSysInfo::currentCpuArchitecture(), // %7
                      /*: This is shown when the Qt version used at run-time
                       *is different to that used during compilation - it not
                       *the usual case.
                       */
                      tr("Qt version (compilation)"), // %8
-                     QLatin1String(QT_VERSION_STR)) // %9
-                     /*: This is shown when the Qt version used at run-time
+                     QLatin1String(QT_VERSION_STR))  // %9
+                                                     /*: This is shown when the Qt version used at run-time
                       *is different to that used during compilation - it not
                       *the usual case.
                       */
-                .arg(tr("Qt version (run-time)"), // %10
-                     qVersion()); // %11
+                .arg(tr("Qt version (run-time)"),    // %10
+                     qVersion());                    // %11
     }
 
     // Else they are the same:
@@ -1260,18 +1278,18 @@ QString dlgAboutDialog::createBuildInfo() const
                "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
                "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
                "</table>")
-            .arg(tr("Technical information:"), // %1
-                 tr("Version"), // %2
-                 mudlet::self()->scmVersion, // %3
-                 tr("OS"), // %4
+            .arg(tr("Technical information:"),  // %1
+                 tr("Version"),                 // %2
+                 mudlet::self()->scmVersion,    // %3
+                 tr("OS"),                      // %4
                  QSysInfo::prettyProductName(), // %5
                  //: This is shown for all other OSes than Windows.
-                 tr("CPU"), // %6
+                 tr("CPU"),                          // %6
                  QSysInfo::currentCpuArchitecture(), // %7
                  /*: This is shown when the same Qt version is used at run-time
                   *as was used during compilation - it is the usual case.
                   */
-                 tr("Qt version"), // %8
+                 tr("Qt version"),               // %8
                  QLatin1String(QT_VERSION_STR)); // %9
 #endif
 }

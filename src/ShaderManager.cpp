@@ -20,25 +20,23 @@
 #include "ShaderManager.h"
 #include "ResourceManager.h"
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QStandardPaths>
 #include <QCoreApplication>
 #include <chrono>
-#include "post_guard.h"
 
 #include "utils.h"
 
 ShaderManager::ShaderManager(ResourceManager* resourceManager, QObject* parent)
-    : QObject(parent)
-    , mDevelopmentMode(false)
-    , mInitialized(false)
-    , mUniformMVP(-1)
-    , mUniformModel(-1)
-    , mUniformNormalMatrix(-1)
-    , mResourceManager(resourceManager)
+: QObject(parent)
+, mDevelopmentMode(false)
+, mInitialized(false)
+, mUniformMVP(-1)
+, mUniformModel(-1)
+, mUniformNormalMatrix(-1)
+, mResourceManager(resourceManager)
 {
     mReloadTimer = new QTimer(this);
     mReloadTimer->setSingleShot(true);
@@ -58,39 +56,35 @@ bool ShaderManager::initialize()
     }
 
     initializeOpenGLFunctions();
-    
+
     mDevelopmentMode = detectDevelopmentMode();
     qDebug() << "ShaderManager: Hot-reload" << (mDevelopmentMode ? "enabled" : "disabled (using embedded shaders)");
-    
+
     if (mDevelopmentMode) {
         // Try multiple well-known locations for shader files
-        QStringList possiblePaths = {
-            // CMake build from build/src/
-            qsl("../src/shaders/"),
-            // CMake build from build/
-            qsl("src/shaders/"),
-            // In-source build
-            qsl("../../src/shaders/"),
-            // Qt Creator build
-            qsl("../../../src/shaders/"),
-            // Relative to current directory
-            qsl("shaders/")
-        };
-        
+        QStringList possiblePaths = {// CMake build from build/src/
+                                     qsl("../src/shaders/"),
+                                     // CMake build from build/
+                                     qsl("src/shaders/"),
+                                     // In-source build
+                                     qsl("../../src/shaders/"),
+                                     // Qt Creator build
+                                     qsl("../../../src/shaders/"),
+                                     // Relative to current directory
+                                     qsl("shaders/")};
+
         QString appDir = QCoreApplication::applicationDirPath();
         QString foundPath;
-        
+
         for (const QString& relativePath : possiblePaths) {
             QString testPath = QDir(appDir).filePath(relativePath);
             QDir testDir(testPath);
-            if (testDir.exists() && 
-                QFile::exists(testDir.filePath(qsl("vertex.glsl"))) && 
-                QFile::exists(testDir.filePath(qsl("fragment.glsl")))) {
+            if (testDir.exists() && QFile::exists(testDir.filePath(qsl("vertex.glsl"))) && QFile::exists(testDir.filePath(qsl("fragment.glsl")))) {
                 foundPath = testPath;
                 break;
             }
         }
-        
+
         if (foundPath.isEmpty()) {
             qWarning() << "ShaderManager: Could not find shader directory, trying fallback locations";
             mVertexShaderPath = QDir(appDir).canonicalPath() + qsl("/../src/shaders/vertex.glsl");
@@ -99,7 +93,7 @@ bool ShaderManager::initialize()
             mVertexShaderPath = QDir(foundPath).canonicalPath() + qsl("/vertex.glsl");
             mFragmentShaderPath = QDir(foundPath).canonicalPath() + qsl("/fragment.glsl");
         }
-        
+
         mFileWatcher = new QFileSystemWatcher(this);
         if (QFile::exists(mVertexShaderPath)) {
             mFileWatcher->addPath(mVertexShaderPath);
@@ -108,12 +102,12 @@ bool ShaderManager::initialize()
             mFileWatcher->addPath(mFragmentShaderPath);
         }
         connect(mFileWatcher, &QFileSystemWatcher::fileChanged, this, &ShaderManager::onShaderFileChanged);
-        
+
         qDebug() << "ShaderManager: Watching shader files:";
         qDebug() << "  Vertex:" << mVertexShaderPath << "(exists:" << QFile::exists(mVertexShaderPath) << ")";
         qDebug() << "  Fragment:" << mFragmentShaderPath << "(exists:" << QFile::exists(mFragmentShaderPath) << ")";
     }
-    
+
     mInitialized = createShaderProgram();
     return mInitialized;
 }
@@ -130,12 +124,12 @@ QOpenGLShaderProgram* ShaderManager::getMainShaderProgram()
 bool ShaderManager::reloadShaders()
 {
     qDebug() << "ShaderManager: Reloading shaders...";
-    
+
     mShaderProgram.reset();
     mUniformMVP = -1;
     mUniformModel = -1;
     mUniformNormalMatrix = -1;
-    
+
     bool success = createShaderProgram();
     if (success) {
         qDebug() << "ShaderManager: Shaders reloaded successfully";
@@ -143,7 +137,7 @@ bool ShaderManager::reloadShaders()
     } else {
         qWarning() << "ShaderManager: Failed to reload shaders";
     }
-    
+
     return success;
 }
 
@@ -156,11 +150,11 @@ void ShaderManager::cleanup()
 void ShaderManager::onShaderFileChanged(const QString& path)
 {
     qDebug() << "ShaderManager: Shader file changed:" << path;
-    
+
     if (mFileWatcher) {
         mFileWatcher->addPath(path);
     }
-    
+
     mReloadTimer->start();
 }
 
@@ -172,7 +166,7 @@ void ShaderManager::delayedReload()
 QString ShaderManager::loadShaderSource(const QString& shaderName)
 {
     QString source;
-    
+
     if (mDevelopmentMode) {
         QString filePath = (shaderName == qsl("vertex")) ? mVertexShaderPath : mFragmentShaderPath;
         QFile file(filePath);
@@ -192,8 +186,8 @@ QString ShaderManager::loadShaderSource(const QString& shaderName)
             qWarning() << "ShaderManager: Failed to load" << shaderName << "shader from resource:" << resourcePath;
         }
     }
-    
-    
+
+
     return source;
 }
 
@@ -203,7 +197,7 @@ bool ShaderManager::createShaderProgram()
 
     QString vertexSource = loadShaderSource(qsl("vertex"));
     QString fragmentSource = loadShaderSource(qsl("fragment"));
-    
+
     if (vertexSource.isEmpty() || fragmentSource.isEmpty()) {
         qWarning() << "ShaderManager: Empty shader sources";
         return false;
@@ -213,7 +207,7 @@ bool ShaderManager::createShaderProgram()
         qWarning() << "ShaderManager: Failed to compile vertex shader:" << mShaderProgram->log();
         return false;
     }
-    
+
     if (mResourceManager) {
         mResourceManager->onShaderCreated();
     }
@@ -222,7 +216,7 @@ bool ShaderManager::createShaderProgram()
         qWarning() << "ShaderManager: Failed to compile fragment shader:" << mShaderProgram->log();
         return false;
     }
-    
+
     if (mResourceManager) {
         mResourceManager->onShaderCreated();
     }
@@ -253,5 +247,3 @@ bool ShaderManager::detectDevelopmentMode()
     return false;
 #endif
 }
-
-

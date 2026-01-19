@@ -28,13 +28,13 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
-TScript::TScript( TScript * parent, Host * pHost )
-: Tree<TScript>( parent )
+TScript::TScript(TScript* parent, Host* pHost)
+: Tree<TScript>(parent)
 , mpHost(pHost)
 {
 }
 
-TScript::TScript(const QString& name, Host * pHost )
+TScript::TScript(const QString& name, Host* pHost)
 : Tree<TScript>(nullptr)
 , mName(name)
 , mpHost(pHost)

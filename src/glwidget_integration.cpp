@@ -24,9 +24,8 @@ QOpenGLWidget* GLWidgetFactory::createGLWidget(TMap* pMap, Host* pHost, QWidget*
 {
     if (pHost && pHost->getUseModern3DMapper()) {
         return new ModernGLWidget(pMap, pHost, parent);
-    } else {
-        return new GLWidget(pMap, pHost, parent);
     }
+    return new GLWidget(pMap, pHost, parent);
 }
 
 bool GLWidgetFactory::isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost)
@@ -34,10 +33,10 @@ bool GLWidgetFactory::isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost)
     if (!widget || !pHost) {
         return false;
     }
-    
+
     bool shouldUseModern = pHost->getUseModern3DMapper();
     bool isModern = dynamic_cast<ModernGLWidget*>(widget) != nullptr;
-    
+
     return shouldUseModern == isModern;
 }
 
@@ -46,12 +45,12 @@ QString GLWidgetFactory::getWidgetTypeName(QOpenGLWidget* widget)
     if (!widget) {
         return QStringLiteral("null");
     }
-    
+
     if (dynamic_cast<ModernGLWidget*>(widget)) {
         return QStringLiteral("ModernGLWidget");
-    } else if (dynamic_cast<GLWidget*>(widget)) {
-        return QStringLiteral("GLWidget");
-    } else {
-        return QStringLiteral("Unknown");
     }
+    if (dynamic_cast<GLWidget*>(widget)) {
+        return QStringLiteral("GLWidget");
+    }
+    return QStringLiteral("Unknown");
 }

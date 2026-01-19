@@ -25,12 +25,11 @@
 #include "TLinkStore.h"
 #include "TMxpClient.h"
 #include "TMxpEvent.h"
+#include "TMxpProcessor.h"
 
-#include "pre_guard.h"
 #include <QList>
 #include <QQueue>
 #include <QStack>
-#include "post_guard.h"
 
 class Host;
 class TMediaData;
@@ -84,6 +83,10 @@ public:
 
     bool getLink(int id, QStringList** links, QStringList** hints) override;
 
+    // EXPIRE tag support
+    int setLink(const QStringList& links, const QStringList& hints, const QString& expireName) override;
+    void expireLinks(const QString& expireName) override;
+
     void playMedia(TMediaData& mediaData) override;
     void stopMedia(TMediaData& mediaData) override;
 
@@ -119,6 +122,8 @@ public:
         Q_UNUSED(value)
     }
 
+    bool startTagReceived(MxpStartTag* startTag) override;
+    
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override;
 
     void enqueueMxpEvent(MxpStartTag* tag);
@@ -132,9 +137,26 @@ public:
 
     void setCaptionForSendEvent(const QString& caption) override;
 
+    int getWrapWidth() const override;
+
+    void insertText(const QString& text) override;
+
     QStack<TMxpEvent> mPendingSendEvents;
+    
+    // Get the encoding used by the connection
+    QByteArray getEncoding() const override;
+    bool shouldLockModeToSecure() const override;
+    
+    // MXP Frame management (FRAME and DEST tag support)
+    bool createMxpFrame(const QString& name, const QMap<QString, QString>& attributes) override;
+    bool closeMxpFrame(const QString& name) override;
+    bool setMxpDestination(const QString& frameName, bool eol, bool eof) override;
+    void clearMxpDestination() override;
+    QString getMxpCurrentDestination() const override;
 
 private:
+    bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const;
+    
     Host* mpHost;
     bool mLinkMode;
 };

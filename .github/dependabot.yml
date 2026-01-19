@@ -13,7 +13,8 @@ updates:
       interval: "weekly"
       day: "friday"
     ignore:
-      # ignore vcpkg as it is updated often, and this goes off commits, not releases
-      - dependency-name: "3rdparty/vcpkg"
+      # ignore lcf as we track a specific branch (5.1-syntax_5.1), not master
+      # the update-3rdparty.yml workflow handles this correctly
+      - dependency-name: "3rdparty/lcf"
     commit-message:
       prefix: "Infrastructure:"

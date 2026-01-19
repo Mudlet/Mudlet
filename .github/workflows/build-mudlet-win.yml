@@ -7,17 +7,25 @@ on:
   workflow_dispatch:
     inputs:
       scheduled:
-        description: 'Imitate a scheduled build'
+        description: 'Imitate a PTB'
         required: false
         default: 'false'
   schedule:
     - cron: '0 2 * * *'
+
+# Permissions required for SignPath trusted build verification
+permissions:
+  id-token: write
+  contents: read
+  actions: read
 
 jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    env:
+      SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -27,9 +35,9 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
 
     - name: (Windows) Setup MSYS2
@@ -43,17 +51,24 @@ jobs:
       shell: msys2 {0}
       env:
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
+
+    - name: check ccache stats prior to build
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+      run: ccache --zero-stats --show-stats
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -62,7 +77,30 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        # Enable debug sending only for tags and scheduled builds (Release builds and PTB builds)
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        WITH_SENTRY: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+
+    - name: check ccache stats post build
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+      run: ccache --show-stats
+
+    - name: (Windows) Run QTest
+      shell: msys2 {0}
+      run: |
+        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        export LUA_PATH
+        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        export LUA_CPATH
+
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
+      env:
+        QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
       timeout-minutes: 5
@@ -90,29 +128,83 @@ jobs:
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
+    - name: (Windows) Prepare binaries for signing
+      id: prepare-signing
+      if: |
+        env.SIGNPATH_SIGNING_ENABLED == 'true' &&
+        (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true')
+      shell: msys2 {0}
+      run: |
+        SIGNING_DIR="${GITHUB_WORKSPACE}/signing-binaries"
+        mkdir -p "${SIGNING_DIR}"
+
+        cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/mudlet.exe" "${SIGNING_DIR}/"
+        cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/MudletCrashReporter.exe" "${SIGNING_DIR}/"
+
+        if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" ]; then
+          cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" "${SIGNING_DIR}/"
+        fi
+        if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" ]; then
+          cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" "${SIGNING_DIR}/"
+        fi
+
+        echo "SIGNING_DIR=$(cygpath -aw "${SIGNING_DIR}")" >> $GITHUB_ENV
+        echo "signing_dir=${SIGNING_DIR}" >> $GITHUB_OUTPUT
+
+    - name: (Windows) Upload unsigned binaries for signing
+      id: upload-unsigned-binaries
+      if: steps.prepare-signing.outcome == 'success'
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-binaries
+        path: ${{env.SIGNING_DIR}}
+        retention-days: 1
+
+    - name: (Windows) Sign binaries with SignPath
+      id: sign-binaries
+      if: steps.upload-unsigned-binaries.outcome == 'success'
+      uses: signpath/github-action-submit-signing-request@v2
+      with:
+        api-token: ${{secrets.SIGNPATH_API_TOKEN}}
+        organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
+        project-slug: 'mudlet'
+        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        artifact-configuration-slug: 'binaries'
+        github-artifact-id: ${{steps.upload-unsigned-binaries.outputs.artifact-id}}
+        wait-for-completion: true
+        output-artifact-directory: ${{steps.prepare-signing.outputs.signing_dir}}
+        wait-for-completion-timeout-in-seconds: 600
+
+    - name: (Windows) Replace binaries with signed versions
+      if: steps.sign-binaries.outcome == 'success'
+      shell: msys2 {0}
+      run: |
+        SIGNING_DIR="${GITHUB_WORKSPACE}/signing-binaries"
+        BUILD_DIR="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
+
+        cp -v "${SIGNING_DIR}/mudlet.exe" "${BUILD_DIR}/"
+        cp -v "${SIGNING_DIR}/MudletCrashReporter.exe" "${BUILD_DIR}/"
+
+        if [ -f "${SIGNING_DIR}/crashpad_handler.exe" ]; then
+          cp -v "${SIGNING_DIR}/crashpad_handler.exe" "${BUILD_DIR}/"
+        fi
+        if [ -f "${SIGNING_DIR}/crashpad_wer.dll" ]; then
+          cp -v "${SIGNING_DIR}/crashpad_wer.dll" "${BUILD_DIR}/"
+        fi
+
+        echo "Binary signing complete."
+
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
-
-    - name: (Windows) Login to Azure
-      uses: azure/login@v2
-      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: Get Azure access token for code signing
-      shell: pwsh
-      if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.pull_request.head.repo.full_name == github.repository)
-      run: |
-        $token = (az account get-access-token --resource https://codesigning.azure.net | ConvertFrom-Json).accessToken
-        "::add-mask::$token"
-        "AZURE_ACCESS_TOKEN=$token" | Add-Content -Path $env:GITHUB_ENV
-
+      env:
+        WITH_SENTRY: "ON"
+  
     - name: (Windows) Deploy
       shell: msys2 {0}
       env:
@@ -122,16 +214,63 @@ jobs:
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
-        AZURE_ACCESS_TOKEN: ${{ env.AZURE_ACCESS_TOKEN }}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
+        GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
 
-    - name: Create intermediate artifact for debugging
+    - name: (Windows) Upload unsigned installer for signing
+      id: upload-unsigned-installer
+      if: |
+        env.ARTIFACT_NAME != '' &&
+        env.SIGNPATH_SIGNING_ENABLED == 'true' &&
+        (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') &&
+        contains(env.ARTIFACT_NAME, 'installer')
       uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-installer
+        path: ${{env.ARTIFACT_WINPATHORFILE}}
+        retention-days: 1
+
+    - name: (Windows) Sign installer with SignPath
+      id: sign-installer
+      if: steps.upload-unsigned-installer.outcome == 'success'
+      uses: signpath/github-action-submit-signing-request@v2
+      with:
+        api-token: ${{secrets.SIGNPATH_API_TOKEN}}
+        organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
+        project-slug: 'mudlet'
+        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        artifact-configuration-slug: 'installer'
+        github-artifact-id: ${{steps.upload-unsigned-installer.outputs.artifact-id}}
+        wait-for-completion: true
+        output-artifact-directory: ${{github.workspace}}/signed-installer
+        wait-for-completion-timeout-in-seconds: 600
+
+    - name: (Windows) Replace installer with signed version
+      if: steps.sign-installer.outcome == 'success'
+      shell: msys2 {0}
+      run: |
+        SIGNED_DIR="${GITHUB_WORKSPACE}/signed-installer"
+        SIGNED_INSTALLER=$(find "${SIGNED_DIR}" -name "*.exe" -type f | head -1)
+        if [ -n "${SIGNED_INSTALLER}" ]; then
+          ORIGINAL_PATH=$(cygpath -au "${ARTIFACT_WINPATHORFILE}")
+          if [ -d "${ORIGINAL_PATH}" ]; then
+            ORIGINAL_EXE=$(find "${ORIGINAL_PATH}" -name "*.exe" -type f | head -1)
+            cp -v "${SIGNED_INSTALLER}" "${ORIGINAL_EXE}"
+          else
+            cp -v "${SIGNED_INSTALLER}" "${ORIGINAL_PATH}"
+          fi
+          echo "Installer signing complete."
+        else
+          echo "Warning: No signed installer found in ${SIGNED_DIR}"
+        fi
+
+    - name: Create intermediate artifact for debugging
+      uses: actions/upload-artifact@v6
       if: env.INTERMEDIATE_ARTIFACT_NAME
       with:
         name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
@@ -143,7 +282,7 @@ jobs:
       # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
       # the given name - the Environmental variables are created by the
       # deploy-mudlet-for-windows.sh script:
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: env.ARTIFACT_NAME
       with:
         name: ${{env.ARTIFACT_NAME}}
@@ -157,7 +296,7 @@ jobs:
 
     - name: Register PTB Release
       shell: msys2 {0}
-      if: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
+      if: ${{ (github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && env.VERSION_STRING != '' }}
       env:
         VERSION_STRING: ${{env.VERSION_STRING}}
         BUILD_COMMIT: ${{env.BUILD_COMMIT}}
