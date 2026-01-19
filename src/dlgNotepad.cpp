@@ -231,10 +231,13 @@ void dlgNotepad::renameTab(int index)
     const QString currentName = tabWidget->tabText(index);
     bool ok = false;
     //: Dialog title for renaming a note tab
-    const QString newName = QInputDialog::getText(this, tr("Rename Note Tab"),
-                                                   //: Label for the input field when renaming a note tab
-                                                   tr("New name:"), QLineEdit::Normal,
-                                                   currentName, &ok);
+    const QString newName = QInputDialog::getText(this,
+                                                  tr("Rename Note Tab"),
+                                                  //: Label for the input field when renaming a note tab
+                                                  tr("New name:"),
+                                                  QLineEdit::Normal,
+                                                  currentName,
+                                                  &ok);
     if (ok && !newName.isEmpty() && newName != currentName) {
         tabWidget->setTabText(index, newName);
         mNeedToSave = true;
@@ -559,10 +562,8 @@ void dlgNotepad::saveSettings()
         return;
     }
 
-    mpHost->writeProfileIniData(qsl("Notepad/SendControlsVisible"),
-                                 action_toggleSendControls->isChecked() ? qsl("true") : qsl("false"));
-    mpHost->writeProfileIniData(qsl("Notepad/WindowState"),
-                                 QString::fromLatin1(saveState().toBase64()));
+    mpHost->writeProfileIniData(qsl("Notepad/SendControlsVisible"), action_toggleSendControls->isChecked() ? qsl("true") : qsl("false"));
+    mpHost->writeProfileIniData(qsl("Notepad/WindowState"), QString::fromLatin1(saveState().toBase64()));
 }
 
 void dlgNotepad::restoreSettings()
@@ -587,7 +588,7 @@ void dlgNotepad::restoreSettings()
     }
 }
 
-void dlgNotepad::closeEvent(QCloseEvent *event)
+void dlgNotepad::closeEvent(QCloseEvent* event)
 {
     saveSettings();
     QMainWindow::closeEvent(event);
@@ -710,8 +711,7 @@ void dlgNotepad::highlightAllMatches()
             QTextEdit::ExtraSelection selection;
             selection.cursor = cursor;
 
-            if (cursor.selectionStart() == currentCursor.selectionStart() &&
-                cursor.selectionEnd() == currentCursor.selectionEnd()) {
+            if (cursor.selectionStart() == currentCursor.selectionStart() && cursor.selectionEnd() == currentCursor.selectionEnd()) {
                 selection.format.setBackground(currentMatchColor);
             } else {
                 selection.format.setBackground(highlightColor);

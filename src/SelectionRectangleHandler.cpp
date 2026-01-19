@@ -46,15 +46,11 @@ bool SelectionRectangleHandler::matches(const T2DMap::MapInteractionContext& con
 
     switch (context.event->type()) {
     case QEvent::MouseButtonPress:
-        return context.button == Qt::LeftButton
-            && !context.isCustomLineDrawing
-            && !context.isRoomBeingMoved
-            && !context.modifiers.testFlag(Qt::AltModifier);
+        return context.button == Qt::LeftButton && !context.isCustomLineDrawing && !context.isRoomBeingMoved && !context.modifiers.testFlag(Qt::AltModifier);
     case QEvent::MouseMove:
         return context.isMultiSelectionActive || context.isSizingLabel;
     case QEvent::MouseButtonRelease:
-        return context.button == Qt::LeftButton
-            && (context.isMultiSelectionActive || context.isSizingLabel);
+        return context.button == Qt::LeftButton && (context.isMultiSelectionActive || context.isSizingLabel);
     default:
         return false;
     }
@@ -110,11 +106,10 @@ bool SelectionRectangleHandler::handleMousePress(T2DMap::MapInteractionContext& 
         if (!mMapWidget.mMapViewOnly) {
             mMapWidget.mHelpMsg = T2DMap::tr("Drag to select multiple rooms or labels, release to finish...");
             //: %1 is the platform-specific key name for Shift
-            mMapWidget.mHelpMsg += qsl(" ")
-                + T2DMap::tr("Hold %1 to add rooms or labels to your current selection.").arg(QKeySequence(Qt::ShiftModifier).toString(QKeySequence::NativeText).remove(QLatin1Char('+')));
+            mMapWidget.mHelpMsg +=
+                    qsl(" ") + T2DMap::tr("Hold %1 to add rooms or labels to your current selection.").arg(QKeySequence(Qt::ShiftModifier).toString(QKeySequence::NativeText).remove(QLatin1Char('+')));
             //: %1 is the platform-specific key name for Alt (Alt on Windows/Linux, Option on macOS)
-            mMapWidget.mHelpMsg += qsl(" ")
-                + T2DMap::tr("Hold %1 and drag to pan the map.").arg(QKeySequence(Qt::AltModifier).toString(QKeySequence::NativeText).remove(QLatin1Char('+')));
+            mMapWidget.mHelpMsg += qsl(" ") + T2DMap::tr("Hold %1 and drag to pan the map.").arg(QKeySequence(Qt::AltModifier).toString(QKeySequence::NativeText).remove(QLatin1Char('+')));
         }
         if (!hasShift) {
             mMapWidget.mMultiSelectionSet.clear();
@@ -196,9 +191,15 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
             const float ry = static_cast<float>(room->y() * -1) * mMapWidget.mRoomHeight + fy;
             QRectF dr;
             if (area->gridMode) {
-                dr = QRectF(static_cast<qreal>(rx - (mMapWidget.mRoomWidth / 2.0f)), static_cast<qreal>(ry - (mMapWidget.mRoomHeight / 2.0f)), static_cast<qreal>(mMapWidget.mRoomWidth), static_cast<qreal>(mMapWidget.mRoomHeight));
+                dr = QRectF(static_cast<qreal>(rx - (mMapWidget.mRoomWidth / 2.0f)),
+                            static_cast<qreal>(ry - (mMapWidget.mRoomHeight / 2.0f)),
+                            static_cast<qreal>(mMapWidget.mRoomWidth),
+                            static_cast<qreal>(mMapWidget.mRoomHeight));
             } else {
-                dr = QRectF(static_cast<qreal>(rx - mMapWidget.mRoomWidth * static_cast<float>(mMapWidget.rSize / 2.0)), static_cast<qreal>(ry - mMapWidget.mRoomHeight * static_cast<float>(mMapWidget.rSize / 2.0)), static_cast<qreal>(mMapWidget.mRoomWidth) * mMapWidget.rSize, static_cast<qreal>(mMapWidget.mRoomHeight) * mMapWidget.rSize);
+                dr = QRectF(static_cast<qreal>(rx - mMapWidget.mRoomWidth * static_cast<float>(mMapWidget.rSize / 2.0)),
+                            static_cast<qreal>(ry - mMapWidget.mRoomHeight * static_cast<float>(mMapWidget.rSize / 2.0)),
+                            static_cast<qreal>(mMapWidget.mRoomWidth) * mMapWidget.rSize,
+                            static_cast<qreal>(mMapWidget.mRoomHeight) * mMapWidget.rSize);
             }
             if (mMapWidget.mMultiRect.contains(dr)) {
                 rectangleSelection.insert(currentRoomId);

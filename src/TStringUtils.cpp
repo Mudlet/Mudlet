@@ -34,5 +34,3 @@ bool TStringUtils::isOneOf(QChar inputCharacter, const QString& characterSet)
 
     return false;
 }
-
-

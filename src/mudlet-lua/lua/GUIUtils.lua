@@ -2647,6 +2647,9 @@ end
 -- setCallBackFunction (name,function as string,args)
 -- it is used by setLabelCallBack functions and setCmdLineAction
 local function setActionCallback(callbackFunc, funcName, name, func, ...)
+  if func == nil and funcName ~= "setCmdLineAction" then
+    return callbackFunc(name, nil)
+  end
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
