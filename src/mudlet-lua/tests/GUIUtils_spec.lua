@@ -969,14 +969,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("should accept positional arguments", function()
-      local result = pcall(prefix, "test", "echo", "red", "blue", "main")
+      local result = pcall(prefix, "test", echo, "red", "blue", "main")
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(prefix, {
         text = "test",
-        func = "echo",
+        func = echo,
         fgColor = "red",
         bgColor = "blue",
         window = "main"
@@ -998,14 +998,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("should accept positional arguments", function()
-      local result = pcall(suffix, "test", "echo", "red", "blue", "main")
+      local result = pcall(suffix, "test", echo, "red", "blue", "main")
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(suffix, {
         text = "test",
-        func = "echo",
+        func = echo,
         fgColor = "red",
         bgColor = "blue",
         window = "main"

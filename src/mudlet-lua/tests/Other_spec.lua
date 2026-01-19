@@ -512,20 +512,26 @@ describe("Tests Other.lua functions", function()
   end)
 
   describe("Tests permKey() table argument support", function()
+    local testGroupName = "testGroup" .. os.time()
+
+    setup(function()
+      permGroup(testGroupName, "key")
+    end)
+
     it("should accept positional arguments without modifier (4 params)", function()
-      local result = pcall(permKey, "testKey" .. os.time(), "testGroup", string.byte('a'), "echo('test')")
+      local result = pcall(permKey, "testKey" .. os.time(), testGroupName, string.byte('a'), "echo('test')")
       assert.is_true(result)
     end)
 
     it("should accept positional arguments with modifier (5 params)", function()
-      local result = pcall(permKey, "testKey2" .. os.time(), "testGroup", 0x02000000, string.byte('b'), "echo('test2')")
+      local result = pcall(permKey, "testKey2" .. os.time(), testGroupName, 0x02000000, string.byte('b'), "echo('test2')")
       assert.is_true(result)
     end)
 
     it("should accept table arguments without modifier", function()
       local result = pcall(permKey, {
         name = "testKey3" .. os.time(),
-        parent = "testGroup",
+        parent = testGroupName,
         keyCode = string.byte('c'),
         code = "echo('test3')"
       })
@@ -535,7 +541,7 @@ describe("Tests Other.lua functions", function()
     it("should accept table arguments with modifier", function()
       local result = pcall(permKey, {
         name = "testKey4" .. os.time(),
-        parentGroup = "testGroup",
+        parentGroup = testGroupName,
         modifier = 0x02000000,
         key = string.byte('d'),
         luaCode = "echo('test4')"
@@ -545,6 +551,12 @@ describe("Tests Other.lua functions", function()
   end)
 
   describe("Tests tempComplexRegexTrigger() table argument support", function()
+    local testGroupName = "testTriggerGroup" .. os.time()
+
+    setup(function()
+      permGroup(testGroupName, "trigger")
+    end)
+
     it("should accept positional arguments with string code", function()
       local result = pcall(tempComplexRegexTrigger,
         "test" .. os.time(), ".*test.*", "echo('found')",
