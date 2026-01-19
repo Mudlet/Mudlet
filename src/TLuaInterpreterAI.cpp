@@ -119,7 +119,7 @@ int TLuaInterpreter::aiChat(lua_State* L)
 
     // Always use event-based approach (async)
     aiManager->chatCompletion(request, [&host, eventName](const LlamafileManager::ApiResponse& response) {
-        TEvent event {};
+        TEvent event{};
 
         // Add event name as first argument
         event.mArgumentList.append(eventName);
@@ -213,7 +213,7 @@ int TLuaInterpreter::aiPrompt(lua_State* L)
     auto* aiManager = pMudlet->getAIManager();
 
     aiManager->textCompletion(request, [&host, eventName](const LlamafileManager::ApiResponse& response) {
-        TEvent event {};
+        TEvent event{};
 
         // Add event name as first argument
         event.mArgumentList.append(eventName);
@@ -268,7 +268,7 @@ int TLuaInterpreter::aiPromptStream(lua_State* L)
 
     // Optional parameters
     double temperature = 0.7;
-    int maxTokens = 0; // 0 means no limit
+    int maxTokens = 0;                            // 0 means no limit
     QString eventName = "aiPromptStreamResponse"; // Default event name
 
     if (lua_gettop(L) >= 2) {
@@ -308,70 +308,70 @@ int TLuaInterpreter::aiPromptStream(lua_State* L)
 
     // For streaming, we need to handle the response differently
     // This will require modifications to LlamaFileManager to support streaming callbacks
-    aiManager->textCompletionStream(request,
-        // Chunk callback - fired for each streaming chunk
-        [&host, eventName](const QString& chunk, bool isComplete) {
-            TEvent event {};
+    aiManager->textCompletionStream(
+            request,
+            // Chunk callback - fired for each streaming chunk
+            [&host, eventName](const QString& chunk, bool isComplete) {
+                TEvent event{};
 
-            // Add event name as first argument
-            event.mArgumentList.append(eventName);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                // Add event name as first argument
+                event.mArgumentList.append(eventName);
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-            // Add chunk type
-            event.mArgumentList.append(isComplete ? QLatin1String("complete") : QLatin1String("partial"));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                // Add chunk type
+                event.mArgumentList.append(isComplete ? QLatin1String("complete") : QLatin1String("partial"));
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-            // Add success status (always true for chunks, errors handled separately)
-            event.mArgumentList.append(QLatin1String("1"));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+                // Add success status (always true for chunks, errors handled separately)
+                event.mArgumentList.append(QLatin1String("1"));
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
 
-            // Add empty error message for chunks
-            event.mArgumentList.append(QString());
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                // Add empty error message for chunks
+                event.mArgumentList.append(QString());
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-            // Add chunk content
-            QString content = chunk;
-            // Strip leading "\n " and trailing "</s>" for final chunk
-            if (isComplete) {
-                if (content.startsWith("\n ")) {
-                    content = content.mid(2);
+                // Add chunk content
+                QString content = chunk;
+                // Strip leading "\n " and trailing "</s>" for final chunk
+                if (isComplete) {
+                    if (content.startsWith("\n ")) {
+                        content = content.mid(2);
+                    }
+                    if (content.endsWith("</s>")) {
+                        content.chop(4);
+                    }
                 }
-                if (content.endsWith("</s>")) {
-                    content.chop(4);
-                }
-            }
-            event.mArgumentList.append(content);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                event.mArgumentList.append(content);
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-            host.raiseEvent(event);
-        },
-        // Error callback - fired on error
-        [&host, eventName](const QString& error) {
-            TEvent event {};
+                host.raiseEvent(event);
+            },
+            // Error callback - fired on error
+            [&host, eventName](const QString& error) {
+                TEvent event{};
 
-            // Add event name as first argument
-            event.mArgumentList.append(eventName);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                // Add event name as first argument
+                event.mArgumentList.append(eventName);
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-            // Add chunk type
-            event.mArgumentList.append(QLatin1String("error"));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                // Add chunk type
+                event.mArgumentList.append(QLatin1String("error"));
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-            // Add success status (false for errors)
-            event.mArgumentList.append(QLatin1String("0"));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+                // Add success status (false for errors)
+                event.mArgumentList.append(QLatin1String("0"));
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
 
-            // Add error message
-            event.mArgumentList.append(error);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                // Add error message
+                event.mArgumentList.append(error);
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-            // Add empty content
-            event.mArgumentList.append(QString());
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                // Add empty content
+                event.mArgumentList.append(QString());
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-            host.raiseEvent(event);
-        }
-    );
+                host.raiseEvent(event);
+            });
 
     lua_pushboolean(L, true);
     return 1;

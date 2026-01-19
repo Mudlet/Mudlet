@@ -26,11 +26,7 @@
 
 bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
 {
-    return encoding.startsWith("M_") ||
-           encoding == "CP437" ||
-           encoding == "CP667" ||
-           encoding == "CP737" ||
-           encoding == "CP869";
+    return encoding.startsWith("M_") || encoding == "CP437" || encoding == "CP667" || encoding == "CP737" || encoding == "CP869";
 }
 
 // Check if an encoding is available via Qt6's QStringDecoder
@@ -236,6 +232,6 @@ QList<QByteArray> TEncodingHelper::aliases(const QByteArray& encoding)
     } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
         return TTextCodec_medievia::aliases();
     }
-    
+
     return {};
 }

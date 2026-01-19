@@ -53,7 +53,7 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
 #ifdef DEBUG_MXP_PROCESSING
     qDebug() << "TMxpTagProcessor::handleTag() processing tag:" << tag->getName();
 #endif
-    
+
     if (!client.tagReceived(tag)) {
 #ifdef DEBUG_MXP_PROCESSING
         qDebug() << "  client.tagReceived() returned false, not handling";
@@ -97,20 +97,20 @@ TMxpTagProcessor::TMxpTagProcessor()
     // Variable and entity tags
     registerHandler(TMxpFeatureOptions({"var", {"publish"}}), new TMxpVarTagHandler());
     registerHandler(TMxpFeatureOptions({"entity", {"name", "value", "desc", "private", "publish", "delete", "add", "remove"}}), new TMxpEntityTagHandler());
-    
+
     // Line spacing tags
     registerHandler(TMxpFeatureOptions({"br", {}}), new TMxpBRTagHandler());
     registerHandler(TMxpFeatureOptions({"hr", {}}), new TMxpHRTagHandler());
-    
+
     // Link tags
     registerHandler(TMxpFeatureOptions({"send", {"href", "hint", "prompt", "expire"}}), new TMxpSendTagHandler());
     registerHandler(TMxpFeatureOptions({"a", {"href", "hint", "expire"}}), new TMxpLinkTagHandler());
     registerHandler(TMxpFeatureOptions({"expire", {"name"}}), new TMxpExpireTagHandler());
-    
+
     // Color and font tags
     registerHandler(TMxpFeatureOptions({"color", {"fore", "back"}}), new TMxpColorTagHandler());
     registerHandler(TMxpFeatureOptions({"font", {"color", "back"}}), new TMxpFontTagHandler());
-    
+
     // Media tags (MSP compatibility)
     registerHandler(TMxpFeatureOptions({"sound", {"fname", "v", "l", "p", "t", "u"}}), new TMxpSoundTagHandler());
     registerHandler(TMxpFeatureOptions({"music", {"fname", "v", "l", "p", "c", "t", "u"}}), new TMxpMusicTagHandler());
@@ -120,7 +120,8 @@ TMxpTagProcessor::TMxpTagProcessor()
     registerHandler(new TMxpImageTagHandler());
 
     // Frame and destination tags
-    registerHandler(TMxpFeatureOptions({"frame", {"name", "action", "internal", "external", "align", "left", "right", "top", "bottom", "width", "height", "scrolling", "floating", "title"}}), new TMxpFrameTagHandler());
+    registerHandler(TMxpFeatureOptions({"frame", {"name", "action", "internal", "external", "align", "left", "right", "top", "bottom", "width", "height", "scrolling", "floating", "title"}}),
+                    new TMxpFrameTagHandler());
     registerHandler(TMxpFeatureOptions({"dest", {"name", "eol", "eof"}}), new TMxpDestTagHandler());
 
     // Formatting tags (text style)

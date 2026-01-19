@@ -44,7 +44,8 @@
 // =============================================================================
 
 // Internal helper functions for compression (static to keep them local to this file)
-static QString compressXML(const QString& xml) {
+static QString compressXML(const QString& xml)
+{
     if (xml.isEmpty()) {
         return QString();
     }
@@ -53,7 +54,8 @@ static QString compressXML(const QString& xml) {
     return QString::fromLatin1(compressed.toBase64());
 }
 
-static QString decompressXML(const QString& data) {
+static QString decompressXML(const QString& data)
+{
     if (data.isEmpty()) {
         return QString();
     }
@@ -73,7 +75,8 @@ static QString decompressXML(const QString& data) {
 }
 
 // XML Export/Import functions - used by both EditorUndoSystem and EditorAddItemCommand
-QString exportTriggerToXML(TTrigger* trigger) {
+QString exportTriggerToXML(TTrigger* trigger)
+{
     if (!trigger) {
         return QString();
     }
@@ -89,7 +92,8 @@ QString exportTriggerToXML(TTrigger* trigger) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportAliasToXML(TAlias* alias) {
+QString exportAliasToXML(TAlias* alias)
+{
     if (!alias) {
         return QString();
     }
@@ -105,7 +109,8 @@ QString exportAliasToXML(TAlias* alias) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportTimerToXML(TTimer* timer) {
+QString exportTimerToXML(TTimer* timer)
+{
     if (!timer) {
         return QString();
     }
@@ -121,7 +126,8 @@ QString exportTimerToXML(TTimer* timer) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportScriptToXML(TScript* script) {
+QString exportScriptToXML(TScript* script)
+{
     if (!script) {
         return QString();
     }
@@ -137,7 +143,8 @@ QString exportScriptToXML(TScript* script) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportKeyToXML(TKey* key) {
+QString exportKeyToXML(TKey* key)
+{
     if (!key) {
         return QString();
     }
@@ -153,7 +160,8 @@ QString exportKeyToXML(TKey* key) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportActionToXML(TAction* action) {
+QString exportActionToXML(TAction* action)
+{
     if (!action) {
         return QString();
     }
@@ -169,7 +177,8 @@ QString exportActionToXML(TAction* action) {
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString getItemName(EditorViewType viewType, int itemID, Host* host) {
+QString getItemName(EditorViewType viewType, int itemID, Host* host)
+{
     switch (viewType) {
     case EditorViewType::cmTriggerView: {
         TTrigger* trigger = host->getTriggerUnit()->getTrigger(itemID);
@@ -200,7 +209,8 @@ QString getItemName(EditorViewType viewType, int itemID, Host* host) {
     }
 }
 
-QString getViewTypeName(EditorViewType viewType) {
+QString getViewTypeName(EditorViewType viewType)
+{
     switch (viewType) {
     case EditorViewType::cmTriggerView:
         //: Display name for trigger items in editor
@@ -226,7 +236,8 @@ QString getViewTypeName(EditorViewType viewType) {
     }
 }
 
-TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Host* host, int position) {
+TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Host* host, int position)
+{
     if (xmlSnapshot.isEmpty() || !host) {
         return nullptr;
     }
@@ -355,7 +366,8 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
     return pT;
 }
 
-bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot) {
+bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot)
+{
     if (!pT || xmlSnapshot.isEmpty()) {
         return false;
     }
@@ -452,7 +464,8 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot) {
 // =============================================================================
 
 // Import a single alias from XML string
-TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* host, int position) {
+TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* host, int position)
+{
     if (xmlSnapshot.isEmpty() || !host) {
         return nullptr;
     }
@@ -548,7 +561,8 @@ TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* ho
 }
 
 // Update an existing alias from XML string
-bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot) {
+bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot)
+{
     if (!pA || xmlSnapshot.isEmpty()) {
         return false;
     }
@@ -612,7 +626,8 @@ bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot) {
 // =============================================================================
 
 // Import a single timer from XML string
-TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* host, int position) {
+TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* host, int position)
+{
     if (xmlSnapshot.isEmpty() || !host) {
         return nullptr;
     }
@@ -708,7 +723,8 @@ TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* ho
 }
 
 // Update an existing timer from XML string
-bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot) {
+bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot)
+{
     if (!pT || xmlSnapshot.isEmpty()) {
         return false;
     }
@@ -772,7 +788,8 @@ bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot) {
 // =============================================================================
 
 // Import a single script from XML string
-TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host* host, int position) {
+TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host* host, int position)
+{
     if (xmlSnapshot.isEmpty() || !host) {
         return nullptr;
     }
@@ -873,7 +890,8 @@ TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host*
 }
 
 // Update an existing script from XML string
-bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot) {
+bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot)
+{
     if (!pS || xmlSnapshot.isEmpty()) {
         return false;
     }
@@ -942,7 +960,8 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot) {
 // =============================================================================
 
 // Import a single key from XML string
-TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, int position) {
+TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, int position)
+{
     if (xmlSnapshot.isEmpty() || !host) {
         return nullptr;
     }
@@ -1039,7 +1058,8 @@ TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, in
 }
 
 // Update an existing key from XML string
-bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot) {
+bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot)
+{
     if (!pK || xmlSnapshot.isEmpty()) {
         return false;
     }
@@ -1104,7 +1124,8 @@ bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot) {
 // =============================================================================
 
 // Import a single action from XML string
-TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host* host, int position) {
+TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host* host, int position)
+{
     if (xmlSnapshot.isEmpty() || !host) {
         return nullptr;
     }
@@ -1224,7 +1245,8 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
 }
 
 // Update an existing action from XML string
-bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot) {
+bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
+{
     if (!pA || xmlSnapshot.isEmpty()) {
         return false;
     }

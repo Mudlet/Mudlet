@@ -642,4 +642,3 @@ QString EditorAddItemCommand::generateText(EditorViewType viewType, const QStrin
         }
     }
 }
-
