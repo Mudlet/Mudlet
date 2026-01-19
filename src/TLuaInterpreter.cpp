@@ -88,8 +88,8 @@ static bool isMain(const QString& name)
     return false;
 }
 
-static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
-static const char *bad_cmdline_value = "command line \"%s\" not found";
+static const char* bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
+static const char* bad_cmdline_value = "command line \"%s\" not found";
 
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
 const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
@@ -102,28 +102,27 @@ const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
 
-#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                 \
-    ({                                                                                               \
-        int pos_ = (ARG_pos);                                                                        \
-        if (!lua_isstring(ARG_L, pos_)) {                                                            \
-            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));\
-            return lua_error(ARG_L);                                                                 \
-        }                                                                                            \
-        lua_tostring(ARG_L, pos_);                                                                   \
+#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                                                                                                                   \
+    ({                                                                                                                                                                                                 \
+        int pos_ = (ARG_pos);                                                                                                                                                                          \
+        if (!lua_isstring(ARG_L, pos_)) {                                                                                                                                                              \
+            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));                                                                                                  \
+            return lua_error(ARG_L);                                                                                                                                                                   \
+        }                                                                                                                                                                                              \
+        lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
     })
 
-#define COMMANDLINE(ARG_L, ARG_name)                                                           \
-    ({                                                                                         \
-        const QString& name_ = (ARG_name);                                                     \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
-        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
-                                    : console_->mSubCommandLineMap.value(name_);               \
-        if (!cmdLine_) {                                                                       \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());             \
-            return 2;                                                                          \
-        }                                                                                      \
-        cmdLine_;                                                                              \
+#define COMMANDLINE(ARG_L, ARG_name)                                                                                                                                                                   \
+    ({                                                                                                                                                                                                 \
+        const QString& name_ = (ARG_name);                                                                                                                                                             \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
+        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine : console_->mSubCommandLineMap.value(name_);                                                                                         \
+        if (!cmdLine_) {                                                                                                                                                                               \
+            lua_pushnil(ARG_L);                                                                                                                                                                        \
+            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
+            return 2;                                                                                                                                                                                  \
+        }                                                                                                                                                                                              \
+        cmdLine_;                                                                                                                                                                                      \
     })
 
 // variable names within these macros have trailing underscores because in
@@ -237,7 +236,7 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
         lua_error(L);
         Q_UNREACHABLE();
     }
-    return static_cast <float> (lua_tonumber(L, pos));
+    return static_cast<float>(lua_tonumber(L, pos));
 }
 
 // No documentation available in wiki - internal function
@@ -258,11 +257,9 @@ double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName
 void TLuaInterpreter::errorArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
-        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s!)",
-            functionName, pos, publicName, publicType, luaL_typename(L, pos));
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s!)", functionName, pos, publicName, publicType, luaL_typename(L, pos));
     } else {
-        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s!)",
-            functionName, pos, publicName, publicType, luaL_typename(L, pos));
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s!)", functionName, pos, publicName, publicType, luaL_typename(L, pos));
     }
 }
 
@@ -319,7 +316,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
     }
 
     if (reply->error() != QNetworkReply::NoError) {
-        TEvent event {};
+        TEvent event{};
         QString localFileName;
 
         switch (reply->operation()) {
@@ -343,9 +340,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
         case QNetworkAccessManager::GetOperation:
             localFileName = downloadMap.value(reply);
-            event.mArgumentList << (localFileName.isEmpty()
-                                   ? qsl("sysGetHttpError")
-                                   : qsl("sysDownloadError"));
+            event.mArgumentList << (localFileName.isEmpty() ? qsl("sysGetHttpError") : qsl("sysDownloadError"));
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -399,7 +394,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 {
-    TEvent event {};
+    TEvent event{};
     Host* pHost = mpHost;
     if (!pHost) {
         return;
@@ -515,7 +510,6 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         }
         break;
-
     }
 
     event.mArgumentList << QString::number(createHttpResponseTable(reply));
@@ -531,14 +525,14 @@ void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, 
 {
     Host& host = getHostFromLua(L);
 
-    TEvent event {};
+    TEvent event{};
     event.mArgumentList << qsl("sysDownloadFileProgress");
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
     event.mArgumentList << fileUrl;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
     event.mArgumentList << QString::number(bytesDownloaded);
     event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-    if(totalBytes >= 0) {
+    if (totalBytes >= 0) {
         event.mArgumentList << QString::number(totalBytes);
         event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
     } else {
@@ -558,7 +552,7 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
         mpFileSystemWatcher->addPath(path);
     }
 
-    TEvent event {};
+    TEvent event{};
     event.mArgumentList << QLatin1String("sysPathChanged");
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
     event.mArgumentList << path;
@@ -675,7 +669,6 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
             return QLatin1String("out");
         }
         return direction;
-
     }
     return QString();
 }
@@ -768,9 +761,8 @@ int TLuaInterpreter::resetProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowsCodepage
 int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 {
-#if defined (Q_OS_WINDOWS)
-    QSettings registry(qsl(R"(HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Nls\CodePage)"),
-                       QSettings::NativeFormat);
+#if defined(Q_OS_WINDOWS)
+    QSettings registry(qsl(R"(HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Nls\CodePage)"), QSettings::NativeFormat);
     auto value = registry.value(qsl("ACP"));
     lua_pushstring(L, value.toString().toUtf8().constData());
     return 1;
@@ -836,190 +828,158 @@ QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
      * * ASCII character abbreviation
      * * `T_` prefix - Telnet control code
      */
-    const QHash<QByteArray, unsigned char> lookupTable = {
-        {QByteArray("<00>"), '\0'},
-        {QByteArray("<O_BINARY>"), '\0'},
-        {QByteArray("<NUL>"), '\0'},
+    const QHash<QByteArray, unsigned char> lookupTable = {{QByteArray("<00>"), '\0'},           {QByteArray("<O_BINARY>"), '\0'},   {QByteArray("<NUL>"), '\0'},
 
-        {QByteArray("<01>"), '\x01'},
-        {QByteArray("<O_ECHO>"), '\x01'},
-        {QByteArray("<SOH>"), '\x01'},
+                                                          {QByteArray("<01>"), '\x01'},         {QByteArray("<O_ECHO>"), '\x01'},   {QByteArray("<SOH>"), '\x01'},
 
-        {QByteArray("<02>"), '\x02'}, // Reconnect
-        {QByteArray("<STX>"), '\x02'},
+                                                          {QByteArray("<02>"), '\x02'}, // Reconnect
+                                                          {QByteArray("<STX>"), '\x02'},
 
-        {QByteArray("<03>"), '\x03'},
-        {QByteArray("<O_SGA>"), '\x03'},
-        {QByteArray("<ETX>"), '\x03'},
+                                                          {QByteArray("<03>"), '\x03'},         {QByteArray("<O_SGA>"), '\x03'},    {QByteArray("<ETX>"), '\x03'},
 
-        {QByteArray("<04>"), '\x04'}, // Approx Message Size Negotiation
-        {QByteArray("<EOT>"), '\x04'},
+                                                          {QByteArray("<04>"), '\x04'}, // Approx Message Size Negotiation
+                                                          {QByteArray("<EOT>"), '\x04'},
 
-        {QByteArray("<05>"), '\x05'},
-        {QByteArray("<O_STATUS>"), '\x05'},
-        {QByteArray("<ENQ>"), '\x05'},
+                                                          {QByteArray("<05>"), '\x05'},         {QByteArray("<O_STATUS>"), '\x05'}, {QByteArray("<ENQ>"), '\x05'},
 
-        {QByteArray("<06>"), '\x06'}, // Timing Mark
-        {QByteArray("<ACK>"), '\x06'},
+                                                          {QByteArray("<06>"), '\x06'}, // Timing Mark
+                                                          {QByteArray("<ACK>"), '\x06'},
 
-        {QByteArray("<07>"), '\x07'}, // Remote Controlled Trans and Echo
-        {QByteArray("<BELL>"), '\x07'},
+                                                          {QByteArray("<07>"), '\x07'}, // Remote Controlled Trans and Echo
+                                                          {QByteArray("<BELL>"), '\x07'},
 
-        {QByteArray("<08>"), '\x08'}, // Output Line Width
-        {QByteArray("<BS>"), '\x08'},
+                                                          {QByteArray("<08>"), '\x08'}, // Output Line Width
+                                                          {QByteArray("<BS>"), '\x08'},
 
-        {QByteArray("<09>"), '\x09'}, // Output Page Size
-        {QByteArray("<HTAB>"), '\x09'},
+                                                          {QByteArray("<09>"), '\x09'}, // Output Page Size
+                                                          {QByteArray("<HTAB>"), '\x09'},
 
-        {QByteArray("<0A>"), '\x0a'}, // Output Carriage-Return Disposition
-        {QByteArray("<LF>"), '\x0a'},
+                                                          {QByteArray("<0A>"), '\x0a'}, // Output Carriage-Return Disposition
+                                                          {QByteArray("<LF>"), '\x0a'},
 
-        {QByteArray("<0B>"), '\x0b'}, // Output Horizontal Tab Stops
-        {QByteArray("<VTAB>"), '\x0b'},
+                                                          {QByteArray("<0B>"), '\x0b'}, // Output Horizontal Tab Stops
+                                                          {QByteArray("<VTAB>"), '\x0b'},
 
-        {QByteArray("<0C>"), '\x0c'}, // Output Horizontal Tab Disposition
-        {QByteArray("<FF>"), '\x0c'},
+                                                          {QByteArray("<0C>"), '\x0c'}, // Output Horizontal Tab Disposition
+                                                          {QByteArray("<FF>"), '\x0c'},
 
-        {QByteArray("<0D>"), '\x0d'}, // Output Formfeed Disposition
-        {QByteArray("<CR>"), '\x0d'},
+                                                          {QByteArray("<0D>"), '\x0d'}, // Output Formfeed Disposition
+                                                          {QByteArray("<CR>"), '\x0d'},
 
-        {QByteArray("<0E>"), '\x0e'}, // Output Vertical Tab Stops
-        {QByteArray("<SO>"), '\x0e'},
+                                                          {QByteArray("<0E>"), '\x0e'}, // Output Vertical Tab Stops
+                                                          {QByteArray("<SO>"), '\x0e'},
 
-        {QByteArray("<0F>"), '\x0f'}, // Output Vertical Tab Disposition
-        {QByteArray("<SI>"), '\x0f'},
+                                                          {QByteArray("<0F>"), '\x0f'}, // Output Vertical Tab Disposition
+                                                          {QByteArray("<SI>"), '\x0f'},
 
-        {QByteArray("<10>"), '\x10'}, // Output Linefeed Disposition
-        {QByteArray("<DLE>"), '\x10'},
+                                                          {QByteArray("<10>"), '\x10'}, // Output Linefeed Disposition
+                                                          {QByteArray("<DLE>"), '\x10'},
 
-        {QByteArray("<11>"), '\x11'}, // Extended ASCII
-        {QByteArray("<DC1>"), '\x11'},
+                                                          {QByteArray("<11>"), '\x11'}, // Extended ASCII
+                                                          {QByteArray("<DC1>"), '\x11'},
 
-        {QByteArray("<12>"), '\x12'}, // Logout
-        {QByteArray("<DC2"), '\x12'},
+                                                          {QByteArray("<12>"), '\x12'}, // Logout
+                                                          {QByteArray("<DC2"), '\x12'},
 
-        {QByteArray("<13>"), '\x13'}, // Byte Macro
-        {QByteArray("<DC3>"), '\x13'},
+                                                          {QByteArray("<13>"), '\x13'}, // Byte Macro
+                                                          {QByteArray("<DC3>"), '\x13'},
 
-        {QByteArray("<14>"), '\x14'}, // Data Entry Terminal
-        {QByteArray("<DC4>"), '\x14'},
+                                                          {QByteArray("<14>"), '\x14'}, // Data Entry Terminal
+                                                          {QByteArray("<DC4>"), '\x14'},
 
-        {QByteArray("<15>"), '\x15'}, // SUPDUP
-        {QByteArray("<NAK>"), '\x15'},
+                                                          {QByteArray("<15>"), '\x15'}, // SUPDUP
+                                                          {QByteArray("<NAK>"), '\x15'},
 
-        {QByteArray("<16>"), '\x16'}, // SUPDUP Output
-        {QByteArray("<SYN>"), '\x16'},
+                                                          {QByteArray("<16>"), '\x16'}, // SUPDUP Output
+                                                          {QByteArray("<SYN>"), '\x16'},
 
-        {QByteArray("<17>"), '\x17'}, // Send location
-        {QByteArray("<ETB>"), '\x17'},
+                                                          {QByteArray("<17>"), '\x17'}, // Send location
+                                                          {QByteArray("<ETB>"), '\x17'},
 
-        {QByteArray("<18>"), '\x18'},
-        {QByteArray("<O_TERM>"), '\x18'},
-        {QByteArray("<CAN>"), '\x18'},
+                                                          {QByteArray("<18>"), '\x18'},         {QByteArray("<O_TERM>"), '\x18'},   {QByteArray("<CAN>"), '\x18'},
 
-        {QByteArray("<19>"), '\x19'},
-        {QByteArray("<O_EOR>"), '\x19'},
-        {QByteArray("<EM>"), '\x19'},
+                                                          {QByteArray("<19>"), '\x19'},         {QByteArray("<O_EOR>"), '\x19'},    {QByteArray("<EM>"), '\x19'},
 
-        {QByteArray("<1A>"), '\x1a'}, // TACACS User Identification
-        {QByteArray("<SUB>"), '\x1a'},
+                                                          {QByteArray("<1A>"), '\x1a'}, // TACACS User Identification
+                                                          {QByteArray("<SUB>"), '\x1a'},
 
-        {QByteArray("<1B>"), '\x1b'}, // Output Marking
-        {QByteArray("<ESC>"), '\x1b'},
+                                                          {QByteArray("<1B>"), '\x1b'}, // Output Marking
+                                                          {QByteArray("<ESC>"), '\x1b'},
 
-        {QByteArray("<1C>"), '\x1c'}, // Terminal Location Number
-        {QByteArray("<FS>"), '\x1c'},
+                                                          {QByteArray("<1C>"), '\x1c'}, // Terminal Location Number
+                                                          {QByteArray("<FS>"), '\x1c'},
 
-        {QByteArray("<1D>"), '\x1d'}, // Telnet 3270 Regime
-        {QByteArray("<GS>"), '\x1d'},
+                                                          {QByteArray("<1D>"), '\x1d'}, // Telnet 3270 Regime
+                                                          {QByteArray("<GS>"), '\x1d'},
 
-        {QByteArray("<1E>"), '\x1e'}, // X.3 PAD
-        {QByteArray("<RS>"), '\x1e'},
+                                                          {QByteArray("<1E>"), '\x1e'}, // X.3 PAD
+                                                          {QByteArray("<RS>"), '\x1e'},
 
-        {QByteArray("<1F>"), '\x1f'},
-        {QByteArray("<O_NAWS>"), '\x1f'},
-        {QByteArray("<US>"), '\x1f'},
+                                                          {QByteArray("<1F>"), '\x1f'},         {QByteArray("<O_NAWS>"), '\x1f'},   {QByteArray("<US>"), '\x1f'},
 
-        {QByteArray("<SP>"), '\x20'}, // 32 dec, Space
+                                                          {QByteArray("<SP>"), '\x20'}, // 32 dec, Space
 
-        {QByteArray("<O_NENV>"), '\x27'}, // 39 dec, New Environment (also MNES)
+                                                          {QByteArray("<O_NENV>"), '\x27'}, // 39 dec, New Environment (also MNES)
 
-        {QByteArray("<O_CHARS>"), '\x2a'}, // 42 dec, Character Set
+                                                          {QByteArray("<O_CHARS>"), '\x2a'}, // 42 dec, Character Set
 
-        {QByteArray("<O_KERMIT>"), '\x2f'}, // 47 dec
+                                                          {QByteArray("<O_KERMIT>"), '\x2f'}, // 47 dec
 
-        {QByteArray("<O_MSDP>"), '\x45'}, // 69 dec
+                                                          {QByteArray("<O_MSDP>"), '\x45'}, // 69 dec
 
-        {QByteArray("<O_MSSP>"), '\x46'}, // 70 dec
+                                                          {QByteArray("<O_MSSP>"), '\x46'}, // 70 dec
 
-        {QByteArray("<O_MCCP>"), '\x55'}, // 85 dec
+                                                          {QByteArray("<O_MCCP>"), '\x55'}, // 85 dec
 
-        {QByteArray("<O_MCCP2>"), '\x56'}, // 86 dec
+                                                          {QByteArray("<O_MCCP2>"), '\x56'}, // 86 dec
 
-        {QByteArray("<O_MSP>"), '\x5a'}, // 90 dec
+                                                          {QByteArray("<O_MSP>"), '\x5a'}, // 90 dec
 
-        {QByteArray("<O_MXP>"), '\x5b'}, // 91 dec
+                                                          {QByteArray("<O_MXP>"), '\x5b'}, // 91 dec
 
-        {QByteArray("<O_ZENITH>"), '\x5d'}, // 93 dec
+                                                          {QByteArray("<O_ZENITH>"), '\x5d'}, // 93 dec
 
-        {QByteArray("<O_AARDWULF>"), '\x66'}, // 102 dec
+                                                          {QByteArray("<O_AARDWULF>"), '\x66'}, // 102 dec
 
-        {QByteArray("<DEL>"), '\x7f'}, // 127 dec
+                                                          {QByteArray("<DEL>"), '\x7f'}, // 127 dec
 
-        {QByteArray("<O_ATCP>"), '\xc8'}, // 200 dec
+                                                          {QByteArray("<O_ATCP>"), '\xc8'}, // 200 dec
 
-        {QByteArray("<O_GMCP>"), '\xc9'}, // 201 dec
+                                                          {QByteArray("<O_GMCP>"), '\xc9'}, // 201 dec
 
-        {QByteArray("<T_EOR>"), '\xef'}, // 239 dec
+                                                          {QByteArray("<T_EOR>"), '\xef'}, // 239 dec
 
-        {QByteArray("<F0>"), '\xf0'},
-        {QByteArray("<T_SE>"), '\xf0'},
+                                                          {QByteArray("<F0>"), '\xf0'},         {QByteArray("<T_SE>"), '\xf0'},
 
-        {QByteArray("<F1>"), '\xf1'},
-        {QByteArray("<T_NOP>"), '\xf1'},
+                                                          {QByteArray("<F1>"), '\xf1'},         {QByteArray("<T_NOP>"), '\xf1'},
 
-        {QByteArray("<F2>"), '\xf2'},
-        {QByteArray("<T_DM>"), '\xf2'},
+                                                          {QByteArray("<F2>"), '\xf2'},         {QByteArray("<T_DM>"), '\xf2'},
 
-        {QByteArray("<F3>"), '\xf3'},
-        {QByteArray("<T_BRK>"), '\xf3'},
+                                                          {QByteArray("<F3>"), '\xf3'},         {QByteArray("<T_BRK>"), '\xf3'},
 
-        {QByteArray("<F4>"), '\xf4'},
-        {QByteArray("<T_IP>"), '\xf4'},
+                                                          {QByteArray("<F4>"), '\xf4'},         {QByteArray("<T_IP>"), '\xf4'},
 
-        {QByteArray("<F5>"), '\xf5'},
-        {QByteArray("<T_ABOP>"), '\xf5'},
+                                                          {QByteArray("<F5>"), '\xf5'},         {QByteArray("<T_ABOP>"), '\xf5'},
 
-        {QByteArray("<F6>"), '\xf6'},
-        {QByteArray("<T_AYT>"), '\xf6'},
+                                                          {QByteArray("<F6>"), '\xf6'},         {QByteArray("<T_AYT>"), '\xf6'},
 
-        {QByteArray("<F7>"), '\xf7'},
-        {QByteArray("<T_EC>"), '\xf7'},
+                                                          {QByteArray("<F7>"), '\xf7'},         {QByteArray("<T_EC>"), '\xf7'},
 
-        {QByteArray("<F8>"), '\xf8'},
-        {QByteArray("<T_EL>"), '\xf8'},
+                                                          {QByteArray("<F8>"), '\xf8'},         {QByteArray("<T_EL>"), '\xf8'},
 
-        {QByteArray("<F9>"), '\xf9'},
-        {QByteArray("<T_GA>"), '\xf9'},
+                                                          {QByteArray("<F9>"), '\xf9'},         {QByteArray("<T_GA>"), '\xf9'},
 
-        {QByteArray("<FA>"), '\xfa'},
-        {QByteArray("<T_SB>"), '\xfa'},
+                                                          {QByteArray("<FA>"), '\xfa'},         {QByteArray("<T_SB>"), '\xfa'},
 
-        {QByteArray("<FB>"), '\xfb'},
-        {QByteArray("<T_WILL>"), '\xfb'},
+                                                          {QByteArray("<FB>"), '\xfb'},         {QByteArray("<T_WILL>"), '\xfb'},
 
-        {QByteArray("<FC>"), '\xfc'},
-        {QByteArray("<T_WONT>"), '\xfc'},
+                                                          {QByteArray("<FC>"), '\xfc'},         {QByteArray("<T_WONT>"), '\xfc'},
 
-        {QByteArray("<FD>"), '\xfd'},
-        {QByteArray("<T_DO>"), '\xfd'},
+                                                          {QByteArray("<FD>"), '\xfd'},         {QByteArray("<T_DO>"), '\xfd'},
 
-        {QByteArray("<FE>"), '\xfe'},
-        {QByteArray("<T_DONT>"), '\xfe'},
+                                                          {QByteArray("<FE>"), '\xfe'},         {QByteArray("<T_DONT>"), '\xfe'},
 
-        {QByteArray("<FF>"), '\xff'},
-        {QByteArray("<T_IAC>"), '\xff'}
-    };
+                                                          {QByteArray("<FF>"), '\xff'},         {QByteArray("<T_IAC>"), '\xff'}};
 
     QByteArray bytes;
     if (input.isEmpty()) {
@@ -1136,14 +1096,15 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         }
         const QString dataQString{data};
         // else
-            // We need to transcode it from UTF-8 into the current Game Server
-            // encoding - this can fail if it includes any characters (as UTF-8)
-            // that the game encoding cannot convey:
+        // We need to transcode it from UTF-8 into the current Game Server
+        // encoding - this can fail if it includes any characters (as UTF-8)
+        // that the game encoding cannot convey:
         if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
             if (!TEncodingHelper::canEncode(dataQString, currentEncoding)) {
-                return warnArgumentValue(L, __func__, qsl(
-                    "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'")
-                    .arg(data.constData(), currentEncoding.constData()));
+                return warnArgumentValue(L,
+                                         __func__,
+                                         qsl("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'")
+                                                 .arg(data.constData(), currentEncoding.constData()));
             }
 
             std::string encodedText{TEncodingHelper::encode(dataQString, currentEncoding).toStdString()};
@@ -1155,9 +1116,8 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // else plain, raw ASCII, we hope!
         for (const QChar c : dataQString) {
             if (c.row() || c.cell() > 127) {
-                return warnArgumentValue(L, __func__, qsl(
-                    "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of 'ASCII'")
-                    .arg(data.constData()));
+                return warnArgumentValue(
+                        L, __func__, qsl("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of 'ASCII'").arg(data.constData()));
             }
         }
 
@@ -1207,8 +1167,7 @@ void TLuaInterpreter::generateElapsedTimeTable(lua_State* L, const QStringList& 
 {
     constexpr int expectedElements = 6;
     if (elapsedTimeSplitString.size() < expectedElements) {
-        qWarning() << "TLuaInterpreter::generateElapsedTimeTable() ERROR: expected" << expectedElements
-                   << "elements in time string but got" << elapsedTimeSplitString.size();
+        qWarning() << "TLuaInterpreter::generateElapsedTimeTable() ERROR: expected" << expectedElements << "elements in time string but got" << elapsedTimeSplitString.size();
         lua_newtable(L);
         return;
     }
@@ -1251,9 +1210,7 @@ void TLuaInterpreter::generateElapsedTimeTable(lua_State* L, const QStringList& 
 int TLuaInterpreter::holdingModifiers(lua_State* L)
 {
     Qt::KeyboardModifiers keyModifiers;
-    keyModifiers = static_cast<Qt::KeyboardModifiers>(
-        getVerifiedInt(L, __func__, 1, "key modifier", true)
-    );
+    keyModifiers = static_cast<Qt::KeyboardModifiers>(getVerifiedInt(L, __func__, 1, "key modifier", true));
     Qt::KeyboardModifiers modifiersHeld = QGuiApplication::queryKeyboardModifiers();
     lua_pushboolean(L, modifiersHeld == keyModifiers);
     return 1;
@@ -1332,9 +1289,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         }
     }
 
-    auto [ok, filename, error] = (saveAsFile.isNull())
-                               ? host.saveProfile(saveToDir)
-                               : host.saveProfileAs(saveToDir + "/" + saveAsFile);
+    auto [ok, filename, error] = (saveAsFile.isNull()) ? host.saveProfile(saveToDir) : host.saveProfileAs(saveToDir + "/" + saveAsFile);
 
     if (ok) {
         lua_pushboolean(L, true);
@@ -1555,11 +1510,15 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
     lua_remove(L, 1);
 
-    if (!lua_isfunction(L, 1)) {
-        lua_pushfstring(L, "%s: bad argument #2 type (function expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
+    int func = 0;
+    if (lua_isnil(L, 1)) {
+        lua_pop(L, 1);
+    } else if (lua_isfunction(L, 1)) {
+        func = luaL_ref(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pushfstring(L, "%s: bad argument #2 type (function or nil expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
     }
-    const int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
     if (funcName == qsl("setLabelClickCallback")) {
@@ -1633,10 +1592,10 @@ int TLuaInterpreter::errorc(lua_State* L)
         if (!host.mpConsole->buffer.isEmpty() && !host.mpConsole->buffer.lineBuffer.at(host.mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             host.postMessage(qsl("\n"));
         }
-        host.mpConsole->print(qsl("[  LUA  ] - "), QColor(80,160,255), QColor(Qt::black));
+        host.mpConsole->print(qsl("[  LUA  ] - "), QColor(80, 160, 255), QColor(Qt::black));
         host.mpConsole->print(qsl("ERROR: "), QColor(Qt::blue), QColor(Qt::black));
         host.mpConsole->print(qsl("%1").arg(luaFunctionInfo), QColor(Qt::green), QColor(Qt::black));
-        host.mpConsole->print(qsl("           %1").arg(luaErrorText), QColor(200,50,42), QColor(Qt::black));
+        host.mpConsole->print(qsl("           %1").arg(luaErrorText), QColor(200, 50, 42), QColor(Qt::black));
     }
     return 0;
 }
@@ -1724,8 +1683,7 @@ std::pair<int, TAction*> TLuaInterpreter::getTActionFromIdOrName(lua_State* L, c
 
     if (!pItem) {
         // we'll get here if the (index) argument is NOT usable:
-        lua_pushfstring(L, "%s: bad argument #%d type (ID as number or name as string expected, got %s!)",
-                        func, index, luaL_typename(L, index));
+        lua_pushfstring(L, "%s: bad argument #%d type (ID as number or name as string expected, got %s!)", func, index, luaL_typename(L, index));
         lua_error(L); // Does not return!
         Q_UNREACHABLE();
     }
@@ -2225,8 +2183,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 
     qint64 const luaLine = getVerifiedInt(L, __func__, s, "line number");
     if (luaLine < 1) {
-        return warnArgumentValue(L, __func__, qsl(
-            "line number %1 invalid, it should be greater than zero").arg(luaLine));
+        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
 
     const Host& host = getHostFromLua(L);
@@ -2540,8 +2497,8 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             return 4;
         } else {
             lua_pushstring(L,
-                            "getMudletVersion: takes one (optional) argument:\n"
-                            "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+                           "getMudletVersion: takes one (optional) argument:\n"
+                           "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
             return lua_error(L);
         }
     } else if (n == 0) {
@@ -2622,7 +2579,7 @@ int TLuaInterpreter::getTime(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getEpoch
-int TLuaInterpreter::getEpoch(lua_State *L)
+int TLuaInterpreter::getEpoch(lua_State* L)
 {
     lua_pushnumber(L, static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0));
     return 1;
@@ -2887,25 +2844,25 @@ int TLuaInterpreter::getPackageInfo(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModuleInfo
 int TLuaInterpreter::setModuleInfo(lua_State* L)
 {
-  Host& host = getHostFromLua(L);
-  const QString moduleName = getVerifiedString(L, __func__, 1, "module name");
-  const QString info = getVerifiedString(L, __func__, 2, "info");
-  const QString value = getVerifiedString(L, __func__, 3, "value");
-  host.mModuleInfo[moduleName][info] = value;
-  lua_pushboolean(L, true);
-  return 1;
+    Host& host = getHostFromLua(L);
+    const QString moduleName = getVerifiedString(L, __func__, 1, "module name");
+    const QString info = getVerifiedString(L, __func__, 2, "info");
+    const QString value = getVerifiedString(L, __func__, 3, "value");
+    host.mModuleInfo[moduleName][info] = value;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setPackageInfo
 int TLuaInterpreter::setPackageInfo(lua_State* L)
 {
-  Host& host = getHostFromLua(L);
-  const QString packageName = getVerifiedString(L, __func__, 1, "package name");
-  const QString info = getVerifiedString(L, __func__, 2, "info");
-  const QString value = getVerifiedString(L, __func__, 3, "value");
-  host.mPackageInfo[packageName][info] = value;
-  lua_pushboolean(L, true);
-  return 1;
+    Host& host = getHostFromLua(L);
+    const QString packageName = getVerifiedString(L, __func__, 1, "package name");
+    const QString info = getVerifiedString(L, __func__, 2, "info");
+    const QString value = getVerifiedString(L, __func__, 3, "value");
+    host.mPackageInfo[packageName][info] = value;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDefaultAreaVisible
@@ -3035,7 +2992,6 @@ int TLuaInterpreter::sendSocket(lua_State* L)
 }
 
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setServerEncoding
 int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
@@ -3062,7 +3018,7 @@ int TLuaInterpreter::getServerEncoding(lua_State* L)
     const Host& host = getHostFromLua(L);
 
     // don't leak if we're using a Mudlet or a Qt-supplied codec to Lua
-    auto sanitizeEncoding = [] (auto encodingName) {
+    auto sanitizeEncoding = [](auto encodingName) {
         if (encodingName.startsWith("M_")) {
             encodingName.remove(0, 2);
         }
@@ -3083,7 +3039,7 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
     const Host& host = getHostFromLua(L);
 
     // don't leak if we're using a Mudlet or a Qt-supplied codec to Lua
-    auto sanitizeEncoding = [] (auto encodingName) {
+    auto sanitizeEncoding = [](auto encodingName) {
         if (encodingName.startsWith("M_")) {
             encodingName.remove(0, 2);
         }
@@ -3105,7 +3061,7 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getOS
 int TLuaInterpreter::getOS(lua_State* L)
 {
-    auto pushProcessor = [&] () {
+    auto pushProcessor = [&]() {
 #if defined(Q_PROCESSOR_IA64)
         lua_pushstring(L, "ia64");
         return 1;
@@ -3236,7 +3192,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 // No documentation available in wiki - internal function
 // reformats given Lua code. In case of any issues, returns the original code as-is
 // issues could be invalid Lua code or the formatter code bugging out
-QString TLuaInterpreter::formatLuaCode(const QString &code)
+QString TLuaInterpreter::formatLuaCode(const QString& code)
 {
     if (code.isEmpty()) {
         return code;
@@ -3288,9 +3244,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 {
     lua_State* L = pGlobalLua;
 
-    const int error = (luaL_loadbuffer(L, code.toUtf8().constData(),
-                                 strlen(code.toUtf8().constData()),
-                                 name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
+    const int error = (luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
 
     if (error) {
         std::string e = "Lua syntax error:";
@@ -3331,7 +3285,7 @@ std::pair<bool, QString> TLuaInterpreter::validateLuaCodeParam(int index)
 // No documentation available in wiki - internal function
 // returns pair where first is bool stating true the given Lua code is valid, false otherwise
 // second is empty if code is valid, error message if not valid
-std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
+std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString& code)
 {
     lua_State* L = pGlobalLua;
     const int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
@@ -3440,7 +3394,7 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     lua_rawset(L, -3);
     lua_pop(L, 1);
 
-    TEvent event {};
+    TEvent event{};
     event.mArgumentList.append(var);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(arg);
@@ -3450,9 +3404,9 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions, const QString &caption)
+void TLuaInterpreter::signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption)
 {
-    lua_State *L = pGlobalLua;
+    lua_State* L = pGlobalLua;
     lua_getglobal(L, "mxp");
     if (!lua_istable(L, -1)) {
         lua_newtable(L);
@@ -3502,7 +3456,7 @@ void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QS
     event.mArgumentList.append(token);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-    Host &host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     if (mudlet::smDebugMode) {
         const QString msg = qsl("\n%1 event <%2> display(%1) to see the full content\n").arg("mxp", token);
         host.mpConsole->printSystemMessage(msg);
@@ -3655,7 +3609,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
 
     for (int k = 0, total = tokenList.size(); k < total; ++k) {
-        TEvent event {};
+        TEvent event{};
         token.append(".");
         token.append(tokenList[k]);
         event.mArgumentList.append(token);
@@ -3858,8 +3812,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
                 script.append(',');
             }
-            if (((textLength > i + 1) && transcodedSrc.at(i + 1) && transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) ||
-                (textLength <= i + 1)) {
+            if (((textLength > i + 1) && transcodedSrc.at(i + 1) && transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) || (textLength <= i + 1)) {
                 script.append('\"');
             }
             varList.append(lastVar);
@@ -3908,7 +3861,7 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
     lua_rawset(L, -3);
     lua_pop(L, 1);
 
-    TEvent event {};
+    TEvent event{};
     event.mArgumentList.append(QLatin1String("channel102Message"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(var));
@@ -3933,7 +3886,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);
         }
-        for (const auto &[name, capture] : mCapturedNameGroups) {
+        for (const auto& [name, capture] : mCapturedNameGroups) {
             lua_pushstring(L, name.toUtf8().constData());
             lua_pushstring(L, capture.toUtf8().constData());
             lua_settable(L, -3);
@@ -3976,13 +3929,14 @@ bool TLuaInterpreter::call_luafunction(void* pT)
         } else {
             if (mudlet::smDebugMode) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
+                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors"
+                                                 << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
+                        >> &host;
             }
         }
         lua_pop(L, lua_gettop(L));
         //lua_settop(L, 0);
         return !error;
-
     }
 
     const QString _n = "error in anonymous Lua function";
@@ -4059,11 +4013,13 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 
             if (mudlet::smDebugMode) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
+                TDebug(Qt::white, Qt::darkGreen) << "LUA OK anonymous Lua function ran without errors"
+                                                 << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
+                        >> &host;
             }
         }
         lua_pop(L, lua_gettop(L));
-        return {!error , returnValue};
+        return {!error, returnValue};
     }
 
     const QString _n = "error in anonymous Lua function";
@@ -4106,7 +4062,9 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     } else {
         if (mudlet::smDebugMode && !muteDebugOutput) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK: script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK: script " << mName << " (" << function << ") ran without errors"
+                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
+                    >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4151,7 +4109,9 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
 
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n") >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors"
+                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms.\n" : ".\n")
+                    >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4164,12 +4124,16 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     // Log error to Editor's Errors TConsole:
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mpErrorConsole->print(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" %1:<%2> %3:<%4>\n").arg(
-            //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
-            tr("object"),
-            name,
-            //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
-            tr("function"), function), QColor(Qt::green), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" %1:<%2> %3:<%4>\n")
+                                                              .arg(
+                                                                      //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
+                                                                      tr("object"),
+                                                                      name,
+                                                                      //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
+                                                                      tr("function"),
+                                                                      function),
+                                                      QColor(Qt::green),
+                                                      QColor(Qt::black));
         mpHost->mpEditorDialog->mpErrorConsole->print(qsl("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
     }
 
@@ -4183,12 +4147,15 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
             mpHost->postMessage(qsl("\n"));
         }
 
-        mpHost->postMessage(qsl("[  LUA  ] - %1: <%2> %3:<%4>\n<%5>").arg(
-            //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
-            tr("object"),
-            name,
-            //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
-            tr("function"), function, e.c_str()));
+        mpHost->postMessage(qsl("[  LUA  ] - %1: <%2> %3:<%4>\n<%5>")
+                                    .arg(
+                                            //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
+                                            tr("object"),
+                                            name,
+                                            //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
+                                            tr("function"),
+                                            function,
+                                            e.c_str()));
     }
 }
 
@@ -4243,7 +4210,9 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function.c_str() << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function.c_str() << ") ran without errors"
+                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
+                    >> &host;
         }
     }
 
@@ -4282,7 +4251,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
                 lua_pushstring(L, (*it).c_str());
                 lua_settable(L, -3); //match in matches
             }
-            for (const auto &[name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
+            for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
                 lua_pushstring(L, name.toUtf8().constData());
                 lua_pushstring(L, capture.toUtf8().constData());
                 lua_settable(L, -3);
@@ -4310,7 +4279,9 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors"
+                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
+                    >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4371,7 +4342,9 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK script " << mName << " (" << function << ") ran without errors"
+                                             << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
+                    >> &host;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -4576,18 +4549,18 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     lua_State* L = pGlobalLua;
-    
+
     // Validate Lua state before attempting to call event handler
     if (!L) {
         qWarning() << "TLuaInterpreter::callEventHandler() - Lua state is null for function:" << function;
         return false;
     }
-    
+
     // Check if we're in emergency stop mode
     if (mpHost && mpHost->mEmergencyStop) {
         return false;
     }
-    
+
     // Record initial stack size for cleanup
     const int initialStackSize = lua_gettop(L);
 
@@ -4600,7 +4573,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
         const QString name = "event handler function";
         logError(err, name, function);
-        
+
         // Clean up stack after error
         lua_settop(L, initialStackSize);
         return false;
@@ -4610,8 +4583,8 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     // Use minimum of argument list size and type list size to avoid out-of-bounds access
     auto maxArguments = std::min({pE.mArgumentList.size(), pE.mArgumentTypeList.size(), static_cast<qsizetype>(LUA_FUNCTION_MAX_ARGS)});
     if (pE.mArgumentList.size() != pE.mArgumentTypeList.size()) {
-        qWarning() << "TLuaInterpreter::callEventHandler() WARNING: argument list size" << pE.mArgumentList.size()
-                   << "does not match type list size" << pE.mArgumentTypeList.size() << "for function:" << function;
+        qWarning() << "TLuaInterpreter::callEventHandler() WARNING: argument list size" << pE.mArgumentList.size() << "does not match type list size" << pE.mArgumentTypeList.size()
+                   << "for function:" << function;
     }
     for (int i = 0; i < maxArguments; i++) {
         switch (pE.mArgumentTypeList.at(i)) {
@@ -4666,7 +4639,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     if (finalStackSize > initialStackSize) {
         qWarning() << "TLuaInterpreter::callEventHandler() - Stack grew during execution. Initial:" << initialStackSize << "Final:" << finalStackSize;
     }
-    
+
     lua_pop(L, lua_gettop(L));
     return !error;
 }
@@ -4704,7 +4677,8 @@ double TLuaInterpreter::condenseMapLoad()
     } else {
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
-            TDebug(Qt::white, Qt::darkGreen) << "LUA OK " << luaFunction << " ran without errors in" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n") >> &host;
+            TDebug(Qt::white, Qt::darkGreen) << "LUA OK " << luaFunction << " ran without errors in" << (executionTimer.isValid() ? " in " + QString::number(executionTimer.elapsed()) + "ms\n" : ".\n")
+                    >> &host;
         }
     }
 
@@ -4717,7 +4691,7 @@ double TLuaInterpreter::condenseMapLoad()
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::performHttpRequest(lua_State *L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb)
+int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb)
 {
     auto& host = getHostFromLua(L);
 
@@ -4788,14 +4762,14 @@ int TLuaInterpreter::performHttpRequest(lua_State *L, const char* functionName, 
 
     QNetworkReply* reply;
     switch (operation) {
-        case QNetworkAccessManager::PostOperation:
-            reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
-            break;
-        case QNetworkAccessManager::PutOperation:
-            reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
-            break;
-        default:
-            reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, verb.toUtf8(), fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+    case QNetworkAccessManager::PostOperation:
+        reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        break;
+    case QNetworkAccessManager::PutOperation:
+        reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        break;
+    default:
+        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, verb.toUtf8(), fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
     };
 
     if (mudlet::smDebugMode) {
@@ -4808,7 +4782,7 @@ int TLuaInterpreter::performHttpRequest(lua_State *L, const char* functionName, 
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#unzipAsync
-int TLuaInterpreter::unzipAsync(lua_State *L)
+int TLuaInterpreter::unzipAsync(lua_State* L)
 {
     const QString zipLocation = getVerifiedString(L, __func__, 1, "zip location");
     QString extractLocation = getVerifiedString(L, __func__, 2, "extract location");
@@ -4831,7 +4805,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
     auto future = QtConcurrent::run(mudlet::unzip, zipLocation, extractLocation, temporaryDir.path());
     auto watcher = new QFutureWatcher<bool>;
     connect(watcher, &QFutureWatcher<bool>::finished, watcher, [=]() {
-        TEvent event {};
+        TEvent event{};
         Host& host = getHostFromLua(L);
 
         if (future.result()) {
@@ -4965,9 +4939,7 @@ static void storeHostInLua(lua_State* L, Host* h);
 // with its success message, on failure will just append...
 bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QString& requirement, const QString& failureConsequence, const QString& description, const QString& luaModuleId)
 {
-    const int error = luaL_dostring(pGlobalLua, qsl("%1require \"%2\"")
-                              .arg(luaModuleId.isEmpty() ? QString() : qsl("%1 =").arg(luaModuleId),
-                                   requirement).toUtf8().constData());
+    const int error = luaL_dostring(pGlobalLua, qsl("%1require \"%2\"").arg(luaModuleId.isEmpty() ? QString() : qsl("%1 =").arg(luaModuleId), requirement).toUtf8().constData());
     if (error) {
         QString luaErrorMsg = tr("No error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
@@ -4979,11 +4951,9 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
         %3 is the error message from the lua sub-system;
         %4 can be an additional message about the expected effect (but may be blank).
         */
-        resultMsgsQueue.enqueue(tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4")
-                                .arg((description.isEmpty() ? requirement : description),
-                                     QLatin1String("\n"),
-                                     luaErrorMsg,
-                                     (failureConsequence.isEmpty() ? QString() : qsl("\n%1").arg(failureConsequence))));
+        resultMsgsQueue.enqueue(
+                tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4")
+                        .arg((description.isEmpty() ? requirement : description), QLatin1String("\n"), luaErrorMsg, (failureConsequence.isEmpty() ? QString() : qsl("\n%1").arg(failureConsequence))));
         return false;
     }
 
@@ -5294,6 +5264,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapPerspective", TLuaInterpreter::setMapPerspective);
 #endif
     lua_register(pGlobalLua, "centerview", TLuaInterpreter::centerview);
+    lua_register(pGlobalLua, "createMapView", TLuaInterpreter::createMapView);
+    lua_register(pGlobalLua, "closeMapView", TLuaInterpreter::closeMapView);
+    lua_register(pGlobalLua, "closeAllMapViews", TLuaInterpreter::closeAllMapViews);
+    lua_register(pGlobalLua, "getMapViewIds", TLuaInterpreter::getMapViewIds);
+    lua_register(pGlobalLua, "getMapViewInfo", TLuaInterpreter::getMapViewInfo);
     lua_register(pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend);
     lua_register(pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger);
     lua_register(pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger);
@@ -5828,7 +5803,7 @@ void TLuaInterpreter::initIndenterGlobals()
     // macOS app bundle would like the search path for the binary modules to
     // also be set to the current binary directory:
     additionalCPaths << qsl("%1/?.so").arg(appPath);
-#elif defined (Q_OS_LINUX)
+#elif defined(Q_OS_LINUX)
     // AppInstaller on Linux would like the search path for the binary modules
     // to also be set to a lib sub-directory of the application directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
@@ -5843,7 +5818,7 @@ void TLuaInterpreter::initIndenterGlobals()
     }
     // 2 AppImage (directory of executable) - not needed for Wndows:
     //     "<applicationDirectory>/?.lua"
-#if ! defined (Q_OS_WINDOWS)
+#if !defined(Q_OS_WINDOWS)
     additionalLuaPaths << qsl("%1/?.lua").arg(appPath);
 #endif
     // 3 QMake shadow builds without CONFIG containing "debug_and_release" but
@@ -5858,11 +5833,9 @@ void TLuaInterpreter::initIndenterGlobals()
     //    "<applicationDirectory>/../../mudlet/3rdparty/?.lua"
     additionalLuaPaths << qsl("%1/../../mudlet/3rdparty/?.lua").arg(appPath);
 
-    int error = luaL_dostring(pIndenterState.get(), qsl("package.path = toNativeSeparators([[%1;]] .. package.path)")
-                              .arg(additionalLuaPaths.join(QLatin1Char(';'))).toUtf8().constData());
+    int error = luaL_dostring(pIndenterState.get(), qsl("package.path = toNativeSeparators([[%1;]] .. package.path)").arg(additionalLuaPaths.join(QLatin1Char(';'))).toUtf8().constData());
     if (!error && !additionalCPaths.isEmpty()) {
-        error = luaL_dostring(pIndenterState.get(), qsl("package.cpath = toNativeSeparators([[%1;]] .. package.cpath)")
-                              .arg(additionalCPaths.join(QLatin1Char(';'))).toUtf8().constData());
+        error = luaL_dostring(pIndenterState.get(), qsl("package.cpath = toNativeSeparators([[%1;]] .. package.cpath)").arg(additionalCPaths.join(QLatin1Char(';'))).toUtf8().constData());
     }
 
     // clang-format off
@@ -5872,7 +5845,7 @@ void TLuaInterpreter::initIndenterGlobals()
   get_ast = request('!.lua.code.get_ast')
   get_formatted_code = request('!.lua.code.ast_as_code')
 )LUA");
-// clang-format on
+        // clang-format on
     }
     if (error) {
         QString e = tr("No error message available from Lua.");
@@ -5903,39 +5876,38 @@ void TLuaInterpreter::loadGlobal()
     // getMudletLuaDefaultPaths() can report them later if asked:
     mPossiblePaths = QStringList{
 #if defined(Q_OS_MACOS)
-        // Load relatively to MacOS inside Resources when we're in a .app
-        // bundle, as mudlet-lua always gets copied in by the build script into
-        // the bundle for the Mac installer build:
-        qsl("%1/../Resources/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath),
+            // Load relatively to MacOS inside Resources when we're in a .app
+            // bundle, as mudlet-lua always gets copied in by the build script into
+            // the bundle for the Mac installer build:
+            qsl("%1/../Resources/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath),
 #endif
 
-        // For the installer we put the lua files under the executable's
-        // location. This is the case for the Windows install:
-        QDir::toNativeSeparators(qsl("%1/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+            // For the installer we put the lua files under the executable's
+            // location. This is the case for the Windows install:
+            QDir::toNativeSeparators(qsl("%1/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
 
-        // Although a no-op for an in source build an additional "../src/"
-        // allows location of lua code when object code is in a directory
-        // alongside the src directory as occurs using Qt Creator "Shadow
-        // Builds":
-        QDir::toNativeSeparators(qsl("%1/../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+            // Although a no-op for an in source build an additional "../src/"
+            // allows location of lua code when object code is in a directory
+            // alongside the src directory as occurs using Qt Creator "Shadow
+            // Builds":
+            QDir::toNativeSeparators(qsl("%1/../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
 
-        // Windows builds (or others where the qmake project file has CONFIG
-        // containing debug_and_release AND debug_and_release_target options)
-        // may be an additional sub-directory down:
-        QDir::toNativeSeparators(qsl("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+            // Windows builds (or others where the qmake project file has CONFIG
+            // containing debug_and_release AND debug_and_release_target options)
+            // may be an additional sub-directory down:
+            QDir::toNativeSeparators(qsl("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
 
-        // CMake builds done from Qt Creator tend to make their build directory
-        // be in a "out-of-source" (the more common name for what Qt calls
-        // "Shadow Builds") on the same level as the top level CMakeList.txt
-        // project file - which is one level up compared to the QMake case.
-        // and in a "src" subdirectory (to match the relative source file
-        // location to that top-level project file) of the main project
-        // "mudlet" directory:
-        QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+            // CMake builds done from Qt Creator tend to make their build directory
+            // be in a "out-of-source" (the more common name for what Qt calls
+            // "Shadow Builds") on the same level as the top level CMakeList.txt
+            // project file - which is one level up compared to the QMake case.
+            // and in a "src" subdirectory (to match the relative source file
+            // location to that top-level project file) of the main project
+            // "mudlet" directory:
+            QDir::toNativeSeparators(qsl("%1/../../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
 
-        // CMake builds from Qt Creator on Windows 11 appear to use this directory:
-        QDir::toNativeSeparators(qsl("%1/../../../mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
-    };
+            // CMake builds from Qt Creator on Windows 11 appear to use this directory:
+            QDir::toNativeSeparators(qsl("%1/../../../mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))};
 
     // Although it is relatively easy to detect whether something is #define d
     // it is not so easy to detect what it contains at the preprocessor stage,
@@ -5943,7 +5915,7 @@ void TLuaInterpreter::loadGlobal()
     // for Linux/FreeBSD where the read-only shared Lua files go into the
     // /usr/share part of the file-system:
     if (!qsl(LUA_DEFAULT_PATH).isEmpty()) {
-        mPossiblePaths <<  QDir::toNativeSeparators(qsl(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
+        mPossiblePaths << QDir::toNativeSeparators(qsl(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
     };
     QStringList failedMessages{};
 
@@ -6169,7 +6141,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
 // No documentation available in wiki - internal function
 QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QString& function, const bool repeating)
 {
-    const QTime time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
+    const QTime time = QTime(0, 0, 0, 0).addMSecs(qRound(timeout * 1000));
     auto* pT = new TTimer(qsl("newTempTimerWithoutAnId"), time, mpHost, repeating);
     pT->setTime(time);
     pT->setIsFolder(false);
@@ -6283,8 +6255,8 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
 int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT = nullptr;
-    const QStringList sList {regex};
-    QList<int> const propertyList {REGEX_EXACT_MATCH};
+    const QStringList sList{regex};
+    QList<int> const propertyList{REGEX_EXACT_MATCH};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -6301,8 +6273,8 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
 int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT = nullptr;
-    const QStringList sList {regex};
-    QList<int> const propertyList {REGEX_BEGIN_OF_LINE_SUBSTRING};
+    const QStringList sList{regex};
+    QList<int> const propertyList{REGEX_BEGIN_OF_LINE_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -6319,8 +6291,8 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
 int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT = nullptr;
-    const QStringList sList {regex};
-    QList<int> const propertyList {REGEX_SUBSTRING};
+    const QStringList sList{regex};
+    QList<int> const propertyList{REGEX_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -6400,8 +6372,8 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
 int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT = nullptr;
-    const QStringList sList {regex};
-    QList<int> const propertyList {REGEX_PERL};
+    const QStringList sList{regex};
+    QList<int> const propertyList{REGEX_PERL};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -6585,10 +6557,10 @@ static void storeHostInLua(lua_State* L, Host* h)
 // No documentation available in wiki - internal function
 Host& getHostFromLua(lua_State* L)
 {
-    lua_pushlightuserdata(L, &host_key);    // 1 - push unique key
-    lua_rawget(L, LUA_REGISTRYINDEX);       // 1 - pop key, push host ptr
+    lua_pushlightuserdata(L, &host_key);                 // 1 - push unique key
+    lua_rawget(L, LUA_REGISTRYINDEX);                    // 1 - pop key, push host ptr
     auto* h = static_cast<Host*>(lua_touserdata(L, -1)); // 1 - get host ptr
-    lua_pop(L, 1);                          // 0 - pop host ptr
+    lua_pop(L, 1);                                       // 0 - pop host ptr
     assert(h);
     return *h;
 }
@@ -6607,8 +6579,7 @@ void TLuaInterpreter::freeLuaRegistryIndex(int index)
 void TLuaInterpreter::freeAllInLuaRegistry(TEvent event)
 {
     for (int i = 0; i < event.mArgumentList.size(); i++) {
-        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
-        {
+        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION) {
             freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
         }
     }
@@ -6680,8 +6651,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
         if (!handle) {
-            return warnArgumentValue(L, __func__,
-                "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
+            return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
         encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
@@ -6709,7 +6679,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         }
     }
 
-    char **wordList;
+    char** wordList;
     size_t wordCount = 0;
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
@@ -6719,8 +6689,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
         if (!handle) {
-            return warnArgumentValue(L, __func__,
-                "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
+            return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
         encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
@@ -6729,7 +6698,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     wordCount = Hunspell_suggest(handle, &wordList, encodedText.constData());
     lua_newtable(L);
     for (size_t i = 0; i < wordCount; ++i) {
-        lua_pushnumber(L, i+1);
+        lua_pushnumber(L, i + 1);
         QString suggestion;
         if (hasUserDictionary) {
             suggestion = QString::fromUtf8(wordList[i]);
@@ -6771,7 +6740,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
 
     lua_newtable(L);
     for (int i = 0; i < wordCount; ++i) {
-        lua_pushinteger(L, i+1);
+        lua_pushinteger(L, i + 1);
         lua_pushstring(L, wordList.at(i).toUtf8().constData());
         lua_settable(L, -3);
     }
@@ -6803,28 +6772,26 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
     const int params = lua_gettop(L);
 
     switch (params) {
-        case 0:
-        {
-            info = host.readProfileData(qsl("description"));
-            break;
+    case 0: {
+        info = host.readProfileData(qsl("description"));
+        break;
+    }
+    default: {
+        QString profileName = getVerifiedString(L, __func__, 1, "profile name");
+        if (profileName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
+            return 2;
         }
-        default:
-        {
-            QString profileName = getVerifiedString(L, __func__, 1, "profile name");
-            if (profileName.isEmpty()) {
-                lua_pushnil(L);
-                lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
-                return 2;
-            }
-            if (!mudlet::self()->profileExists(profileName)) {
-                lua_pushnil(L);
-                lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", profileName.toUtf8().constData());
-                return 2;
-            } else {
-                info = mudlet::self()->readProfileData(profileName, qsl("description"));
-            }
-            break;
+        if (!mudlet::self()->profileExists(profileName)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", profileName.toUtf8().constData());
+            return 2;
+        } else {
+            info = mudlet::self()->readProfileData(profileName, qsl("description"));
         }
+        break;
+    }
     }
 
     lua_pushstring(L, info.toUtf8().constData());
@@ -6839,17 +6806,15 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
     const int params = lua_gettop(L);
 
     switch (params) {
-        case 1:
-        {
-            text = getVerifiedString(L, __func__, 1, "text");
-            break;
-        }
-        default:
-        {
-            profileName = getVerifiedString(L, __func__, 1, "profile name");
-            text = getVerifiedString(L, __func__, 2, "text");
-            break;
-        }
+    case 1: {
+        text = getVerifiedString(L, __func__, 1, "text");
+        break;
+    }
+    default: {
+        profileName = getVerifiedString(L, __func__, 1, "profile name");
+        text = getVerifiedString(L, __func__, 2, "text");
+        break;
+    }
     }
 
     QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
@@ -6933,7 +6898,7 @@ void TLuaInterpreter::updateAnsi16ColorsInTable()
     // Equivalent to Lua:
     // color_table = color_table or {}
     lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
-    if (!(lua_toboolean(L,-1))) {
+    if (!(lua_toboolean(L, -1))) {
         // no it doesn't
         lua_pop(L, 1);
         // So make it
@@ -7037,7 +7002,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     // Equivalent to Lua:
     // color_table = color_table or {}
     lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
-    if (!(lua_toboolean(L,-1))) {
+    if (!(lua_toboolean(L, -1))) {
         // no it doesn't
         lua_pop(L, 1);
         // So make it
@@ -7138,7 +7103,7 @@ void TLuaInterpreter::createHttpHeadersTable(lua_State* L, QNetworkReply* reply)
         // Push header key onto stack
         lua_pushstring(L, header.constData());
         // Push header value onto stack
-        lua_pushstring(L,  reply->rawHeader(header).constData());
+        lua_pushstring(L, reply->rawHeader(header).constData());
         // Put key-value pair into table (now 3 deep in stack), pop stack twice
         lua_settable(L, -3);
     }
@@ -7170,7 +7135,7 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
         // Push cookie name onto stack
         lua_pushstring(L, cookie.name().constData());
         // Push cookie value onto stack
-        lua_pushstring(L,  cookie.value().constData());
+        lua_pushstring(L, cookie.value().constData());
         // Put key-value pair into table (now 3 deep in stack), pop stack twice
         lua_settable(L, -3);
     }
@@ -7286,7 +7251,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addFileWatch
-int TLuaInterpreter::addFileWatch(lua_State * L)
+int TLuaInterpreter::addFileWatch(lua_State* L)
 {
     auto path = getVerifiedString(L, __func__, 1, "path");
     auto& host = getHostFromLua(L);
@@ -7301,7 +7266,7 @@ int TLuaInterpreter::addFileWatch(lua_State * L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeFileWatch
-int TLuaInterpreter::removeFileWatch(lua_State * L)
+int TLuaInterpreter::removeFileWatch(lua_State* L)
 {
     auto path = getVerifiedString(L, __func__, 1, "path");
     auto& host = getHostFromLua(L);
@@ -7314,7 +7279,7 @@ int TLuaInterpreter::removeFileWatch(lua_State * L)
 // Please use same options with same names in setConfig and getConfig and keep them in sync
 // The table argument case for setting multiple properties at once is handled
 // by setConfig in Other.lua.
-int TLuaInterpreter::setConfig(lua_State * L)
+int TLuaInterpreter::setConfig(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
@@ -7323,8 +7288,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return warnArgumentValue(L, __func__, "you must provide key");
     }
 
-    auto success = [&]()
-    {
+    auto success = [&]() {
         if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(key) >> &host;
         }
@@ -7390,8 +7354,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         if (key == qsl("mapInfoColor")) {
             if (!lua_istable(L, 2)) {
-                lua_pushfstring(L, "%s: bad argument #%d type (table expected for mapInfoColor, got %s!)",
-                    __func__, 2, luaL_typename(L, 2));
+                lua_pushfstring(L, "%s: bad argument #%d type (table expected for mapInfoColor, got %s!)", __func__, 2, luaL_typename(L, 2));
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor requires a table {r, g, b} or {r, g, b, a}"));
             }
 
@@ -7597,8 +7560,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
         if (!behaviours.contains(behaviour)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"",
-                            lua_tostring(L, 2), behaviours.join(qsl("\", \"")).toUtf8().constData());
+            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), behaviours.join(qsl("\", \"")).toUtf8().constData());
             return 2;
         }
 
@@ -7617,8 +7579,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
         if (!values.contains(value)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"",
-                            lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
+            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
             return 2;
         }
 
@@ -7644,8 +7605,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
         if (!values.contains(value)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid commandLineHistorySaveSize string \"%s\", it should be one of \"%s\"",
-                            lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
+            lua_pushfstring(L, "invalid commandLineHistorySaveSize string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
             return 2;
         }
 
@@ -7677,8 +7637,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
         if (!values.contains(value)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid ambiguousEAsianWidthCharacters string \"%s\", it should be one of \"%s\"",
-                            lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
+            lua_pushfstring(L, "invalid ambiguousEAsianWidthCharacters string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
             return 2;
         }
 
@@ -7765,7 +7724,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#announce
-int TLuaInterpreter::announce(lua_State *L)
+int TLuaInterpreter::announce(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "text to announce");
     static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
@@ -7777,8 +7736,8 @@ int TLuaInterpreter::announce(lua_State *L)
         processing = getVerifiedString(L, __func__, 2, "processing style");
 
         if (!processingKinds.contains(processing)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (processing should be one of %s, got %s!)",
-                __func__, 2, processingKinds.join(qsl(", ")).toUtf8().constData(), processing.toUtf8().constData());
+            lua_pushfstring(
+                    L, "%s: bad argument #%d type (processing should be one of %s, got %s!)", __func__, 2, processingKinds.join(qsl(", ")).toUtf8().constData(), processing.toUtf8().constData());
             return lua_error(L);
         }
     }
@@ -7791,9 +7750,9 @@ int TLuaInterpreter::announce(lua_State *L)
 // Please use same options with same names in setConfig and getConfig and keep them in sync
 // The no args case that returns a table is handled by getConfig in Other.lua
 // that runs a loop with a list of these properties, please update that list.
-int TLuaInterpreter::getConfig(lua_State *L)
+int TLuaInterpreter::getConfig(lua_State* L)
 {
-    auto &host = getHostFromLua(L);
+    auto& host = getHostFromLua(L);
     const QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "you must provide a key");
@@ -7806,173 +7765,317 @@ int TLuaInterpreter::getConfig(lua_State *L)
     }
 
     const std::unordered_map<QString, std::function<void()>> configMap = {
-        { qsl("mapRoomSize"), [&](){ lua_pushnumber(L, host.mRoomSize); } },
-        { qsl("mapExitSize"), [&](){ lua_pushnumber(L, host.mLineSize); } },
-        { qsl("mapRoundRooms"), [&](){ lua_pushboolean(L, host.mBubbleMode); } },
-        { qsl("showRoomIdsOnMap"), [&](){ lua_pushboolean(L, host.mShowRoomID); } },
-        { qsl("show3dMapView"), [&](){
+            {qsl("mapRoomSize"),
+             [&]() {
+                 lua_pushnumber(L, host.mRoomSize);
+             }},
+            {qsl("mapExitSize"),
+             [&]() {
+                 lua_pushnumber(L, host.mLineSize);
+             }},
+            {qsl("mapRoundRooms"),
+             [&]() {
+                 lua_pushboolean(L, host.mBubbleMode);
+             }},
+            {qsl("showRoomIdsOnMap"),
+             [&]() {
+                 lua_pushboolean(L, host.mShowRoomID);
+             }},
+            {qsl("show3dMapView"),
+             [&]() {
 #if defined(INCLUDE_3DMAPPER)
-            if (host.mpMap && host.mpMap->mpMapper) {
-                auto widget = host.mpMap->mpMapper->glWidget;
-                lua_pushboolean(L, (widget && widget->isVisible()));
-                return;
-            }
+                 if (host.mpMap && host.mpMap->mpMapper) {
+                     auto widget = host.mpMap->mpMapper->glWidget;
+                     lua_pushboolean(L, (widget && widget->isVisible()));
+                     return;
+                 }
 #endif
-            lua_pushboolean(L, false);
-        }},
-        { qsl("mapperPanelVisible"), [&](){ lua_pushboolean(L, host.mShowPanel); } },
-        { qsl("mapShowRoomBorders"), [&](){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
-        { qsl("mapInfoColor"), [&](){
-            lua_newtable(L);
-            lua_pushnumber(L, host.mMapInfoBg.red());
-            lua_rawseti(L, -2, 1);
-            lua_pushnumber(L, host.mMapInfoBg.green());
-            lua_rawseti(L, -2, 2);
-            lua_pushnumber(L, host.mMapInfoBg.blue());
-            lua_rawseti(L, -2, 3);
-            lua_pushnumber(L, host.mMapInfoBg.alpha());
-            lua_rawseti(L, -2, 4);
-        } },
-        { qsl("mapShowGrid"), [&](){ lua_pushboolean(L, host.mMapperShowGrid); } },
-        { qsl("editorAutoComplete"), [&](){ lua_pushboolean(L, host.mEditorAutoComplete); } },
-        { qsl("enableGMCP"), [&](){ lua_pushboolean(L, host.mEnableGMCP); } },
-        { qsl("enableMSSP"), [&](){ lua_pushboolean(L, host.mEnableMSSP); } },
-        { qsl("enableMSDP"), [&](){ lua_pushboolean(L, host.mEnableMSDP); } },
-        { qsl("enableMSP"), [&](){ lua_pushboolean(L, host.mEnableMSP); } },
-        { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
-        { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
-        { qsl("enableMXP"), [&](){ lua_pushboolean(L, host.mEnableMXP); } },
-        { qsl("enableNAWS"), [&](){ lua_pushboolean(L, host.mEnableNAWS); } },
-        { qsl("logDirectory"), [&](){
-            const auto logDir = host.mLogDir;
+                 lua_pushboolean(L, false);
+             }},
+            {qsl("mapperPanelVisible"),
+             [&]() {
+                 lua_pushboolean(L, host.mShowPanel);
+             }},
+            {qsl("mapShowRoomBorders"),
+             [&]() {
+                 lua_pushboolean(L, host.mMapperShowRoomBorders);
+             }},
+            {qsl("mapInfoColor"),
+             [&]() {
+                 lua_newtable(L);
+                 lua_pushnumber(L, host.mMapInfoBg.red());
+                 lua_rawseti(L, -2, 1);
+                 lua_pushnumber(L, host.mMapInfoBg.green());
+                 lua_rawseti(L, -2, 2);
+                 lua_pushnumber(L, host.mMapInfoBg.blue());
+                 lua_rawseti(L, -2, 3);
+                 lua_pushnumber(L, host.mMapInfoBg.alpha());
+                 lua_rawseti(L, -2, 4);
+             }},
+            {qsl("mapShowGrid"),
+             [&]() {
+                 lua_pushboolean(L, host.mMapperShowGrid);
+             }},
+            {qsl("editorAutoComplete"),
+             [&]() {
+                 lua_pushboolean(L, host.mEditorAutoComplete);
+             }},
+            {qsl("enableGMCP"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableGMCP);
+             }},
+            {qsl("enableMSSP"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableMSSP);
+             }},
+            {qsl("enableMSDP"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableMSDP);
+             }},
+            {qsl("enableMSP"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableMSP);
+             }},
+            {qsl("enableMTTS"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableMTTS);
+             }},
+            {qsl("enableMNES"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableMNES);
+             }},
+            {qsl("enableMXP"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableMXP);
+             }},
+            {qsl("enableNAWS"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableNAWS);
+             }},
+            {qsl("logDirectory"),
+             [&]() {
+                 const auto logDir = host.mLogDir;
 
-            if (logDir == nullptr || logDir.isEmpty()) {
-                lua_pushstring(L, mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
-            } else {
-                lua_pushstring(L, host.mLogDir.toUtf8().constData());
-            }
-        } },
-        { qsl("askTlsAvailable"), [&](){lua_pushboolean(L, host.mAskTlsAvailable); } },
-        { qsl("promptForMXPProcessorOn"), [&](){lua_pushboolean(L, host.mPromptedForMXPProcessorOn); } },
-        { qsl("specialForceMXPProcessorOn"), [&](){lua_pushboolean(L, host.getForceMXPProcessorOn()); } },
-        { qsl("promptForVersionInTTYPE"), [&](){lua_pushboolean(L, host.mPromptedForVersionInTTYPE); } },
-        { qsl("versionInTTYPE"), [&](){ lua_pushboolean(L, host.mVersionInTTYPE); } },
-        { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
-        { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
-        { qsl("showSentText"), [&](){
-            if (useStringFormat) {
-                // Return string representation for new enhanced API
-                switch (host.mCommandEchoMode) {
-                case Host::CommandEchoMode::Never:
-                    lua_pushstring(L, "never");
-                    break;
-                case Host::CommandEchoMode::Always:
-                    lua_pushstring(L, "always");
-                    break;
-                case Host::CommandEchoMode::ScriptControl:
-                    lua_pushstring(L, "script");
-                    break;
-                }
-            } else {
-                // For backward compatibility, return boolean for legacy scripts
-                switch (host.mCommandEchoMode) {
-                case Host::CommandEchoMode::Never:
-                    lua_pushboolean(L, false);
-                    break;
-                case Host::CommandEchoMode::Always:
-                case Host::CommandEchoMode::ScriptControl:
-                    // Both modes map to true for backward compatibility
-                    lua_pushboolean(L, true);
-                    break;
-                }
-            }
-        } },
-        { qsl("fixUnnecessaryLinebreaks"), [&](){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
-        { qsl("specialForceCompressionOff"), [&](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
-        { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
-        { qsl("specialForceMxpNegotiationOff"), [&](){
-            // specialForceMxpNegotiationOff should not be used anymore, but we support it for compatibility
-            // it will be the inverse of enableMXP
-            lua_pushboolean(L, !host.mEnableMXP);
-        } },
-        { qsl("specialForceCharsetNegotiationOff"), [&](){
-            // specialForceCharsetNegotiationOff should not be used anymore, but we support it for compatibility
-            // it will be the inverse of enableCHARSET
-            lua_pushboolean(L, !host.mEnableCHARSET);
-        } },
-        { qsl("enableCHARSET"), [&](){ lua_pushboolean(L, host.mEnableCHARSET); } },
-        { qsl("forceNewEnvironNegotiationOff"), [&](){
-            // forceNewEnvironNegotiationOff should not be used anymore, but we support it for compatibility
-            // it will be the inverse of enableNEWENVIRON
-            lua_pushboolean(L, !host.mEnableNEWENVIRON);
-        } },
-        { qsl("enableNEWENVIRON"), [&](){ lua_pushboolean(L, host.mEnableNEWENVIRON); } },
-        { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
-        { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
-        { qsl("blankLinesBehaviour"), [&](){
-            const auto behaviour = host.mBlankLineBehaviour;
-            if (behaviour == Host::BlankLineBehaviour::Show) {
-                lua_pushstring(L, "show");
-            } else if (behaviour == Host::BlankLineBehaviour::Hide) {
-                lua_pushstring(L, "hide");
-            } else if (behaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
-                lua_pushstring(L, "replacewithspace");
-            }
-        } },
-        { qsl("caretShortcut"), [&](){
-            const auto caret = host.mCaretShortcut;
-            if (caret == Host::CaretShortcut::None) {
-                lua_pushstring(L, "none");
-            } else if (caret == Host::CaretShortcut::Tab) {
-                lua_pushstring(L, "tab");
-            } else if (caret == Host::CaretShortcut::CtrlTab) {
-                lua_pushstring(L, "ctrltab");
-            } else if (caret == Host::CaretShortcut::F6) {
-                lua_pushstring(L, "f6");
-            }
-        } },
-        { qsl("commandLineHistorySaveSize"), [&](){ lua_pushnumber(L, host.getCommandLineHistorySaveSize()); } },
-        { qsl("controlCharacterHandling"), [&](){
-            const auto controlCharacterMode = host.getControlCharacterMode();
-            switch (controlCharacterMode) {
-            case ControlCharacterMode::Picture:
-                lua_pushstring(L, "picture");
-                break;
-            case ControlCharacterMode::OEM:
-                lua_pushstring(L, "oem");
-                break;
-            default:
-                lua_pushstring(L, "asis");
-            }
-        } },
-        { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } },
-        { qsl("f3SearchEnabled"), [&](){ lua_pushboolean(L, host.getF3SearchEnabled()); } },
-        { qsl("showTabConnectionIndicators"), [&](){ lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators); } },
-        { qsl("advertiseScreenReader"), [&](){ lua_pushboolean(L, host.mAdvertiseScreenReader); } },
-        { qsl("ambiguousEAsianWidthCharacters"), [&]() {
-            const auto ambiguousEAsianGlyphWidth = host.getWideAmbiguousEAsianGlyphsControlState();
-            switch (ambiguousEAsianGlyphWidth) {
-            case Qt::Unchecked:
-                lua_pushstring(L, "narrow");
-                break;
-            case Qt::Checked:
-                lua_pushstring(L, "wide");
-            break;
-            default:
-                lua_pushstring(L, "auto");
-            }
-        } },
-        { qsl("enableClosedCaption"), [&](){ lua_pushboolean(L, host.mEnableClosedCaption); } },
-        { qsl("showUpperLowerLevels"), [&](){ lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels); } },
-        { qsl("muteMediaAPI"), [&](){ lua_pushboolean(L, mudlet::self()->muteAPI()); } },
-        { qsl("muteMediaGame"), [&](){ lua_pushboolean(L, mudlet::self()->muteGame()); } },
-        { qsl("ircHostName"), [&](){ lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData()); } },
-        { qsl("ircHostPort"), [&](){ lua_pushnumber(L, dlgIRC::readIrcHostPort(&host)); } },
-        { qsl("ircHostSecure"), [&](){ lua_pushboolean(L, dlgIRC::readIrcHostSecure(&host)); } },
-        { qsl("ircChannels"), [&](){ lua_pushstring(L, dlgIRC::readIrcChannels(&host).join(qsl(" ")).toUtf8().constData()); } },
-        { qsl("ircNickName"), [&](){ lua_pushstring(L, dlgIRC::readIrcNickName(&host).toUtf8().constData()); } },
-        { qsl("ircPassword"), [&](){ lua_pushstring(L, dlgIRC::readIrcPassword(&host).toUtf8().constData()); } }
-    };
+                 if (logDir == nullptr || logDir.isEmpty()) {
+                     lua_pushstring(L, mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
+                 } else {
+                     lua_pushstring(L, host.mLogDir.toUtf8().constData());
+                 }
+             }},
+            {qsl("askTlsAvailable"),
+             [&]() {
+                 lua_pushboolean(L, host.mAskTlsAvailable);
+             }},
+            {qsl("promptForMXPProcessorOn"),
+             [&]() {
+                 lua_pushboolean(L, host.mPromptedForMXPProcessorOn);
+             }},
+            {qsl("specialForceMXPProcessorOn"),
+             [&]() {
+                 lua_pushboolean(L, host.getForceMXPProcessorOn());
+             }},
+            {qsl("promptForVersionInTTYPE"),
+             [&]() {
+                 lua_pushboolean(L, host.mPromptedForVersionInTTYPE);
+             }},
+            {qsl("versionInTTYPE"),
+             [&]() {
+                 lua_pushboolean(L, host.mVersionInTTYPE);
+             }},
+            {qsl("inputLineStrictUnixEndings"),
+             [&]() {
+                 lua_pushboolean(L, host.mUSE_UNIX_EOL);
+             }},
+            {qsl("autoClearInputLine"),
+             [&]() {
+                 lua_pushboolean(L, host.mAutoClearCommandLineAfterSend);
+             }},
+            {qsl("showSentText"),
+             [&]() {
+                 if (useStringFormat) {
+                     // Return string representation for new enhanced API
+                     switch (host.mCommandEchoMode) {
+                     case Host::CommandEchoMode::Never:
+                         lua_pushstring(L, "never");
+                         break;
+                     case Host::CommandEchoMode::Always:
+                         lua_pushstring(L, "always");
+                         break;
+                     case Host::CommandEchoMode::ScriptControl:
+                         lua_pushstring(L, "script");
+                         break;
+                     }
+                 } else {
+                     // For backward compatibility, return boolean for legacy scripts
+                     switch (host.mCommandEchoMode) {
+                     case Host::CommandEchoMode::Never:
+                         lua_pushboolean(L, false);
+                         break;
+                     case Host::CommandEchoMode::Always:
+                     case Host::CommandEchoMode::ScriptControl:
+                         // Both modes map to true for backward compatibility
+                         lua_pushboolean(L, true);
+                         break;
+                     }
+                 }
+             }},
+            {qsl("fixUnnecessaryLinebreaks"),
+             [&]() {
+                 lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX);
+             }},
+            {qsl("specialForceCompressionOff"),
+             [&]() {
+                 lua_pushboolean(L, host.mFORCE_NO_COMPRESSION);
+             }},
+            {qsl("specialForceGAOff"),
+             [&]() {
+                 lua_pushboolean(L, host.mFORCE_GA_OFF);
+             }},
+            {qsl("specialForceMxpNegotiationOff"),
+             [&]() {
+                 // specialForceMxpNegotiationOff should not be used anymore, but we support it for compatibility
+                 // it will be the inverse of enableMXP
+                 lua_pushboolean(L, !host.mEnableMXP);
+             }},
+            {qsl("specialForceCharsetNegotiationOff"),
+             [&]() {
+                 // specialForceCharsetNegotiationOff should not be used anymore, but we support it for compatibility
+                 // it will be the inverse of enableCHARSET
+                 lua_pushboolean(L, !host.mEnableCHARSET);
+             }},
+            {qsl("enableCHARSET"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableCHARSET);
+             }},
+            {qsl("forceNewEnvironNegotiationOff"),
+             [&]() {
+                 // forceNewEnvironNegotiationOff should not be used anymore, but we support it for compatibility
+                 // it will be the inverse of enableNEWENVIRON
+                 lua_pushboolean(L, !host.mEnableNEWENVIRON);
+             }},
+            {qsl("enableNEWENVIRON"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableNEWENVIRON);
+             }},
+            {qsl("compactInputLine"),
+             [&]() {
+                 lua_pushboolean(L, host.getCompactInputLine());
+             }},
+            {qsl("announceIncomingText"),
+             [&]() {
+                 lua_pushboolean(L, host.mAnnounceIncomingText);
+             }},
+            {qsl("blankLinesBehaviour"),
+             [&]() {
+                 const auto behaviour = host.mBlankLineBehaviour;
+                 if (behaviour == Host::BlankLineBehaviour::Show) {
+                     lua_pushstring(L, "show");
+                 } else if (behaviour == Host::BlankLineBehaviour::Hide) {
+                     lua_pushstring(L, "hide");
+                 } else if (behaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
+                     lua_pushstring(L, "replacewithspace");
+                 }
+             }},
+            {qsl("caretShortcut"),
+             [&]() {
+                 const auto caret = host.mCaretShortcut;
+                 if (caret == Host::CaretShortcut::None) {
+                     lua_pushstring(L, "none");
+                 } else if (caret == Host::CaretShortcut::Tab) {
+                     lua_pushstring(L, "tab");
+                 } else if (caret == Host::CaretShortcut::CtrlTab) {
+                     lua_pushstring(L, "ctrltab");
+                 } else if (caret == Host::CaretShortcut::F6) {
+                     lua_pushstring(L, "f6");
+                 }
+             }},
+            {qsl("commandLineHistorySaveSize"),
+             [&]() {
+                 lua_pushnumber(L, host.getCommandLineHistorySaveSize());
+             }},
+            {qsl("controlCharacterHandling"),
+             [&]() {
+                 const auto controlCharacterMode = host.getControlCharacterMode();
+                 switch (controlCharacterMode) {
+                 case ControlCharacterMode::Picture:
+                     lua_pushstring(L, "picture");
+                     break;
+                 case ControlCharacterMode::OEM:
+                     lua_pushstring(L, "oem");
+                     break;
+                 default:
+                     lua_pushstring(L, "asis");
+                 }
+             }},
+            {qsl("logInHTML"),
+             [&]() {
+                 lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat);
+             }},
+            {qsl("f3SearchEnabled"),
+             [&]() {
+                 lua_pushboolean(L, host.getF3SearchEnabled());
+             }},
+            {qsl("showTabConnectionIndicators"),
+             [&]() {
+                 lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators);
+             }},
+            {qsl("advertiseScreenReader"),
+             [&]() {
+                 lua_pushboolean(L, host.mAdvertiseScreenReader);
+             }},
+            {qsl("ambiguousEAsianWidthCharacters"),
+             [&]() {
+                 const auto ambiguousEAsianGlyphWidth = host.getWideAmbiguousEAsianGlyphsControlState();
+                 switch (ambiguousEAsianGlyphWidth) {
+                 case Qt::Unchecked:
+                     lua_pushstring(L, "narrow");
+                     break;
+                 case Qt::Checked:
+                     lua_pushstring(L, "wide");
+                     break;
+                 default:
+                     lua_pushstring(L, "auto");
+                 }
+             }},
+            {qsl("enableClosedCaption"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableClosedCaption);
+             }},
+            {qsl("showUpperLowerLevels"),
+             [&]() {
+                 lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels);
+             }},
+            {qsl("muteMediaAPI"),
+             [&]() {
+                 lua_pushboolean(L, mudlet::self()->muteAPI());
+             }},
+            {qsl("muteMediaGame"),
+             [&]() {
+                 lua_pushboolean(L, mudlet::self()->muteGame());
+             }},
+            {qsl("ircHostName"),
+             [&]() {
+                 lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData());
+             }},
+            {qsl("ircHostPort"),
+             [&]() {
+                 lua_pushnumber(L, dlgIRC::readIrcHostPort(&host));
+             }},
+            {qsl("ircHostSecure"),
+             [&]() {
+                 lua_pushboolean(L, dlgIRC::readIrcHostSecure(&host));
+             }},
+            {qsl("ircChannels"),
+             [&]() {
+                 lua_pushstring(L, dlgIRC::readIrcChannels(&host).join(qsl(" ")).toUtf8().constData());
+             }},
+            {qsl("ircNickName"),
+             [&]() {
+                 lua_pushstring(L, dlgIRC::readIrcNickName(&host).toUtf8().constData());
+             }},
+            {qsl("ircPassword"), [&]() {
+                 lua_pushstring(L, dlgIRC::readIrcPassword(&host).toUtf8().constData());
+             }}};
 
     auto it = configMap.find(key);
     if (it != configMap.end()) {
@@ -8005,7 +8108,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
             if (validExperiments.contains(key)) {
                 lua_pushboolean(L, host.experimentEnabled(key));
             } else {
-                lua_pushboolean(L, false);  // Invalid experiments are always false
+                lua_pushboolean(L, false); // Invalid experiments are always false
             }
         }
         return 1;
@@ -8065,8 +8168,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
 
         } else {
             if (lua_type(L, 1) != LUA_TBOOLEAN) {
-                lua_pushfstring(L, "%s: bad argument #1 type (command line name as string or save history as boolean is optional, got %s!)",
-                                __func__, luaL_typename(L, 1));
+                lua_pushfstring(L, "%s: bad argument #1 type (command line name as string or save history as boolean is optional, got %s!)", __func__, luaL_typename(L, 1));
                 return lua_error(L); // Dummy return!
             }
 

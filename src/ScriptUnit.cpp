@@ -292,13 +292,7 @@ std::tuple<QString, int, int, int> ScriptUnit::assembleReport()
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("Scripts current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("tempScripts current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active Scripts: ") << QString::number(statsActiveItems) << QLatin1String("\n");
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsTempItems,
-        statsActiveItems
-    };
+    msg << QLatin1String("Scripts current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("tempScripts current total: ") << QString::number(statsTempItems)
+        << QLatin1String("\n") << QLatin1String("active Scripts: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    return {msg.join(QString()), statsItemsTotal, statsTempItems, statsActiveItems};
 }

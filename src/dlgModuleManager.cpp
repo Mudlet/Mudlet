@@ -46,9 +46,7 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-dlgModuleManager::~dlgModuleManager()
-{
-}
+dlgModuleManager::~dlgModuleManager() {}
 
 void dlgModuleManager::layoutModules()
 {
@@ -110,7 +108,7 @@ void dlgModuleManager::layoutModules()
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
-            itemLocation->setToolTip(utils::richText(moduleInfo[0]));     // show the full path in a tooltip, in case it doesn't fit in the table
+            itemLocation->setToolTip(utils::richText(moduleInfo[0]));         // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
             itemPriority->setData(Qt::EditRole, mpHost->mModulePriorities[moduleName]);
             moduleTable->setItem(row, 0, itemEntry);
@@ -192,8 +190,7 @@ void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
     }
 
     if (mpHost->moduleHelp.contains(entry->text())) {
-        helpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL"))
-                                || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
+        helpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL")) || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
     } else {
         helpButton->setDisabled(true);
     }

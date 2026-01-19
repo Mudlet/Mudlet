@@ -20,7 +20,7 @@
 #include "TEntityResolver.h"
 #include "utils.h"
 
-QString TEntityResolver::getResolution(const QString& entity, bool resolveCustomEntities, TEntityType *entityType) const
+QString TEntityResolver::getResolution(const QString& entity, bool resolveCustomEntities, TEntityType* entityType) const
 {
     if (entity.front() != '&' || entity.back() != ';') {
         if (entityType) {
@@ -82,7 +82,8 @@ bool TEntityResolver::registerEntity(const QString& entity, const QString& str)
     return true;
 }
 
-bool TEntityResolver::unregisterEntity(const QString & entity){
+bool TEntityResolver::unregisterEntity(const QString& entity)
+{
     return mEntititesMap.remove(entity.toLower()) > 0;
 }
 
@@ -126,7 +127,9 @@ QString TEntityResolver::interpolate(const QString& input, std::function<QString
 
 QString TEntityResolver::interpolate(const QString& input) const
 {
-    return interpolate(input, [this](const QString& it) { return getResolution(it); });
+    return interpolate(input, [this](const QString& it) {
+        return getResolution(it);
+    });
 }
 
 const TEntityResolver TEntityResolver::scmDefaultResolver = TEntityResolver();
