@@ -21,7 +21,8 @@
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
 
-FileOpenHandler::FileOpenHandler(QObject* parent) : QObject(parent)
+FileOpenHandler::FileOpenHandler(QObject* parent)
+: QObject(parent)
 {
     QCoreApplication::instance()->installEventFilter(this);
 }
@@ -46,4 +47,3 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
     }
     return QObject::eventFilter(obj, event);
 }
-

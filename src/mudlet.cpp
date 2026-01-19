@@ -231,7 +231,7 @@ void mudlet::init()
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
     setContentsMargins(0, 0, 0, 0);
-    setAcceptDrops(true);  // Enable drag and drop for profile tabs
+    setAcceptDrops(true); // Enable drag and drop for profile tabs
     menuGames->setToolTipsVisible(true);
     menuEditor->setToolTipsVisible(true);
     menuOptions->setToolTipsVisible(true);
@@ -257,8 +257,7 @@ void mudlet::init()
 
     // Add context menu to toolbar for show/hide functionality
     mpMainToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(mpMainToolBar, &QWidget::customContextMenuRequested,
-            this, &mudlet::slot_showMainToolBarContextMenu);
+    connect(mpMainToolBar, &QWidget::customContextMenuRequested, this, &mudlet::slot_showMainToolBarContextMenu);
     addToolBarBreak();
     auto frame = new QWidget(this);
     setCentralWidget(frame);
@@ -273,16 +272,13 @@ void mudlet::init()
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tabChanged);
     connect(mpTabBar, &QTabBar::tabMoved, this, &mudlet::slot_tabMoved);
     // Connect the tab bar's detach signal
-    connect(mpTabBar, &TTabBar::tabDetachRequested,
-            this, &mudlet::slot_tabDetachRequested);
+    connect(mpTabBar, &TTabBar::tabDetachRequested, this, &mudlet::slot_tabDetachRequested);
     // Connect the tab bar's reattach signal (for drag and drop reattachment)
-    connect(mpTabBar, &TTabBar::tabReattachRequested,
-            this, &mudlet::slot_tabReattachRequested);
+    connect(mpTabBar, &TTabBar::tabReattachRequested, this, &mudlet::slot_tabReattachRequested);
 
     // Add context menu to tab bar for toolbar visibility options
     mpTabBar->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(mpTabBar, &QWidget::customContextMenuRequested,
-            this, &mudlet::slot_showTabContextMenu);
+    connect(mpTabBar, &QWidget::customContextMenuRequested, this, &mudlet::slot_showTabContextMenu);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
@@ -518,10 +514,11 @@ void mudlet::init()
 #if defined(INCLUDE_UPDATER)
     if (publicTestVersion) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
-        const QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
+        const QStringList issueReportIcons{"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
         mpActionReportIssue->setIcon(QIcon(qsl(":/icons/%1").arg(issueReportIcons.at(randomIcon))));
-        mpActionReportIssue->setToolTip(utils::richText(tr("The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!")));
+        mpActionReportIssue->setToolTip(
+                utils::richText(tr("The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!")));
         mpMainToolBar->addAction(mpActionReportIssue);
         mpActionReportIssue->setObjectName(qsl("reportissue_action"));
         mpMainToolBar->widgetForAction(mpActionReportIssue)->setObjectName(mpActionReportIssue->objectName());
@@ -798,21 +795,21 @@ void mudlet::init()
     // PLACEMARKER: sample benchmarking code
     // looking to benchmark old/new code? Use this example
     // full docs at https://nanobench.ankerl.com
-//    ankerl::nanobench::Bench benchmark;
-//    benchmark.title("Example benchmark")
-//            .minEpochIterations(2000)
-//            .warmup(100)
-//            .relative(true);
+    //    ankerl::nanobench::Bench benchmark;
+    //    benchmark.title("Example benchmark")
+    //            .minEpochIterations(2000)
+    //            .warmup(100)
+    //            .relative(true);
 
-//    benchmark.run("old code", [this] {
-//        loadMaps();
-//    });
+    //    benchmark.run("old code", [this] {
+    //        loadMaps();
+    //    });
 
-//    benchmark.run("new code", [this] {
-//        for (int i = 0; i < 2; i++) {
-//            loadMaps();
-//        }
-//    });
+    //    benchmark.run("new code", [this] {
+    //        for (int i = 0; i < 2; i++) {
+    //            loadMaps();
+    //        }
+    //    });
 }
 
 static QString findExecutableDir()
@@ -951,380 +948,381 @@ void mudlet::loadMaps()
     // Initially populated from the dictionaries provided within the Debian
     // GNU/Linux distribution:
     //: In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a '-' Chinese is an exception!
-    mDictionaryLanguageCodeMap = {{qsl("af"), tr("Afrikaans")},
-                                  {qsl("af_za"), tr("Afrikaans (South Africa)")},
-                                  {qsl("an"), tr("Aragonese")},
-                                  {qsl("an_es"), tr("Aragonese (Spain)")},
-                                  {qsl("ar"), tr("Arabic")},
-                                  {qsl("ar_ae"), tr("Arabic (United Arab Emirates)")},
-                                  {qsl("ar_bh"), tr("Arabic (Bahrain)")},
-                                  {qsl("ar_dz"), tr("Arabic (Algeria)")},
-                                  {qsl("ar_eg"), tr("Arabic (Egypt)")},
-                                  {qsl("ar_in"), tr("Arabic (India)")},
-                                  {qsl("ar_iq"), tr("Arabic (Iraq)")},
-                                  {qsl("ar_jo"), tr("Arabic (Jordan)")},
-                                  {qsl("ar_kw"), tr("Arabic (Kuwait)")},
-                                  {qsl("ar_lb"), tr("Arabic (Lebanon)")},
-                                  {qsl("ar_ly"), tr("Arabic (Libya)")},
-                                  {qsl("ar_ma"), tr("Arabic (Morocco)")},
-                                  {qsl("ar_om"), tr("Arabic (Oman)")},
-                                  {qsl("ar_qa"), tr("Arabic (Qatar)")},
-                                  {qsl("ar_sa"), tr("Arabic (Saudi Arabia)")},
-                                  {qsl("ar_sd"), tr("Arabic (Sudan)")},
-                                  {qsl("ar_sy"), tr("Arabic (Syria)")},
-                                  {qsl("ar_tn"), tr("Arabic (Tunisia)")},
-                                  {qsl("ar_ye"), tr("Arabic (Yemen)")},
-                                  {qsl("be"), tr("Belarusian")},
-                                  {qsl("be_by"), tr("Belarusian (Belarus)")},
-                                  {qsl("be_ru"), tr("Belarusian (Russia)")},
-                                  {qsl("bg"), tr("Bulgarian")},
-                                  {qsl("bg_bg"), tr("Bulgarian (Bulgaria)")},
-                                  {qsl("bn"), tr("Bangla")},
-                                  {qsl("bn_bd"), tr("Bangla (Bangladesh)")},
-                                  {qsl("bn_in"), tr("Bangla (India)")},
-                                  {qsl("bo"), tr("Tibetan")},
-                                  {qsl("bo_cn"), tr("Tibetan (China)")},
-                                  {qsl("bo_in"), tr("Tibetan (India)")},
-                                  {qsl("br"), tr("Breton")},
-                                  {qsl("br_fr"), tr("Breton (France)")},
-                                  {qsl("bs"), tr("Bosnian")},
-                                  {qsl("bs_ba"), tr("Bosnian (Bosnia/Herzegovina)")},
-                                  {qsl("bs_ba_cyrl"), tr("Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)")},
-                                  {qsl("ca"), tr("Catalan")},
-                                  {qsl("ca_es"), tr("Catalan (Spain)")},
-                                  {qsl("ca_es_valencia"), tr("Catalan (Spain - Valencian)")},
-                                  {qsl("ckb"), tr("Central Kurdish")},
-                                  {qsl("ckb_iq"), tr("Central Kurdish (Iraq)")},
-                                  {qsl("cs"), tr("Czech")},
-                                  {qsl("cs_cz"), tr("Czech (Czechia)")},
-                                  {qsl("cy"), tr("Welsh")},
-                                  {qsl("cy_gb"), tr("Welsh (United Kingdom {Wales})")},
-                                  {qsl("da"), tr("Danish")},
-                                  {qsl("da_dk"), tr("Danish (Denmark)")},
-                                  {qsl("de"), tr("German")},
-                                  {qsl("de_at"), tr("German (Austria)")},
-                                  {qsl("de_at_frami"), tr("German (Austria, revised by F M Baumann)")},
-                                  {qsl("de_be"), tr("German (Belgium)")},
-                                  {qsl("de_ch"), tr("German (Switzerland)")},
-                                  {qsl("de_ch_frami"), tr("German (Switzerland, revised by F M Baumann)")},
-                                  {qsl("de_de"), tr("German (Germany/Belgium/Luxemburg)")},
-                                  {qsl("de_de_frami"), tr("German (Germany/Belgium/Luxemburg, revised by F M Baumann)")},
-                                  {qsl("de_li"), tr("German (Liechtenstein)")},
-                                  {qsl("de_lu"), tr("German (Luxembourg)")},
-                                  {qsl("dz"), tr("Dzongkha")},
-                                  {qsl("dz_bt"), tr("Dzongkha (Bhutan)")},
-                                  {qsl("el"), tr("Greek")},
-                                  {qsl("el_gr"), tr("Greek (Greece)")},
-                                  {qsl("en"), tr("English")},
-                                  {qsl("en_ag"), tr("English (Antigua/Barbuda)")},
-                                  {qsl("en_au"), tr("English (Australia)")},
-                                  {qsl("en_au_large"), tr("English (Australia, Large)", "This dictionary contains larger vocabulary.")},
-                                  {qsl("en_bs"), tr("English (Bahamas)")},
-                                  {qsl("en_bw"), tr("English (Botswana)")},
-                                  {qsl("en_bz"), tr("English (Belize)")},
-                                  {qsl("en_ca"), tr("English (Canada)")},
-                                  {qsl("en_ca_large"), tr("English (Canada, Large)", "This dictionary contains larger vocabulary.")},
-                                  {qsl("en_dk"), tr("English (Denmark)")},
-                                  {qsl("en_gb"), tr("English (United Kingdom)")},
-                                  {qsl("en_gb_large"), tr("English (United Kingdom, Large)", "This dictionary contains larger vocabulary.")},
-                                  {qsl("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
-                                  {qsl("en_gh"), tr("English (Ghana)")},
-                                  {qsl("en_hk"), tr("English (Hong Kong SAR China)")},
-                                  {qsl("en_ie"), tr("English (Ireland)")},
-                                  {qsl("en_in"), tr("English (India)")},
-                                  {qsl("en_jm"), tr("English (Jamaica)")},
-                                  {qsl("en_na"), tr("English (Namibia)")},
-                                  {qsl("en_ng"), tr("English (Nigeria)")},
-                                  {qsl("en_nz"), tr("English (New Zealand)")},
-                                  {qsl("en_ph"), tr("English (Philippines)")},
-                                  {qsl("en_sg"), tr("English (Singapore)")},
-                                  {qsl("en_tt"), tr("English (Trinidad/Tobago)")},
-                                  {qsl("en_us"), tr("English (United States)")},
-                                  {qsl("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")},
-                                  {qsl("en_za"), tr("English (South Africa)")},
-                                  {qsl("en_zw"), tr("English (Zimbabwe)")},
-                                  {qsl("eo"), tr("Esperanto")},
-                                  {qsl("es"), tr("Spanish")},
-                                  {qsl("es_ar"), tr("Spanish (Argentina)")},
-                                  {qsl("es_bo"), tr("Spanish (Bolivia)")},
-                                  {qsl("es_cl"), tr("Spanish (Chile)")},
-                                  {qsl("es_co"), tr("Spanish (Colombia)")},
-                                  {qsl("es_cr"), tr("Spanish (Costa Rica)")},
-                                  {qsl("es_cu"), tr("Spanish (Cuba)")},
-                                  {qsl("es_do"), tr("Spanish (Dominican Republic)")},
-                                  {qsl("es_ec"), tr("Spanish (Ecuador)")},
-                                  {qsl("es_es"), tr("Spanish (Spain)")},
-                                  {qsl("es_gt"), tr("Spanish (Guatemala)")},
-                                  {qsl("es_hn"), tr("Spanish (Honduras)")},
-                                  {qsl("es_mx"), tr("Spanish (Mexico)")},
-                                  {qsl("es_ni"), tr("Spanish (Nicaragua)")},
-                                  {qsl("es_pa"), tr("Spanish (Panama)")},
-                                  {qsl("es_pe"), tr("Spanish (Peru)")},
-                                  {qsl("es_pr"), tr("Spanish (Puerto Rico)")},
-                                  {qsl("es_py"), tr("Spanish (Paraguay)")},
-                                  {qsl("es_sv"), tr("Spanish (El Savador)")},
-                                  {qsl("es_us"), tr("Spanish (United States)")},
-                                  {qsl("es_uy"), tr("Spanish (Uruguay)")},
-                                  {qsl("es_ve"), tr("Spanish (Venezuela)")},
-                                  {qsl("et"), tr("Estonian")},
-                                  {qsl("et_ee"), tr("Estonian (Estonia)")},
-                                  {qsl("eu"), tr("Basque")},
-                                  {qsl("eu_es"), tr("Basque (Spain)")},
-                                  {qsl("eu_fr"), tr("Basque (France)")},
-                                  {qsl("fi"), tr("Finnish")},
-                                  {qsl("fi_fi"), tr("Finnish")},
-                                  {qsl("fo"), tr("Faroese")},
-                                  {qsl("fo_fo"), tr("Faroese (Faroe Islands)")},
-                                  {qsl("fr"), tr("French")},
-                                  // On OpenBSD this seems to be the "usual spellings of French,
-                                  // with, in addition, some new spellings rectifying past
-                                  // inconsistencies":
-                                  {qsl("fr_xx_classique"), tr("French")},
-                                  {qsl("fr_be"), tr("French (Belgium)")},
-                                  {qsl("fr_ca"), tr("French (Catalan)")},
-                                  {qsl("fr_ch"), tr("French (Switzerland)")},
-                                  {qsl("fr_fr"), tr("French (France)")},
-                                  {qsl("fr_lu"), tr("French (Luxemburg)")},
-                                  {qsl("fr_mc"), tr("French (Monaco)")},
-                                  {qsl("ga"), tr("Irish")},
-                                  {qsl("gd"), tr("Gaelic")},
-                                  {qsl("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
-                                  {qsl("gl"), tr("Galician")},
-                                  {qsl("gl_es"), tr("Galician (Spain)")},
-                                  {qsl("gn"), tr("Guarani")},
-                                  {qsl("gn_py"), tr("Guarani (Paraguay)")},
-                                  {qsl("gu"), tr("Gujarati")},
-                                  {qsl("gu_in"), tr("Gujarati (India)")},
-                                  // Debian uses gug instead of gn for some reason:
-                                  {qsl("gug"), tr("Guarani")},
-                                  {qsl("gug_py"), tr("Guarani (Paraguay)")},
-                                  {qsl("he"), tr("Hebrew")},
-                                  {qsl("he_il"), tr("Hebrew (Israel)")},
-                                  {qsl("hi"), tr("Hindi")},
-                                  {qsl("hi_in"), tr("Hindi (India)")},
-                                  {qsl("hr"), tr("Croatian")},
-                                  {qsl("hr_hr"), tr("Croatian (Croatia)")},
-                                  {qsl("hu"), tr("Hungarian")},
-                                  {qsl("hu_hu"), tr("Hungarian (Hungary)")},
-                                  {qsl("hy"), tr("Armenian")},
-                                  {qsl("hy_am"), tr("Armenian (Armenia)")},
-                                  {qsl("id"), tr("Indonesian")},
-                                  {qsl("id_id"), tr("Indonesian (Indonesia)")},
-                                  //: , formerly known as Occidental, and not to be mistaken for Interlingua
-                                  {qsl("ie"), tr("Interlingue")},
-                                  {qsl("is"), tr("Icelandic")},
-                                  {qsl("is_is"), tr("Icelandic (Iceland)")},
-                                  {qsl("it"), tr("Italian")},
-                                  {qsl("it_ch"), tr("Italian (Switzerland)")},
-                                  {qsl("it_it"), tr("Italian (Italy)")},
-                                  {qsl("kk"), tr("Kazakh")},
-                                  {qsl("kk_kz"), tr("Kazakh (Kazakhstan)")},
-                                  {qsl("kmr"), tr("Kurmanji")},
-                                  {qsl("kmr_latn"), tr("Kurmanji {Latin-alphabet Kurdish}")},
-                                  {qsl("ko"), tr("Korean")},
-                                  {qsl("ko_kr"), tr("Korean (South Korea)")},
-                                  {qsl("ku"), tr("Kurdish")},
-                                  {qsl("ku_sy"), tr("Kurdish (Syria)")},
-                                  {qsl("ku_tr"), tr("Kurdish (Turkey)")},
-                                  {qsl("la"), tr("Latin")},
-                                  {qsl("lb"), tr("Luxembourgish")},
-                                  {qsl("lb_lu"), tr("Luxembourgish (Luxembourg)")},
-                                  {qsl("lo"), tr("Lao")},
-                                  {qsl("lo_la"), tr("Lao (Laos)")},
-                                  {qsl("lt"), tr("Lithuanian")},
-                                  {qsl("lt_lt"), tr("Lithuanian (Lithuania)")},
-                                  {qsl("lv"), tr("Latvian")},
-                                  {qsl("lv_lv"), tr("Latvian (Latvia)")},
-                                  {qsl("ml"), tr("Malayalam")},
-                                  {qsl("ml_in"), tr("Malayalam (India)")},
-                                  {qsl("mn"), tr("Mongolian")},
-                                  {qsl("mn_mn"), tr("Mongolian (Mongolia)")},
-                                  {qsl("nb"), tr("Norwegian Bokmål")},
-                                  {qsl("nb_no"), tr("Norwegian Bokmål (Norway)")},
-                                  {qsl("ne"), tr("Nepali")},
-                                  {qsl("ne_np"), tr("Nepali (Nepal)")},
-                                  {qsl("nl"), tr("Dutch")},
-                                  {qsl("nl_an"), tr("Dutch (Netherlands Antilles)")},
-                                  {qsl("nl_aw"), tr("Dutch (Aruba)")},
-                                  {qsl("nl_be"), tr("Dutch (Belgium)")},
-                                  {qsl("nl_nl"), tr("Dutch (Netherlands)")},
-                                  {qsl("nl_sr"), tr("Dutch (Suriname)")},
-                                  {qsl("nn"), tr("Norwegian Nynorsk")},
-                                  {qsl("nn_no"), tr("Norwegian Nynorsk (Norway)")},
-                                  {qsl("oc"), tr("Occitan")},
-                                  {qsl("oc_fr"), tr("Occitan (France)")},
-                                  {qsl("pl"), tr("Polish")},
-                                  {qsl("pl_pl"), tr("Polish (Poland)")},
-                                  {qsl("pt"), tr("Portuguese")},
-                                  {qsl("pt_br"), tr("Portuguese (Brazil)")},
-                                  {qsl("pt_pt"), tr("Portuguese (Portugal)")},
-                                  {qsl("ro"), tr("Romanian")},
-                                  {qsl("ro_ro"), tr("Romanian (Romania)")},
-                                  {qsl("ru"), tr("Russian")},
-                                  {qsl("ru_ru"), tr("Russian (Russia)")},
-                                  {qsl("se"), tr("Northern Sami")},
-                                  {qsl("se_fi"), tr("Northern Sami (Finland)")},
-                                  {qsl("se_no"), tr("Northern Sami (Norway)")},
-                                  {qsl("se_se"), tr("Northern Sami (Sweden)")},
-                                  //: This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication
-                                  {qsl("sh"), tr("Shtokavian")},
-                                  //: This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication
-                                  {qsl("sh_yu"), tr("Shtokavian (former state of Yugoslavia)")},
-                                  {qsl("si"), tr("Sinhala")},
-                                  {qsl("si_lk"), tr("Sinhala (Sri Lanka)")},
-                                  {qsl("sk"), tr("Slovak")},
-                                  {qsl("sk_sk"), tr("Slovak (Slovakia)")},
-                                  {qsl("sl"), tr("Slovenian")},
-                                  {qsl("sl_si"), tr("Slovenian (Slovenia)")},
-                                  {qsl("so"), tr("Somali")},
-                                  {qsl("so_so"), tr("Somali (Somalia)")},
-                                  {qsl("sq"), tr("Albanian")},
-                                  {qsl("sq_al"), tr("Albanian (Albania)")},
-                                  {qsl("sr"), tr("Serbian")},
-                                  {qsl("sr_me"), tr("Serbian (Montenegro)")},
-                                  {qsl("sr_rs"), tr("Serbian (Serbia)")},
-                                  {qsl("sr_latn_rs"), tr("Serbian (Serbia - Latin-alphabet)")},
-                                  {qsl("sr_yu"), tr("Serbian (former state of Yugoslavia)")},
-                                  {qsl("ss"), tr("Swati")},
-                                  {qsl("ss_sz"), tr("Swati (Swaziland)")},
-                                  {qsl("ss_za"), tr("Swati (South Africa)")},
-                                  {qsl("sv"), tr("Swedish")},
-                                  {qsl("sv_se"), tr("Swedish (Sweden)")},
-                                  {qsl("sv_fi"), tr("Swedish (Finland)")},
-                                  {qsl("sw"), tr("Swahili")},
-                                  {qsl("sw_ke"), tr("Swahili (Kenya)")},
-                                  {qsl("sw_tz"), tr("Swahili (Tanzania)")},
-                                  {qsl("te"), tr("Telugu")},
-                                  {qsl("te_in"), tr("Telugu (India)")},
-                                  {qsl("th"), tr("Thai")},
-                                  {qsl("th_th"), tr("Thai (Thailand)")},
-                                  {qsl("ti"), tr("Tigrinya")},
-                                  {qsl("ti_er"), tr("Tigrinya (Eritrea)")},
-                                  {qsl("ti_et"), tr("Tigrinya (Ethiopia)")},
-                                  {qsl("tk"), tr("Turkmen")},
-                                  {qsl("tk_tm"), tr("Turkmen (Turkmenistan)")},
-                                  {qsl("tl"), tr("Tagalog")},
-                                  {qsl("tn"), tr("Tswana")},
-                                  {qsl("tn_bw"), tr("Tswana (Botswana)")},
-                                  {qsl("tn_za"), tr("Tswana (South Africa)")},
-                                  {qsl("tr"), tr("Turkish")},
-                                  {qsl("tr_tr"), tr("Turkish (Turkey)")},
-                                  {qsl("ts"), tr("Tsonga")},
-                                  {qsl("ts_za"), tr("Tsonga (South Africa)")},
-                                  {qsl("uk"), tr("Ukrainian")},
-                                  {qsl("uk_ua"), tr("Ukrainian (Ukraine)")},
-                                  {qsl("uz"), tr("Uzbek")},
-                                  {qsl("uz_uz"), tr("Uzbek (Uzbekistan)")},
-                                  {qsl("ve"), tr("Venda")},
-                                  {qsl("vi"), tr("Vietnamese")},
-                                  {qsl("vi_vn"), tr("Vietnamese (Vietnam)")},
-                                  {qsl("vi_daucu"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
-                                  {qsl("vi_daumoi"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
-                                  // OpenBSD has the old names, see:
-                                  // https://github.com/1ec5/hunspell-vi/commit/fecdb355e7c114e1d5ca22fe5b301b2d54af84c9
-                                  {qsl("vi_x_old"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
-                                  {qsl("vi_x_new"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
-                                  {qsl("wa"), tr("Walloon")},
-                                  {qsl("xh"), tr("Xhosa")},
-                                  {qsl("yi"), tr("Yiddish")},
-                                  {qsl("zh"), tr("Chinese")},
-                                  {qsl("zh_cn"), tr("Chinese (China - simplified)")},
-                                  {qsl("zh_tw"), tr("Chinese (Taiwan - traditional)")},
-                                  {qsl("zu"), tr("Zulu")}};
+    mDictionaryLanguageCodeMap = {
+            {qsl("af"), tr("Afrikaans")},
+            {qsl("af_za"), tr("Afrikaans (South Africa)")},
+            {qsl("an"), tr("Aragonese")},
+            {qsl("an_es"), tr("Aragonese (Spain)")},
+            {qsl("ar"), tr("Arabic")},
+            {qsl("ar_ae"), tr("Arabic (United Arab Emirates)")},
+            {qsl("ar_bh"), tr("Arabic (Bahrain)")},
+            {qsl("ar_dz"), tr("Arabic (Algeria)")},
+            {qsl("ar_eg"), tr("Arabic (Egypt)")},
+            {qsl("ar_in"), tr("Arabic (India)")},
+            {qsl("ar_iq"), tr("Arabic (Iraq)")},
+            {qsl("ar_jo"), tr("Arabic (Jordan)")},
+            {qsl("ar_kw"), tr("Arabic (Kuwait)")},
+            {qsl("ar_lb"), tr("Arabic (Lebanon)")},
+            {qsl("ar_ly"), tr("Arabic (Libya)")},
+            {qsl("ar_ma"), tr("Arabic (Morocco)")},
+            {qsl("ar_om"), tr("Arabic (Oman)")},
+            {qsl("ar_qa"), tr("Arabic (Qatar)")},
+            {qsl("ar_sa"), tr("Arabic (Saudi Arabia)")},
+            {qsl("ar_sd"), tr("Arabic (Sudan)")},
+            {qsl("ar_sy"), tr("Arabic (Syria)")},
+            {qsl("ar_tn"), tr("Arabic (Tunisia)")},
+            {qsl("ar_ye"), tr("Arabic (Yemen)")},
+            {qsl("be"), tr("Belarusian")},
+            {qsl("be_by"), tr("Belarusian (Belarus)")},
+            {qsl("be_ru"), tr("Belarusian (Russia)")},
+            {qsl("bg"), tr("Bulgarian")},
+            {qsl("bg_bg"), tr("Bulgarian (Bulgaria)")},
+            {qsl("bn"), tr("Bangla")},
+            {qsl("bn_bd"), tr("Bangla (Bangladesh)")},
+            {qsl("bn_in"), tr("Bangla (India)")},
+            {qsl("bo"), tr("Tibetan")},
+            {qsl("bo_cn"), tr("Tibetan (China)")},
+            {qsl("bo_in"), tr("Tibetan (India)")},
+            {qsl("br"), tr("Breton")},
+            {qsl("br_fr"), tr("Breton (France)")},
+            {qsl("bs"), tr("Bosnian")},
+            {qsl("bs_ba"), tr("Bosnian (Bosnia/Herzegovina)")},
+            {qsl("bs_ba_cyrl"), tr("Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)")},
+            {qsl("ca"), tr("Catalan")},
+            {qsl("ca_es"), tr("Catalan (Spain)")},
+            {qsl("ca_es_valencia"), tr("Catalan (Spain - Valencian)")},
+            {qsl("ckb"), tr("Central Kurdish")},
+            {qsl("ckb_iq"), tr("Central Kurdish (Iraq)")},
+            {qsl("cs"), tr("Czech")},
+            {qsl("cs_cz"), tr("Czech (Czechia)")},
+            {qsl("cy"), tr("Welsh")},
+            {qsl("cy_gb"), tr("Welsh (United Kingdom {Wales})")},
+            {qsl("da"), tr("Danish")},
+            {qsl("da_dk"), tr("Danish (Denmark)")},
+            {qsl("de"), tr("German")},
+            {qsl("de_at"), tr("German (Austria)")},
+            {qsl("de_at_frami"), tr("German (Austria, revised by F M Baumann)")},
+            {qsl("de_be"), tr("German (Belgium)")},
+            {qsl("de_ch"), tr("German (Switzerland)")},
+            {qsl("de_ch_frami"), tr("German (Switzerland, revised by F M Baumann)")},
+            {qsl("de_de"), tr("German (Germany/Belgium/Luxemburg)")},
+            {qsl("de_de_frami"), tr("German (Germany/Belgium/Luxemburg, revised by F M Baumann)")},
+            {qsl("de_li"), tr("German (Liechtenstein)")},
+            {qsl("de_lu"), tr("German (Luxembourg)")},
+            {qsl("dz"), tr("Dzongkha")},
+            {qsl("dz_bt"), tr("Dzongkha (Bhutan)")},
+            {qsl("el"), tr("Greek")},
+            {qsl("el_gr"), tr("Greek (Greece)")},
+            {qsl("en"), tr("English")},
+            {qsl("en_ag"), tr("English (Antigua/Barbuda)")},
+            {qsl("en_au"), tr("English (Australia)")},
+            {qsl("en_au_large"), tr("English (Australia, Large)", "This dictionary contains larger vocabulary.")},
+            {qsl("en_bs"), tr("English (Bahamas)")},
+            {qsl("en_bw"), tr("English (Botswana)")},
+            {qsl("en_bz"), tr("English (Belize)")},
+            {qsl("en_ca"), tr("English (Canada)")},
+            {qsl("en_ca_large"), tr("English (Canada, Large)", "This dictionary contains larger vocabulary.")},
+            {qsl("en_dk"), tr("English (Denmark)")},
+            {qsl("en_gb"), tr("English (United Kingdom)")},
+            {qsl("en_gb_large"), tr("English (United Kingdom, Large)", "This dictionary contains larger vocabulary.")},
+            {qsl("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
+            {qsl("en_gh"), tr("English (Ghana)")},
+            {qsl("en_hk"), tr("English (Hong Kong SAR China)")},
+            {qsl("en_ie"), tr("English (Ireland)")},
+            {qsl("en_in"), tr("English (India)")},
+            {qsl("en_jm"), tr("English (Jamaica)")},
+            {qsl("en_na"), tr("English (Namibia)")},
+            {qsl("en_ng"), tr("English (Nigeria)")},
+            {qsl("en_nz"), tr("English (New Zealand)")},
+            {qsl("en_ph"), tr("English (Philippines)")},
+            {qsl("en_sg"), tr("English (Singapore)")},
+            {qsl("en_tt"), tr("English (Trinidad/Tobago)")},
+            {qsl("en_us"), tr("English (United States)")},
+            {qsl("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")},
+            {qsl("en_za"), tr("English (South Africa)")},
+            {qsl("en_zw"), tr("English (Zimbabwe)")},
+            {qsl("eo"), tr("Esperanto")},
+            {qsl("es"), tr("Spanish")},
+            {qsl("es_ar"), tr("Spanish (Argentina)")},
+            {qsl("es_bo"), tr("Spanish (Bolivia)")},
+            {qsl("es_cl"), tr("Spanish (Chile)")},
+            {qsl("es_co"), tr("Spanish (Colombia)")},
+            {qsl("es_cr"), tr("Spanish (Costa Rica)")},
+            {qsl("es_cu"), tr("Spanish (Cuba)")},
+            {qsl("es_do"), tr("Spanish (Dominican Republic)")},
+            {qsl("es_ec"), tr("Spanish (Ecuador)")},
+            {qsl("es_es"), tr("Spanish (Spain)")},
+            {qsl("es_gt"), tr("Spanish (Guatemala)")},
+            {qsl("es_hn"), tr("Spanish (Honduras)")},
+            {qsl("es_mx"), tr("Spanish (Mexico)")},
+            {qsl("es_ni"), tr("Spanish (Nicaragua)")},
+            {qsl("es_pa"), tr("Spanish (Panama)")},
+            {qsl("es_pe"), tr("Spanish (Peru)")},
+            {qsl("es_pr"), tr("Spanish (Puerto Rico)")},
+            {qsl("es_py"), tr("Spanish (Paraguay)")},
+            {qsl("es_sv"), tr("Spanish (El Savador)")},
+            {qsl("es_us"), tr("Spanish (United States)")},
+            {qsl("es_uy"), tr("Spanish (Uruguay)")},
+            {qsl("es_ve"), tr("Spanish (Venezuela)")},
+            {qsl("et"), tr("Estonian")},
+            {qsl("et_ee"), tr("Estonian (Estonia)")},
+            {qsl("eu"), tr("Basque")},
+            {qsl("eu_es"), tr("Basque (Spain)")},
+            {qsl("eu_fr"), tr("Basque (France)")},
+            {qsl("fi"), tr("Finnish")},
+            {qsl("fi_fi"), tr("Finnish")},
+            {qsl("fo"), tr("Faroese")},
+            {qsl("fo_fo"), tr("Faroese (Faroe Islands)")},
+            {qsl("fr"), tr("French")},
+            // On OpenBSD this seems to be the "usual spellings of French,
+            // with, in addition, some new spellings rectifying past
+            // inconsistencies":
+            {qsl("fr_xx_classique"), tr("French")},
+            {qsl("fr_be"), tr("French (Belgium)")},
+            {qsl("fr_ca"), tr("French (Catalan)")},
+            {qsl("fr_ch"), tr("French (Switzerland)")},
+            {qsl("fr_fr"), tr("French (France)")},
+            {qsl("fr_lu"), tr("French (Luxemburg)")},
+            {qsl("fr_mc"), tr("French (Monaco)")},
+            {qsl("ga"), tr("Irish")},
+            {qsl("gd"), tr("Gaelic")},
+            {qsl("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
+            {qsl("gl"), tr("Galician")},
+            {qsl("gl_es"), tr("Galician (Spain)")},
+            {qsl("gn"), tr("Guarani")},
+            {qsl("gn_py"), tr("Guarani (Paraguay)")},
+            {qsl("gu"), tr("Gujarati")},
+            {qsl("gu_in"), tr("Gujarati (India)")},
+            // Debian uses gug instead of gn for some reason:
+            {qsl("gug"), tr("Guarani")},
+            {qsl("gug_py"), tr("Guarani (Paraguay)")},
+            {qsl("he"), tr("Hebrew")},
+            {qsl("he_il"), tr("Hebrew (Israel)")},
+            {qsl("hi"), tr("Hindi")},
+            {qsl("hi_in"), tr("Hindi (India)")},
+            {qsl("hr"), tr("Croatian")},
+            {qsl("hr_hr"), tr("Croatian (Croatia)")},
+            {qsl("hu"), tr("Hungarian")},
+            {qsl("hu_hu"), tr("Hungarian (Hungary)")},
+            {qsl("hy"), tr("Armenian")},
+            {qsl("hy_am"), tr("Armenian (Armenia)")},
+            {qsl("id"), tr("Indonesian")},
+            {qsl("id_id"), tr("Indonesian (Indonesia)")},
+            //: , formerly known as Occidental, and not to be mistaken for Interlingua
+            {qsl("ie"), tr("Interlingue")},
+            {qsl("is"), tr("Icelandic")},
+            {qsl("is_is"), tr("Icelandic (Iceland)")},
+            {qsl("it"), tr("Italian")},
+            {qsl("it_ch"), tr("Italian (Switzerland)")},
+            {qsl("it_it"), tr("Italian (Italy)")},
+            {qsl("kk"), tr("Kazakh")},
+            {qsl("kk_kz"), tr("Kazakh (Kazakhstan)")},
+            {qsl("kmr"), tr("Kurmanji")},
+            {qsl("kmr_latn"), tr("Kurmanji {Latin-alphabet Kurdish}")},
+            {qsl("ko"), tr("Korean")},
+            {qsl("ko_kr"), tr("Korean (South Korea)")},
+            {qsl("ku"), tr("Kurdish")},
+            {qsl("ku_sy"), tr("Kurdish (Syria)")},
+            {qsl("ku_tr"), tr("Kurdish (Turkey)")},
+            {qsl("la"), tr("Latin")},
+            {qsl("lb"), tr("Luxembourgish")},
+            {qsl("lb_lu"), tr("Luxembourgish (Luxembourg)")},
+            {qsl("lo"), tr("Lao")},
+            {qsl("lo_la"), tr("Lao (Laos)")},
+            {qsl("lt"), tr("Lithuanian")},
+            {qsl("lt_lt"), tr("Lithuanian (Lithuania)")},
+            {qsl("lv"), tr("Latvian")},
+            {qsl("lv_lv"), tr("Latvian (Latvia)")},
+            {qsl("ml"), tr("Malayalam")},
+            {qsl("ml_in"), tr("Malayalam (India)")},
+            {qsl("mn"), tr("Mongolian")},
+            {qsl("mn_mn"), tr("Mongolian (Mongolia)")},
+            {qsl("nb"), tr("Norwegian Bokmål")},
+            {qsl("nb_no"), tr("Norwegian Bokmål (Norway)")},
+            {qsl("ne"), tr("Nepali")},
+            {qsl("ne_np"), tr("Nepali (Nepal)")},
+            {qsl("nl"), tr("Dutch")},
+            {qsl("nl_an"), tr("Dutch (Netherlands Antilles)")},
+            {qsl("nl_aw"), tr("Dutch (Aruba)")},
+            {qsl("nl_be"), tr("Dutch (Belgium)")},
+            {qsl("nl_nl"), tr("Dutch (Netherlands)")},
+            {qsl("nl_sr"), tr("Dutch (Suriname)")},
+            {qsl("nn"), tr("Norwegian Nynorsk")},
+            {qsl("nn_no"), tr("Norwegian Nynorsk (Norway)")},
+            {qsl("oc"), tr("Occitan")},
+            {qsl("oc_fr"), tr("Occitan (France)")},
+            {qsl("pl"), tr("Polish")},
+            {qsl("pl_pl"), tr("Polish (Poland)")},
+            {qsl("pt"), tr("Portuguese")},
+            {qsl("pt_br"), tr("Portuguese (Brazil)")},
+            {qsl("pt_pt"), tr("Portuguese (Portugal)")},
+            {qsl("ro"), tr("Romanian")},
+            {qsl("ro_ro"), tr("Romanian (Romania)")},
+            {qsl("ru"), tr("Russian")},
+            {qsl("ru_ru"), tr("Russian (Russia)")},
+            {qsl("se"), tr("Northern Sami")},
+            {qsl("se_fi"), tr("Northern Sami (Finland)")},
+            {qsl("se_no"), tr("Northern Sami (Norway)")},
+            {qsl("se_se"), tr("Northern Sami (Sweden)")},
+            //: This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication
+            {qsl("sh"), tr("Shtokavian")},
+            //: This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication
+            {qsl("sh_yu"), tr("Shtokavian (former state of Yugoslavia)")},
+            {qsl("si"), tr("Sinhala")},
+            {qsl("si_lk"), tr("Sinhala (Sri Lanka)")},
+            {qsl("sk"), tr("Slovak")},
+            {qsl("sk_sk"), tr("Slovak (Slovakia)")},
+            {qsl("sl"), tr("Slovenian")},
+            {qsl("sl_si"), tr("Slovenian (Slovenia)")},
+            {qsl("so"), tr("Somali")},
+            {qsl("so_so"), tr("Somali (Somalia)")},
+            {qsl("sq"), tr("Albanian")},
+            {qsl("sq_al"), tr("Albanian (Albania)")},
+            {qsl("sr"), tr("Serbian")},
+            {qsl("sr_me"), tr("Serbian (Montenegro)")},
+            {qsl("sr_rs"), tr("Serbian (Serbia)")},
+            {qsl("sr_latn_rs"), tr("Serbian (Serbia - Latin-alphabet)")},
+            {qsl("sr_yu"), tr("Serbian (former state of Yugoslavia)")},
+            {qsl("ss"), tr("Swati")},
+            {qsl("ss_sz"), tr("Swati (Swaziland)")},
+            {qsl("ss_za"), tr("Swati (South Africa)")},
+            {qsl("sv"), tr("Swedish")},
+            {qsl("sv_se"), tr("Swedish (Sweden)")},
+            {qsl("sv_fi"), tr("Swedish (Finland)")},
+            {qsl("sw"), tr("Swahili")},
+            {qsl("sw_ke"), tr("Swahili (Kenya)")},
+            {qsl("sw_tz"), tr("Swahili (Tanzania)")},
+            {qsl("te"), tr("Telugu")},
+            {qsl("te_in"), tr("Telugu (India)")},
+            {qsl("th"), tr("Thai")},
+            {qsl("th_th"), tr("Thai (Thailand)")},
+            {qsl("ti"), tr("Tigrinya")},
+            {qsl("ti_er"), tr("Tigrinya (Eritrea)")},
+            {qsl("ti_et"), tr("Tigrinya (Ethiopia)")},
+            {qsl("tk"), tr("Turkmen")},
+            {qsl("tk_tm"), tr("Turkmen (Turkmenistan)")},
+            {qsl("tl"), tr("Tagalog")},
+            {qsl("tn"), tr("Tswana")},
+            {qsl("tn_bw"), tr("Tswana (Botswana)")},
+            {qsl("tn_za"), tr("Tswana (South Africa)")},
+            {qsl("tr"), tr("Turkish")},
+            {qsl("tr_tr"), tr("Turkish (Turkey)")},
+            {qsl("ts"), tr("Tsonga")},
+            {qsl("ts_za"), tr("Tsonga (South Africa)")},
+            {qsl("uk"), tr("Ukrainian")},
+            {qsl("uk_ua"), tr("Ukrainian (Ukraine)")},
+            {qsl("uz"), tr("Uzbek")},
+            {qsl("uz_uz"), tr("Uzbek (Uzbekistan)")},
+            {qsl("ve"), tr("Venda")},
+            {qsl("vi"), tr("Vietnamese")},
+            {qsl("vi_vn"), tr("Vietnamese (Vietnam)")},
+            {qsl("vi_daucu"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
+            {qsl("vi_daumoi"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
+            // OpenBSD has the old names, see:
+            // https://github.com/1ec5/hunspell-vi/commit/fecdb355e7c114e1d5ca22fe5b301b2d54af84c9
+            {qsl("vi_x_old"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
+            {qsl("vi_x_new"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
+            {qsl("wa"), tr("Walloon")},
+            {qsl("xh"), tr("Xhosa")},
+            {qsl("yi"), tr("Yiddish")},
+            {qsl("zh"), tr("Chinese")},
+            {qsl("zh_cn"), tr("Chinese (China - simplified)")},
+            {qsl("zh_tw"), tr("Chinese (Taiwan - traditional)")},
+            {qsl("zu"), tr("Zulu")}};
 
     mEncodingNameMap = {
-        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-        {"ASCII", tr("ASCII (Basic)")},
-        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"UTF-8", tr("UTF-8 (Recommended)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"EUC-KR", tr("EUC-KR (Korean)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"GBK", tr("GBK (Chinese)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"GB18030", tr("GB18030 (Chinese)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"BIG5", tr("Big5-ETen (Taiwan)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"BIG5-HKSCS", tr("Big5-HKSCS (Hong Kong)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-1", tr("ISO 8859-1 (Western European)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-2", tr("ISO 8859-2 (Central European)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-3", tr("ISO 8859-3 (South European)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-4", tr("ISO 8859-4 (Baltic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-5", tr("ISO 8859-5 (Cyrillic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-6", tr("ISO 8859-6 (Arabic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-7", tr("ISO 8859-7 (Greek)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-8", tr("ISO 8859-8 (Hebrew Visual)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-9", tr("ISO 8859-9 (Turkish)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-10", tr("ISO 8859-10 (Nordic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-11", tr("ISO 8859-11 (Latin/Thai)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-13", tr("ISO 8859-13 (Baltic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-14", tr("ISO 8859-14 (Celtic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-15", tr("ISO 8859-15 (Western)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"ISO 8859-16", tr("ISO 8859-16 (Romanian)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"CP437", tr("CP437 (OEM Font)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"M_CP437", qsl("m ") % tr("CP437 (OEM Font)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"CP667", tr("CP667 (Mazovia)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"M_CP667", qsl("m ") % tr("CP667 (Mazovia)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"CP737", tr("CP737 (DOS Greek)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"M_CP737", qsl("m ") % tr("CP737 (DOS Greek)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"CP850", tr("CP850 (Western Europe)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"CP866", tr("CP866 (Cyrillic/Russian)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"CP869", tr("CP869 (DOS Greek 2)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"M_CP869",  qsl("m ") % tr("CP869 (DOS Greek 2)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"CP1161", tr("CP1161 (Latin/Thai)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"KOI8-R", tr("KOI8-R (Cyrillic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"KOI8-U", tr("KOI8-U (Cyrillic/Ukrainian)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"MACINTOSH", tr("MACINTOSH")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"M_MEDIEVIA",  qsl("m ") % tr("Medievia {Custom codec for that MUD}")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1250", tr("WINDOWS-1250 (Central European)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1251", tr("WINDOWS-1251 (Cyrillic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1252", tr("WINDOWS-1252 (Western)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1253", tr("WINDOWS-1253 (Greek)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1254", tr("WINDOWS-1254 (Turkish)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1255", tr("WINDOWS-1255 (Hebrew)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1256", tr("WINDOWS-1256 (Arabic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1257", tr("WINDOWS-1257 (Baltic)")},
-                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-                        {"WINDOWS-1258", tr("WINDOWS-1258 (Vietnamese)")}};
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ASCII", tr("ASCII (Basic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"UTF-8", tr("UTF-8 (Recommended)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"EUC-KR", tr("EUC-KR (Korean)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"GBK", tr("GBK (Chinese)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"GB18030", tr("GB18030 (Chinese)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"BIG5", tr("Big5-ETen (Taiwan)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"BIG5-HKSCS", tr("Big5-HKSCS (Hong Kong)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-1", tr("ISO 8859-1 (Western European)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-2", tr("ISO 8859-2 (Central European)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-3", tr("ISO 8859-3 (South European)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-4", tr("ISO 8859-4 (Baltic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-5", tr("ISO 8859-5 (Cyrillic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-6", tr("ISO 8859-6 (Arabic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-7", tr("ISO 8859-7 (Greek)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-8", tr("ISO 8859-8 (Hebrew Visual)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-9", tr("ISO 8859-9 (Turkish)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-10", tr("ISO 8859-10 (Nordic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-11", tr("ISO 8859-11 (Latin/Thai)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-13", tr("ISO 8859-13 (Baltic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-14", tr("ISO 8859-14 (Celtic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-15", tr("ISO 8859-15 (Western)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"ISO 8859-16", tr("ISO 8859-16 (Romanian)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"CP437", tr("CP437 (OEM Font)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"M_CP437", qsl("m ") % tr("CP437 (OEM Font)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"CP667", tr("CP667 (Mazovia)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"M_CP667", qsl("m ") % tr("CP667 (Mazovia)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"CP737", tr("CP737 (DOS Greek)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"M_CP737", qsl("m ") % tr("CP737 (DOS Greek)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"CP850", tr("CP850 (Western Europe)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"CP866", tr("CP866 (Cyrillic/Russian)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"CP869", tr("CP869 (DOS Greek 2)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"M_CP869", qsl("m ") % tr("CP869 (DOS Greek 2)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"CP1161", tr("CP1161 (Latin/Thai)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"KOI8-R", tr("KOI8-R (Cyrillic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"KOI8-U", tr("KOI8-U (Cyrillic/Ukrainian)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"MACINTOSH", tr("MACINTOSH")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"M_MEDIEVIA", qsl("m ") % tr("Medievia {Custom codec for that MUD}")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1250", tr("WINDOWS-1250 (Central European)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1251", tr("WINDOWS-1251 (Cyrillic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1252", tr("WINDOWS-1252 (Western)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1253", tr("WINDOWS-1253 (Greek)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1254", tr("WINDOWS-1254 (Turkish)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1255", tr("WINDOWS-1255 (Hebrew)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1256", tr("WINDOWS-1256 (Arabic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1257", tr("WINDOWS-1257 (Baltic)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"WINDOWS-1258", tr("WINDOWS-1258 (Vietnamese)")}};
 
     /*: This represents the format of the timestamps shown alongside the texts
      * in a console and might require translation for a few locales; the content
@@ -1534,8 +1532,8 @@ void mudlet::loadTranslators(const QString& languageCode)
     if (!mudletTranslatorFileName.isEmpty()) {
         const bool isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
         if (isOk && !pMudletTranslator->isEmpty()) {
-//            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mPathNameMudletTranslations << "/"
-//                                         << mudletTranslatorFileName << "\"...";
+            //            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mPathNameMudletTranslations << "/"
+            //                                         << mudletTranslatorFileName << "\"...";
             qApp->installTranslator(pMudletTranslator);
             mTranslatorsLoadedList.append(pMudletTranslator);
         }
@@ -1549,7 +1547,7 @@ void mudlet::slot_moduleManager()
         return;
     }
     auto moduleManager = pH->mpModuleManager;
-    if (!moduleManager){
+    if (!moduleManager) {
         moduleManager = new dlgModuleManager(this, pH);
         pH->mpModuleManager = moduleManager;
 
@@ -1746,7 +1744,7 @@ void mudlet::slot_toggleAlwaysOnTop()
         setWindowFlags(flags | Qt::WindowStaysOnTopHint);
         dactionToggleAlwaysOnTop->setChecked(true);
     }
-    show();  // Required after changing window flags
+    show(); // Required after changing window flags
 }
 
 void mudlet::slot_minimize()
@@ -1863,7 +1861,7 @@ void mudlet::slot_activateMainWindow()
 {
     raise();
     activateWindow();
-    show(); // Ensure it's not minimized
+    show();             // Ensure it's not minimized
     updateWindowMenu(); // Refresh checkmarks
 }
 
@@ -1883,7 +1881,7 @@ void mudlet::slot_activateDetachedWindow()
             detachedWindow->raise();
             detachedWindow->activateWindow();
             detachedWindow->show(); // Ensure it's not minimized
-            updateWindowMenu(); // Refresh checkmarks
+            updateWindowMenu();     // Refresh checkmarks
         }
     }
 }
@@ -2014,7 +2012,7 @@ void mudlet::updateMultiViewControls()
 {
     const bool isEnabled = (mHostManager.getHostCount() > 1);
 
-    if (mpActionMultiView->isEnabled() != isEnabled){
+    if (mpActionMultiView->isEnabled() != isEnabled) {
         mpActionMultiView->setEnabled(isEnabled);
     }
 
@@ -2033,7 +2031,7 @@ void mudlet::updateMultiViewControls()
 void mudlet::reshowRequiredMainConsoles()
 {
     if (mpTabBar->count() > 1 && mMultiView) {
-        for (const auto& host: mHostManager) {
+        for (const auto& host : mHostManager) {
             if (host->mpConsole) {
                 // Only show consoles that are in the main window, not detached ones
                 const QString profileName = host->getName();
@@ -2149,8 +2147,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     auto pEditor = new dlgTriggerEditor(pH);
     pH->mpEditorDialog = pEditor;
-    connect(pH, &Host::profileSaveStarted,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pH, &Host::profileSaveFinished,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+    connect(pH, &Host::profileSaveStarted, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pH, &Host::profileSaveFinished, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
     pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
@@ -2208,10 +2206,10 @@ void mudlet::slot_timerFires()
     }
     TTimer* pTT = pHost->getTimerUnit()->getTimer(id);
     if (Q_LIKELY(pTT)) {
-// commented out as it will be spammy in normal situations but saved as useful
-// during timer debugging... 8-)
-//        qDebug().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
-//        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
+        // commented out as it will be spammy in normal situations but saved as useful
+        // during timer debugging... 8-)
+        //        qDebug().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
+        //        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
         pTT->execute();
         if (pTT->checkRestart()) {
             pTT->start();
@@ -2743,15 +2741,16 @@ void mudlet::readEarlySettings(const QSettings& settings)
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
-        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage << "\" to a recognised locale, reverting to the POSIX 'C' one.";
+        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage
+                                       << "\" to a recognised locale, reverting to the POSIX 'C' one.";
         return;
     }
 
-// #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
-//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
-// #else
-//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
-// #endif
+    // #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
+    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+    // #else
+    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+    // #endif
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -2787,9 +2786,9 @@ void mudlet::readLateSettings(const QSettings& settings)
     // Qt::WindowActive from the state and then apply the result of combining
     // the stored state - if we are full-screen then the maximised does not have
     // any effect until we leave that:
-    auto state = windowState() & ~(Qt::WindowMaximized|Qt::WindowFullScreen|Qt::WindowActive);
+    auto state = windowState() & ~(Qt::WindowMaximized | Qt::WindowFullScreen | Qt::WindowActive);
     state |= (settings.value(qsl("fullScreen"), false).toBool() ? Qt::WindowFullScreen : Qt::WindowNoState)
-            |(settings.value(qsl("maximized"), false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState);
+             | (settings.value(qsl("maximized"), false).toBool() ? Qt::WindowMaximized : Qt::WindowNoState);
     setWindowState(state);
 
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
@@ -2996,7 +2995,9 @@ void mudlet::slot_showConnectionDialog()
     QStringList packagesToInstall = mInstanceCoordinator->readPackageQueue();
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
-    connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() { enableToolbarButtons(); });
+    connect(mpConnectionDialog, &QDialog::accepted, this, [=, this]() {
+        enableToolbarButtons();
+    });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
 
     // Use a timer to ensure the main window is ready before showing the dialog
@@ -3516,10 +3517,7 @@ void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
 void mudlet::slot_updateShortcuts()
 {
     if (Q_LIKELY(mMenuVisibleState.has_value())) {
-        if ((mMenuBarVisibility == enums::visibleNever
-            || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()))
-           && (!mMenuVisibleState.value()) ) {
-
+        if ((mMenuBarVisibility == enums::visibleNever || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount())) && (!mMenuVisibleState.value())) {
             /*
              * IF   EITHER the menu is NOT to be shown
              *      OR the menu is only to be show when there is no profiles AND there IS one
@@ -3532,10 +3530,7 @@ void mudlet::slot_updateShortcuts()
             return;
         }
 
-        if ((mMenuBarVisibility == enums::visibleAlways
-            || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount()))
-           && (mMenuVisibleState.value()) ) {
-
+        if ((mMenuBarVisibility == enums::visibleAlways || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount())) && (mMenuVisibleState.value())) {
             /*
              * IF   EITHER the menu IS to be shown
              *      OR the menu is only to be show when there is no profiles AND there is NOT one
@@ -3827,11 +3822,8 @@ void mudlet::slot_showMapperDialog()
 
     // Create a new mapper instance for the main window's per-profile dock widget
     // We need to copy player room style details first
-    pHost->getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
-                                   pMap->mPlayerRoomOuterDiameterPercentage,
-                                   pMap->mPlayerRoomInnerDiameterPercentage,
-                                   pMap->mPlayerRoomOuterColor,
-                                   pMap->mPlayerRoomInnerColor);
+    pHost->getPlayerRoomStyleDetails(
+            pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
 
     // Create the mapper dialog
     auto mainMapper = new dlgMapper(newMapDockWidget, pHost, pMap);
@@ -4106,9 +4098,7 @@ void mudlet::slot_replay()
     QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
 
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
-                                                    lastDir,
-                                                    tr("*.dat"));
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), lastDir, tr("*.dat"));
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
@@ -4187,14 +4177,14 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
     hostList.removeDuplicates();
     int loadedProfiles = 0;
 
-    for (auto& hostName : cliProfiles){
+    for (auto& hostName : cliProfiles) {
         if (hostList.contains(hostName)) {
             QElapsedTimer timer;
             timer.start();
             doAutoLogin(hostName);
             hostList.removeOne(hostName);
             loadedProfiles++;
-            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
+            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed() / 1000.0 << "seconds";
         }
     }
 
@@ -4205,14 +4195,14 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
             timer.start();
             doAutoLogin(hostName);
             loadedProfiles++;
-            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed()/1000.0 << "seconds";
+            qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed() / 1000.0 << "seconds";
         }
     }
 
     if (loadedProfiles == 0) {
         slot_showConnectionDialog();
     } else {
-        qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed()/1000.0 << "seconds";
+        qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed() / 1000.0 << "seconds";
     }
 }
 
@@ -4424,7 +4414,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         activateWindow();
     }
 
-    TEvent event {};
+    TEvent event{};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     // A non-zero value is how we send a "true" value - which indicates that
@@ -4473,7 +4463,7 @@ void mudlet::slot_multiView(const bool state)
     }
     mMultiView = state;
     bool foundActiveHost = false;
-    for (const auto &pHost : mHostManager) {
+    for (const auto& pHost : mHostManager) {
         auto console = pHost->mpConsole;
         if (!console) {
             continue;
@@ -4512,7 +4502,7 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
         menuAction->setChecked(state);
     }
 
-    for (const auto &pHost : mHostManager) {
+    for (const auto& pHost : mHostManager) {
         if (state) {
             if (isAPINotGame) {
                 pHost->mpMedia->muteMedia(TMediaData::MediaProtocolAPI);
@@ -4560,13 +4550,10 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
 
                 if (sequence && !sequence->toString().isEmpty()) {
                     const QString seq = sequence->toString(QKeySequence::NativeText);
-                    message = isMediaMuted
-                        ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use \"%1\" to unmute.").arg(seq)
-                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use \"%1\" to mute.").arg(seq);
+                    message = isMediaMuted ? tr("[ INFO ]  - Mudlet and game sounds are muted. Use \"%1\" to unmute.").arg(seq)
+                                           : tr("[ INFO ]  - Mudlet and game sounds are unmuted. Use \"%1\" to mute.").arg(seq);
                 } else {
-                    message = isMediaMuted
-                        ? tr("[ INFO ]  - Mudlet and game sounds are muted.")
-                        : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
+                    message = isMediaMuted ? tr("[ INFO ]  - Mudlet and game sounds are muted.") : tr("[ INFO ]  - Mudlet and game sounds are unmuted.");
                 }
 
                 pHost->postMessage(message);
@@ -4621,8 +4608,7 @@ void mudlet::slot_compactInputLine(const bool state)
         mpCurrentActiveHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
         if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line"));
-                state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
-
+            state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
             mpCurrentActiveHost->postMessage(infoMsg);
@@ -4675,11 +4661,11 @@ void mudlet::slot_toggleFullScreenView()
     if (state & Qt::WindowFullScreen) {
         // Need to remove the Qt::WindowFullScreen AND Qt::WindowActive from the
         // state and then apply the result
-        setWindowState(state & ~(Qt::WindowFullScreen|Qt::WindowActive));
+        setWindowState(state & ~(Qt::WindowFullScreen | Qt::WindowActive));
     } else {
         // Need to apply the Qt::WindowFullScreen state after removing
         // Qt::WindowActive from the flags we might read:
-        setWindowState((state & ~(Qt::WindowActive))|Qt::WindowFullScreen);
+        setWindowState((state & ~(Qt::WindowActive)) | Qt::WindowFullScreen);
     }
     // Update the controls to reflect the actual state - note that
     // QAction::setChecked(bool) won't cause excution loops as it doesn't
@@ -4874,8 +4860,7 @@ void mudlet::slot_replayTimeChanged()
 {
     // This can get called by a QTimer after mpLabelReplayTime has been destroyed:
     if (mpLabelReplayTime) {
-        mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>")
-                                   .arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+        mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
         mpLabelReplayTime->show();
     }
 }
@@ -4937,7 +4922,7 @@ void mudlet::slot_replaySpeedDown()
 void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown)
 {
     mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : QTextOption::Flag())
-                                           |(isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : QTextOption::Flag()));
+                                            | (isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : QTextOption::Flag()));
     emit signal_editorTextOptionsChanged(mEditorTextOptions);
 }
 
@@ -4958,7 +4943,8 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     if (!archive) {
         zip_error_t error;
         zip_error_init_with_code(&error, err);
-        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - failed to unzip file, error: \"" << zip_error_strerror(&error) << "\"";
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - failed to unzip file, error: \""
+                                       << zip_error_strerror(&error) << "\"";
         zip_error_fini(&error);
         return false;
     }
@@ -5051,7 +5037,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 
     err = zip_close(archive);
     if (err) {
-        zip_error_t *error = zip_get_error(archive);
+        zip_error_t* error = zip_get_error(archive);
         qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
         zip_error_fini(error);
         zip_discard(archive);
@@ -5390,8 +5376,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     pUpdateMenu->insertAction(nullptr, mpActionAbout);
     // We can then add in the new item to give access the update(s)
     //: Review update(s) menu item, %n is the count of how many updates are available
-    auto pActionReview = pUpdateMenu->addAction(tr("Review %n update(s)...", nullptr, updateCount),
-                                                this, &mudlet::slot_manualUpdateCheck);
+    auto pActionReview = pUpdateMenu->addAction(tr("Review %n update(s)...", nullptr, updateCount), this, &mudlet::slot_manualUpdateCheck);
     //: Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here
     pActionReview->setToolTip(utils::richText(tr("Review the update(s) available...", nullptr, updateCount)));
     // Override the default hide tooltips state:
@@ -5483,7 +5468,8 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
             pHost->mProfileLoadError = message;
             //: %1 is the path and file name (i.e. the location) of the problem fil
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
-            "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
+                                  "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.")
+                                       .arg(file.fileName()));
 
             qDebug().nospace().noquote() << "mudlet::loadProfile(" << profile_name << ", " << playOnline << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
         } else {
@@ -5582,8 +5568,8 @@ std::string mudlet::replaceString(std::string subject, const std::string& search
 {
     size_t pos = 0;
     while ((pos = subject.find(search, pos)) != std::string::npos) {
-         subject.replace(pos, search.length(), replace);
-         pos += replace.length();
+        subject.replace(pos, search.length(), replace);
+        pos += replace.length();
     }
     return subject;
 }
@@ -5631,8 +5617,7 @@ bool mudlet::migratePasswordsToSecureStorage()
 
     mStorePasswordsSecurely = true;
 
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath))
-                                   .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     bool anyMigrationNeeded = false;
 
@@ -5646,9 +5631,11 @@ bool mudlet::migratePasswordsToSecureStorage()
                 // that users may still have installed alongside development builds
                 if (isVersionAtLeast(qsl("4.20.0"))) {
                     deleteProfileData(profile, qsl("password"));
-                    qDebug().nospace().noquote() << "mudlet::migratePasswordsToSecureStorage() INFO - migrated password for profile \"" << profile << "\" from old format and cleaned up legacy storage.";
+                    qDebug().nospace().noquote() << "mudlet::migratePasswordsToSecureStorage() INFO - migrated password for profile \"" << profile
+                                                 << "\" from old format and cleaned up legacy storage.";
                 } else {
-                    qDebug().nospace().noquote() << "mudlet::migratePasswordsToSecureStorage() INFO - migrated password for profile \"" << profile << "\" from old format (legacy storage preserved for compatibility).";
+                    qDebug().nospace().noquote() << "mudlet::migratePasswordsToSecureStorage() INFO - migrated password for profile \"" << profile
+                                                 << "\" from old format (legacy storage preserved for compatibility).";
                 }
                 anyMigrationNeeded = true;
             } else {
@@ -5693,9 +5680,11 @@ bool mudlet::migratePasswordsToProfileStorage()
             // This prevents breaking compatibility with older Mudlet versions
             if (isVersionAtLeast(qsl("4.20.0"))) {
                 CredentialManager::removeCredential(profile, "character");
-                qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile << "\" to profile storage and cleaned up secure storage.";
+                qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile
+                                             << "\" to profile storage and cleaned up secure storage.";
             } else {
-                qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile << "\" to profile storage (secure storage preserved for compatibility).";
+                qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile
+                                             << "\" to profile storage (secure storage preserved for compatibility).";
             }
         }
 
@@ -5739,14 +5728,15 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
         // Only delete from secure storage if this version is >= 4.20.0
         // This prevents breaking compatibility with older Mudlet versions
         if (isVersionAtLeast(qsl("4.20.0"))) {
-            auto *deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
+            auto* deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
             deleteJob->setAutoDelete(true);
             deleteJob->setKey(profileName);
             deleteJob->setProperty("profile", profileName);
             deleteJob->start();
             qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage() INFO - migrated password for profile \"" << profileName << "\" and cleaned up legacy keychain storage.";
         } else {
-            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage() INFO - migrated password for profile \"" << profileName << "\" (legacy keychain storage preserved for compatibility).";
+            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage() INFO - migrated password for profile \"" << profileName
+                                         << "\" (legacy keychain storage preserved for compatibility).";
         }
     }
     mProfilePasswordsToMigrate.removeAll(profileName);
@@ -5766,7 +5756,8 @@ void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
     if (job->error()) {
         const auto error = job->errorString();
         if (error != qsl("Entry not found") && error != qsl("No match")) {
-            qWarning().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage(...) ERROR - could not migrate character password for \"" << characterName << "\" in profile \"" << profileName << "\"; error was: " << error << ".";
+            qWarning().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage(...) ERROR - could not migrate character password for \"" << characterName << "\" in profile \""
+                                           << profileName << "\"; error was: " << error << ".";
         }
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
@@ -5778,15 +5769,17 @@ void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
         // Only delete from QtKeychain if this version is >= 4.20.0
         // This prevents breaking compatibility with older Mudlet versions
         if (isVersionAtLeast(qsl("4.20.0"))) {
-            auto *deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
+            auto* deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
             deleteJob->setAutoDelete(true);
             deleteJob->setKey(characterName);
             deleteJob->setProperty("profile", profileName);
             deleteJob->setProperty("character", characterName);
             deleteJob->start();
-            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage() INFO - migrated character password for \"" << characterName << "\" in profile \"" << profileName << "\" and cleaned up legacy keychain storage.";
+            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage() INFO - migrated character password for \"" << characterName << "\" in profile \"" << profileName
+                                         << "\" and cleaned up legacy keychain storage.";
         } else {
-            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage() INFO - migrated character password for \"" << characterName << "\" in profile \"" << profileName << "\" (legacy keychain storage preserved for compatibility).";
+            qDebug().nospace().noquote() << "mudlet::slot_passwordMigratedToSecureStorage() INFO - migrated character password for \"" << characterName << "\" in profile \"" << profileName
+                                         << "\" (legacy keychain storage preserved for compatibility).";
         }
     }
 
@@ -5913,11 +5906,11 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
                                            << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
         } else {
 #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
-            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
-                                         << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " ("
+                                         << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
 #else
-            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
-                                         << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " ("
+                                         << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
 #endif
         }
         loadTranslators(languageCode);
@@ -5936,7 +5929,7 @@ QString mudlet::autodetectPreferredLanguage()
 {
     // en_GB is a temporary special exception due to its likeness to en_US, while its
     // translation is still only at 20%
-    QVector<QString> availableQualityTranslations {qsl("en_GB")};
+    QVector<QString> availableQualityTranslations{qsl("en_GB")};
     for (auto& code : getAvailableTranslationCodes()) {
         auto& translation = mTranslationsMap[code];
         if (translation.fromResourceFile()) {
@@ -5961,7 +5954,7 @@ QString mudlet::autodetectPreferredLanguage()
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash<QString, unsigned int>&gc, QStringList& wl)
+bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash<QString, unsigned int>& gc, QStringList& wl)
 {
     QFile dict(dictionaryPath);
     if (!dict.exists()) {
@@ -5969,7 +5962,7 @@ bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash
     }
 
     // First update the line count in the list of words
-    if (!dict.open(QFile::ReadOnly|QFile::Text)) {
+    if (!dict.open(QFile::ReadOnly | QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::scanDictionaryFile(...) ERROR - failed to open dictionary file (for reading): \"" << dict.fileName() << "\" reason: " << dict.errorString();
         return false;
     }
@@ -6037,7 +6030,7 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
     // QFile::WriteOnly automatically implies QFile::Truncate in the absence of
     // certain other flags:
     QSaveFile dict(dictionaryPath);
-    if (!dict.open(QFile::WriteOnly|QFile::Text)) {
+    if (!dict.open(QFile::WriteOnly | QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::overwriteDictionaryFile(...) ERROR - failed to open dictionary file (for writing): \"" << dict.fileName() << "\" reason: " << dict.errorString();
         return false;
     }
@@ -6045,8 +6038,8 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
     QTextStream ds(&dict);
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
-      ds << QChar(QChar::LineFeed);
-      ds << wl.join(QChar::LineFeed).toUtf8();
+        ds << QChar(QChar::LineFeed);
+        ds << wl.join(QChar::LineFeed).toUtf8();
     }
     ds.flush();
     dict.commit();
@@ -6059,10 +6052,10 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
 }
 
 // Returns -1 on significant failure (where the caller will have to bail out)
-int mudlet::getDictionaryWordCount(const QString &dictionaryPath)
+int mudlet::getDictionaryWordCount(const QString& dictionaryPath)
 {
     QFile dict(dictionaryPath);
-    if (!dict.open(QFile::ReadOnly|QFile::Text)) {
+    if (!dict.open(QFile::ReadOnly | QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dict.fileName() << "\" reason: " << dict.errorString();
         return -1;
     }
@@ -6109,7 +6102,7 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
 
     QSaveFile aff(affixPath);
     // Finally, having got the needed content, write it out:
-    if (!aff.open(QFile::WriteOnly|QFile::Text)) {
+    if (!aff.open(QFile::WriteOnly | QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to open affix file (for writing): \"" << aff.fileName() << "\" reason: " << aff.errorString();
         return false;
     }
@@ -6295,7 +6288,7 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Saved an extra " << wordCount - oldWordCount << " words in dictionary.";
     } else if (wordCount < oldWordCount) {
-        qDebug().nospace().noquote() << "  Saved " << oldWordCount - wordCount  << " fewer words in dictionary.";
+        qDebug().nospace().noquote() << "  Saved " << oldWordCount - wordCount << " fewer words in dictionary.";
     } else {
         qDebug().nospace().noquote() << "  No change in the number of words saved in dictionary.";
     }
@@ -6356,7 +6349,7 @@ std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QS
     }
 
     if (!QFile::copy(newIconPath, profileIconPath)) {
-        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath<< " to" << profileIconPath;
+        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath << " to" << profileIconPath;
         return {false, qsl("couldn't copy icon file into new location")};
     }
 
@@ -6468,7 +6461,7 @@ void mudlet::activateProfile(Host* pHost)
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
         // Tell the old profile that it is losing focus:
-        TEvent focusLostEvent {};
+        TEvent focusLostEvent{};
         focusLostEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
         // Boolean arguments are carried as "0" for false or "1" for true,
         // This is for the profile that is losing focus:
@@ -6542,7 +6535,7 @@ void mudlet::activateProfile(Host* pHost)
     menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
 
     // Tell the new profile that it is gaining focus via a Mudlet event:
-    TEvent focusGainedEvent {};
+    TEvent focusGainedEvent{};
     focusGainedEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
     focusGainedEvent.mArgumentList << QLatin1String("1");
     focusGainedEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
@@ -6598,7 +6591,7 @@ void mudlet::setupTrayIcon()
     auto menu = new QMenu(this);
     auto hideTrayAction = new QAction(tr("Hide tray icon"), this);
     connect(hideTrayAction, &QAction::triggered, this, [=, this]() {
-       mTrayIcon.hide();
+        mTrayIcon.hide();
     });
     menu->addAction(hideTrayAction);
     auto exitAction = new QAction(tr("Quit Mudlet"), this);
@@ -6621,7 +6614,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
             auto name = pWidget->property("HostName").toString();
             widgetMap.insert(name, pWidget);
         } else {
-            qWarning().nospace().noquote() << "mudlet::slot_tabMoved(" << oldPos<< ", " << newPos << ") WARNING - nullptr for pointer to TMainConsole at 'profileIndex': " << profileIndex << ".";
+            qWarning().nospace().noquote() << "mudlet::slot_tabMoved(" << oldPos << ", " << newPos << ") WARNING - nullptr for pointer to TMainConsole at 'profileIndex': " << profileIndex << ".";
         }
     }
     // Now go through all the names, pull the associated TMainConsoles from the
@@ -6658,7 +6651,7 @@ void mudlet::refreshTabBar()
 void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName)
 {
     const QHash<QString, QStringList> defaultScripts = {
-        // clang-format off
+            // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
         {qsl(":/run-lua-code.mpackage"),             {qsl("*")}},
         {qsl(":/echo.mpackage"),                     {qsl("*")}},
@@ -6680,7 +6673,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
                                                       qsl("starmourn.com"),
                                                       qsl("stickmud.com")}},
         {qsl(":/MedBootstrap.xml"),                  {qsl("medievia.com")}}
-        // clang-format on
+            // clang-format on
     };
 
     QHashIterator<QString, QStringList> i(defaultScripts);
@@ -6753,8 +6746,8 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 #else
     if (const bool layEasterEgg = (now.date().month() == 4
                         && now.date().day() == 1); layEasterEgg) {
-#endif // ! DEBUG_EASTER_EGGS
-        // clang-format on
+#endif // ! DEBUG_EASTER_EGGS                                                                                                                                                                                \
+        // clang-format on                                                                                                                                                                             \
         // Set to one more than the highest number Mudlet_splashscreen_other_NN.png:
         auto egg = QRandomGenerator::global()->bounded(24);
         if (egg) {
@@ -6762,21 +6755,17 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
             return QImage(eggFileName);
         }
         // For the zeroth case just rotate the picture 180 degrees:
-        const QImage original(releaseVersion
-                                ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                                : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
-                                                                 : qsl(":/splash/Mudlet_splashscreen_development.png"));
+        const QImage original(releaseVersion ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                              : testVersion  ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                             : qsl(":/splash/Mudlet_splashscreen_development.png"));
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-        return original.flipped(Qt::Horizontal|Qt::Vertical);
+        return original.flipped(Qt::Horizontal | Qt::Vertical);
 #else
         // Deprecated in 6.9 and due for removal in 6.13:
         return original.mirrored(true, true);
 #endif
     }
-    return QImage(releaseVersion
-                              ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                              : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
-                                                               : qsl(":/splash/Mudlet_splashscreen_development.png"));
+    return QImage(releaseVersion ? qsl(":/splash/Mudlet_splashscreen_main.png") : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png") : qsl(":/splash/Mudlet_splashscreen_development.png"));
 #else
     return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN
@@ -6827,7 +6816,7 @@ bool mudlet::experiencedMudletPlayer()
     QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
     QDateTime sixMonthsAgo = QDateTime::currentDateTime().addMonths(-6);
 
-    for (const QFileInfo &entry : entries) {
+    for (const QFileInfo& entry : entries) {
         if (entry.lastModified() < sixMonthsAgo) {
             cachedResult = true;
             return true;
@@ -6884,8 +6873,7 @@ void mudlet::changeEvent(QEvent* event)
 
 bool mudlet::profileExists(const QString& profileName)
 {
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath))
-                                 .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     if (profiles.contains(profileName, Qt::CaseInsensitive)) {
         return true;
@@ -6901,10 +6889,8 @@ void mudlet::initializeAI()
     mpLlamafileManager = std::make_unique<LlamafileManager>(this);
 
     // Connect signals
-    connect(mpLlamafileManager.get(), &LlamafileManager::statusChanged,
-            this, &mudlet::slot_aiStatusChanged);
-    connect(mpLlamafileManager.get(), &LlamafileManager::processError,
-            this, &mudlet::slot_aiError);
+    connect(mpLlamafileManager.get(), &LlamafileManager::statusChanged, this, &mudlet::slot_aiStatusChanged);
+    connect(mpLlamafileManager.get(), &LlamafileManager::processError, this, &mudlet::slot_aiError);
 
     // Try to find and configure AI model
     if (findAIModel()) {
@@ -6979,13 +6965,8 @@ bool mudlet::findAIModel()
 
     // Search for llamafile executables in common locations
     QStringList searchPaths;
-    searchPaths << QCoreApplication::applicationDirPath()
-                << QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
-                << QStandardPaths::writableLocation(QStandardPaths::DownloadLocation)
-                << getMudletPath(enums::profilesPath)
-                << (getMudletPath(enums::profilesPath) + "/ai")
-                << "/usr/local/bin"
-                << "/opt/llamafile";
+    searchPaths << QCoreApplication::applicationDirPath() << QStandardPaths::writableLocation(QStandardPaths::HomeLocation) << QStandardPaths::writableLocation(QStandardPaths::DownloadLocation)
+                << getMudletPath(enums::profilesPath) << (getMudletPath(enums::profilesPath) + "/ai") << "/usr/local/bin" << "/opt/llamafile";
 
     QString foundPath = LlamafileManager::findLlamafileExecutable(searchPaths);
     if (!foundPath.isEmpty()) {
@@ -7168,14 +7149,11 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     transferDockWidgetToDetachedWindow(profileName, detachedWindow);
 
     // Connect signals
-    connect(detachedWindow, &TDetachedWindow::reattachRequested,
-            this, [this](const QString& profileName) {
-                slot_tabReattachRequested(profileName, -1); // Use default insert index
-            });
-    connect(detachedWindow, &TDetachedWindow::windowClosed,
-            this, &mudlet::slot_detachedWindowClosed);
-    connect(detachedWindow, &TDetachedWindow::profileDetachToWindowRequested,
-            this, &mudlet::slot_profileDetachToWindow);
+    connect(detachedWindow, &TDetachedWindow::reattachRequested, this, [this](const QString& profileName) {
+        slot_tabReattachRequested(profileName, -1); // Use default insert index
+    });
+    connect(detachedWindow, &TDetachedWindow::windowClosed, this, &mudlet::slot_detachedWindowClosed);
+    connect(detachedWindow, &TDetachedWindow::profileDetachToWindowRequested, this, &mudlet::slot_profileDetachToWindow);
 
     // Initialize the toolbar for this profile
     if (pHost) {
@@ -7269,8 +7247,7 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
 
         if (auto* existingConsole = qobject_cast<TMainConsole*>(widget)) {
             if (existingConsole->objectName() == safeProfileName) {
-                qWarning() << "reattachTab: CONFLICT! Main window already has console for" << safeProfileName
-                          << "existing:" << existingConsole << "moving:" << console;
+                qWarning() << "reattachTab: CONFLICT! Main window already has console for" << safeProfileName << "existing:" << existingConsole << "moving:" << console;
                 // Remove the conflicting console
                 existingConsole->setParent(nullptr);
                 existingConsole->hide();
@@ -7437,8 +7414,7 @@ void mudlet::addConsoleToSplitter(TMainConsole* console, int index)
 
     // Safety check: make sure console doesn't have a conflicting parent
     if (console->parentWidget() && console->parentWidget() != mpSplitter_profileContainer) {
-        qWarning() << "addConsoleToSplitter: Console has unexpected parent" << console->parentWidget()
-                   << ", removing from current parent first";
+        qWarning() << "addConsoleToSplitter: Console has unexpected parent" << console->parentWidget() << ", removing from current parent first";
         // Remove from current parent without setting to nullptr
         if (auto* layout = console->parentWidget()->layout()) {
             layout->removeWidget(console);
@@ -7526,9 +7502,7 @@ QIcon mudlet::createConnectionStatusIcon(bool isConnected, bool isConnecting, bo
         painter.setBrush(QColor(220, 50, 50));
         painter.setPen(QPen(QColor(180, 40, 40), 1));
         QPolygon triangle;
-        triangle << QPoint(centerX, centerY - 4)
-                 << QPoint(centerX - 4, centerY + 3)
-                 << QPoint(centerX + 4, centerY + 3);
+        triangle << QPoint(centerX, centerY - 4) << QPoint(centerX - 4, centerY + 3) << QPoint(centerX + 4, centerY + 3);
         painter.drawPolygon(triangle);
     } else if (isConnected) {
         // Green filled circle for connected
@@ -7721,10 +7695,10 @@ void mudlet::moveProfileBetweenDetachedWindows(const QString& profileName, TDeta
     sourceWindow->removeProfile(profileName);
 
     // Important: Reset console properties before moving to ensure proper sizing
-    console->setParent(nullptr);  // Temporarily unparent
+    console->setParent(nullptr); // Temporarily unparent
     console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     console->setMinimumSize(0, 0);
-    console->setMaximumSize(16777215, 16777215);  // Qt's maximum size
+    console->setMaximumSize(16777215, 16777215); // Qt's maximum size
 
     // Ensure console is in a clean state before adding to new window
     console->hide();
@@ -7889,8 +7863,7 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
         QWidget* widget = mpSplitter_profileContainer->widget(i);
         if (auto* existingConsole = qobject_cast<TMainConsole*>(widget)) {
             if (existingConsole->objectName() == profileName) {
-                qWarning() << "moveProfileFromDetachedToMainWindow: CONFLICT! Main window already has console for" << profileName
-                          << "existing:" << existingConsole << "moving:" << console;
+                qWarning() << "moveProfileFromDetachedToMainWindow: CONFLICT! Main window already has console for" << profileName << "existing:" << existingConsole << "moving:" << console;
                 // Remove the conflicting console - need to use setParent for splitter widgets
                 existingConsole->setParent(nullptr);
                 existingConsole->hide();
@@ -7970,8 +7943,7 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     // Make sure the moved profile becomes the current active one
     if (pHost && mpCurrentActiveHost != pHost) {
 #if defined(DEBUG_WINDOW_HANDLING)
-        qDebug() << "moveProfileFromDetachedToMainWindow: Current active host is" << (mpCurrentActiveHost ? mpCurrentActiveHost->getName() : "null")
-                 << ", forcing switch to" << pHost->getName();
+        qDebug() << "moveProfileFromDetachedToMainWindow: Current active host is" << (mpCurrentActiveHost ? mpCurrentActiveHost->getName() : "null") << ", forcing switch to" << pHost->getName();
 #endif
         mpCurrentActiveHost = pHost;
     }
@@ -8064,8 +8036,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
     mpCurrentMapDockWidget = nullptr;
 
 #if defined(DEBUG_WINDOW_HANDLING)
-    qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile: Starting for profile" << profileName
-             << "- mMainWindowDockWidgetMap.size():" << mMainWindowDockWidgetMap.size();
+    qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile: Starting for profile" << profileName << "- mMainWindowDockWidgetMap.size():" << mMainWindowDockWidgetMap.size();
 #endif
 
     // Collect dock widgets to process to avoid iterator invalidation
@@ -8097,8 +8068,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
         // Check if the dock widget still exists and is in our map
         if (!dockWidget || !mMainWindowDockWidgetMap.contains(dockKey)) {
 #if defined(DEBUG_WINDOW_HANDLING)
-            qDebug() << "mudlet: Skipping main window dock widget" << dockKey << "- widget exists:" << (dockWidget != nullptr)
-                     << "in map:" << mMainWindowDockWidgetMap.contains(dockKey);
+            qDebug() << "mudlet: Skipping main window dock widget" << dockKey << "- widget exists:" << (dockWidget != nullptr) << "in map:" << mMainWindowDockWidgetMap.contains(dockKey);
 #endif
             continue;
         }
@@ -8115,9 +8085,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                 // Check the user's preference for dock widget visibility
                 bool shouldBeVisible = mMainWindowDockWidgetUserPreference.value(dockKey, false);
 #if defined(DEBUG_WINDOW_HANDLING)
-                qDebug() << "mudlet: Found main window dock widget for current profile" << profileName
-                         << "currently visible:" << dockWidget->isVisible()
-                         << "should be visible:" << shouldBeVisible;
+                qDebug() << "mudlet: Found main window dock widget for current profile" << profileName << "currently visible:" << dockWidget->isVisible() << "should be visible:" << shouldBeVisible;
 #endif
 
                 // Show or hide based on user preference
@@ -8189,10 +8157,8 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
 
 #if defined(DEBUG_WINDOW_HANDLING)
     // Debug output to help track dock widget visibility changes
-    qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile:" << profileName
-             << "- Found visible dock widget:" << currentProfileHasVisibleDockWidget
-             << "- Total dock widgets:" << dockWidgetsToProcess.size()
-             << "- mpCurrentMapDockWidget set:" << (mpCurrentMapDockWidget != nullptr);
+    qDebug() << "mudlet::updateMainWindowDockWidgetVisibilityForProfile:" << profileName << "- Found visible dock widget:" << currentProfileHasVisibleDockWidget
+             << "- Total dock widgets:" << dockWidgetsToProcess.size() << "- mpCurrentMapDockWidget set:" << (mpCurrentMapDockWidget != nullptr);
 #endif
 }
 

@@ -62,7 +62,7 @@ TArea::~TArea()
     }
     if (!mpRoomDB->mBulkDeletionMode) {
         mpRoomDB->removeArea(this);
-     }
+    }
 }
 
 int TArea::getAreaID()
@@ -529,19 +529,45 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         QPair<QString, int> exitData;
         exitData.second = itAreaExit.value().first;
         switch (itAreaExit.value().second) {
-        case DIR_NORTH:     exitData.first = QString("north");                         break;
-        case DIR_NORTHEAST: exitData.first = QString("northeast");                     break;
-        case DIR_NORTHWEST: exitData.first = QString("northwest");                     break;
-        case DIR_SOUTH:     exitData.first = QString("south");                         break;
-        case DIR_WEST:      exitData.first = QString("west");                          break;
-        case DIR_EAST:      exitData.first = QString("east");                          break;
-        case DIR_SOUTHEAST: exitData.first = QString("southeast");                     break;
-        case DIR_SOUTHWEST: exitData.first = QString("southwest");                     break;
-        case DIR_UP:        exitData.first = QString("up");                            break;
-        case DIR_DOWN:      exitData.first = QString("down");                          break;
-        case DIR_IN:        exitData.first = QString("in");                            break;
-        case DIR_OUT:       exitData.first = QString("out");                           break;
-        case DIR_OTHER:     roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());   break;
+        case DIR_NORTH:
+            exitData.first = QString("north");
+            break;
+        case DIR_NORTHEAST:
+            exitData.first = QString("northeast");
+            break;
+        case DIR_NORTHWEST:
+            exitData.first = QString("northwest");
+            break;
+        case DIR_SOUTH:
+            exitData.first = QString("south");
+            break;
+        case DIR_WEST:
+            exitData.first = QString("west");
+            break;
+        case DIR_EAST:
+            exitData.first = QString("east");
+            break;
+        case DIR_SOUTHEAST:
+            exitData.first = QString("southeast");
+            break;
+        case DIR_SOUTHWEST:
+            exitData.first = QString("southwest");
+            break;
+        case DIR_UP:
+            exitData.first = QString("up");
+            break;
+        case DIR_DOWN:
+            exitData.first = QString("down");
+            break;
+        case DIR_IN:
+            exitData.first = QString("in");
+            break;
+        case DIR_OUT:
+            exitData.first = QString("out");
+            break;
+        case DIR_OTHER:
+            roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());
+            break;
         default:
             qWarning("TArea::getAreaExitRoomData() Warning: unrecognised exit code %i found for exit from room %i to room %i.", itAreaExit.value().second, itAreaExit.key(), itAreaExit.value().first);
         }
@@ -578,7 +604,8 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
 int TArea::createLabelId() const
 {
     int labelId = -1;
-    do {} while (mMapLabels.contains(++labelId));
+    do {
+    } while (mMapLabels.contains(++labelId));
     if (labelId < 0) {
         labelId = -1;
     }
@@ -760,15 +787,9 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
         labelObj.insert(QLatin1String("text"), textValue);
     }
 
-    if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
-          && pLabel->fgColor.green() == defaultLabelForeground.green()
-          && pLabel->fgColor.blue() == defaultLabelForeground.blue()
-          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha()
-          && pLabel->bgColor.red() == defaultLabelBackground.red()
-          && pLabel->bgColor.green() == defaultLabelBackground.green()
-          && pLabel->bgColor.blue() == defaultLabelBackground.blue()
-          && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
-
+    if (!(pLabel->fgColor.red() == defaultLabelForeground.red() && pLabel->fgColor.green() == defaultLabelForeground.green() && pLabel->fgColor.blue() == defaultLabelForeground.blue()
+          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha() && pLabel->bgColor.red() == defaultLabelBackground.red() && pLabel->bgColor.green() == defaultLabelBackground.green()
+          && pLabel->bgColor.blue() == defaultLabelBackground.blue() && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
         // For an image the colors are not used and tend to be set to black, if
         // so skip them. Unfortunately because of the way QColour s are
         // assembled the operator== is too picky for our purposes as even the
