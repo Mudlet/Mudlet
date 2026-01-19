@@ -1118,9 +1118,6 @@ function Geyser.Label:new2 (cons, container)
   return me
 end
 
-function fakeFunction()
-end
-
 --- internal function that adds the "More..." scrollbars
 function Geyser.Label:addScrollbars(parent, layout)
   local label = parent.nestedLabels[1]
@@ -1182,19 +1179,6 @@ function Geyser.Label:addChild(cons, container)
   me.nestParent = self
   me:setOnEnter("doNestEnter", me)
   me:setOnLeave("doNestLeave", me)
-
-  if not me.clickCallback then
-    --used in instances where an element only meant to serve as
-    --a nest container is clicked on.  Without this, we get
-    --seg faults
-    me:setClickCallback("fakeFunction")
-  end
-  if not me.releaseCallback then
-    --used in instances where an element only meant to serve as
-    --a nest container is released over.  Without this, we get
-    --seg faults
-    me:setReleaseCallback("fakeFunction")
-  end
 
   me.flyDir = flyDir
   me.layoutDir = layoutDir

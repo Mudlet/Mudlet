@@ -20,9 +20,9 @@
 
 #include "TLinkStore.h"
 #if !defined(LinkStore_Test)
-#include "TBuffer.h"  // For Mudlet::HyperlinkStyling definition
+#include "TBuffer.h" // For Mudlet::HyperlinkStyling definition
 #include "Host.h"
-#include "utils.h"    // For qsl() macro
+#include "utils.h" // For qsl() macro
 #endif
 
 #include <QSet>
@@ -138,9 +138,9 @@ void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
             mSelectionGroupIndex.remove(oldKey, id);
         }
     }
-    
+
     mStylingStore[id] = styling;
-    
+
     // Add new selection group index entry if applicable
     if (styling.selection.hasSelectionSettings) {
         QPair<QString, QString> key = qMakePair(styling.selection.group, styling.selection.value);

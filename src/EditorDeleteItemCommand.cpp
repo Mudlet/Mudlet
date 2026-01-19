@@ -31,7 +31,9 @@
 #include <algorithm>
 
 EditorDeleteItemCommand::EditorDeleteItemCommand(EditorViewType viewType, const QList<DeletedItemInfo>& deletedItems, Host* host)
-: EditorCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host), mViewType(viewType), mDeletedItems(deletedItems)
+: EditorCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host)
+, mViewType(viewType)
+, mDeletedItems(deletedItems)
 {
 }
 
@@ -67,7 +69,9 @@ void EditorDeleteItemCommand::undo()
                 canRestore = true;
             } else {
                 // Check if parent was also deleted
-                bool parentWasDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&item](const DeletedItemInfo& info) { return info.itemID == item.parentID; });
+                bool parentWasDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&item](const DeletedItemInfo& info) {
+                    return info.itemID == item.parentID;
+                });
                 if (parentWasDeleted) {
                     // Parent was deleted - check if it's already been processed
                     if (processedIDs.contains(item.parentID)) {
@@ -130,7 +134,9 @@ void EditorDeleteItemCommand::undo()
         }
 
         // Find the corresponding item in mDeletedItems to update the ID
-        auto it = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) { return item.itemName == info.itemName && item.parentID == info.parentID; });
+        auto it = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) {
+            return item.itemName == info.itemName && item.parentID == info.parentID;
+        });
         if (it == mDeletedItems.end()) {
 #if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorDeleteItemCommand::undo() - Could not find item in original list:" << info.itemName << "with parentID=" << info.parentID;
@@ -722,7 +728,9 @@ void EditorDeleteItemCommand::redo()
         // Skip items whose parent is also in the deletion list
         // (they will be automatically deleted when the parent is deleted)
         if (info.parentID != -1) {
-            bool parentBeingDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) { return item.itemID == info.parentID; });
+            bool parentBeingDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) {
+                return item.itemID == info.parentID;
+            });
             if (parentBeingDeleted) {
                 continue; // Skip this item - it will be deleted by its parent
             }
@@ -736,9 +744,7 @@ void EditorDeleteItemCommand::redo()
             }
             if (trigger->getName() != info.itemName) {
 #if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::redo() - Trigger ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << trigger->getName()
-                           << "- not deleting";
+                qWarning() << "EditorDeleteItemCommand::redo() - Trigger ID" << info.itemID << "name changed from" << info.itemName << "to" << trigger->getName() << "- not deleting";
 #endif
                 break;
             }
@@ -754,9 +760,7 @@ void EditorDeleteItemCommand::redo()
             }
             if (alias->getName() != info.itemName) {
 #if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::redo() - Alias ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << alias->getName()
-                           << "- not deleting";
+                qWarning() << "EditorDeleteItemCommand::redo() - Alias ID" << info.itemID << "name changed from" << info.itemName << "to" << alias->getName() << "- not deleting";
 #endif
                 break;
             }
@@ -772,9 +776,7 @@ void EditorDeleteItemCommand::redo()
             }
             if (timer->getName() != info.itemName) {
 #if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::redo() - Timer ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << timer->getName()
-                           << "- not deleting";
+                qWarning() << "EditorDeleteItemCommand::redo() - Timer ID" << info.itemID << "name changed from" << info.itemName << "to" << timer->getName() << "- not deleting";
 #endif
                 break;
             }
@@ -790,9 +792,7 @@ void EditorDeleteItemCommand::redo()
             }
             if (script->getName() != info.itemName) {
 #if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::redo() - Script ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << script->getName()
-                           << "- not deleting";
+                qWarning() << "EditorDeleteItemCommand::redo() - Script ID" << info.itemID << "name changed from" << info.itemName << "to" << script->getName() << "- not deleting";
 #endif
                 break;
             }
@@ -808,9 +808,7 @@ void EditorDeleteItemCommand::redo()
             }
             if (key->getName() != info.itemName) {
 #if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::redo() - Key ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << key->getName()
-                           << "- not deleting";
+                qWarning() << "EditorDeleteItemCommand::redo() - Key ID" << info.itemID << "name changed from" << info.itemName << "to" << key->getName() << "- not deleting";
 #endif
                 break;
             }
@@ -826,9 +824,7 @@ void EditorDeleteItemCommand::redo()
             }
             if (action->getName() != info.itemName) {
 #if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::redo() - Action ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << action->getName()
-                           << "- not deleting";
+                qWarning() << "EditorDeleteItemCommand::redo() - Action ID" << info.itemID << "name changed from" << info.itemName << "to" << action->getName() << "- not deleting";
 #endif
                 break;
             }

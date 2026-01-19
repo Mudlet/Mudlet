@@ -29,13 +29,13 @@
 #include "mudlet.h"
 
 TKey::TKey(TKey* parent, Host* pHost)
-: Tree<TKey>( parent )
+: Tree<TKey>(parent)
 , mpHost(pHost)
 {
 }
 
 TKey::TKey(QString name, Host* pHost)
-: Tree<TKey>( nullptr )
+: Tree<TKey>(nullptr)
 , mpHost(pHost)
 , mName(name)
 {

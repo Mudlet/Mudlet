@@ -82,7 +82,7 @@ bool TMxpNodeBuilder::acceptTag(char ch)
 
     if (ch == '<') { // reset
         if (!mIsInsideTag) {
-        resetCurrentTag();
+            resetCurrentTag();
         }
         if (!mRawTagContent.empty() && mRawTagContent.back() == '<') {
             mRawTagContent.pop_back();

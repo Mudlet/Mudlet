@@ -39,6 +39,7 @@ class TScript : public Tree<TScript>
     friend class XMLimport;
     friend class DeleteItemCommand;
     friend class EditorDeleteItemCommand;
+    friend class ScriptUnit;
 
 public:
     virtual ~TScript();

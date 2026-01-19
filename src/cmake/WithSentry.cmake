@@ -21,7 +21,7 @@ set(SENTRY_COMMON_ARGS
     -DCMAKE_CXX_COMPILER=clang++
     -DSENTRY_BACKEND=crashpad
     -DSENTRY_BUILD_SHARED_LIBS=OFF
-    -DSENTRY_INTEGRATION_QT=OFF
+    -DSENTRY_INTEGRATION_QT=ON
     -G Ninja
 )
 
@@ -94,17 +94,27 @@ target_include_directories(${LIB_MUDLET_TARGET} PRIVATE
 target_link_directories(${LIB_MUDLET_TARGET} PUBLIC
     "${SENTRY_PATH}/install_without_transport/lib/"
 )
-target_link_libraries(${LIB_MUDLET_TARGET}
-    sentry
-    crashpad_client
-    crashpad_handler_lib
-    crashpad_minidump
-    crashpad_mpack
-    crashpad_snapshot
-    crashpad_tools
-    crashpad_util
-    mini_chromium
-)
+# The sentry Qt integration needs qInstallMessageHandler from Qt6::Core.
+# CMake de-duplicates Qt6::Core, placing it before sentry in the link order.
+# LINK_GROUP:RESCAN makes the linker scan repeatedly until all references resolve.
+if(NOT APPLE)
+    target_link_libraries(${LIB_MUDLET_TARGET}
+        "$<LINK_GROUP:RESCAN,sentry,crashpad_client,crashpad_handler_lib,crashpad_minidump,crashpad_mpack,crashpad_snapshot,crashpad_tools,crashpad_util,mini_chromium,Qt6::Core>"
+    )
+else()
+    # macOS linker doesn't support RESCAN (--start-group/--end-group)
+    target_link_libraries(${LIB_MUDLET_TARGET}
+        sentry
+        crashpad_client
+        crashpad_handler_lib
+        crashpad_minidump
+        crashpad_mpack
+        crashpad_snapshot
+        crashpad_tools
+        crashpad_util
+        mini_chromium
+    )
+endif()
 
 if(APPLE)
     target_link_libraries(${LIB_MUDLET_TARGET} bsm)
