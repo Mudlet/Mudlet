@@ -33,7 +33,7 @@
 TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget(pW)
 , mpTAction(pA)
-, mpWidget( new QWidget( this ) )
+, mpWidget(new QWidget(this))
 , mpHost(pHost)
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
@@ -76,7 +76,7 @@ void TToolBar::setName(const QString& name)
 
 void TToolBar::moveEvent(QMoveEvent* e)
 {
-    if (!mpTAction||mpHost.isNull()) {
+    if (!mpTAction || mpHost.isNull()) {
         return;
     }
 
@@ -184,7 +184,7 @@ void TToolBar::finalize()
 // now retrieve the button state to ensure the visible representation is used.
 void TToolBar::slot_pressed(const bool isChecked)
 {
-    auto * pB = dynamic_cast<TFlipButton*>(sender());
+    auto* pB = dynamic_cast<TFlipButton*>(sender());
     if (!pB) {
         return;
     }
@@ -203,7 +203,7 @@ void TToolBar::slot_pressed(const bool isChecked)
         mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
     } else {
         pA->mButtonState = false;
-        pB->setChecked(false);                   // This does NOT invoke the clicked()!
+        pB->setChecked(false);               // This does NOT invoke the clicked()!
         mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
     }
 

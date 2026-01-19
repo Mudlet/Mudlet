@@ -88,8 +88,7 @@ int TLuaInterpreter::connectToServer(lua_State* L)
     if (!lua_isnoneornil(L, 2)) {
         port = getVerifiedInt(L, __func__, 2, "port number {default = 23}", true);
         if (port > 65535 || port < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "invalid port number %1 given, if supplied it must be in range 1 to 65535, {defaults to 23 if not provided}").arg(port));
+            return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535, {defaults to 23 if not provided}").arg(port));
         }
     }
 
@@ -145,8 +144,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
         raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
         if (mudlet::smDebugMode) {
             auto& lHost = getHostFromLua(L);
-            TDebug(Qt::white, Qt::blue) << "downloadFile: " << bytesDownloaded << "/" << totalBytes
-                                        << " bytes ready for " << reply->url().toString() << "\n" >> &lHost;
+            TDebug(Qt::white, Qt::blue) << "downloadFile: " << bytesDownloaded << "/" << totalBytes << " bytes ready for " << reply->url().toString() << "\n" >> &lHost;
         }
     });
 
@@ -160,7 +158,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConnectionInfo
-int TLuaInterpreter::getConnectionInfo(lua_State *L)
+int TLuaInterpreter::getConnectionInfo(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
 
@@ -424,13 +422,13 @@ int TLuaInterpreter::openIRC(lua_State* L)
     if (!pHost) {
         return warnArgumentValue(L, __func__, "no host found");
     }
-    
+
     if (!pHost->mpDlgIRC) {
         pHost->mpDlgIRC = new dlgIRC(pHost);
     }
     pHost->mpDlgIRC->raise();
     pHost->mpDlgIRC->show();
-    
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -479,15 +477,13 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
 int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendTelnetChannel102: bad argument #1 type (message bytes {2 characters} as string expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "sendTelnetChannel102: bad argument #1 type (message bytes {2 characters} as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     const std::string msg = lua_tostring(L, 1);
     if (msg.length() != 2) {
-        return warnArgumentValue(L, __func__, qsl(
-            "invalid message of length %1 supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)")
-            .arg(msg.length()));
+        return warnArgumentValue(
+                L, __func__, qsl("invalid message of length %1 supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)").arg(msg.length()));
     }
 
     std::string output;
@@ -588,7 +584,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
     }
     if (args > 3) {
-            password = getVerifiedString(L, __func__, 4, "server password", true);
+        password = getVerifiedString(L, __func__, 4, "server password", true);
     }
 
     Host* pHost = &getHostFromLua(L);
@@ -677,7 +673,7 @@ int TLuaInterpreter::putHTTP(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#deleteHTTP
-int TLuaInterpreter::deleteHTTP(lua_State *L)
+int TLuaInterpreter::deleteHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
@@ -698,7 +694,6 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
         while (lua_next(L, 2) != 0) {
             // key at index -2 and value at index -1
             if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,
@@ -730,4 +725,3 @@ int TLuaInterpreter::customHTTP(lua_State* L)
     auto customMethod = getVerifiedString(L, __func__, 1, "http method");
     return performHttpRequest(L, __func__, 1, QNetworkAccessManager::CustomOperation, customMethod);
 }
-

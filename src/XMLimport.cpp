@@ -147,10 +147,10 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     // Minor check is not currently relevant, just abort on 2.000f or more
 
                     const QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
-                                         "\"%1\"\n"
-                                         "reports it has a version (%2) it must have come from a later Mudlet version,\n"
-                                         "and this one cannot read it, you need a newer Mudlet!")
-                                              .arg(pfile->fileName(), versionString);
+                                               "\"%1\"\n"
+                                               "reports it has a version (%2) it must have come from a later Mudlet version,\n"
+                                               "and this one cannot read it, you need a newer Mudlet!")
+                                                    .arg(pfile->fileName(), versionString);
                     mpHost->postMessage(moanMsg);
                     return {false, moanMsg};
                 }
@@ -491,11 +491,10 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             // depending on the value (I.R.E. MUD maps always uses "1" for "door"
             // and/or "hidden" - though the latter does not always appear with
             // former):
-            const int door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1)
-                    ? 3
-                    : (attributes().hasAttribute(qsl("door")) && attributes().value(qsl("door")).toString().toInt() >= 0 && attributes().value(qsl("door")).toString().toInt() <= 3)
-                      ? attributes().value(qsl("door")).toString().toInt()
-                      : 0;
+            const int door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1) ? 3
+                             : (attributes().hasAttribute(qsl("door")) && attributes().value(qsl("door")).toString().toInt() >= 0 && attributes().value(qsl("door")).toString().toInt() <= 3)
+                                     ? attributes().value(qsl("door")).toString().toInt()
+                                     : 0;
             if (dir.isEmpty()) {
                 if (attributes().value(qsl("special")).toString().toInt() == 1 && !attributes().value(qsl("command")).toString().isEmpty()) {
                     // This is how IRE XML maps mark special exits, rather than
@@ -548,9 +547,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                 continue;
             }
 
-            pT->setCoordinates(attributes().value(qsl("x")).toString().toInt(),
-                               attributes().value(qsl("y")).toString().toInt(),
-                               attributes().value(qsl("z")).toString().toInt());
+            pT->setCoordinates(attributes().value(qsl("x")).toString().toInt(), attributes().value(qsl("y")).toString().toInt(), attributes().value(qsl("z")).toString().toInt());
             continue;
         } else if (name() == qsl("features")) {
             readRoomFeatures(pT);
@@ -1177,56 +1174,56 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
 {
     // Simple colors (no alpha channel)
     static const QHash<QString, QColor Host::*> simpleColors = {
-        {qsl("mCommandLineFgColor"), &Host::mCommandLineFgColor},
-        {qsl("mCommandLineBgColor"), &Host::mCommandLineBgColor},
-        {qsl("mFgColor"), &Host::mFgColor},
-        {qsl("mBgColor"), &Host::mBgColor},
-        {qsl("mCommandFgColor"), &Host::mCommandFgColor},
-        {qsl("mCommandBgColor"), &Host::mCommandBgColor},
-        {qsl("mBlack"), &Host::mBlack},
-        {qsl("mLightBlack"), &Host::mLightBlack},
-        {qsl("mRed"), &Host::mRed},
-        {qsl("mLightRed"), &Host::mLightRed},
-        {qsl("mBlue"), &Host::mBlue},
-        {qsl("mLightBlue"), &Host::mLightBlue},
-        {qsl("mGreen"), &Host::mGreen},
-        {qsl("mLightGreen"), &Host::mLightGreen},
-        {qsl("mYellow"), &Host::mYellow},
-        {qsl("mLightYellow"), &Host::mLightYellow},
-        {qsl("mCyan"), &Host::mCyan},
-        {qsl("mLightCyan"), &Host::mLightCyan},
-        {qsl("mMagenta"), &Host::mMagenta},
-        {qsl("mLightMagenta"), &Host::mLightMagenta},
-        {qsl("mWhite"), &Host::mWhite},
-        {qsl("mLightWhite"), &Host::mLightWhite},
-        {qsl("mFgColor2"), &Host::mFgColor_2},
-        {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
-        {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
-        {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
-        {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
-        {qsl("mBlack2"), &Host::mBlack_2},
-        {qsl("mLightBlack2"), &Host::mLightBlack_2},
-        {qsl("mRed2"), &Host::mRed_2},
-        {qsl("mLightRed2"), &Host::mLightRed_2},
-        {qsl("mBlue2"), &Host::mBlue_2},
-        {qsl("mLightBlue2"), &Host::mLightBlue_2},
-        {qsl("mGreen2"), &Host::mGreen_2},
-        {qsl("mLightGreen2"), &Host::mLightGreen_2},
-        {qsl("mYellow2"), &Host::mYellow_2},
-        {qsl("mLightYellow2"), &Host::mLightYellow_2},
-        {qsl("mCyan2"), &Host::mCyan_2},
-        {qsl("mLightCyan2"), &Host::mLightCyan_2},
-        {qsl("mMagenta2"), &Host::mMagenta_2},
-        {qsl("mLightMagenta2"), &Host::mLightMagenta_2},
-        {qsl("mWhite2"), &Host::mWhite_2},
-        {qsl("mLightWhite2"), &Host::mLightWhite_2},
+            {qsl("mCommandLineFgColor"), &Host::mCommandLineFgColor},
+            {qsl("mCommandLineBgColor"), &Host::mCommandLineBgColor},
+            {qsl("mFgColor"), &Host::mFgColor},
+            {qsl("mBgColor"), &Host::mBgColor},
+            {qsl("mCommandFgColor"), &Host::mCommandFgColor},
+            {qsl("mCommandBgColor"), &Host::mCommandBgColor},
+            {qsl("mBlack"), &Host::mBlack},
+            {qsl("mLightBlack"), &Host::mLightBlack},
+            {qsl("mRed"), &Host::mRed},
+            {qsl("mLightRed"), &Host::mLightRed},
+            {qsl("mBlue"), &Host::mBlue},
+            {qsl("mLightBlue"), &Host::mLightBlue},
+            {qsl("mGreen"), &Host::mGreen},
+            {qsl("mLightGreen"), &Host::mLightGreen},
+            {qsl("mYellow"), &Host::mYellow},
+            {qsl("mLightYellow"), &Host::mLightYellow},
+            {qsl("mCyan"), &Host::mCyan},
+            {qsl("mLightCyan"), &Host::mLightCyan},
+            {qsl("mMagenta"), &Host::mMagenta},
+            {qsl("mLightMagenta"), &Host::mLightMagenta},
+            {qsl("mWhite"), &Host::mWhite},
+            {qsl("mLightWhite"), &Host::mLightWhite},
+            {qsl("mFgColor2"), &Host::mFgColor_2},
+            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
+            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
+            {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
+            {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
+            {qsl("mBlack2"), &Host::mBlack_2},
+            {qsl("mLightBlack2"), &Host::mLightBlack_2},
+            {qsl("mRed2"), &Host::mRed_2},
+            {qsl("mLightRed2"), &Host::mLightRed_2},
+            {qsl("mBlue2"), &Host::mBlue_2},
+            {qsl("mLightBlue2"), &Host::mLightBlue_2},
+            {qsl("mGreen2"), &Host::mGreen_2},
+            {qsl("mLightGreen2"), &Host::mLightGreen_2},
+            {qsl("mYellow2"), &Host::mYellow_2},
+            {qsl("mLightYellow2"), &Host::mLightYellow_2},
+            {qsl("mCyan2"), &Host::mCyan_2},
+            {qsl("mLightCyan2"), &Host::mLightCyan_2},
+            {qsl("mMagenta2"), &Host::mMagenta_2},
+            {qsl("mLightMagenta2"), &Host::mLightMagenta_2},
+            {qsl("mWhite2"), &Host::mWhite_2},
+            {qsl("mLightWhite2"), &Host::mLightWhite_2},
     };
 
     // Colors that support alpha channel
     static const QHash<QString, QColor Host::*> alphaColors = {
-        {qsl("mBgColor2"), &Host::mBgColor_2},
-        {qsl("mMapGridColor"), &Host::mMapGridColor},
-        {qsl("mMapInfoBg"), &Host::mMapInfoBg},
+            {qsl("mBgColor2"), &Host::mBgColor_2},
+            {qsl("mMapGridColor"), &Host::mMapGridColor},
+            {qsl("mMapInfoBg"), &Host::mMapInfoBg},
     };
 
     const QString elemName = elementName.toString();
@@ -1843,15 +1840,20 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, con
                         list << num;
                         break;
                     default:
-                        mpHost->postMessage(qsl("[ ERROR ] - \"%1\" as a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\" cannot be understood by this version of Mudlet, is it from a later version? Converting it to a SUBSTRING type so the data can be shown but it will probably not work as expected.").arg(numberText, parentName));
+                        mpHost->postMessage(
+                                qsl("[ ERROR ] - \"%1\" as a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\" cannot be understood by this "
+                                    "version of Mudlet, is it from a later version? Converting it to a SUBSTRING type so the data can be shown but it will probably not work as expected.")
+                                        .arg(numberText, parentName));
                         list << REGEX_SUBSTRING; //Set it to the default type
                     }
 
                 } else {
-                    qWarning(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
-                           numberText.toUtf8().constData(),
-                           parentName.toUtf8().constData());
-                    mpHost->postMessage(qsl("[ ERROR ] - Unable to convert: \"%1\" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\"!").arg(numberText, parentName));
+                    qWarning(
+                            R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
+                            numberText.toUtf8().constData(),
+                            parentName.toUtf8().constData());
+                    mpHost->postMessage(qsl("[ ERROR ] - Unable to convert: \"%1\" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\"!")
+                                                .arg(numberText, parentName));
                     list << REGEX_SUBSTRING; //Just assume most common one
                 }
             } else {
@@ -1913,7 +1915,7 @@ QString XMLimport::readScriptElement()
 }
 
 // Unlike the reverse operation in the XMLexport this can modify the supplied patternList:
-void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<int> & typeList)
+void XMLimport::remapColorsToAnsiNumber(QStringList& patternList, const QList<int>& typeList)
 {
     // The regexp is slightly modified compared to the one we once used to allow
     // it to capture a '-' sign as part of the color numbers as we use -2 for
@@ -1934,7 +1936,8 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
                 int ansibg = TTrigger::scmIgnored;
                 int fg = match.captured(1).toInt(&isFgOk);
                 if (!isFgOk) {
-                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default foreground";
+                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious()
+                             << " setting colour to default foreground";
                     fg = TTrigger::scmDefault;
                 } else {
                     // clang-format off
@@ -1965,7 +1968,8 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
 
                 int bg = match.captured(2).toInt(&isBgOk);
                 if (!isBgOk) {
-                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
+                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious()
+                             << " setting colour to default background";
                     bg = TTrigger::scmDefault;
                 } else {
                     // clang-format off
@@ -2039,7 +2043,6 @@ void XMLimport::readStopWatchMap()
             }
         }
     }
-
 }
 
 void XMLimport::readMapInfoContributor()

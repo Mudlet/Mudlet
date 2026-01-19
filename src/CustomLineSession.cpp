@@ -175,11 +175,11 @@ void CustomLineSession::clearOriginalPoints()
 std::optional<CustomLineSession::LineKey> CustomLineSession::currentLineKey() const
 {
     if (mMapWidget.mCustomLineSelectedRoom > 0 && !mMapWidget.mCustomLineSelectedExit.isEmpty()) {
-        return LineKey { mMapWidget.mCustomLineSelectedRoom, mMapWidget.mCustomLineSelectedExit };
+        return LineKey{mMapWidget.mCustomLineSelectedRoom, mMapWidget.mCustomLineSelectedExit};
     }
 
     if (mMapWidget.mCustomLinesRoomFrom > 0 && !mMapWidget.mCustomLinesRoomExit.isEmpty()) {
-        return LineKey { mMapWidget.mCustomLinesRoomFrom, mMapWidget.mCustomLinesRoomExit };
+        return LineKey{mMapWidget.mCustomLinesRoomFrom, mMapWidget.mCustomLinesRoomExit};
     }
 
     return std::nullopt;
@@ -211,7 +211,7 @@ void CustomLineSession::rememberOriginalLine(const LineKey& key, const QList<QPo
         return;
     }
 
-    mOriginalLine = OriginalLine { key, points };
+    mOriginalLine = OriginalLine{key, points};
 }
 
 void CustomLineSession::snapLineToGrid(LineKey key, QList<QPointF>& points, TRoom& room)
@@ -319,4 +319,3 @@ std::optional<int> CustomLineSession::resolveCustomLineTargetRoomId(const TRoom&
 
     return std::nullopt;
 }
-

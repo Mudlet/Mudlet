@@ -164,12 +164,12 @@ HostManager::Iter::Iter(HostManager* manager, bool at_start)
     }
 }
 
-bool HostManager::Iter::operator== (const Iter& other) const
+bool HostManager::Iter::operator==(const Iter& other) const
 {
     return it == other.it;
 }
 
-bool HostManager::Iter::operator!= (const Iter& other) const
+bool HostManager::Iter::operator!=(const Iter& other) const
 {
     return it != other.it;
 }

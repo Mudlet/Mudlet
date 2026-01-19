@@ -24,18 +24,20 @@
 
 MxpTagAttribute::MxpTagAttribute(const QString& name, const QString& value)
 : QPair<QString, QString>(name, value)
-{}
+{
+}
 
 MxpTagAttribute::MxpTagAttribute(const QString& name)
 : MxpTagAttribute(name, QString())
-{}
+{
+}
 
 MxpTagAttribute::MxpTagAttribute()
 : QPair<QString, QString>()
-{}
+{
+}
 
-MxpTagAttribute::~MxpTagAttribute()
-{}
+MxpTagAttribute::~MxpTagAttribute() {}
 
 const MxpTagAttribute& MxpStartTag::getAttribute(int attrIndex) const
 {

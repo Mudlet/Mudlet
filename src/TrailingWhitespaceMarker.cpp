@@ -40,20 +40,23 @@ void markQString(QString* text)
 
     // Mark leading spaces before ^ with a middle dot
     if (trimmedText.front() == '^') {
-        auto firstNonSpace = std::find_if_not(text->begin(), text->end(), [](QChar c) {return c == QChar(' '); });
+        auto firstNonSpace = std::find_if_not(text->begin(), text->end(), [](QChar c) {
+            return c == QChar(' ');
+        });
         std::replace(text->begin(), firstNonSpace, QChar(' '), middleDot);
     }
 
     // Mark trailing spaces after $ with a middle dot
     if (trimmedText.back() == '$') {
-        auto lastNonSpace = std::find_if_not(text->rbegin(), text->rend(), [](QChar c) {return c == QChar(' '); });
+        auto lastNonSpace = std::find_if_not(text->rbegin(), text->rend(), [](QChar c) {
+            return c == QChar(' ');
+        });
         std::replace(lastNonSpace, text->rend(), QChar(' '), middleDot);
     }
 }
 
 void markQLineEdit(QLineEdit* lineEdit)
 {
-
     QString text = lineEdit->text();
 
     unmarkQString(&text);
@@ -69,7 +72,6 @@ void markQLineEdit(QLineEdit* lineEdit)
 
 void unmarkQLineEdit(QLineEdit* lineEdit)
 {
-
     QString text = lineEdit->text();
 
     unmarkQString(&text);
