@@ -30,6 +30,24 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
+#include <functional>
+
+ActionUnit::~ActionUnit()
+{
+    for (auto action : mActionRootNodeList) {
+        action->mpHost = nullptr;
+        std::function<void(TAction*)> nullifyChildren = [&nullifyChildren](TAction* a) {
+            for (auto child : *a->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(action);
+    }
+    for (auto action : mActionRootNodeList) {
+        delete action;
+    }
+}
 
 void ActionUnit::_uninstall(TAction* pChild, const QString& packageName)
 {
@@ -184,6 +202,16 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
                 mudlet::self()->removeDockWidget(pChild->mpToolBar);
             }
         }
+    }
+}
+
+void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentAction(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentAction(childID, oldParentID, newParentID, 0, position);
     }
 }
 
@@ -504,7 +532,8 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pAction->mLocation == 4) {
         if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
-            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName() << "\"), for this toolbar forcing it to the Left one!";
+            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
+                       << "\"), for this toolbar forcing it to the Left one!";
         }
         mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);
         if (pAction->mToolbarLastFloatingState) {

@@ -159,7 +159,6 @@ private slots:
     // Discord and IRC slots for detached window context
     void slot_profileDiscord();
     void slot_mudletDiscord();
-    void slot_irc();
 
     // Window menu activation slots
     void slot_activateMainWindow();
@@ -227,10 +226,9 @@ private:
     QAction* mpActionReconnectStandalone{nullptr};
     QAction* mpActionReattach{nullptr};
 
-    // Discord and IRC actions
+    // Discord actions
     QAction* mpActionDiscord{nullptr};
     QAction* mpActionMudletDiscord{nullptr};
-    QAction* mpActionIRC{nullptr};
 
     // Menu actions with shortcuts
     QAction* mpMenuConnectAction{nullptr};

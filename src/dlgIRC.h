@@ -33,8 +33,6 @@
 #include <IrcCompleter>
 #include <IrcConnection>
 #include <IrcMessage>
-#include <IrcTextFormat>
-#include <IrcUser>
 #include <IrcUserModel>
 
 #include <QPointer>

@@ -25,7 +25,6 @@
 
 #include "Tree.h"
 
-#include <QApplication>
 #include <QDebug>
 #include <QPointer>
 #include <QSharedPointer>

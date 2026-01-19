@@ -61,7 +61,6 @@ dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pParentWidget)
 void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
 {
     label_colorIcon->setPixmap(comboBox_patternType->itemIcon(index).pixmap(15, 15));
-
 }
 
 void dlgTriggerPatternEdit::applyThemePalette(const QPalette& editorPalette)

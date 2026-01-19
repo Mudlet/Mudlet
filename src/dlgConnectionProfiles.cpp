@@ -24,6 +24,7 @@
 
 #include "dlgConnectionProfiles.h"
 
+#include <pugixml.hpp>
 
 #include "Host.h"
 #include "HostManager.h"
@@ -391,10 +392,10 @@ void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList package
     packageInfoLayout->setContentsMargins(8, 8, 8, 8);
     packageGroupBox->setStyleSheet("QGroupBox:title { padding-left: 8px; }");
 
-    for (const QString &package : packages) {
+    for (const QString& package : packages) {
         QFileInfo fileInfo(package);
         QString packageName = fileInfo.baseName();
-        QLabel *packageLabel = new QLabel(packageName);
+        QLabel* packageLabel = new QLabel(packageName);
         packageInfoLayout->addWidget(packageLabel);
     }
 
@@ -446,17 +447,16 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
 
-    credManager->storePassword(profile, "character", pass,
-        [credManager, profile](bool success, const QString& errorMessage) {
-            if (success) {
-                qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
-            } else {
-                qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
-            }
+    credManager->storePassword(profile, "character", pass, [credManager, profile](bool success, const QString& errorMessage) {
+        if (success) {
+            qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
+        } else {
+            qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
+        }
 
-            // Clean up the credential manager
-            credManager->deleteLater();
-        });
+        // Clean up the credential manager
+        credManager->deleteLater();
+    });
 }
 
 void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
@@ -464,17 +464,16 @@ void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
 
-    credManager->removePassword(profile, "character",
-        [credManager, profile](bool success, const QString& errorMessage) {
-            if (success) {
-                qDebug() << "dlgConnectionProfiles: Successfully removed password for profile" << profile;
-            } else {
-                qWarning() << "dlgConnectionProfiles: Failed to remove password for profile" << profile << ":" << errorMessage;
-            }
+    credManager->removePassword(profile, "character", [credManager, profile](bool success, const QString& errorMessage) {
+        if (success) {
+            qDebug() << "dlgConnectionProfiles: Successfully removed password for profile" << profile;
+        } else {
+            qWarning() << "dlgConnectionProfiles: Failed to remove password for profile" << profile << ":" << errorMessage;
+        }
 
-            // Clean up the credential manager
-            credManager->deleteLater();
-        });
+        // Clean up the credential manager
+        credManager->deleteLater();
+    });
 }
 
 void dlgConnectionProfiles::slot_updateLogin(const QString& login)
@@ -619,51 +618,49 @@ void dlgConnectionProfiles::slot_saveName()
     // Check for orphaned keychain entries when creating a new profile with a name
     // that doesn't exist as a directory but might have keychain entries from
     // a previously deleted profile (deleted outside Mudlet interface)
-    if (mudlet::self()->storingPasswordsSecurely() &&
-        currentProfileEditName == tr("new profile name") &&
-        !QDir(mudlet::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
-
+    if (mudlet::self()->storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(mudlet::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
         // Check if there are orphaned keychain entries for this profile name
         auto* credManager = new CredentialManager(this);
-        credManager->retrievePassword(newProfileName, "character",
-            [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl]
-            (bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
-                Q_UNUSED(characterPassword)
-                Q_UNUSED(errorMessage)
+        credManager->retrievePassword(
+                newProfileName,
+                "character",
+                [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl](bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
+                    Q_UNUSED(characterPassword)
+                    Q_UNUSED(errorMessage)
 
-                credManager->retrievePassword(newProfileName, "proxy",
-                    [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry]
-                    (bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
-                        Q_UNUSED(proxyPassword)
-                        Q_UNUSED(errorMessage)
+                    credManager->retrievePassword(newProfileName,
+                                                  "proxy",
+                                                  [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry](
+                                                          bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
+                                                      Q_UNUSED(proxyPassword)
+                                                      Q_UNUSED(errorMessage)
 
-                        // If we found any orphaned entries, clean them up
-                        if (foundCharacterEntry || foundProxyEntry) {
-                            if (foundCharacterEntry) {
-                                credManager->removeCredential(newProfileName, "character",
-                                    [newProfileName](bool success, const QString& errorMessage) {
-                                        if (!success) {
-                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
-                                        }
-                                    });
-                            }
+                                                      // If we found any orphaned entries, clean them up
+                                                      if (foundCharacterEntry || foundProxyEntry) {
+                                                          if (foundCharacterEntry) {
+                                                              credManager->removeCredential(newProfileName, "character", [newProfileName](bool success, const QString& errorMessage) {
+                                                                  if (!success) {
+                                                                      qWarning()
+                                                                              << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
+                                                                  }
+                                                              });
+                                                          }
 
-                            if (foundProxyEntry) {
-                                credManager->removeCredential(newProfileName, "proxy",
-                                    [newProfileName](bool success, const QString& errorMessage) {
-                                        if (!success) {
-                                            qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
-                                        }
-                                    });
-                            }
-                        }
+                                                          if (foundProxyEntry) {
+                                                              credManager->removeCredential(newProfileName, "proxy", [newProfileName](bool success, const QString& errorMessage) {
+                                                                  if (!success) {
+                                                                      qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
+                                                                  }
+                                                              });
+                                                          }
+                                                      }
 
-                        credManager->deleteLater();
+                                                      credManager->deleteLater();
 
-                        // Continue with normal profile creation flow
-                        continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
-                    });
-            });
+                                                      // Continue with normal profile creation flow
+                                                      continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
+                                                  });
+                });
 
         return; // Exit here - continueProfileSave will be called from the callback
     }
@@ -675,9 +672,7 @@ void dlgConnectionProfiles::slot_saveName()
     continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
 }
 
-void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName,
-                                               const QString& newProfileHost, const QString& newProfilePort,
-                                               const int newProfileSslTsl)
+void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl)
 {
     const QString currentProfileEditName = pItem->data(csmNameRole).toString();
     setItemName(pItem, newProfileName);
@@ -811,23 +806,21 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         auto* credManager = new CredentialManager(this);
 
         // Clean up character password entry
-        credManager->removeCredential(profile, "character",
-            [profile](bool success, const QString& errorMessage) {
-                if (!success) {
-                    qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
-                }
-            });
+        credManager->removeCredential(profile, "character", [profile](bool success, const QString& errorMessage) {
+            if (!success) {
+                qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
+            }
+        });
 
         // Clean up proxy password entry (if any)
-        credManager->removeCredential(profile, "proxy",
-            [credManager, profile](bool success, const QString& errorMessage) {
-                if (!success) {
-                    qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << errorMessage;
-                }
+        credManager->removeCredential(profile, "proxy", [credManager, profile](bool success, const QString& errorMessage) {
+            if (!success) {
+                qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << errorMessage;
+            }
 
-                // Clean up the credential manager after both operations
-                credManager->deleteLater();
-            });
+            // Clean up the credential manager after both operations
+            credManager->deleteLater();
+        });
     }
 
     // record the deleted default profile so it does not get re-created in the future
@@ -927,7 +920,8 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
         }
         ofs << what;
         if (!file.commit()) {
-            qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+            qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString()
+                                         << "\".";
         }
     }
 
@@ -1100,9 +1094,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         } else if (entry == QLatin1String("autosave.xml")) {
             const QFileInfo fileInfo(dir, entry);
             auto lastModified = fileInfo.lastModified();
-            profile_history->addItem(QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))),
-                                     mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat),
-                                     QVariant(entry));
+            profile_history->addItem(
+                    QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))), mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat), QVariant(entry));
         } else if (entry.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)) {
             profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
@@ -1372,22 +1365,21 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager();
 
-    credManager->retrievePassword(profile, "character",
-        [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
-            if (success) {
-                callback(password);
-                QString passwordCopy = password; // Make a copy for secure clearing
-                SecureStringUtils::secureStringClear(passwordCopy);
-            } else {
-                if (!errorMessage.isEmpty()) {
-                    qDebug() << "dlgConnectionProfiles: Failed to retrieve password:" << errorMessage;
-                }
-                callback(QString()); // Call with empty string on failure
+    credManager->retrievePassword(profile, "character", [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
+        if (success) {
+            callback(password);
+            QString passwordCopy = password; // Make a copy for secure clearing
+            SecureStringUtils::secureStringClear(passwordCopy);
+        } else {
+            if (!errorMessage.isEmpty()) {
+                qDebug() << "dlgConnectionProfiles: Failed to retrieve password:" << errorMessage;
             }
+            callback(QString()); // Call with empty string on failure
+        }
 
-            // Clean up the credential manager
-            credManager->deleteLater();
-        });
+        // Clean up the credential manager
+        credManager->deleteLater();
+    });
 }
 
 std::optional<QColor> getCustomColor(const QString& profileName)
@@ -1449,8 +1441,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
-    const QString imageLocation = QFileDialog::getOpenFileName(
-            this, tr("Select custom image for profile (should be 120x30)"), lastDir, tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
+    const QString imageLocation = QFileDialog::getOpenFileName(this, tr("Select custom image for profile (should be 120x30)"), lastDir, tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
     if (imageLocation.isEmpty()) {
         return;
     }
@@ -1719,11 +1710,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     Host* pHostBeforeLoad = mudlet::self()->getHostManager().getHost(profile_name);
     bool hostExistedBefore = (pHostBeforeLoad != nullptr);
 
-    Host *pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());
+    Host* pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());
 
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
-
         Host* pActiveHost = mudlet::self()->getActiveHost();
 
         if (pActiveHost && pActiveHost->getName() == profile_name) {
@@ -1773,8 +1763,12 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         }
 
         // This settings also need to be configured, note that the only time not to
-        // save the setting is on profile loading:
-        pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
+        // save the setting is on profile loading. Only override the default UTF-8
+        // encoding if a saved encoding exists:
+        const QByteArray savedEncoding = readProfileData(profile_name, qsl("encoding")).toUtf8();
+        if (!savedEncoding.isEmpty()) {
+            pHost->mTelnet.setEncoding(savedEncoding, false);
+        }
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
@@ -1903,11 +1897,12 @@ bool dlgConnectionProfiles::validateProfile()
              *  line can be italicised and spaced out - if appropriate for
              *  the locale.
              */
-            notificationAreaMessageBox->setText(qsl("%1%2\n\n%3").arg(!notificationAreaMessageBox->text().isEmpty() ? notificationAreaMessageBox->text().append(QChar::LineFeed) : QString(),
-                                                                      tr("Please enter the URL of the Game server.\n\n"
-                                                                         "<i>SSL/TLS connections require a URL, as an IP address is not a suitable "
-                                                                         "identifier for the certification of the Game Server.</i>"),
-                                                                      check.errorString()));
+            notificationAreaMessageBox->setText(qsl("%1%2\n\n%3")
+                                                        .arg(!notificationAreaMessageBox->text().isEmpty() ? notificationAreaMessageBox->text().append(QChar::LineFeed) : QString(),
+                                                             tr("Please enter the URL of the Game server.\n\n"
+                                                                "<i>SSL/TLS connections require a URL, as an IP address is not a suitable "
+                                                                "identifier for the certification of the Game Server.</i>"),
+                                                             check.errorString()));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
@@ -2278,52 +2273,49 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     if (mudlet::self()->storingPasswordsSecurely()) {
         mKeychainOperationInProgress = true;
         auto* credManager = new CredentialManager(this);
-        credManager->retrievePassword(profile_name, "character",
-            [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
-                // Clear the operation flag first
-                mKeychainOperationInProgress = false;
+        credManager->retrievePassword(profile_name, "character", [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
+            // Clear the operation flag first
+            mKeychainOperationInProgress = false;
 
-                // Check if profile selection has changed while we were waiting
-                if (listWidget_profiles->currentItem() &&
-                    listWidget_profiles->currentItem()->data(csmNameRole).toString() == profile_name) {
-
-                    if (success) {
-                        // Keychain operation succeeded - set the password (even if empty)
-                        // Temporarily block textChanged signal to avoid triggering save on programmatic setText
-                        {
-                            const QSignalBlocker blocker(character_password_entry);
-                            character_password_entry->setText(retrievedPassword);
-                        }
-
-                        if (retrievedPassword.isEmpty()) {
-                            qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
-                        } else {
-                            qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
-                        }
-                    } else {
-                        // Fallback to QSettings only if credential retrieval failed
-                        loadPasswordFromSettings(profile_name);
-                        qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
+            // Check if profile selection has changed while we were waiting
+            if (listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profile_name) {
+                if (success) {
+                    // Keychain operation succeeded - set the password (even if empty)
+                    // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+                    {
+                        const QSignalBlocker blocker(character_password_entry);
+                        character_password_entry->setText(retrievedPassword);
                     }
+
+                    if (retrievedPassword.isEmpty()) {
+                        qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
+                    } else {
+                        qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
+                    }
+                } else {
+                    // Fallback to QSettings only if credential retrieval failed
+                    loadPasswordFromSettings(profile_name);
+                    qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
                 }
+            }
 
-                // Check if there's a pending connection waiting for this password load
-                // (do this regardless of profile selection state to avoid hanging)
-                if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
-                    qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profile_name;
+            // Check if there's a pending connection waiting for this password load
+            // (do this regardless of profile selection state to avoid hanging)
+            if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
+                qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profile_name;
 
-                    // Clear pending state
-                    QString profileToLoad = mPendingProfileLoad;
-                    bool shouldConnect = mPendingConnect;
-                    mPendingProfileLoad.clear();
+                // Clear pending state
+                QString profileToLoad = mPendingProfileLoad;
+                bool shouldConnect = mPendingConnect;
+                mPendingProfileLoad.clear();
 
-                    // Proceed with the connection
-                    loadProfile(shouldConnect);
-                    QDialog::accept();
-                }
+                // Proceed with the connection
+                loadProfile(shouldConnect);
+                QDialog::accept();
+            }
 
-                credManager->deleteLater();
-            });
+            credManager->deleteLater();
+        });
     } else {
         // Secure storage disabled, use QSettings directly
         loadPasswordFromSettings(profile_name);

@@ -36,14 +36,13 @@ using namespace std::chrono_literals;
 static bool isFileAccessible(const QString& filePath)
 {
     // Try opening file with exclusive write access
-    HANDLE hFile = CreateFileW(
-        reinterpret_cast<const wchar_t*>(filePath.utf16()),
-        GENERIC_WRITE,
-        0, // No sharing - exclusive access
-        nullptr,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr);
+    HANDLE hFile = CreateFileW(reinterpret_cast<const wchar_t*>(filePath.utf16()),
+                               GENERIC_WRITE,
+                               0, // No sharing - exclusive access
+                               nullptr,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               nullptr);
 
     if (hFile == INVALID_HANDLE_VALUE) {
         DWORD error = GetLastError();
@@ -67,8 +66,7 @@ static bool tryFileOperationWithRetry(const std::function<bool()>& operation, co
 
     for (int attempt = 0; attempt < maxAttempts; ++attempt) {
         if (attempt > 0) {
-            qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts
-                      << "after" << retryDelays[attempt - 1].count() << "ms delay";
+            qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts << "after" << retryDelays[attempt - 1].count() << "ms delay";
             QThread::msleep(retryDelays[attempt - 1].count());
         }
 
@@ -119,8 +117,7 @@ static void cleanupSquirrelTempFiles()
     }
 
     if (removedCount > 0) {
-        qWarning() << "Cleaned up" << removedCount << "Mudlet .nupkg files from SquirrelTemp, freed"
-                  << (freedSpace / 1024 / 1024) << "MB of disk space";
+        qWarning() << "Cleaned up" << removedCount << "Mudlet .nupkg files from SquirrelTemp, freed" << (freedSpace / 1024 / 1024) << "MB of disk space";
     }
 }
 #endif // Q_OS_WINDOWS
@@ -144,9 +141,7 @@ Updater::Updater(QSettings* settings)
     this->settings = settings;
 
     QString baseUrl = QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw");
-    QString channel = (mudlet::BuildType::PublicTest == buildType)
-                              ? QStringLiteral("public-test-build")
-                              : QStringLiteral("release");
+    QString channel = (mudlet::BuildType::PublicTest == buildType) ? QStringLiteral("public-test-build") : QStringLiteral("release");
 
     // On 32-bit Windows, check if we can upgrade to 64-bit
 #if defined(Q_OS_WINDOWS)
@@ -183,15 +178,15 @@ void Updater::checkUpdatesOnStart()
 
     mDailyCheck->setInterval(12h);
     connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
-          auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-          qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
-          if (updates.isEmpty()) {
-              return;
-          } else if (!updateAutomatically()) {
-              emit signal_updateAvailable(updates.size());
-          } else {
-              feed->downloadRelease(updates.first());
-          }
+        auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+        qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
+        if (updates.isEmpty()) {
+            return;
+        } else if (!updateAutomatically()) {
+            emit signal_updateAvailable(updates.size());
+        } else {
+            feed->downloadRelease(updates.first());
+        }
     });
     mDailyCheck->start();
 }
@@ -245,7 +240,9 @@ void Updater::showChangelog() const
 void Updater::showFullChangelog() const
 {
     if (!feed->isReady()) {
-        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=, this]() { showChangelog(); });
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=, this]() {
+            showChangelog();
+        });
         feed->load();
         return;
     }
@@ -340,9 +337,11 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
     if (newPathFileInfo.exists() && !isFileAccessible(newPath)) {
         qWarning() << "Old installer exists but is locked:" << newPath;
         // Try to delete with retry logic
-        bool removed = tryFileOperationWithRetry([&]() {
-            return isFileAccessible(newPath) && dir.remove(newPathFileInfo.absoluteFilePath());
-        }, qsl("Delete old installer"));
+        bool removed = tryFileOperationWithRetry(
+                [&]() {
+                    return isFileAccessible(newPath) && dir.remove(newPathFileInfo.absoluteFilePath());
+                },
+                qsl("Delete old installer"));
 
         if (!removed) {
             qWarning() << "Couldn't delete the old installer after retries:" << newPath;
@@ -358,9 +357,11 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
     }
 
     // dir.rename actually moves a file - try with retry logic
-    bool moved = tryFileOperationWithRetry([&]() {
-        return isFileAccessible(downloadedSetupName) && dir.rename(downloadedSetupName, newPath);
-    }, qsl("Move installer to temp location"));
+    bool moved = tryFileOperationWithRetry(
+            [&]() {
+                return isFileAccessible(downloadedSetupName) && dir.rename(downloadedSetupName, newPath);
+            },
+            qsl("Move installer to temp location"));
 
     if (!moved) {
         qWarning() << "Moving new installer into" << newPath << "failed after all retries";
@@ -402,7 +403,9 @@ void Updater::setupOnLinux()
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run([&]() { untarOnLinux(feed->getDownloadFile()->fileName()); });
+        QFuture<void> future = QtConcurrent::run([&]() {
+            untarOnLinux(feed->getDownloadFile()->fileName());
+        });
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
@@ -441,9 +444,7 @@ void Updater::slot_updateLinuxBinary()
 
     QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + unzippedBinaryName);
     auto systemEnvironment = QProcessEnvironment::systemEnvironment();
-    auto appimageLocation = systemEnvironment.contains(qsl("APPIMAGE")) ?
-                systemEnvironment.value(qsl("APPIMAGE"), QString()) :
-                QCoreApplication::applicationFilePath();
+    auto appimageLocation = systemEnvironment.contains(qsl("APPIMAGE")) ? systemEnvironment.value(qsl("APPIMAGE"), QString()) : QCoreApplication::applicationFilePath();
 
     const QString& installedBinaryPath(appimageLocation);
 
@@ -497,9 +498,13 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
-    QFuture<void> future = QtConcurrent::run([&, filePath]() { untarOnLinux(filePath); });
+    QFuture<void> future = QtConcurrent::run([&, filePath]() {
+        untarOnLinux(filePath);
+    });
 #elif defined(Q_OS_WINDOWS)
-    QFuture<void> future = QtConcurrent::run([&, filePath]() { prepareSetupOnWindows(filePath); });
+    QFuture<void> future = QtConcurrent::run([&, filePath]() {
+        prepareSetupOnWindows(filePath);
+    });
 #endif
 
     // replace current binary with the unzipped one
@@ -631,9 +636,8 @@ bool Updater::is64BitCompatible() const
 #endif
 
     BOOL isWow64 = FALSE;
-    typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
-    LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)
-        GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+    typedef BOOL(WINAPI * LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
+    LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
 
     if (fnIsWow64Process) {
         if (fnIsWow64Process(GetCurrentProcess(), &isWow64)) {

@@ -43,16 +43,16 @@
 #endif
 
 
-GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget *parent)
+GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 : QOpenGLWidget(parent)
 , mpMap(pMap)
 , mpHost(pHost)
 {
     if (mpHost->mBgColor_2.alpha() < 255) {
-    setAttribute(Qt::WA_OpaquePaintEvent, false);
-    setAttribute(Qt::WA_AlwaysStackOnTop);
+        setAttribute(Qt::WA_OpaquePaintEvent, false);
+        setAttribute(Qt::WA_AlwaysStackOnTop);
     } else {
-    setAttribute(Qt::WA_OpaquePaintEvent);
+        setAttribute(Qt::WA_OpaquePaintEvent);
     }
 }
 
@@ -290,7 +290,7 @@ void GLWidget::paintGL()
             } else {
                 message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
             }
-            painter.drawText(0, 0, (width() -1), (height() -1), Qt::AlignCenter | Qt::TextWordWrap, message);
+            painter.drawText(0, 0, (width() - 1), (height() - 1), Qt::AlignCenter | Qt::TextWordWrap, message);
             painter.end();
 
             glLoadIdentity();
@@ -371,59 +371,59 @@ void GLWidget::paintGL()
     glEnable(GL_LINE_STIPPLE);
     glLineWidth(1.0);
     float planeColor2[][4] = {{0.9, 0.5, 0.0, 1.0},
-                               {165.0 / 255.0, 102.0 / 255.0, 167.0 / 255.0, 1.0},
-                               {170.0 / 255.0, 10.0 / 255.0, 127.0 / 255.0, 1.0},
-                               {203.0 / 255.0, 135.0 / 255.0, 101.0 / 255.0, 1.0},
-                               {154.0 / 255.0, 154.0 / 255.0, 115.0 / 255.0, 1.0},
-                               {107.0 / 255.0, 154.0 / 255.0, 100.0 / 255.0, 1.0},
-                               {154.0 / 255.0, 184.0 / 255.0, 111.0 / 255.0, 1.0},
-                               {67.0 / 255.0, 154.0 / 255.0, 148.0 / 255.0, 1.0},
-                               {154.0 / 255.0, 118.0 / 255.0, 151.0 / 255.0, 1.0},
-                               {208.0 / 255.0, 213.0 / 255.0, 164.0 / 255.0, 1.0},
-                               {213.0 / 255.0, 169.0 / 255.0, 158.0 / 255.0, 1.0},
-                               {139.0 / 255.0, 209.0 / 255.0, 0, 1.0},
-                               {163.0 / 255.0, 209.0 / 255.0, 202.0 / 255.0, 1.0},
-                               {158.0 / 255.0, 156.0 / 255.0, 209.0 / 255.0, 1.0},
-                               {209.0 / 255.0, 144.0 / 255.0, 162.0 / 255.0, 1.0},
-                               {209.0 / 255.0, 183.0 / 255.0, 78.0 / 255.0, 1.0},
-                               {111.0 / 255.0, 209.0 / 255.0, 88.0 / 255.0, 1.0},
-                               {95.0 / 255.0, 120.0 / 255.0, 209.0 / 255.0, 1.0},
-                               {31.0 / 255.0, 209.0 / 255.0, 126.0 / 255.0, 1.0},
-                               {1.0, 170.0 / 255.0, 1.0, 1.0},
-                               {158.0 / 255.0, 105.0 / 255.0, 158.0 / 255.0, 1.0},
-                               {68.0 / 255.0, 189.0 / 255.0, 189.0 / 255.0, 1.0},
-                               {0.1, 0.69, 0.49, 1.0},
-                               {0.0, 0.15, 1.0, 1.0},
-                               {0.12, 0.02, 0.20, 1.0},
-                               {0.0, 0.3, 0.1, 1.0}};
+                              {165.0 / 255.0, 102.0 / 255.0, 167.0 / 255.0, 1.0},
+                              {170.0 / 255.0, 10.0 / 255.0, 127.0 / 255.0, 1.0},
+                              {203.0 / 255.0, 135.0 / 255.0, 101.0 / 255.0, 1.0},
+                              {154.0 / 255.0, 154.0 / 255.0, 115.0 / 255.0, 1.0},
+                              {107.0 / 255.0, 154.0 / 255.0, 100.0 / 255.0, 1.0},
+                              {154.0 / 255.0, 184.0 / 255.0, 111.0 / 255.0, 1.0},
+                              {67.0 / 255.0, 154.0 / 255.0, 148.0 / 255.0, 1.0},
+                              {154.0 / 255.0, 118.0 / 255.0, 151.0 / 255.0, 1.0},
+                              {208.0 / 255.0, 213.0 / 255.0, 164.0 / 255.0, 1.0},
+                              {213.0 / 255.0, 169.0 / 255.0, 158.0 / 255.0, 1.0},
+                              {139.0 / 255.0, 209.0 / 255.0, 0, 1.0},
+                              {163.0 / 255.0, 209.0 / 255.0, 202.0 / 255.0, 1.0},
+                              {158.0 / 255.0, 156.0 / 255.0, 209.0 / 255.0, 1.0},
+                              {209.0 / 255.0, 144.0 / 255.0, 162.0 / 255.0, 1.0},
+                              {209.0 / 255.0, 183.0 / 255.0, 78.0 / 255.0, 1.0},
+                              {111.0 / 255.0, 209.0 / 255.0, 88.0 / 255.0, 1.0},
+                              {95.0 / 255.0, 120.0 / 255.0, 209.0 / 255.0, 1.0},
+                              {31.0 / 255.0, 209.0 / 255.0, 126.0 / 255.0, 1.0},
+                              {1.0, 170.0 / 255.0, 1.0, 1.0},
+                              {158.0 / 255.0, 105.0 / 255.0, 158.0 / 255.0, 1.0},
+                              {68.0 / 255.0, 189.0 / 255.0, 189.0 / 255.0, 1.0},
+                              {0.1, 0.69, 0.49, 1.0},
+                              {0.0, 0.15, 1.0, 1.0},
+                              {0.12, 0.02, 0.20, 1.0},
+                              {0.0, 0.3, 0.1, 1.0}};
 
 
     float planeColor[][4] = {{0.5, 0.6, 0.5, 0.2},
-                              {0.233, 0.498, 0.113, 0.2},
-                              {0.666, 0.333, 0.498, 0.2},
-                              {0.5, 0.333, 0.666, 0.2},
-                              {0.69, 0.458, 0.0, 0.2},
-                              {0.333, 0.0, 0.49, 0.2},
-                              {133.0 / 255.0, 65.0 / 255.0, 98.0 / 255.0, 0.2},
-                              {0.3, 0.3, 0.0, 0.2},
-                              {0.6, 0.2, 0.6, 0.2},
-                              {0.6, 0.6, 0.2, 0.2},
-                              {0.4, 0.1, 0.4, 0.2},
-                              {0.4, 0.4, 0.1, 0.2},
-                              {0.3, 0.1, 0.3, 0.2},
-                              {0.3, 0.3, 0.1, 0.2},
-                              {0.2, 0.1, 0.2, 0.2},
-                              {0.2, 0.2, 0.1, 0.2},
-                              {0.24, 0.1, 0.5, 0.2},
-                              {0.1, 0.1, 0.0, 0.2},
-                              {0.54, 0.6, 0.2, 0.2},
-                              {0.2, 0.2, 0.5, 0.2},
-                              {0.6, 0.6, 0.2, 0.2},
-                              {0.6, 0.4, 0.6, 0.2},
-                              {0.4, 0.4, 0.1, 0.2},
-                              {0.4, 0.2, 0.4, 0.2},
-                              {0.2, 0.2, 0.0, 0.2},
-                              {0.2, 0.1, 0.3, 0.2}};
+                             {0.233, 0.498, 0.113, 0.2},
+                             {0.666, 0.333, 0.498, 0.2},
+                             {0.5, 0.333, 0.666, 0.2},
+                             {0.69, 0.458, 0.0, 0.2},
+                             {0.333, 0.0, 0.49, 0.2},
+                             {133.0 / 255.0, 65.0 / 255.0, 98.0 / 255.0, 0.2},
+                             {0.3, 0.3, 0.0, 0.2},
+                             {0.6, 0.2, 0.6, 0.2},
+                             {0.6, 0.6, 0.2, 0.2},
+                             {0.4, 0.1, 0.4, 0.2},
+                             {0.4, 0.4, 0.1, 0.2},
+                             {0.3, 0.1, 0.3, 0.2},
+                             {0.3, 0.3, 0.1, 0.2},
+                             {0.2, 0.1, 0.2, 0.2},
+                             {0.2, 0.2, 0.1, 0.2},
+                             {0.24, 0.1, 0.5, 0.2},
+                             {0.1, 0.1, 0.0, 0.2},
+                             {0.54, 0.6, 0.2, 0.2},
+                             {0.2, 0.2, 0.5, 0.2},
+                             {0.6, 0.6, 0.2, 0.2},
+                             {0.6, 0.4, 0.6, 0.2},
+                             {0.4, 0.4, 0.1, 0.2},
+                             {0.4, 0.2, 0.4, 0.2},
+                             {0.2, 0.2, 0.0, 0.2},
+                             {0.2, 0.1, 0.3, 0.2}};
 
     while (true) {
         if (zRot <= 0) {
@@ -516,7 +516,7 @@ void GLWidget::paintGL()
                     // if (areaExit) {
                     //    glLineWidth(1); //1/mScale+2);
                     // } else {
-                        glLineWidth(1); //1/mScale);
+                    glLineWidth(1); //1/mScale);
                     // }
                     if (k == mRID || ((rz == pz) && (rx == px) && (ry == py))) {
                         glDisable(GL_BLEND);
@@ -782,8 +782,7 @@ void GLWidget::paintGL()
                             break;
                         default: //user defined room color
                             if (!mpMap->mCustomEnvColors.contains(env)) {
-                                if (16 < env && env < 232)
-                                {
+                                if (16 < env && env < 232) {
                                     quint8 const base = env - 16;
                                     quint8 r = base / 36;
                                     quint8 g = (base - (r * 36)) / 6;
@@ -926,7 +925,7 @@ void GLWidget::paintGL()
                     // if (areaExit) {
                     //    glLineWidth(1); //1/mScale+2);
                     // } else {
-                        glLineWidth(1); //1/mScale);
+                    glLineWidth(1); //1/mScale);
                     // }
                     if (k == mRID || ((rz == pz) && (rx == px) && (ry == py))) {
                         glDisable(GL_BLEND);
@@ -941,7 +940,7 @@ void GLWidget::paintGL()
                         glEnable(GL_LIGHT1);
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor2[ef]);
                         glMateriali(GL_FRONT, GL_SHININESS, 1); //gut:36
-                        glColor4f(0.3, 0.3, 0.3, 1.0); /*planeColor2[ef][0],
+                        glColor4f(0.3, 0.3, 0.3, 1.0);          /*planeColor2[ef][0],
                                   planeColor2[ef][1],
                                   planeColor2[ef][2],
                                   planeColor2[ef][3])*/
@@ -1190,8 +1189,7 @@ void GLWidget::paintGL()
                             break;
                         default: //user defined room color
                             if (!mpMap->mCustomEnvColors.contains(env)) {
-                                if (16 < env && env < 232)
-                                {
+                                if (16 < env && env < 232) {
                                     quint8 const base = env - 16;
                                     quint8 r = base / 36;
                                     quint8 g = (base - (r * 36)) / 6;
@@ -1583,8 +1581,7 @@ void GLWidget::paintGL()
                     break;
                 default: //user defined room color
                     if (!mpMap->mCustomEnvColors.contains(env)) {
-                        if (16 < env && env < 232)
-                        {
+                        if (16 < env && env < 232) {
                             quint8 const base = env - 16;
                             quint8 r = base / 36;
                             quint8 g = (base - (r * 36)) / 6;
@@ -1885,8 +1882,7 @@ void GLWidget::paintGL()
                 break;
             default: //user defined room color
                 if (!mpMap->mCustomEnvColors.contains(env)) {
-                    if (16 < env && env < 232)
-                    {
+                    if (16 < env && env < 232) {
                         quint8 const base = env - 16;
                         quint8 r = base / 36;
                         quint8 g = (base - (r * 36)) / 6;
@@ -2013,23 +2009,23 @@ void GLWidget::paintGL()
             }
             glEnd();
 
-//            if (mpMap->rooms[pArea->rooms[i]]->out > -1) {
-//                glBegin( GL_LINE_LOOP );
-//                for (int angle=0; angle<360; angle += 1 ) {
-//                    glVertex3f((0.5 + sin((float)angle) * 0.25)/scale, ( cos((float)angle) * 0.25)/scale, 0.0);
-//                }
-//                glEnd();
-//            }
+            //            if (mpMap->rooms[pArea->rooms[i]]->out > -1) {
+            //                glBegin( GL_LINE_LOOP );
+            //                for (int angle=0; angle<360; angle += 1 ) {
+            //                    glVertex3f((0.5 + sin((float)angle) * 0.25)/scale, ( cos((float)angle) * 0.25)/scale, 0.0);
+            //                }
+            //                glEnd();
+            //            }
 
-//            glTranslatef(-0.1, 0.0, 0.0);
-//            if (mpMap->rooms[pArea->rooms[i]]->in > -1) {
-//                glBegin(GL_TRIANGLE_FAN);
-//                glVertex3f(0.0, 0.0, 0.0);
-//                for (int angle=0; angle<=360; angle += 5) {
-//                    glVertex3f((sin((float)angle)*0.25)/scale, (cos((float)angle)*0.25)/scale, 0.0);
-//                }
-//                glEnd();
-//            }
+            //            glTranslatef(-0.1, 0.0, 0.0);
+            //            if (mpMap->rooms[pArea->rooms[i]]->in > -1) {
+            //                glBegin(GL_TRIANGLE_FAN);
+            //                glVertex3f(0.0, 0.0, 0.0);
+            //                for (int angle=0; angle<=360; angle += 5) {
+            //                    glVertex3f((sin((float)angle)*0.25)/scale, (cos((float)angle)*0.25)/scale, 0.0);
+            //                }
+            //                glEnd();
+            //            }
         }
 
 
@@ -2055,7 +2051,7 @@ void GLWidget::resizeGL(int w, int h)
 void GLWidget::mousePressEvent(QMouseEvent* event)
 {
     mudlet::self()->activateProfile(mpHost);
-    if (!mpMap||!mpMap->mpRoomDB) {
+    if (!mpMap || !mpMap->mpRoomDB) {
         return;
     }
     if (event->buttons() & Qt::LeftButton) {
@@ -2107,9 +2103,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
             } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
             } else {
-                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
-                                                          .arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)),
-                                                               QString::number(mpMap->mTargetID))));
+                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(
+                        tr("Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)), QString::number(mpMap->mTargetID))));
             }
             //            else
             //            {
@@ -2133,7 +2128,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
 
 void GLWidget::mouseMoveEvent(QMouseEvent* event)
 {
-    if (!mpMap||!mpMap->mpRoomDB) {
+    if (!mpMap || !mpMap->mpRoomDB) {
         return;
     }
     if (mPanMode) {
