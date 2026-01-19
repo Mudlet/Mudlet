@@ -31,7 +31,9 @@
 #include <algorithm>
 
 EditorDeleteItemCommand::EditorDeleteItemCommand(EditorViewType viewType, const QList<DeletedItemInfo>& deletedItems, Host* host)
-: EditorCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host), mViewType(viewType), mDeletedItems(deletedItems)
+: EditorCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host)
+, mViewType(viewType)
+, mDeletedItems(deletedItems)
 {
 }
 
@@ -67,7 +69,9 @@ void EditorDeleteItemCommand::undo()
                 canRestore = true;
             } else {
                 // Check if parent was also deleted
-                bool parentWasDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&item](const DeletedItemInfo& info) { return info.itemID == item.parentID; });
+                bool parentWasDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&item](const DeletedItemInfo& info) {
+                    return info.itemID == item.parentID;
+                });
                 if (parentWasDeleted) {
                     // Parent was deleted - check if it's already been processed
                     if (processedIDs.contains(item.parentID)) {
@@ -89,7 +93,9 @@ void EditorDeleteItemCommand::undo()
 
         // Safety check for circular dependencies or broken references
         if (!madeProgress && !remainingItems.isEmpty()) {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorDeleteItemCommand::undo() - Could not resolve parent-child dependencies for" << remainingItems.size() << "items, adding them anyway";
+#endif
             sortedItems.append(remainingItems);
             break;
         }
@@ -128,9 +134,13 @@ void EditorDeleteItemCommand::undo()
         }
 
         // Find the corresponding item in mDeletedItems to update the ID
-        auto it = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) { return item.itemName == info.itemName && item.parentID == info.parentID; });
+        auto it = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) {
+            return item.itemName == info.itemName && item.parentID == info.parentID;
+        });
         if (it == mDeletedItems.end()) {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorDeleteItemCommand::undo() - Could not find item in original list:" << info.itemName << "with parentID=" << info.parentID;
+#endif
             continue;
         }
         auto& originalInfo = *it;
@@ -145,15 +155,19 @@ void EditorDeleteItemCommand::undo()
             TTrigger* pParent = nullptr;
             if (info.parentID != -1) {
                 pParent = mpHost->getTriggerUnit()->getTrigger(info.parentID);
+#if defined(DEBUG_UNDO_REDO)
                 if (!pParent) {
                     qWarning() << "EditorDeleteItemCommand::undo() - Parent trigger not found for" << info.itemName << "parentID=" << info.parentID;
                 }
+#endif
             }
 
             // Restore the trigger from XML snapshot at its original position
             TTrigger* pRestoredTrigger = importTriggerFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredTrigger) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore trigger" << info.itemName;
+#endif
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredTrigger->getID();
@@ -224,7 +238,9 @@ void EditorDeleteItemCommand::undo()
 
             TAlias* pRestoredAlias = importAliasFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredAlias) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore alias" << info.itemName;
+#endif
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredAlias->getID();
@@ -291,7 +307,9 @@ void EditorDeleteItemCommand::undo()
 
             TTimer* pRestoredTimer = importTimerFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredTimer) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore timer" << info.itemName;
+#endif
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredTimer->getID();
@@ -358,7 +376,9 @@ void EditorDeleteItemCommand::undo()
 
             TScript* pRestoredScript = importScriptFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredScript) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore script" << info.itemName;
+#endif
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredScript->getID();
@@ -425,7 +445,9 @@ void EditorDeleteItemCommand::undo()
 
             TKey* pRestoredKey = importKeyFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredKey) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore key" << info.itemName;
+#endif
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredKey->getID();
@@ -492,7 +514,9 @@ void EditorDeleteItemCommand::undo()
 
             TAction* pRestoredAction = importActionFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
             if (!pRestoredAction) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore action" << info.itemName;
+#endif
             } else {
                 mLastOperationWasValid = true;
                 int newID = pRestoredAction->getID();
@@ -552,7 +576,9 @@ void EditorDeleteItemCommand::undo()
             break;
         }
         default:
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorDeleteItemCommand::undo() - Unknown item type";
+#endif
             break;
         }
     }
@@ -578,11 +604,15 @@ void EditorDeleteItemCommand::redo()
             TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(info.itemID);
             // Validate: item exists and has expected name (prevents deleting wrong item if ID reused)
             if (!trigger) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Trigger" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+#endif
                 continue;
             }
             if (trigger->getName() != info.itemName) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Trigger ID" << info.itemID << "expected name" << info.itemName << "but found" << trigger->getName() << ", skipping";
+#endif
                 continue;
             }
             // Valid item found
@@ -593,11 +623,15 @@ void EditorDeleteItemCommand::redo()
             TAlias* alias = mpHost->getAliasUnit()->getAlias(info.itemID);
             // Validate: item exists and has expected name
             if (!alias) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Alias" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+#endif
                 continue;
             }
             if (alias->getName() != info.itemName) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Alias ID" << info.itemID << "expected name" << info.itemName << "but found" << alias->getName() << ", skipping";
+#endif
                 continue;
             }
             // Valid item found
@@ -608,11 +642,15 @@ void EditorDeleteItemCommand::redo()
             TTimer* timer = mpHost->getTimerUnit()->getTimer(info.itemID);
             // Validate: item exists and has expected name
             if (!timer) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Timer" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+#endif
                 continue;
             }
             if (timer->getName() != info.itemName) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Timer ID" << info.itemID << "expected name" << info.itemName << "but found" << timer->getName() << ", skipping";
+#endif
                 continue;
             }
             // Valid item found
@@ -623,11 +661,15 @@ void EditorDeleteItemCommand::redo()
             TScript* script = mpHost->getScriptUnit()->getScript(info.itemID);
             // Validate: item exists and has expected name
             if (!script) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Script" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+#endif
                 continue;
             }
             if (script->getName() != info.itemName) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Script ID" << info.itemID << "expected name" << info.itemName << "but found" << script->getName() << ", skipping";
+#endif
                 continue;
             }
             // Valid item found
@@ -638,11 +680,15 @@ void EditorDeleteItemCommand::redo()
             TKey* key = mpHost->getKeyUnit()->getKey(info.itemID);
             // Validate: item exists and has expected name
             if (!key) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Key" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+#endif
                 continue;
             }
             if (key->getName() != info.itemName) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Key ID" << info.itemID << "expected name" << info.itemName << "but found" << key->getName() << ", skipping";
+#endif
                 continue;
             }
             // Valid item found
@@ -653,11 +699,15 @@ void EditorDeleteItemCommand::redo()
             TAction* action = mpHost->getActionUnit()->getAction(info.itemID);
             // Validate: item exists and has expected name
             if (!action) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Action" << info.itemName << "ID:" << info.itemID << "no longer exists, skipping";
+#endif
                 continue;
             }
             if (action->getName() != info.itemName) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorDeleteItemCommand::redo() - Action ID" << info.itemID << "expected name" << info.itemName << "but found" << action->getName() << ", skipping";
+#endif
                 continue;
             }
             // Valid item found
@@ -678,7 +728,9 @@ void EditorDeleteItemCommand::redo()
         // Skip items whose parent is also in the deletion list
         // (they will be automatically deleted when the parent is deleted)
         if (info.parentID != -1) {
-            bool parentBeingDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) { return item.itemID == info.parentID; });
+            bool parentBeingDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) {
+                return item.itemID == info.parentID;
+            });
             if (parentBeingDeleted) {
                 continue; // Skip this item - it will be deleted by its parent
             }
@@ -691,9 +743,9 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             if (trigger->getName() != info.itemName) {
-                qWarning() << "EditorDeleteItemCommand::redo() - Trigger ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << trigger->getName()
-                           << "- not deleting";
+#if defined(DEBUG_UNDO_REDO)
+                qWarning() << "EditorDeleteItemCommand::redo() - Trigger ID" << info.itemID << "name changed from" << info.itemName << "to" << trigger->getName() << "- not deleting";
+#endif
                 break;
             }
             mpHost->getTriggerUnit()->unregisterTrigger(trigger);
@@ -707,9 +759,9 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             if (alias->getName() != info.itemName) {
-                qWarning() << "EditorDeleteItemCommand::redo() - Alias ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << alias->getName()
-                           << "- not deleting";
+#if defined(DEBUG_UNDO_REDO)
+                qWarning() << "EditorDeleteItemCommand::redo() - Alias ID" << info.itemID << "name changed from" << info.itemName << "to" << alias->getName() << "- not deleting";
+#endif
                 break;
             }
             mpHost->getAliasUnit()->unregisterAlias(alias);
@@ -723,9 +775,9 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             if (timer->getName() != info.itemName) {
-                qWarning() << "EditorDeleteItemCommand::redo() - Timer ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << timer->getName()
-                           << "- not deleting";
+#if defined(DEBUG_UNDO_REDO)
+                qWarning() << "EditorDeleteItemCommand::redo() - Timer ID" << info.itemID << "name changed from" << info.itemName << "to" << timer->getName() << "- not deleting";
+#endif
                 break;
             }
             mpHost->getTimerUnit()->unregisterTimer(timer);
@@ -739,9 +791,9 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             if (script->getName() != info.itemName) {
-                qWarning() << "EditorDeleteItemCommand::redo() - Script ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << script->getName()
-                           << "- not deleting";
+#if defined(DEBUG_UNDO_REDO)
+                qWarning() << "EditorDeleteItemCommand::redo() - Script ID" << info.itemID << "name changed from" << info.itemName << "to" << script->getName() << "- not deleting";
+#endif
                 break;
             }
             mpHost->getScriptUnit()->unregisterScript(script);
@@ -755,9 +807,9 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             if (key->getName() != info.itemName) {
-                qWarning() << "EditorDeleteItemCommand::redo() - Key ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << key->getName()
-                           << "- not deleting";
+#if defined(DEBUG_UNDO_REDO)
+                qWarning() << "EditorDeleteItemCommand::redo() - Key ID" << info.itemID << "name changed from" << info.itemName << "to" << key->getName() << "- not deleting";
+#endif
                 break;
             }
             mpHost->getKeyUnit()->unregisterKey(key);
@@ -771,9 +823,9 @@ void EditorDeleteItemCommand::redo()
                 break;
             }
             if (action->getName() != info.itemName) {
-                qWarning() << "EditorDeleteItemCommand::redo() - Action ID" << info.itemID
-                           << "name changed from" << info.itemName << "to" << action->getName()
-                           << "- not deleting";
+#if defined(DEBUG_UNDO_REDO)
+                qWarning() << "EditorDeleteItemCommand::redo() - Action ID" << info.itemID << "name changed from" << info.itemName << "to" << action->getName() << "- not deleting";
+#endif
                 break;
             }
             mpHost->getActionUnit()->unregisterAction(action);

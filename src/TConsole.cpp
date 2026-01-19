@@ -46,13 +46,18 @@
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
+#include <QFile>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QPainter>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSplitter>
 #include <QTextBoundaryFinder>
-#include <QPainter>
+#include <QVideoWidget>
 
 const QString TConsole::cmLuaLineVariable("line");
 
@@ -84,7 +89,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpHyperlinkCompactManager = std::make_unique<THyperlinkCompactManager>();
     mpHyperlinkSelectionManager = std::make_unique<THyperlinkSelectionManager>(*this);
     mpHyperlinkVisibilityManager = std::make_unique<THyperlinkVisibilityManager>(this);
-    
+
     initializeOSC8StyleFeature();
     initializeOSC8MenuFeature();
     initializeOSC8TooltipFeature();
@@ -228,23 +233,20 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // zero-timer at the end of this constructor
 
         // Connect user input trigger (command submission only, not typing)
-        connect(mpCommandLine, &TCommandLine::commandSubmitted,
-                mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onUserInput);
-        
+        connect(mpCommandLine, &TCommandLine::commandSubmitted, mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onUserInput);
+
         // Connect GA/EOR prompt signal from telnet
-        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived,
-                mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onPromptReceived);
-        
+        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived, mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onPromptReceived);
+
         // Refresh display when hyperlink visibility changes
-        connect(mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::visibilityChanged,
-                this, [this]() {
-                    if (mUpperPane) {
-                        mUpperPane->forceUpdate();
-                    }
-                    if (mLowerPane) {
-                        mLowerPane->forceUpdate();
-                    }
-                });
+        connect(mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::visibilityChanged, this, [this]() {
+            if (mUpperPane) {
+                mUpperPane->forceUpdate();
+            }
+            if (mLowerPane) {
+                mLowerPane->forceUpdate();
+            }
+        });
     }
 
     layer = new QWidget(mpMainDisplay);
@@ -290,7 +292,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         setFocusProxy(mpCommandLine);
         mUpperPane->setFocusProxy(mpCommandLine);
         mLowerPane->setFocusProxy(mpCommandLine);
-    } else if (mType & (UserWindow|SubConsole)) {
+    } else if (mType & (UserWindow | SubConsole)) {
         // These will need to be changed when the built in TCommandLine is
         // enabled or an additional one is added to them:
         setFocusProxy(mpHost->mpConsole->mpCommandLine);
@@ -416,21 +418,17 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         The first argument 'N' represents the 'N'etwork latency; the second 'S' the
         'S'ystem (processing) time
         */
-        const QString dummyTextA = tr("N:%1 S:%2")
-                                     .arg(0.0, 0, 'f', 3)
-                                     .arg(0.0, 0, 'f', 3);
+        const QString dummyTextA = tr("N:%1 S:%2").arg(0.0, 0, 'f', 3).arg(0.0, 0, 'f', 3);
         /*:
         The argument 'S' represents the 'S'ystem (processing) time, in this situation
         the Game Server is not sending "GoAhead" signals so we cannot deduce the
         network latency...
         */
-        const QString dummyTextB = tr("<no GA> S:%1")
-                                     .arg(0.0, 0, 'f', 3);
+        const QString dummyTextB = tr("<no GA> S:%1").arg(0.0, 0, 'f', 3);
         do {
             latencyFont.setPointSize(--latencyFontPointSize);
         } while (latencyFontPointSize > 6
-                 && qMax(QFontMetrics(latencyFont).boundingRect(dummyTextA).width(),
-                         QFontMetrics(latencyFont).boundingRect(dummyTextB).width()) + latencyFontSizeMargin
+                 && qMax(QFontMetrics(latencyFont).boundingRect(dummyTextA).width(), QFontMetrics(latencyFont).boundingRect(dummyTextB).width()) + latencyFontSizeMargin
                             > mpLineEdit_networkLatency->maximumWidth());
 
         mpLineEdit_networkLatency->setFont(latencyFont);
@@ -454,7 +452,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     mpBufferSearchBox->setClearButtonEnabled(true);
     for (auto child : mpBufferSearchBox->children()) {
-        auto *pAction_clear(qobject_cast<QAction *>(child));
+        auto* pAction_clear(qobject_cast<QAction*>(child));
         if (pAction_clear && pAction_clear->objectName() == QLatin1String("_q_qlineeditclearaction")) {
             connect(pAction_clear, &QAction::triggered, this, &TConsole::slot_clearSearchResults, Qt::QueuedConnection);
             break;
@@ -570,7 +568,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mHScrollBarEnabled = true;
     }
 
-    if (mType & (ErrorConsole|SubConsole|UserWindow)) {
+    if (mType & (ErrorConsole | SubConsole | UserWindow)) {
         mpScrollBar->hide();
         mLowerPane->hide();
         layerCommandLine->hide();
@@ -600,7 +598,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     // error and debug consoles inherit font of the main console
     if (mType & (ErrorConsole | CentralDebugConsole)) {
-
         // They always use "Control Pictures" to show control characters:
         mControlCharacter = ControlCharacterMode::Picture;
         refreshView();
@@ -659,7 +656,7 @@ void TConsole::raiseMudletSysWindowResizeEvent(const int overallWidth, const int
     if (mpHost.isNull()) {
         return;
     }
-    TEvent mudletEvent {};
+    TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
     mudletEvent.mArgumentList.append(QString::number(overallWidth - mBorders.left() - mBorders.right()));
     mudletEvent.mArgumentList.append(QString::number(overallHeight - mBorders.top() - mBorders.bottom() - mpCommandLine->height()));
@@ -694,24 +691,23 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layoutLayer2->activate();
     }
 
-    if (mType & (MainConsole|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
+    if (mType & (MainConsole | SubConsole | UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
         x -= (mpLeftToolBar->width() + mpRightToolBar->width());
         y -= mpTopToolBar->height();
         // The mBorders components will be all zeros for all but the MainConsole:
-        mpMainDisplay->resize(x - mBorders.left() - mBorders.right(),
-                              y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
+        mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y);
     }
     mpMainDisplay->move(mBorders.left(), mBorders.top());
 
-    if (mType & (CentralDebugConsole|ErrorConsole)) {
+    if (mType & (CentralDebugConsole | ErrorConsole)) {
         layerCommandLine->hide();
-    } else if (mType & ~(SubConsole|UserWindow)) {
+    } else if (mType & ~(SubConsole | UserWindow)) {
         // does nothing for SubConsole or UserWindows
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
@@ -735,14 +731,14 @@ void TConsole::resizeEvent(QResizeEvent* event)
             raiseMudletSysWindowResizeEvent(x, y);
         }
     }
-//create the sysUserWindowResize Event for automatic resizing with Geyser
+    //create the sysUserWindowResize Event for automatic resizing with Geyser
     if (mType & (UserWindow) && !mpHost.isNull()) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
         const QString func = "handleWindowResizeEvent";
         const QString n = "WindowResizeEvent";
         pLua->call(func, n);
 
-        TEvent mudletEvent {};
+        TEvent mudletEvent{};
         mudletEvent.mArgumentList.append(QLatin1String("sysUserWindowResizeEvent"));
         mudletEvent.mArgumentList.append(QString::number(x));
         mudletEvent.mArgumentList.append(QString::number(y));
@@ -830,7 +826,7 @@ void TConsole::closeEvent(QCloseEvent* event)
         return;
     }
 
-    if (mType & (SubConsole|Buffer)) {
+    if (mType & (SubConsole | Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
             auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
             if (pC) {
@@ -897,7 +893,7 @@ int TConsole::getButtonState()
 // generated for Lua user control by the Lua subsystem.
 void TConsole::slot_toggleLogging()
 {
-    if (mType & (CentralDebugConsole|ErrorConsole|SubConsole|UserWindow)) {
+    if (mType & (CentralDebugConsole | ErrorConsole | SubConsole | UserWindow)) {
         return;
         // We don't support logging anything other than main console (at present?)
     }
@@ -959,7 +955,7 @@ void TConsole::changeColors()
 {
     if (mType == CentralDebugConsole) {
         // No-op now?
-    } else if (mType & (ErrorConsole|SubConsole|UserWindow|Buffer)) {
+    } else if (mType & (ErrorConsole | SubConsole | UserWindow | Buffer)) {
         if (!mBgImageMode) {
             auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
             mpMainDisplay->setStyleSheet(styleSheet);
@@ -1008,7 +1004,7 @@ void TConsole::changeColors()
     }
 
     buffer.updateColors();
-    if (mType & (MainConsole|Buffer)) {
+    if (mType & (MainConsole | Buffer)) {
         buffer.mWrapAt = mpHost->mWrapAt;
         buffer.mWrapIndent = mpHost->mWrapIndentCount;
         buffer.mWrapHangingIndent = mpHost->mWrapHangingIndentCount;
@@ -1085,13 +1081,12 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 
 void TConsole::scrollDown(int lines)
 {
-    if ((mType & (UserWindow|SubConsole)) && !mScrollingEnabled) {
+    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
         return;
     }
 
     mUpperPane->scrollDown(lines);
-    if (!mUpperPane->mIsTailMode &&
-        (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
+    if (!mUpperPane->mIsTailMode && (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
         mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
         mUpperPane->scrollDown(100);                             // needs another scroll to force mIsTailMode
     }
@@ -1108,7 +1103,7 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
-    if ((mType & (UserWindow|SubConsole)) && !mScrollingEnabled) {
+    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
         return;
     }
 
@@ -1119,7 +1114,9 @@ void TConsole::scrollUp(int lines)
     mLowerPane->forceUpdate();
 
     if (lowerAppears) {
-        QTimer::singleShot(0, this, [this, lines]() {  mUpperPane->scrollUp(mLowerPane->getRowCount() + lines); });
+        QTimer::singleShot(0, this, [this, lines]() {
+            mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
+        });
         if (mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
             const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
@@ -1143,7 +1140,7 @@ void TConsole::deselect()
 
 void TConsole::showEvent(QShowEvent* event)
 {
-    if (mType & (MainConsole|Buffer)) {
+    if (mType & (MainConsole | Buffer)) {
         if (mpHost) {
             mAlertOnNewData = false;
         }
@@ -1153,7 +1150,7 @@ void TConsole::showEvent(QShowEvent* event)
 
 void TConsole::hideEvent(QHideEvent* event)
 {
-    if (mType & (MainConsole|Buffer)) {
+    if (mType & (MainConsole | Buffer)) {
         if (mpHost) {
             if (mudlet::self()->mWindowMinimized) {
                 if (mpHost->mAlertOnNewData) {
@@ -1261,7 +1258,6 @@ void TConsole::insertText(const QString& text, QPoint P)
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
             }
         }
-
     }
 }
 
@@ -1560,7 +1556,7 @@ void TConsole::raiseFontChangeEvent()
     if (!mpHost) {
         return;
     }
-    if (!(mType & (MainConsole|UserWindow|SubConsole))) {
+    if (!(mType & (MainConsole | UserWindow | SubConsole))) {
         return;
     }
 
@@ -1583,7 +1579,7 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         mDisplayFontDetails = newFontDetails;
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
-        if (mType & (MainConsole|SubConsole|UserWindow)) {
+        if (mType & (MainConsole | SubConsole | UserWindow)) {
             if (mpHost->mpConsole) {
                 for (auto& commandLine : mpHost->mpConsole->mSubCommandLineMap) {
                     auto pConsole = commandLine->console();
@@ -1649,7 +1645,7 @@ int TConsole::select(const QString& text, int numOfMatch)
     if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "line under current user cursor: " >> mpHost;
         TDebug(Qt::red, Qt::black) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
-        TDebug(Qt::gray, Qt::black) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >>  mpHost;
+        TDebug(Qt::gray, Qt::black) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
 
     int begin = -1;
@@ -1676,7 +1672,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::darkRed, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
-                                                       << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
+                                       << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
                 >> mpHost;
     }
     return begin;
@@ -1825,7 +1821,7 @@ void TConsole::printCommand(QString& msg)
         msg.append(QChar::LineFeed);
         const int lineBeforeNewContent = buffer.getLastLineNumber();
         if (lineBeforeNewContent >= 0 && !buffer.lineBuffer.back().isEmpty()) {
-                msg.prepend(QChar::LineFeed);
+            msg.prepend(QChar::LineFeed);
         }
         buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
     } else {
@@ -2026,7 +2022,6 @@ void TConsole::slot_searchBufferUp()
         } while (searchX > -1);
 
         if (found) {
-
             // Scroll to show the match
             scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
@@ -2070,7 +2065,6 @@ void TConsole::slot_searchBufferDown()
         } while (searchX > -1);
 
         if (found) {
-
             // Scroll to show the match
             scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
@@ -2188,34 +2182,89 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
     switch (event->button()) {
-    case Qt::LeftButton:    mudletEvent.mArgumentList.append(QString::number(1));   break;
-    case Qt::RightButton:   mudletEvent.mArgumentList.append(QString::number(2));   break;
-    case Qt::MiddleButton:  mudletEvent.mArgumentList.append(QString::number(3));   break;
-    case Qt::BackButton:    mudletEvent.mArgumentList.append(QString::number(4));   break;
-    case Qt::ForwardButton: mudletEvent.mArgumentList.append(QString::number(5));   break;
-    case Qt::TaskButton:    mudletEvent.mArgumentList.append(QString::number(6));   break;
-    case Qt::ExtraButton4:  mudletEvent.mArgumentList.append(QString::number(7));   break;
-    case Qt::ExtraButton5:  mudletEvent.mArgumentList.append(QString::number(8));   break;
-    case Qt::ExtraButton6:  mudletEvent.mArgumentList.append(QString::number(9));   break;
-    case Qt::ExtraButton7:  mudletEvent.mArgumentList.append(QString::number(10));  break;
-    case Qt::ExtraButton8:  mudletEvent.mArgumentList.append(QString::number(11));  break;
-    case Qt::ExtraButton9:  mudletEvent.mArgumentList.append(QString::number(12));  break;
-    case Qt::ExtraButton10: mudletEvent.mArgumentList.append(QString::number(13));  break;
-    case Qt::ExtraButton11: mudletEvent.mArgumentList.append(QString::number(14));  break;
-    case Qt::ExtraButton12: mudletEvent.mArgumentList.append(QString::number(15));  break;
-    case Qt::ExtraButton13: mudletEvent.mArgumentList.append(QString::number(16));  break;
-    case Qt::ExtraButton14: mudletEvent.mArgumentList.append(QString::number(17));  break;
-    case Qt::ExtraButton15: mudletEvent.mArgumentList.append(QString::number(18));  break;
-    case Qt::ExtraButton16: mudletEvent.mArgumentList.append(QString::number(19));  break;
-    case Qt::ExtraButton17: mudletEvent.mArgumentList.append(QString::number(20));  break;
-    case Qt::ExtraButton18: mudletEvent.mArgumentList.append(QString::number(21));  break;
-    case Qt::ExtraButton19: mudletEvent.mArgumentList.append(QString::number(22));  break;
-    case Qt::ExtraButton20: mudletEvent.mArgumentList.append(QString::number(23));  break;
-    case Qt::ExtraButton21: mudletEvent.mArgumentList.append(QString::number(24));  break;
-    case Qt::ExtraButton22: mudletEvent.mArgumentList.append(QString::number(25));  break;
-    case Qt::ExtraButton23: mudletEvent.mArgumentList.append(QString::number(26));  break;
-    case Qt::ExtraButton24: mudletEvent.mArgumentList.append(QString::number(27));  break;
-    default:                mudletEvent.mArgumentList.append(QString::number(0));
+    case Qt::LeftButton:
+        mudletEvent.mArgumentList.append(QString::number(1));
+        break;
+    case Qt::RightButton:
+        mudletEvent.mArgumentList.append(QString::number(2));
+        break;
+    case Qt::MiddleButton:
+        mudletEvent.mArgumentList.append(QString::number(3));
+        break;
+    case Qt::BackButton:
+        mudletEvent.mArgumentList.append(QString::number(4));
+        break;
+    case Qt::ForwardButton:
+        mudletEvent.mArgumentList.append(QString::number(5));
+        break;
+    case Qt::TaskButton:
+        mudletEvent.mArgumentList.append(QString::number(6));
+        break;
+    case Qt::ExtraButton4:
+        mudletEvent.mArgumentList.append(QString::number(7));
+        break;
+    case Qt::ExtraButton5:
+        mudletEvent.mArgumentList.append(QString::number(8));
+        break;
+    case Qt::ExtraButton6:
+        mudletEvent.mArgumentList.append(QString::number(9));
+        break;
+    case Qt::ExtraButton7:
+        mudletEvent.mArgumentList.append(QString::number(10));
+        break;
+    case Qt::ExtraButton8:
+        mudletEvent.mArgumentList.append(QString::number(11));
+        break;
+    case Qt::ExtraButton9:
+        mudletEvent.mArgumentList.append(QString::number(12));
+        break;
+    case Qt::ExtraButton10:
+        mudletEvent.mArgumentList.append(QString::number(13));
+        break;
+    case Qt::ExtraButton11:
+        mudletEvent.mArgumentList.append(QString::number(14));
+        break;
+    case Qt::ExtraButton12:
+        mudletEvent.mArgumentList.append(QString::number(15));
+        break;
+    case Qt::ExtraButton13:
+        mudletEvent.mArgumentList.append(QString::number(16));
+        break;
+    case Qt::ExtraButton14:
+        mudletEvent.mArgumentList.append(QString::number(17));
+        break;
+    case Qt::ExtraButton15:
+        mudletEvent.mArgumentList.append(QString::number(18));
+        break;
+    case Qt::ExtraButton16:
+        mudletEvent.mArgumentList.append(QString::number(19));
+        break;
+    case Qt::ExtraButton17:
+        mudletEvent.mArgumentList.append(QString::number(20));
+        break;
+    case Qt::ExtraButton18:
+        mudletEvent.mArgumentList.append(QString::number(21));
+        break;
+    case Qt::ExtraButton19:
+        mudletEvent.mArgumentList.append(QString::number(22));
+        break;
+    case Qt::ExtraButton20:
+        mudletEvent.mArgumentList.append(QString::number(23));
+        break;
+    case Qt::ExtraButton21:
+        mudletEvent.mArgumentList.append(QString::number(24));
+        break;
+    case Qt::ExtraButton22:
+        mudletEvent.mArgumentList.append(QString::number(25));
+        break;
+    case Qt::ExtraButton23:
+        mudletEvent.mArgumentList.append(QString::number(26));
+        break;
+    case Qt::ExtraButton24:
+        mudletEvent.mArgumentList.append(QString::number(27));
+        break;
+    default:
+        mudletEvent.mArgumentList.append(QString::number(0));
     }
     QPoint pos = event->position().toPoint();
     mudletEvent.mArgumentList.append(QString::number(pos.x()));
@@ -2359,7 +2408,8 @@ void TConsole::slot_adjustAccessibleNames()
         } else {
             setAccessibleName(tr("User window \"%1\".").arg(mConsoleName));
         }
-        setAccessibleDescription(tr("Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window."));
+        setAccessibleDescription(
+                tr("Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window."));
         if (mLowerPane->isVisible()) {
             if (multipleProfilesActive) {
                 //: accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.
@@ -2490,7 +2540,7 @@ void TConsole::setCaretMode(bool enabled)
     } else {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // NVDA breaks focus reset, so do it on a timer
-        QTimer::singleShot(0, this, [this] () {
+        QTimer::singleShot(0, this, [this]() {
             mUpperPane->releaseKeyboard();
         });
 #endif
@@ -2605,7 +2655,7 @@ void TConsole::handleLinesOverflowEvent(const int lineCount)
     }
 
     // Else we do have an overflow situation so let's raise an event for it:
-    TEvent sysWindowOverflow {};
+    TEvent sysWindowOverflow{};
     sysWindowOverflow.mArgumentList.append(QLatin1String("sysWindowOverflowEvent"));
     sysWindowOverflow.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     sysWindowOverflow.mArgumentList.append(mConsoleName);

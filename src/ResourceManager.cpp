@@ -22,9 +22,7 @@
 
 #include <QOpenGLContext>
 
-ResourceManager::ResourceManager()
-{
-}
+ResourceManager::ResourceManager() {}
 
 ResourceManager::~ResourceManager()
 {
@@ -43,8 +41,7 @@ void ResourceManager::initialize()
     mErrorCheckingEnabled = true;
 
     mInitialized = true;
-    qDebug() << "ResourceManager: Initialized with error checking"
-             << (mErrorCheckingEnabled ? "enabled" : "disabled");
+    qDebug() << "ResourceManager: Initialized with error checking" << (mErrorCheckingEnabled ? "enabled" : "disabled");
 }
 
 void ResourceManager::cleanup()
@@ -67,24 +64,24 @@ bool ResourceManager::checkGLError(const QString& operation) const
     if (error != GL_NO_ERROR) {
         const char* errorString;
         switch (error) {
-            case GL_INVALID_ENUM:
-                errorString = "GL_INVALID_ENUM";
-                break;
-            case GL_INVALID_VALUE:
-                errorString = "GL_INVALID_VALUE";
-                break;
-            case GL_INVALID_OPERATION:
-                errorString = "GL_INVALID_OPERATION";
-                break;
-            case GL_OUT_OF_MEMORY:
-                errorString = "GL_OUT_OF_MEMORY";
-                break;
-            case GL_INVALID_FRAMEBUFFER_OPERATION:
-                errorString = "GL_INVALID_FRAMEBUFFER_OPERATION";
-                break;
-            default:
-                errorString = "UNKNOWN_GL_ERROR";
-                break;
+        case GL_INVALID_ENUM:
+            errorString = "GL_INVALID_ENUM";
+            break;
+        case GL_INVALID_VALUE:
+            errorString = "GL_INVALID_VALUE";
+            break;
+        case GL_INVALID_OPERATION:
+            errorString = "GL_INVALID_OPERATION";
+            break;
+        case GL_OUT_OF_MEMORY:
+            errorString = "GL_OUT_OF_MEMORY";
+            break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION:
+            errorString = "GL_INVALID_FRAMEBUFFER_OPERATION";
+            break;
+        default:
+            errorString = "UNKNOWN_GL_ERROR";
+            break;
         }
 
         qWarning() << "OpenGL Error in" << operation << ":" << errorString << "(" << error << ")";

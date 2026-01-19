@@ -24,13 +24,13 @@
 
 
 #include "ui_room_exits.h"
-#include <QCheckBox>
 #include <QDialog>
 #include <QPointer>
 #include <QSet>
 #include <QStyledItemDelegate>
 
 class QAction;
+class QCheckBox;
 class Host;
 class TRoom;
 

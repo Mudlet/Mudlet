@@ -1244,4 +1244,38 @@ describe("Tests UI functions", function()
     assert.are.equal(selection, "Qux")
     deselect()
   end)
+
+  -- Tests for label callback functions accepting nil to clear callbacks
+  -- See: https://github.com/Mudlet/Mudlet/issues/823
+  describe("label callback functions accept nil", function()
+    local testLabelName = "testCallbackLabel"
+
+    setup(function()
+      createLabel(testLabelName, 0, 0, 100, 100, 1)
+    end)
+
+    teardown(function()
+      deleteLabel(testLabelName)
+    end)
+
+    it("setLabelClickCallback accepts nil to clear callback", function()
+      setLabelClickCallback(testLabelName, function() end)
+      assert.is_true(setLabelClickCallback(testLabelName, nil))
+    end)
+
+    it("setLabelOnEnter accepts nil to clear callback", function()
+      setLabelOnEnter(testLabelName, function() end)
+      assert.is_true(setLabelOnEnter(testLabelName, nil))
+    end)
+
+    it("setLabelOnLeave accepts nil to clear callback", function()
+      setLabelOnLeave(testLabelName, function() end)
+      assert.is_true(setLabelOnLeave(testLabelName, nil))
+    end)
+
+    it("setLabelReleaseCallback accepts nil to clear callback", function()
+      setLabelReleaseCallback(testLabelName, function() end)
+      assert.is_true(setLabelReleaseCallback(testLabelName, nil))
+    end)
+  end)
 end)

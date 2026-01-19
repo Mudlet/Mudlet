@@ -43,37 +43,37 @@
 #include <QFile>
 #include <sstream>
 
-XMLexport::XMLexport( Host * pH )
+XMLexport::XMLexport(Host* pH)
 : mpHost(pH)
 {
 }
 
-XMLexport::XMLexport( TTrigger * pT )
+XMLexport::XMLexport(TTrigger* pT)
 : mpTrigger(pT)
 {
 }
 
-XMLexport::XMLexport( TTimer * pT )
+XMLexport::XMLexport(TTimer* pT)
 : mpTimer(pT)
 {
 }
 
-XMLexport::XMLexport( TAlias * pT )
+XMLexport::XMLexport(TAlias* pT)
 : mpAlias(pT)
 {
 }
 
-XMLexport::XMLexport( TAction * pT )
+XMLexport::XMLexport(TAction* pT)
 : mpAction(pT)
 {
 }
 
-XMLexport::XMLexport( TScript * pT )
+XMLexport::XMLexport(TScript* pT)
 : mpScript(pT)
 {
 }
 
-XMLexport::XMLexport( TKey * pT )
+XMLexport::XMLexport(TKey* pT)
 : mpKey(pT)
 {
 }
@@ -158,12 +158,18 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     }
 }
 
-void XMLexport::exportHost(const QString& filename_pugi_xml)
+bool XMLexport::exportHost(const QString& filename_pugi_xml)
 {
+    if (!mpHost) {
+        qCritical() << "XMLexport::exportHost() ERROR - Host is null, cannot export";
+        return false;
+    }
+
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
 
     runAsyncSave(filename_pugi_xml, qsl("profile"));
+    return true;
 }
 
 // Helper to encapsulate async save pattern: clone document, save in background thread,
@@ -179,8 +185,8 @@ void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey
     for (pugi::xml_node child = mExportDoc.first_child(); child; child = child.next_sibling()) {
         docClone.append_copy(child);
     }
-    auto future = QtConcurrent::run([fileName, docClone = std::move(docClone)]() mutable { 
-        return XMLexport::saveXmlDocToFile(fileName, docClone); 
+    auto future = QtConcurrent::run([fileName, docClone = std::move(docClone)]() mutable {
+        return XMLexport::saveXmlDocToFile(fileName, docClone);
     });
     auto watcher = new QFutureWatcher<bool>;
     connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey]() {
@@ -222,21 +228,21 @@ void XMLexport::sanitizeForQxml(std::string& output)
 {
     QMap<std::string, std::string> replacements{
             {"&#1;", "\uFFFC\u2401"},   // SOH
-            {"&#01;", "\uFFFC\u2401"},   // SOH
+            {"&#01;", "\uFFFC\u2401"},  // SOH
             {"&#2;", "\uFFFC\u2402"},   // STX
-            {"&#02;", "\uFFFC\u2402"},   // STX
+            {"&#02;", "\uFFFC\u2402"},  // STX
             {"&#3;", "\uFFFC\u2403"},   // ETX
-            {"&#03;", "\uFFFC\u2403"},   // ETX
+            {"&#03;", "\uFFFC\u2403"},  // ETX
             {"&#4;", "\uFFFC\u2404"},   // EOT
-            {"&#04;", "\uFFFC\u2404"},   // EOT
+            {"&#04;", "\uFFFC\u2404"},  // EOT
             {"&#5;", "\uFFFC\u2405"},   // ENQ
-            {"&#05;", "\uFFFC\u2405"},   // ENQ
+            {"&#05;", "\uFFFC\u2405"},  // ENQ
             {"&#6;", "\uFFFC\u2406"},   // ACK
-            {"&#06;", "\uFFFC\u2406"},   // ACK
+            {"&#06;", "\uFFFC\u2406"},  // ACK
             {"&#7;", "\uFFFC\u2407"},   // BEL
-            {"&#07;", "\uFFFC\u2407"},   // BEL
+            {"&#07;", "\uFFFC\u2407"},  // BEL
             {"&#8;", "\uFFFC\u2408"},   // BS
-            {"&#08;", "\uFFFC\u2408"},   // BS
+            {"&#08;", "\uFFFC\u2408"},  // BS
             {"&#11;", "\uFFFC\u240B"},  // VT
             {"&#12;", "\uFFFC\u240C"},  // FF
             {"&#14;", "\uFFFC\u240E"},  // SS
@@ -328,13 +334,13 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
     std::stringstream saveStringStream(std::ios::out);
     doc.save(saveStringStream);
     std::string output(saveStringStream.str());
-    
+
     // Apply sanitization for control characters
     sanitizeForQxml(output);
 
     file.write(output.data(), output.size());
     bool success = file.error() == QFileDevice::NoError;
-    
+
     if (!success) {
         printErrorMessage(file.errorString());
     } else if (!file.commit()) {
@@ -363,7 +369,15 @@ bool XMLexport::saveXmlFile(QSaveFile& file)
     sanitizeForQxml(output);
     // Now we can use Qt's file handling which does handle non-Latin1 named
     // files - which MinGW's STL file handling (on Windows platform) does not:
-    file.write(output.data());
+    const qint64 bytesWritten = file.write(output.data(), static_cast<qint64>(output.size()));
+    if (bytesWritten == -1) {
+        qWarning() << "XMLexport::saveXmlFile() ERROR - failed to write XML data:" << file.errorString();
+        return false;
+    }
+    if (bytesWritten != static_cast<qint64>(output.size())) {
+        qWarning() << "XMLexport::saveXmlFile() ERROR - incomplete write: wrote" << bytesWritten << "of" << output.size() << "bytes";
+        return false;
+    }
     return file.error() == QFileDevice::NoError;
 }
 
@@ -428,7 +442,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
     bool enableUserDictionary;
     bool useSharedDictionary;
-    mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     if (pHost->mMapInfoContributors.isEmpty()) {
@@ -519,10 +533,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
     host.append_attribute("f3SearchEnabled") = pHost->mF3SearchEnabled ? "yes" : "no";
     host.append_attribute("enableClosedCaption") = pHost->mEnableClosedCaption ? "yes" : "no";
-    host.append_attribute("caretShortcut") = QMetaEnum::fromType<Host::CaretShortcut>().valueToKey(
-            static_cast<int>(pHost->mCaretShortcut));
-    host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(
-            static_cast<int>(pHost->mBlankLineBehaviour));
+    host.append_attribute("caretShortcut") = QMetaEnum::fromType<Host::CaretShortcut>().valueToKey(static_cast<int>(pHost->mCaretShortcut));
+    host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
     host.append_attribute("ShowIDsInEditor") = pHost->showIdsInEditor() ? "yes" : "no";
     if (const int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
@@ -946,8 +958,8 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             trigger.append_child("mStayOpen").text().set(QString::number(pT->mStayOpen).toUtf8().constData());
             trigger.append_child("mCommand").text().set(pT->mCommand.toUtf8().constData());
             trigger.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
-            trigger.append_child("mFgColor").text().set(pT->mFgColor == QColorConstants::Transparent ? "transparent": pT->mFgColor.name().toUtf8().constData());
-            trigger.append_child("mBgColor").text().set(pT->mBgColor == QColorConstants::Transparent ? "transparent": pT->mBgColor.name().toUtf8().constData());
+            trigger.append_child("mFgColor").text().set(pT->mFgColor == QColorConstants::Transparent ? "transparent" : pT->mFgColor.name().toUtf8().constData());
+            trigger.append_child("mBgColor").text().set(pT->mBgColor == QColorConstants::Transparent ? "transparent" : pT->mBgColor.name().toUtf8().constData());
             trigger.append_child("mSoundFile").text().set(pT->mSoundFile.toUtf8().constData());
             trigger.append_child("colorTriggerFgColor").text().set(pT->mColorTriggerFgColor.name().toUtf8().constData());
             trigger.append_child("colorTriggerBgColor").text().set(pT->mColorTriggerBgColor.name().toUtf8().constData());
@@ -1264,9 +1276,8 @@ void XMLexport::writeScriptElement(const QString& script, pugi::xml_node xmlElem
 }
 
 // Unlike the reverse operation in XMLimport we cannot modify the supplied patternlist
-QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, const QList<int> & typeList)
+QStringList XMLexport::remapAnsiToColorNumber(const QStringList& patternList, const QList<int>& typeList)
 {
-
     QStringList results;
     const QRegularExpression regex = QRegularExpression(qsl("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
     QStringListIterator itPattern(patternList);
@@ -1363,10 +1374,12 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
                     }
 
                     if (!isFgOk) {
-                        qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default foreground";
+                        qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious()
+                                 << " setting colour to default foreground";
                     }
                     if (!isBgOk) {
-                        qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
+                        qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious()
+                                 << " setting colour to default background";
                     }
 
                     results << qsl("FG%1BG%2").arg(QString::number(fg), QString::number(bg));

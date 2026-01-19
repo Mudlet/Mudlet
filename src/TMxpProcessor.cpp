@@ -71,7 +71,7 @@ bool TMxpProcessor::setMode(int modeCode)
     // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20TagsmMXP = true; // some servers don't negotiate, they assume!
 
     mMXP = true;
-    
+
     switch (modeCode) {
     case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
         mMXP_MODE = MXP_MODE_OPEN;
@@ -160,16 +160,13 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
-    if (ch == '<'
-    && mMxpTagBuilder.isInsideTag()
-    && !mMxpTagBuilder.isQuotedSequence()
-    && !mMxpTagBuilder.isInsideComment()) {
+    if (ch == '<' && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.isQuotedSequence() && !mMxpTagBuilder.isInsideComment()) {
         // Error recovery: nested '<' inside a tag
         // Output the incomplete tag as text and prepare to process the new '<' as a tag start
         const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
         const QByteArray encoding = mpMxpClient->getEncoding();
         QString decoded;
-        
+
         if (encoding == qsl("UTF-8")) {
             decoded = QString::fromStdString(rawBytes);
         } else if (encoding == qsl("ISO 8859-1")) {
@@ -177,7 +174,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         } else {
             decoded = TEncodingHelper::decode(QByteArray::fromRawData(rawBytes.c_str(), rawBytes.length()), encoding);
         }
-        
+
         lastEntityValue = qsl("<") + decoded;
         // resetForNewTag() puts the builder in "inside tag" state, as if we just processed '<'
         // This allows the next character to be processed as part of the new tag
@@ -188,16 +185,15 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         return HANDLER_NEXT_CHAR;
     }
-    
     if (mMxpTagBuilder.hasTag()) {
         // Save raw tag content before it gets cleared by buildTag()
         // Note: getRawTagContent() returns content INCLUDING the closing '>'
         const std::string rawTagBytes = mMxpTagBuilder.getRawTagContent();
         const QByteArray encoding = mpMxpClient->getEncoding();
-        
+
         // Build the tag content string with proper encoding
         QString rawTagContent = qsl("<");
-        
+
         // Decode the raw bytes using the proper encoding
         if (encoding == qsl("UTF-8")) {
             rawTagContent += QString::fromStdString(rawTagBytes);
@@ -207,7 +203,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             // For other encodings (GBK, BIG5, EUC-KR, etc.), use TEncodingHelper
             rawTagContent += TEncodingHelper::decode(QByteArray::fromRawData(rawTagBytes.c_str(), rawTagBytes.length()), encoding);
         }
-        
+
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
@@ -227,17 +223,17 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
     }
 
-    if (mEntityHandler.handle(ch, resolveCustomEntities)) {             // ch is part of an entity
-        if (mEntityHandler.isEntityResolved()) { // entity has been mapped (i.e. ch == ';')
+    if (mEntityHandler.handle(ch, resolveCustomEntities)) { // ch is part of an entity
+        if (mEntityHandler.isEntityResolved()) {            // entity has been mapped (i.e. ch == ';')
             lastEntityValue = mEntityHandler.getResultAndReset();
             switch (mEntityHandler.getEntityType()) {
-                case ENTITY_TYPE_CUSTOM:
-                    return HANDLER_INSERT_ENTITY_CUST;
-                case ENTITY_TYPE_SYSTEM:
-                    // Note special handling for '\n' as a result of &newline;
-                    return lastEntityValue == qsl("\n") ? HANDLER_COMMIT_LINE : HANDLER_INSERT_ENTITY_SYS;
-                default:
-                    return HANDLER_INSERT_ENTITY_LIT;
+            case ENTITY_TYPE_CUSTOM:
+                return HANDLER_INSERT_ENTITY_CUST;
+            case ENTITY_TYPE_SYSTEM:
+                // Note special handling for '\n' as a result of &newline;
+                return lastEntityValue == qsl("\n") ? HANDLER_COMMIT_LINE : HANDLER_INSERT_ENTITY_SYS;
+            default:
+                return HANDLER_INSERT_ENTITY_LIT;
             }
         } else { // ask for the next char
             return HANDLER_NEXT_CHAR;

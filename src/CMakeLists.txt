@@ -151,6 +151,8 @@ set(mudlet_SRCS
     TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
+    TMapView.cpp
+    TMapViewManager.cpp
     TMedia.cpp
     TMediaPlaylist.cpp
     TMxpElementDefinitionHandler.cpp
@@ -356,6 +358,8 @@ set(mudlet_HDRS
     TMainConsole.h
     TMap.h
     TMapLabel.h
+    TMapView.h
+    TMapViewManager.h
     TMatchState.h
     TMedia.h
     TMediaPlaylist.h

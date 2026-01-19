@@ -24,7 +24,7 @@ TMxpTagHandlerResult TMxpImageTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
     Q_UNUSED(ctx)
     Q_UNUSED(client)
     Q_UNUSED(tag)
-    
+
     // IMAGE tag is not yet supported in Mudlet, but we swallow it
     // to prevent it from appearing in the output
     return MXP_TAG_HANDLED;
