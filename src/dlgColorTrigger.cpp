@@ -53,18 +53,19 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
     connect(buttonBox->button(QDialogButtonBox::Apply), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_moreColorsClicked);
 
     connect(buttonBox->button(QDialogButtonBox::Ignore), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_resetColorClicked);
-    buttonBox->button(QDialogButtonBox::Ignore)->setToolTip(utils::richText(mIsBackground
-                                                                            ? tr("Click to make the color trigger ignore the text's background color - however choosing this for both foreground and background is an error.")
-                                                                            : tr("Click to make the color trigger ignore the text's foreground color - however choosing this for both foreground and background is an error.")));
+    buttonBox->button(QDialogButtonBox::Ignore)
+            ->setToolTip(utils::richText(mIsBackground
+                                                 ? tr("Click to make the color trigger ignore the text's background color - however choosing this for both foreground and background is an error.")
+                                                 : tr("Click to make the color trigger ignore the text's foreground color - however choosing this for both foreground and background is an error.")));
     // The Reset button means trigger only if the text is not set to anything
     // so is in the "default" colour - what ever THAT is:
     connect(buttonBox->button(QDialogButtonBox::Reset), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_defaultColorClicked);
     buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Default"));
-    buttonBox->button(QDialogButtonBox::Reset)->setToolTip(utils::richText(mIsBackground
-                                                                                ? tr("Click to make the color trigger when the text's background color has not been modified from its normal value.")                                                                          : tr("Click to make the color trigger when the text's foreground color has not been modified from its normal value.")));
-    groupBox_basicColors->setToolTip(utils::richText(mIsBackground
-                                                     ? tr("Click a color to make the trigger fire only when the text's background color matches the color number indicated.")
-                                                     : tr("Click a color to make the trigger fire only when the text's foreground color matches the color number indicated.")));
+    buttonBox->button(QDialogButtonBox::Reset)
+            ->setToolTip(utils::richText(mIsBackground ? tr("Click to make the color trigger when the text's background color has not been modified from its normal value.")
+                                                       : tr("Click to make the color trigger when the text's foreground color has not been modified from its normal value.")));
+    groupBox_basicColors->setToolTip(utils::richText(mIsBackground ? tr("Click a color to make the trigger fire only when the text's background color matches the color number indicated.")
+                                                                   : tr("Click a color to make the trigger fire only when the text's foreground color matches the color number indicated.")));
 
     connect(pushButton_setUsingRgbValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_rgbColorClicked);
     connect(pushButton_setUsingGrayValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_grayColorClicked);
@@ -188,13 +189,10 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
 
     // If the current is ignored or default set the focus onto them:
     if ((mIsBackground && mpTrigger->mColorTriggerBgAnsi == TTrigger::scmDefault) || (!mIsBackground && mpTrigger->mColorTriggerFgAnsi == TTrigger::scmDefault)) {
-
         buttonBox->button(QDialogButtonBox::Reset)->setFocus();
 
     } else if ((mIsBackground && mpTrigger->mColorTriggerBgAnsi == TTrigger::scmIgnored) || (!mIsBackground && mpTrigger->mColorTriggerFgAnsi == TTrigger::scmIgnored)) {
-
         buttonBox->button(QDialogButtonBox::Ignore)->setFocus();
-
     }
 }
 
@@ -204,9 +202,7 @@ void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor
         slot_basicColorClicked(ansiColor);
     });
 
-    if ((mIsBackground && (mpTrigger->mColorTriggerBgAnsi == ansiColor))
-     || (!mIsBackground && (mpTrigger->mColorTriggerFgAnsi == ansiColor))) {
-
+    if ((mIsBackground && (mpTrigger->mColorTriggerBgAnsi == ansiColor)) || (!mIsBackground && (mpTrigger->mColorTriggerFgAnsi == ansiColor))) {
         pButton->setFocus();
     }
 
@@ -223,8 +219,7 @@ void dlgColorTrigger::slot_rgbColorChanged()
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
     // the generated stylesheet:
-    label_rgbValue->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(mRgbAnsiColor)
-                                  .replace(QLatin1String("QPushButton"), QLatin1String("QLabel")));
+    label_rgbValue->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(mRgbAnsiColor).replace(QLatin1String("QPushButton"), QLatin1String("QLabel")));
 }
 
 void dlgColorTrigger::slot_setRBGButtonFocus()
@@ -242,8 +237,7 @@ void dlgColorTrigger::slot_grayColorChanged(int sliderValue)
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
     // the generated stylesheet:
-    label_grayValue->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(mGrayAnsiColor)
-                                   .replace(QLatin1String("QPushButton"), QLatin1String("QLabel")));
+    label_grayValue->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(mGrayAnsiColor).replace(QLatin1String("QPushButton"), QLatin1String("QLabel")));
 
     if (horizontalSlider_gray->value() != sliderValue) {
         // This slot is also used to set the value so it may need to reposition

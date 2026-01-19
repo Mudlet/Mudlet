@@ -151,6 +151,35 @@ echo ""
 echo "    Completed"
 echo ""
 
+if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
+  echo "=== Installing Qt debug packages for Sentry ==="
+  pacman_attempts=0
+  while true; do
+    if /usr/bin/pacman -S --needed --noconfirm \
+      "${MINGW_PACKAGE_PREFIX}-qt6-base-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-svg-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-speech-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-imageformats-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-tools-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-5compat-debug"; then
+        break
+    fi
+
+    pacman_attempts=$((pacman_attempts +1))
+
+    if [ ${pacman_attempts} -lt 10 ]; then
+      echo "=== Some Qt debug packages failed to install, waiting and trying again ==="
+      sleep 10
+    else
+      echo "=== Some Qt debug packages failed to install after ${pacman_attempts} attempts, giving up ==="
+      exit 7
+    fi
+  done
+  echo ""
+  echo "    Qt debug packages installed"
+  echo ""
+fi
 
 if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
   # The luarocks config file has not been tweaked to put the compiled rocks in

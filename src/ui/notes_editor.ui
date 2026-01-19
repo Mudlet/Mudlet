@@ -19,7 +19,17 @@
      <number>0</number>
     </property>
     <item>
-     <widget class="QPlainTextEdit" name="notesEdit"/>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="tabsClosable">
+       <bool>true</bool>
+      </property>
+      <property name="movable">
+       <bool>true</bool>
+      </property>
+      <property name="documentMode">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -39,7 +49,7 @@
     <string>toolBar</string>
    </property>
    <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
+    <enum>BottomToolBarArea</enum>
    </attribute>
    <attribute name="toolBarBreak">
     <bool>false</bool>

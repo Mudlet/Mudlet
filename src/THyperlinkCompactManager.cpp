@@ -42,9 +42,7 @@ void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const
 
     if (mShorthandRegistry.contains(shorthand)) {
         const ShorthandEntry& existing = mShorthandRegistry.value(shorthand);
-        qWarning() << "THyperlinkCompactManager::registerShorthand: Replacing existing shorthand"
-                   << shorthand << "→" << existing.fullName
-                   << "with new mapping:" << shorthand << "→" << fullName;
+        qWarning() << "THyperlinkCompactManager::registerShorthand: Replacing existing shorthand" << shorthand << "→" << existing.fullName << "with new mapping:" << shorthand << "→" << fullName;
     }
 
     mShorthandRegistry.insert(shorthand, ShorthandEntry(fullName));
@@ -114,8 +112,7 @@ void THyperlinkCompactManager::registerPresetProperty(const QString& propertyNam
     }
 
     if (mPresetPropertyRegistry.contains(propertyName)) {
-        qWarning() << "THyperlinkCompactManager::registerPresetProperty: Replacing existing preset property"
-                   << propertyName;
+        qWarning() << "THyperlinkCompactManager::registerPresetProperty: Replacing existing preset property" << propertyName;
     }
 
     mPresetPropertyRegistry.insert(propertyName, PresetPropertyEntry());
@@ -172,8 +169,7 @@ void THyperlinkCompactManager::registerPreset(const QString& name, const QJsonOb
     emit presetRegistered(name);
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[CompactSyntax] Registered preset:" << name
-             << "config:" << QJsonDocument(config).toJson(QJsonDocument::Compact);
+    qDebug() << "[CompactSyntax] Registered preset:" << name << "config:" << QJsonDocument(config).toJson(QJsonDocument::Compact);
 #endif
 }
 
@@ -206,8 +202,7 @@ QJsonObject THyperlinkCompactManager::deepMerge(const QJsonObject& base, const Q
 {
     // Check recursion depth limit to prevent stack overflow
     if (depth >= MAX_MERGE_DEPTH) {
-        qWarning() << "THyperlinkCompactManager::deepMerge: Maximum recursion depth"
-                   << MAX_MERGE_DEPTH << "reached. Stopping recursion and using overlay.";
+        qWarning() << "THyperlinkCompactManager::deepMerge: Maximum recursion depth" << MAX_MERGE_DEPTH << "reached. Stopping recursion and using overlay.";
         return overlay;
     }
 

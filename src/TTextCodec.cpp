@@ -245,7 +245,7 @@ QString TTextCodec_437::toUnicode(const QByteArray& bytes)
 {
     QString result;
     result.reserve(bytes.size());
-    
+
     for (unsigned char byte : bytes) {
         if (byte < 0x80) {
             result += QLatin1Char(byte);
@@ -260,7 +260,7 @@ QString TTextCodec_667::toUnicode(const QByteArray& bytes)
 {
     QString result;
     result.reserve(bytes.size());
-    
+
     for (unsigned char byte : bytes) {
         if (byte < 0x80) {
             result += QLatin1Char(byte);
@@ -275,7 +275,7 @@ QString TTextCodec_737::toUnicode(const QByteArray& bytes)
 {
     QString result;
     result.reserve(bytes.size());
-    
+
     for (unsigned char byte : bytes) {
         if (byte < 0x80) {
             result += QLatin1Char(byte);
@@ -290,7 +290,7 @@ QString TTextCodec_869::toUnicode(const QByteArray& bytes)
 {
     QString result;
     result.reserve(bytes.size());
-    
+
     for (unsigned char byte : bytes) {
         if (byte < 0x80) {
             result += QLatin1Char(byte);
@@ -305,7 +305,7 @@ QString TTextCodec_medievia::toUnicode(const QByteArray& bytes)
 {
     QString result;
     result.reserve(bytes.size());
-    
+
     for (unsigned char byte : bytes) {
         if (byte < 0x80) {
             result += QLatin1Char(byte);
@@ -321,7 +321,7 @@ QByteArray TTextCodec_437::fromUnicode(const QString& str)
 {
     QByteArray result;
     result.reserve(str.size());
-    
+
     for (const QChar& ch : str) {
         if (ch < QLatin1Char('\x80')) {
             result += ch.cell();
@@ -341,7 +341,7 @@ QByteArray TTextCodec_667::fromUnicode(const QString& str)
 {
     QByteArray result;
     result.reserve(str.size());
-    
+
     for (const QChar& ch : str) {
         if (ch < QLatin1Char('\x80')) {
             result += ch.cell();
@@ -361,7 +361,7 @@ QByteArray TTextCodec_737::fromUnicode(const QString& str)
 {
     QByteArray result;
     result.reserve(str.size());
-    
+
     for (const QChar& ch : str) {
         if (ch < QLatin1Char('\x80')) {
             result += ch.cell();
@@ -381,7 +381,7 @@ QByteArray TTextCodec_869::fromUnicode(const QString& str)
 {
     QByteArray result;
     result.reserve(str.size());
-    
+
     for (const QChar& ch : str) {
         if (ch < QLatin1Char('\x80')) {
             result += ch.cell();
@@ -401,7 +401,7 @@ QByteArray TTextCodec_medievia::fromUnicode(const QString& str)
 {
     QByteArray result;
     result.reserve(str.size());
-    
+
     for (const QChar& ch : str) {
         if (ch < QLatin1Char('\x80')) {
             result += ch.cell();

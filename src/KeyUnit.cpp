@@ -386,12 +386,9 @@ int KeyUnit::getNewID()
 QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers modifierCode) const
 {
     QString name;
-    name = ((modifierCode & Qt::ShiftModifier) ? "shift + " : QString())
-         % ((modifierCode & Qt::ControlModifier) ? "control + " : QString())
-         % ((modifierCode & Qt::AltModifier) ? "alt + " : QString())
-         % ((modifierCode & Qt::MetaModifier) ? "meta + " : QString())
-         % ((modifierCode & Qt::KeypadModifier) ? "keypad + " : QString())
-         % ((modifierCode & Qt::GroupSwitchModifier) ? "groupswitch + " : QString());
+    name = ((modifierCode & Qt::ShiftModifier) ? "shift + " : QString()) % ((modifierCode & Qt::ControlModifier) ? "control + " : QString()) % ((modifierCode & Qt::AltModifier) ? "alt + " : QString())
+           % ((modifierCode & Qt::MetaModifier) ? "meta + " : QString()) % ((modifierCode & Qt::KeypadModifier) ? "keypad + " : QString())
+           % ((modifierCode & Qt::GroupSwitchModifier) ? "groupswitch + " : QString());
 
 
     if (mKeys.contains(keyCode)) {
@@ -403,7 +400,9 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
               "%1 is a string describing the modifier keys (e.g. \"shift\" or \"control\") "
               "used with the key, whose 'code' number, in %2 is not one that we have a name "
               "for. This is probably one of those extra keys around the edge of the keyboard "
-              "that some people have.").arg(name).arg(keyCode, 4, 16, QLatin1Char('0'));
+              "that some people have.")
+            .arg(name)
+            .arg(keyCode, 4, 16, QLatin1Char('0'));
 }
 
 void KeyUnit::assembleReport(TKey* pItem)
@@ -435,16 +434,10 @@ std::tuple<QString, int, int, int> KeyUnit::assembleReport()
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("Keys current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("tempKeys current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active Keys: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    msg << QLatin1String("Keys current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("tempKeys current total: ") << QString::number(statsTempItems)
+        << QLatin1String("\n") << QLatin1String("active Keys: ") << QString::number(statsActiveItems) << QLatin1String("\n");
 
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsTempItems,
-        statsActiveItems
-    };
+    return {msg.join(QString()), statsItemsTotal, statsTempItems, statsActiveItems};
 }
 
 void KeyUnit::markCleanup(TKey* pT)

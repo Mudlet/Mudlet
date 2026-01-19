@@ -26,20 +26,20 @@
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 : mpHost(pHost)
-{}
+{
+}
 
 void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QString& data)
 {
     QJsonParseError parseError;
     auto jsonDoc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
     if (parseError.error != QJsonParseError::NoError) {
-        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Failed to parse JSON: " << parseError.errorString()
-                                       << " at offset " << parseError.offset << ". Received data: \"" << data << "\"";
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Failed to parse JSON: " << parseError.errorString() << " at offset " << parseError.offset << ". Received data: \"" << data
+                                       << "\"";
         return;
     }
     if (!jsonDoc.isObject()) {
-        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Expected JSON object but got "
-                                       << (jsonDoc.isArray() ? "array" : jsonDoc.isNull() ? "null" : "unknown type") << ".";
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Expected JSON object but got " << (jsonDoc.isArray() ? "array" : jsonDoc.isNull() ? "null" : "unknown type") << ".";
         return;
     }
     auto jsonObj = jsonDoc.object();
@@ -60,22 +60,22 @@ void GMCPAuthenticator::sendCredentials()
 {
     auto character = mpHost->getLogin();
     auto password = mpHost->getPass();
-    
+
     QJsonObject credentials;
 
     if (!character.isEmpty() && !password.isEmpty()) {
         credentials["account"] = character;
         credentials["password"] = password;
     }
-    
+
     QJsonDocument doc(credentials);
     QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
-    
+
     // Clear sensitive data from memory as soon as possible
-    credentials = QJsonObject(); // Clear JSON object
-    doc = QJsonDocument();       // Clear document
+    credentials = QJsonObject();                    // Clear JSON object
+    doc = QJsonDocument();                          // Clear document
     SecureStringUtils::secureStringClear(password); // Clear password copy
-    
+
     // Build and send the GMCP message
     std::string output;
     output += TN_IAC;
@@ -88,10 +88,10 @@ void GMCPAuthenticator::sendCredentials()
 
     // Send credentials to server
     mpHost->mTelnet.socketOutRaw(output);
-    
+
     // Clear message from memory
     SecureStringUtils::secureStringClear(gmcpMessage);
-    
+
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP credentials";
 #endif
@@ -103,13 +103,12 @@ void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QS
     QJsonParseError parseError;
     auto doc = QJsonDocument::fromJson(data.toUtf8(), &parseError);
     if (parseError.error != QJsonParseError::NoError) {
-        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Failed to parse JSON: " << parseError.errorString()
-                                       << " at offset " << parseError.offset << ". Received data: \"" << data << "\"";
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Failed to parse JSON: " << parseError.errorString() << " at offset " << parseError.offset << ". Received data: \"" << data
+                                       << "\"";
         return;
     }
     if (!doc.isObject()) {
-        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Expected JSON object but got "
-                                       << (doc.isArray() ? "array" : doc.isNull() ? "null" : "unknown type") << ".";
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - Expected JSON object but got " << (doc.isArray() ? "array" : doc.isNull() ? "null" : "unknown type") << ".";
         return;
     }
     auto obj = doc.object();
@@ -134,7 +133,6 @@ void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QS
             //: %1 shows the reason for failure, could be authentication, etc.
             mpHost->postMessage(tr("[ WARN ]  - Could not log in to the game: %1").arg(message));
         }
-
     }
 }
 

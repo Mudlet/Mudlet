@@ -143,10 +143,11 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
     popup->addSeparator();
 
     const QString viewModeItem = context.isMapViewOnly ?
-        //: 2D Mapper context menu (room) item
-        T2DMap::tr("Switch to editing mode") :
-        //: 2D Mapper context menu (room) item
-        T2DMap::tr("Switch to viewing mode");
+                                                       //: 2D Mapper context menu (room) item
+                                         T2DMap::tr("Switch to editing mode")
+                                                       :
+                                                       //: 2D Mapper context menu (room) item
+                                         T2DMap::tr("Switch to viewing mode");
     auto setMapViewOnly = new QAction(viewModeItem, &mMapWidget);
     QObject::connect(setMapViewOnly, &QAction::triggered, &mMapWidget, &T2DMap::slot_toggleMapViewOnly);
     popup->addAction(setMapViewOnly);
