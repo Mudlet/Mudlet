@@ -801,6 +801,15 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     // Invert the logic here as we are saying "scaled" rather than "unscaled":
     labelObj.insert(QLatin1String("scaledels"), !pLabel->noScaling);
 
+    if (!pLabel->font.family().isEmpty()) {
+        QJsonObject fontObj;
+        fontObj.insert(QLatin1String("family"), pLabel->font.family());
+        fontObj.insert(QLatin1String("pointSize"), pLabel->font.pointSize());
+        fontObj.insert(QLatin1String("weight"), pLabel->font.weight());
+        fontObj.insert(QLatin1String("italic"), pLabel->font.italic());
+        labelObj.insert(QLatin1String("font"), fontObj);
+    }
+
     const QJsonValue labelValue{labelObj};
     array.append(labelValue);
 }
@@ -842,6 +851,14 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
     label.showOnTop = labelObj.value(QLatin1String("showOnTop")).toBool();
 
     label.noScaling = !labelObj.value(QLatin1String("scaledels")).toBool(true);
+
+    if (labelObj.contains(QLatin1String("font"))) {
+        const QJsonObject fontObj = labelObj.value(QLatin1String("font")).toObject();
+        label.font = QFont(fontObj.value(QLatin1String("family")).toString(),
+                           fontObj.value(QLatin1String("pointSize")).toInt(),
+                           fontObj.value(QLatin1String("weight")).toInt(),
+                           fontObj.value(QLatin1String("italic")).toBool());
+    }
 
     mMapLabels.insert(labelId, label);
 }
