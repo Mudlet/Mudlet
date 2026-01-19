@@ -30,7 +30,7 @@
 #include "mudlet.h"
 
 TAlias::TAlias(TAlias* parent, Host* pHost)
-: Tree<TAlias>( parent )
+: Tree<TAlias>(parent)
 , mpHost(pHost)
 {
 }
@@ -164,8 +164,8 @@ bool TAlias::match(const QString& haystack)
         for (uint32_t j = 0; j < namecount; ++j) {
             const int n = (tabptr[0] << 8) | tabptr[1];
             auto name = QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed();
-            auto* substring_start = haystackC + ovector[2*n];
-            auto substring_length = ovector[2*n+1] - ovector[2*n];
+            auto* substring_start = haystackC + ovector[2 * n];
+            auto substring_length = ovector[2 * n + 1] - ovector[2 * n];
             auto utf16_pos = haystack.indexOf(QString::fromUtf8(substring_start, substring_length));
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
@@ -215,14 +215,14 @@ bool TAlias::match(const QString& haystack)
         }
     }
 
-END : {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        pL->setCaptureNameGroups(nameGroups, namePositions);
-        // call lua trigger function with number of matches and matches itselves as arguments
-        execute();
-        pL->clearCaptureGroups();
-    }
+END: {
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
+    pL->setCaptureNameGroups(nameGroups, namePositions);
+    // call lua trigger function with number of matches and matches itselves as arguments
+    execute();
+    pL->clearCaptureGroups();
+}
 
     if (match_data) {
         pcre2_match_data_free(match_data);
@@ -257,13 +257,8 @@ void TAlias::compileRegex()
 
     // PCRE2_UTF needed to run compile in UTF-8 mode
     // PCRE2_UCP needed for \d, \w etc. to use Unicode properties:
-    QSharedPointer<pcre2_code> re(pcre2_compile(
-        reinterpret_cast<PCRE2_SPTR>(mRegexCode.toUtf8().constData()),
-        PCRE2_ZERO_TERMINATED,
-        PCRE2_UTF | PCRE2_UCP,
-        &errorcode,
-        &erroffset,
-        nullptr), pcre2_code_deleter);
+    QSharedPointer<pcre2_code> re(pcre2_compile(reinterpret_cast<PCRE2_SPTR>(mRegexCode.toUtf8().constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP, &errorcode, &erroffset, nullptr),
+                                  pcre2_code_deleter);
 
     if (re == nullptr) {
         mOK_init = false;

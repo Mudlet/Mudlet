@@ -39,16 +39,16 @@ bool THyperlinkSelectionManager::isSelected(const QString& group, const QString&
 void THyperlinkSelectionManager::setSelected(const QString& group, const QString& value, bool selected)
 {
     registerGroupMember(group, value);
-    
+
     bool previousState = isSelected(group, value);
-    
+
     // If selecting and group is exclusive, clear other selections
     if (selected && isGroupExclusive(group)) {
         handleExclusiveSelection(group, value);
     }
-    
+
     mSelectionState[group][value] = selected;
-    
+
     if (previousState != selected) {
         emit selectionChanged(group, value, selected);
     }
@@ -86,7 +86,7 @@ QString THyperlinkSelectionManager::addSelectedParameter(const QString& command,
     QUrlQuery query(url);
     query.removeQueryItem(qsl("selected"));
     query.addQueryItem(qsl("selected"), isSelected ? qsl("true") : qsl("false"));
-    
+
     QString cleanCommand = url.path();
     if (!query.isEmpty()) {
         cleanCommand += qsl("?") + query.query(QUrl::FullyEncoded);
@@ -98,17 +98,17 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
 {
     // Query the current selection state from our internal state
     bool isSelected = this->isSelected(group, value);
-    
+
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "modifyUriForSelection called with baseUri:" << baseUri << "group:" << group << "value:" << value << "isSelected:" << isSelected;
 #endif
-    
+
     // Check if it's a send() or sendCmdLine() call
     const QString sendPrefix = qsl("send([[");
     const QString sendSuffix = qsl("]])");
     const QString sendCmdLinePrefix = qsl("sendCmdLine([[");
     const QString sendCmdLineSuffix = qsl("]])");
-    
+
     if (baseUri.startsWith(sendPrefix) && baseUri.endsWith(sendSuffix)) {
         const int prefixLength = sendPrefix.length();
         const int suffixLength = sendSuffix.length();
@@ -130,7 +130,7 @@ QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri
 #endif
         return result;
     }
-    
+
     // For other URI formats (like openUrl), return as-is
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "No modification - returning as-is";
@@ -143,18 +143,18 @@ void THyperlinkSelectionManager::registerGroupMember(const QString& group, const
     if (!mGroupMembers.contains(group)) {
         mGroupMembers[group] = QSet<QString>();
     }
-    
+
     mGroupMembers[group].insert(value);
 }
 
 void THyperlinkSelectionManager::setGroupExclusive(const QString& group, bool exclusive)
 {
     mGroupExclusivity[group] = exclusive;
-    
+
     if (exclusive && mSelectionState.contains(group)) {
         QStringList members = getGroupMembers(group);
         members.sort();
-        
+
         bool foundFirst = false;
         for (const QString& member : members) {
             if (isSelected(group, member)) {

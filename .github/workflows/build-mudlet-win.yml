@@ -13,11 +13,19 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
+# Permissions required for SignPath trusted build verification
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
 jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    env:
+      SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -125,6 +133,72 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
+    - name: (Windows) Prepare binaries for signing
+      id: prepare-signing
+      if: |
+        env.SIGNPATH_SIGNING_ENABLED == 'true' &&
+        (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true')
+      shell: msys2 {0}
+      run: |
+        SIGNING_DIR="${GITHUB_WORKSPACE}/signing-binaries"
+        mkdir -p "${SIGNING_DIR}"
+
+        cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/mudlet.exe" "${SIGNING_DIR}/"
+        cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/MudletCrashReporter.exe" "${SIGNING_DIR}/"
+
+        if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" ]; then
+          cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" "${SIGNING_DIR}/"
+        fi
+        if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" ]; then
+          cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" "${SIGNING_DIR}/"
+        fi
+
+        echo "SIGNING_DIR=$(cygpath -aw "${SIGNING_DIR}")" >> $GITHUB_ENV
+        echo "signing_dir=${SIGNING_DIR}" >> $GITHUB_OUTPUT
+
+    - name: (Windows) Upload unsigned binaries for signing
+      id: upload-unsigned-binaries
+      if: steps.prepare-signing.outcome == 'success'
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-binaries
+        path: ${{env.SIGNING_DIR}}
+        retention-days: 1
+
+    - name: (Windows) Sign binaries with SignPath
+      id: sign-binaries
+      if: steps.upload-unsigned-binaries.outcome == 'success'
+      uses: signpath/github-action-submit-signing-request@v2
+      with:
+        api-token: ${{secrets.SIGNPATH_API_TOKEN}}
+        organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
+        project-slug: 'mudlet'
+        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        artifact-configuration-slug: 'binaries'
+        github-artifact-id: ${{steps.upload-unsigned-binaries.outputs.artifact-id}}
+        wait-for-completion: true
+        output-artifact-directory: ${{steps.prepare-signing.outputs.signing_dir}}
+        wait-for-completion-timeout-in-seconds: 600
+
+    - name: (Windows) Replace binaries with signed versions
+      if: steps.sign-binaries.outcome == 'success'
+      shell: msys2 {0}
+      run: |
+        SIGNING_DIR="${GITHUB_WORKSPACE}/signing-binaries"
+        BUILD_DIR="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
+
+        cp -v "${SIGNING_DIR}/mudlet.exe" "${BUILD_DIR}/"
+        cp -v "${SIGNING_DIR}/MudletCrashReporter.exe" "${BUILD_DIR}/"
+
+        if [ -f "${SIGNING_DIR}/crashpad_handler.exe" ]; then
+          cp -v "${SIGNING_DIR}/crashpad_handler.exe" "${BUILD_DIR}/"
+        fi
+        if [ -f "${SIGNING_DIR}/crashpad_wer.dll" ]; then
+          cp -v "${SIGNING_DIR}/crashpad_wer.dll" "${BUILD_DIR}/"
+        fi
+
+        echo "Binary signing complete."
+
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
@@ -147,6 +221,53 @@ jobs:
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
+
+    - name: (Windows) Upload unsigned installer for signing
+      id: upload-unsigned-installer
+      if: |
+        env.ARTIFACT_NAME != '' &&
+        env.SIGNPATH_SIGNING_ENABLED == 'true' &&
+        (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') &&
+        contains(env.ARTIFACT_NAME, 'installer')
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-installer
+        path: ${{env.ARTIFACT_WINPATHORFILE}}
+        retention-days: 1
+
+    - name: (Windows) Sign installer with SignPath
+      id: sign-installer
+      if: steps.upload-unsigned-installer.outcome == 'success'
+      uses: signpath/github-action-submit-signing-request@v2
+      with:
+        api-token: ${{secrets.SIGNPATH_API_TOKEN}}
+        organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
+        project-slug: 'mudlet'
+        signing-policy-slug: ${{secrets.SIGNPATH_SIGNING_POLICY_SLUG}}
+        artifact-configuration-slug: 'installer'
+        github-artifact-id: ${{steps.upload-unsigned-installer.outputs.artifact-id}}
+        wait-for-completion: true
+        output-artifact-directory: ${{github.workspace}}/signed-installer
+        wait-for-completion-timeout-in-seconds: 600
+
+    - name: (Windows) Replace installer with signed version
+      if: steps.sign-installer.outcome == 'success'
+      shell: msys2 {0}
+      run: |
+        SIGNED_DIR="${GITHUB_WORKSPACE}/signed-installer"
+        SIGNED_INSTALLER=$(find "${SIGNED_DIR}" -name "*.exe" -type f | head -1)
+        if [ -n "${SIGNED_INSTALLER}" ]; then
+          ORIGINAL_PATH=$(cygpath -au "${ARTIFACT_WINPATHORFILE}")
+          if [ -d "${ORIGINAL_PATH}" ]; then
+            ORIGINAL_EXE=$(find "${ORIGINAL_PATH}" -name "*.exe" -type f | head -1)
+            cp -v "${SIGNED_INSTALLER}" "${ORIGINAL_EXE}"
+          else
+            cp -v "${SIGNED_INSTALLER}" "${ORIGINAL_PATH}"
+          fi
+          echo "Installer signing complete."
+        else
+          echo "Warning: No signed installer found in ${SIGNED_DIR}"
+        fi
 
     - name: Create intermediate artifact for debugging
       uses: actions/upload-artifact@v6

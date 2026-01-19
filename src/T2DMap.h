@@ -47,6 +47,7 @@
 class Host;
 class TArea;
 class TMap;
+class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
 class CustomLineDrawContextMenuHandler;
@@ -169,6 +170,9 @@ public:
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
+    void flushTextLabelPixmapCache() {mTextLabelPixmapCache.clear();}
+    void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
+    void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
@@ -422,6 +426,7 @@ private:
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames = false;
     QCache<QString, QPixmap> mSymbolPixmapCache;
+    QCache<QString, QPixmap> mTextLabelPixmapCache;
     ushort mSymbolFontSize = 1;
     QFont mMapSymbolFont;
     QPointer<QAction> mpCreateRoomAction;
