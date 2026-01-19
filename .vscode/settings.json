@@ -26,8 +26,17 @@
     "tuple": "cpp",
     "type_traits": "cpp",
     "utility": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "*.h": "cpp",
+    "*.cpp": "cpp",
+    "*.c": "c",
+    "CMakeLists.txt": "cmake"
   },
+  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}/src",
+    "${workspaceFolder}/3rdparty"
+  ],
   "[lua]": {
     "editor.tabSize": 2
   }

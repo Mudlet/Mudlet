@@ -169,6 +169,8 @@ function db:_sql_values(values)
     elseif t == "table" and v._timestamp ~= nil then
       if not v._timestamp then
         s = "NULL"
+      elseif v._timestamp == "CURRENT_TIMESTAMP" then
+        s = "datetime('now')"
       else
         s = "datetime('" .. v._timestamp .. "', 'unixepoch')"
       end
@@ -400,6 +402,53 @@ end
 
 
 -- NOT LUADOC
+-- Extracts UNIQUE constraints with ON CONFLICT clauses from a CREATE TABLE statement.
+-- This includes both column-level constraints (e.g., "col1" TEXT UNIQUE ON CONFLICT REPLACE)
+-- and table-level constraints (e.g., UNIQUE("col1", "col2") ON CONFLICT FAIL).
+-- This allows us to detect when constraint definitions have changed without being affected by
+-- column additions/removals.
+function db:_extract_table_constraints(sql)
+  if not sql or sql == "" then
+    return ""
+  end
+  
+  -- Normalize whitespace and case for consistent comparison
+  local normalized = sql:lower()
+  normalized = normalized:gsub("\n", " ")
+  normalized = normalized:gsub("\r", " ")
+  normalized = normalized:gsub("%s+", " ")
+  normalized = normalized:gsub("^%s*(.-)%s*$", "%1")
+  
+  -- Extract the part between the parentheses of CREATE TABLE
+  local content = normalized:match("create%s+table%s+[%w_\"]+%s*%((.+)%)")
+  if not content then
+    return ""
+  end
+  
+  local constraints = {}
+  
+  -- Find table-level UNIQUE constraints
+  -- They look like: UNIQUE("col1") ON CONFLICT REPLACE or UNIQUE("col1", "col2") ON CONFLICT FAIL
+  for constraint in content:gmatch('unique%s*%([^)]+%)%s+on%s+conflict%s+%w+') do
+    table.insert(constraints, constraint)
+  end
+  
+  -- Find column-level UNIQUE constraints
+  -- They look like: "col1" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT REPLACE
+  -- We need to extract just the "UNIQUE ON CONFLICT X" part for comparison
+  for constraint in content:gmatch('unique%s+on%s+conflict%s+%w+') do
+    table.insert(constraints, constraint)
+  end
+  
+  -- Sort for consistent comparison
+  table.sort(constraints)
+  
+  return table.concat(constraints, "|")
+end
+
+
+
+-- NOT LUADOC
 -- The migrate function is meant to upgrade an existing database live, to maintain a consistent
 -- and correct set of sheets and fields, along with their indexes. It should be safe to run
 -- at any time, and must not cause any data loss. It simply adds to what is there: in perticular
@@ -462,7 +511,133 @@ function db:_migrate(db_name, s_name, force)
   else
     -- At this point we know that the sheet already exists, but we are concerned if the current
     -- definition includes columns which may be added.
-    local missing = {}
+    
+    -- Check if the table-level constraints have changed (e.g., _violations option changed)
+    -- by comparing only the UNIQUE constraint definitions, not the column list
+    local expected_sql = db:_build_create_table_sql(schema, s_name)
+    local get_actual_sql = "SELECT sql FROM sqlite_master " ..
+                           "WHERE type = 'table' AND name = '" .. s_name .. "'"
+    local sql_cur, sql_err = conn:execute(get_actual_sql)
+    local table_constraints_changed = false
+    
+    if sql_cur and type(sql_cur) ~= "number" then
+      local sql_row = sql_cur:fetch({}, "a")
+      sql_cur:close()
+      
+      if sql_row and sql_row.sql then
+        local actual_sql = sql_row.sql
+        local expected_constraints = db:_extract_table_constraints(expected_sql)
+        local actual_constraints = db:_extract_table_constraints(actual_sql)
+        
+        if expected_constraints ~= actual_constraints then
+          table_constraints_changed = true
+        end
+      end
+    end
+    
+    -- If the table-level constraints have changed, we need to recreate the table
+    if table_constraints_changed then
+      -- Commit any pending transaction before table recreation
+      conn:commit()
+      
+      -- Check if we're deleting columns that contain data (unless force flag is set)
+      local redundant_columns = {}
+      for k, _ in pairs(current_columns) do
+        if not schema.columns[k] and k ~= "_row_id" then
+          redundant_columns[#redundant_columns + 1] = k
+        end
+      end
+      
+      if #redundant_columns > 0 and not force then
+        -- Check if any of the redundant columns contain non-null data
+        local not_blank = {}
+        for _, col in ipairs(redundant_columns) do
+          local check_sql = string.format('SELECT COUNT(*) AS cnt FROM %s WHERE "%s" IS NOT NULL', s_name, col)
+          local check_cur, check_err = conn:execute(check_sql)
+          assert(check_cur, check_err)
+          
+          if type(check_cur) ~= "number" then
+            local check_row = check_cur:fetch({}, "a")
+            check_cur:close()
+            
+            if check_row and check_row.cnt and tonumber(check_row.cnt) > 0 then
+              not_blank[#not_blank + 1] = col
+            end
+          end
+        end
+        
+        assert(not not_blank[1] or force,
+               "db:_migrate halted due to data present in undefined columns: " .. table.concat(not_blank, ", ") ..
+               "\nuse force option to drop anyway.")
+      end
+      
+      -- Build the list of columns to preserve (only columns that exist in both current and new schema)
+      local fields = { "_row_id" }
+      for k, _ in pairs(schema.columns) do
+        if current_columns[k] then
+          fields[#fields + 1] = string.format('"%s"', k)
+        end
+      end
+      local fields_sql = table.concat(fields, ", ")
+      
+      -- Get the current CREATE TABLE statement to use for the backup
+      local get_create = "SELECT sql FROM sqlite_master " ..
+                        "WHERE type = 'table' AND name = '" .. s_name .. "'"
+      local create_cur, create_err = conn:execute(get_create)
+      assert(create_cur, create_err)
+      
+      if type(create_cur) ~= "number" then
+        local row = create_cur:fetch({}, "a")
+        create_cur:close()
+        
+        -- Ensure we got a result
+        if not row or not row.sql then
+          error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
+        end
+        
+        -- Create temporary backup table, recreate main table, copy data
+        local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
+        create_tmp = create_tmp:gsub("TABLE", "TEMPORARY TABLE")
+        
+        local sql_chunks = {}
+        sql_chunks[#sql_chunks + 1] = create_tmp .. ";"
+        sql_chunks[#sql_chunks + 1] = "INSERT INTO " .. s_name .. "_bak SELECT * FROM " .. s_name .. ";"
+        sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
+        
+        local new_create_sql = db:_build_create_table_sql(schema, s_name)
+        
+        sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
+        sql_chunks[#sql_chunks + 1] = string.format("INSERT INTO %s SELECT %s FROM %s_bak;", s_name, fields_sql, s_name)
+        sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
+        
+        for i, sql in ipairs(sql_chunks) do
+          local ret, str = conn:execute(sql)
+          
+          if not ret then
+            error("Migration failed at chunk " .. i .. ": " .. tostring(str))
+          end
+        end
+        
+        -- Commit the migration transaction
+        conn:commit()
+        
+        -- After recreating the table with new constraints, add any new columns that didn't exist before
+        for k, v in pairs(schema.columns) do
+          if not current_columns[k] then
+            local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
+            local t = db:_sql_type(v)
+            local def = db:_sql_convert(v)
+            local sql = sql_add:format(s_name, k, t, def)
+            conn:execute(sql)
+            db:echo_sql(sql)
+            -- Update current_columns to reflect the newly added column
+            current_columns[k] = ""
+          end
+        end
+      end
+    else
+      -- No table definition change, proceed with normal column migration
+      local missing = {}
 
     for k, v in pairs(schema.columns) do
 
@@ -527,6 +702,12 @@ function db:_migrate(db_name, s_name, force)
       if type(cur) ~= "number" then
         local row = cur:fetch({}, "a");
         cur:close()
+        
+        -- Ensure we got a result
+        if not row or not row.sql then
+          error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
+        end
+        
         local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
         local sql_chunks = {}
         local fields = { "_row_id" }
@@ -557,6 +738,7 @@ function db:_migrate(db_name, s_name, force)
         end
       end
     end
+    end -- end of else block for table_constraints_changed check
   end
 
   -- On every invocation of db:create we run the code that creates indexes, as that code will
@@ -580,7 +762,7 @@ function db:_build_create_table_sql(schema, s_name)
   local sql_column = '"%s" %s NULL'
   local sql_column_default = sql_column .. ' DEFAULT %s'
 
-  local on_conflict = "ON CONFLICT "..schema.options._violations
+  local on_conflict = "ON CONFLICT "..(schema.options._violations or "FAIL")
 
   local sql_chunks = { '"_row_id" INTEGER PRIMARY KEY AUTOINCREMENT' }
 
@@ -593,17 +775,19 @@ function db:_build_create_table_sql(schema, s_name)
   --
   -- Into unique_column_constraints when the a column is unique on its own
   -- and into unique_table_constraints when columns are grouped together.
-  if type(schema.options._unique) == "string" then
-    table.insert(unique_column_constraints, schema.options._unique)
-  elseif type(schema.options._unique) == "table" then
-    for _, unique_constraint in ipairs(schema.options._unique) do
-      if type(unique_constraint) == "string" then
-        table.insert(unique_column_constraints, unique_constraint)
-      elseif type(unique_constraint) == "table" then
-        table.insert(
-          unique_table_constraints,
-          'UNIQUE("'..table.concat(unique_constraint, '", "')..'") '..on_conflict
-        )
+  if schema.options and schema.options._unique then
+    if type(schema.options._unique) == "string" then
+      table.insert(unique_column_constraints, schema.options._unique)
+    elseif type(schema.options._unique) == "table" then
+      for i, unique_constraint in ipairs(schema.options._unique) do
+        if type(unique_constraint) == "string" then
+          table.insert(unique_column_constraints, unique_constraint)
+        elseif type(unique_constraint) == "table" then
+          table.insert(
+            unique_table_constraints,
+            'UNIQUE("'..table.concat(unique_constraint, '", "')..'") '..on_conflict
+          )
+        end
       end
     end
   end
@@ -624,7 +808,7 @@ function db:_build_create_table_sql(schema, s_name)
 
   -- Add in the unique constraints
   for _, unique_table_constraint in ipairs(unique_table_constraints) do
-    sql_chunks[#sql_chunks + 1] = "UNIQUE("..table.concat(unique_table_constraint, ", ")..")"
+    sql_chunks[#sql_chunks + 1] = unique_table_constraint
   end
 
   return "CREATE TABLE " .. s_name.. " ("..table.concat(sql_chunks, ", ")..")"
@@ -733,10 +917,11 @@ function db:fetch_sql(sheet, sql)
   -- if we had a syntax error in our SQL, cur will be nil
   if cur and cur ~= 0 then
     local results = {}
+    local columns = cur:getcolnames()
     local row = cur:fetch({}, "a")
 
     while row do
-      results[#results + 1] = db:_coerce_sheet(sheet, row)
+      results[#results + 1] = db:_coerce_sheet(columns, sheet, row)
       row = cur:fetch({}, "a")
     end
     cur:close()
@@ -870,11 +1055,9 @@ function db:aggregate(field, fn, query, distinct)
       return count
     end
     -- Only datetime left
-    -- the value, count, is currently in a UTC timestamp
-    local localtime = datetime:parse(count, nil, true)
-    -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-    count = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
-    return count
+    local utc_epoch = datetime:parse(count, nil, true)
+    local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
+    return db:Timestamp(utc_epoch + locale_diff)
   else
     return 0
   end
@@ -1175,20 +1358,24 @@ end
 -- After a table so retrieved from the database, this function coerces values to
 -- their proper types. Specifically, numbers and datetimes become the proper
 -- types.
-function db:_coerce_sheet(sheet, tbl)
+function db:_coerce_sheet(columns, sheet, tbl)
   if tbl then
     tbl._row_id = tonumber(tbl._row_id)
 
-    for k, v in pairs(tbl) do
+    for _, k in pairs(columns) do
       if k ~= "_row_id" then
         local field = sheet[k]
         if field.type == "number" then
           tbl[k] = tonumber(tbl[k]) or tbl[k]
         elseif field.type == "datetime" then
-          -- the value, tbl[k], is currently in a UTC timestamp
-          local localtime = datetime:parse(tbl[k], nil, true)
-          -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-          tbl[k] = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
+          if (tbl[k] == nil) then
+            tbl[k] = db:Timestamp(nil)
+          else
+            -- the value, tbl[k], is a UTC timestamp
+            local utc_epoch = datetime:parse(tbl[k], nil, true)
+            local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
+            tbl[k] = db:Timestamp(utc_epoch + locale_diff)
+          end
         end
       end
     end
@@ -1210,6 +1397,8 @@ function db:_coerce(field, value)
   elseif field.type == "datetime" then
     if value._timestamp == false then
       return "NULL"
+    elseif value._timestamp == "CURRENT_TIMESTAMP" then
+      return "datetime('now')"
     else
       return "datetime('" .. value._timestamp .. "', 'unixepoch')" or "'" .. value .. "'"
     end
@@ -1587,17 +1776,22 @@ end
 --- <b><u>TODO</u></b>
 function db:Timestamp(ts, fmt)
   local dt = {}
-  if type(ts) == "table" then
-    dt._timestamp = os.time(ts)
-  elseif type(ts) == "number" then
-    dt._timestamp = ts
-  elseif type(ts) == "string" and
-  assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
-    dt._timestamp = "CURRENT_TIMESTAMP"
-  elseif ts == nil then
-    dt._timestamp = false
+
+  if ts == nil then
+      dt._timestamp = false
+  elseif ts == "CURRENT_TIMESTAMP" then
+      dt._timestamp = "CURRENT_TIMESTAMP"
   else
-    assert(nil, "Invalid value passed to db.Timestamp()")
+    local t = type(ts)
+    if t == "table" then
+      dt._timestamp = os.time(ts)
+    elseif t == "number" then
+      dt._timestamp = ts
+    elseif t == "string" then
+      dt._timestamp = datetime:parse(ts, fmt, true)
+    else
+      error("Invalid value passed to db.Timestamp()")
+    end
   end
   return setmetatable(dt, db.__TimestampMT)
 end
@@ -1631,9 +1825,9 @@ db.__SheetMT = {
     local field = db.__schema[db_name][sht_name]['columns'][f_name]
     local field_type = ""
     local rt
-    if assert(field, errormsg:format(k, sht_name, db_name)) then
+    if assert(field ~= nil, errormsg:format(k, sht_name, db_name)) then
       field_type = type(field)
-      if field_type == "table" and field._timestamp then
+      if field_type == "table" and field._timestamp ~= nil then
         field_type = "datetime"
       end
 

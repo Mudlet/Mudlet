@@ -21,10 +21,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QMultiMap>
-#include "post_guard.h"
 
 class QString;
 
@@ -36,6 +34,7 @@ public:
     void loadFont(const QString& filePath, const QString& belongsTo = "main");
     bool fontAlreadyLoaded(const QString& filePath);
     void unloadFonts(const QString& belongsTo);
+    void addEmojiFont();
 
 private:
     void loadFonts(const QString& folder);

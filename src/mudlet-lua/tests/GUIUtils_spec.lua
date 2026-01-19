@@ -869,6 +869,33 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  describe("Tests the error handling of setLabelStyleSheet", function()
+    local testLabel = "setLabelStyleSheetTestLabel"
+
+    after_each(function()
+      pcall(deleteLabel, testLabel)
+    end)
+
+    it("Should return nil + error when label doesn't exist", function()
+      local nonExistentLabel = "thisLabelDoesNotExist"
+      local ok, err = setLabelStyleSheet(nonExistentLabel, "color: red;")
+      assert.is_nil(ok)
+      assert.matches("label name '.*' not found", err)
+    end)
+
+    it("Should return nil + error when label name is empty", function()
+      local ok, err = setLabelStyleSheet("", "color: red;")
+      assert.is_nil(ok)
+      assert.matches("cannot have an empty string", err)
+    end)
+
+    it("Should return true when successfully setting stylesheet on existing label", function()
+      createLabel(testLabel, 10, 10, 100, 50, 1)
+      local ok = setLabelStyleSheet(testLabel, "color: blue;")
+      assert.is_true(ok)
+    end)
+  end)
+
   describe("Tests the functionality of replace", function()
     it("Should return nil+msg if nothing is selected to replace", function()
       deselect()

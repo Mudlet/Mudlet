@@ -23,17 +23,17 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "utils.h"
+
 #include <QMultiMap>
 #include <QPointer>
+#include <QSet>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
 class Host;
 class TAlias;
-
 
 class AliasUnit
 {
@@ -44,6 +44,7 @@ public:
     explicit AliasUnit(Host* pHost)
     : mpHost(pHost)
     {}
+    ~AliasUnit();
 
     std::list<TAlias*> getAliasRootNodeList() { return mAliasRootNodeList; }
     TAlias* getAlias(int id);
@@ -59,6 +60,7 @@ public:
     void uninstall(const QString&);
     void _uninstall(TAlias* pChild, const QString& packageName);
     void reParentAlias(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     bool processDataStream(const QString&);
     void stopAllTriggers();
     void reenableAllTriggers();
@@ -68,7 +70,7 @@ public:
     void doCleanup();
 
     QMultiMap<QString, TAlias*> mLookupTable;
-    std::list<TAlias*> mCleanupList;
+    QSet<TAlias*> mCleanupSet;
     QList<TAlias*> uninstallList;
 
 
@@ -91,6 +93,7 @@ private:
     int statsItemsTotal = 0;
     int statsTempItems = 0;
     int statsActiveItems = 0;
+    bool mIsProcessing = false;
 };
 
 #endif // MUDLET_ALIASUNIT_H

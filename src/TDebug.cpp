@@ -52,33 +52,78 @@ TDebug& TDebug::operator>>(Host* pHost)
         if (Q_UNLIKELY(!smMessageQueue.isEmpty())) {
             // The smpDebugConsole must have just come on-line - so unload all
             // the stacked up messages:
-            while (!smMessageQueue.isEmpty()) {
+            QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
+
+            while (!smMessageQueue.isEmpty() && debugConsole) {
                 const auto& message = smMessageQueue.dequeue();
-                if (message.mTag.isNull()) {
-                    mudlet::smpDebugConsole->print(message.mMessage, message.mForeground, message.mBackground);
+                // Create local copy for each print call to ensure thread safety
+                QPointer<TConsole> localDebugConsole = debugConsole;
+
+                if (localDebugConsole) {
+                    if (message.mTag.isNull()) {
+                        localDebugConsole->print(message.mMessage, message.mForeground, message.mBackground);
+                    } else {
+                        localDebugConsole->print(message.mTag % message.mMessage, message.mForeground, message.mBackground);
+                    }
                 } else {
-                    mudlet::smpDebugConsole->print(message.mTag % message.mMessage, message.mForeground, message.mBackground);
+                    // Console became invalid, break out of the loop
+                    break;
                 }
+                // Update the loop condition variable
+                debugConsole = mudlet::smpDebugConsole;
             }
         }
 
+        // Check if debug console is still valid before using it
+        QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
+
+        if (!debugConsole) {
+            return *this;
+        }
+
+        // Safety check: if pHost is not null but not in smIdentifierMap,
+        // the Host is probably being destroyed, so treat as system message
+        if (pHost && !smIdentifierMap.contains(pHost)) {
+            QPointer<TConsole> localDebugConsole = debugConsole;
+
+            if (localDebugConsole) {
+                localDebugConsole->print(csmTagSystemMessage % msg, fgColor, bgColor);
+            }
+
+            return *this;
+        }
+
         auto tag = deduceProfileTag(msg, pHost);
+
         if (tag.isNull()) {
             // We use an empty message with no host pointer to flush out the
             // enqueued messages the first time the CDC is shown - so in that
             // case we will already done everything needed in previous chunk
             // of code. Otherwise just print the message without a tag marking:
             if (!msg.isEmpty()) {
-                mudlet::smpDebugConsole->print(msg, fgColor, bgColor);
+                QPointer<TConsole> localDebugConsole = debugConsole;
+                if (localDebugConsole) {
+                    localDebugConsole->print(msg, fgColor, bgColor);
+                }
             }
         } else if (tag == csmTagSystemMessage || Q_UNLIKELY(tag == csmTagFault) || TDebug::smIdentifierMap.count() > 1) {
             // This is a system message or something went wrong in identifying the profile or more than one profile is active
-            mudlet::smpDebugConsole->print(tag % msg, fgColor, bgColor);
+            // Create local copy and re-check debugConsole validity before printing
+            QPointer<TConsole> localDebugConsole = debugConsole;
+
+            if (localDebugConsole) {
+                localDebugConsole->print(tag % msg, fgColor, bgColor);
+            }
         } else {
             // Only one profile active - so don't print the tag:
-            mudlet::smpDebugConsole->print(msg, fgColor, bgColor);
+            // Create local copy and re-check debugConsole validity before printing
+            QPointer<TConsole> localDebugConsole = debugConsole;
+            if (localDebugConsole) {
+                localDebugConsole->print(msg, fgColor, bgColor);
+            }
         }
     }
+
     return *this;
 }
 
@@ -166,12 +211,9 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 /* static */ void TDebug::addHost(Host* pHost, const QString hostName)
 {
     if (!initialised) {
-        smAvailableIdentifiers << qsl("[A] ") << qsl("[B] ") << qsl("[C] ") << qsl("[D] ") << qsl("[E] ")
-                               << qsl("[F] ") << qsl("[G] ") << qsl("[H] ") << qsl("[I] ") << qsl("[J] ")
-                               << qsl("[K] ") << qsl("[L] ") << qsl("[M] ") << qsl("[N] ") << qsl("[O] ")
-                               << qsl("[P] ") << qsl("[Q] ") << qsl("[R] ") << qsl("[S] ") << qsl("[T] ")
-                               << qsl("[U] ") << qsl("[V] ") << qsl("[W] ") << qsl("[X] ") << qsl("[Y] ")
-                               << qsl("[Z] ");
+        smAvailableIdentifiers << qsl("[A] ") << qsl("[B] ") << qsl("[C] ") << qsl("[D] ") << qsl("[E] ") << qsl("[F] ") << qsl("[G] ") << qsl("[H] ") << qsl("[I] ") << qsl("[J] ") << qsl("[K] ")
+                               << qsl("[L] ") << qsl("[M] ") << qsl("[N] ") << qsl("[O] ") << qsl("[P] ") << qsl("[Q] ") << qsl("[R] ") << qsl("[S] ") << qsl("[T] ") << qsl("[U] ") << qsl("[V] ")
+                               << qsl("[W] ") << qsl("[X] ") << qsl("[Y] ") << qsl("[Z] ");
         initialised = true;
     }
 
@@ -205,12 +247,34 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 
 /* static */ void TDebug::removeHost(Host* pHost, const QString hostName)
 {
-    auto identifier = TDebug::smIdentifierMap.take(pHost);
+    QPair<QString, QString> identifier;
+
+    if (pHost) {
+        // Normal case: remove by Host pointer
+        identifier = TDebug::smIdentifierMap.take(pHost);
+    } else {
+        // Host is being destroyed: find by hostName and remove
+        const Host* foundHost = nullptr;
+
+        for (auto it = smIdentifierMap.begin(); it != smIdentifierMap.end(); ++it) {
+            if (it.value().first == hostName) {
+                foundHost = it.key();
+                identifier = it.value();
+                break;
+            }
+        }
+
+        if (foundHost) {
+            smIdentifierMap.remove(foundHost);
+        }
+    }
+
     // Check for the use of non-profile specific tags:
     if (identifier.second != csmTagOverflow && identifier.second != csmTagSystemMessage && identifier.second != csmTagFault) {
         // is a normal identifier so push it in at the back of the queue for reuse:
         smAvailableIdentifiers.enqueue(identifier.second);
     }
+
     TDebug localMessage(Qt::darkGray, Qt::white);
     localMessage << qsl("Profile '%1' ended.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);
@@ -243,7 +307,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     // because the default size will clip the text otherwise, unless the
     // user resizes the CDC:
     messageLines.prepend(qsl("%1 profiles active now. Each message from a profile \n"
-                                        "will be prefixed as follows:")
+                             "will be prefixed as follows:")
                                  .arg(TDebug::smIdentifierMap.count()));
 
     return messageLines.join(QChar::LineFeed).append(QChar::LineFeed);

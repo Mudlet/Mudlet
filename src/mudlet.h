@@ -26,13 +26,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Announcer.h"
-#include "MudletInstanceCoordinator.h"
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
+#include "LlamaFileManager.h"
+#include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
-#include "TMediaData.h"
 #include "utils.h"
 #include <memory>
 
@@ -40,9 +39,7 @@
 #include "updater.h"
 #endif
 
-#include "pre_guard.h"
 #include "ui_main_window.h"
-#include "edbee/views/texttheme.h"
 #include <QAction>
 #include <QDir>
 #include <QFlags>
@@ -56,43 +53,14 @@
 #include <QTime>
 #include <QVersionNumber>
 #include <QWindow>
-#include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include <../3rdparty/qtkeychain/keychain.h>
+#include <qtkeychain/keychain.h>
 #else
 #include <qt6keychain/keychain.h>
 #endif
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
-
-// for system physical memory info
-#if defined(Q_OS_WINDOWS)
-#include <Windows.h>
-#include <Psapi.h>
-#elif defined(Q_OS_MACOS)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <array>
-#elif defined(Q_OS_HURD)
-#include <errno.h>
-#include <unistd.h>
-#elif defined(Q_OS_OPENBSD)
-// OpenBSD doesn't have a sysinfo.h
-#include <sys/sysctl.h>
-#include <unistd.h>
-#elif defined(Q_OS_UNIX)
-// Including both GNU/Linux and FreeBSD
-#include <sys/resource.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// Any other OS?
-#endif
-#include "post_guard.h"
 
 class QCloseEvent;
 class QMediaPlayer;
@@ -111,10 +79,16 @@ class QTimer;
 class dlgAboutDialog;
 class dlgConnectionProfiles;
 class dlgIRC;
+class dlgNotepad;
+class dlgPackageManager;
+class dlgModuleManager;
+class dlgPackageExporter;
 class dlgProfilePreferences;
+class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
 class TConsole;
+class TDetachedWindow;
 class TDockWidget;
 class TEvent;
 class TLabel;
@@ -208,6 +182,11 @@ public:
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
+    // This may need to be localised, it represents the format of the timestamp
+    inline static QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
+    // If localised this should be set to the same format and length as the
+    // smTimeStampFormat:
+    inline static QString smBlankTimeStamp = qsl("------------ ");
 
 
     void showEvent(QShowEvent*) override;
@@ -223,7 +202,7 @@ public:
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
-    void announce(const QString& text, const QString& processing = QString());
+    void announce(const QString& text, const QString& processing = QString(), bool isPlain = false);
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
@@ -231,6 +210,8 @@ public:
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
+    void updateMainWindowToolbarState();
+    void updateMainWindowTitle();
     void forceClose();
     void armForceClose();
     Host* getActiveHost();
@@ -238,6 +219,9 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     HostManager& getHostManager() { return mHostManager; }
+    ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
+    const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
+    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
@@ -254,8 +238,15 @@ public:
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
+    // Helper function to check if current version is >= specified version for backward compatibility
+    bool isVersionAtLeast(const QString& minVersion);
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
+
+    // Profile validation and orphan detection
+    bool hasOrphanedProfiles();
+    QStringList getOrphanedProfiles();
+    void reattachOrphanedProfiles();
     // Both of these revises the contents of the .aff file and handle a .dic
     // file that has been updated externally/manually (to add or remove words)
     // - the first also puts the contents of the .dic file into the
@@ -296,17 +287,22 @@ public:
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
-    void setupPreInstallPackages(const QString&);
+    void setInvertMapZoom(const bool);
+    void setShowTabConnectionIndicators(const bool);
+    void setupPreInstallPackages(const QString&, const QString&);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
+    bool invertMapZoom() const { return mInvertMapZoom; }
+    bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
     void showOptionsDialog(const QString&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
@@ -393,6 +389,16 @@ public:
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
+    bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
+
+    // AI integration methods
+    LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
+    bool aiModelAvailable() const;
+    bool aiRunning() const;
+    QString getAIModelPath() const { return mAIModelPath; }
+    void setAIModelPath(const QString& path);
+    bool getAIAutoStart() const { return mAIAutoStart; }
+    void setAIAutoStart(bool autoStart);
 
 
 #if defined(INCLUDE_UPDATER)
@@ -403,15 +409,16 @@ public:
 public slots:
     void slot_closeCurrentProfile();
     void slot_closeProfileRequested(int);
+    void slot_closeProfileByName(const QString& profileName);
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
-    void slot_irc();
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
     void slot_showFullChangelog();
 #endif
     void slot_mapper();
+    void slot_showMapperDialog(); // Enhanced mapper dialog with per-profile dock widgets
     void slot_moduleManager();
     void slot_mudletDiscord();
     void slot_multiView(const bool);
@@ -426,6 +433,15 @@ public slots:
     void slot_processEventLoopHackTimerRun();
     void slot_profileDiscord();
     void slot_reconnect();
+    void slot_reattachAllDetachedWindows();
+    void slot_toggleAlwaysOnTop();
+    void slot_minimize();
+    void slot_newMapWindow();
+    void updateWindowMenu();
+    void slot_activateMainWindow();
+    void slot_activateDetachedWindow();
+    void slot_activateMainWindowProfile();
+    void slot_activateDetachedWindowProfile();
     void slot_replay();
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
@@ -444,11 +460,44 @@ public slots:
     void slot_toggleReplay();
     void slot_toggleLogging();
     void slot_toggleEmergencyStop();
-
+    void slot_tabDetachRequested(int index, const QPoint& globalPos);
+    void slot_tabReattachRequested(const QString& tabName, int insertIndex = -1);
+    void slot_detachedWindowClosed(const QString& profileName);
+    void slot_profileDetachToWindow(const QString& profileName, TDetachedWindow* targetWindow);
+    void updateDetachedWindowToolbars();
+    static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
+    void updateMainWindowTabIndicators();
+    void updateMainWindowTabBarAutoHide();
+    void updateTabIndicators(); // Update all tab indicators (main window)
+    void updateDetachedWindowTabIndicators(); // Update all detached window tab indicators
+    void slot_showActionDialog();
+    void slot_showAliasDialog();
+    void slot_showEditorDialog();
+    void slot_showHelpDialog();
+    void slot_showKeyDialog();
+    void slot_showPreferencesDialog();
+    void slot_showScriptDialog();
+    static void restoreProfileFocus(const QString& profileName);
+    static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
+    void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
+    void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
+    void setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager);
+    void setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter);
+    void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
+    void slot_showTimerDialog();
+    void slot_showTabContextMenu(const QPoint& position);
+    void slot_toggleMainToolBar();
+    void slot_showMainToolBarContextMenu(const QPoint& position);
+    void synchronizeToolBarVisibility(bool visible);
+    void slot_showTriggerDialog();
+    void slot_showVariableDialog();
 
 protected:
     void closeEvent(QCloseEvent*) override;
     void changeEvent(QEvent*) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
 
 
 signals:
@@ -463,6 +512,7 @@ signals:
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
     void signal_passwordsMigratedToSecure();
+    void signal_characterPasswordsMigrated();
     void signal_profileActivated(Host *, quint8);
     void signal_profileMapReloadRequested(QList<QString>);
     void signal_setToolBarIconSize(int);
@@ -473,7 +523,10 @@ signals:
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
-
+    void signal_aiStatusChanged(bool running);
+    void signal_aiModelChanged(const QString& modelPath);
+    void signal_showTabConnectionIndicatorsChanged(bool);
+    void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
@@ -483,16 +536,6 @@ private slots:
 #if defined(INCLUDE_UPDATER)
     void slot_reportIssue();
 #endif
-    void slot_showActionDialog();
-    void slot_showAliasDialog();
-    void slot_showEditorDialog();
-    void slot_showHelpDialog();
-    void slot_showKeyDialog();
-    void slot_showPreferencesDialog();
-    void slot_showScriptDialog();
-    void slot_showTimerDialog();
-    void slot_showTriggerDialog();
-    void slot_showVariableDialog();
     void slot_tabMoved(const int oldPos, const int newPos);
     void slot_toggleCompactInputLine();
 #if defined(INCLUDE_UPDATER)
@@ -501,14 +544,17 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
+    void slot_aiStatusChanged(LlamafileManager::Status newStatus, LlamafileManager::Status oldStatus);
+    void slot_aiError(const QString& error);
+    void slot_refreshTabIndicatorsDelayed();
 
 
 private:
-    static bool desktopInDarkMode();
 
 
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+    static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString &dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
@@ -525,6 +571,14 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
+
+    // Profile detachment helper methods
+    void moveProfileFromMainToDetachedWindow(const QString& profileName, int tabIndex, TDetachedWindow* targetWindow);
+    void moveProfileBetweenDetachedWindows(const QString& profileName, TDetachedWindow* sourceWindow, TDetachedWindow* targetWindow);
+    void moveProfileFromDetachedToMainWindow(const QString& profileName, TDetachedWindow* sourceWindow);
+    int findTabIndex(const QString& profileName) const;
+    void cleanupDetachedWindowsMap(); // Remove null pointers from the map
+
 
     inline static QPointer<mudlet> smpSelf = nullptr;
 
@@ -581,7 +635,6 @@ private:
     QPointer<QAction> mpActionDiscord;
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
-    QPointer<QAction> mpActionIRC;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
     QPointer<QAction> mpActionModuleManager;
@@ -603,9 +656,9 @@ private:
     QPointer<QAction> mpActionScripts;
     QPointer<QAction> mpActionSpeedDisplay;
     QPointer<QAction> mpActionTimers;
+    QPointer<QAction> mpActionToggleMainToolBar;
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
-    Announcer* mpAnnouncer = nullptr;
     // This pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsequent
     // loadTranslators(...) call
@@ -619,8 +672,11 @@ private:
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
     QPointer<QLabel> mpLabelReplayTime;
+    QPointer<QWidget> mpFocusWidgetBeforeDeactivate;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
+    // a list of character passwords currently being migrated to secure storage
+    QList<QPair<QString, QString>> mCharacterPasswordsToMigrate;
     QPointer<QShortcut> mpShortcutCloseProfile;
     QPointer<QShortcut> mpShortcutConnect;
     QPointer<QShortcut> mpShortcutDisconnect;
@@ -644,12 +700,13 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mShowMapAuditErrors = false;
+    bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
     QSplitter* mpSplitter_profileContainer = nullptr;
     bool mStorePasswordsSecurely = true;
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
-    enums::controlsVisibility mToolbarVisibility = enums::visibleAlways;
+    enums::controlsVisibility mToolbarVisibility = enums::visibleNever;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     // An encapsulation of the mInterfaceLanguage in a form that Qt uses to
     // hold all the details:
@@ -658,12 +715,50 @@ private:
     // The collection of words in what mpHunspell_sharedDictionary points to:
     QSet<QString> mWordSet_shared;
 
+    // Window menu management for multiple windows
+    QList<QAction*> mWindowListActions;
+    QAction* mWindowListSeparator = nullptr;
+
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0; // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
     // show the tutorial maximum 3 times on a new Mudlet
     static const int mScrollbackTutorialsMax = 3; // Split screen
     static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
+
+    // AI/LlamaFile integration
+    std::unique_ptr<LlamafileManager> mpLlamafileManager;
+    QString mAIModelPath;
+    bool mAIAutoStart = true;
+
+    // Helper methods for AI integration
+    void initializeAI();
+    void shutdownAI();
+    bool findAIModel();
+    void setupAIConfig();
+
+    // Helper method for detached windows cleanup
+    void saveDetachedWindowsGeometry();
+
+    // Detached windows for profiles
+    QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+
+    // Dock widget management for main window per-profile widgets
+    QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
+    QMap<QString, bool> mMainWindowDockWidgetUserPreference; // User's show/hide preference for dock widgets
+    QPointer<QDockWidget> mpCurrentMapDockWidget;
+
+    // Helper methods for detached windows
+    void detachTab(int tabIndex, const QPoint& position);
+    void reattachTab(const QString& profileName, int insertIndex = -1);
+    TMainConsole* removeConsoleFromSplitter(const QString& profileName);
+    void addConsoleToSplitter(TMainConsole* console, int index = -1);
+
+    // Helper methods for main window dock widget management
+    void updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName);
+    void transferDockWidgetToDetachedWindow(const QString& profileName, TDetachedWindow* detachedWindow);
+    void transferDockWidgetFromDetachedWindow(const QString& profileName, TDetachedWindow* detachedWindow);
+    void transferDockWidgetBetweenDetachedWindows(const QString& profileName, TDetachedWindow* sourceWindow, TDetachedWindow* targetWindow);
 };
 
 

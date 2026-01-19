@@ -3,22 +3,23 @@ name: QGridLayout Items Ordering
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
 
 jobs:
   qgrid-ordering:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{github.event.pull_request.head.ref}}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
           token: ${{secrets.GH_PAT_SORT_UIFILES}}
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
       - name: Install yarn dependencies
         run: |
-          yarn add xml-js --dev
+          yarn add sax --dev
           node CI/fix.grid.ui.ordering.js
       - name: Add & Commit
         uses: EndBug/add-and-commit@v9.1.4

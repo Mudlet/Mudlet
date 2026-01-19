@@ -229,7 +229,7 @@ private slots:
         // Real life example from Aldebaran: (there are more sensible ones with EXPIRE which Mudlet does not yet support)
         //
         // <!EL WH '<SEND "whisper &NAME; |finger &NAME; |tell &NAME; " HINT="whisper &NAME;|finger &NAME;|tell &NAME;" PROMPT>' ATT='NAME=someone'>
-        // 
+        //
         // Used like <WH playerid>Player</WH> says: Hello!
         // However, if player is invisible, playerid is empty, like <WH >Someone</WH> says: Hello!
         //
@@ -279,6 +279,39 @@ private slots:
         QCOMPARE(stub.mHints[0], "whisper someone");
         QCOMPARE(stub.mHints[1], "finger someone");
         QCOMPARE(stub.mHints[2], "tell someone");
+    }
+
+    void testCustomElementAttributePassThrough() {
+        // Test that attributes from custom element tags are passed through to the definition
+        // <!ELEMENT Ex '<SEND>'>
+        // <Ex EXPIRE='Exits' HREF='north'>North</Ex>
+        // Should result in: <SEND EXPIRE='Exits' HREF='north'>North</SEND>
+        
+        TMxpStubHandlerContext ctx;
+        TMxpStubClient stub;
+        
+        // Define custom element that expands to <SEND>
+        auto defTag = parseNode("<!ELEMENT Ex '<SEND>'>");
+        TMxpElementDefinitionHandler definitionHandler;
+        definitionHandler.handleTag(ctx, stub, defTag->asStartTag());
+        
+        // Use custom element with EXPIRE and HREF attributes
+        auto startTag = parseNode("<Ex EXPIRE='Exits' HREF='north'>");
+        auto endTag = parseNode("</Ex>");
+        
+        TMxpCustomElementTagHandler customElementTagHandler;
+        TMxpTagHandler& tagHandler = customElementTagHandler;
+        
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+        tagHandler.handleContent("North");
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+        
+        // Verify the attributes were passed through correctly
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[north]])");
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "north");
+        QCOMPARE(stub.mExpireName, "Exits");
     }
 };
 

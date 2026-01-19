@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2016, 2020-2023, 2025 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,10 +30,8 @@
 #include "TConsole.h"
 #include "TRoomDB.h"
 
-#include "pre_guard.h"
 #include <QBuffer>
 #include <QElapsedTimer>
-#include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without
@@ -57,10 +56,12 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 
 TArea::~TArea()
 {
-    if (mpRoomDB) {
-        mpRoomDB->removeArea(this);
-    } else {
+    if (!mpRoomDB) {
         qDebug() << "ERROR: In TArea::~TArea(), instance has no mpRoomDB";
+        return;
+    }
+    if (!mpRoomDB->mBulkDeletionMode) {
+        mpRoomDB->removeArea(this);
     }
 }
 
@@ -528,19 +529,45 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         QPair<QString, int> exitData;
         exitData.second = itAreaExit.value().first;
         switch (itAreaExit.value().second) {
-        case DIR_NORTH:     exitData.first = QString("north");                         break;
-        case DIR_NORTHEAST: exitData.first = QString("northeast");                     break;
-        case DIR_NORTHWEST: exitData.first = QString("northwest");                     break;
-        case DIR_SOUTH:     exitData.first = QString("south");                         break;
-        case DIR_WEST:      exitData.first = QString("west");                          break;
-        case DIR_EAST:      exitData.first = QString("east");                          break;
-        case DIR_SOUTHEAST: exitData.first = QString("southeast");                     break;
-        case DIR_SOUTHWEST: exitData.first = QString("southwest");                     break;
-        case DIR_UP:        exitData.first = QString("up");                            break;
-        case DIR_DOWN:      exitData.first = QString("down");                          break;
-        case DIR_IN:        exitData.first = QString("in");                            break;
-        case DIR_OUT:       exitData.first = QString("out");                           break;
-        case DIR_OTHER:     roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());   break;
+        case DIR_NORTH:
+            exitData.first = QString("north");
+            break;
+        case DIR_NORTHEAST:
+            exitData.first = QString("northeast");
+            break;
+        case DIR_NORTHWEST:
+            exitData.first = QString("northwest");
+            break;
+        case DIR_SOUTH:
+            exitData.first = QString("south");
+            break;
+        case DIR_WEST:
+            exitData.first = QString("west");
+            break;
+        case DIR_EAST:
+            exitData.first = QString("east");
+            break;
+        case DIR_SOUTHEAST:
+            exitData.first = QString("southeast");
+            break;
+        case DIR_SOUTHWEST:
+            exitData.first = QString("southwest");
+            break;
+        case DIR_UP:
+            exitData.first = QString("up");
+            break;
+        case DIR_DOWN:
+            exitData.first = QString("down");
+            break;
+        case DIR_IN:
+            exitData.first = QString("in");
+            break;
+        case DIR_OUT:
+            exitData.first = QString("out");
+            break;
+        case DIR_OTHER:
+            roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());
+            break;
         default:
             qWarning("TArea::getAreaExitRoomData() Warning: unrecognised exit code %i found for exit from room %i to room %i.", itAreaExit.value().second, itAreaExit.key(), itAreaExit.value().first);
         }
@@ -577,7 +604,8 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
 int TArea::createLabelId() const
 {
     int labelId = -1;
-    do {} while (mMapLabels.contains(++labelId));
+    do {
+    } while (mMapLabels.contains(++labelId));
     if (labelId < 0) {
         labelId = -1;
     }
@@ -759,15 +787,9 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
         labelObj.insert(QLatin1String("text"), textValue);
     }
 
-    if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
-          && pLabel->fgColor.green() == defaultLabelForeground.green()
-          && pLabel->fgColor.blue() == defaultLabelForeground.blue()
-          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha()
-          && pLabel->bgColor.red() == defaultLabelBackground.red()
-          && pLabel->bgColor.green() == defaultLabelBackground.green()
-          && pLabel->bgColor.blue() == defaultLabelBackground.blue()
-          && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
-
+    if (!(pLabel->fgColor.red() == defaultLabelForeground.red() && pLabel->fgColor.green() == defaultLabelForeground.green() && pLabel->fgColor.blue() == defaultLabelForeground.blue()
+          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha() && pLabel->bgColor.red() == defaultLabelBackground.red() && pLabel->bgColor.green() == defaultLabelBackground.green()
+          && pLabel->bgColor.blue() == defaultLabelBackground.blue() && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
         // For an image the colors are not used and tend to be set to black, if
         // so skip them. Unfortunately because of the way QColour s are
         // assembled the operator== is too picky for our purposes as even the
@@ -799,6 +821,15 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     labelObj.insert(QLatin1String("showOnTop"), pLabel->showOnTop);
     // Invert the logic here as we are saying "scaled" rather than "unscaled":
     labelObj.insert(QLatin1String("scaledels"), !pLabel->noScaling);
+
+    if (!pLabel->font.family().isEmpty()) {
+        QJsonObject fontObj;
+        fontObj.insert(QLatin1String("family"), pLabel->font.family());
+        fontObj.insert(QLatin1String("pointSize"), pLabel->font.pointSize());
+        fontObj.insert(QLatin1String("weight"), pLabel->font.weight());
+        fontObj.insert(QLatin1String("italic"), pLabel->font.italic());
+        labelObj.insert(QLatin1String("font"), fontObj);
+    }
 
     const QJsonValue labelValue{labelObj};
     array.append(labelValue);
@@ -832,16 +863,23 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
         label.bgColor = defaultLabelBackground;
     }
 
-    const QJsonArray imageArray = labelObj.value(QLatin1String("image")).toArray();
     QList<QByteArray> pixmapData;
-    for (int i = 0, total = imageArray.size(); i < total; ++i) {
-        pixmapData.append(imageArray.at(i).toString().toLatin1());
+    for (const auto& image : labelObj.value(QLatin1String("image")).toArray()) {
+        pixmapData.append(image.toString().toLatin1());
     }
     label.pix = convertBase64DataToImage(pixmapData);
 
     label.showOnTop = labelObj.value(QLatin1String("showOnTop")).toBool();
 
     label.noScaling = !labelObj.value(QLatin1String("scaledels")).toBool(true);
+
+    if (labelObj.contains(QLatin1String("font"))) {
+        const QJsonObject fontObj = labelObj.value(QLatin1String("font")).toObject();
+        label.font = QFont(fontObj.value(QLatin1String("family")).toString(),
+                           fontObj.value(QLatin1String("pointSize")).toInt(),
+                           fontObj.value(QLatin1String("weight")).toInt(),
+                           fontObj.value(QLatin1String("italic")).toBool());
+    }
 
     mMapLabels.insert(labelId, label);
 }
@@ -916,7 +954,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 {
     QBuffer imageInputBuffer;
 
-    imageInputBuffer.open(QIODevice::WriteOnly);
+    if (!imageInputBuffer.open(QIODevice::WriteOnly)) {
+        qWarning() << "TArea::convertImageToBase64Data() ERROR: failed to open image input buffer for writing";
+        return {};
+    }
     // Go for maximum compression - for the smallest amount of data, the second
     // argument is a const char[] so does not require a QString wrapper:
     pixmap.save(&imageInputBuffer, "PNG", 0);
@@ -924,7 +965,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
     QByteArray encodedImageArray{imageInputBuffer.buffer().toBase64()};
     imageInputBuffer.close();
     imageOutputBuffer.setBuffer(&encodedImageArray);
-    imageOutputBuffer.open(QIODevice::ReadOnly);
+    if (!imageOutputBuffer.open(QIODevice::ReadOnly)) {
+        qWarning() << "TArea::convertImageToBase64Data() ERROR: failed to open image output buffer for reading";
+        return {};
+    }
 
     QList<QByteArray> pixmapArray;
     // Extract the image into lines of bytes (unsigned chars):
@@ -945,7 +989,9 @@ QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) co
 {
     const QByteArray decodedImageArray = QByteArray::fromBase64(pixmapArray.join());
     QPixmap pixmap;
-    pixmap.loadFromData(decodedImageArray);
+    if (!pixmap.loadFromData(decodedImageArray)) {
+        qWarning() << "TArea::convertBase64DataToImage() ERROR - failed to load pixmap from base64 data, data size:" << decodedImageArray.size() << "bytes";
+    }
 
     return pixmap;
 }

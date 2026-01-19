@@ -24,18 +24,18 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "utils.h"
+
 #include <QMap>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
 class Host;
 class TKey;
-
 
 class KeyUnit : public QObject
 {
@@ -46,6 +46,7 @@ class KeyUnit : public QObject
 
 public:
     explicit KeyUnit(Host* pHost);
+    ~KeyUnit();
 
     std::list<TKey*> getKeyRootNodeList()
     {
@@ -63,6 +64,7 @@ public:
     bool registerKey(TKey* pT);
     void unregisterKey(TKey* pT);
     void reParentKey(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
     QString getKeyName(const Qt::Key, const Qt::KeyboardModifiers) const;
@@ -77,7 +79,7 @@ public:
 
 
     QMultiMap<QString, TKey*> mLookupTable;
-    std::list<TKey*> mCleanupList;
+    QSet<TKey*> mCleanupSet;
     QList<TKey*> uninstallList;
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally
@@ -106,6 +108,7 @@ private:
     int statsItemsTotal = 0;
     int statsTempItems = 0;
     int statsActiveItems = 0;
+    bool mIsProcessing = false;
 };
 
 #endif // MUDLET_KEYUNIT_H

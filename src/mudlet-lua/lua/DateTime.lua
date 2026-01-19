@@ -52,7 +52,7 @@ function datetime:calculate_UTCdiff(ts)
   local date, time = os.date, os.time
   local utc = date('!*t', ts)
   local lcl = date('*t', ts)
-  lcl.isdst = os.date("*t")["isdst"]
+  lcl.isdst = false
   return os.difftime(time(lcl), time(utc))
 end
 
@@ -140,7 +140,7 @@ function datetime:parse(source, format, as_epoch)
 
     dt.min = tonumber(m.minute)
     dt.sec = tonumber(m.second)
-    dt.isdst = os.date("*t")["isdst"]
+    dt.isdst = os.date("*t", os.time(dt))["isdst"]
 
     if as_epoch then
       return os.time(dt)

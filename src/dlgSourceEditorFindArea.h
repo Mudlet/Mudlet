@@ -21,11 +21,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_source_editor_find_area.h"
-#include <QTextEdit>
-#include <QKeyEvent>
-#include "post_guard.h"
+
+class QEvent;
 
 /*namespace Ui {
 class dlgSourceEditorFindArea;

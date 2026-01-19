@@ -25,19 +25,19 @@
  ***************************************************************************/
 
 
-#include "TConsole.h"
+#include "utils.h"
 
-#include "pre_guard.h"
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
-#include <QTextDecoder>
-#include "post_guard.h"
+#include <QStringDecoder>
+#include <QToolButton>
+#include <QResizeEvent>
 
-
-class KeyUnit;
 class Host;
+class KeyUnit;
+class TConsole;
 
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {
@@ -77,6 +77,7 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const { return mpConsole; }
+    void setEchoSuppression(bool suppress);
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -88,6 +89,12 @@ public:
     // end of the session:
     bool mSaveCommands = true;
 
+
+signals:
+    // Emitted when a command is submitted (Enter pressed)
+    void commandSubmitted();
+    // Emitted when the command line text changes (for hyperlink visibility triggers)
+    void commandLineTextChanged();
 
 public slots:
     void slot_popupMenu();
@@ -112,6 +119,10 @@ private:
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
+    void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void updatePasswordToggleButton();
+    void positionPasswordToggleButton();
 
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
@@ -138,6 +149,23 @@ private:
     QSet<QString> tabCompleteBlacklist;
     // The file used to store the command history between sessions:
     QString mBackingFileName;
+
+    // Track echo suppression state
+    bool mIsEchoSuppressed = false;
+    // Track password visibility state when echo is suppressed
+    bool mPasswordVisible = false;
+    // Button to toggle password visibility
+    QToolButton* mpPasswordToggleButton = nullptr;
+    // Store text that was in the command line before echo suppression started
+    // This allows us to restore user input after password prompts complete
+    QString mTextToRestoreAfterEchoSuppression;
+    // Track whether the preserved text was originally selected (for auto-clear OFF)
+    bool mRestoredTextShouldBeSelected = false;
+    // Track whether user typed anything during echo suppression mode
+    bool mUserTypedDuringEchoSuppression = false;
+
+private slots:
+    void slot_togglePasswordVisibility();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

@@ -34,5 +34,4 @@ public:
 
     TMxpTagHandlerResult handleEndTag(TMxpContext &context, TMxpClient& client, MxpEndTag* tag) override;
 };
-#include "TMxpTagHandler.h"
 #endif //MUDLET_TMXPFONTTAGHANDLER_H

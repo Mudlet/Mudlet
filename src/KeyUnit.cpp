@@ -27,6 +27,8 @@
 #include "Host.h"
 #include "TKey.h"
 
+#include <functional>
+
 KeyUnit::KeyUnit(Host* pHost)
 : mRunAllKeyMatches(false)
 , mpHost(pHost)
@@ -34,6 +36,27 @@ KeyUnit::KeyUnit(Host* pHost)
 , mModuleMember(false)
 {
     setupKeyNames();
+}
+
+KeyUnit::~KeyUnit()
+{
+    // Set mpHost to null on all keys (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto key : mKeyRootNodeList) {
+        key->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TKey*)> nullifyChildren = [&nullifyChildren](TKey* k) {
+            for (auto child : *k->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(key);
+    }
+    for (auto key : mKeyRootNodeList) {
+        delete key;
+    }
 }
 
 void KeyUnit::resetStats()
@@ -70,15 +93,31 @@ void KeyUnit::uninstall(const QString& packageName)
 bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers modifiers)
 {
     bool isMatchFound = false;
+
+    // Set processing flag to prevent re-entrant cleanup during key execution
+    mIsProcessing = true;
+
     for (auto keyObject : mKeyRootNodeList) {
+        // Skip null or invalid key objects during profile closing/destruction
+        // Skip null or invalid key objects during profile closing/destruction
+        if (!keyObject || !keyObject->isActive() || (keyObject->mpHost && keyObject->mpHost->isClosingDown())) {
+            continue;
+        }
+
         if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
+                // Clear processing flag and perform any deferred cleanup before returning
+                mIsProcessing = false;
+                doCleanup();
                 return true;
             }
-
             isMatchFound = true;
         }
     }
+
+    // Clear processing flag and perform any deferred cleanup
+    mIsProcessing = false;
+    doCleanup();
 
     return isMatchFound;
 }
@@ -246,6 +285,16 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
     }
 }
 
+void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentKey(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentKey(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
     if (!pT) {
@@ -337,12 +386,9 @@ int KeyUnit::getNewID()
 QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers modifierCode) const
 {
     QString name;
-    name = ((modifierCode & Qt::ShiftModifier) ? "shift + " : QString())
-         % ((modifierCode & Qt::ControlModifier) ? "control + " : QString())
-         % ((modifierCode & Qt::AltModifier) ? "alt + " : QString())
-         % ((modifierCode & Qt::MetaModifier) ? "meta + " : QString())
-         % ((modifierCode & Qt::KeypadModifier) ? "keypad + " : QString())
-         % ((modifierCode & Qt::GroupSwitchModifier) ? "groupswitch + " : QString());
+    name = ((modifierCode & Qt::ShiftModifier) ? "shift + " : QString()) % ((modifierCode & Qt::ControlModifier) ? "control + " : QString()) % ((modifierCode & Qt::AltModifier) ? "alt + " : QString())
+           % ((modifierCode & Qt::MetaModifier) ? "meta + " : QString()) % ((modifierCode & Qt::KeypadModifier) ? "keypad + " : QString())
+           % ((modifierCode & Qt::GroupSwitchModifier) ? "groupswitch + " : QString());
 
 
     if (mKeys.contains(keyCode)) {
@@ -354,7 +400,9 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
               "%1 is a string describing the modifier keys (e.g. \"shift\" or \"control\") "
               "used with the key, whose 'code' number, in %2 is not one that we have a name "
               "for. This is probably one of those extra keys around the edge of the keyboard "
-              "that some people have.").arg(name).arg(keyCode, 4, 16, QLatin1Char('0'));
+              "that some people have.")
+            .arg(name)
+            .arg(keyCode, 4, 16, QLatin1Char('0'));
 }
 
 void KeyUnit::assembleReport(TKey* pItem)
@@ -386,34 +434,31 @@ std::tuple<QString, int, int, int> KeyUnit::assembleReport()
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("Keys current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("tempKeys current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active Keys: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    msg << QLatin1String("Keys current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("tempKeys current total: ") << QString::number(statsTempItems)
+        << QLatin1String("\n") << QLatin1String("active Keys: ") << QString::number(statsActiveItems) << QLatin1String("\n");
 
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsTempItems,
-        statsActiveItems
-    };
+    return {msg.join(QString()), statsItemsTotal, statsTempItems, statsActiveItems};
 }
 
 void KeyUnit::markCleanup(TKey* pT)
 {
-    for (auto key : mCleanupList) {
-        if (key == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }
 
 void KeyUnit::doCleanup()
 {
-    for (auto key : mCleanupList) {
-        delete key;
+    // Skip cleanup if we're currently processing keys to prevent iterator invalidation
+    // Cleanup will be performed when processDataStream() completes
+    if (mIsProcessing) {
+        return;
     }
-    mCleanupList.clear();
+
+    QMutableSetIterator<TKey*> itKey(mCleanupSet);
+    while (itKey.hasNext()) {
+        auto pKey = itKey.next();
+        itKey.remove();
+        delete pKey;
+    }
 }
 
 void KeyUnit::setupKeyNames()

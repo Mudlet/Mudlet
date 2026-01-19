@@ -1026,4 +1026,257 @@ describe("Tests DB.lua functions", function()
       assert.are.same(results, test)
     end)
   end)
+
+  describe("Tests, if timestamp handling works as intended",
+  function()
+    local input = {
+      current = db:Timestamp("CURRENT_TIMESTAMP"),
+      niled = db:Timestamp(nil),
+      epoched = db:Timestamp(1748288082), -- 2025-05-26T19:34:42+00:00
+      tabled = db:Timestamp({year=1970, month=1, day=1, hour=10, sec=1})
+    }
+
+    before_each(function()
+      mydb = db:create("mydbttimestamptesting", { sheet = input })
+    end)
+
+    after_each(function()
+      db:close()
+      local filename = getMudletHomeDir() .. "/Database_mydbttimestamptesting.db"
+      os.remove(filename)
+      mydb = nil
+    end)
+
+
+    it("should fetch a timestamp for CURRENT_TIMESTAMP.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      local result = results[1]
+      assert.is_true(result.current._timestamp ~= nil)
+    end)
+
+    it("should fetch the same epoch timestamp as what was put in.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      local result = results[1]
+      assert.are.same(result.epoched:as_number(), input.epoched:as_number())
+      assert.are.same(result.epoched:as_string(), input.epoched:as_string())
+      assert.are.same(result.epoched:as_table(), input.epoched:as_table())
+    end)
+
+    it("should fetch the same table timestamp as what was put in.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      local result = results[1]
+      assert.are.same(result.tabled:as_number(), input.tabled:as_number())
+      assert.are.same(result.tabled:as_string(), input.tabled:as_string())
+      assert.are.same(result.tabled:as_table(), input.tabled:as_table())
+    end)
+
+    it("should fetch the same niled timestamp as what was put in.",
+    function()
+      db:add(mydb.sheet, input)
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+
+      local result = results[1]
+      assert.are.same(result.niled._timestamp, input.niled._timestamp)
+    end)
+
+    it("should update without changing a timestamp's value.",
+    function()
+      db:add(mydb.sheet, input)
+
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+      local first_result = results[1]
+
+      db:update(mydb.sheet, results[1])
+
+      results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+      local second_result = results[1]
+
+      assert.are.same(first_result.current:as_number(), second_result.current:as_number())
+      assert.are.same(first_result.current:as_string(), second_result.current:as_string())
+      assert.are.same(first_result.current:as_table(), second_result.current:as_table())
+
+      assert.are.same(first_result.epoched:as_number(), second_result.epoched:as_number())
+      assert.are.same(first_result.epoched:as_string(), second_result.epoched:as_string())
+      assert.are.same(first_result.epoched:as_table(), second_result.epoched:as_table())
+
+      assert.are.same(first_result.tabled:as_number(), second_result.tabled:as_number())
+      assert.are.same(first_result.tabled:as_string(), second_result.tabled:as_string())
+      assert.are.same(first_result.tabled:as_table(), second_result.tabled:as_table())
+
+      assert.are.same(first_result.niled._timestamp, second_result.niled._timestamp)
+    end)
+  end)
+
+  describe("Tests that _violations changes trigger table migration", function()
+    local test_db_name = "violations_migration_test"
+    local test_db_file
+    
+    before_each(function()
+      test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
+      -- Remove any existing test database
+      os.remove(test_db_file)
+    end)
+    
+    after_each(function()
+      db:close()
+      os.remove(test_db_file)
+    end)
+    
+    it("should migrate table when _violations changes from FAIL to REPLACE", function()
+      -- Create initial database with FAIL
+      mydb = db:create(test_db_name, {
+        people = {
+          name = "",
+          city = "",
+          _unique = { "name" },
+          _violations = "FAIL"
+        }
+      })
+      
+      -- Add some test data
+      db:add(mydb.people, {name = "Alice", city = "Boston"})
+      db:add(mydb.people, {name = "Bob", city = "Chicago"})
+      
+      -- Verify FAIL behavior: adding duplicate should error
+      local result, err = db:add(mydb.people, {name = "Alice", city = "Denver"})
+      assert.is_nil(result)
+      assert.is_not_nil(err)
+      
+      -- Close and recreate with REPLACE
+      db:close()
+      mydb = db:create(test_db_name, {
+        people = {
+          name = "",
+          city = "",
+          _unique = { "name" },
+          _violations = "REPLACE"
+        }
+      })
+      
+      -- Verify data is still there
+      local results = db:fetch(mydb.people)
+      assert.are.equal(2, #results)
+      
+      -- Now REPLACE behavior should work: adding duplicate should replace
+      db:add(mydb.people, {name = "Alice", city = "Denver"})
+      
+      results = db:fetch(mydb.people)
+      assert.are.equal(2, #results)
+      
+      -- Find Alice's record
+      local alice = nil
+      for _, person in ipairs(results) do
+        if person.name == "Alice" then
+          alice = person
+          break
+        end
+      end
+      
+      assert.is_not_nil(alice)
+      assert.are.equal("Denver", alice.city)
+    end)
+    
+    it("should migrate table when _violations changes from REPLACE to IGNORE", function()
+      -- Create initial database with REPLACE
+      mydb = db:create(test_db_name, {
+        items = {
+          id = 0,
+          value = "",
+          _unique = { "id" },
+          _violations = "REPLACE"
+        }
+      })
+      
+      -- Add initial data
+      db:add(mydb.items, {id = 1, value = "first"})
+      db:add(mydb.items, {id = 1, value = "second"}) -- Should replace
+      
+      local results = db:fetch(mydb.items)
+      assert.are.equal(1, #results)
+      assert.are.equal("second", results[1].value)
+      
+      -- Close and recreate with IGNORE
+      db:close()
+      mydb = db:create(test_db_name, {
+        items = {
+          id = 0,
+          value = "",
+          _unique = { "id" },
+          _violations = "IGNORE"
+        }
+      })
+      
+      -- Add duplicate with IGNORE - should keep original
+      db:add(mydb.items, {id = 1, value = "third"})
+      
+      results = db:fetch(mydb.items)
+      assert.are.equal(1, #results)
+      assert.are.equal("second", results[1].value) -- Should still be "second"
+    end)
+    
+    it("should migrate table when _violations changes with multi-column unique constraint", function()
+      -- Create initial database with FAIL on multi-column unique
+      mydb = db:create(test_db_name, {
+        records = {
+          name = "",
+          category = "",
+          value = 0,
+          _unique = { {"name", "category"} },
+          _violations = "FAIL"
+        }
+      })
+      
+      -- Add test data
+      db:add(mydb.records, {name = "Item1", category = "A", value = 10})
+      db:add(mydb.records, {name = "Item1", category = "B", value = 20})
+      
+      -- Verify FAIL behavior
+      local result, err = db:add(mydb.records, {name = "Item1", category = "A", value = 30})
+      assert.is_nil(result)
+      assert.is_not_nil(err)
+      
+      -- Close and recreate with REPLACE
+      db:close()
+      mydb = db:create(test_db_name, {
+        records = {
+          name = "",
+          category = "",
+          value = 0,
+          _unique = { {"name", "category"} },
+          _violations = "REPLACE"
+        }
+      })
+      
+      -- Now REPLACE should work
+      db:add(mydb.records, {name = "Item1", category = "A", value = 30})
+      
+      local results = db:fetch(mydb.records, db:eq(mydb.records.name, "Item1"))
+      assert.are.equal(2, #results)
+      
+      -- Verify the value was replaced
+      local found_replaced = false
+      for _, record in ipairs(results) do
+        if record.category == "A" and record.value == 30 then
+          found_replaced = true
+          break
+        end
+      end
+      assert.is_true(found_replaced)
+    end)
+  end)
 end)

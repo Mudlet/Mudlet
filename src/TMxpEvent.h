@@ -20,16 +20,15 @@
 #ifndef MUDLET_TMXPEVENT_H
 #define MUDLET_TMXPEVENT_H
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QStringList>
-#include "post_guard.h"
 
 struct TMxpEvent
 {
     QString name;
     QMap<QString, QString> attrs;
     QStringList actions;
+    QString caption;
 };
 
 #endif //MUDLET_TMXPEVENT_H

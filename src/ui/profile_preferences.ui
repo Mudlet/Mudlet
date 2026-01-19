@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>965</width>
-    <height>694</height>
+    <width>1055</width>
+    <height>876</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -39,10 +39,10 @@
       <string notr="true"/>
      </property>
      <property name="tabShape">
-      <enum>QTabWidget::Rounded</enum>
+      <enum>QTabWidget::TabShape::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>5</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -61,7 +61,7 @@
           <string>Icon sizes</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_iconsAndToolbars">
-          <item row="0" column="0" alignment="Qt::AlignRight">
+          <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_mainIconSize">
             <property name="text">
              <string>Icon size toolbars:</string>
@@ -71,7 +71,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1" alignment="Qt::AlignLeft">
+          <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QSpinBox" name="MainIconSize">
             <property name="specialValueText">
              <string/>
@@ -87,7 +87,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="2" alignment="Qt::AlignRight">
+          <item row="0" column="2" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_33">
             <property name="text">
              <string>Icon size in tree views:</string>
@@ -97,7 +97,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="3" alignment="Qt::AlignLeft">
+          <item row="0" column="3" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QSpinBox" name="TEFolderIconSize">
             <property name="minimum">
              <number>1</number>
@@ -110,7 +110,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" alignment="Qt::AlignRight">
+          <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_menuBarVisiblity">
             <property name="text">
              <string>Show menu bar:</string>
@@ -120,7 +120,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1" alignment="Qt::AlignLeft">
+          <item row="1" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QComboBox" name="comboBox_menuBarVisibility">
             <property name="currentIndex">
              <number>0</number>
@@ -142,7 +142,7 @@
             </item>
            </widget>
           </item>
-          <item row="1" column="2" alignment="Qt::AlignRight">
+          <item row="1" column="2" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_toolBarVisibility">
             <property name="text">
              <string>Show main toolbar</string>
@@ -152,7 +152,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="3" alignment="Qt::AlignLeft">
+          <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignLeft">
            <widget class="QComboBox" name="comboBox_toolBarVisibility">
             <property name="currentIndex">
              <number>0</number>
@@ -275,7 +275,7 @@
              <string>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</string>
             </property>
             <property name="textFormat">
-             <enum>Qt::RichText</enum>
+             <enum>Qt::TextFormat::RichText</enum>
             </property>
            </widget>
           </item>
@@ -329,7 +329,7 @@
              <string>Please reconnect to your game for the change to take effect</string>
             </property>
             <property name="textFormat">
-             <enum>Qt::AutoText</enum>
+             <enum>Qt::TextFormat::AutoText</enum>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -379,7 +379,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" alignment="Qt::AlignRight">
+          <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_whereToLog">
             <property name="text">
              <string>Save log files in:</string>
@@ -410,7 +410,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" alignment="Qt::AlignRight">
+          <item row="2" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_logFileNameFormat">
             <property name="text">
              <string>Log format:</string>
@@ -423,7 +423,7 @@
           <item row="2" column="1" colspan="3">
            <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
           </item>
-          <item row="3" column="0" alignment="Qt::AlignRight">
+          <item row="3" column="0" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_logFileName">
             <property name="text">
              <string>Log name:</string>
@@ -436,7 +436,7 @@
           <item row="3" column="1" colspan="2">
            <widget class="QLineEdit" name="lineEdit_logFileName">
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -459,7 +459,7 @@
        <item>
         <spacer name="verticalSpacer_general">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -521,7 +521,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QCheckBox" name="show_sent_text_checkbox">
+           <widget class="QCheckBox" name="checkBox_highlightHistory">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -529,10 +529,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option.&lt;/i&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;Highlights your input line text when scrolling through your history for easy cancellation.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Show the text you sent</string>
+             <string>Highlight history</string>
             </property>
            </widget>
           </item>
@@ -552,8 +552,8 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_highlightHistory">
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="disable_password_masking_checkbox">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -561,14 +561,71 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Highlights your input line text when scrolling through your history for easy cancellation.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Disable password masking when servers request hidden input.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Warning:&lt;/b&gt; This is not recommended for security reasons as passwords will be visible in plain text.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Highlight history</string>
+             <string>Disable password masking</string>
             </property>
            </widget>
           </item>
+          <item row="2" column="1">
+           <spacer name="horizontalSpacer_disable_password_masking">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
           <item row="3" column="0">
+           <widget class="QLabel" name="label_show_sent_text">
+            <property name="text">
+             <string>Show sent commands:</string>
+            </property>
+            <property name="buddy">
+             <cstring>show_sent_text_combobox</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QComboBox" name="show_sent_text_combobox">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Controls how sent commands are echoed in the display box:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;b&gt;Never&lt;/b&gt;: Commands are never shown regardless of script settings&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Script controlled&lt;/b&gt;: Scripts can control visibility using send(cmd, true/false)&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Always&lt;/b&gt;: Commands are always shown regardless of script settings&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option.&lt;/i&gt;&lt;/p&gt;</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>Never</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Script controlled</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Always</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="4" column="0">
            <widget class="QLabel" name="label_commandSeparator">
             <property name="text">
              <string>Command separator:</string>
@@ -578,7 +635,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="4" column="1">
            <widget class="QLineEdit" name="command_separator_lineedit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -591,7 +648,7 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_commandLineMinimumHeight">
             <property name="text">
              <string>Command line minimum height in pixels:</string>
@@ -601,7 +658,7 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="5" column="1">
            <widget class="QSpinBox" name="commandLineMinimumHeight">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -610,7 +667,7 @@
              </sizepolicy>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
             <property name="maximum">
              <number>300</number>
@@ -685,7 +742,7 @@
           <item row="2" column="4">
            <spacer name="horizontalSpacer_radioButtons_userDictionary">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -701,7 +758,7 @@
        <item>
         <spacer name="verticalSpacer_inputLine">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -728,31 +785,80 @@
         <widget class="QGroupBox" name="groupBox_font">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
+           <horstretch>1</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="title">
           <string>Font</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_font">
-          <item row="3" column="0" colspan="4">
-           <widget class="QLabel" name="label_variableWidthFontWarning">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_font" columnstretch="0,1,0,0,0,0">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_displayFont">
             <property name="text">
-             <string comment="Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer">This font is not monospace, which may not be ideal for playing some text games:
-you can use it but there could be issues with aligning columns of text</string>
+             <string>Font:</string>
             </property>
             <property name="buddy">
-             <cstring>fontSize</cstring>
+             <cstring>fontComboBox_displayFont</cstring>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="4">
+          <item row="0" column="1">
+           <widget class="QFontComboBox" name="fontComboBox_displayFont">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>1</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="editable">
+             <bool>false</bool>
+            </property>
+            <property name="maxVisibleItems">
+             <number>20</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_displayFontSize">
+            <property name="text">
+             <string>Size:</string>
+            </property>
+            <property name="buddy">
+             <cstring>spinBox_displayFontSize</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="spinBox_displayFontSize">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>99</number>
+            </property>
+            <property name="value">
+             <number>14</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QCheckBox" name="checkBox_antiAlias">
+            <property name="toolTip">
+             <string>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable anti-aliasing</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="4">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -764,39 +870,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QPushButton" name="pushButton_fontDialog">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
+          <item row="2" column="0" colspan="4">
+           <widget class="QLabel" name="label_variableWidthFontWarning">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
             </property>
             <property name="text">
-             <string>Select Font</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_30">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Font:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QCheckBox" name="mNoAntiAlias">
-            <property name="toolTip">
-             <string>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Enable anti-aliasing</string>
+             <string comment="Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer">This font is not monospace, which may not be ideal for playing some text games:
+you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
@@ -1015,7 +1098,7 @@ you can use it but there could be issues with aligning columns of text</string>
           </sizepolicy>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="title">
           <string>Word wrapping</string>
@@ -1024,7 +1107,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item>
            <widget class="QFrame" name="frame_wrap_at">
             <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+             <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_wrap_at">
              <item>
@@ -1078,7 +1161,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item>
            <widget class="QFrame" name="frame_indent_wrapped">
             <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+             <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_indent_wrapped">
              <item>
@@ -1132,7 +1215,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item>
            <widget class="QFrame" name="frame_hanging_indent_wrapped">
             <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+             <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_hanging_indent_wrapped">
              <item>
@@ -1190,6 +1273,85 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_consoleBuffer">
+         <property name="title">
+          <string>Scrollback</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_groupBox_consoleBuffer">
+          <item>
+           <widget class="QFrame" name="frame_console_buffer_size">
+            <property name="frameShape">
+             <enum>QFrame::Shape::NoFrame</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_frame_console_buffer_size">
+             <item>
+              <widget class="QLabel" name="label_console_buffer_size_spinBox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>200</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>&lt;p&gt;Maximum number of lines to keep in the console buffer. When exceeded, older lines are removed in batches.&lt;/p&gt;</string>
+               </property>
+               <property name="text">
+                <string>Main display size:</string>
+               </property>
+               <property name="buddy">
+                <cstring>console_buffer_size_spinBox</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="console_buffer_size_spinBox">
+               <property name="toolTip">
+                <string>&lt;p&gt;Maximum number of lines to keep in the console buffer. Minimum is 100 lines.&lt;/p&gt;</string>
+               </property>
+               <property name="minimum">
+                <number>100</number>
+               </property>
+               <property name="maximum">
+                <number>2147483647</number>
+               </property>
+               <property name="value">
+                <number>10000</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_console_buffer_lines">
+               <property name="text">
+                <string>lines</string>
+               </property>
+               <property name="buddy">
+                <cstring>console_buffer_size_spinBox</cstring>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_useMaxBufferSize">
+            <property name="toolTip">
+             <string>&lt;p&gt;Use the maximum buffer size your system can handle. This will be calculated based on available memory.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Use maximum lines possible</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_doubleClick">
          <property name="title">
           <string>Double-click</string>
@@ -1227,6 +1389,26 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>Display options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_displayOptions">
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_controlCharacterHandling">
+            <property name="text">
+             <string>Display control characters as:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_controlCharacterHandling</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
+            <property name="text">
+             <string>Make 'Ambiguous' E. Asian width characters wide</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
@@ -1244,16 +1426,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
-            <property name="text">
-             <string>Make 'Ambiguous' E. Asian width characters wide</string>
-            </property>
-            <property name="tristate">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_echoLuaErrors">
             <property name="toolTip">
@@ -1264,23 +1436,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_controlCharacterHandling">
-            <property name="text">
-             <string>Display control characters as:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_controlCharacterHandling</cstring>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="1">
            <widget class="QComboBox" name="comboBox_controlCharacterHandling">
             <property name="currentIndex">
              <number>0</number>
             </property>
             <property name="sizeAdjustPolicy">
-             <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+             <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
             </property>
             <item>
              <property name="text">
@@ -1299,13 +1461,23 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_showTabConnectionIndicators">
+            <property name="toolTip">
+             <string>Display whenever a tab is connected or a disconnected</string>
+            </property>
+            <property name="text">
+             <string>Show connection status on tabs</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
        <item>
         <spacer name="verticalSpacer_mainDisplay">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -1337,10 +1509,10 @@ you can use it but there could be issues with aligning columns of text</string>
              </size>
             </property>
             <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
+             <enum>QFrame::Shape::StyledPanel</enum>
             </property>
             <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
+             <enum>QFrame::Shadow::Raised</enum>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_frame_edbeePreviewWidget">
              <property name="spacing">
@@ -1381,7 +1553,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>true</bool>
             </property>
             <property name="sizeAdjustPolicy">
-             <enum>QComboBox::AdjustToContents</enum>
+             <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
             </property>
            </widget>
           </item>
@@ -1468,7 +1640,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_codeEditor">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -1629,7 +1801,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="3" column="0" colspan="4">
            <widget class="Line" name="line_colorsSeparator">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -2040,7 +2212,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_displayColors">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -2134,7 +2306,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="3" column="0" colspan="3">
            <widget class="Line" name="line">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -2286,18 +2458,109 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Map view</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_mapViewOptions">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="mMapperUseAntiAlias">
-            <property name="toolTip">
-             <string>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</string>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="7" column="0">
+           <spacer name="roomSizeTopMarginSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
             </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Policy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>10</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="1" column="3" colspan="2">
+           <widget class="QCheckBox" name="checkBox_largeAreaExitArrows">
             <property name="text">
-             <string>Use high quality graphics in 2D view</string>
+             <string>Use large area exit arrows in 2D view</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item row="9" column="0" colspan="5">
+           <widget class="QGroupBox" name="groupBox_mapSymbols">
+            <property name="title">
+             <string>Symbols</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_groupBox_mapSymbols">
+             <item row="1" column="0" colspan="2">
+              <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
+               <property name="text">
+                <string>Only use symbols (glyphs) from chosen font</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QPushButton" name="pushButton_showGlyphUsage">
+               <property name="text">
+                <string>Show symbol usage...</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_mapSymbolsFont">
+               <property name="text">
+                <string>2D Map Room Symbol Font</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox_drawUpperLowerLevels">
+            <property name="toolTip">
+             <string>&lt;p&gt;When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Draw rooms on upper and lower levels</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QCheckBox" name="checkBox_invertMapZoom">
+            <property name="toolTip">
+             <string>&lt;p&gt;If checked, scrolling up zooms out and scrolling down zooms in. If unchecked, scrolling up zooms in and scrolling down zooms out.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Invert zoom direction</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <spacer name="roomSizeBottomMarginSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Policy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>10</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="0" column="3" colspan="2">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
             <property name="toolTip">
              <string>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area.&lt;/p&gt;</string>
@@ -2310,7 +2573,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="checkbox_mMapperShowRoomBorders">
             <property name="toolTip">
              <string>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab.&lt;/p&gt;</string>
@@ -2323,55 +2586,22 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_largeAreaExitArrows">
-            <property name="text">
-             <string>Use large area exit arrows in 2D view</string>
+          <item row="0" column="0" colspan="2">
+           <widget class="QCheckBox" name="mMapperUseAntiAlias">
+            <property name="toolTip">
+             <string>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</string>
             </property>
-            <property name="checked">
-             <bool>false</bool>
+            <property name="text">
+             <string>Use high quality graphics in 2D view</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" alignment="Qt::AlignRight">
-           <widget class="QLabel" name="label_mapSymbolsFont">
-            <property name="text">
-             <string>2D Map Room Symbol Font</string>
+          <item row="11" column="0" colspan="5">
+           <widget class="QGroupBox" name="widget_playerRoomStyle">
+            <property name="title">
+             <string>Player room marker</string>
             </property>
-           </widget>
-          </item>
-          <item row="2" column="1" alignment="Qt::AlignLeft">
-           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
-          </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
-            <property name="text">
-             <string>Only use symbols (glyphs) from chosen font</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QPushButton" name="pushButton_showGlyphUsage">
-            <property name="text">
-             <string>Show symbol usage...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="2">
-           <widget class="QWidget" name="widget_playerRoomStyle" native="true">
             <layout class="QGridLayout" name="gridLayout_widget_playerRoomStyle">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
              <item row="0" column="0">
               <widget class="QLabel" name="label_playerRoomStyle">
                <property name="text">
@@ -2405,7 +2635,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <number>0</number>
                </property>
                <property name="sizeAdjustPolicy">
-                <enum>QComboBox::AdjustToContents</enum>
+                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
                </property>
                <item>
                 <property name="text">
@@ -2435,7 +2665,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="suffix">
                 <string>%</string>
@@ -2463,7 +2693,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="suffix">
                 <string>%</string>
@@ -2482,13 +2712,163 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
+          <item row="4" column="0" colspan="3">
+           <widget class="QGroupBox" name="gridGroupBox">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+            <layout class="QGridLayout" name="groupBox_sizing">
+             <property name="rightMargin">
+              <number>1</number>
+             </property>
+             <property name="horizontalSpacing">
+              <number>-1</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_roomSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Room size:</string>
+               </property>
+               <property name="buddy">
+                <cstring>spinBox_roomSize</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_exitSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Exit size:</string>
+               </property>
+               <property name="buddy">
+                <cstring>spinBox_exitSize</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSpinBox" name="spinBox_roomSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>30</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>11</number>
+               </property>
+               <property name="value">
+                <number>5</number>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="4">
+              <widget class="QLabel" name="label_gridSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Grid width:</string>
+               </property>
+               <property name="buddy">
+                <cstring>doubleSpinBox_gridSize</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QSpinBox" name="spinBox_exitSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="minimum">
+                <number>2</number>
+               </property>
+               <property name="maximum">
+                <number>20</number>
+               </property>
+               <property name="value">
+                <number>7</number>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="5">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_gridSize">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="decimals">
+                <number>1</number>
+               </property>
+               <property name="minimum">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>5.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.500000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
        <item>
         <spacer name="verticalSpacer_mapper">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -2651,10 +3031,30 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="3" column="2">
+           <widget class="QLabel" name="label_mapGridColor">
+            <property name="text">
+             <string>Grid color:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_mapGridColor</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QPushButton" name="pushButton_mapGridColor">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
           <item row="4" column="0" colspan="4">
            <widget class="Line" name="line_mapperColorsSeparator">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -2991,7 +3391,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_mapperColors">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3008,119 +3408,6 @@ you can use it but there could be issues with aligning columns of text</string>
        <string>Chat</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_tab_chat">
-       <item>
-        <widget class="QGroupBox" name="groupBox_ircOptions">
-         <property name="title">
-          <string>IRC client options</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0,0">
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblIrcHostName">
-            <property name="text">
-             <string>Server address:</string>
-            </property>
-            <property name="buddy">
-             <cstring>ircHostName</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="ircHostName">
-            <property name="inputMethodHints">
-             <set>Qt::ImhUrlCharactersOnly</set>
-            </property>
-            <property name="placeholderText">
-             <string>irc.example.net</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="lblIrcHostPort">
-            <property name="text">
-             <string>Port:</string>
-            </property>
-            <property name="buddy">
-             <cstring>ircHostPort</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QLineEdit" name="ircHostPort">
-            <property name="inputMethodHints">
-             <set>Qt::ImhDigitsOnly</set>
-            </property>
-            <property name="placeholderText">
-             <string>6667</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lblIrcNick">
-            <property name="text">
-             <string>Nickname:</string>
-            </property>
-            <property name="buddy">
-             <cstring>ircNick</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="ircNick">
-            <property name="placeholderText">
-             <string>MudletUser123</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLabel" name="lblIrcChannels">
-            <property name="text">
-             <string>Auto-join channels: </string>
-            </property>
-            <property name="buddy">
-             <cstring>ircChannels</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QLineEdit" name="ircChannels">
-            <property name="placeholderText">
-             <string>#channel1 #channel2 #etc...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="lblIrcPassword">
-            <property name="text">
-             <string>Server password: </string>
-            </property>
-            <property name="buddy">
-             <cstring>ircPassword</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="ircPassword">
-            <property name="echoMode">
-             <enum>QLineEdit::Password</enum>
-            </property>
-            <property name="placeholderText">
-             <string>password (optional)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="2">
-           <widget class="QCheckBox" name="ircHostSecure">
-            <property name="toolTip">
-             <string>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Use a secure connection</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
        <item>
         <widget class="QGroupBox" name="groupBox_discordPrivacy">
          <property name="title">
@@ -3231,7 +3518,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
                <property name="placeholderText">
                 <string>specific Discord username</string>
@@ -3263,7 +3550,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
                </property>
                <property name="inputMethodHints">
-                <set>Qt::ImhDigitsOnly</set>
+                <set>Qt::InputMethodHint::ImhDigitsOnly</set>
                </property>
                <property name="inputMask">
                 <string notr="true">9999;#</string>
@@ -3285,10 +3572,10 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_connection">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
+          <enum>QSizePolicy::Policy::Expanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3332,13 +3619,13 @@ you can use it but there could be issues with aligning columns of text</string>
              <item row="0" column="0">
               <widget class="QLabel" name="label">
                <property name="layoutDirection">
-                <enum>Qt::LeftToRight</enum>
+                <enum>Qt::LayoutDirection::LeftToRight</enum>
                </property>
                <property name="text">
                 <string>Issuer:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -3355,7 +3642,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Issued to:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -3372,7 +3659,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Expires:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -3389,7 +3676,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <string>Serial:</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -3466,10 +3753,10 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>true</bool>
             </property>
             <property name="frameShape">
-             <enum>QFrame::Box</enum>
+             <enum>QFrame::Shape::Box</enum>
             </property>
             <property name="frameShadow">
-             <enum>QFrame::Plain</enum>
+             <enum>QFrame::Shadow::Plain</enum>
             </property>
             <property name="lineWidth">
              <number>3</number>
@@ -3514,7 +3801,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>false</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -3523,7 +3810,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <number>5</number>
                </property>
                <property name="textInteractionFlags">
-                <set>Qt::NoTextInteraction</set>
+                <set>Qt::TextInteractionFlag::NoTextInteraction</set>
                </property>
               </widget>
              </item>
@@ -3548,7 +3835,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>false</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -3557,7 +3844,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <number>5</number>
                </property>
                <property name="textInteractionFlags">
-                <set>Qt::NoTextInteraction</set>
+                <set>Qt::TextInteractionFlag::NoTextInteraction</set>
                </property>
               </widget>
              </item>
@@ -3582,7 +3869,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>false</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -3591,7 +3878,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <number>5</number>
                </property>
                <property name="textInteractionFlags">
-                <set>Qt::NoTextInteraction</set>
+                <set>Qt::TextInteractionFlag::NoTextInteraction</set>
                </property>
               </widget>
              </item>
@@ -3619,7 +3906,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>true</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -3721,7 +4008,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Password for logging into the proxy if required.&lt;/p&gt;</string>
             </property>
             <property name="echoMode">
-             <enum>QLineEdit::Password</enum>
+             <enum>QLineEdit::EchoMode::Password</enum>
             </property>
             <property name="placeholderText">
              <string>password (optional)</string>
@@ -3734,10 +4021,10 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_chat">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
+          <enum>QSizePolicy::Policy::Expanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3763,17 +4050,17 @@ you can use it but there could be issues with aligning columns of text</string>
           </sizepolicy>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="title">
           <string>Main window shortcuts</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_groupBox_mainWindowShortcuts">
           <property name="sizeConstraint">
-           <enum>QLayout::SetMinimumSize</enum>
+           <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
           </property>
           <item>
            <widget class="QLabel" name="label_shortcutsInstructions">
@@ -3781,7 +4068,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>To disable shortcut input 'Esc' key.</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
             </property>
            </widget>
           </item>
@@ -3794,7 +4081,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-          <item alignment="Qt::AlignRight">
+          <item alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QToolButton" name="toolButton_resetMainWindowShortcuts">
             <property name="text">
              <string>Reset to defaults</string>
@@ -3807,7 +4094,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_shortcuts">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3933,10 +4220,10 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_accessibility">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
+          <enum>QSizePolicy::Policy::Expanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3985,20 +4272,26 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="mForceNewEnvironNegotiationOff">
+           <widget class="QCheckBox" name="checkBox_mVersionInTTYPE">
+            <property name="toolTip">
+             <string>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</string>
+            </property>
             <property name="text">
-             <string>Force NEW_ENVIRON negotiation off</string>
+             <string>Send Mudlet version in terminal type</string>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QCheckBox" name="mFORCE_CHARSET_NEGOTIATION_OFF">
+           <widget class="QCheckBox" name="checkBox_mForceMXPProcessorOn">
+            <property name="toolTip">
+             <string>&lt;p&gt;Some servers do not negotiate Mud eXtension Protocol (MXP). When checked, this preference forces the MXP processor to be enabled. Note: To disable MXP entirely, leave this unchecked and also uncheck MXP in Choose protocols section of the General tab in Settings.&lt;/p&gt;</string>
+            </property>
             <property name="text">
-             <string>Force CHARSET negotiation off</string>
+             <string>Force MXP processing on</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="2">
+          <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_specialoption">
             <property name="enabled">
              <bool>true</bool>
@@ -4015,7 +4308,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>Please reconnect to your game for the change to take effect</string>
             </property>
             <property name="textFormat">
-             <enum>Qt::AutoText</enum>
+             <enum>Qt::TextFormat::AutoText</enum>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -4106,6 +4399,32 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>true</bool>
             </property>
            </widget>
+          </item>
+          <item row="6" column="0">
+              <widget class="QLabel" name="label_crashReportPolicy">
+                  <property name="text">
+                      <string>Crash report sending policy:</string>
+                  </property>
+              </widget>
+          </item>
+          <item row="6" column="1">
+              <widget class="QComboBox" name="comboBox_crashReportPolicy">
+                  <item>
+                      <property name="text">
+                          <string>Always send</string>
+                      </property>
+                  </item>
+                  <item>
+                      <property name="text">
+                          <string>Never send</string>
+                      </property>
+                  </item>
+                  <item>
+                      <property name="text">
+                          <string>Ask each time</string>
+                      </property>
+                  </item>
+              </widget>
           </item>
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
@@ -4199,10 +4518,10 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>true</bool>
                </property>
                <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
                <property name="buttonSymbols">
-                <enum>QAbstractSpinBox::PlusMinus</enum>
+                <enum>QAbstractSpinBox::ButtonSymbols::PlusMinus</enum>
                </property>
                <property name="accelerated">
                 <bool>true</bool>
@@ -4211,7 +4530,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <bool>true</bool>
                </property>
                <property name="currentSection">
-                <enum>QDateTimeEdit::HourSection</enum>
+                <enum>QDateTimeEdit::Section::HourSection</enum>
                </property>
                <property name="displayFormat">
                 <string comment="Used to set a time interval only">h:mm:ss.zzz</string>
@@ -4272,7 +4591,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Orientation::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -4298,7 +4617,7 @@ you can use it but there could be issues with aligning columns of text</string>
       <item>
        <spacer name="horizontalSpacer_bottom">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -4361,17 +4680,20 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_whereToLog</tabstop>
   <tabstop>pushButton_resetLogDir</tabstop>
   <tabstop>USE_UNIX_EOL</tabstop>
-  <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>auto_clear_input_line_checkbox</tabstop>
-  <tabstop>checkBox_runAllKeyBindings</tabstop>
   <tabstop>checkBox_highlightHistory</tabstop>
+  <tabstop>checkBox_runAllKeyBindings</tabstop>
+  <tabstop>disable_password_masking_checkbox</tabstop>
+  <tabstop>show_sent_text_combobox</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>
   <tabstop>checkBox_spellCheck</tabstop>
   <tabstop>comboBox_dictionary</tabstop>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
-  <tabstop>mNoAntiAlias</tabstop>
+  <tabstop>fontComboBox_displayFont</tabstop>
+  <tabstop>spinBox_displayFontSize</tabstop>
+  <tabstop>checkBox_antiAlias</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>
@@ -4379,6 +4701,8 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>wrap_at_spinBox</tabstop>
   <tabstop>indent_wrapped_spinBox</tabstop>
   <tabstop>hanging_indent_wrapped_spinBox</tabstop>
+  <tabstop>console_buffer_size_spinBox</tabstop>
+  <tabstop>checkBox_useMaxBufferSize</tabstop>
   <tabstop>doubleclick_ignore_lineedit</tabstop>
   <tabstop>checkBox_USE_IRE_DRIVER_BUGFIX</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
@@ -4433,7 +4757,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showDefaultArea</tabstop>
   <tabstop>checkBox_largeAreaExitArrows</tabstop>
   <tabstop>fontComboBox_mapSymbols</tabstop>
-  <tabstop>pushButton_showGlyphUsage</tabstop>
   <tabstop>pushButton_playerRoomPrimaryColor</tabstop>
   <tabstop>spinBox_playerRoomOuterDiameter</tabstop>
   <tabstop>pushButton_playerRoomSecondaryColor</tabstop>
@@ -4462,12 +4785,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_Lcyan_2</tabstop>
   <tabstop>pushButton_Lwhite_2</tabstop>
   <tabstop>reset_colors_button_2</tabstop>
-  <tabstop>ircHostName</tabstop>
-  <tabstop>ircNick</tabstop>
-  <tabstop>ircPassword</tabstop>
-  <tabstop>ircHostSecure</tabstop>
-  <tabstop>ircHostPort</tabstop>
-  <tabstop>ircChannels</tabstop>
   <tabstop>comboBox_discordLargeIconPrivacy</tabstop>
   <tabstop>comboBox_discordSmallIconPrivacy</tabstop>
   <tabstop>checkBox_discordServerAccessToPartyInfo</tabstop>
@@ -4496,9 +4813,9 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
-  <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
+  <tabstop>checkBox_mVersionInTTYPE</tabstop>
+  <tabstop>checkBox_mForceMXPProcessorOn</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
-  <tabstop>mForceNewEnvironNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>

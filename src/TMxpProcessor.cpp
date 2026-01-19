@@ -21,9 +21,8 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
-#include "pre_guard.h"
+#include "TEncodingHelper.h"
 #include <QDebug>
-#include "post_guard.h"
 
 bool TMxpProcessor::setMode(const QString& code)
 {
@@ -72,6 +71,7 @@ bool TMxpProcessor::setMode(int modeCode)
     // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20TagsmMXP = true; // some servers don't negotiate, they assume!
 
     mMXP = true;
+
     switch (modeCode) {
     case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
         mMXP_MODE = MXP_MODE_OPEN;
@@ -99,6 +99,10 @@ bool TMxpProcessor::setMode(int modeCode)
         mMXP_MODE = MXP_MODE_TEMP_SECURE;
         break;
     case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
+        // When force MXP is enabled with secure mode locked, prevent server from changing default back to OPEN
+        if (mMXP_DEFAULT == MXP_MODE_SECURE && mpMxpClient && mpMxpClient->shouldLockModeToSecure()) {
+            return true; // Acknowledge but don't change mode
+        }
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
         break;
     case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
@@ -109,6 +113,10 @@ bool TMxpProcessor::setMode(int modeCode)
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
         break;
     case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
+        // When force MXP is enabled with secure mode locked, prevent server from changing default to LOCKED
+        if (mMXP_DEFAULT == MXP_MODE_SECURE && mpMxpClient && mpMxpClient->shouldLockModeToSecure()) {
+            return true; // Acknowledge but don't change mode
+        }
         // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
         if (mMXP_MODE == MXP_MODE_OPEN) {
             mpMxpClient->resetTextProperties();
@@ -152,33 +160,80 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
+    if (ch == '<' && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.isQuotedSequence() && !mMxpTagBuilder.isInsideComment()) {
+        // Error recovery: nested '<' inside a tag
+        // Output the incomplete tag as text and prepare to process the new '<' as a tag start
+        const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
+        const QByteArray encoding = mpMxpClient->getEncoding();
+        QString decoded;
+
+        if (encoding == qsl("UTF-8")) {
+            decoded = QString::fromStdString(rawBytes);
+        } else if (encoding == qsl("ISO 8859-1")) {
+            decoded = QString::fromLatin1(rawBytes.c_str(), static_cast<int>(rawBytes.length()));
+        } else {
+            decoded = TEncodingHelper::decode(QByteArray::fromRawData(rawBytes.c_str(), rawBytes.length()), encoding);
+        }
+
+        lastEntityValue = qsl("<") + decoded;
+        // resetForNewTag() puts the builder in "inside tag" state, as if we just processed '<'
+        // This allows the next character to be processed as part of the new tag
+        mMxpTagBuilder.resetForNewTag();
+        return HANDLER_INSERT_ENTITY_SYS;
+    }
+
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         return HANDLER_NEXT_CHAR;
     }
-
     if (mMxpTagBuilder.hasTag()) {
+        // Save raw tag content before it gets cleared by buildTag()
+        // Note: getRawTagContent() returns content INCLUDING the closing '>'
+        const std::string rawTagBytes = mMxpTagBuilder.getRawTagContent();
+        const QByteArray encoding = mpMxpClient->getEncoding();
+
+        // Build the tag content string with proper encoding
+        QString rawTagContent = qsl("<");
+
+        // Decode the raw bytes using the proper encoding
+        if (encoding == qsl("UTF-8")) {
+            rawTagContent += QString::fromStdString(rawTagBytes);
+        } else if (encoding == qsl("ISO 8859-1")) {
+            rawTagContent += QString::fromLatin1(rawTagBytes.c_str(), static_cast<int>(rawTagBytes.length()));
+        } else {
+            // For other encodings (GBK, BIG5, EUC-KR, etc.), use TEncodingHelper
+            rawTagContent += TEncodingHelper::decode(QByteArray::fromRawData(rawTagBytes.c_str(), rawTagBytes.length()), encoding);
+        }
+
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
-        //        qDebug() << "TAG RECEIVED: " << tag->asString();
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
             mMXP_MODE = mMXP_DEFAULT;
         }
 
         TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
+
+        // If tag was not handled (not valid MXP and not a custom element), display it as-is
+        // Use HANDLER_INSERT_ENTITY_SYS so the Unicode content is inserted directly
+        // without being reprocessed through toLatin1() which would destroy non-ASCII chars
+        if (result == MXP_TAG_NOT_HANDLED) {
+            lastEntityValue = rawTagContent;
+            return HANDLER_INSERT_ENTITY_SYS;
+        }
+
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
     }
 
-    if (mEntityHandler.handle(ch, resolveCustomEntities)) {             // ch is part of an entity
-        if (mEntityHandler.isEntityResolved()) { // entity has been mapped (i.e. ch == ';')
+    if (mEntityHandler.handle(ch, resolveCustomEntities)) { // ch is part of an entity
+        if (mEntityHandler.isEntityResolved()) {            // entity has been mapped (i.e. ch == ';')
             lastEntityValue = mEntityHandler.getResultAndReset();
             switch (mEntityHandler.getEntityType()) {
-                case ENTITY_TYPE_CUSTOM:
-                    return HANDLER_INSERT_ENTITY_CUST;
-                case ENTITY_TYPE_SYSTEM:
-                    // Note special handling for '\n' as a result of &newline;
-                    return lastEntityValue == qsl("\n") ? HANDLER_COMMIT_LINE : HANDLER_INSERT_ENTITY_SYS;
-                default:
-                    return HANDLER_INSERT_ENTITY_LIT;
+            case ENTITY_TYPE_CUSTOM:
+                return HANDLER_INSERT_ENTITY_CUST;
+            case ENTITY_TYPE_SYSTEM:
+                // Note special handling for '\n' as a result of &newline;
+                return lastEntityValue == qsl("\n") ? HANDLER_COMMIT_LINE : HANDLER_INSERT_ENTITY_SYS;
+            default:
+                return HANDLER_INSERT_ENTITY_LIT;
             }
         } else { // ask for the next char
             return HANDLER_NEXT_CHAR;

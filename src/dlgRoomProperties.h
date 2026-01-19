@@ -23,12 +23,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Host.h"
-
-#include "pre_guard.h"
 #include "ui_room_properties.h"
-#include "post_guard.h"
 
+#include <QListWidget>
+
+class Host;
+class TRoom;
 
 class dlgRoomProperties : public QDialog, public Ui::room_properties
 {
@@ -45,6 +45,7 @@ public:
         QHash<bool, int> lockStatus,
         QSet<TRoom*>& pRooms);
     void accept() override;
+    void reject() override;
 
 signals:
     void signal_save_symbol(
@@ -54,7 +55,10 @@ signals:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, std::optional<bool> newLockStatus,
+        bool changeBorderColor, QColor newBorderColor,
+        bool changeBorderThickness, int newBorderThickness,
         QSet<TRoom*> mpRooms);
+    void signal_preview_border(QSet<TRoom*> rooms);
 
 private:
     QColor backgroundBasedColor(QColor);
@@ -68,6 +72,9 @@ private:
     void initWeightInstructions();
     QStringList getComboBoxWeightItems();
     void initLockInstructions();
+    void initBorderInstructions();
+    void emitBorderPreview();
+    void restoreOriginalBorders();
 
     Host* mpHost = nullptr;
     QSet<TRoom*> mpRooms;
@@ -77,6 +84,13 @@ private:
     QColor mRoomColor;
     int mRoomColorNumber = -1;
     bool mChangeRoomColor = false;
+    bool mSymbolColorWasChanged = false;
+    QColor selectedBorderColor;
+    int mBorderThickness = 0;
+    bool mBorderColorWasChanged = false;
+    bool mBorderThicknessWasChanged = false;
+    QHash<TRoom*, QColor> mOriginalBorderColors;
+    QHash<TRoom*, int> mOriginalBorderThicknesses;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:
@@ -91,6 +105,11 @@ private slots:
 
     void slot_symbolComboBoxItemChanged(const int);
     void slot_weightComboBoxItemChanged(const int);
+
+    void slot_openBorderColorSelector();
+    void slot_borderColorSelected(const QColor&);
+    void slot_resetBorderColor();
+    void slot_borderThicknessChanged(int);
 };
 
 #endif // MUDLET_DLGROOMPROPERTIES_H

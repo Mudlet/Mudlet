@@ -1101,6 +1101,10 @@ if false then
   end
 
 
+  --- <b><u>TODO</u></b>  setWindowWrapHangingIndent - TLuaInterpreter::setWindowWrapHangingIndent
+  function setWindowWrapHangingIndent()
+  end
+
 
   --- <b><u>TODO</u></b>  spawn - TLuaInterpreter::spawn
   function spawn()

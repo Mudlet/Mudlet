@@ -27,6 +27,29 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
+#include <functional>
+
+TriggerUnit::~TriggerUnit()
+{
+    // Set mpHost to null on all triggers (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TTrigger*)> nullifyChildren = [&nullifyChildren](TTrigger* t) {
+            for (auto child : *t->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(trigger);
+    }
+    for (auto trigger : mTriggerRootNodeList) {
+        delete trigger;
+    }
+}
+
 void TriggerUnit::resetStats()
 {
     statsItemsTotal = 0;
@@ -97,25 +120,43 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     }
 }
 
-void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
+// Enum-based reParentTrigger implementation
+void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
 {
     TTrigger* pOldParent = getTriggerPrivate(oldParentID);
     TTrigger* pNewParent = getTriggerPrivate(newParentID);
     TTrigger* pChild = getTriggerPrivate(childID);
+
     if (!pChild) {
         return;
     }
+
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
         mTriggerRootNodeList.remove(pChild);
     }
+
+    // Convert enum mode to the internal flags
+    int parentPosition = (mode == TreeItemInsertMode::AtPosition) ? 0 : -1;
+    int childPosition = (mode == TreeItemInsertMode::AtPosition) ? position : -1;
+
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
         pChild->setParent(pNewParent);
     } else {
         pChild->Tree<TTrigger>::setParent(nullptr);
         addTriggerRootNode(pChild, parentPosition, childPosition, true);
+    }
+}
+
+// Legacy integer-based reParentTrigger - delegates to enum-based version
+void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
+{
+    if (parentPosition == -1 || childPosition == -1) {
+        reParentTrigger(childID, oldParentID, newParentID, TreeItemInsertMode::Append, 0);
+    } else {
+        reParentTrigger(childID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, childPosition);
     }
 }
 
@@ -137,18 +178,16 @@ TTrigger* TriggerUnit::getTrigger(int id)
 {
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TTrigger* TriggerUnit::getTriggerPrivate(int id)
 {
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool TriggerUnit::registerTrigger(TTrigger* pT)
@@ -237,24 +276,28 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
-#if defined(Q_OS_WINDOWS)
-    // strndup(3) - a safe strdup(3) does not seem to be available in the
-    // original mingw or the replacement mingw-w64 enmvironment we use:
-    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().constData()) + 1));
-    strcpy(subject, data.toUtf8().constData());
-#else
-    char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
-#endif
+    const QByteArray utf8Data = data.toUtf8();
+    const char* utf8Ptr = utf8Data.constData();
+    const size_t utf8Length = utf8Data.size();
+
+    char* subject = static_cast<char*>(malloc(utf8Length + 1));
+    if (!subject) {
+        return;
+    }
+    memcpy(subject, utf8Ptr, utf8Length);
+    subject[utf8Length] = '\0';
+
+    // Set processing flag to prevent re-entrant cleanup during trigger execution
+    mIsProcessing = true;
 
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }
     free(subject);
 
-    for (auto& trigger : mCleanupList) {
-        delete trigger;
-    }
-    mCleanupList.clear();
+    // Clear processing flag and perform any deferred cleanup
+    mIsProcessing = false;
+    doCleanup();
 }
 
 void TriggerUnit::compileAll()
@@ -395,35 +438,29 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("tempTriggers current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n")
-        << QLatin1String("trigger patterns total: ") << QString::number(statsPatternsTotal) << QLatin1String("\n")
-        << QLatin1String("active patterns total: ") << QString::number(statsPatternsActive) << QLatin1String("\n");
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsPatternsTotal,
-        statsTempItems,
-        statsActiveItems,
-        statsPatternsActive
-    };
+    msg << QLatin1String("triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("tempTriggers current total: ") << QString::number(statsTempItems)
+        << QLatin1String("\n") << QLatin1String("active triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n") << QLatin1String("trigger patterns total: ")
+        << QString::number(statsPatternsTotal) << QLatin1String("\n") << QLatin1String("active patterns total: ") << QString::number(statsPatternsActive) << QLatin1String("\n");
+    return {msg.join(QString()), statsItemsTotal, statsPatternsTotal, statsTempItems, statsActiveItems, statsPatternsActive};
 }
 
 void TriggerUnit::doCleanup()
 {
-    for (auto trigger : mCleanupList) {
-        delete trigger;
+    // Skip cleanup if we're currently processing triggers to prevent iterator invalidation
+    // Cleanup will be performed when processDataStream() completes
+    if (mIsProcessing) {
+        return;
     }
-    mCleanupList.clear();
+
+    QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
+    while (itTrigger.hasNext()) {
+        auto pTrigger = itTrigger.next();
+        itTrigger.remove();
+        delete pTrigger;
+    }
 }
 
 void TriggerUnit::markCleanup(TTrigger* pT)
 {
-    for (auto trigger : mCleanupList) {
-        if (trigger == pT) {
-            return;
-        }
-    }
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }

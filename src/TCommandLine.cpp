@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2018-2020, 2022-2025 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2023-2025 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +24,7 @@
 
 #include "TCommandLine.h"
 
+#include "TEncodingHelper.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
@@ -32,12 +33,13 @@
 #include "TEvent.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
 #include <QKeyEvent>
+#include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>
-#include "post_guard.h"
+#include <QToolButton>
+#include <QIcon>
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
@@ -52,10 +54,23 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    setFont(mpHost->getDisplayFont());
+    setFont(mpConsole->font());
     document()->setDocumentMargin(2);
 
-    if (mType & (MainCommandLine|ConsoleCommandLine)) {
+    // Create password toggle button for MainCommandLine only
+    if (mType == MainCommandLine) {
+        mpPasswordToggleButton = new QToolButton(this);
+        mpPasswordToggleButton->setMinimumSize(QSize(20, 20));
+        mpPasswordToggleButton->setMaximumSize(QSize(20, 20));
+        mpPasswordToggleButton->setFocusPolicy(Qt::NoFocus);
+        mpPasswordToggleButton->setCursor(Qt::PointingHandCursor);
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-on.png")));
+        mpPasswordToggleButton->setToolTip(tr("Show password"));
+        mpPasswordToggleButton->setVisible(false); // Hidden by default
+        connect(mpPasswordToggleButton, &QToolButton::clicked, this, &TCommandLine::slot_togglePasswordVisibility);
+    }
+
+    if (mType & (MainCommandLine | ConsoleCommandLine)) {
         // put an outline around the command line when it is integrated into
         // bottom of a TConsole - so that it can be visually separated from
         // the text output area - particulary when "dark" mode is in effect
@@ -97,6 +112,15 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     restoreHistory();
 
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
+
+    // Forward textChanged signal for hyperlink visibility triggers
+    connect(this, &QPlainTextEdit::textChanged, this, &TCommandLine::commandLineTextChanged);
+
+    if (mType == MainCommandLine) { // Limit to the main command line only
+        connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
+            this->setEchoSuppression(isRemoteEcho);
+        });
+    }
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -111,11 +135,23 @@ void TCommandLine::processNormalKey(QEvent* event)
     } else {
         mUserKeptOnTyping = false;
     }
+
+    // Track if user types during echo suppression for content preservation logic
+    if (mIsEchoSuppressed && mType == MainCommandLine) {
+        mUserTypedDuringEchoSuppression = true;
+    }
+
     spellCheck();
 }
 
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
+    // Don't process keybindings if the host is closing down to prevent crashes
+    // when multiple profiles are closed quickly
+    if (mpHost && mpHost->isClosingDown()) {
+        return false;
+    }
+
     if (mpKeyUnit->processDataStream(static_cast<Qt::Key>(keyEvent->key()), static_cast<Qt::KeyboardModifiers>(keyEvent->modifiers()))) {
         keyEvent->accept();
         return true;
@@ -130,28 +166,43 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 // event propagation to the parent widget stops.
 bool TCommandLine::event(QEvent* event)
 {
+    // Don't process events if the host is closing down to prevent crashes
+    // when multiple profiles are closed quickly
+    if (!mpHost || mpHost->isClosingDown()) {
+        return QPlainTextEdit::event(event);
+    }
+
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
         auto* ke = dynamic_cast<QKeyEvent*>(event);
         if (!ke) {
-            // Something is wrong -
             qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynamically castable to the latter - so the processing of this event "
                                      "has been aborted - please report this to Mudlet Makers.";
-            // Indicate that we don't want to touch this event with a barge-pole!
             return false;
         }
 
-        if (ke->matches(QKeySequence::Copy)){ // Copy is Ctrl+C and possibly Ctrl+Ins, F16
-            if (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0)) {
-                // Only process if there is a selection active in the TConsole
+        if (ke->matches(QKeySequence::Copy)) { // Copy is Ctrl+C and possibly Ctrl+Ins, F16
+            // Check for console selections in both upper and lower panes
+            // Prioritize console selection over command line text
+            const bool hasUpperPaneSelection = !mpConsole->mUpperPane->mSelectedRegion.isEmpty();
+            const bool hasLowerPaneSelection = !mpConsole->mLowerPane->mSelectedRegion.isEmpty();
+
+            if (hasUpperPaneSelection) {
+                // Copy from upper pane if it has a selection
                 mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
+            } else if (hasLowerPaneSelection) {
+                // Copy from lower pane if it has a selection
+                mpConsole->mLowerPane->slot_copySelectionToClipboard();
+                ke->accept();
+                return true;
             }
+            // If no console selection, fall through to default command line copy behavior
         }
 
-        if (ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
-            if (keybindingMatched(ke)) { // If user has set up a keybind then do that instead.
+        if (ke->matches(QKeySequence::Find)) { // Find is Ctrl+F
+            if (keybindingMatched(ke)) {       // If user has set up a keybind then do that instead.
                 return true;
             }
 
@@ -160,7 +211,11 @@ bool TCommandLine::event(QEvent* event)
                 mudlet::self()->dactionInputLine->setChecked(false);
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
             }
+
+            mpConsole->mUpperPane->slot_copySelectionToSearchBar();
             mpConsole->mpBufferSearchBox->setFocus();
+            mpConsole->mpBufferSearchBox->selectAll();
+
             ke->accept();
             return true;
         }
@@ -169,7 +224,6 @@ bool TCommandLine::event(QEvent* event)
         if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()))) {
             ke->accept();
             return true;
-
         }
 
         switch (ke->key()) {
@@ -206,7 +260,7 @@ bool TCommandLine::event(QEvent* event)
                 return true;
             }
 
-            if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) ==  Qt::NoModifier) {
+            if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) == Qt::NoModifier) {
                 // Process as plain <BACKTAB> - (ignoring implicit <SHIFT>)
                 handleTabCompletion(false);
                 adjustHeight();
@@ -222,8 +276,8 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_Tab:
-            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(ke->modifiers() & Qt::ControlModifier)) ||
-                (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (ke->modifiers() & Qt::ControlModifier))) {
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(ke->modifiers() & Qt::ControlModifier))
+                || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (ke->modifiers() & Qt::ControlModifier))) {
                 mpHost->setCaretEnabled(true);
                 ke->accept();
                 return true;
@@ -270,7 +324,7 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_Backspace:
-            if ((ke->modifiers() & (allModifiers & ~(Qt::ControlModifier|Qt::ShiftModifier))) == Qt::NoModifier) {
+            if ((ke->modifiers() & (allModifiers & ~(Qt::ControlModifier | Qt::ShiftModifier))) == Qt::NoModifier) {
                 // Ignore state of <CTRL> and <SHIFT> keys
                 mHistoryBuffer = 0;
 
@@ -327,7 +381,6 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->clearSplit();
                 ke->accept();
                 return true;
-
             }
 
             if ((ke->modifiers() & allModifiers) == Qt::ShiftModifier) {
@@ -335,7 +388,6 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 adjustHeight();
                 return true;
-
             }
 
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -373,7 +425,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_Down:
 #if defined(Q_OS_MACOS)
-            if ((ke->modifiers() & allModifiers) == (Qt::ControlModifier|Qt::KeypadModifier)) {
+            if ((ke->modifiers() & allModifiers) == (Qt::ControlModifier | Qt::KeypadModifier)) {
 #else
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
 #endif
@@ -406,7 +458,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_Up:
 #if defined(Q_OS_MACOS)
-            if ((ke->modifiers() & allModifiers) == (Qt::ControlModifier|Qt::KeypadModifier)) {
+            if ((ke->modifiers() & allModifiers) == (Qt::ControlModifier | Qt::KeypadModifier)) {
 #else
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
 #endif
@@ -427,7 +479,6 @@ bool TCommandLine::event(QEvent* event)
                 historyMove(MOVE_UP);
                 ke->accept();
                 return true;
-
             }
 
             if (keybindingMatched(ke)) {
@@ -460,7 +511,9 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 mpConsole->scrollUp(0);
-                QTimer::singleShot(0, this, [this]() {  mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight()); });
+                QTimer::singleShot(0, this, [this]() {
+                    mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight());
+                });
                 ke->accept();
                 return true;
             }
@@ -476,7 +529,6 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->scrollDown(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
-
             }
             if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers,
@@ -591,6 +643,11 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 
 void TCommandLine::hideEvent(QHideEvent* event)
 {
+    // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
+    if (mType == SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
+        mpHost->mpConsole->mpCommandLine->setFocus();
+    }
+
     QPlainTextEdit::hideEvent(event);
 }
 
@@ -601,7 +658,7 @@ void TCommandLine::adjustHeight()
         qWarning() << "TCommandLine::adjustHeight() ERROR: mpConsole->layerCommandLine is NULL!";
         return;
     }
-    int lines = document()->size().height();
+    int lines = static_cast<int>(document()->size().height());
     // Workaround for SubCommandLines textCursor not visible in some situations
     // SubCommandLines cannot autoresize
     if (mType == SubCommandLine) {
@@ -618,11 +675,8 @@ void TCommandLine::adjustHeight()
     }
     const int fontH = QFontMetrics(font()).height();
     // Adjust height margin based on font size and if it is more than one row
-    int marginH = lines > 1 ? 2+fontH/3 : 5;
-    if (lines > 1 && marginH < 8) {
-        marginH = 8; // needed for very small fonts
-    }
-    int _height = fontH * lines + marginH;
+    int marginH = lines > 1 ? 10 : 5;
+    int _height = (fontH + 1) * lines + marginH;
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
@@ -693,7 +747,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         return;
     }
 
-    auto codec = mpHost->mpConsole->getHunspellCodec_system();
+    auto codecName = mpHost->mpConsole->getHunspellCodecName_system();
     auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
     auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
     bool haveAddOption = false;
@@ -743,13 +797,12 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     // need to have a codec prepared for it and can use QString::toUtf8()
     // directly:
     const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
-    if (!(handle_system && codec)) {
+    if (!(handle_system && !codecName.isEmpty())) {
         mSystemDictionarySuggestionsCount = 0;
     } else {
         // The dictionary used from "the system" may not be UTF-8 encoded so we
-        // will need to transform the UTF-16BE "QString" to the appropriate encoding
-        // using "codec" declared previously in this method:
-        const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+        // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+        const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
         if (!Hunspell_spell(handle_system, encodedText.constData())) {
             // The word is NOT in the main system dictionary:
             if (handle_profile) {
@@ -784,14 +837,14 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
     if (mSystemDictionarySuggestionsCount) {
         for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
-            auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
+            auto pA = new QAction(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
 #if defined(Q_OS_FREEBSD)
             // Adding the text afterwards as user data as well as in the
             // constructor is to fix a bug(?) in FreeBSD that
             // automagically adds a '&' somewhere in the text to be a
             // shortcut - but doesn't show it and forgets to remove
             // it when asked for the text later:
-            pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
+            pA->setData(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
 #endif
             connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
             spellings_system << pA;
@@ -810,14 +863,14 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     if (handle_profile) {
         if (mUserDictionarySuggestionsCount) {
             for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
+                auto pA = new QAction(QString::fromUtf8(mpUserSuggestionsList[i]));
 #if defined(Q_OS_FREEBSD)
                 // Adding the text afterwards as user data as well as in the
                 // constructor is to fix a bug(?) in FreeBSD that
                 // automagically adds a '&' somewhere in the text to be a
                 // shortcut - but doesn't show it and forgets to remove
                 // it when asked for the text later:
-                pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
+                pA->setData(QString::fromUtf8(mpUserSuggestionsList[i]));
 #endif
                 connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                 spellings_profile << pA;
@@ -880,6 +933,13 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
+    // Prevent selection, drag/drop of text in the command line when echo suppression is on
+    // Allow right-click to show the context menu (enables Paste)
+    if (mIsEchoSuppressed && mType == MainCommandLine && event->button() != Qt::RightButton) {
+        event->ignore();
+        return;
+    }
+
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
         if (mpHost->mEnableSpellCheck) {
@@ -889,8 +949,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         }
 
         popup->addSeparator();
-        foreach(auto label, contextMenuItems.keys()) {
-            auto eventName = contextMenuItems.value(label);
+        for (const auto& [label, eventName] : contextMenuItems.asKeyValueRange()) {
             auto action = new QAction(label, this);
             connect(action, &QAction::triggered, this, [=, this]() {
                 TEvent mudletEvent = {};
@@ -932,22 +991,25 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mLastCompletion.clear();
     mUserKeptOnTyping = false;
 
+    // Emit signal for hyperlink visibility triggers before processing the command
+    emit commandSubmitted();
+
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
-    for (int i = 0; i < commandList.size(); ++i) {
+    for (QString& command : commandList) {
         if (mType != MainCommandLine && mActionFunction) {
-            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, commandList.at(i));
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
-            mpHost->send(commandList.at(i));
+            mpHost->send(command);
         }
         // send command to your MiniConsole
-        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
+        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
             // This usage of commandList modifies the content!!!
-            mpConsole->printCommand(commandList[i]);
+            mpConsole->printCommand(command);
         }
     }
 
-    if (!toPlainText().isEmpty()) {
+    if (!toPlainText().isEmpty() && !mpHost->isRemoteEchoingActive()) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
@@ -964,14 +1026,14 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     }
 
     if (mpHost->mAutoClearCommandLineAfterSend) {
-#if defined (Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
         // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
         // essentially re-announcing everything we've typed. This workaround fixes this behaviour
         // and does not seem to negatively affect other platforms
         hide();
 #endif
         clear();
-#if defined (Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
         show();
 #endif
     } else {
@@ -1009,7 +1071,9 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar::LineFeed, QChar::Space);
 
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
-    wordList.append(commandLineSuggestions.values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead.
+    wordList.append(
+            commandLineSuggestions
+                    .values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead.
     const QStringList blacklist = tabCompleteBlacklist.values();
     QStringList toDelete;
 
@@ -1047,7 +1111,8 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         int offset = 0;
-        forever {
+        forever
+        {
             const QString tmp = filterList.back();
             filterList.removeAll(tmp);
             filterList.insert(offset, tmp);
@@ -1121,6 +1186,21 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
+    // DOWN at position 0 with text: save to history and clear input
+    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty()) {
+        mHistoryList.removeAll(toPlainText());
+        if (!mHistoryList.isEmpty()) {
+            mHistoryList[0] = toPlainText();
+        } else {
+            mHistoryList.push_front(toPlainText());
+        }
+        mHistoryList.push_front(QString());
+
+        clear();
+        adjustHeight();
+        return;
+    }
+
     if (mHistoryList.empty()) {
         return;
     }
@@ -1203,9 +1283,18 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     }
 
     // The dictionary used from "the system" may not be UTF-8 encoded so we
-    // will need to transform the UTF-16BE "QString" to the appropriate encoding
-    // using the correct "codec":
-    const QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
+    // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+    const QByteArray codecName = mpHost->mpConsole->getHunspellCodecName_system();
+    if (codecName.isEmpty()) {
+        // If we don't know the encoding, we can't safely spell-check
+        f.setFontUnderline(false);
+        c.setCharFormat(f);
+        setTextCursor(c);
+        mSpellChecking = false;
+        return;
+    }
+
+    const QByteArray encodedText = TEncodingHelper::encode(spellCheckedWord, codecName);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
@@ -1240,11 +1329,13 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
 
 bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
 {
-    const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+    const Qt::KeyboardModifiers allExceptShiftModifiers = Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
 
-    if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
-        // let user-defined Ctrl+# keys match first - and only if the user hasn't created
-        // then we fallback to tab switching
+    if ((ke->modifiers() & allExceptShiftModifiers) == Qt::ControlModifier) {
+        // let user-defined Ctrl+# keys match first - and only if the user
+        // hasn't created one then we fallback to tab switching - however
+        // since some locales need the SHIFT modifier to enter numbers from the
+        // top keyboard row (e.g. French AZERTY) we must ignore that one!
         if (keybindingMatched(ke)) {
             // Ah the user HAS created a matching binding:
             return true;
@@ -1305,7 +1396,8 @@ void TCommandLine::clearMarksOnWholeLine()
     setTextCursor(oldCursor);
 }
 
-void TCommandLine::setAction(const int func){
+void TCommandLine::setAction(const int func)
+{
     releaseFunc(mActionFunction, func);
     mActionFunction = func;
 }
@@ -1381,7 +1473,8 @@ void TCommandLine::slot_adjustAccessibleNames()
             kept as short as possible.
             */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.").arg(hostName));
+                                        "to run commands locally.")
+                                             .arg(hostName));
         } else {
             /*:
             Accessibility-friendly name to describe the main command line for a
@@ -1406,15 +1499,15 @@ void TCommandLine::slot_adjustAccessibleNames()
             the command line name, %2 is the name of the window/console that
             it is on and %3 is the name of the profile.
             */
-            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.")
-                                      .arg(mCommandLineName, mpConsole->mConsoleName, hostName));
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.").arg(mCommandLineName, mpConsole->mConsoleName, hostName));
             /*:
             Accessibility-friendly description for an extra command line on top of a
             console/window when more than one profile is loaded, %1 is the profile
             name.
             */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.").arg(hostName));
+                                        "to run commands locally.")
+                                             .arg(hostName));
         } else {
             /*:
             Accessibility-friendly name to describe an extra command line on
@@ -1422,8 +1515,7 @@ void TCommandLine::slot_adjustAccessibleNames()
             command line name and %2 is the name of the window/console that
             it is on.
             */
-            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.")
-                                      .arg(mCommandLineName, mpConsole->mConsoleName));
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.").arg(mCommandLineName, mpConsole->mConsoleName));
             /*:
             Accessibility-friendly description for an extra command line on
             top of a console/window when only one profile is loaded.
@@ -1448,15 +1540,15 @@ void TCommandLine::slot_adjustAccessibleNames()
             loaded, %1 is the profile name.
             */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.").arg(hostName));
+                                        "to run commands locally.")
+                                             .arg(hostName));
         } else {
             /*:
             Accessibility-friendly name to describe the built-in command line
             of a console/window other than the main one, when only one
             profile is loaded, %1 is the name of the window/console.
             */
-            setAccessibleName(tr("Input line of \"%1\" window.")
-                                      .arg(mCommandLineName));
+            setAccessibleName(tr("Input line of \"%1\" window.").arg(mCommandLineName));
             /*:
             Accessibility-friendly description for the built-in command line of a
             console/window other than the main window's one when only one profile is
@@ -1505,8 +1597,7 @@ void TCommandLine::restoreHistory()
 
         // else failed to open the file despite it existing
         if (historyFile.error() != QFileDevice::NoError) {
-            qWarning() << "TCommandLine::restoreHistory() ERROR - unable to open command history for the command line called: "
-                       << mCommandLineName << " of type: " << mType
+            qWarning() << "TCommandLine::restoreHistory() ERROR - unable to open command history for the command line called: " << mCommandLineName << " of type: " << mType
                        << " reason: " << historyFile.errorString();
             return;
         }
@@ -1514,10 +1605,8 @@ void TCommandLine::restoreHistory()
     // else no such file - which will be the case for the first time the
     // command line is created - so it might not be an error:
     if (mCommandLineName != qsl("main")) {
-        qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: "
-                << mCommandLineName << " of type: " << mType
-                << " because the file: " << mBackingFileName
-                << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
+        qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: " << mCommandLineName << " of type: " << mType
+                 << " because the file: " << mBackingFileName << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
     }
 }
 
@@ -1548,9 +1637,249 @@ void TCommandLine::slot_saveHistory()
         // unsent text in the command line?
         ofs << mHistoryList.mid(0, saveSize + 1).join(QChar::LineFeed);
         if (!historyFile.commit()) {
-            qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
-                                         << " of type: " << mType << " reason: " << historyFile.errorString();
+            qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName << " of type: " << mType
+                                         << " reason: " << historyFile.errorString();
         }
     }
 }
 
+/*
+ * setEchoSuppression - Handle password input mode for the main command line
+ *
+ * This function manages the transition between normal command input and secure password entry.
+ * When a MUD server requests password input, it signals echo suppression which hides user typing.
+ *
+ * Key challenges handled:
+ * - Preserving user's command text during password prompts for restoration afterward
+ * - Distinguishing between commands and partial password input when suppression activates
+ * - Maintaining correct selection state (important for auto-clear OFF workflow)
+ * - Supporting users who type password characters before echo suppression kicks in
+ *
+ * Common workflows:
+ * 1. Auto-clear ON: user types command -> sends -> password prompt -> restore command
+ * 2. Auto-clear OFF: user types command -> sends -> command selected -> password prompt -> restore selected command
+ * 3. Rapid login: user types 'password' -> server enables echo suppression mid-typing -> continue hidden
+ * 4. Empty command line: straightforward password entry with no restoration needed
+ *
+ * @param suppress true to start password mode (hide input), false to end it (restore normal input)
+ */
+void TCommandLine::setEchoSuppression(bool suppress)
+{
+    // Echo suppression (password masking) only applies to the main command line
+    // SubCommandLines and ConsoleCommandLines are not affected by server password prompts
+    if (mType != MainCommandLine) {
+        return;
+    }
+
+    // If password masking is disabled by user preference, don't activate it
+    if (suppress && mpHost->mDisablePasswordMasking) {
+        return;
+    }
+
+    // Early exit if suppression state hasn't changed - avoids unnecessary processing
+    if (mIsEchoSuppressed == suppress) {
+        return;
+    }
+
+    mIsEchoSuppressed = suppress;
+
+    if (suppress) {
+        // === STARTING PASSWORD INPUT MODE ===
+        // When password prompting begins, we need to handle different scenarios:
+        // 1. User has command typed and selected (auto-clear OFF) - preserve for restoration
+        // 2. User has unselected command (auto-clear ON) - check if it's a command vs. partial password
+        // 3. User was already typing password characters before echo suppression activated
+        // 4. Command line is empty - simple case, just start password mode
+
+        const QString currentText = toPlainText();
+        QString textToRestoreAfterPassword; // Command text to restore after password entry
+        QString partialPasswordToKeep;      // Password chars user typed before suppression activated
+
+        // Analyze what the user currently has in the command line
+        if (!currentText.isEmpty()) {
+            QTextCursor cursor = textCursor();
+
+            if (cursor.hasSelection()) {
+                // SCENARIO 1: Auto-clear is OFF, previous command is selected
+                // User workflow: sent command -> server shows password prompt -> command gets selected
+                // Action: Save selected text for restoration after password, remember it was selected
+                textToRestoreAfterPassword = cursor.selectedText();
+                mRestoredTextShouldBeSelected = true;
+            } else {
+                // SCENARIO 2 & 3: Text exists but isn't selected - determine what it is
+                mRestoredTextShouldBeSelected = false;
+
+                // Check if current text matches recent command history to distinguish between:
+                // - A command that was just sent (preserve it)
+                // - Password characters already being typed (continue with them)
+                bool isExistingCommand = false;
+                const int maxHistoryEntriesToCheck = qMin(500, mHistoryList.size());
+
+                for (int i = 0; i < maxHistoryEntriesToCheck; ++i) {
+                    const QString& historyEntry = mHistoryList[i];
+
+                    if (!historyEntry.isEmpty()) {
+                        if (currentText == historyEntry) {
+                            isExistingCommand = true;
+                        }
+                        break;
+                    }
+                }
+
+                if (!isExistingCommand && !mHistoryList.isEmpty()) {
+                    // SCENARIO 3: Text doesn't match history - likely password chars already typed
+                    // User workflow: types 'password' -> server enables echo suppression mid-typing
+                    // Action: Continue with these characters as hidden password input
+                    partialPasswordToKeep = currentText;
+                } else {
+                    // SCENARIO 2: Text matches history - it's a recently sent command
+                    // User workflow: types command -> sends it -> server prompts for password
+                    // Action: Preserve command for restoration after password entry
+                    textToRestoreAfterPassword = currentText;
+                }
+            }
+        } else {
+            // SCENARIO 4: Command line is empty - straightforward password entry
+            mRestoredTextShouldBeSelected = false;
+        }
+
+        // Store the command text for later restoration (empty if none to restore)
+        mTextToRestoreAfterEchoSuppression = textToRestoreAfterPassword;
+        mUserTypedDuringEchoSuppression = false; // Reset typing tracking
+        clear();                                 // Clear command line for password input
+
+        // Show password toggle button and reset visibility state
+        if (mpPasswordToggleButton) {
+            mPasswordVisible = false; // Start with password hidden
+            updatePasswordToggleButton();
+            mpPasswordToggleButton->setVisible(true);
+            positionPasswordToggleButton();
+        }
+
+        // If user was already typing password characters, restore them and continue
+        if (!partialPasswordToKeep.isEmpty()) {
+            setPlainText(partialPasswordToKeep);
+            QTextCursor cursor = textCursor();
+            cursor.movePosition(QTextCursor::End); // Position cursor for continued typing
+            setTextCursor(cursor);
+        }
+    } else {
+        // === ENDING PASSWORD INPUT MODE ===
+        // Password entry is complete, restore the command line to its previous state
+        // This handles the transition from hidden password input back to normal command entry
+
+        clear(); // Clear the password field first for security
+
+        // Hide password toggle button
+        if (mpPasswordToggleButton) {
+            mpPasswordToggleButton->setVisible(false);
+        }
+
+        // Restore any command text that was preserved when password mode started
+        // Only restore if user didn't type anything during echo suppression
+        if (!mTextToRestoreAfterEchoSuppression.isEmpty() && !mUserTypedDuringEchoSuppression) {
+            setPlainText(mTextToRestoreAfterEchoSuppression);
+
+            // Restore the original selection state to maintain user workflow consistency
+            QTextCursor cursor = textCursor();
+
+            if (mRestoredTextShouldBeSelected) {
+                // Original text was selected (auto-clear OFF) - restore selection
+                // User workflow: command selected -> password entered -> command re-selected for editing/resending
+                cursor.movePosition(QTextCursor::Start);
+                cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+            } else {
+                // Original text was not selected - position cursor at end for continued typing
+                cursor.movePosition(QTextCursor::End);
+            }
+
+            setTextCursor(cursor);
+        }
+
+        // Clear saved state - restoration is complete
+        mTextToRestoreAfterEchoSuppression.clear();
+        mRestoredTextShouldBeSelected = false;
+        mUserTypedDuringEchoSuppression = false;
+    }
+
+    viewport()->update(); // Force repaint to apply/remove password masking visual effect
+}
+
+void TCommandLine::paintEvent(QPaintEvent* event)
+{
+    // Only mask text for the main command line when echo is suppressed and password is not visible
+    if (mIsEchoSuppressed && mType == MainCommandLine && !mPasswordVisible) {
+        QPainter painter(viewport());
+        QTextCursor cursor = textCursor();
+        QTextBlock block = document()->firstBlock();
+        QFontMetrics fm(font());
+
+        // Paint each line with asterisks instead of actual text
+        for (QTextBlock b = block; b.isValid(); b = b.next()) {
+            QString text = b.text();
+            QString mask = QString('*').repeated(text.length());
+            QRect r = blockBoundingGeometry(b).translated(contentOffset()).toRect();
+            painter.drawText(r.topLeft() + QPoint(0, fm.ascent()), mask);
+        }
+        return;
+    }
+
+    QPlainTextEdit::paintEvent(event);
+}
+
+void TCommandLine::slot_togglePasswordVisibility()
+{
+    if (!mIsEchoSuppressed || mType != MainCommandLine) {
+        return;
+    }
+
+    mPasswordVisible = !mPasswordVisible;
+    updatePasswordToggleButton();
+    viewport()->update(); // triggers paintEvent to mask/unmask
+}
+
+void TCommandLine::updatePasswordToggleButton()
+{
+    if (!mpPasswordToggleButton) {
+        return;
+    }
+
+    if (mPasswordVisible) {
+        // Password is visible, show "hide" icon (eye with slash)
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-off.png")));
+        mpPasswordToggleButton->setToolTip(tr("Hide password"));
+    } else {
+        // Password is hidden, show "show" icon (eye)
+        mpPasswordToggleButton->setIcon(QIcon(qsl(":/icons/password-show-on.png")));
+        mpPasswordToggleButton->setToolTip(tr("Show password"));
+    }
+}
+
+void TCommandLine::positionPasswordToggleButton()
+{
+    if (!mpPasswordToggleButton) {
+        return;
+    }
+
+    // Position the button at the right side of the text edit
+    const QRect viewportRect = viewport()->geometry();
+    const int buttonWidth = mpPasswordToggleButton->width();
+    const int buttonHeight = mpPasswordToggleButton->height();
+    const int margin = 5;
+
+    // Position at the right edge, vertically centered
+    const int x = viewportRect.width() - buttonWidth - margin;
+    const int y = (viewportRect.height() - buttonHeight) / 2;
+
+    mpPasswordToggleButton->move(x, y);
+}
+
+void TCommandLine::resizeEvent(QResizeEvent* event)
+{
+    QPlainTextEdit::resizeEvent(event);
+
+    // Reposition the password toggle button when the widget is resized
+    if (mpPasswordToggleButton && mpPasswordToggleButton->isVisible()) {
+        positionPasswordToggleButton();
+    }
+}

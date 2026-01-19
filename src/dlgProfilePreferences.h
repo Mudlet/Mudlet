@@ -25,25 +25,20 @@
 
 
 #include "mudlet.h"
-#include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
-#include "TMedia.h"
-#include "TScript.h"
-#include "TTimer.h"
-#include "TTrigger.h"
 
-#include "pre_guard.h"
 #include "ui_profile_preferences.h"
-#include <QtCore>
 #include <QDialog>
-#include <QDir>
-#include <QDoubleSpinBox>
-#include <QFontDialog>
 #include <QMap>
-#include "post_guard.h"
 
 class Host;
+class QCloseEvent;
+class QDoubleSpinBox;
+class TAction;
+class TAlias;
+class TKey;
+class TScript;
+class TTimer;
+class TTrigger;
 
 
 class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
@@ -56,11 +51,6 @@ public:
     void setTab(QString tab);
 
 public slots:
-    // Fonts.
-    void slot_setFontSize();
-    void slot_setDisplayFont();
-// Not used: slot_setCommandLineFont();
-
     // Terminal colors.
     void slot_setColorBlack();
     void slot_setColorLightBlack();
@@ -108,6 +98,7 @@ public slots:
     void slot_setMapRoomBorderColor();
     void slot_setMapInfoBgColor();
     void slot_setMapRoomCollisionBorderColor();
+    void slot_setMapGridColor();
     void slot_setLowerLevelColor();
     void slot_setUpperLevelColor();
     void slot_resetMapColors();
@@ -172,15 +163,30 @@ private slots:
     void slot_enableDarkEditor(const QString&);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
+    void slot_toggleUseMaxBufferSize(bool checked);
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
+    void slot_changeInvertMapZoom(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
+    void slot_roomSizeChanged(int size);
+    void slot_exitSizeChanged(int size);
+    void slot_gridSizeChanged(double size);
+    void slot_displayFontChanged();
+    void slot_displayFontSizeChanged();
+    void slot_displayFontAliasingChanged();
+    void slot_changeShowTabConnectionIndicators(bool state);
+    void slot_crashReportPolicyChanged(int index);
+
 
 signals:
     void signal_themeUpdateCompleted();
     void signal_preferencesSaved();
     void signal_resetMainWindowShortcutsToDefaults();
+    void preferencesClosing(const QString& profileName);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void setColors();
@@ -208,9 +214,10 @@ private:
     QString mapSaveLoadDirectory(Host* pHost);
     void loadMap(const QString&);
     void fillOutMapHistory();
+    bool updateDisplayFont();
+    void cancelShortcutCaptures();
 
-    int mFontSize = 10;
-    QFont mDisplayFont;
+
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
@@ -227,6 +234,9 @@ private:
     QPointer<QAction> mEnableMXP;
     QPointer<QAction> mEnableMTTS;
     QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableNAWS;
+    QPointer<QAction> mEnableCHARSET;
+    QPointer<QAction> mEnableNEWENVIRON;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

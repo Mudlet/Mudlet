@@ -27,7 +27,6 @@
 
 #include "dlgTriggerEditor.h"
 
-#include "pre_guard.h"
 #include <QApplication>
 #include <QFile>
 #include <QMap>
@@ -35,7 +34,6 @@
 #include <QPointer>
 #include <QXmlStreamReader>
 #include <QClipboard>
-#include "post_guard.h"
 
 class Host;
 class TAction;
@@ -55,12 +53,12 @@ public:
     explicit XMLimport(Host*);
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
-    std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
+    std::pair<EditorViewType, int> importFromClipboard();
 
 private:
     const QString YES = qsl("yes");
 
-    std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
+    std::pair<EditorViewType, int> readPackage();
 
     void readHostPackage();
     int readTriggerPackage();
@@ -85,6 +83,8 @@ private:
     void readUnknownElement(const QString&);
 
     void readHost(Host*);
+    bool readHostColorElement(Host*, QStringView elementName);
+    bool readHostBorderElement(QMargins&, QStringView elementName);
     void readLegacyMapInfoContributors();
     void readMapInfoContributor();
     void readProfileShortcut();
@@ -110,23 +110,23 @@ private:
 
     QPointer<Host> mpHost;
     QString mPackageName;
-    TTrigger* mpTrigger;
-    TTimer* mpTimer;
-    TAlias* mpAlias;
-    TKey* mpKey;
-    TAction* mpAction;
-    TScript* mpScript;
-    TVar* mpVar;
-    bool gotTrigger;
-    bool gotTimer;
-    bool gotAlias;
-    bool gotKey;
-    bool gotAction;
-    bool gotScript;
-    int module;
-    int mMaxRoomId;
-    quint8 mVersionMajor;
-    quint16 mVersionMinor; // Cannot be a quint8 as that only allows x.255 for the decimal
+    TTrigger* mpTrigger = nullptr;
+    TTimer* mpTimer = nullptr;
+    TAlias* mpAlias = nullptr;
+    TKey* mpKey = nullptr;
+    TAction* mpAction = nullptr;
+    TScript* mpScript = nullptr;
+    TVar* mpVar = nullptr;
+    bool gotTrigger = false;
+    bool gotTimer = false;
+    bool gotAlias = false;
+    bool gotKey = false;
+    bool gotAction = false;
+    bool gotScript = false;
+    int module = 0;
+    int mMaxRoomId = 0;
+    quint8 mVersionMajor = 1; // 0 to 255
+    quint16 mVersionMinor = 0; // 0 to 999 for 3 digit decimal value. Cannot be a quint8 as that only allows x.255 for the decimal
 };
 
 #endif // MUDLET_XMLEXPORT_H

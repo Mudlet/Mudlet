@@ -1,0 +1,26 @@
+# SignPath Policy for Release Signing
+# This policy is used with the production certificate for official releases
+#
+# Policy enforcements:
+# - Artifacts must be built by GitHub Actions workflows
+# - Build must originate from the Mudlet/Mudlet repository
+# - Only GitHub-hosted runners are allowed (for open source verification)
+# - Only allow signing from protected branches (release tags and development)
+
+# Runner restrictions - only allow GitHub-hosted runners for trusted builds
+runners:
+  allowed:
+    - "ubuntu-*"
+    - "windows-*"
+    - "macos-*"
+
+# Branch restrictions for release signing
+# Only allow signing from:
+# - Release tags (Mudlet-*)
+# - Development branch (for PTB builds)
+# - Release branches (release-*)
+branches:
+  allowed:
+    - "refs/tags/Mudlet-*"
+    - "refs/heads/development"
+    - "refs/heads/release-*"
