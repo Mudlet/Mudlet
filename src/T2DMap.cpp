@@ -1872,11 +1872,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
     painter.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
     painter.setPen(pen);
 
-    const qreal visibleMinX = mMapCenterX - xspan / 2.0;
-    const qreal visibleMaxX = mMapCenterX + xspan / 2.0;
-    const qreal visibleMinY = -((yspan / 2.0) + mMapCenterY);
-    const qreal visibleMaxY = (yspan / 2.0) - mMapCenterY;
-
     if (mShowGrid && mRoomWidth > 0.0f && mRoomHeight > 0.0f) {
         painter.save();
 
@@ -1886,6 +1881,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
         const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize);
         gridPen.setWidthF(gridWidth);
         painter.setPen(gridPen);
+
+        const qreal visibleMinX = mMapCenterX - xspan / 2.0;
+        const qreal visibleMaxX = mMapCenterX + xspan / 2.0;
+        const qreal visibleMinY = -((yspan / 2.0) + mMapCenterY);
+        const qreal visibleMaxY = (yspan / 2.0) - mMapCenterY;
 
         const int startX = static_cast<int>(std::floor(visibleMinX));
         const int endX = static_cast<int>(std::ceil(visibleMaxX));
@@ -1920,8 +1920,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     if (mudlet::self()->mDrawUpperLowerLevels) {
         // draw room on lower z-levels
-        const bool isLowerLevelVisible = pDrawnArea->isZLevelVisibleInViewport(zLevel - 1, visibleMinX, visibleMaxX, visibleMinY, visibleMaxY);
-        while (isLowerLevelVisible && itRoom.hasNext()) {
+        while (itRoom.hasNext()) {
             const int currentAreaRoom = itRoom.next();
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -1951,8 +1950,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         itRoom.toFront();
 
         // draw rooms on upper z-levels
-        const bool isUpperLevelVisible = pDrawnArea->isZLevelVisibleInViewport(zLevel + 1, visibleMinX, visibleMaxX, visibleMinY, visibleMaxY);
-        while (isUpperLevelVisible && itRoom.hasNext()) {
+        while (itRoom.hasNext()) {
             const int currentAreaRoom = itRoom.next();
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -2029,12 +2027,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     // draw room exits
     if (!pDrawnArea->gridMode) {
-        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap, visibleMinX, visibleMaxX, visibleMinY, visibleMaxY);
+        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
     }
 
     // now draw rooms on selected z-level
-    const bool isCurrentLevelVisible = pDrawnArea->isZLevelVisibleInViewport(zLevel, visibleMinX, visibleMaxX, visibleMinY, visibleMaxY);
-    while (isCurrentLevelVisible && itRoom.hasNext()) {
+    while (itRoom.hasNext()) {
         const int currentAreaRoom = itRoom.next();
         TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
         if (!room) {
@@ -2334,12 +2331,8 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
-void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap, qreal visibleMinX, qreal visibleMaxX, qreal visibleMinY, qreal visibleMaxY)
+void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
 {
-    if (!pArea->isZLevelVisibleInViewport(zLevel, visibleMinX, visibleMaxX, visibleMinY, visibleMaxY)) {
-        return;
-    }
-
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
     const float widgetHeight = height();

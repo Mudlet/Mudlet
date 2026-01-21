@@ -435,14 +435,6 @@ void GLWidget::paintGL()
                 break;
             }
         }
-        if (!pArea->zLevels.contains(static_cast<int>(zPlane))) {
-            if (zRot <= 0) {
-                zPlane -= 1.0;
-            } else {
-                zPlane += 1.0;
-            }
-            continue;
-        }
         QSetIterator<int> itRoom(pArea->getAreaRooms());
         while (itRoom.hasNext()) {
             TRoom* pR = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -1332,10 +1324,6 @@ void GLWidget::paintGL()
     while (true) {
         if (zPlane > zmax) {
             break;
-        }
-        if (!pArea->zLevels.contains(static_cast<int>(zPlane))) {
-            zPlane += 1.0;
-            continue;
         }
         QSetIterator<int> itRoom(pArea->getAreaRooms());
         while (itRoom.hasNext()) {

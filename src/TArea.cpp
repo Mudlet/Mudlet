@@ -1028,20 +1028,6 @@ void TArea::set2DMapZoom(const qreal zoom)
     }
 }
 
-bool TArea::isZLevelVisibleInViewport(int z, qreal viewMinX, qreal viewMaxX, qreal viewMinY, qreal viewMaxY) const
-{
-    if (!xminForZ.contains(z)) {
-        return false;
-    }
-
-    const qreal zMinX = xminForZ.value(z);
-    const qreal zMaxX = xmaxForZ.value(z);
-    const qreal zMinY = yminForZ.value(z);
-    const qreal zMaxY = ymaxForZ.value(z);
-
-    return !(zMaxX < viewMinX || zMinX > viewMaxX || zMaxY < viewMinY || zMinY > viewMaxY);
-}
-
 void TArea::clean()
 {
     if (mIsDirty) {
