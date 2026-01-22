@@ -574,7 +574,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce debugging messages about WILL/WONT/DO/DONT and other commands for
 #   suboptions - change the value to 2 to get a bit more detail about the size
 #   and nature of the command:
-# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_TELNET=1)
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_TELNET=3)
 #
 # * Produce qDebug() messages about the decoding of UTF-8 data when it is not
 #   the single bytes of pure ASCII text:

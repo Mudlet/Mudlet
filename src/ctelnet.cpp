@@ -1374,6 +1374,7 @@ void cTelnet::sendTelnetOption(char type, unsigned char option)
     }
 
     qDebug().noquote().nospace() << "WE send telnet IAC " << _type << " " << decodeOption(option);
+    postMessage(qsl("[ INFO ]  - TELNET: WE send IAC %1 %2").arg(_type, decodeOption(option)));
 #endif
     std::string output;
     output += TN_IAC;
@@ -2425,8 +2426,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     }
     if (telnetCommand.size() > 2) {
         qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << commandType << " + " << decodeOption(telnetCommand[2]);
+        postMessage(qsl("[ INFO ]  - TELNET: SERVER sent (%1 bytes): %2 + %3").arg(telnetCommand.size()).arg(commandType, decodeOption(telnetCommand[2])));
     } else {
         qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << commandType;
+        postMessage(qsl("[ INFO ]  - TELNET: SERVER sent (%1 bytes): %2").arg(telnetCommand.size()).arg(commandType));
     }
 #endif
 
@@ -2456,6 +2459,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         const auto idxOption = static_cast<size_t>(option);
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
+        postMessage(qsl("[ INFO ]  - TELNET: Server sent IAC WILL %1").arg(decodeOption(option)));
 #endif
 
         if (option == OPT_EOR) {
@@ -2553,6 +2557,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 socketOutRaw(output);
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                 qDebug() << "WE send telnet IAC DO MSDP";
+                postMessage(qsl("[ INFO ]  - TELNET: WE send IAC DO MSDP"));
 #endif
                 raiseProtocolEvent("sysProtocolEnabled", "MSDP");
                 break;
@@ -2809,6 +2814,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         const auto idxOption = static_cast<size_t>(option);
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC WONT " << decodeOption(option);
+        postMessage(qsl("[ INFO ]  - TELNET: Server sent IAC WONT %1").arg(decodeOption(option)));
 #endif
         if (triedToEnable[idxOption]) {
             hisOptionState[idxOption] = false;
@@ -2914,6 +2920,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         const auto idxOption = static_cast<size_t>(option);
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
+        postMessage(qsl("[ INFO ]  - TELNET: Server sent IAC DO %1").arg(decodeOption(option)));
 #endif
 
         if (option == OPT_NEW_ENVIRON) {
@@ -3131,6 +3138,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         const auto idxOption = static_cast<size_t>(option);
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option);
+        postMessage(qsl("[ INFO ]  - TELNET: Server sent IAC DONT %1").arg(decodeOption(option)));
 #endif
 
         if (option == OPT_NEW_ENVIRON) {
