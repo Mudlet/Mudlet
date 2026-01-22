@@ -1744,10 +1744,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     TEvent areaViewedChangedEvent{};
 
     // Secondary views don't follow the player - they maintain their own independent view
-    // Track if we're auto-centering on the player (vs user manually panning)
-    const bool centeringOnPlayer = !mIsSecondaryView && ((!mPick && !mShiftMode) || mpMap->mNewMove);
-
-    if (centeringOnPlayer) {
+    if (!mIsSecondaryView && ((!mPick && !mShiftMode) || mpMap->mNewMove)) {
         mShiftMode = true;
         // that's of interest only here because the map editor is here ->
         // map might not be updated, thus I force a map update on centerview()
@@ -1783,27 +1780,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
     } else {
         xspan = xyzoom;
         yspan = xyzoom * (widgetHeight / widgetWidth);
-    }
-
-    // Center map on area when it fits entirely in viewport, but only when
-    // following player movement - not during manual panning or editing
-    if (centeringOnPlayer && !mRoomBeingMoved && !mMultiSelection) {
-        const int zLevel = mMapCenterZ;
-
-        // Get area bounds for current Z level (use overall bounds as fallback)
-        const qreal areaMinX = pDrawnArea->xminForZ.value(zLevel, pDrawnArea->min_x);
-        const qreal areaMaxX = pDrawnArea->xmaxForZ.value(zLevel, pDrawnArea->max_x);
-        // Y is inverted in map coordinates
-        const qreal areaMinY = -pDrawnArea->ymaxForZ.value(zLevel, pDrawnArea->max_y);
-        const qreal areaMaxY = -pDrawnArea->yminForZ.value(zLevel, pDrawnArea->min_y);
-
-        if (areaMaxX - areaMinX <= xspan) {
-            mMapCenterX = (areaMinX + areaMaxX) / 2.0;
-        }
-
-        if (areaMaxY - areaMinY <= yspan) {
-            mMapCenterY = (areaMinY + areaMaxY) / 2.0;
-        }
     }
 
     mRoomWidth = widgetWidth / xspan;
