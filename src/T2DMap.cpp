@@ -1802,7 +1802,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         if (areaMaxY - areaMinY <= yspan) {
-            mMapCenterY = (areaMinY + areaMaxY) / 2.0;
+            // Negate because areaMinY/areaMaxY are in room coords, but mMapCenterY uses screen coords (-room.y())
+            mMapCenterY = -((areaMinY + areaMaxY) / 2.0);
         }
     }
 

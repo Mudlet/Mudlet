@@ -1849,6 +1849,16 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         restore16ColorSet();
 
+        // Recalculate area bounds to fix any corrupted yminForZ/ymaxForZ values
+        // from older map files (bug where first room's Y wasn't negated)
+        const QList<int> areaIds = mpRoomDB->getAreaIDList();
+        for (int areaId : areaIds) {
+            TArea* pA = mpRoomDB->getArea(areaId);
+            if (pA) {
+                pA->calcSpan();
+            }
+        }
+
         const QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
                                  "consistency details...")
                                       .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
