@@ -691,7 +691,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
             {qsl("Dragonfire MUD"),
              qsl("dragonfiremud.com"),
              1999,
-             true,
+             false,
              qsl("<a href='https://www.dragonfiremud.com/'>https://www.dragonfiremud.com/</a>"),
              qsl(":/icons/dragonfire_icon.jpg"),
              qsl("Dragonfire MUD is an ancient LPMUD that has been online since 1989, offering deep "
@@ -706,7 +706,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
             {qsl("Beyond the Void MUD"),
              qsl("voidmud.com"),
              2201,
-             true,
+             false,
              qsl("<a href='https://www.voidmud.com/'>https://www.voidmud.com/</a>"),
              qsl(":/icons/voidmud_icon.jpg"),
              qsl("Beyond the Void is an EverQuest-inspired text RPG that brings the world of Norrath "
