@@ -25,7 +25,7 @@
  ***************************************************************************/
 
 
-#include "TConsole.h"
+#include "utils.h"
 
 #include <QPlainTextEdit>
 #include <QPointer>
@@ -35,9 +35,9 @@
 #include <QToolButton>
 #include <QResizeEvent>
 
-
-class KeyUnit;
 class Host;
+class KeyUnit;
+class TConsole;
 
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {

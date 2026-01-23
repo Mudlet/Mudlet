@@ -29,7 +29,12 @@
 #include "TTrigger.h"
 
 EditorModifyPropertyCommand::EditorModifyPropertyCommand(EditorViewType viewType, int itemID, const QString& itemName, const QString& oldStateXML, const QString& newStateXML, Host* host)
-: EditorCommand(generateText(viewType, itemName), host), mViewType(viewType), mItemID(itemID), mItemName(itemName), mOldStateXML(oldStateXML), mNewStateXML(newStateXML)
+: EditorCommand(generateText(viewType, itemName), host)
+, mViewType(viewType)
+, mItemID(itemID)
+, mItemName(itemName)
+, mOldStateXML(oldStateXML)
+, mNewStateXML(newStateXML)
 {
     mCreationTime.start();
 }
@@ -45,10 +50,14 @@ void EditorModifyPropertyCommand::undo()
         TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
         if (pTrigger) {
             if (!updateTriggerFromXML(pTrigger, mOldStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore trigger" << mItemName << "to old state";
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::undo() - Trigger" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -56,10 +65,14 @@ void EditorModifyPropertyCommand::undo()
         TAlias* pAlias = mpHost->getAliasUnit()->getAlias(mItemID);
         if (pAlias) {
             if (!updateAliasFromXML(pAlias, mOldStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore alias" << mItemName << "to old state";
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::undo() - Alias" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -67,10 +80,14 @@ void EditorModifyPropertyCommand::undo()
         TTimer* pTimer = mpHost->getTimerUnit()->getTimer(mItemID);
         if (pTimer) {
             if (!updateTimerFromXML(pTimer, mOldStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore timer" << mItemName << "to old state";
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::undo() - Timer" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -78,10 +95,14 @@ void EditorModifyPropertyCommand::undo()
         TScript* pScript = mpHost->getScriptUnit()->getScript(mItemID);
         if (pScript) {
             if (!updateScriptFromXML(pScript, mOldStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore script" << mItemName << "to old state";
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::undo() - Script" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -89,10 +110,14 @@ void EditorModifyPropertyCommand::undo()
         TKey* pKey = mpHost->getKeyUnit()->getKey(mItemID);
         if (pKey) {
             if (!updateKeyFromXML(pKey, mOldStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore key" << mItemName << "to old state";
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::undo() - Key" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -100,10 +125,14 @@ void EditorModifyPropertyCommand::undo()
         TAction* pAction = mpHost->getActionUnit()->getAction(mItemID);
         if (pAction) {
             if (!updateActionFromXML(pAction, mOldStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::undo() - Failed to restore action" << mItemName << "to old state";
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::undo() - Action" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -133,10 +162,14 @@ void EditorModifyPropertyCommand::redo()
         TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
         if (pTrigger) {
             if (!updateTriggerFromXML(pTrigger, mNewStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to trigger" << mItemName;
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::redo() - Trigger" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -144,10 +177,14 @@ void EditorModifyPropertyCommand::redo()
         TAlias* pAlias = mpHost->getAliasUnit()->getAlias(mItemID);
         if (pAlias) {
             if (!updateAliasFromXML(pAlias, mNewStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to alias" << mItemName;
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::redo() - Alias" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -155,10 +192,14 @@ void EditorModifyPropertyCommand::redo()
         TTimer* pTimer = mpHost->getTimerUnit()->getTimer(mItemID);
         if (pTimer) {
             if (!updateTimerFromXML(pTimer, mNewStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to timer" << mItemName;
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::redo() - Timer" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -166,10 +207,14 @@ void EditorModifyPropertyCommand::redo()
         TScript* pScript = mpHost->getScriptUnit()->getScript(mItemID);
         if (pScript) {
             if (!updateScriptFromXML(pScript, mNewStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to script" << mItemName;
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::redo() - Script" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -177,10 +222,14 @@ void EditorModifyPropertyCommand::redo()
         TKey* pKey = mpHost->getKeyUnit()->getKey(mItemID);
         if (pKey) {
             if (!updateKeyFromXML(pKey, mNewStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to key" << mItemName;
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::redo() - Key" << mItemName << "not found";
+#endif
         }
         break;
     }
@@ -188,10 +237,14 @@ void EditorModifyPropertyCommand::redo()
         TAction* pAction = mpHost->getActionUnit()->getAction(mItemID);
         if (pAction) {
             if (!updateActionFromXML(pAction, mNewStateXML)) {
+#if defined(DEBUG_UNDO_REDO)
                 qWarning() << "EditorModifyPropertyCommand::redo() - Failed to apply new state to action" << mItemName;
+#endif
             }
         } else {
+#if defined(DEBUG_UNDO_REDO)
             qWarning() << "EditorModifyPropertyCommand::redo() - Action" << mItemName << "not found";
+#endif
         }
         break;
     }

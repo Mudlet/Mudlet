@@ -62,6 +62,10 @@ public:
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
 
+    void updateTriggerIcon(QTreeWidgetItem* pItem, int triggerID);
+    void updateTriggerIconsRecursively(QTreeWidgetItem* pItem);
+    QTreeWidgetItem* findItemByTriggerID(QTreeWidgetItem* pParent, int triggerID);
+
 signals:
     void itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition);
     void batchMoveStarted();

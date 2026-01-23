@@ -70,6 +70,36 @@ QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 - Use Qt's parent-child system for automatic cleanup for Qt classes
 - Otherwise, use C++ smart pointers for non-Qt classes
 
+### Include management
+
+Minimize `#include` directives to reduce build times:
+
+**In header files (.h):**
+- Only include what's needed for declarations in that header
+- Use forward declarations (`class Foo;`) when only pointers or references are used
+- Never include headers "just in case" - each include in a header propagates to all files that include it
+
+**In source files (.cpp):**
+- Only include headers actually used in that file
+- When adding new code, verify you need each include you add
+- Don't copy includes from similar files without checking if they're needed
+
+**Forward declaration examples:**
+```cpp
+// In header: use forward declaration when only pointer/reference is needed
+class Host;  // Forward declare instead of #include "Host.h"
+class QCloseEvent;
+
+class MyClass {
+    Host* mpHost;  // Pointer - forward declaration sufficient
+    void closeEvent(QCloseEvent* event);  // Pointer param - forward declaration sufficient
+};
+
+// In cpp: include the full header where the type is actually used
+#include "Host.h"
+#include <QCloseEvent>
+```
+
 ## Key architecture points
 Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
 
@@ -121,11 +151,19 @@ if (!file.open(QIODevice::ReadOnly)) {
 
 ## Build system notes
 
-- **Primary**: CMake (handles platform-specific configurations)
-- **Legacy**: QMake in `src/mudlet.pro`
-- Use `.clang-format` configuration in `src/` for C++ code style
+- **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
+
+### Code formatting
+
+After editing any C++ files (`.cpp`, `.h`), run clang-format before committing:
+
+```bash
+clang-format -i path/to/edited/file.cpp path/to/edited/file.h
+```
+
+The project uses the `.clang-format` configuration in `src/`. This ensures consistent code style across the codebase.
 
 ### Static analysis
 
@@ -133,7 +171,7 @@ For complete setup instructions on how to run static analysis during a build see
 
 ### Debugging options
 
-Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defines for development (search "Debugging code inclusions"):
+`src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
 
 - `DEBUG_TELNET` - Telnet protocol debugging
 - `DEBUG_UTF8_PROCESSING` - UTF-8 decoding messages
@@ -141,7 +179,7 @@ Both `src/CMakeLists.txt` and `src/mudlet.pro` contain commented debugging defin
 - `DEBUG_WINDOW_HANDLING` - UI window operations
 - And others for encoding, MXP, map autosave, etc.
 
-**Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines (CMake) or `DEFINES+=DEBUG_XXX` lines (QMake) when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+**Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
 
 ### Git
 
@@ -161,8 +199,7 @@ cmake ../../Mudlet -DCMAKE_PREFIX_PATH=`brew --prefix qt6`
 make -j `sysctl -n hw.ncpu`
 
 # Run
-cd /path/to/Mudlet/build
-./src/mudlet.app/Contents/MacOS/mudlet
+cd /path/to/Mudlet/build && ./src/mudlet.app/Contents/MacOS/mudlet
 ```
 
 ### Building on Linux

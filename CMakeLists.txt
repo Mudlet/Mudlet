@@ -86,7 +86,7 @@ else()
     message(STATUS "Git SHA1 used: ${GIT_SHA1}")
 endif()
 
-# Set APP_VERSION (update in mudlet.pro as well)
+# Set APP_VERSION
 set(APP_VERSION 4.19.1)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
@@ -214,8 +214,8 @@ endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+  set(CMAKE_C_COMPILER_LAUNCHER ccache)
+  set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif(CCACHE_FOUND)
 
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)

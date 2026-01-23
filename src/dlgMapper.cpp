@@ -39,7 +39,7 @@
 
 using namespace std::chrono_literals;
 
-dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
+dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
 : QWidget(parent)
 , mpMap(pM)
 , mpHost(pH)
@@ -120,7 +120,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     connect(mpMap->mMapInfoContributorManager, &MapInfoContributorManager::signal_contributorsUpdated, this, &dlgMapper::slot_updateInfoContributors);
     slot_updateInfoContributors();
-
 }
 
 int dlgMapper::getCurrentShownAreaIndex()
@@ -253,7 +252,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
         connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
         connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
-        
+
         // Player icon adjustment controls
         connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
         connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
@@ -261,7 +260,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
         connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
         connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
-        
+
         // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
         if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
             connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
@@ -281,11 +280,11 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         widget_3DControls->setVisible(true);
         widget_playerIconControls->setVisible(mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")
 #ifdef DEBUG_PLAYER_ICON_CONTROLS
-                                               && true
+                                              && true
 #else
-                                               && false
+                                              && false
 #endif
-                                               );
+        );
     } else {
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
@@ -462,9 +461,18 @@ void dlgMapper::recreate3DWidget()
 #endif
 }
 
-void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, Host* pHost, TMap* pMap,
-                            int roomID, int displayAreaId, int selectionSize, QColor& infoColor,
-                            int xOffset, int yOffset, int widgetWidth, int fontHeight)
+void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
+                             QPainter& painter,
+                             Host* pHost,
+                             TMap* pMap,
+                             int roomID,
+                             int displayAreaId,
+                             int selectionSize,
+                             QColor& infoColor,
+                             int xOffset,
+                             int yOffset,
+                             int widgetWidth,
+                             int fontHeight)
 {
     if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
         return;
@@ -497,17 +505,8 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter
     }
 
 #ifdef QT_DEBUG
-    yOffset += paintMapInfoContributor(painter,
-                         xOffset,
-                         yOffset,
-                         {false,
-                          false,
-                          QObject::tr("render time: %1S")
-                                  .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3),
-                          infoColor},
-                         pHost->mMapInfoBg,
-                         fontHeight,
-                         widgetWidth);
+    yOffset += paintMapInfoContributor(
+            painter, xOffset, yOffset, {false, false, QObject::tr("render time: %1S").arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3), infoColor}, pHost->mMapInfoBg, fontHeight, widgetWidth);
 #else
     Q_UNUSED(renderTimer)
 #endif
@@ -519,9 +518,7 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter
     }
 }
 
-int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
-                                      const MapInfoProperties& properties, QColor bgColor, int fontHeight,
-                                      int widgetWidth)
+int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth)
 {
     if (properties.text.isEmpty()) {
         return 0;
@@ -536,15 +533,21 @@ int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffs
     const int infoHeight = fontHeight;
     QRect testRect;
     QRect mapInfoRect = QRect(xOffset, yOffset, widgetWidth - 10 - xOffset, infoHeight);
-    testRect = painter.boundingRect(mapInfoRect.left() + 10, mapInfoRect.top(), mapInfoRect.width() - 20, mapInfoRect.height() - 20,
-                                   Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
-                                   infoText);
+    testRect = painter.boundingRect(mapInfoRect.left() + 10,
+                                    mapInfoRect.top(),
+                                    mapInfoRect.width() - 20,
+                                    mapInfoRect.height() - 20,
+                                    Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
+                                    infoText);
     mapInfoRect.setHeight(testRect.height() + 10);
     painter.fillRect(mapInfoRect, bgColor);
     painter.setPen(properties.color);
-    painter.drawText(mapInfoRect.left() + 10, mapInfoRect.top(), mapInfoRect.width() - 20, mapInfoRect.height() - 10,
-                    Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
-                    infoText);
+    painter.drawText(mapInfoRect.left() + 10,
+                     mapInfoRect.top(),
+                     mapInfoRect.width() - 20,
+                     mapInfoRect.height() - 10,
+                     Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
+                     infoText);
     painter.restore();
     return mapInfoRect.height();
 }
@@ -599,6 +602,12 @@ void dlgMapper::slot_setupMapperMenu()
     menu->addSeparator();
     mpInfoMenu = menu->addMenu(tr("Info overlays"));
     updateInfoMenu();
+
+    menu->addSeparator();
+    auto* newMapWindowAction = new QAction(tr("New map window"), this);
+    newMapWindowAction->setToolTip(tr("Open an additional map view"));
+    connect(newMapWindowAction, &QAction::triggered, mudlet::self(), &mudlet::slot_newMapWindow);
+    menu->addAction(newMapWindowAction);
 
     menu->exec(toolButton_mapperMenu->mapToGlobal(toolButton_mapperMenu->rect().bottomLeft()));
 }
