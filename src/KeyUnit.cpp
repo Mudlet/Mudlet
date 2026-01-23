@@ -94,8 +94,6 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 {
     bool isMatchFound = false;
 
-    // Increment processing depth to prevent re-entrant cleanup during key execution
-    // Using a counter instead of bool handles nested calls from Lua scripts
     mProcessingDepth++;
 
     for (auto keyObject : mKeyRootNodeList) {
@@ -107,7 +105,6 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 
         if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
-                // Decrement processing depth and perform cleanup only when all processing is complete
                 mProcessingDepth--;
                 if (mProcessingDepth == 0) {
                     doCleanup();
@@ -118,7 +115,6 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
         }
     }
 
-    // Decrement processing depth and perform cleanup only when all processing is complete
     mProcessingDepth--;
     if (mProcessingDepth == 0) {
         doCleanup();
@@ -452,8 +448,6 @@ void KeyUnit::markCleanup(TKey* pT)
 
 void KeyUnit::doCleanup()
 {
-    // Skip cleanup if we're currently processing keys to prevent iterator invalidation
-    // Cleanup will be performed when all nested processDataStream() calls complete
     if (mProcessingDepth > 0) {
         return;
     }

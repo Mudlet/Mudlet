@@ -261,8 +261,6 @@ bool AliasUnit::processDataStream(const QString& data)
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
     auto copyOfNodeList = mAliasRootNodeList;
 
-    // Increment processing depth to prevent re-entrant cleanup during alias execution
-    // Using a counter instead of bool handles nested calls from expandAlias()/send()
     mProcessingDepth++;
 
     for (auto alias : copyOfNodeList) {
@@ -272,7 +270,6 @@ bool AliasUnit::processDataStream(const QString& data)
         }
     }
 
-    // Decrement processing depth and perform cleanup only when all processing is complete
     mProcessingDepth--;
     if (mProcessingDepth == 0) {
         doCleanup();
@@ -410,8 +407,6 @@ std::tuple<QString, int, int, int> AliasUnit::assembleReport()
 
 void AliasUnit::doCleanup()
 {
-    // Skip cleanup if we're currently processing aliases to prevent iterator invalidation
-    // Cleanup will be performed when all nested processDataStream() calls complete
     if (mProcessingDepth > 0) {
         return;
     }
