@@ -528,10 +528,8 @@ function table.update(t1, t2)
     tbl[k] = v
   end
   for k, v in pairs(t2) do
-    if type(v) == "table" then
-      -- Only recurse if tbl[k] is also a table; otherwise replace entirely
-      local existing = tbl[k]
-      tbl[k] = table.update(type(existing) == "table" and existing or {}, v)
+    if type(v) == "table" and type(tbl[k]) == "table" then
+      tbl[k] = table.update(tbl[k], v)
     else
       tbl[k] = v
     end
