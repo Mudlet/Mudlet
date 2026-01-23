@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,17 +25,17 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QApplication>
+#include <QDebug>
 #include <QPointer>
 #include <QSharedPointer>
-#include "post_guard.h"
 
-#include <pcre.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 class Host;
 
-#define MAX_CAPTURE_GROUPS 33
+using NameGroupMatches = QVector<QPair<QString, QString>>;
 
 class TAlias : public Tree<TAlias>
 {
@@ -49,17 +49,23 @@ public:
     TAlias(const QString& name, Host* pHost);
     void compileAll();
     void compileRegex();
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
     void setName(const QString& name);
     void compile();
     bool compileScript();
     void execute();
-    QString getScript() { return mScript; }
+    QString getScript() const { return mScript; }
     bool setScript(const QString& script);
-    QString getRegexCode() { return mRegexCode; }
+    QString getRegexCode() const { return mRegexCode; }
     void setRegexCode(const QString&);
     void setCommand(const QString& command) { mCommand = command; }
-    QString getCommand() { return mCommand; }
+    QString getCommand() const { return mCommand; }
+    QString packageName(TAlias* pAlias);
+    QString moduleName(TAlias* pAlias);
+    bool checkIfNew();
+    void unmarkAsNew();
+
+
 
     bool match(const QString& toMatch);
     bool registerAlias();
@@ -69,15 +75,40 @@ public:
     QString mName;
     QString mCommand;
     QString mRegexCode;
-    QSharedPointer<pcre> mpRegex;
+    QSharedPointer<pcre2_code> mpRegex;
     QString mScript;
     QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled;
-    bool mModuleMember;
-    bool mModuleMasterFolder;
+    bool mModuleMember = false;
+    bool mModuleMasterFolder = false;
     QString mFuncName;
-    bool exportItem;
-    bool mRegisteredAnonymousLuaFunction;
+    bool exportItem = true;
+    bool mRegisteredAnonymousLuaFunction = false;
+    QVector<NameGroupMatches> nameCaptures;
+    bool mIsNew = true;
+
+private:
+    bool mNeedsToBeCompiled = true;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TAlias* alias)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver)
+
+    if (!alias) {
+        return debug << "TAlias(0x0) ";
+    }
+    debug.nospace() << "TAlias(" << alias->getName() << ")";
+    debug.nospace() << ", command=" << alias->getCommand();
+    debug.nospace() << ", regexCode=" << alias->getRegexCode();
+    debug.nospace() << ", funcName=" << alias->mFuncName;
+    debug.nospace() << ", script is in: " << (alias->mRegisteredAnonymousLuaFunction ? "string": "Lua function");
+    debug.nospace() << ", script=" << alias->getScript();
+    debug.nospace() << ", registeredAnonymousLuaFunction=" << alias->mRegisteredAnonymousLuaFunction;
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TALIAS_H

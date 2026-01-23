@@ -1,89 +1,386 @@
-name: Build Mudlet
+name: 🔨 Build Mudlet
 on:
-  - pull_request
-  - push
+  push:
+    branches: [master, development, release-*]
+    tags: [Mudlet-*]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      scheduled:
+        description: 'Imitate a scheduled build'
+        required: false
+        default: 'false'
+  schedule:
+    - cron: '0 2 * * *'
 
 jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    env:
+      LUA_VERSION: '5.1.5'
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
         include:
-          # - os: windows-latest
-          #   triplet: x64-windows
-          - os: ubuntu-latest
-            buildname: 'ubuntu'
-            triplet: x64-linux
+          # Note: using / in the "buildname" has significance - replacing the
+          # ',' in some of the following with a '/' seemed to cause extra
+          # spurious steps in the build and broke things! - SlySven
+          # oldest OS supported for maximum compatibility of built AppImage
+          - os: ubuntu-22.04
+            buildname: 'ubuntu / gcc / lua tests'
             compiler: gcc_64
-          - os: macos-latest
-            buildname: 'macos / C++ tests'
-            triplet: x64-osx
+            gcc_compiler_version: 10
+            qt: '6.9.0'
+            deploy: 'deploy'
+            run_tests: 'true'
+          - os: ubuntu-22.04
+            # Another try to use GCC12
+            buildname: 'ubuntu (x86_64)'
+            compiler: gcc_64
+            gcc_compiler_version: 12
+            qt: '6.9.0'
+          - os: ubuntu-latest
+            buildname: 'ubuntu / clang'
             compiler: clang_64
-    env:
-      qt: "5.14.1"
+            gcc_compiler_version: 10
+            qt: '6.9.0'
+          - os: macos-15-intel
+            buildname: 'macos (x86_64) / c++, lua tests'
+            compiler: clang_64
+            qt: '6.9.0'
+            deploy: 'deploy'
+            run_tests: 'true'
+          - os: macos-14
+            buildname: 'macos (arm64) / c++, lua tests'
+            compiler: clang_64
+            qt: '6.9.0'
+            deploy: 'deploy'
+            run_tests: 'true'
 
     steps:
-    - name: Restore Qt cache
-      uses: actions/cache@v2
-      id: cache-qt
-      with:
-        path: ${{runner.workspace}}/Qt/${{env.qt}}
-        key: ${{runner.os}}-qt-${{env.qt}}
-        restore-keys: |
-          ${{runner.os}}-qt-
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v2
-      if: steps.cache-qt.outputs.cache-hit != 'true'
-      with:
-        version: ${{env.qt}}
-        dir: ${{runner.workspace}}
-        arch: win64_mingw73 # this key is relevant only for windows
-        cached: ${{steps.cache-qt.outputs.cache-hit}}
-
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v5
       with:
         submodules: true
         fetch-depth: 0
 
-    - name: (macOS) Install homebrew dependencies
-      if: runner.os == 'macOS'
-      run: |
-        # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cache: true
+        modules: qt5compat qtmultimedia
 
-    - name: (Linux) Install apt dependencies
+    - name: Use CMake 3.30.3
+      uses: lukka/get-cmake@v3.30.3
+
+    - name: (macOS) Install Lua via GitHub Actions
+      if: runner.os == 'macOS'
+      uses: leafo/gh-actions-lua@v12
+      with:
+        luaVersion: ${{ env.LUA_VERSION }}
+        buildCache: false
+
+    - name: (macOS) Install Luarocks via GitHub Actions
+      if: runner.os == 'macOS'
+      uses: leafo/gh-actions-luarocks@v6
+
+    - name: (macOS) Install dependencies
+      if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      run: |
+        # Install all required dependencies
+        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+        # Use latest available XCode
+        echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
+        echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
+
+        # Detect Homebrew prefix once (differs between x86_64 and ARM64)
+        if [ "$(uname -m)" = "arm64" ]; then
+          HOMEBREW_PREFIX=/opt/homebrew
+        else
+          HOMEBREW_PREFIX=/usr/local
+        fi
+        echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
+
+        # Help CMake find Lua installed by gh-actions-lua
+        # The action installs to .lua/ and .luarocks/ in the runner home
+        echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
+
+        # Help CMake find keg-only Homebrew packages (PCRE2 is keg-only on macOS)
+        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+        # Install lua-yajl early to generate translation statistics
+        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
+
+        # Allow stats generation script to see location of lua-yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+
+    - name: (Linux) Install Lua via GitHub Actions
+      uses: leafo/gh-actions-lua@v12
+      if: runner.os == 'Linux'
+      with:
+        luaVersion: ${{ env.LUA_VERSION }}
+        buildCache: false
+
+    - name: (Linux) Install Luarocks via GitHub Actions
+      uses: leafo/gh-actions-luarocks@v6
+      if: runner.os == 'Linux'
+
+    - name: (Linux) Install dependencies
       if: runner.os == 'Linux'
       run: |
-        # Installing packages might fail as the github image becomes outdated
-        sudo apt update
-        # These aren't available or don't work well in vcpkg
-        sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
+        sudo apt-get update
 
-    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
-    - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v4
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+        # Install all required dependencies
+        # imagemagick is for the desktop screenshot
+        # liblua5.1-0-dev is needed for CMake to find Lua headers/library
+        sudo apt-get install \
+          ccache \
+          expect \
+          g++-${{matrix.gcc_compiler_version}} \
+          imagemagick \
+          libassimp-dev \
+          libboost-dev \
+          libglu1-mesa-dev \
+          libhunspell-dev \
+          liblua5.1-0-dev \
+          libpcre2-dev \
+          libpulse-dev \
+          libpugixml-dev \
+          libsecret-1-dev \
+          libsqlite3-dev \
+          libxkbcommon-x11-0 \
+          libyajl-dev \
+          libzip-dev \
+          pcre2-utils \
+          pkg-config \
+          -y
+
+        # switch to GCC that supports C++20 while retaining support for older OS's
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+        # Install lua-yajl early to generate translation statistics
+        luarocks --lua-version 5.1 install --local lua-yajl
+
+        # Allow stats generation script to see location of lua-yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+
+    - name: (Linux Clang) change compiler & disable optional components
+      if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
+      run: |
+         echo "CXX=clang++" >> $GITHUB_ENV
+         echo "CC=clang" >> $GITHUB_ENV
+         echo "WITH_UPDATER=no" >> $GITHUB_ENV
+         echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
+         echo "WITH_FONTS=no" >> $GITHUB_ENV
+
+    - name: Restore ccache
+      id: restore-ccache
+      uses: actions/cache/restore@v4
       with:
-        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
-        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
+        path: ${{runner.workspace}}/ccache
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
+
+    - name: (Linux) Set build info
+      if: runner.os == 'Linux'
+      env:
+        GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
+      run: |
+        sudo apt-get -y install pcre2-utils
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
+        ${{github.workspace}}/CI/travis.set-build-info.sh
+
+    - name: (macOS) Set build info
+      if: runner.os == 'macOS'
+      env:
+        GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
+      run: |
+        brew install pcre2
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
+        ${{github.workspace}}/CI/travis.set-build-info.sh
+        # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
+        echo "CXX=clang++" >> $GITHUB_ENV
+        echo "CC=clang" >> $GITHUB_ENV
+
+    - name: check ccache stats prior to build
+      run: ccache --zero-stats --show-stats
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
+        cmakeAppendedArgs: >-
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
+          -DUSE_SANITIZER=""
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
 
-    - name: Run C++ tests (macOS)
+    - name: Save ccache
+      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
+    - name: check ccache stats post build
+      run: ccache --show-stats
+
+    - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
+
+    - name: install dependencies for packaging/tests
+      if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
+      run: |
+        LUAROCKS="luarocks --lua-version 5.1 install --local"
+
+        $LUAROCKS LuaFileSystem
+        $LUAROCKS luautf8
+
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
+          $LUAROCKS lrexlib-pcre2 PCRE2_DIR=${HOMEBREW_PREFIX}/opt/pcre2
+        else
+          $LUAROCKS lua-zip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1
+          $LUAROCKS lrexlib-pcre2
+        fi
+
+        # CI changelog generation dependencies
+        $LUAROCKS argparse
+        $LUAROCKS lunajson
+
+        # Lua-based tests
+        $LUAROCKS busted
+
+        # necessary for Qt multimedia and modern Qt
+        # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
+        if [ "${RUNNER_OS}" = "Linux" ]; then
+          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
+        fi
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+
+    - name: add ssh-agent for release uploads
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
+      uses: webfactory/ssh-agent@v0.9.1
+      with:
+        ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
+
+    - name: package Mudlet
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      run: |
+        export ARCH=$(uname -m)
+        echo "ARCH=$ARCH" >> $GITHUB_ENV
+        if [ "$RUNNER_OS" = "macOS" ] && [ "$ARCH" = "arm64" ]; then
+          # dblsqd only supports 'arm' as an architecture and not 'arm64'
+          export ARCH_DBLSQD=arm
+          echo "ARCH_DBLSQD=arm" >> $GITHUB_ENV
+        else
+          export ARCH_DBLSQD=$ARCH
+          echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
+        fi
+        ${{github.workspace}}/CI/travis.after_success.sh
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
+        DEPLOY: ${{matrix.deploy}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
+        APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
+        APPLE_PASSWORD: ${{secrets.APPLE_PASSWORD}}
+        APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
+
+    - name: Upload packaged Mudlet
+      uses: actions/upload-artifact@v5
+      if: env.UPLOAD_FILENAME
+      with:
+        name: ${{env.UPLOAD_FILENAME}}
+        path: ${{env.FOLDER_TO_UPLOAD}}
+
+    - name: Submit to make.mudlet.org
+      if: env.UPLOAD_FILENAME
+      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      shell: bash
+
+
+    # we need to be in the right place for LuaGlobals.lua to load
+    - name: (Linux) Prep binary for running tests
+      if: matrix.run_tests == 'true' && runner.os =='Linux'
+      run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
+      shell: bash
+
+    - name: (macOS) Prep binary for running tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      run: |
+        if [ -d "${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
+          cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop/Mudlet.app
+        elif [ -d "${{runner.workspace}}/b/ninja/Mudlet PTB.app" ]; then
+          cp -r "${{runner.workspace}}/b/ninja/Mudlet PTB.app" ~/Desktop/Mudlet.app
+        else
+          cp -r ${{runner.workspace}}/b/ninja/src/mudlet.app ~/Desktop/Mudlet.app
+        fi
+        cd ~/Desktop
+        sudo codesign --remove-signature ~/Desktop/Mudlet.app
+      shell: bash
+
+    - name: (Linux) Run Lua tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      timeout-minutes: 5
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+
+    - name: (macOS) Run Lua tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      timeout-minutes: 5
+      shell: bash
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+
+    - name: Passed Lua tests
+      if: matrix.run_tests == 'true'
+      run: |
+        if [ -e /tmp/busted-tests-failed ]
+        then
+          echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
+          exit 1
+        fi

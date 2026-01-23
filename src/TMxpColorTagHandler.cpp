@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,12 +22,15 @@
 #include "TMxpClient.h"
 bool TMxpColorTagHandler::supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
 {
+    Q_UNUSED(ctx)
+    Q_UNUSED(client)
     return tag->isNamed("COLOR") || tag->isNamed("C");
 }
 TMxpTagHandlerResult TMxpColorTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    QString fg = tag->getAttributeByNameOrIndex("FORE", 0);
-    QString bg = tag->getAttributeByNameOrIndex("BACK", 1);
+    Q_UNUSED(ctx)
+    const QString fg = tag->getAttributeByNameOrIndex("FORE", 0);
+    const QString bg = tag->getAttributeByNameOrIndex("BACK", 1);
 
     client.pushColor(fg, bg);
 
@@ -34,6 +38,8 @@ TMxpTagHandlerResult TMxpColorTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 }
 TMxpTagHandlerResult TMxpColorTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
+    Q_UNUSED(ctx)
+    Q_UNUSED(tag)
     client.popColor();
     return MXP_TAG_HANDLED;
 }

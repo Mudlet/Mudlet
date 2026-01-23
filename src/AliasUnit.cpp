@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,29 @@
 
 #include "Host.h"
 #include "TAlias.h"
+
+#include <functional>
+
+AliasUnit::~AliasUnit()
+{
+    // Set mpHost to null on all aliases (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto alias : mAliasRootNodeList) {
+        alias->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TAlias*)> nullifyChildren = [&nullifyChildren](TAlias* a) {
+            for (auto child : *a->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(alias);
+    }
+    for (auto alias : mAliasRootNodeList) {
+        delete alias;
+    }
+}
 
 void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
@@ -57,20 +81,11 @@ void AliasUnit::compileAll()
     }
 }
 
-void AliasUnit::initStats()
+void AliasUnit::resetStats()
 {
-    statsAliasTotal = 0;
-    statsTempAliases = 0;
-    statsActiveAliases = 0;
-    statsActiveAliasesMax = 0;
-    statsActiveAliasesMin = 0;
-    statsActiveAliasesAverage = 0;
-    statsTempAliasesCreated = 0;
-    statsTempAliasesKilled = 0;
-    statsAverageLineProcessingTime = 0;
-    statsMaxLineProcessingTime = 0;
-    statsMinLineProcessingTime = 0;
-    statsRegexAliases = 0;
+    statsItemsTotal = 0;
+    statsTempItems = 0;
+    statsActiveItems = 0;
 }
 
 void AliasUnit::addAliasRootNode(TAlias* pT, int parentPosition, int childPosition, bool moveAlias)
@@ -150,7 +165,6 @@ void AliasUnit::removeAllTempAliases()
 
 TAlias* AliasUnit::getAlias(int id)
 {
-    QMutexLocker locker(&mAliasUnitLock);
     if (mAliasMap.find(id) != mAliasMap.end()) {
         return mAliasMap.value(id);
     } else {
@@ -233,14 +247,25 @@ int AliasUnit::getNewID()
 bool AliasUnit::processDataStream(const QString& data)
 {
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
-    Lua->set_lua_string(QStringLiteral("command"), data);
+    Lua->set_lua_string(qsl("command"), data);
     bool state = false;
-    for (auto alias : mAliasRootNodeList) {
+    //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
+    auto copyOfNodeList = mAliasRootNodeList;
+
+    // Set processing flag to prevent re-entrant cleanup during alias execution
+    mIsProcessing = true;
+
+    for (auto alias : copyOfNodeList) {
         // = data.replace( "\n", "" );
         if (alias->match(data)) {
             state = true;
         }
     }
+
+    // Clear processing flag and perform any deferred cleanup
+    mIsProcessing = false;
+    doCleanup();
+
     // the idea to get "command" after alias processing is finished and send its value
     // was too difficult for users because if multiple alias change the value of command it becomes too difficult to handle for many users
     // it's easier if we simply intercepts the command and hand responsibility for
@@ -266,17 +291,37 @@ void AliasUnit::reenableAllTriggers()
 
 TAlias* AliasUnit::findFirstAlias(const QString& name)
 {
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     if (it != mLookupTable.cend() && it.key() == name) {
         return it.value();
     }
     return nullptr;
 }
 
+std::vector<int> AliasUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
+{
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : std::as_const(mAliasMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : std::as_const(mAliasMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    }
+    return ids;
+}
+
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TAlias* pT = it.value();
         pT->setIsActive(true);
@@ -289,7 +334,7 @@ bool AliasUnit::enableAlias(const QString& name)
 bool AliasUnit::disableAlias(const QString& name)
 {
     bool found = false;
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TAlias* pT = it.value();
         pT->setIsActive(false);
@@ -317,64 +362,54 @@ bool AliasUnit::killAlias(const QString& name)
     return false;
 }
 
-void AliasUnit::_assembleReport(TAlias* pChild)
+void AliasUnit::assembleReport(TAlias* pItem)
 {
-    std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
-    for (auto alias : *childrenList) {
-        _assembleReport(alias);
-        if (alias->isActive()) {
-            statsActiveAliases++;
+    std::list<TAlias*>* childrenList = pItem->mpMyChildrenList;
+    for (auto pChild : *childrenList) {
+        ++statsItemsTotal;
+        if (pChild->isActive()) {
+            ++statsActiveItems;
         }
-        if (alias->isTemporary()) {
-            statsTempAliases++;
+        if (pChild->isTemporary()) {
+            ++statsTempItems;
         }
-        statsAliasTotal++;
+        assembleReport(pChild);
     }
 }
 
-QString AliasUnit::assembleReport()
+std::tuple<QString, int, int, int> AliasUnit::assembleReport()
 {
-    statsActiveAliases = 0;
-    statsAliasTotal = 0;
-    statsTempAliases = 0;
-    for (auto alias : mAliasRootNodeList) {
-        if (alias->isActive()) {
-            statsActiveAliases++;
+    resetStats();
+    for (auto pItem : mAliasRootNodeList) {
+        ++statsItemsTotal;
+        if (pItem->isActive()) {
+            ++statsActiveItems;
         }
-        if (alias->isTemporary()) {
-            statsTempAliases++;
+        if (pItem->isTemporary()) {
+            ++statsTempItems;
         }
-        statsAliasTotal++;
-        std::list<TAlias*>* childrenList = alias->mpMyChildrenList;
-        for (auto childAlias : *childrenList) {
-            _assembleReport(childAlias);
-            if (childAlias->isActive()) {
-                statsActiveAliases++;
-            }
-            if (childAlias->isTemporary()) {
-                statsTempAliases++;
-            }
-            statsAliasTotal++;
-        }
+        assembleReport(pItem);
     }
     QStringList msg;
-    msg << QStringLiteral("Aliases current total: ") << QString::number(statsAliasTotal) << QStringLiteral("\n")
-        << QStringLiteral("tempAliases current total: ") << QString::number(statsTempAliases) << QStringLiteral("\n")
-        << QStringLiteral("active Aliases: ") << QString::number(statsActiveAliases) << QStringLiteral("\n");
-        /*<< "active Aliases max this session: " << QString::number(statsActiveAliasesMax) << "\n"
-        << "active Aliases min this session: " << QString::number(statsActiveAliasesMin) << "\n"
-        << "active Aliases average this session: " << QString::number(statsActiveAliasesAverage) << "\n"*/
-        //<< "tempAliases created this session: " << QString::number(statsTempAliasesCreated) << "\n"
-        //<< "tempAliases killed this session: " << QString::number(statsTempAliasesKilled) << "\n"
-        //<< "current total regex Aliases: " << QString::number(statsRegexAliases) << "\n"
-        //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
-        //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
-        //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
-    return msg.join(QString());
+    msg << QLatin1String("Aliases current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("tempAliases current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
+        << QLatin1String("active Aliases: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    return {
+        msg.join(QString()),
+        statsItemsTotal,
+        statsTempItems,
+        statsActiveItems
+    };
 }
 
 void AliasUnit::doCleanup()
 {
+    // Skip cleanup if we're currently processing aliases to prevent iterator invalidation
+    // Cleanup will be performed when processDataStream() completes
+    if (mIsProcessing) {
+        return;
+    }
+
     for (auto alias : mCleanupList) {
         delete alias;
     }

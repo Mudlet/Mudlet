@@ -6,13 +6,13 @@
     <AliasPackage>
         <Alias isActive="yes" isFolder="no">
             <name>delete old profiles</name>
-            <script>deleteOldProfiles(matches[3], matches[2]==&quot;maps&quot;)
+            <script>deleteOldProfiles(matches[3], matches[2])
 
 --Syntax examples: &quot;delete old profiles&quot;  -&gt; deletes profiles older than 31 days
 --					&quot;delete old maps 10&quot;	-&gt; deletes maps older than 10 days</script>
             <command></command>
             <packageName></packageName>
-            <regex>^delete old (profiles|maps)(?: (\d+))?$</regex>
+            <regex>^delete old (profiles|maps|modules)(?: (\d+))?$</regex>
         </Alias>
     </AliasPackage>
     <ActionPackage/>
@@ -20,54 +20,74 @@
         <Script isActive="yes" isFolder="no">
             <name>deleteOldProfiles script</name>
             <packageName></packageName>
-            <script>function deleteOldProfiles(keepdays_arg, delete_maps)
+            <script>function deleteOldProfiles(keepdays_arg, delete_folder)
+  --[[
+  Deletes old profiles/maps/modules in the &quot;current&quot;/&quot;map&quot;/&quot;moduleBackups&quot; folders of the Mudlet home directory.
+  The following files are NOT deleted:
+  - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
+  - One file for every month before that. Specifically: The first available file of every month prior to this.
+  Setting the second argument to true will delete maps instead of profiles. (e.g. deleteOldProfiles(10, true))
+  --]]
 
---[[
-	Deletes old profiles/maps in the &quot;current&quot;/&quot;map&quot; folders of the Mudlet home directory.
-	The following files are NOT deleted:
-	- Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.	
-	- One file for every month before that. Specifically: The first available file of every month prior to this.
-	Setting the second argument to true will delete maps instead of profiles. (e.g. deleteOldProfiles(10, true))
---]]
+  -- Ensure correct value is passed for second argument
+  assert(type(delete_folder) == &quot;string&quot;, &quot;Wrong type for delete_folder; expected string, got &quot; .. type(delete_folder))
+  assert(table.contains({&quot;profiles&quot;, &quot;maps&quot;, &quot;modules&quot;}, delete_folder), &quot;delete_folder must be profiles, maps or modules&quot;)
 
-	local keepdays = tonumber(keepdays_arg) or 31
-	local profile_table = {}
-	local used_last_mod_months = {}
-	local slash = (string.char(getMudletHomeDir():byte()) == &quot;/&quot;) and &quot;/&quot; or &quot;\\&quot;
-	local dirpath = getMudletHomeDir()..slash..(delete_maps and &quot;map&quot; or &quot;current&quot;)
-	local delnum = 0
+  local keepdays = tonumber(keepdays_arg) or 31
+  local profile_table = {}
+  local used_last_mod_months = {}
+  local slash = (string.char(getMudletHomeDir():byte()) == &quot;/&quot;) and &quot;/&quot; or &quot;\\&quot;
+  local delnum = 0
 
-	-- Traverse the profiles folder and create a table of files:
-	for filename in lfs.dir(dirpath) do
-		if filename~=&quot;.&quot; and filename~=&quot;..&quot; then
-			profile_table[#profile_table+1] = {name = filename, last_mod = lfs.attributes(dirpath..slash..filename, &quot;modification&quot;)}
-		end
-	end
+  local to_folder = {
+    profiles = &quot;current&quot;,
+    maps = &quot;map&quot;,
+  }
 
-	-- Sort the table according to last modification date from old to new:
-	table.sort(profile_table, function (a,b) return a.last_mod &lt; b.last_mod end)
+  local dirpath = delete_folder == &quot;modules&quot;
+    and getMudletHomeDir()..slash..&quot;..&quot;..slash..&quot;..&quot;..slash..&quot;moduleBackups&quot;
+    or getMudletHomeDir()..slash..to_folder[delete_folder]
 
-	echo(string.format(&quot;\nDeleting old %s. Files newer than %d days and one profile for every month before that will be kept.&quot;, delete_maps and &quot;maps&quot; or &quot;profiles&quot;, keepdays))
-	for i,v in ipairs(profile_table) do
-		local days = math.floor(os.difftime(os.time(), v.last_mod)/86400)
-		local last_mod_month = os.date(&quot;%Y/%m&quot;, v.last_mod)
-		if days &gt; keepdays then
-			-- For profiles older than X days, check if we already kept a table for this month:
-			if not table.contains(used_last_mod_months, last_mod_month) then
-				-- If not, do nothing and mark this month as &quot;kept&quot;.
-				used_last_mod_months[#used_last_mod_months+1] = last_mod_month
-			else
-				-- Otherwise remove the file:
-				local success, errorstring = os.remove(dirpath..slash..v.name)
-				if success then
-					delnum = delnum + 1
-				else
-					cecho(&quot;\n&lt;red&gt;ERROR: &quot;..errorstring)
-				end
-			end
-		end
-	end
-	echo(string.format(&quot;\nDeletion complete. %d/%d files were removed successfully.&quot;, delnum, #profile_table))
+  -- Traverse the profiles folder and create a table of files:
+  for filename in lfs.dir(dirpath) do
+    if filename~=&quot;.&quot; and filename~=&quot;..&quot; then
+      profile_table[#profile_table+1] = {
+        name = filename,
+        last_mod = lfs.attributes(dirpath..slash..filename, &quot;modification&quot;)
+      }
+    end
+  end
+
+  -- Sort the table according to last modification date from old to new:
+  table.sort(profile_table, function (a,b) return a.last_mod &lt; b.last_mod end)
+
+  echo(string.format(
+    &quot;\nDeleting old %s. Files newer than %d days and one for every month before that will be kept.&quot;,
+    delete_folder,
+    keepdays
+  ))
+
+  for i, v in ipairs(profile_table) do
+    local days = math.floor(os.difftime(os.time(), v.last_mod) / 86400)
+    local last_mod_month = os.date(&quot;%Y/%m&quot;, v.last_mod)
+    if days &gt; keepdays then
+      -- For profiles older than X days, check if we already kept a table for this month:
+      if not table.contains(used_last_mod_months, last_mod_month) then
+        -- If not, do nothing and mark this month as &quot;kept&quot;.
+        used_last_mod_months[#used_last_mod_months+1] = last_mod_month
+      else
+        -- Otherwise remove the file:
+        local success, errorstring = os.remove(dirpath..slash..v.name)
+        if success then
+          delnum = delnum + 1
+        else
+          cecho(&quot;\n&lt;red&gt;ERROR: &quot;..errorstring)
+        end
+      end
+    end
+  end
+
+  echo(string.format(&quot;\nDeletion complete. %d/%d files were removed successfully.&quot;, delnum, #profile_table))
 end
 </script>
             <eventHandlerList/>

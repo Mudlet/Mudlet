@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - virginmedia.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,18 +23,22 @@
 
 TMxpTagHandlerResult TMxpFontTagHandler::handleStartTag(TMxpContext& context, TMxpClient& client, MxpStartTag* tag)
 {
-    QString fontFace = tag->getAttributeByNameOrIndex("FACE", 0);
-    QString fontSize = tag->getAttributeByNameOrIndex("SIZE", 1);
+    Q_UNUSED(context)
+    const QString fontFace = tag->getAttributeByNameOrIndex("FACE", 0);
+    const QString fontSize = tag->getAttributeByNameOrIndex("SIZE", 1);
     client.pushFont(fontFace, fontSize);
 
-    QString fgColor = tag->getAttributeByNameOrIndex("COLOR", 2);
-    QString bgColor = tag->getAttributeByNameOrIndex("BACK", 3);
+    const QString fgColor = tag->getAttributeByNameOrIndex("COLOR", 2);
+    const QString bgColor = tag->getAttributeByNameOrIndex("BACK", 3);
     client.pushColor(fgColor, bgColor);
 
     return MXP_TAG_HANDLED;
 }
+
 TMxpTagHandlerResult TMxpFontTagHandler::handleEndTag(TMxpContext& context, TMxpClient& client, MxpEndTag* tag)
 {
+    Q_UNUSED(context)
+    Q_UNUSED(tag)
     client.popFont();
     client.popColor();
 

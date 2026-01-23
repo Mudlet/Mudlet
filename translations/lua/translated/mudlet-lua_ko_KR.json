@@ -1,0 +1,102 @@
+{
+  "AdjustableContainer.attach": {
+    "message": "붙이기:",
+    "description": "attaches your container to a border"
+  },
+  "AdjustableContainer.bottom": {
+    "message": "하단",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.top": {
+    "message": "위쪽",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "왼쪽",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "오른쪽",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.custom": {
+    "message": "사용자 정의:",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
+  "AdjustableContainer.lock": {
+    "message": "잠금",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.lockstyle": {
+    "message": "잠금 스타일:",
+    "description": "different modes/styles to choose which will be the lock behaviour of the container"
+  },
+  "AdjustableContainer.standard": {
+    "message": "표준",
+    "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
+  },
+  "AdjustableContainer.light": {
+    "message": "간단",
+    "description": "one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
+  },
+  "AdjustableContainer.full": {
+    "message": "전체",
+    "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
+  "AdjustableContainer.border": {
+    "message": "테두리",
+    "description": "one of the Lockstyles which keeps the borders of the container visible."
+  },
+  "AdjustableContainer.save": {
+    "message": "저장",
+    "description": "saves the containers settings"
+  },
+  "AdjustableContainer.load": {
+    "message": "로드",
+    "description": "loads the previously saved settings of the container"
+  },
+  "AdjustableContainer.min_restore": {
+    "message": "최소화/복원",
+    "description": "label to minimize/restore the container"
+  },
+  "AdjustableContainer.connectTo": {
+    "message": "연결하기: ",
+    "description": "connect your container to a border to create a frame"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "연결 해제 ",
+    "description": "disconnect your container from the border frame"
+  },
+  "Mudlet.packageInstallSuccess": {
+    "message": "'%s' 패키지를 성공적으로 설치했습니다.",
+    "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageInstallFail": {
+    "message": "'%s' 설치에 실패했습니다: %s",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallSuccess": {
+    "message": "'%s' 모듈을 성공적으로 설치했습니다.",
+    "description": "Success message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallFail": {
+    "message": "'%s' 설치 실패: %s",
+    "description": "Failure message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageDownloading": {
+    "message": "%s에서 패키지를 다운로드 중입니다.",
+    "description": "Download package from Url for installation - %s is source url"
+  },
+  "Mudlet.prefixOk": {
+    "message": "[ 확인 ] - ",
+    "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixWarn": {
+    "message": "[ 경고 ] - ",
+    "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixInfo": {
+    "message": "[ 정보 ] - ",
+    "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
+  }
+}

@@ -4,10 +4,11 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2020 by Matthias Urlichs matthias@urlichs.de            *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,24 +32,123 @@
 
 #include "TTextCodec.h"
 
-#include "pre_guard.h"
 #include <QDataStream>
-#include <QHBoxLayout>
+#include <QElapsedTimer>
 #include <QFile>
+#include <QFont>
+#include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
 #include <QPointer>
-#include <QTextStream>
+#include <QSaveFile>
+#include <QSplitter>
+#include <QVideoWidget>
 #include <QWidget>
-#include "post_guard.h"
 
 #include <hunspell/hunspell.h>
 
 #include <list>
 #include <map>
 
+// This contains the details of a font that we might want to maintain a record
+// of, independently of a QFont instance:
+struct TFontAttributes
+{
+    explicit TFontAttributes(const bool isAntiAliased = false)
+    : mStyleStrategy(isAntiAliased
+                             ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
+                             : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality))
+    {}
+
+    explicit TFontAttributes(const QFont& font) {
+        mName = font.family();
+        mPointSize = font.pointSize();
+        mStyleHint = font.styleHint();
+        mStyleStrategy = font.styleStrategy();
+        mFixedPitch = font.fixedPitch();
+        mKerning = font.kerning();
+        mWeight = font.weight();
+        mUnderline = font.underline();
+        mOverline = font.overline();
+        mStrikeout = font.strikeOut();
+        mItalic = font.italic();
+        // Although we had a setter for this we never used it:
+        // mLetterSpacing = font.letterSpacing();
+        // mSpacingType = font.SpacingType();
+    }
+
+    // Since C++20 the comparison operators can also be default coded by the
+    // compiler:
+    bool operator==(const TFontAttributes& other) const = default;
+    bool operator!=(const TFontAttributes& other) const = default;
+
+    TFontAttributes& operator=(const TFontAttributes& other) = default;
+
+    QFont makeFont() const {
+        QFont font = QFont(mName, mPointSize, mWeight, mItalic);
+        font.setFixedPitch(mFixedPitch);
+        font.setStyleHint(mStyleHint, mStyleStrategy);
+        font.setKerning(mKerning);
+        font.setUnderline(mUnderline);
+        font.setOverline(mOverline);
+        font.setStrikeOut(mStrikeout);
+
+        return font;
+    }
+
+    void setAntiAliasOption(const bool isAntiAliased) {
+        mStyleStrategy = isAntiAliased
+                                 ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
+                                 : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality);
+    }
+
+    // enums to consider:
+    // Not used: QFont::Capitalization mCapitalization; // { MixedCase, AllUppercase, AllLowercase, SmallCaps, Capitalize }
+    // Not used: QFont::HintingPreference mHintingPreference; // { PreferDefaultHinting, PreferNoHinting, PreferVerticalHinting, PreferFullHinting }
+    // Not used: QFont::SpacingType mSpacingType; // { PercentageSpacing, AbsoluteSpacing }
+    // Not used: QFont::Stretch mStretch; // { AnyStretch, UltraCondensed, ExtraCondensed, Condensed, SemiCondensed, …, UltraExpanded }
+    // Not used: QFont::Style mStyle; // { StyleNormal, StyleItalic, StyleOblique }
+    // Combined and used with next: QFont::StyleHint mStyleHint; // { AnyStyle, SansSerif, Helvetica, Serif, Times, …, System }
+    // Combined and used with prior: QFont::StyleStrategy mStyleStrategy; // { PreferDefault, PreferBitmap, PreferDevice, PreferOutline, ForceOutline, …, PreferQuality }
+    // Used: QFont::Weight mWeight; // { Thin, ExtraLight, Light, Normal, Medium, …, Black }
+
+    QString mName = qsl("Bitstream Vera Sans Mono");
+    int mPointSize = 14;
+    // Actually this is combined with the next one - but doesn't work on X11
+    // anyway - and since we don't specify it in the TConsole case this means
+    // the QFont::AnyStyle is used for other Desktop environments:
+    QFont::StyleHint mStyleHint = QFont::AnyStyle;
+    // We use either: (QFont::NoAntialias | QFont::PreferQuality) for all
+    // TConsoles but the main one can be set to (QFont::PreferAntialias |
+    // QFont::PreferQuality) instead - see constuctor:
+    QFont::StyleStrategy mStyleStrategy;
+    // qreal mLetterSpacing = 0.0;
+    // QFont::SpacingType mSpacingType = QFont::AbsoluteSpacing;
+    // We use but don't set "Line Spacing" - so don't worry about it.
+    QFont::Weight mWeight = QFont::Normal;
+    bool mFixedPitch = true; // We always set this
+    bool mKerning = false; // We haven't been resetting this but we ought to
+    // we don't set these on "base" fonts for TConsole's but we can set them for
+    // bits of text:
+    bool mUnderline = false;
+    bool mOverline = false;
+    bool mStrikeout = false;
+    bool mItalic = false;
+};
+
+enum class ControlCharacterMode {
+    AsIs = 0x0,
+    Picture = 0x1,
+    OEM = 0x2
+};
+
+// Needed so it can be handled as a QVariant
+Q_DECLARE_METATYPE(ControlCharacterMode)
+
 class QCloseEvent;
 class QLineEdit;
 class QScrollBar;
+class QShortcut;
 class QToolButton;
 
 class dlgMapper;
@@ -57,6 +157,7 @@ class TTextEdit;
 class TCommandLine;
 class TDockWidget;
 class TLabel;
+class TScrollBox;
 class TSplitter;
 class dlgNotepad;
 
@@ -75,12 +176,18 @@ public:
         UserWindow = 0x10, // Floatable/Dockable console, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
         Buffer = 0x20 // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
-
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
+    enum SearchOption {
+        // Unset:
+        SearchOptionNone = 0x0,
+        SearchOptionCaseSensitive = 0x1
+    };
+    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
+
     Q_DISABLE_COPY(TConsole)
-    explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
-    ~TConsole();
+    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    ~TConsole() override;
 
     void reset();
     void resizeConsole();
@@ -89,14 +196,15 @@ public:
     void insertHTML(const QString&);
     void insertText(const QString&);
     void insertText(const QString&, QPoint);
-    void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false);
-    void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false);
-    void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
+    void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false, QVector<int> luaReference = QVector<int>());
+    void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false, QVector<int> luaReference = QVector<int>());
+    void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false, QVector<int> luaReference = QVector<int>());
     void copy();
     void cut();
     void paste();
+    void clear();
     void appendBuffer();
-    void appendBuffer(TBuffer);
+    void appendBuffer(const TBuffer&);
     int getButtonState();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
@@ -105,6 +213,7 @@ public:
     int getLineNumber();
     int getLineCount();
     bool deleteLine(int);
+    void clearSelection() const;
 
     int getColumnNumber();
 
@@ -113,11 +222,18 @@ public:
         mWrapAt = pos;
         buffer.setWrapAt(pos);
     }
+    int getWrapAt();
 
     void setIndentCount(int count)
     {
         mIndentCount = count;
         buffer.setWrapIndent(count);
+    }
+
+    void setHangingIndentCount(int count)
+    {
+        mHangingIndentCount = count;
+        buffer.setWrapHangingIndent(count);
     }
 
     TLinkStore &getLinkStore() { return buffer.mLinkStore; }
@@ -132,179 +248,217 @@ public:
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
+    void setCommandBgColor(const QColor&);
+    void setCommandBgColor(int, int, int, int);
+    void setCommandFgColor(const QColor&);
+    void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
-    void setMiniConsoleCmdVisible(bool);
+    void setScrolling(const bool state);
+    bool getScrolling() const { return mScrollingEnabled; }
+    void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
-    void print(const QString&, QColor fgColor, QColor bgColor);
     void print(const QString& msg);
     void print(const char*);
+    void print(const QString& msg, QColor fgColor, QColor bgColor);
     void printSystemMessage(const QString& msg);
-    void printOnDisplay(std::string&, bool isFromServer = false);
     void printCommand(QString&);
     bool hasSelection();
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
+    void refreshView() const;
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
-    bool setMiniConsoleFontSize(int);
-    bool setMiniConsoleFont(const QString& font);
+    void setFontSize(int);
+    void setFontName(const QString& fontName);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
-    void setLink(const QStringList& linkFunction, const QStringList& linkHint);
+    void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
-    void finalize();
-    void runTriggers(int);
-    void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
+    QColor getConsoleBgColor() const { return mBgColor; }
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
     std::list<int> getBgColor();
     void luaWrapLine(int line);
     QString getCurrentLine();
     void selectCurrentLine();
-    bool saveMap(const QString&, int saveVersion = 0);
-    bool loadMap(const QString&);
-    bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
-
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
-
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
-    // In the next pair of functions the first element in the return is an
+    // In the next function the first element in the return is an
     // error code:
     // 0 = Okay
     // 1 = Window not found
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
+    void setCaretMode(bool enabled);
+    void setSearchOptions(const SearchOptions);
+    void setF3SearchEnabled(const bool enabled);
+    void setProxyForFocus(TCommandLine*);
+    void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
+    // Raises an event if the number of lines (in the
+    // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
+    // non-scrolling window:
+    void handleLinesOverflowEvent(const int lineCount);
+    void clearSplit();
+    bool showTimeStamps() const { return mShowTimeStamps; }
+    void raiseMudletResizeEvent();
+    // This *should* be overridding the (void) QWidget::setFont(const QFont&)
+    // method but doesn't seem to be...!
+    // The forceChange option is required when using this method within
+    // setFontName(...) or setFontSize(...) so that the changes made
+    // on the TFontDetails class are forced into play, as otherwise
+    // it looks that they haven't inside this method:
+    void setFont(const QFont&, const bool forceChange = false);
 
 
     QPointer<Host> mpHost;
+
+    // Initialised in the constructor:
+    TFontAttributes mDisplayFontDetails;
+
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
-    // Only on a MainConsole type instance:
     QPointer<TCommandLine> mpCommandLine;
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;
-    TTextEdit* mUpperPane;
-    TTextEdit* mLowerPane;
+    TTextEdit* mUpperPane = nullptr;
+    TTextEdit* mLowerPane = nullptr;
 
-    QToolButton* emergencyStop;
-    QWidget* layer;
-    QWidget* layerCommandLine;
-    QHBoxLayout* layoutLayer2;
-    QWidget* layerEdit;
-    QColor mBgColor;
-    int mButtonState;
-    TBuffer mClipboard;
-    QColor mCommandBgColor;
-    QColor mCommandFgColor;
+    QToolButton* emergencyStop = nullptr;
+    QWidget* layer = nullptr;
+    QWidget* layerCommandLine = nullptr;
+    QHBoxLayout* layoutLayer2 = nullptr;
+
+    QColor mBgColor = QColorConstants::Black;
+    QColor mFgColor = QColorConstants::LightGray;
+    QColor mSystemMessageFgColor = QColorConstants::Red;
+    QColor mCommandBgColor = QColorConstants::Black;
+    QColor mSystemMessageBgColor = mBgColor;
+    QColor mCommandFgColor = QColor(213, 195, 0);
+
+    //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
+    int mButtonState = 1;
 
     QString mConsoleName;
     QString mCurrentLine;
-    int mDeletedLines;
-    QString mDisplayFontName;
-    int mDisplayFontSize;
-    QFont mDisplayFont;
-    int mEngineCursor;
-    QColor mFgColor;
-    TChar mFormatBasic;
-    TChar mFormatSystemMessage;
+    int mEngineCursor = -1;
 
-    int mIndentCount;
-    int mMainFrameBottomHeight;
-    int mMainFrameLeftWidth;
-    int mMainFrameRightWidth;
-    int mMainFrameTopHeight;
-    int mOldX;
-    int mOldY;
+    int mIndentCount = 0;
+    int mHangingIndentCount = 0;
+    QMargins mBorders;
+    int mOldX = 0;
+    int mOldY = 0;
 
     TChar mFormatCurrent;
     QString mFormatSequenceRest;
 
-    QWidget* mpBaseVFrame;
-    QWidget* mpTopToolBar;
-    QWidget* mpBaseHFrame;
-    QWidget* mpLeftToolBar;
-    QWidget* mpMainFrame;
-    QWidget* mpRightToolBar;
-    QWidget* mpMainDisplay;
-    QLabel* mpBackground;
+    QWidget* mpBaseVFrame = nullptr;
+    QWidget* mpTopToolBar = nullptr;
+    QWidget* mpBaseHFrame = nullptr;
+    QWidget* mpLeftToolBar = nullptr;
+    QWidget* mpMainFrame = nullptr;
+    QWidget* mpRightToolBar = nullptr;
+    QWidget* mpMainDisplay = nullptr;
 
-    dlgMapper* mpMapper;
+    QPointer<dlgMapper> mpMapper;
 
-    QScrollBar* mpScrollBar;
-    QScrollBar* mpHScrollBar;
+    QScrollBar* mpScrollBar = nullptr;
+    QScrollBar* mpHScrollBar = nullptr;
 
-
-    QTime mProcessingTime;
-    bool mRecordReplay;
-    QFile mReplayFile;
+    QElapsedTimer mProcessingTimer;
+    bool mRecordReplay = false;
+    QSaveFile mReplayFile;
     QDataStream mReplayStream;
-    TChar mStandardFormat;
 
-    QColor mSystemMessageBgColor;
-    QColor mSystemMessageFgColor;
-    bool mTriggerEngineMode;
+    bool mTriggerEngineMode = false;
 
     QPoint mUserCursor;
-    bool mWindowIsHidden;
-    int mWrapAt;
-    QLineEdit* networkLatency;
+    int mWrapAt = 100;
+    QLineEdit* mpLineEdit_networkLatency = nullptr;
     QPoint P_begin;
     QPoint P_end;
     QString mProfileName;
-    TSplitter* splitter;
-    bool mIsPromptLine;
-    QToolButton* logButton;
-    bool mUserAgreedToCloseConsole;
-    QLineEdit* mpBufferSearchBox;
-    QToolButton* mpBufferSearchUp;
-    QToolButton* mpBufferSearchDown;
-    int mCurrentSearchResult;
-    QList<int> mSearchResults;
+    TSplitter* splitter = nullptr;
+    bool mIsPromptLine = false;
+    QToolButton* logButton = nullptr;
+    QToolButton* timeStampButton = nullptr;
+    QToolButton* replayButton = nullptr;
+    QLineEdit* mpBufferSearchBox = nullptr;
+    QAction* mpAction_searchCaseSensitive = nullptr;
+    QToolButton* mpBufferSearchUp = nullptr;
+    QToolButton* mpBufferSearchDown = nullptr;
+    // The line on which the current search result has been found, or the next
+    // one is to start (currently only for the main console):
+    int mCurrentSearchResult = 0;
+    // Not used:
+    // QList<int> mSearchResults;
+    // The term that is currently being search for (currently only for the main
+    // console):
     QString mSearchQuery;
-    QWidget* mpButtonMainLayer;
-    int mBgImageMode;
+    QWidget* mpButtonMainLayer = nullptr;
+    int mBgImageMode = 0;
     QString mBgImagePath;
-    bool mHScrollBarEnabled;
-
-signals:
-    // Raised when new data is incoming to trigger Alert handling in mudlet
-    // class, second argument is true for a lower priority indication when
-    // locally produced information is painted into main console
-    void signal_newDataAlert(const QString&, bool isLowerPriorityChange = false);
-
+    bool mHScrollBarEnabled = false;
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
+    QVideoWidget* mpVideoWidget = nullptr;
+    QSplitter* commandSplitter = nullptr;
 
 public slots:
     void slot_searchBufferUp();
     void slot_searchBufferDown();
     void slot_toggleReplayRecording();
-    void slot_stop_all_triggers(bool);
+    void slot_stopAllItems(bool);
     void slot_toggleLogging();
+    void slot_changeControlCharacterHandling(const ControlCharacterMode);
+    void slot_toggleSearchCaseSensitivity(bool);
+    void slot_toggleTimeStamps(const bool);
+    void slot_saveCommandSearchSettings();
 
-    // Used by mudlet class as told by "Profile Preferences"
-    // =>"Copy Map" in another profile to inform a list of
-    // profiles - asynchronously - to load in an updated map
-    void slot_reloadMap(QList<QString>);
+signals:
+    void resized(QResizeEvent* event);
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
+    void dragMoveEvent(QDragMoveEvent*) override;
     void dropEvent(QDropEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
 
-private:
-    void refreshMiniConsole() const;
+    bool mAlertOnNewData = true;
 
-    ConsoleType mType;
+private slots:
+    void slot_adjustAccessibleNames();
+    void slot_clearSearchResults();
+    void focusOnSearchResultAndAnnounce(int searchX, int searchY);
+
+private:
+    void createSearchOptionIcon();
+    void raiseFontChangeEvent();
+    void restoreCommandSearchSettings();
+
+    ConsoleType mType = UnknownType;
+    QSize mOldSize;
+    SearchOptions mSearchOptions = SearchOptionNone;
+    QAction* mpAction_searchOptions = nullptr;
+    QIcon mIcon_searchOptions;
+    bool mScrollingEnabled = true;
+    bool mF3SearchEnabled = false;
+    QPointer<QShortcut> mpSearchNextShortcut;
+    QPointer<QShortcut> mpSearchPrevShortcut;
+    // The size of the TConsole in (normal) "character" cells:
+    QSize mDimensions;
+    // Whether to show (a 13 character by default) timestamp to the left of
+    // each line of text:
+    bool mShowTimeStamps = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
@@ -313,17 +467,17 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
-    QDebugStateSaver saver(debug);
+    const QDebugStateSaver saver(debug);
     switch (type) {
-    case TConsole::UnknownType:           text = QStringLiteral("Unknown"); break;
-    case TConsole::CentralDebugConsole:   text = QStringLiteral("Central Debug Console"); break;
-    case TConsole::ErrorConsole:          text = QStringLiteral("Profile Error Console"); break;
-    case TConsole::MainConsole:           text = QStringLiteral("Profile Main Console"); break;
-    case TConsole::SubConsole:            text = QStringLiteral("Mini Console"); break;
-    case TConsole::UserWindow:            text = QStringLiteral("User Window"); break;
-    case TConsole::Buffer:                text = QStringLiteral("Buffer"); break;
+    case TConsole::UnknownType:           text = qsl("Unknown"); break;
+    case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;
+    case TConsole::ErrorConsole:          text = qsl("Profile Error Console"); break;
+    case TConsole::MainConsole:           text = qsl("Profile Main Console"); break;
+    case TConsole::SubConsole:            text = qsl("Mini Console"); break;
+    case TConsole::UserWindow:            text = qsl("User Window"); break;
+    case TConsole::Buffer:                text = qsl("Buffer"); break;
     default:
-        text = QStringLiteral("Non-coded Type");
+        text = qsl("Non-coded Type");
     }
     debug.nospace() << text;
     return debug;
@@ -331,4 +485,3 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 #endif // !defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCONSOLE_H
-

@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2020, 2022 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,17 +26,13 @@
 #include "TRoom.h"
 
 #ifndef Q_MOC_RUN
-#include "pre_guard.h"
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/graphviz.hpp>
-#include "post_guard.h"
 #endif
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QString>
-#include "post_guard.h"
 
 #include <math.h> // for sqrt
 
@@ -67,16 +64,19 @@ class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    distance_heuristic(LocMap l, Vertex goal) : m_location(l), m_goal(goal) {}
+    distance_heuristic(LocMap l, Vertex goal)
+    : m_location(l)
+    , m_goal(goal)
+    {}
 
     CostType operator()(Vertex u)
     {
         if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea()) {
             return 1;
         }
-        CostType dx = m_location[m_goal].pR->x - m_location[u].pR->x;
-        CostType dy = m_location[m_goal].pR->y - m_location[u].pR->y;
-        CostType dz = m_location[m_goal].pR->z - m_location[u].pR->z;
+        CostType dx = m_location[m_goal].pR->x() - m_location[u].pR->x();
+        CostType dy = m_location[m_goal].pR->y() - m_location[u].pR->y();
+        CostType dz = m_location[m_goal].pR->z() - m_location[u].pR->z();
 
         return std::sqrt(dx * dx + dy * dy + dz * dz);
     }
@@ -97,11 +97,13 @@ template <class Vertex>
 class astar_goal_visitor : public boost::default_astar_visitor
 {
 public:
-    astar_goal_visitor(Vertex goal) : m_goal(goal) {}
+    explicit astar_goal_visitor(Vertex goal)
+    : m_goal(goal)
+    {}
 
     template <class Graph>
-    void examine_vertex(Vertex u, Graph& g)
-    {
+    void examine_vertex(Vertex u, Graph& g) {
+        Q_UNUSED(g)
         if (u == m_goal) {
             throw found_goal();
         }

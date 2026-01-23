@@ -21,12 +21,11 @@
 #define MUDLET_TMXPELEMENTREGISTRY_H
 
 #include "MxpTag.h"
-#include "pre_guard.h"
+#include <QHash>
 #include <QMap>
 #include <QStringList>
 #include <QList>
 #include <QSharedPointer>
-#include "post_guard.h"
 
 struct TMxpElement
 {
@@ -35,6 +34,8 @@ struct TMxpElement
     QStringList attrs;
     QString tag;
     QString flags;
+    // if a custom element definition specified a default for an attribute, it's in defaultValues[attribute]
+    QHash<QString, QString> defaultValues;
     bool open;
     bool empty;
 

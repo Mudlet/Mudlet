@@ -14,7 +14,7 @@ BasedOnStyle: LLVM
 
 # language
 Language: Cpp
-Standard: Cpp11
+Standard: c++17
 DisableFormat: false
 
 # line length
@@ -105,10 +105,6 @@ PenaltyReturnTypeOnItsOwnLine: 60
 
 # includes
 IncludeCategories:
-  - Regex: '^"post_guard.h"$'
-    Priority: 7
-  - Regex: '^"pre_guard.h"$'
-    Priority: 2
   - Regex: '^"ui_.*'
     Priority: 3
   - Regex: '^<Qt.*'

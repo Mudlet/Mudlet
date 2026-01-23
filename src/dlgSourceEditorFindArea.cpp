@@ -21,15 +21,15 @@
 #include "dlgSourceEditorFindArea.h"
 #include "ui_dlgPackageExporter.h"
 
-#include "pre_guard.h"
 #include <QDebug>
-#include "post_guard.h"
 
-dlgSourceEditorFindArea::dlgSourceEditorFindArea(QWidget* pF) : QWidget(pF)
+dlgSourceEditorFindArea::dlgSourceEditorFindArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
     lineEdit_findText->installEventFilter(this);
+    lineEdit_replaceText->installEventFilter(this);
 }
 
 bool dlgSourceEditorFindArea::eventFilter(QObject* obj, QEvent* event)
@@ -38,6 +38,19 @@ bool dlgSourceEditorFindArea::eventFilter(QObject* obj, QEvent* event)
         if (event->type() == QEvent::KeyPress) {
             QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
             if (keyEvent->key() == Qt::Key_Enter or keyEvent->key() == Qt::Key_Return) {
+                if (keyEvent->modifiers().testFlag(Qt::ShiftModifier)) {
+                    emit signal_sourceEditorFindPrevious();
+                } else {
+                    emit signal_sourceEditorFindNext();
+                }
+                return true;
+            }
+        }
+    } else if (obj == lineEdit_replaceText) {
+        if (event->type() == QEvent::KeyPress) {
+            QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+            if (keyEvent->key() == Qt::Key_Enter or keyEvent->key() == Qt::Key_Return) {
+                emit signal_sourceEditorReplace();
                 if (keyEvent->modifiers().testFlag(Qt::ShiftModifier)) {
                     emit signal_sourceEditorFindPrevious();
                 } else {

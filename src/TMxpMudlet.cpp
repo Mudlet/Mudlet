@@ -23,12 +23,15 @@
 #include "TConsole.h"
 #include "TLinkStore.h"
 
+#include <QSet>
+#include <QStack>
 
-TMxpMudlet::TMxpMudlet(Host* pHost) : mpHost(pHost), mLinkMode(false), isBold(false), isUnderline(false), isItalic(false) {}
+static const QString PLACEHOLDER_TEXT = QLatin1String("&text;");
+
 
 QString TMxpMudlet::getVersion()
 {
-    return scmVersion;
+    return mudlet::self()->scmVersion;
 }
 
 void TMxpMudlet::sendToServer(QString& str)
@@ -67,7 +70,17 @@ void TMxpMudlet::popColor(QList<QColor>& stack)
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
-    return getLinkStore().addLinks(links, hints);
+    return getLinkStore().addLinks(links, hints, mpHost);
+}
+
+int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints, const QString& expireName)
+{
+    return getLinkStore().addLinks(links, hints, mpHost, QVector<int>(), expireName);
+}
+
+void TMxpMudlet::expireLinks(const QString& expireName)
+{
+    getLinkStore().expireLinks(expireName, mpHost);
 }
 
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
@@ -94,7 +107,16 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
         if (mpContext->getElementRegistry().containsElement(tag->getName())) {
             enqueueMxpEvent(tag->asStartTag());
         } else if (tag->isNamed("SEND")) {
-            enqueueMxpEvent(tag->asStartTag());
+            // send events are queued on closing tag so the caption is available
+            TMxpEvent event;
+            event.name = tag->getName();
+            auto* startTag = tag->asStartTag();
+            for (const auto& attrName : startTag->getAttributesNames()) {
+                event.attrs[attrName] = startTag->getAttributeValue(attrName);
+            }
+            event.actions = getLinkStore().getCurrentLinks();
+            event.caption.clear();
+            mPendingSendEvents.push(event);
         }
     }
 
@@ -103,16 +125,168 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
 
 void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
 {
-    TMxpEvent ev;
-    ev.name = tag->getName();
+    TMxpEvent mxpEvent;
+    mxpEvent.name = tag->getName();
     for (const auto& attrName : tag->getAttributesNames()) {
-        ev.attrs[attrName] = tag->getAttributeValue(attrName);
+        mxpEvent.attrs[attrName] = tag->getAttributeValue(attrName);
     }
-    ev.actions = getLinkStore().getCurrentLinks();
-    mMxpEvents.enqueue(ev);
+    mxpEvent.actions = getLinkStore().getCurrentLinks();
+    mxpEvent.caption.clear();
+    mMxpEvents.enqueue(mxpEvent);
+}
+
+void TMxpMudlet::setCaptionForSendEvent(const QString& caption)
+{
+    if (!mPendingSendEvents.isEmpty()) {
+        TMxpEvent event = mPendingSendEvents.pop();
+        event.caption = caption;
+        for (QString& act : event.actions) {
+            act.replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
+        }
+        for (auto it = event.attrs.begin(); it != event.attrs.end(); ++it) {
+            it.value().replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
+        }
+        mMxpEvents.enqueue(event);
+    }
 }
 
 TLinkStore& TMxpMudlet::getLinkStore()
 {
     return mpHost->mpConsole->getLinkStore();
+}
+
+// Handle 'stacks' of attribute settings:
+void TMxpMudlet::setBold(bool bold)
+{
+    if (bold) {
+        boldCounter++;
+    } else if (boldCounter > 0) {
+        boldCounter--;
+    }
+}
+
+void TMxpMudlet::setItalic(bool italic)
+{
+    if (italic) {
+        italicCounter++;
+    } else if (italicCounter > 0) {
+        italicCounter--;
+    }
+}
+
+void TMxpMudlet::setUnderline(bool underline)
+{
+    if (underline) {
+        underlineCounter++;
+    } else if (underlineCounter > 0) {
+        underlineCounter--;
+    }
+}
+
+void TMxpMudlet::setStrikeOut(bool strikeOut)
+{
+    if (strikeOut) {
+        strikeOutCounter++;
+    } else if (strikeOutCounter > 0) {
+        strikeOutCounter--;
+    }
+}
+
+// reset text Properties (from open tags) at end of line
+void TMxpMudlet::resetTextProperties()
+{
+    boldCounter = 0;
+    italicCounter = 0;
+    underlineCounter = 0;
+    strikeOutCounter = 0;
+
+    // for the next two, we can assume both lists are usually empty (in case of properly
+    // balanced MXP tags), and if not, they'll only contain very few entries. Thus it seems
+    // sensible to check first, and then just remove all of the few nodes rather than
+    // removing the whole list first and then create a new one from scratch.
+    while (!fgColors.isEmpty()) {
+        fgColors.pop_back();
+    }
+
+    while (!bgColors.isEmpty()) {
+        bgColors.pop_back();
+    }
+}
+
+bool TMxpMudlet::startTagReceived(MxpStartTag* startTag)
+{
+    // Get the current MXP mode from the processor
+    TMXPMode currentMode = mpHost->mMxpProcessor.mode();
+    
+    // In LOCKED mode, no tags are allowed
+    if (currentMode == MXP_MODE_LOCKED) {
+        return false;
+    }
+    
+    // Check if this tag is allowed in the current mode
+    const QString tagName = startTag->getName().toUpper();
+
+    if (!isTagAllowedInMode(tagName, currentMode)) {
+        return false;
+    }
+    
+    return true;
+}
+
+bool TMxpMudlet::isTagAllowedInMode(const QString& tagName, TMXPMode mode) const
+{
+    // In SECURE or TEMP_SECURE mode, all tags are allowed
+    if (mode == MXP_MODE_SECURE || mode == MXP_MODE_TEMP_SECURE) {
+        return true;
+    }
+    
+    // In LOCKED mode, no tags are allowed (handled in startTagReceived)
+    if (mode == MXP_MODE_LOCKED) {
+        return false;
+    }
+    
+    // In OPEN mode, only specific formatting tags are allowed
+    // According to MXP spec: https://www.zuggsoft.com/zmud/mxp.htm
+    // OPEN tags are: B, I, U, S, C (color), H (high), FONT, NOBR, P, BR, SBR
+    // Plus their variations: BOLD, ITALIC, UNDERLINE, STRIKEOUT, EM, STRONG, HIGH
+    static const QSet<QString> openModeTags = {
+        qsl("B"), qsl("BOLD"), qsl("STRONG"),
+        qsl("I"), qsl("ITALIC"), qsl("EM"),
+        qsl("U"), qsl("UNDERLINE"),
+        qsl("S"), qsl("STRIKEOUT"),
+        qsl("C"), qsl("COLOR"),
+        qsl("H"), qsl("HIGH"),
+        qsl("FONT"),
+        qsl("NOBR"),
+        qsl("P"),
+        qsl("BR"), qsl("SBR")
+    };
+    
+    return openModeTags.contains(tagName);
+}
+
+QByteArray TMxpMudlet::getEncoding() const
+{
+    return mpHost->mTelnet.getEncoding();
+}
+
+int TMxpMudlet::getWrapWidth() const
+{
+    // Return the host's configured wrap width, with a sensible minimum
+    return qMax(mpHost->mWrapAt, 40);
+}
+
+void TMxpMudlet::insertText(const QString& text)
+{
+    // Insert text by feeding it back through the MXP processing pipeline
+    // This ensures it respects the current line buffer state
+    if (mpHost && mpHost->mpConsole) {
+        std::string textToInsert = text.toStdString();
+        mpHost->mpConsole->buffer.translateToPlainText(textToInsert, false);
+    }
+}
+
+bool TMxpMudlet::shouldLockModeToSecure() const
+{
+    return mpHost && mpHost->getForceMXPProcessorOn();
 }

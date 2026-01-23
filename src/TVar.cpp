@@ -21,7 +21,6 @@
 
 
 #include "TVar.h"
-#include <lua.h> // Needed for LUA_TNONE in Constructors!
 
 /*
  * LUA type values from lua.h for lua 5.1:
@@ -38,51 +37,28 @@
  */
 
 TVar::TVar()
-: hidden(false)
-, kpointer(Q_NULLPTR)
-, vpointer(Q_NULLPTR)
-, saved(false)
-, reference(false)
-, parent(Q_NULLPTR)
-, name(QString())
-, kType(LUA_TNONE)
-, value(QString())
-, vType(LUA_TNONE)
-, nkType(LUA_TNONE)
-, nName(QString())
 {
 }
 
 TVar::TVar(TVar* p)
-: hidden(false)
-, kpointer(Q_NULLPTR)
-, vpointer(Q_NULLPTR)
-, saved(false)
-, reference(false)
-, parent(p)
-, name(QString())
-, kType(LUA_TNONE)
-, value(QString())
-, vType(LUA_TNONE)
-, nkType(LUA_TNONE)
-, nName(QString())
+: parent(p)
 {
 }
 
 TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, const int vt)
-: hidden(false)
-, kpointer(Q_NULLPTR)
-, vpointer(Q_NULLPTR)
-, saved(false)
-, reference(false)
-, parent(p)
+: parent(p)
 , name(kName)
-, kType(kt)
+, keyType(kt)
 , value(val)
-, vType(vt)
-, nkType(LUA_TNONE)
-, nName(QString())
+, valueType(vt)
 {
+}
+
+TVar::~TVar()
+{
+    // Delete all children recursively
+    qDeleteAll(children);
+    children.clear();
 }
 
 void TVar::setReference(const bool s)
@@ -95,15 +71,15 @@ void TVar::addChild(TVar* c)
     children.append(c);
 }
 
-QString TVar::getName()
+QString TVar::getName() const
 {
     return name;
 }
 
 bool TVarLessThan(TVar* varA, TVar* varB)
 {
-    QString a = varA->getName();
-    QString b = varB->getName();
+    const QString a = varA->getName();
+    const QString b = varB->getName();
     bool isAOk = false;
     bool isBOk = false;
 
@@ -141,33 +117,33 @@ void TVar::removeChild(TVar* t)
     children.removeAll(t);
 }
 
-int TVar::getKeyType()
+int TVar::getKeyType() const
 {
-    return kType;
+    return keyType;
 }
 
-QString TVar::getValue()
+QString TVar::getValue() const
 {
     return value;
 }
 
-int TVar::getValueType()
+int TVar::getValueType() const
 {
-    return vType;
+    return valueType;
 }
 
 void TVar::setNewName(const QString& n, const int t)
 {
     nName = n;
-    nkType = t;
+    newKeyType = t;
 }
 
-int TVar::getNewKeyType()
+int TVar::getNewKeyType() const
 {
-    return nkType;
+    return newKeyType;
 }
 
-QString TVar::getNewName()
+QString TVar::getNewName() const
 {
     return nName;
 }
@@ -175,9 +151,9 @@ QString TVar::getNewName()
 void TVar::clearNewName()
 {
     name = nName;
-    kType = nkType;
+    keyType = newKeyType;
     nName = QString();
-    nkType = LUA_TNIL; // CHECK: Was 0 but perhaps it should have been -1 (LUA_TNONE ?)
+    newKeyType = LUA_TNIL; // CHECK: Was 0 but perhaps it should have been -1 (LUA_TNONE ?)
 }
 
 bool TVar::setValue(const QString& val)
@@ -189,20 +165,20 @@ bool TVar::setValue(const QString& val)
 bool TVar::setValue(const QString& val, const int t)
 {
     value = val;
-    vType = t;
+    valueType = t;
     return true;
 }
 
 bool TVar::setValueType(const int t)
 {
-    vType = t;
+    valueType = t;
     return true;
 }
 
 bool TVar::setName(const QString& n, const int kt)
 {
     name = n;
-    kType = kt;
+    keyType = kt;
     return true;
 }
 

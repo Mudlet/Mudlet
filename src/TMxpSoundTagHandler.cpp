@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Mike Conley - sousesider[at]gmail.com           *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,81 +18,103 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMedia.h"
+#include "TMediaData.h"
 #include "TMxpSoundTagHandler.h"
 #include "TMxpClient.h"
 
 TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    TMediaData mediaData {};
+    Q_UNUSED(ctx)
 
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
-    mediaData.setMediaType(TMediaData::MediaTypeSound);
-    mediaData.setMediaFileName(tag->getAttributeValue("FName"));
+    const QString fileName = extractFileName(tag);
 
-    if (tag->hasAttribute("V")) {
-        QString volume = tag->getAttributeValue("V");
+    if (!fileName.isEmpty()) {
+        const QString volume = extractVolume(tag);
+        const QString loops = extractLoops(tag);
+        const QString priority = extractPriority(tag);
+        const QString type = extractType(tag);
+        const QString url = extractUrl(tag);
+
+        TMediaData mediaData {};
+
+        mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
+        mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+        mediaData.setMediaFileName(fileName);
 
         if (!volume.isEmpty()) {
             mediaData.setMediaVolume(volume.toInt());
-
-            if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-                // Support preloading
-            } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
-                mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-            } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
-                mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
-            }
+        } else {
+            mediaData.setMediaVolume(TMediaData::MediaVolumeMax); // MSP the Max is the Default
         }
-    }
-
-    if (tag->hasAttribute("L")) {
-        QString loops = tag->getAttributeValue("L");
 
         if (!loops.isEmpty()) {
             mediaData.setMediaLoops(loops.toInt());
 
-            if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
+            if (mediaData.mediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.mediaLoops() == 0) {
                 mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
             }
+        } else {
+            mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
         }
-    }
-
-    if (tag->hasAttribute("P")) {
-        QString priority = tag->getAttributeValue("P");
 
         if (!priority.isEmpty()) {
             mediaData.setMediaPriority(priority.toInt());
 
-            if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
+            if (mediaData.mediaPriority() > TMediaData::MediaPriorityMax) {
                 mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
-            } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
+            } else if (mediaData.mediaPriority() < TMediaData::MediaPriorityMin) {
                 mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
             }
+        } else {
+            mediaData.setMediaPriority(TMediaData::MediaPriorityDefault);
         }
-    }
-
-    if (tag->hasAttribute("T")) {
-        QString type = tag->getAttributeValue("T");
 
         if (!type.isEmpty()) {
             mediaData.setMediaTag(type.toLower());
         }
-    }
-
-    if (tag->hasAttribute("U")) {
-        QString url = tag->getAttributeValue("U");
 
         if (!url.isEmpty()) {
             mediaData.setMediaUrl(url);
         }
-    }
 
-    if (mediaData.getMediaFileName() == "Off" && mediaData.getMediaUrl().isEmpty()) {
-        client.stopMedia(mediaData);
-    } else {
-        client.playMedia(mediaData);
+        if (mediaData.mediaFileName() == "Off" && mediaData.mediaUrl().isEmpty()) {
+            client.stopMedia(mediaData);
+        } else {
+            client.playMedia(mediaData);
+        }
     }
 
     return MXP_TAG_HANDLED;
+}
+
+QString TMxpSoundTagHandler::extractFileName(MxpStartTag* tag)
+{
+    return tag->getAttributeByNameOrIndex(qsl("fname"), 0);
+}
+
+QString TMxpSoundTagHandler::extractVolume(MxpStartTag* tag)
+{
+    return tag->getAttributeByNameOrIndex(qsl("v"), 1);
+}
+
+QString TMxpSoundTagHandler::extractLoops(MxpStartTag* tag)
+{
+    return tag->getAttributeByNameOrIndex(qsl("l"), 2);
+}
+
+QString TMxpSoundTagHandler::extractPriority(MxpStartTag* tag)
+{
+
+    return tag->getAttributeByNameOrIndex(qsl("p"), 3);
+}
+
+QString TMxpSoundTagHandler::extractType(MxpStartTag* tag)
+{
+    return tag->getAttributeByNameOrIndex(qsl("t"), 4);
+}
+
+QString TMxpSoundTagHandler::extractUrl(MxpStartTag* tag)
+{
+    return tag->getAttributeByNameOrIndex(qsl("u"), 5);
 }

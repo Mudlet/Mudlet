@@ -21,11 +21,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_source_editor_find_area.h"
 #include <QTextEdit>
 #include <QKeyEvent>
-#include "post_guard.h"
 
 /*namespace Ui {
 class dlgSourceEditorFindArea;
@@ -45,6 +43,7 @@ signals:
     void signal_sourceEditorFindPrevious();
     void signal_sourceEditorFindNext();
     void signal_sourceEditorMovementNecessary();
+    void signal_sourceEditorReplace();
 };
 
 #endif // MUDLET_DLGSOURCEEDITORFINDAREA_H

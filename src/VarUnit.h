@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia..com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,11 +23,12 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include <QApplication>
 #include <QMap>
 #include <QSet>
 #include <QStringList>
-#include "post_guard.h"
+
+#include "utils.h"
 
 
 class TVar;
@@ -36,8 +38,11 @@ class QTreeWidgetItem;
 
 class VarUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(VarUnit) // Needed so we can use tr() even though VarUnit is NOT derived from QObject
+
 public:
     VarUnit();
+    ~VarUnit();
     QStringList varName(TVar*);
     QStringList shortVarName(TVar*);
     bool varExists(TVar*);
@@ -70,10 +75,12 @@ public:
 
 private:
     TVar* base;
-    QSet<QString> varList;
+    QSet<QString> variableSet;
+    // ?? variables
     QMap<QTreeWidgetItem*, TVar*> wVars;
+    // temporary variables
     QMap<QTreeWidgetItem*, TVar*> tVars;
-    QSet<const void*> pointers;
+    QSet<const void*> mPointers;
 };
 
 #endif // MUDLET_VARUNIT_H

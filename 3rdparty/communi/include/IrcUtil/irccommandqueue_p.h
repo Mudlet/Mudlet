@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -46,13 +46,13 @@ class IrcCommandQueuePrivate : public QObject,  public IrcCommandFilter
 public:
     IrcCommandQueuePrivate();
 
-    bool commandFilter(IrcCommand* cmd);
+    bool commandFilter(IrcCommand* cmd) override;
 
     void _irc_updateTimer();
     void _irc_sendBatch(bool force = false);
 
-    IrcCommandQueue* q_ptr;
-    IrcConnection* connection;
+    IrcCommandQueue* q_ptr = nullptr;
+    IrcConnection* connection = nullptr;
     QTimer timer;
     int batch;
     int interval;

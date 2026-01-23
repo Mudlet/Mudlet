@@ -18,25 +18,16 @@
  ***************************************************************************/
 #include "TStringUtils.h"
 
-QStringView TStringUtils::strip(QStringView str, QChar start, QChar end)
-{
-    int len = str.length();
-    if (len > 1 && str.front() == start && str.back() == end) {
-        return str.mid(1, len - 2);
-    }
-
-    return str;
-}
 
 bool TStringUtils::isQuote(QChar ch)
 {
-    return isOneOf(ch, QStringLiteral("\'\""));
+    return isOneOf(ch, qsl("\'\""));
 }
 
-bool TStringUtils::isOneOf(QChar ch, const QString& chars)
+bool TStringUtils::isOneOf(QChar inputCharacter, const QString& characterSet)
 {
-    for (const auto& o : chars) {
-        if (o == ch) {
+    for (const auto& setCharacter : characterSet) {
+        if (setCharacter == inputCharacter) {
             return true;
         }
     }
@@ -44,17 +35,4 @@ bool TStringUtils::isOneOf(QChar ch, const QString& chars)
     return false;
 }
 
-bool TStringUtils::isQuoted(QStringView ref)
-{
-    return TStringUtils::isQuote(ref.front()) && ref.front() == ref.back();
-}
 
-QStringView TStringUtils::unquote(QStringView ref)
-{
-    return isQuoted(ref) ? ref.mid(1, ref.size() - 2) : ref;
-}
-
-bool TStringUtils::isBetween(QStringView str, char first, char last)
-{
-    return str.front() == first && str.back() == last;
-}

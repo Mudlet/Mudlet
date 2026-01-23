@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -30,28 +31,16 @@
 class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
-enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE };
+enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE, HANDLER_INSERT_ENTITY_CUST, HANDLER_INSERT_ENTITY_SYS, HANDLER_INSERT_ENTITY_LIT };
 
 // handles the MXP protocol
 class TMxpProcessor
 {
-    // State of MXP system:
-    bool mMXP;
-    TMXPMode mMXP_MODE;
-    TMXPMode mMXP_DEFAULT;
-
-    // MXP delegated handlers
-    TMxpNodeBuilder mMxpTagBuilder;
-    TMxpTagProcessor mMxpTagProcessor;
-    TEntityHandler mEntityHandler;
-
-    TMxpClient* mpMxpClient;
-
 public:
     explicit TMxpProcessor(TMxpClient* pMxpClient)
-    : mMXP(false)
-    , mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN)
-    , mMxpTagBuilder(true), mEntityHandler(mMxpTagProcessor.getEntityResolver()), mpMxpClient(pMxpClient)
+    : mMxpTagBuilder(true)
+    , mEntityHandler(mMxpTagProcessor.getEntityResolver())
+    , mpMxpClient(pMxpClient)
     {
         mpMxpClient->initialize(&mMxpTagProcessor);
     }
@@ -61,11 +50,33 @@ public:
     TMXPMode mode() const;
 
     void enable();
+    void disable();
     bool isEnabled() const;
     void resetToDefaultMode();
 
-    TMxpProcessingResult processMxpInput(char& ch);
+    TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);
+    QString getEntityValue() { return lastEntityValue; }
+    void setLastEntityValue(const QString& value) { lastEntityValue = value; }
+    TMxpTagProcessor& getMxpTagProcessor() { return mMxpTagProcessor; }
+    TMxpNodeBuilder& getMxpTagBuilder() { return mMxpTagBuilder; }
+
+private:
+    // State of MXP system:
+    bool mMXP = false;
+    TMXPMode mMXP_MODE = MXP_MODE_OPEN;
+    TMXPMode mMXP_DEFAULT = MXP_MODE_OPEN;
+
+    // MXP delegated handlers
+    TMxpNodeBuilder mMxpTagBuilder;
+    TMxpTagProcessor mMxpTagProcessor;
+    // The creation of this element requires the preceding one:
+    TEntityHandler mEntityHandler;
+
+    TMxpClient* mpMxpClient = nullptr;
+
+    // value of the last resolved entity:
+    QString lastEntityValue;
 };
 
 #endif //MUDLET_TMXPPROCESSOR_H

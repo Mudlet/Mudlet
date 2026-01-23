@@ -2,7 +2,7 @@
 #define DISCORD_H
 /***************************************************************************
  *   Copyright (C) 2018 by Vadim Peretokin - vperetokin@gmail.com          *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,17 +22,14 @@
 
 #include "Host.h"
 
-#include "pre_guard.h"
 #include <functional>
 #include <utility>
 #include <QDebug>
-#include <QReadWriteLock>
 #include <QTimer>
 #include <QTimerEvent>
 #include <QLibrary>
 #include "../3rdparty/discord/rpc/include/discord_register.h"
 #include "../3rdparty/discord/rpc/include/discord_rpc.h"
-#include "post_guard.h"
 
 /*
  * From the discord headers and on-line documentation:
@@ -72,13 +69,16 @@ class localDiscordPresence {
 
 public:
     localDiscordPresence()
-    : mState(), mDetails()
-    , mStartTimestamp(0), mEndTimestamp(0)
-    , mLargeImageKey(), mLargeImageText()
-    , mSmallImageKey(), mSmallImageText()
-    , mPartyId(), mPartySize(0), mPartyMax(0)
-    , mMatchSecret(), mJoinSecret(), mSpectateSecret()
-    , mInstance(1)
+    : mState()
+    , mDetails()
+    , mLargeImageKey()
+    , mLargeImageText()
+    , mSmallImageKey()
+    , mSmallImageText()
+    , mPartyId()
+    , mMatchSecret()
+    , mJoinSecret()
+    , mSpectateSecret()
     {
     }
 
@@ -93,8 +93,8 @@ public:
     void setJoinSecret(const QString&);
     void setMatchSecret(const QString&);
     void setSpectateSecret(const QString&);
-    void setPartySize(const int n) { mPartySize = n; }
-    void setPartyMax(const int n) { mPartyMax = n; }
+    void setPartySize(const int size) { mPartySize = size; }
+    void setPartyMax(const int maximum) { mPartyMax = maximum; }
     DiscordRichPresence convert() const;
     QString getStateText() const { return mState; }
     QString getDetailText() const { return mDetails; }
@@ -115,29 +115,29 @@ public:
 private:
     char mState[128];
     char mDetails[128];
-    int64_t mStartTimestamp;
-    int64_t mEndTimestamp;
+    int64_t mStartTimestamp = 0;
+    int64_t mEndTimestamp = 0;
     char mLargeImageKey[32];
     char mLargeImageText[128];
     char mSmallImageKey[32];
     char mSmallImageText[128];
     char mPartyId[128];
-    int mPartySize;
-    int mPartyMax;
+    int mPartySize = 0;
+    int mPartyMax = 0;
     char mMatchSecret[128];
     char mJoinSecret[128];
     char mSpectateSecret[128];
-    int8_t mInstance;
+    int8_t mInstance = 1;
 };
 
 #ifndef QT_NO_DEBUG_STREAM
 // Note "inline" is REQUIRED:
 inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
 {
-    QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
+    const QDebugStateSaver saver(debug);
+    Q_UNUSED(saver)
 
-    QString result = QStringLiteral("localDiscordPresence(\n"
+    QString result = qsl("localDiscordPresence(\n"
                                     "    mDetails: \"%1\"  mState: \"%2\" mInstance: %3\n"
                                     "    mLargeImageKey: \"%4\"  mLargeImageText: \"%5\" \n"
                                     "    mSmallImageKey: \"%6\"  mSmallImageText: \"%7\" \n")
@@ -146,7 +146,7 @@ inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
                           ldp.getLargeImageKey(), ldp.getLargeImageText(),
                           ldp.getSmallImageKey(), ldp.getSmallImageText());
 
-    result.append(QStringLiteral("    mPartyId: \"%1\"  mPartySize: %2 mPartyMax %3\n"
+    result.append(qsl("    mPartyId: \"%1\"  mPartySize: %2 mPartyMax %3\n"
                                  "    mMatchSecret: \"%4\"  mJoinSecret: \"%5\" mSpectateSecret \"%6\"\n"
                                  "    mStartTimeStamp: %7  mEndTimeStamp: %8)\n")
                   .arg(ldp.getPartyId(), QString::number(ldp.getPartySize()), QString::number(ldp.getPartyMax()),
@@ -185,6 +185,7 @@ public:
     void setParty(Host*, int);
     void setParty(Host*, int, int);
     bool setApplicationID(Host*, const QString&);
+    void resetData(Host*);
     QString getApplicationId(Host* pHost) const;
 
     // These retrieve the cached data:
@@ -217,7 +218,7 @@ private:
 
     void timerEvent(QTimerEvent *event) override;
 
-    DiscordEventHandlers* mpHandlers;
+    DiscordEventHandlers* mpHandlers = nullptr;
 
     // These are function pointers to functions located in the Discord RPC library:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -232,7 +233,7 @@ private:
     // std::function<void(const char*, int)> Discord_Respond;
     // std::function<void(DiscordEventHandlers*)> Discord_UpdateHandlers;
 
-    bool mLoaded;
+    bool mLoaded = false;
 
     // Key is a Application Id, Value is a pointer to a local copy of the data
     // currently held for that presence:
@@ -268,8 +269,6 @@ private:
     // https://github.com/discordapp/discord-rpc/issues/202
     QString mCurrentApplicationId;
 
-    // Protect the four values after this one from async processes:
-    static QReadWriteLock smReadWriteLock;
     // These are needed to validate the local user's presence on Discord to
     // the one that they want to be associated with a profile's character name
     // - it may be desired to not reveal the character name on Discord until

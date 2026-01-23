@@ -23,11 +23,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMap>
 #include <QString>
 #include <QVector>
-#include "post_guard.h"
 
 #include "MxpTag.h"
 #include "TEntityResolver.h"
@@ -49,7 +47,6 @@ class TMxpTagProcessor : public TMxpContext
 
 public:
     TMxpTagProcessor();
-    TMxpTagHandlerResult process(TMxpContext& ctx, TMxpClient& client, const std::string& currentToken);
 
     TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;
     void handleContent(char ch) override;

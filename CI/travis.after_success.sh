@@ -1,32 +1,27 @@
 #!/bin/bash
 
-if [ "${TRAVIS_REPO_SLUG}" != "Mudlet/Mudlet" ]; then
+if { [ -n "$GITHUB_REPOSITORY" ] && [ "${GITHUB_REPOSITORY}" != "Mudlet/Mudlet" ]; } then
   exit 0
 fi
 
-if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-  echo Deploy on linux.
+if [ "${RUNNER_OS}" = "Linux" ]; then
+  echo Deploy on Linux.
   . CI/travis.linux.after_success.sh;
-fi
-if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-  echo Deploy on OSX.
+elif [ "${RUNNER_OS}" = "macOS" ]; then
+  echo Deploy on macOS.
   . CI/travis.osx.after_success.sh;
-fi
-
-if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
-  prId=" ,#${TRAVIS_PULL_REQUEST}"
-fi
-
-if [ ! -z "${DEPLOY_URL}" ]; then
-  curl \
-    --data-urlencode "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${TRAVIS_OS_NAME}${prId}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
-    https://webhooks.gitter.im/e/cc99072d43b642c4673a
 fi
 
 echo ""
 echo "******************************************************"
 echo ""
-echo "Finished building Mudlet ${VERSION}${MUDLET_VERSION_BUILD}"
+if [ -z ${MUDLET_VERSION_BUILD} ]; then
+  # A release build
+  echo "Finished building Mudlet ${VERSION}"
+else
+  # Not a release build so include the details including the Git SHA1 in the message
+  echo "Finished building Mudlet ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+fi
 if [ ! -z "${DEPLOY_URL}" ]; then
   echo "Deployed the output to ${DEPLOY_URL}"
 fi

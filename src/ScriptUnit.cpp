@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +25,13 @@
 
 #include "Host.h"
 #include "TScript.h"
+
+void ScriptUnit::resetStats()
+{
+    statsItemsTotal = 0;
+    statsTempItems = 0;
+    statsActiveItems = 0;
+}
 
 void ScriptUnit::_uninstall(TScript* pChild, const QString& packageName)
 {
@@ -117,7 +125,6 @@ void ScriptUnit::removeScriptRootNode(TScript* pT)
 
 TScript* ScriptUnit::getScript(int id)
 {
-    QMutexLocker locker(&mScriptUnitLock);
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
     } else {
@@ -171,8 +178,6 @@ void ScriptUnit::addScript(TScript* pT)
         return;
     }
 
-    QMutexLocker locker(&mScriptUnitLock);
-
     if (!pT->getID()) {
         pT->setID(getNewID());
     }
@@ -199,22 +204,74 @@ int ScriptUnit::getNewID()
     return ++mMaxID;
 }
 
-void ScriptUnit::compileAll()
+void ScriptUnit::compileAll(bool saveLoadingError)
 {
     for (auto script : mScriptRootNodeList) {
         if (script->isActive()) {
-            script->compileAll();
+            script->compileAll(saveLoadingError);
         }
+    }
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->doCleanReset();
     }
 }
 
-QVector<int> ScriptUnit::findScriptId(const QString& name) const
+std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
-    QVector<int> Ids;
-    for (auto script : mScriptMap) {
-        if (script->getName() == name) {
-            Ids.append(script->getID());
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : std::as_const(mScriptMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : std::as_const(mScriptMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
         }
     }
-    return Ids;
+    return ids;
+}
+
+void ScriptUnit::assembleReport(TScript* pItem)
+{
+    std::list<TScript*>* childrenList = pItem->mpMyChildrenList;
+    for (auto pChild : *childrenList) {
+        ++statsItemsTotal;
+        if (pChild->isActive()) {
+            ++statsActiveItems;
+        }
+        if (pChild->isTemporary()) {
+            ++statsTempItems;
+        }
+        assembleReport(pChild);
+    }
+}
+
+std::tuple<QString, int, int, int> ScriptUnit::assembleReport()
+{
+    resetStats();
+    for (auto pItem : mScriptRootNodeList) {
+        ++statsItemsTotal;
+        if (pItem->isActive()) {
+            ++statsActiveItems;
+        }
+        if (pItem->isTemporary()) {
+            ++statsTempItems;
+        }
+        assembleReport(pItem);
+    }
+    QStringList msg;
+    msg << QLatin1String("Scripts current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("tempScripts current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
+        << QLatin1String("active Scripts: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    return {
+        msg.join(QString()),
+        statsItemsTotal,
+        statsTempItems,
+        statsActiveItems
+    };
 }

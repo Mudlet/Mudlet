@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022-2023 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,9 +24,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QString>
-#include "post_guard.h"
 
 #include <iostream>
 #include <list>
@@ -35,12 +34,13 @@ template <class T>
 class Tree
 {
 public:
-    explicit Tree();
+    Tree();
     explicit Tree(T* parent);
     virtual ~Tree();
 
     T* getParent() const { return mpParent; }
     std::list<T*>* getChildrenList() const;
+    std::list<T*> getAncestorList() const;
     bool hasChildren() const { return (!mpMyChildrenList->empty()); }
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
@@ -58,23 +58,34 @@ public:
     void setShouldBeActive(bool b);
     bool isTemporary() const;
     void setTemporary(bool state);
-    // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
+    // Returns true if all the ancestors of this node are active. If there are no ancestors it also returns true.
     bool ancestorsActive() const;
     QString& getError();
     void setError(QString);
     bool state() const;
+/* No longer used - most cases were accessing the member directly
     QString getPackageName() const { return mPackageName; }
     void setPackageName(const QString& n) { mPackageName = n; }
+*/
+/* Not used, the member was not either
     void setModuleName(const QString& n) { mModuleName = n; }
     QString getModuleName() const { return mModuleName; }
-    bool isFolder() { return mFolder; }
-    void setIsFolder(bool b) { mFolder = b; }
+*/
+    bool isFolder() const { return mFolder; }
+    void setIsFolder(bool b)
+    {
+        mFolder = b;
+        // Allow the folder to be enabled
+        if (b) {
+            mOK_init = true;
+        }
+    }
 
     T* mpParent;
     std::list<T*>* mpMyChildrenList;
     int mID;
     QString mPackageName;
-    QString mModuleName;
+// Not used:    QString mModuleName;
 
 protected:
     virtual bool canBeActivated() const;
@@ -92,29 +103,29 @@ private:
 
 template <class T>
 Tree<T>::Tree()
-: mpParent( nullptr )
+: mpParent(nullptr)
 , mpMyChildrenList( new std::list<T *> )
-, mID( 0 )
-, mOK_init( true )
-, mOK_code( true )
-, mActive( false )
-, mUserActiveState( false )
-, mTemporary( false )
-, mFolder( false )
+, mID(0)
+, mOK_init(true)
+, mOK_code(true)
+, mActive(false)
+, mUserActiveState(false)
+, mTemporary(false)
+, mFolder(false)
 {
 }
 
 template <class T>
 Tree<T>::Tree( T * pParent )
-: mpParent( pParent )
+: mpParent(pParent)
 , mpMyChildrenList( new std::list<T *> )
-, mID( 0 )
-, mOK_init( true )
-, mOK_code( true )
-, mActive( false )
-, mUserActiveState( false )
-, mTemporary( false )
-, mFolder( false )
+, mID(0)
+, mOK_init(true)
+, mOK_code(true)
+, mActive(false)
+, mUserActiveState(false)
+, mTemporary(false)
+, mFolder(false)
 {
     if (pParent) {
         pParent->addChild(static_cast<T*>(this));
@@ -132,20 +143,18 @@ Tree<T>::~Tree()
         delete pChild;
     }
     delete mpMyChildrenList;
+    mpMyChildrenList = nullptr;
     if (mpParent) {
         mpParent->popChild(static_cast<T*>(this)); // tell parent about my death
-        // FIXME: std::uncaught_exception() is deprecated in C++17 and is to be
-        // removed in C++20 - and this throws out a lot of build time warnings
-        // that are currently being suppressed by a `-Wno-deprecated-declarations`
-        // but which might also be masking issues in other areas:
-        if (std::uncaught_exception()) {
+        if (std::uncaught_exceptions()) {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }
     }
 }
 
 template <class T>
-void Tree<T>::setTemporary(const bool state) {
+void Tree<T>::setTemporary(const bool state)
+{
     mTemporary = state;
 }
 
@@ -223,6 +232,10 @@ void Tree<T>::deactivate()
 template <class T>
 bool Tree<T>::isActive() const
 {
+    // Check if object is in a valid state (not being destroyed)
+    if (!mpMyChildrenList) {
+        return false;
+    }
     return (mActive && canBeActivated());
 }
 
@@ -284,6 +297,18 @@ template <class T>
 std::list<T*>* Tree<T>::getChildrenList() const
 {
     return mpMyChildrenList;
+}
+
+template <class T>
+std::list<T*> Tree<T>::getAncestorList() const
+{
+    std::list<T*> ancestorList;
+    auto node = mpParent;
+    while (node) {
+        ancestorList.push_back(node);
+        node = node->mpParent;
+    }
+    return ancestorList;
 }
 
 template <class T>

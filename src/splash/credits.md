@@ -1,0 +1,24 @@
+Other:
+- 01: SlySven
+- 02: SlySven
+- 03: SlySven
+- 04: SlySven with Prawny via https://pixabay.com/illustrations/anatomy-eye-eyeball-sight-vision-2030234/
+- 05: SlySven with geralt via https://pixabay.com/illustrations/black-hole-galaxy-science-space-4092609/
+- 06: SlySven with TheDigitalArtist via https://pixabay.com/illustrations/brick-wall-brick-mortar-wall-652490/
+- 07: Leris
+- 08: Leris with Carrion Fields via telnet://carrionfields.net:4449
+- 09: Leris
+- 10: Leris with garten-gg via https://pixabay.com/illustrations/antique-car-car-racing-run-1163081/
+- 11: Leris with mohamed_hassan via https://pixabay.com/illustrations/start-line-starting-new-year-2019-3449607/
+- 12: Leris with susannp4 via https://pixabay.com/illustrations/forest-trees-landscape-1699079/
+- 13: Leris with Hokusay via https://pixabay.com/illustrations/home-forest-mountain-summer-spring-7675773/
+- 14: Leris with Thanh_Nguyen_SLQ via https://pixabay.com/illustrations/korea-street-photo-art-city-road-6757629/
+- 15: Leris with qimono via https://pixabay.com/illustrations/maze-labyrinth-solution-lost-1804499/
+- 16: Leris with Darkmoon_Art via https://pixabay.com/illustrations/ruins-towers-trees-mountains-7820436/
+- 17: Leris with vinsky2002 via https://pixabay.com/illustrations/autumn-lights-tree-plant-green-4903009/
+- 18: Leris with Three-shots via https://pixabay.com/illustrations/elephant-dust-road-africa-savannah-2066383/
+- 19: Leris with Darkmoon_Art via https://pixabay.com/illustrations/trees-starry-sky-monk-rock-moss-4324616/
+- 20: Leris with DimaDim_art via https://pixabay.com/illustrations/giraffe-savannah-animals-africa-5128394/
+- 21: Leris with Hokusay via https://pixabay.com/illustrations/home-forest-mountain-summer-spring-7675774/
+- 22: Leris with Club Night (1907) by George Bellows via https://commons.wikimedia.org/wiki/Paintings_by_George_Wesley_Bellows
+- 23: Leris with ascii art generator

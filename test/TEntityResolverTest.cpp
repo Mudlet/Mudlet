@@ -2,6 +2,7 @@
 #include <QMap>
 #include <TEntityResolver.h>
 #include <QtTest/QtTest>
+#include "utils.h"
 
 class TEntityResolverTest : public QObject {
 Q_OBJECT
@@ -23,16 +24,21 @@ private slots:
         QCOMPARE(resolver.getResolution("&lt;"), "<");
         QCOMPARE(resolver.getResolution("&amp;"), "&");
         QCOMPARE(resolver.getResolution("&quot;"), "\"");
+        QCOMPARE(resolver.getResolution("&Uacute;"), "Ú");
+        QCOMPARE(resolver.getResolution("&uacute;"), "ú");
     }
 
     void testStandardEntitiesCaseInsensitive()
     {
         TEntityResolver resolver;
+        TEntityType type;
 
         QCOMPARE(resolver.getResolution("&GT;"), ">");
         QCOMPARE(resolver.getResolution("&Lt;"), "<");
         QCOMPARE(resolver.getResolution("&AmP;"), "&");
         QCOMPARE(resolver.getResolution("&QUOT;"), "\"");
+        QCOMPARE(resolver.getResolution("&Copy;", true, &type), "©");
+        QCOMPARE(type, ENTITY_TYPE_SYSTEM);
     }
 
     void testDecimalCode()
@@ -57,6 +63,7 @@ private slots:
     void testRegisteredEntities()
     {
         TEntityResolver resolver;
+        TEntityType type;
 
         // Examples from MXP specification https://www.zuggsoft.com/zmud/mxp.htm#ENTITY
         resolver.registerEntity("&Version;", "6.15");
@@ -65,7 +72,11 @@ private slots:
 
         QCOMPARE(resolver.getResolution("&VERSION;"), "6.15");
         QCOMPARE(resolver.getResolution("&Start;"), "<em>");
-        QCOMPARE(resolver.getResolution("&end;"), "</em>");
+        QCOMPARE(resolver.getResolution("&end;", true, &type), "</em>");
+        QCOMPARE(type, ENTITY_TYPE_CUSTOM);
+        // Check if disabling resolution of custom entities works and is properly signalled
+        QCOMPARE(resolver.getResolution("&end;", false, &type), "&end;");
+        QCOMPARE(type, ENTITY_TYPE_UNKNOWN);
     }
 
     void testRegisterEntityAsChar()
@@ -106,8 +117,8 @@ private slots:
     void testCustomInterpolation()
     {
         const QMap<QString, QString> attributes = {
-                {QStringLiteral("&name;"), QStringLiteral("drunk sailor")},
-                {QStringLiteral("&desc;"), QStringLiteral("A drunk sailor is lying here")}
+                {qsl("&name;"), qsl("drunk sailor")},
+                {qsl("&desc;"), qsl("A drunk sailor is lying here")}
         };
 
         auto mapping = [attributes](auto& attr) {

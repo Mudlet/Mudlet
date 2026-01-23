@@ -23,30 +23,32 @@
 #include "TEntityHandler.h"
 
 // returns true if the char is handled by the EntityHandler (i.e. it is part of an entity)
-bool TEntityHandler::handle(char ch)
+bool TEntityHandler::handle(char c, bool resolveCustomEntities)
 {
-    if (ch == ';' && !mCurrentEntity.isEmpty()) { // END OF ENTITY
-        mCurrentEntity.append(ch);
-
-        QString resolved = mpEntityResolver.getResolution(mCurrentEntity);
-        // we only get the last character, current implementation of TBuffer loop is based on one char at a time
-        // TODO: it could be interesting to have a way to send longer sequences to the buffer
-        mResult = resolved.back().toLatin1();
-
-        mIsResolved = true;
-        mCurrentEntity.clear();
+    const bool isLegalNamedEntityChar = isalnum(c) ||
+                                        c == '#' || c == '.' || c == '-' ||
+                                        c == '_' || c == '&' || c == ';';
+    
+    if (!mCurrentEntity.isEmpty() || c == '&') {
+        mCurrentEntity.append(c);
+        if (c == ';') {
+            mResult = mpEntityResolver.getResolution(mCurrentEntity, resolveCustomEntities, &entityType);
+            mIsResolved = true;
+            mCurrentEntity.clear();
+        } else if (!isLegalNamedEntityChar) {
+            mResult = mCurrentEntity;
+            mIsResolved = true;
+            entityType = ENTITY_TYPE_UNKNOWN;
+            mCurrentEntity.clear();
+        } else {
+            mIsResolved = false;
+            entityType = ENTITY_TYPE_UNKNOWN;
+        }
         return true;
-    } else if (ch == '&' || !mCurrentEntity.isEmpty()) { // START OR MIDDLE OF ENTITY
-        mIsResolved = false;
-        mCurrentEntity.append(ch);
-        return true;
-    } else if (mCurrentEntity.length() > 7) { // LONG ENTITY? MAYBE INVALID... IGNORE IT
-        reset();
-        return false;
-    } else {
-        return false;
     }
+    return false;
 }
+
 bool TEntityHandler::isEntityResolved() const
 {
     return mIsResolved;
@@ -57,7 +59,7 @@ void TEntityHandler::reset()
     mCurrentEntity.clear();
     mIsResolved = false;
 }
-char TEntityHandler::getResultAndReset()
+QString TEntityHandler::getResultAndReset()
 {
     reset();
     return mResult;

@@ -24,10 +24,10 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
+#include <QDebug>
 #include <QPointer>
 #include <QStringList>
-#include "post_guard.h"
+#include <optional>
 
 class Host;
 class TEvent;
@@ -43,20 +43,29 @@ public:
     TScript(TScript* parent, Host* pHost);
     TScript(const QString& name, Host* pHost);
 
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
     void setName(const QString& name) { mName = name; }
-    void compile();
-    void compileAll();
-    bool compileScript();
+    void compile(bool saveLoadingError = false);
+    void compileAll(bool saveLoadingError = false);
+    bool compileScript(bool saveLoadingError = false);
     void execute();
-    QString getScript() { return mScript; }
+    QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool registerScript();
     void callEventHandler(const TEvent&);
     void setEventHandlerList(QStringList handlerList);
-    QStringList getEventHandlerList() { return mEventHandlerList; }
-    bool exportItem;
-    bool mModuleMasterFolder;
+    QStringList getEventHandlerList() const { return mEventHandlerList; }
+    std::optional<QString> getLoadingError();
+    void setLoadingError(const QString& error);
+    void clearLoadingError();
+    QString packageName(TScript* pScript);
+    QString moduleName(TScript* pScript);
+    bool checkIfNew();
+    void unmarkAsNew();
+
+    bool exportItem = true;
+    bool mModuleMasterFolder = false;
+    bool mIsNew = true;
 
 private:
     TScript() = default;
@@ -64,9 +73,24 @@ private:
     QString mScript;
     QString mFuncName;
     QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled;
+    bool mNeedsToBeCompiled = true;
     QStringList mEventHandlerList;
-    bool mModuleMember;
+    bool mModuleMember = false;
+    std::optional<QString> mLoadingError;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+// Note "inline" is REQUIRED:
+inline QDebug& operator<<(QDebug& debug, const TScript* script)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver)
+    debug.nospace() << "TScript(" << script->getName() << ")";
+    debug.nospace() << ", script=" << script->getScript();
+    debug.nospace() << ", event handlers=" << script->getEventHandlerList();
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TSCRIPT_H

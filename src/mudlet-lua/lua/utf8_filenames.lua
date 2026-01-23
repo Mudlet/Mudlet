@@ -2,7 +2,8 @@
 -- Module: utf8_filenames
 ------------------------------------------------------------------------------------------------------------------------------
 -- Filename: utf8_filenames.lua
--- Version:  2019-01-17
+-- Version:  2019-07-13
+-- License:  MIT (see at the end of this file)
 
 -- This module modifies standard Lua functions so that they work with UTF-8 filenames on Windows:
 --    io.open
@@ -43,6 +44,9 @@
 -- The conversion from UTF-8 to "Windows ANSI codepage" is implemented according to mapping tables published at unicode.org.
 -- Mapping tables are stored in human-unreadable compressed form to significantly reduce module size.
 
+-- This version was forked from upstream by Vadim Peretokin and it has been modified to work with the
+-- Mudet MUD Client (https://www.mudlet.org) and uses a couple of Lua functions provided by that application
+-- that are NOT present in a normal Lua interpreter environment.
 
 local test_data_integrity = false  -- set to true if you are unsure about correctness of human-unreadable parts of this file
 
@@ -164,6 +168,12 @@ local function modify_lua_functions(all_compressed_mappings)
       print"-------------------------------------------------"
    end
 
+   --[[
+   The next couple of lines diverge from upstream as they use functions
+   that we provide ourselves that avoid the need to:
+   * probe the environment for the OS
+   * spawn an external OS command to extract a value from the Windows Registry
+   --]]
    if getOS() == "windows" then
 
       local codepage = getWindowsCodepage()
@@ -224,10 +234,8 @@ local function modify_lua_functions(all_compressed_mappings)
          function os.execute(command)
             if command then
                command = convert_from_utf8(command)
-               return orig_os_execute(command)
-            else
-               return orig_os_execute()
             end
+            return orig_os_execute(command)
          end
 
          local orig_io_open = io.open
@@ -258,10 +266,8 @@ local function modify_lua_functions(all_compressed_mappings)
          function dofile(filename)
             if filename then
                filename = convert_from_utf8(filename)
-               return orig_dofile(filename)
-            else
-               return orig_dofile()
             end
+            return orig_dofile(filename)
          end
 
          local orig_loadfile = loadfile
@@ -269,10 +275,8 @@ local function modify_lua_functions(all_compressed_mappings)
          function loadfile(filename, ...)
             if filename then
                filename = convert_from_utf8(filename)
-               return orig_loadfile(filename, ...)
-            else
-               return orig_loadfile()
             end
+            return orig_loadfile(filename, ...)
          end
 
          local orig_require = require
@@ -1302,3 +1306,31 @@ return modify_lua_functions{
       ZXcFgkq"'Fy1Y&1(9JUd}Ocsef`q@Mqhp9qF,L&bZ%{fJM?;=gO;]2C,fTC!8N)06E3>|]=],
 
 }
+
+--[[
+
+MIT License
+
+Copyright (c) 2019  Egor Skriptunoff
+Copyright (c) 2019  Vadim Peretokin <vperetokin@gmail.com>
+Copyright (c) 2021  Stephen Lyons <slysven@virginmedia.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+]]

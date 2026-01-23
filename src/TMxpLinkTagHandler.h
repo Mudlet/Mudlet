@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,7 +31,11 @@ class TMxpLinkTagHandler : public TMxpSingleTagHandler
     QString getHref(const MxpStartTag* tag);
 
 public:
-    TMxpLinkTagHandler() : TMxpSingleTagHandler("A"), mIsHrefInContent(false), mLinkId(0) {}
+    TMxpLinkTagHandler()
+    : TMxpSingleTagHandler("A")
+    , mIsHrefInContent(false)
+    , mLinkId(0)
+    {}
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;

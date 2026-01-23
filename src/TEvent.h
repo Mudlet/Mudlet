@@ -23,11 +23,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QStringBuilder>
 #include <QStringList>
-#include "post_guard.h"
 
 #define ARGUMENT_TYPE_NUMBER 0
 #define ARGUMENT_TYPE_STRING 1
@@ -47,7 +45,7 @@ public:
 // Note "inline" is REQUIRED:
 inline QDebug& operator<<(QDebug& debug, const TEvent& event)
 {
-    QDebugStateSaver saver(debug);
+    const QDebugStateSaver saver(debug);
     const int argCount = event.mArgumentList.count();
     const int typeCount = event.mArgumentTypeList.count();
     int i = 0;

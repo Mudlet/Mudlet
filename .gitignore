@@ -10,8 +10,42 @@ qrc_*.cpp
 *.qm
 *.autosave
 mudlet
+app-build.txt
+
+# Qt creator's clangd cache
+.cache
 
 # ignore macOS apps in general, but keep the Autoupdater from Sparkle
+3rdparty/boost/*
+3rdparty/cocoapods/*
 !3rdparty/sparkle/Sparkle.framework/Versions/A/Resources/Autoupdate.app
+
 translations/translated/lrelease_output.txt
 translations/translated/translation-stats.json
+CMakeLists.txt.user
+
+#CLion
+.idea
+cmake-build-debug
+cmake-build-minsizerel
+cmake-build-release
+cmake-build-relwithdebinfo
+
+#VS Code
+.vscode/*.code-workspace
+
+#Docker
+docker/docker-compose.override.yml
+docker/.env
+
+# Build information for Clang-based tools
+compile_commands.json
+
+#Visual Studio
+.vs
+out
+CMakeSettings.json
+
+# flatpak builder
+CI/.flatpak-builder
+CI/build-dir

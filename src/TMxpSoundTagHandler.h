@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Mike Conley - sousesider[at]gmail.com           *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,7 +27,16 @@
 class TMxpSoundTagHandler : public TMxpSingleTagHandler
 {
 public:
-    TMxpSoundTagHandler() : TMxpSingleTagHandler("SOUND") {}
+    TMxpSoundTagHandler()
+    : TMxpSingleTagHandler("SOUND")
+    {}
+
+    static QString extractFileName(MxpStartTag* tag);
+    static QString extractVolume(MxpStartTag* tag);
+    static QString extractLoops(MxpStartTag* tag);
+    static QString extractPriority(MxpStartTag* tag);
+    static QString extractType(MxpStartTag* tag);
+    static QString extractUrl(MxpStartTag* tag);
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };

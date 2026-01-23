@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z "${TRAVIS_TAG}" ]; then
+if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
   echo "Not a release build - skipping release validation."
   # don't use exit here:
   # https://docs.travis-ci.com/user/job-lifecycle#how-does-this-work-or-why-you-should-not-use-exit-in-build-steps
@@ -20,7 +20,7 @@ else
       error "mudlet.pro's VERSION variable isn't formatted following the semantic versioning rules in a release build."
     fi
 
-    VALID_BUILD=$(pcregrep --only-matching=1 ' +BUILD ? = ? ("")' < src/mudlet.pro)
+    VALID_BUILD=$(pcregrep --only-matching=1 'BUILD ? = ? ("")' < src/mudlet.pro)
     if [ "${VALID_BUILD}" != '""' ]; then
       error "mudlet.pro's BUILD variable isn't set to \"\" as it should be in a release build."
     fi
@@ -34,7 +34,7 @@ else
       error "CMakeLists.txt VERSION variable isn't formatted following the semantic versioning rules in a release build."
     fi
 
-    VALID_BUILD=$(pcregrep --only-matching=1 'set\(APP_BUILD ("")\)$' < CMakeLists.txt)
+    VALID_BUILD=$(pcregrep --only-matching=1 'set\(APP_BUILD ("")' < CMakeLists.txt)
     if [ "${VALID_BUILD}" != '""' ]; then
       error "CMakeLists.txt APP_BUILD variable isn't set to \"\" as it should be in a release build."
     fi
@@ -45,10 +45,6 @@ else
        error "Updater is disabled in a release build."
     fi
   }
-
-  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-    sudo apt-get install pcregrep
-  fi
 
   validate_qmake
   validate_cmake

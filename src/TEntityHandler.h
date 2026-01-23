@@ -26,22 +26,28 @@
 // Handles entity processing state and conversion of simple standard entities such as &gt; &lt; &amp; and &quot;
 class TEntityHandler
 {
+public:
+    TEntityHandler()
+    : TEntityHandler(TEntityResolver::scmDefaultResolver)
+    {}
+    explicit TEntityHandler(const TEntityResolver& pResolver)
+    : mpEntityResolver(pResolver)
+    {}
+
+    bool handle(char character, bool resolveCustomEntities);
+    void reset();
+
+    bool isEntityResolved() const;
+    QString getResultAndReset();
+    inline TEntityType getEntityType(void) {return entityType;}
+
 private:
     const TEntityResolver& mpEntityResolver;
 
     QString mCurrentEntity;
-    bool mIsResolved;
-    char mResult;
-
-public:
-    TEntityHandler() : TEntityHandler(TEntityResolver::scmDefaultResolver) {}
-    explicit TEntityHandler(const TEntityResolver& pResolver) : mpEntityResolver(pResolver), mIsResolved(false), mResult(0) {}
-
-    bool handle(char ch);
-    void reset();
-
-    bool isEntityResolved() const;
-    char getResultAndReset();
+    bool mIsResolved = false;
+    QString mResult;
+    TEntityType entityType = ENTITY_TYPE_UNKNOWN;
 };
 
 #endif //MUDLET_TENTITYHANDLER_H

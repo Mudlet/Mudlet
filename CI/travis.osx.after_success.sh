@@ -2,59 +2,98 @@
 
 set -e
 
+sign_and_notarize () {
+
+  local appBundle="$1"
+  codesign --deep -o runtime -s "$IDENTITY" "${appBundle}"
+  echo "Signed final .dmg"
+
+  for i in {1..3}; do
+    echo "Trying to notarize (attempt ${i})"
+    if xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
+      break
+    fi
+  done
+}
+
+sign_app_bundle () {
+
+  local appBundle="$1"
+  echo "Signing app bundle: ${appBundle}"
+  codesign -s "$IDENTITY" -o runtime --timestamp "${appBundle}"
+  echo "Successfully signed app bundle"
+
+  echo "Notarizing app bundle"
+  for i in {1..3}; do
+    echo "Trying to notarize app bundle (attempt ${i})"
+    if xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
+      echo "Successfully notarized app bundle"
+      break
+    fi
+  done
+
+  echo "Stapling notarization ticket to app bundle"
+  xcrun stapler staple "${appBundle}"
+}
+
+BUILD_DIR="${BUILD_FOLDER}"
+SOURCE_DIR="${GITHUB_WORKSPACE}"
+
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
 
-# we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
 
   # get commit date now before we check out an change into another git repository
-  COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
+  COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
   YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
-  git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
-  cd "${TRAVIS_BUILD_DIR}/../installers/osx"
+  cd "${BUILD_DIR}/../installers/osx"
 
-  # setup macOS keychain for code signing on development builds only,
-  # as Travis does not allow signing on usual PR builds
-  if [ ! -z "$CERT_PW" ]; then
+  # setup macOS keychain for code signing on ptb/release builds.
+  if [ -n "$MACOS_SIGNING_PASS" ]; then
     KEYCHAIN=build.keychain
     security create-keychain -p travis $KEYCHAIN
     security default-keychain -s $KEYCHAIN
     security unlock-keychain -p travis $KEYCHAIN
     security set-keychain-settings -t 3600 -u $KEYCHAIN
-    security import Certificates.p12 -k $KEYCHAIN -P "$CERT_PW" -T /usr/bin/codesign
-    OSX_VERSION=$(sw_vers -productVersion | cut -d '.' -f 1,2)
-    if [ "${OSX_VERSION}" != "10.11" ]; then
-      # This is a new command on 10.12 and above, so don't run it on 10.11 (lowest supported version)
-      security set-key-partition-list -S apple-tool:,apple: -s -k travis $KEYCHAIN
-    fi
+    security import Certificates.p12 -k $KEYCHAIN -P "$MACOS_SIGNING_PASS" -T /usr/bin/codesign
+    security set-key-partition-list -S apple-tool:,apple: -s -k travis $KEYCHAIN
     export IDENTITY="Developer ID Application"
     echo "Imported identity:"
     security find-identity
     echo "----"
   fi
 
-  ln -s "${TRAVIS_BUILD_DIR}" source
-
-  if [ -z "${TRAVIS_TAG}" ] && [ "${public_test_build}" != "true" ]; then # PR build
+  if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
-    appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
-    mv "source/build/Mudlet.app" "source/build/${appBaseName}.app"
+    appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}"
+    if [ -n "${GITHUB_REPOSITORY}" ]; then
+      mv "${BUILD_DIR}/src/mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
+    else
+      mv "${BUILD_DIR}/Mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
+    fi
 
     ./make-installer.sh "${appBaseName}.app"
 
-    if [ ! -z "$CERT_PW" ]; then
-      codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
-      echo "Signed final .dmg"
+    if [ -n "$MACOS_SIGNING_PASS" ]; then
+      sign_and_notarize "${HOME}/Desktop/${appBaseName}.dmg"
     fi
 
-    DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
-
+    echo "=== ... later, via Github ==="
+    # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
+    mkdir -p "${BUILD_DIR}/upload/"
+    mv "${HOME}/Desktop/${appBaseName}.dmg" "${BUILD_DIR}/upload/"
+    {
+      echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
+      echo "UPLOAD_FILENAME=${appBaseName}"
+    } >> "$GITHUB_ENV"
+    DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
   else # ptb/release build
-    app="${TRAVIS_BUILD_DIR}/build/Mudlet.app"
+    app="${BUILD_DIR}/build/mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
 
       if [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
@@ -63,51 +102,147 @@ if [ "${DEPLOY}" = "deploy" ]; then
       fi
 
       echo "== Creating a public test build =="
-      mv "$app" "source/build/Mudlet PTB.app"
-      app="source/build/Mudlet PTB.app"
+      if [ -n "${GITHUB_REPOSITORY}" ]; then
+        mv "${BUILD_DIR}/src/mudlet.app" "${BUILD_DIR}/Mudlet PTB.app"
+      else
+        mv "$app" "source/build/Mudlet PTB.app"
+      fi
+
+      app="${BUILD_DIR}/Mudlet PTB.app"
     else
       echo "== Creating a release build =="
     fi
 
-    # add ssh-key to ssh-agent for deployment
-    # shellcheck disable=2154
-    # the two "undefined" variables are defined by travis
-    if [ "${public_test_build}" != "true" ]; then
-      echo "=== Registering Mudlet SSH keys for release upload ==="
-      openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${TRAVIS_BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
-      eval "$(ssh-agent -s)"
-      chmod 600 /tmp/mudlet-deploy-key
-      ssh-add /tmp/mudlet-deploy-key
-    fi
-
     if [ "${public_test_build}" == "true" ]; then
-      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
+      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}" "$app"
     else
-      ./make-installer.sh -r "${VERSION}" "$app"
+      ./make-installer.sh -r "${VERSION}-${ARCH}" "$app"
     fi
 
-    if [ ! -z "$CERT_PW" ]; then
+    if [ ! -z "$MACOS_SIGNING_PASS" ]; then
       if [ "${public_test_build}" == "true" ]; then
-        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet PTB.dmg"
+        sign_and_notarize "${HOME}/Desktop/Mudlet PTB.dmg"
       else
-        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+        sign_and_notarize "${HOME}/Desktop/Mudlet.dmg"
       fi
-      echo "Signed final .dmg"
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"
+      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg"
     else
-      mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
+      mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg"
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      echo "=== Uploading public test build to make.mudlet.org ==="
-      DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"  "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" -O - -q)
+      echo "=== Setting up for Github upload ==="
+      mkdir -p "${BUILD_DIR}/upload/"
+      mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}.dmg" "${BUILD_DIR}/upload/"
+      {
+        echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
+        echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}"
+      } >> "$GITHUB_ENV"
+      DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
     else
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
+
+      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+        echo "Error: release not found as expected at $DEPLOY_URL"
+        exit 1
+      fi
+
+      SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" | awk '{print $1}')
+
+      # Create portable version (compressed .app bundle)
+      echo "=== Creating portable version ==="
+      PORTABLE_NAME="Mudlet-${VERSION}-${ARCH}-portable"
+      cd "${HOME}/Desktop"
+
+      # Find the app dynamically to avoid path issues
+      APP_PATH=$(find "${BUILD_DIR}" -name "mudlet.app" -type d | head -1)
+      if [ -n "$APP_PATH" ]; then
+        APP_DIR=$(dirname "$APP_PATH")
+        echo "Found mudlet.app at: $APP_PATH"
+        MACOS_DIR="${APP_PATH}/Contents/MacOS"
+        if [ -d "$MACOS_DIR" ]; then
+          touch "${MACOS_DIR}/portable.txt"
+          echo "Created portable.txt at: ${MACOS_DIR}/portable.txt"
+        else
+          echo "Error: Could not find MacOS directory at: $MACOS_DIR"
+          exit 1
+        fi
+
+        # Sign the app bundle specifically for portable version
+        if [ -n "$MACOS_SIGNING_PASS" ]; then
+          echo "Signing app bundle for portable version"
+          sign_app_bundle "$APP_PATH"
+        fi
+
+        tar -czf "${PORTABLE_NAME}.tar.gz" -C "$APP_DIR" "mudlet.app"
+      else
+        echo "Error: Could not find mudlet.app anywhere in ${BUILD_DIR}"
+        echo "Directory contents:"
+        find "${BUILD_DIR}" -name "*.app" -type d
+        exit 1
+      fi
+      PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
+
+      echo "=== Uploading portable version ==="
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+
+      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
+        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
+        exit 1
+      fi
+
+      if [ "${ARCH}" = "arm64" ]; then
+        FILE_CATEGORY="4"
+      else
+        FILE_CATEGORY="3"
+      fi
+
+      # Get current timestamp
+      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+      read -r day month year hour minute second <<< "$current_timestamp"
+
+      # Upload regular DMG version
+      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+      -F "file_type=2" \
+      -F "file_remote=$DEPLOY_URL" \
+      -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS)" \
+      -F "file_des=sha256: $SHA256SUM" \
+      -F "file_cat=${FILE_CATEGORY}" \
+      -F "file_permission=-1" \
+      -F "file_timestamp_day=$day" \
+      -F "file_timestamp_month=$month" \
+      -F "file_timestamp_year=$year" \
+      -F "file_timestamp_hour=$hour" \
+      -F "file_timestamp_minute=$minute" \
+      -F "file_timestamp_second=$second" \
+      -F "output=json" \
+      -F "do=Add File"
+
+      # Upload portable version
+      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+      -F "file_type=2" \
+      -F "file_remote=$PORTABLE_DEPLOY_URL" \
+      -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS Portable)" \
+      -F "file_des=sha256: $PORTABLE_SHA256SUM" \
+      -F "file_cat=${FILE_CATEGORY}" \
+      -F "file_permission=-1" \
+      -F "file_timestamp_day=$day" \
+      -F "file_timestamp_month=$month" \
+      -F "file_timestamp_year=$year" \
+      -F "file_timestamp_hour=$hour" \
+      -F "file_timestamp_minute=$minute" \
+      -F "file_timestamp_second=$second" \
+      -F "output=json" \
+      -F "do=Add File"
+
     fi
 
     # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
@@ -115,19 +250,25 @@ if [ "${DEPLOY}" = "deploy" ]; then
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
     if [ "${public_test_build}" == "true" ]; then
-      echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}" || true
+      echo "=== Downloading release feed ==="
+      downloadedfeed=$(mktemp)
+      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/mac/${ARCH_DBLSQD}" --output-document="$downloadedfeed"
+      echo "=== Generating a changelog ==="
+      cd "${SOURCE_DIR}" || exit
+      changelog=$(lua "${SOURCE_DIR}/CI/generate-changelog.lua" --mode ptb --releasefile "${downloadedfeed}")
 
-      echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}" || true
+      echo "=== Creating release in Dblsqd ==="
+      dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}" || true
+
+      # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}"
     fi
   fi
 
   # delete keychain just in case
-  if [ ! -z "$CERT_PW" ]; then
+  if [ ! -z "$MACOS_SIGNING_PASS" ]; then
     security delete-keychain $KEYCHAIN
   fi
 

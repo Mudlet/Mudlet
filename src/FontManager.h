@@ -21,9 +21,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QMap>
-#include "post_guard.h"
+#include <QMultiMap>
 
 class QString;
 
@@ -32,15 +31,19 @@ class FontManager
 {
 public:
     void addFonts();
-    void loadFont(const QString& filePath);
+    void loadFont(const QString& filePath, const QString& belongsTo = "main");
     bool fontAlreadyLoaded(const QString& filePath);
+    void unloadFonts(const QString& belongsTo);
+    void addEmojiFont();
 
 private:
     void loadFonts(const QString& folder);
-    void rememberFont(const QString& fileName, int fontID);
+    void rememberFont(const QString& fileName, int fontID, const QString& belongsTo);
 
-    QMap<QString, int> loadedFonts;
-
+    // map of font file path & font ID
+    QMap<QString, int> loadedFontPaths;
+    // map of font affiliation ("main" or a specific package) & font IDs
+    QMultiMap<QString, int> loadedFontAffiliation;
 };
 
 #endif // MUDLET_FONTMANAGER_H

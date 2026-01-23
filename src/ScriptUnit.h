@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,12 +23,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QMap>
-#include <QMutex>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
@@ -41,22 +39,22 @@ class ScriptUnit
     friend class XMLimport;
 
 public:
-    ScriptUnit(Host* pHost) : mpHost(pHost), mMaxID(0) {}
+    explicit ScriptUnit(Host* pHost)
+    : mpHost(pHost)
+    {}
 
     std::list<TScript*> getScriptRootNodeList()
     {
-        QMutexLocker locker(&mScriptUnitLock);
         return mScriptRootNodeList;
     }
 
     QMap<int, TScript*> getScriptList()
     {
-        QMutexLocker locker(&mScriptUnitLock);
         return mScriptMap;
     }
 
     TScript* getScript(int id);
-    void compileAll();
+    void compileAll(bool saveLoadingError = false);
     bool registerScript(TScript* pT);
     void unregisterScript(TScript* pT);
     void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
@@ -64,9 +62,12 @@ public:
     void uninstall(const QString&);
     void _uninstall(TScript* pChild, const QString& packageName);
     int getNewID();
-    QMutex mScriptUnitLock;
+    std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
+    void resetStats();
+    std::tuple<QString, int, int, int> assembleReport();
+
     QList<TScript*> uninstallList;
-    QVector<int> findScriptId(const QString& name) const;
+
 
 private:
     ScriptUnit() = default;
@@ -76,10 +77,15 @@ private:
     void addScript(TScript* pT);
     void removeScriptRootNode(TScript* pT);
     void removeScript(TScript*);
+    void assembleReport(TScript*);
+
     QPointer<Host> mpHost;
     QMap<int, TScript*> mScriptMap;
     std::list<TScript*> mScriptRootNodeList;
-    int mMaxID;
+    int mMaxID = 0;
+    int statsItemsTotal = 0;
+    int statsTempItems = 0;
+    int statsActiveItems = 0;
 };
 
 #endif // MUDLET_SCRIPTUNIT_H

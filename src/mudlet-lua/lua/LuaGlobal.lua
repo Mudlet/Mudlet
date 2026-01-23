@@ -1,27 +1,7 @@
 -- Mudlet Lua packages loader
 
--- Set to true (possibly via code in the C++ TLuaInterpreter::loadGlobal()
--- method) to report on the determination of what path to use to load the other
--- Mudlet and Geyser provided Lua files...
-debugLoading = debugLoading or false
-
--- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
--- directory if nil.
-if luaGlobalPath == nil then
-  luaGlobalPath = lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
-  if debugLoading then
-    echo([[luaGlobalPath was nil so has been defaulted to: "]] .. luaGlobalPath .. [[".
-
-]])
-  end
-elseif debugLoading then
-  echo([[luaGlobalPath has been preset to: "]] .. luaGlobalPath .. [[".
-
-]])
-end
-
-if package.loaded["rex_pcre"] then
-  rex = require "rex_pcre"
+if package.loaded["rex_pcre2"] then
+  rex = require "rex_pcre2"
 end
 if package.loaded["lpeg"] then
   lpeg = require "lpeg"
@@ -110,12 +90,14 @@ local packages = {
   "TableUtils.lua",
   -- "Logging.lua", -- never documented and fails to load now
   "DebugTools.lua",
+  "DateTime.lua",
   "DB.lua",
   "geyser/Geyser.lua",
   "geyser/GeyserGeyser.lua",
   "geyser/GeyserUtil.lua",
   "geyser/GeyserColor.lua",
   "geyser/GeyserSetConstraints.lua",
+  "geyser/GeyserStyleSheet.lua",
   "geyser/GeyserContainer.lua",
   "geyser/GeyserWindow.lua",
   "geyser/GeyserLabel.lua",
@@ -123,11 +105,13 @@ local packages = {
   "geyser/GeyserMiniConsole.lua",
   "geyser/GeyserMapper.lua",
   "geyser/GeyserReposition.lua",
+  "geyser/GeyserScrollBox.lua",
   "geyser/GeyserHBox.lua",
   "geyser/GeyserVBox.lua",
   "geyser/GeyserUserWindow.lua",
   "geyser/GeyserAdjustableContainer.lua",
   "geyser/GeyserCommandLine.lua",
+  "geyser/GeyserButton.lua",
 
   -- TODO probably don't need to load this file
   "geyser/GeyserTests.lua",
@@ -136,41 +120,50 @@ local packages = {
   "GMCP.lua",
   "KeyCodes.lua",
   "CursorShapes.lua",
-  "TTSValues.lua"
+  "TTSValues.lua",
+  "IDManager.lua",
 }
 
+-- Set to true (possibly via code in the C++ TLuaInterpreter::loadGlobal()
+-- method) to report on the determination of what path to use to load the other
+-- Mudlet and Geyser provided Lua files...
+debugLoading = debugLoading or false
+local sep = package.config:sub(1,1)
+
 if debugLoading then
-   echo("Path separator is: '" .. package.config:sub(1,1) .. "'\n\n")
-end
+  echo("Path separator is: '" .. sep .. "'\n\n")
 
-nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
-
-if debugLoading then
-  echo([[Directory separator conversion gives: "]] .. nativeLuaGlobalPath .. [[".
-
-Current directory is: "]] .. lfs.currentdir() .. [[".
-
-]])
-end
-
-for _, packageName in ipairs(packages) do
-  local packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
-  if debugLoading then
-    echo([[Trying to load: "]] .. packagePath .. [["
-]])
+  -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
+  -- directory if nil.
+  if luaGlobalPath == nil then
+    luaGlobalPath = lfs.currentdir()
+    echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
+  else
+    echo("luaGlobalPath has been preset to: \"" .. luaGlobalPath .. "\".\n\n")
   end
-  local result, msg = pcall(dofile, packagePath)
-  if debugLoading then
-    if result then
-      echo([[Loaded: "]] .. packageName .. [[".
+  nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
+  echo("Directory separator conversion gives: \"" .. nativeLuaGlobalPath .. "\".\n\n")
+  echo("Current directory is: \"" .. lfs.currentdir() .. "\".\n\n")
 
-]])
-    else
-      echo([[Error attempting to load file:
-  ]] .. msg .. [[.
-
-]])
+  local packagePath, status, result = "", false, ""
+  for _, packageName in ipairs(packages) do
+    packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
+    echo("Trying to load: \"" .. packagePath .. "\"\n")
+    status, result = pcall(dofile, packagePath)
+    if (status == false) then
+        error("Error attempting to load package("..packageName..") file:\n  " .. result .. ".\n\n")
     end
+    echo("Loaded: \"" .. packageName .. "\".\n\n")
   end
-  assert(result, msg)
+else
+  -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
+  -- directory if nil.
+  luaGlobalPath = luaGlobalPath or lfs.currentdir()
+  nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
+
+  local packagePath = ""
+  for _, packageName in ipairs(packages) do
+    packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
+    dofile(packagePath)
+  end
 end

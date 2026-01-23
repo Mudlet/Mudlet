@@ -1,3 +1,6 @@
+#ifndef MUDLET_MXPENTITYRESOLVER_H
+#define MUDLET_MXPENTITYRESOLVER_H
+
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
@@ -17,19 +20,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_MXPENTITYRESOLVER_H
-#define MUDLET_MXPENTITYRESOLVER_H
-
-#include "pre_guard.h"
 #include <QHash>
 #include <QString>
-#include "post_guard.h"
 #include <functional>
+
+enum TEntityType { ENTITY_TYPE_SYSTEM, ENTITY_TYPE_CUSTOM, ENTITY_TYPE_UNKNOWN };
 
 class TEntityResolver
 {
-    QHash<QString, QString> mEntititesMap;
-
 public:
     static const QHash<QString, QString> scmStandardEntites;
     static const TEntityResolver scmDefaultResolver;
@@ -42,7 +40,10 @@ public:
     bool registerEntity(const QString& entity, const QString& str);
     bool unregisterEntity(const QString& entity);
 
-    QString getResolution(const QString& entityValue) const;
+    // Having this optional pointer argument may not be optimal, but some callers must know the type
+    // and we cannot have a private variable recording it as many classes calling us are using this
+    // as a const class.
+    QString getResolution(const QString& entityValue, bool resolveCustomEntities = true, TEntityType *entityType = nullptr) const;
 
     static QString resolveCode(ushort val);
     static QString resolveCode(const QString& entityValue);
@@ -50,6 +51,9 @@ public:
     static QString interpolate(const QString& input, std::function<QString(const QString&)> resolver);
 
     QString interpolate(const QString& input) const;
+
+private:
+    QHash<QString, QString> mEntititesMap;
 };
 
 #endif //MUDLET_MXPENTITYRESOLVER_H

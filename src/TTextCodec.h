@@ -1,7 +1,7 @@
 #ifndef TTEXTCODEC_H
 #define TTEXTCODEC_H
 /***************************************************************************
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020, 2024 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,13 +22,12 @@
 /***************************************************************************
  *   This class is entirely concerned with providing some codecs on        *
  *   platforms that do not come with a Qt provided QTextCodec for the      *
- *   encodings - which seems to be the Windows AppVeyor CI at this time.   *
+ *   encodings - which seems to be the Windows AppVeyor CI at this time,   *
+ *   or for any "special cases".                                           *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QTextCodec>
 #include <QVector>
-#include "post_guard.h"
 
 
 class TTextCodec_437 : private QTextCodec
@@ -94,4 +93,21 @@ public:
 private:
     static const QVector<QChar> CptoUnicode;
 };
+
+class TTextCodec_medievia : private QTextCodec
+{
+public:
+    TTextCodec_medievia() = default;
+    ~TTextCodec_medievia() = default;
+
+    QByteArray name() const override;
+    QList<QByteArray> aliases() const override;
+    int mibEnum() const override;
+    QString convertToUnicode(const char *in, int length, ConverterState *state) const override;
+    QByteArray convertFromUnicode(const QChar *in, int length, ConverterState *state) const override;
+
+private:
+    static const QVector<QChar> CptoUnicode;
+};
+
 #endif // TTEXTCODEC_H

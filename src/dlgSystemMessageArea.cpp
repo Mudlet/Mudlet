@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,22 +23,22 @@
 #include "dlgSystemMessageArea.h"
 
 
-dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pF) : QWidget(pF)
+dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
 
     QPixmap holdPixmap;
-
-    holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
+    holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelWarning->setPixmap(holdPixmap);
+    notificationAreaIconLabelWarning->setPixmap(holdPixmap);
 
-    holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
+    holdPixmap = notificationAreaIconLabelError->pixmap(Qt::ReturnByValue);
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelError->setPixmap(holdPixmap);
+    notificationAreaIconLabelError->setPixmap(holdPixmap);
 
-    holdPixmap = *(this->notificationAreaIconLabelInformation->pixmap());
+    holdPixmap = notificationAreaIconLabelInformation->pixmap(Qt::ReturnByValue);
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelInformation->setPixmap(holdPixmap);
+    notificationAreaIconLabelInformation->setPixmap(holdPixmap);
 }

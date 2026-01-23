@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://github.com/Mudlet/Mudlet"><img src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/mudlet_main_256px.pn-20171109060211-hidv2woj9dffwyql-11/mudlet_main_256px.png" alt="Mudlet"></a>
+  <a href="https://github.com/Mudlet/Mudlet"><img src="https://github.com/Mudlet/artwork/blob/master/mudlet_main_256px.png?raw=true" alt="Mudlet"></a>
   <br>
   Mudlet
   <br>
@@ -21,10 +21,8 @@
   <a href="https://www.codefactor.io/repository/github/mudlet/mudlet">
     <img src="https://www.codefactor.io/repository/github/mudlet/mudlet/badge" alt="CodeFactor" />
   </a>
-  <br>
-  <sup><b>Windows:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true" alt="AppVeyor (Windows) CI Build status" style="max-width:100%;">
-  </a>
-  <sup><b>Linux &amp; MacOS:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development" alt="Travis (Linux &amp; MacOs) CI Build status" style="max-width:100%;">
+  <a href="https://console.algora.io/org/Mudlet/bounties?status=open">
+    <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fconsole.algora.io%2Fapi%2Fshields%2FMudlet%2Fbounties%3Fstatus%3Dopen"/>
   </a>
 </p>
 
@@ -44,7 +42,7 @@
 
 ## About
 
-Mudlet is a quality [MUD](https://en.wikipedia.org/wiki/MUD) client, designed to take mudding to a new level.
+Mudlet is a quality [MUD](https://en.wikipedia.org/wiki/Multi-user_dungeon) client, designed to take mudding to a new level.
 
 It’s a modern breed of a client on the gaming scene – with an intuitive user interface, a specially designed scripting framework, and a very fast text display. That, along with cross-platform capability and an open-source development model result in a very likable game client.
 
@@ -67,7 +65,7 @@ It’s a modern breed of a client on the gaming scene – with an intuitive user
 
 <details>
   <summary>Explain?</summary>
-  
+
 ### Easy to use client
 
 We’re big on usability, and as such, creating an easy to use client and interface is one of the defining goals of the project. This applies to both the power users and usual gamers – everyone will feel at home with Mudlet, without having to waste too much time figuring out how to do something.
@@ -87,7 +85,7 @@ We believe in making Mudlet available to people on all major platforms, and we w
 
 ## Download
 
-Download for free from [mudlet.org](https://www.mudlet.org/download/)
+Download for free from [mudlet.org](https://www.mudlet.org/download/).
 
 ## How To Use
 
@@ -99,24 +97,49 @@ Download for free from [mudlet.org](https://www.mudlet.org/download/)
     1. Pick a `Profile name`
     1. Hit `Connect`
 
+## Compiling
+
+If you'd like to compile Mudlet yourself instead of [downloading](https://www.mudlet.org/download/), you can find instructions to do so [here](https://wiki.mudlet.org/w/Compiling_Mudlet).
+
+## Vision
+
+Mudlet's [vision](https://www.mudlet.org/about/vision/) is to build the best text gaming experience possible to nurture & grow this niche scene.
+
 ## Roadmap
 
-See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed, as well as contribute!
+See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed
+
+## Contribute
+
+Join in, contributions are welcome! Find out how you can start [Contributing](docs/CONTRIBUTING.md).
 
 ## Credits
 
-Author: [Mudlet Makers](https://github.com/Mudlet/Mudlet/graphs/contributors). Join in, contributions are welcome!
+Author: [Mudlet Makers](https://github.com/Mudlet/Mudlet/graphs/contributors). 
 
 This software wouldnt've been possible without these open source packages:
 
 - [Qt](https://www.qt.io/)
 - [Lua](https://www.lua.org/)
+- [PCRE](https://www.pcre.org/)
 - [edbee](http://www.edbee.net/)
 - [DBLSQD](https://www.dblsqd.com/)
+- [argparse](https://github.com/luarocks/argparse)
+- [Boost Graph Library](https://www.boost.org/doc/libs/1_83_0/libs/graph/doc/)
+- [Busted](https://lunarmodules.github.io/busted/)
+- [Ccache](https://ccache.dev/)
 - [Communi](https://communi.github.io/)
-- [PCRE](https://www.pcre.org/)
-- [lua-yajl](https://github.com/brimworks/lua-yajl)
 - [Hunspell](https://hunspell.github.io/)
+- [lua-http](https://daurnimator.github.io/lua-http/)
+- [lua-yajl](https://github.com/brimworks/lua-yajl)
+- [lua-zip](https://github.com/brimworks/lua-zip)
+- [LuaFileSystem](http://keplerproject.github.io/luafilesystem/)
+- [Luarocks](https://luarocks.org/)
+- [LuaSQL](http://keplerproject.github.io/luasql/)
+- [luautf8](https://github.com/starwing/luautf8)
+- [pugixml](https://pugixml.org/)
+- [SQLite](https://sqlite.org/index.html)
+- [yajl](http://lloyd.github.io/yajl/)
 
 Credit to [Markdownify](https://github.com/amitmerchant1990/electron-markdownify) for the README inspiration.
 
@@ -129,3 +152,4 @@ GPL2+
 > [website](https://www.mudlet.org/) &nbsp;&middot;&nbsp;
 > [forums](https://forums.mudlet.org/) &nbsp;&middot;&nbsp;
 > [manual](https://wiki.mudlet.org/w/Manual:Contents)
+

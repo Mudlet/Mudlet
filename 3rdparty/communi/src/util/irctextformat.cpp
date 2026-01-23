@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -36,12 +36,11 @@
 
 #include "irctextformat.h"
 #include "ircpalette.h"
-#if QT_VERSION >= 0x050000
-#include <QRegularExpression>
-#endif
+#include "irccore_p.h"
 #include <QStringList>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QUrl>
+#include <QDebug>
 #include "irc.h"
 
 IRC_BEGIN_NAMESPACE
@@ -104,7 +103,7 @@ public:
     IrcTextFormat::SpanFormat spanFormat;
 };
 
-static bool parseColors(const QString& message, int pos, int* len, int* fg = 0, int* bg = 0)
+static bool parseColors(const QString& message, int pos, int* len, int* fg = nullptr, int* bg = nullptr)
 {
     // fg(,bg)
     *len = 0;
@@ -112,15 +111,16 @@ static bool parseColors(const QString& message, int pos, int* len, int* fg = 0, 
         *fg = -1;
     if (bg)
         *bg = -1;
-    QRegExp rx(QLatin1String("(\\d{1,2})(?:,(\\d{1,2}))?"));
-    int idx = rx.indexIn(message, pos);
-    if (idx == pos) {
-        *len = rx.matchedLength();
+
+    QRegularExpression re("(\\d{1,2})(?:,(\\d{1,2}))?");
+    auto match = re.match(message, pos);
+    if (match.hasMatch()) {
+        *len = match.captured().length();
         if (fg)
-            *fg = rx.cap(1).toInt();
+            *fg = match.captured(1).toInt();
         if (bg) {
             bool ok = false;
-            int tmp = rx.cap(2).toInt(&ok);
+            int tmp = match.captured(2).toInt(&ok);
             if (ok)
                 *bg = tmp;
         }
@@ -128,25 +128,30 @@ static bool parseColors(const QString& message, int pos, int* len, int* fg = 0, 
     return *len > 0;
 }
 
-static QString generateLink(const QString& protocol, const QString& href)
+static QString generateLink(const QString& protocol, const QString &raw, const QString &href)
 {
-    const char* exclude = ":/?@%#=+&,";
-    const QByteArray url = QUrl::toPercentEncoding(href, exclude);
+    const char* exclude = ":/?@%#=+&,;";
+    const QByteArray url = QUrl::toPercentEncoding(raw, exclude);
     return QString(QLatin1String("<a href='%1%2'>%3</a>")).arg(protocol, url, href);
 }
 
-static QString parseLinks(const QString& message, const QString& pattern, QList<QUrl>* urls)
+static QString parseUrls(const QString& message, const QString& pattern, QList<QUrl>* urls)
 {
     QString processed = message;
-#if QT_VERSION >= 0x050000
+
     int offset = 0;
     QRegularExpression rx(pattern);
     QRegularExpressionMatchIterator it = rx.globalMatch(message);
     while (it.hasNext()) {
         QRegularExpressionMatch match = it.next();
         QString protocol;
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
         if (match.capturedRef(2).isEmpty()) {
             QStringRef link = match.capturedRef(1);
+#else
+        if (match.capturedView(2).isEmpty()) {
+            QStringView link = match.capturedView(1);
+#endif
             if (link.startsWith(QStringLiteral("ftp."), Qt::CaseInsensitive))
                 protocol = QStringLiteral("ftp://");
             else if (link.contains(QStringLiteral("@")))
@@ -157,37 +162,16 @@ static QString parseLinks(const QString& message, const QString& pattern, QList<
 
         const int start = match.capturedStart();
         const int len = match.capturedEnd() - start;
-        const QString href = match.captured();
-        const QString link = generateLink(protocol, href);
+        QString href = match.captured();
+        QString raw = href;
+        raw.replace("&amp;", "&");
+        const QString link = generateLink(protocol, raw, href);
         processed.replace(start + offset, len, link);
         offset += link.length() - len;
         if (urls)
-            urls->append(QUrl(protocol + href));
+            urls->append(QUrl(protocol + raw));
     }
-#else
-    int pos = 0;
-    QRegExp rx(pattern);
-    while ((pos = rx.indexIn(processed, pos)) >= 0) {
-        int len = rx.matchedLength();
-        QString href = processed.mid(pos, len);
 
-        QString protocol;
-        if (rx.cap(2).isEmpty()) {
-            if (rx.cap(1).contains(QLatin1Char('@')))
-                protocol = QLatin1String("mailto:");
-            else if (rx.cap(1).startsWith(QLatin1String("ftp."), Qt::CaseInsensitive))
-                protocol = QLatin1String("ftp://");
-            else
-                protocol = QLatin1String("http://");
-        }
-
-        QString link = generateLink(protocol, href);
-        processed.replace(pos, len, link);
-        pos += link.length();
-        if (urls)
-            urls->append(QUrl(protocol + href));
-    }
-#endif
     return processed;
 }
 
@@ -196,7 +180,7 @@ void IrcTextFormatPrivate::parse(const QString& str, QString* text, QString* htm
     QString processed = str;
 
     // TODO:
-    //processed.replace(QLatin1Char('&'), QLatin1String("&amp;"));
+    processed.replace(QLatin1Char('&'), QLatin1String("&amp;"));
     processed.replace(QLatin1Char('<'), QLatin1String("&lt;"));
     //processed.replace(QLatin1Char('>'), QLatin1String("&gt;"));
     //processed.replace(QLatin1Char('"'), QLatin1String("&quot;"));
@@ -336,7 +320,7 @@ void IrcTextFormatPrivate::parse(const QString& str, QString* text, QString* htm
                 if (!potentialUrl && pos > 0 && !processed.at(pos - 1).isSpace()
                         && pos < processed.length() - 1 && !processed.at(pos + 1).isSpace())
                     potentialUrl = true;
-                // flow through
+                Q_FALLTHROUGH();
             default:
                 if (text)
                     *text += processed.at(pos);
@@ -352,7 +336,7 @@ void IrcTextFormatPrivate::parse(const QString& str, QString* text, QString* htm
     }
 
     if ((html || urls) && potentialUrl && !urlPattern.isEmpty())
-        processed = parseLinks(processed, urlPattern, urls);
+        processed = parseUrls(processed, urlPattern, urls);
     if (html)
         *html = processed;
 }
@@ -463,7 +447,7 @@ QString IrcTextFormat::toHtml(const QString& text) const
 {
     Q_D(const IrcTextFormat);
     QString html;
-    d->parse(text, 0, &html, 0);
+    d->parse(text, nullptr, &html, nullptr);
     return html;
 }
 
@@ -477,7 +461,7 @@ QString IrcTextFormat::toPlainText(const QString& text) const
 {
     Q_D(const IrcTextFormat);
     QString plain;
-    d->parse(text, &plain, 0, 0);
+    d->parse(text, &plain, nullptr, nullptr);
     return plain;
 }
 

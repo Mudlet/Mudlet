@@ -17,36 +17,53 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "TMxpEntityTagHandler.h"
+#include "TStringUtils.h"
+
 TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    if (tag->getAttributesCount() < 2) {
+    if (tag->getAttributesCount() < 1) {
         return MXP_TAG_NOT_HANDLED;
     }
 
     static const QStringList boolOptions({"PRIVATE", "PUBLISH", "DELETE", "ADD", "REMOVE"});
     TEntityResolver& resolver = ctx.getEntityResolver();
 
-    const QString& name = tag->getAttrName(1);
+    const QString& name = tag->getAttrName(0);
+    const QString& entity = qsl("&%1;").arg(name);
 
     if (tag->hasAttribute("DELETE")) {
-        resolver.unregisterEntity(name);
-    } else if (!boolOptions.contains(tag->getAttribute(1).getName(), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
+        resolver.unregisterEntity(entity);
+    } else if (tag->getAttributesCount() > 1 && !boolOptions.contains(tag->getAttrName(1), Qt::CaseInsensitive)) {
+        // 2nd attribute is actually the value
         const QString& value = tag->getAttrName(1);
         if (tag->hasAttribute("ADD")) {
-            QString newDefinition = resolver.getResolution(name);
-            newDefinition.append("|");
-            newDefinition.append(value);
-
-            resolver.registerEntity(name, newDefinition);
+            const QString prevDefinition = resolver.getResolution(entity);
+            QStringList definitionList = prevDefinition.split('|');
+            definitionList.push_back(value);
+            resolver.registerEntity(entity, definitionList.join('|'));
         } else if (tag->hasAttribute("REMOVE")) {
-            QString currentValue = resolver.getResolution(name);
-            QString toDelete = currentValue.contains("|") ? "|" + value : value;
-            resolver.registerEntity(name, currentValue.replace(toDelete, ""));
-        } else { // PUBLISH
-            resolver.registerEntity(name, value);
-            client.publishEntity(name, value);
+            const QString prevDefinition = resolver.getResolution(entity);
+            QStringList definitionList = prevDefinition.split('|');
+            definitionList.removeOne(value);
+            resolver.registerEntity(entity, definitionList.join('|'));
+        } else {
+            resolver.registerEntity(entity, value);
+        }
+
+        if (tag->hasAttribute("PUBLISH")) {
+            client.publishEntity(entity, value);
+        }
+    } else if (!tag->hasAttribute("ADD") && !tag->hasAttribute("REMOVE")) {
+        // Apparently there is no (or an empty) value, so set us to empty string.
+        // Adding or removing an empty string to the value has no effect, that's why we skipped those.
+        // Note that the TagParser will parse a '' argument as a non existent argument, so
+        // so both <!EN name> and <!EN name ''> will come here.
+        const QString value;
+        resolver.registerEntity(entity, value);
+
+        if (tag->hasAttribute("PUBLISH")) {
+            client.publishEntity(entity, value);
         }
     }
-
     return MXP_TAG_HANDLED;
 }

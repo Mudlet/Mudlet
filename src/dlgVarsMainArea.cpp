@@ -22,20 +22,23 @@
 
 #include "dlgVarsMainArea.h"
 
-#include "pre_guard.h"
 #include <QListWidgetItem>
-#include "post_guard.h"
 
 extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
 #include <lua.h>
+#endif
 }
 
-dlgVarsMainArea::dlgVarsMainArea(QWidget* pF) : QWidget(pF)
+dlgVarsMainArea::dlgVarsMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
 
-    // Modify the normal QComboBoxes with customised data models that impliment
+    // Modify the normal QComboBoxes with customised data models that implement
     // https://stackoverflow.com/a/21376774/4805858 so that individual entries
     // can be "disabled":
     // Key type widget:

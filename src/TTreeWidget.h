@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,10 +23,8 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QPointer>
 #include <QTreeWidget>
-#include "post_guard.h"
 
 class Host;
 
@@ -36,7 +35,7 @@ class TTreeWidget : public QTreeWidget
 
 public:
     Q_DISABLE_COPY(TTreeWidget)
-    TTreeWidget(QWidget* pW);
+    explicit TTreeWidget(QWidget* pW);
     Qt::DropActions supportedDropActions() const override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
@@ -47,6 +46,8 @@ public:
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    // TODO: replace these eight methods with a single one to "characterise"
+    // the TTreeWidget instance after creation:
     void setHost(Host* pH);
     void setIsScriptTree();
     void setIsTimerTree();
@@ -63,6 +64,7 @@ private:
     QPointer<Host> mpHost;
     int mOldParentID;
     int mChildID;
+    // TODO: replace these seven booleans with a single enum:
     bool mIsTriggerTree;
     bool mIsAliasTree;
     bool mIsScriptTree;
@@ -70,6 +72,7 @@ private:
     bool mIsKeyTree;
     bool mIsVarTree;
     bool mIsActionTree;
+    // CHECK: Should this actually be a: QPersistentModelIndex ?
     QModelIndex mClickedItem;
 };
 

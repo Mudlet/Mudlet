@@ -22,9 +22,7 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_scripts_main_area.h"
-#include "post_guard.h"
 
 
 class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area
@@ -39,9 +37,10 @@ public:
     // is not raised. Example: When the user saves without leaving the LineEdit
     void trimName();
     void trimEventHandlerName();
+
 private slots:
-    void slot_editing_name_finished();
-    void slot_editing_event_name_finished();
+    void slot_editingNameFinished();
+    void slot_editingEventNameFinished();
 };
 
 #endif // MUDLET_DLGSCRIPTSMAINAREA_H

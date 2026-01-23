@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2018, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,18 +28,19 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TMedia.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
 
-#include "pre_guard.h"
 #include "ui_profile_preferences.h"
 #include <QtCore>
 #include <QDialog>
 #include <QDir>
 #include <QDoubleSpinBox>
+#include <QFontDialog>
 #include <QMap>
-#include "post_guard.h"
+#include <QCloseEvent>
 
 class Host;
 
@@ -49,69 +51,73 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
-    dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
+    explicit dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
     void setTab(QString tab);
 
 public slots:
-    // Fonts.
-    void setFontSize();
-    void setDisplayFont();
-    void setCommandLineFont();
-
     // Terminal colors.
-    void setColorBlack();
-    void setColorLightBlack();
-    void setColorRed();
-    void setColorLightRed();
-    void setColorBlue();
-    void setColorLightBlue();
-    void setColorGreen();
-    void setColorLightGreen();
-    void setColorYellow();
-    void setColorLightYellow();
-    void setColorCyan();
-    void setColorLightCyan();
-    void setColorMagenta();
-    void setColorLightMagenta();
-    void setColorWhite();
-    void setColorLightWhite();
-    void setFgColor();
-    void setBgColor();
-    void setCommandLineBgColor();
-    void setCommandLineFgColor();
-    void setCommandFgColor();
-    void setCommandBgColor();
-    void resetColors();
+    void slot_setColorBlack();
+    void slot_setColorLightBlack();
+    void slot_setColorRed();
+    void slot_setColorLightRed();
+    void slot_setColorBlue();
+    void slot_setColorLightBlue();
+    void slot_setColorGreen();
+    void slot_setColorLightGreen();
+    void slot_setColorYellow();
+    void slot_setColorLightYellow();
+    void slot_setColorCyan();
+    void slot_setColorLightCyan();
+    void slot_setColorMagenta();
+    void slot_setColorLightMagenta();
+    void slot_setColorWhite();
+    void slot_setColorLightWhite();
+    void slot_setFgColor();
+    void slot_setBgColor();
+    void slot_setCommandLineBgColor();
+    void slot_setCommandLineFgColor();
+    void slot_setCommandBgColor();
+    void slot_setCommandFgColor();
+    void slot_resetColors();
 
     // Mapper colors.
-    void setColorBlack2();
-    void setColorLightBlack2();
-    void setColorRed2();
-    void setColorLightRed2();
-    void setColorBlue2();
-    void setColorLightBlue2();
-    void setColorGreen2();
-    void setColorLightGreen2();
-    void setColorYellow2();
-    void setColorLightYellow2();
-    void setColorCyan2();
-    void setColorLightCyan2();
-    void setColorMagenta2();
-    void setColorLightMagenta2();
-    void setColorWhite2();
-    void setColorLightWhite2();
-    void setFgColor2();
-    void setBgColor2();
-    void resetColors2();
+    void slot_setMapColorBlack();
+    void slot_setMapColorLightBlack();
+    void slot_setMapColorRed();
+    void slot_setMapColorLightRed();
+    void slot_setMapColorBlue();
+    void slot_setMapColorLightBlue();
+    void slot_setMapColorGreen();
+    void slot_setMapColorLightGreen();
+    void slot_setMapColorYellow();
+    void slot_setMapColorLightYellow();
+    void slot_setMapColorCyan();
+    void slot_setMapColorLightCyan();
+    void slot_setMapColorMagenta();
+    void slot_setMapColorLightMagenta();
+    void slot_setMapColorWhite();
+    void slot_setMapColorLightWhite();
+    void slot_setMapExitsColor();
+    void slot_setMapBgColor();
+    void slot_setMapRoomBorderColor();
+    void slot_setMapInfoBgColor();
+    void slot_setMapRoomCollisionBorderColor();
+    void slot_setMapGridColor();
+    void slot_setLowerLevelColor();
+    void slot_setUpperLevelColor();
+    void slot_resetMapColors();
 
     // Map.
-    void downloadMap();
-    void loadMap();
-    void saveMap();
-    void copyMap();
-    void slot_chooseProfilesChanged(QAction*);
+    void slot_downloadMap();
+    void slot_loadMap();
+    void slot_saveMap();
+    void slot_copyMap();
+    void slot_chosenProfilesChanged(QAction*);
     void slot_showMapGlyphUsage();
 
+    // Media
+    void slot_purgeMediaCache();
+    void slot_toggleEnableClosedCaption(const bool);
 
     // Log.
     void slot_setLogDir();
@@ -120,9 +126,9 @@ public slots:
     void slot_changeLogFileAsHtml(bool isHtml);
 
     // Save.
-    void slot_save_and_exit();
+    void slot_saveAndClose();
 
-    void hideActionLabel();
+    void slot_hideActionLabel();
     void slot_setEncoding(const int);
 
     void slot_handleHostAddition(Host*, quint8);
@@ -133,36 +139,64 @@ public slots:
 private slots:
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
-    void slot_script_selected(int index);
-    void slot_editor_tab_selected(int tabIndex);
-    void slot_theme_selected(int index);
+    void slot_scriptSelected(int index);
+    void slot_tabChanged(int tabIndex);
+    void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
-    void slot_changeEnableFullScreenMode(const bool);
+    void slot_setAppearance(const enums::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
     void slot_changeAutomaticUpdates(const bool);
     void slot_setToolBarIconSize(const int);
     void slot_setTreeWidgetIconSize(const int);
-    void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
-    void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeMenuBarVisibility(const enums::controlsVisibility);
+    void slot_changeToolBarVisibility(const enums::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
-    void slot_changeGuiLanguage(const QString&);
-    void slot_passwords_location_changed(int);
+    void slot_changeGuiLanguage(int);
+    void slot_passwordStorageLocationChanged(int);
     void slot_changePlayerRoomStyle(const int);
     void slot_setPlayerRoomPrimaryColor();
     void slot_setPlayerRoomSecondaryColor();
     void slot_setPlayerRoomOuterDiameter(const int);
     void slot_setPlayerRoomInnerDiameter(const int);
+    void slot_setPostingTimeout(const double);
+    void slot_changeControlCharacterHandling();
+    void slot_enableDarkEditor(const QString&);
+    void slot_toggleAdvertiseScreenReader(const bool);
+    void slot_changeWrapAt();
+    void slot_toggleUseMaxBufferSize(bool checked);
+    void slot_deleteMap();
+    void slot_changeLargeAreaExitArrows(const bool);
+    void slot_changeInvertMapZoom(const bool);
+    void slot_hidePasswordMigrationLabel();
+    void slot_loadHistoryMap();
+    void slot_roomSizeChanged(int size);
+    void slot_exitSizeChanged(int size);
+    void slot_gridSizeChanged(double size);
+    void slot_displayFontChanged();
+    void slot_displayFontSizeChanged();
+    void slot_displayFontAliasingChanged();
+    void slot_changeShowTabConnectionIndicators(bool state);
+
+
+signals:
+    void signal_themeUpdateCompleted();
+    void signal_preferencesSaved();
+    void signal_resetMainWindowShortcutsToDefaults();
+    void preferencesClosing(const QString& profileName);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void setColors();
     void setColors2();
-    void setColor(QPushButton*, QColor&);
+    void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
-    void setButtonColor(QPushButton*, const QColor&);
+    void setButtonColor(QPushButton*, const QColor&, const bool hasAlpha = false);
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();
@@ -179,10 +213,14 @@ private:
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
-    void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
+    QString mapSaveLoadDirectory(Host* pHost);
+    void loadMap(const QString&);
+    void fillOutMapHistory();
+    bool updateDisplayFont();
+    void cancelShortcutCaptures();
 
-    int mFontSize;
+
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
@@ -190,13 +228,24 @@ private:
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
+    QMap<QString, QKeySequence*> currentShortcuts;
+    QPointer<QMenu> protocolMenu;
+    QPointer<QAction> mEnableGMCP;
+    QPointer<QAction> mEnableMSDP;
+    QPointer<QAction> mEnableMSSP;
+    QPointer<QAction> mEnableMSP;
+    QPointer<QAction> mEnableMXP;
+    QPointer<QAction> mEnableMTTS;
+    QPointer<QAction> mEnableMNES;
+    QPointer<QAction> mEnableCHARSET;
+    QPointer<QAction> mEnableNEWENVIRON;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same
     // flag back for Host::mUseSharedDictionary even if we turn-off
     // Host::mEnableUserDictionary: - although, following review THAT has been
     // disallowed...
-    bool mUseSharedDictionary;
+    bool mUseSharedDictionary = false;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

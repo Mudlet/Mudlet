@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -50,8 +50,8 @@ class IRC_UTIL_EXPORT IrcCommandParser : public QObject
     Q_FLAGS(Details)
 
 public:
-    explicit IrcCommandParser(QObject* parent = 0);
-    virtual ~IrcCommandParser();
+    explicit IrcCommandParser(QObject* parent = nullptr);
+    ~IrcCommandParser() override;
 
     QStringList commands() const;
 

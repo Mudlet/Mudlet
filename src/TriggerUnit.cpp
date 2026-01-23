@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,20 +27,36 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
-void TriggerUnit::initStats()
+#include <functional>
+
+TriggerUnit::~TriggerUnit()
 {
-    statsTriggerTotal = 0;
-    statsTempTriggers = 0;
-    statsActiveTriggers = 0;
-    statsActiveTriggersMax = 0;
-    statsActiveTriggersMin = 0;
-    statsActiveTriggersAverage = 0;
-    statsTempTriggersCreated = 0;
-    statsTempTriggersKilled = 0;
-    statsAverageLineProcessingTime = 0;
-    statsMaxLineProcessingTime = 0;
-    statsMinLineProcessingTime = 0;
-    statsRegexTriggers = 0;
+    // Set mpHost to null on all triggers (including children) to prevent them from trying to
+    // unregister themselves during destruction (which would modify the list
+    // we're iterating over and cause iterator invalidation)
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->mpHost = nullptr;
+        // Also set mpHost to null on all children recursively
+        std::function<void(TTrigger*)> nullifyChildren = [&nullifyChildren](TTrigger* t) {
+            for (auto child : *t->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(trigger);
+    }
+    for (auto trigger : mTriggerRootNodeList) {
+        delete trigger;
+    }
+}
+
+void TriggerUnit::resetStats()
+{
+    statsItemsTotal = 0;
+    statsTempItems = 0;
+    statsActiveItems = 0;
+    statsPatternsTotal = 0;
+    statsPatternsActive = 0;
 }
 
 void TriggerUnit::_uninstall(TTrigger* pChild, const QString& packageName)
@@ -141,7 +158,6 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
 
 TTrigger* TriggerUnit::getTrigger(int id)
 {
-    QMutexLocker locker(&mTriggerUnitLock);
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
     } else {
@@ -240,24 +256,30 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (!data.isEmpty()) {
-#if defined(Q_OS_WIN32)
-        // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-        char* subject = (char*)malloc(strlen(data.toUtf8().data()) + 1);
-        strcpy(subject, data.toUtf8().data());
-#else
-        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
-#endif
-        for (auto trigger : mTriggerRootNodeList) {
-            trigger->match(subject, data, line);
-        }
-        free(subject);
-
-        for (auto& trigger : mCleanupList) {
-            delete trigger;
-        }
-        mCleanupList.clear();
+    if (data.isEmpty()) {
+        return;
     }
+
+#if defined(Q_OS_WINDOWS)
+    // strndup(3) - a safe strdup(3) does not seem to be available in the
+    // original mingw or the replacement mingw-w64 enmvironment we use:
+    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().constData()) + 1));
+    strcpy(subject, data.toUtf8().constData());
+#else
+    char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+#endif
+
+    // Set processing flag to prevent re-entrant cleanup during trigger execution
+    mIsProcessing = true;
+
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->match(subject, data, line);
+    }
+    free(subject);
+
+    // Clear processing flag and perform any deferred cleanup
+    mIsProcessing = false;
+    doCleanup();
 }
 
 void TriggerUnit::compileAll()
@@ -285,7 +307,7 @@ void TriggerUnit::reenableAllTriggers()
 
 TTrigger* TriggerUnit::findTrigger(const QString& name)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         return pT;
@@ -293,10 +315,30 @@ TTrigger* TriggerUnit::findTrigger(const QString& name)
     return nullptr;
 }
 
+std::vector<int> TriggerUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
+{
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : std::as_const(mTriggerMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : std::as_const(mTriggerMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    }
+    return ids;
+}
+
 bool TriggerUnit::enableTrigger(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->setIsActive(true);
@@ -309,7 +351,7 @@ bool TriggerUnit::enableTrigger(const QString& name)
 bool TriggerUnit::disableTrigger(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->setIsActive(false);
@@ -321,7 +363,7 @@ bool TriggerUnit::disableTrigger(const QString& name)
 
 void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->mKeepFiring = lines;
@@ -331,7 +373,7 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 
 bool TriggerUnit::killTrigger(const QString& name)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         if (pT->isTemporary()) //this function is only defined for tempTriggers, permanent objects cannot be removed
@@ -345,60 +387,62 @@ bool TriggerUnit::killTrigger(const QString& name)
     return false;
 }
 
-void TriggerUnit::_assembleReport(TTrigger* pChild)
+void TriggerUnit::assembleReport(TTrigger* pItem)
 {
-    std::list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
-    for (auto trigger : *childrenList) {
-        _assembleReport(trigger);
-        if (trigger->isActive()) {
-            statsActiveTriggers++;
+    std::list<TTrigger*>* childrenList = pItem->mpMyChildrenList;
+    for (auto pChild : *childrenList) {
+        ++statsItemsTotal;
+        if (pChild->isActive()) {
+            ++statsActiveItems;
+            statsPatternsActive += pChild->mPatterns.size();
         }
-        if (trigger->isTemporary()) {
-            statsTempTriggers++;
+        if (pChild->isTemporary()) {
+            ++statsTempItems;
         }
-        statsPatterns += trigger->mRegexCodeList.size();
-        statsTriggerTotal++;
+        statsPatternsTotal += pChild->mPatterns.size();
+        assembleReport(pChild);
     }
 }
 
-QString TriggerUnit::assembleReport()
+std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 {
-    statsActiveTriggers = 0;
-    statsTriggerTotal = 0;
-    statsTempTriggers = 0;
-    statsPatterns = 0;
-    for (auto rootTrigger : mTriggerRootNodeList) {
-        if (rootTrigger->isActive()) {
-            statsActiveTriggers++;
+    resetStats();
+    for (auto pItem : mTriggerRootNodeList) {
+        ++statsItemsTotal;
+        if (pItem->isActive()) {
+            ++statsActiveItems;
+            statsPatternsActive += pItem->mPatterns.size();
         }
-        if (rootTrigger->isTemporary()) {
-            statsTempTriggers++;
+        if (pItem->isTemporary()) {
+            ++statsTempItems;
         }
-        statsPatterns += rootTrigger->mRegexCodeList.size();
-        statsTriggerTotal++;
-        std::list<TTrigger*>* childrenList = rootTrigger->mpMyChildrenList;
-        for (auto childTrigger : *childrenList) {
-            _assembleReport(childTrigger);
-            if (childTrigger->isActive()) {
-                statsActiveTriggers++;
-            }
-            if (childTrigger->isTemporary()) {
-                statsTempTriggers++;
-            }
-            statsPatterns += childTrigger->mRegexCodeList.size();
-            statsTriggerTotal++;
-        }
+        statsPatternsTotal += pItem->mPatterns.size();
+        assembleReport(pItem);
     }
     QStringList msg;
-    msg << "triggers current total: " << QString::number(statsTriggerTotal) << "\n"
-        << "trigger patterns total: " << QString::number(statsPatterns) << "\n"
-        << "tempTriggers current total: " << QString::number(statsTempTriggers) << "\n"
-        << "active triggers: " << QString::number(statsActiveTriggers) << "\n";
-    return msg.join("");
+    msg << QLatin1String("triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("tempTriggers current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
+        << QLatin1String("active triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n")
+        << QLatin1String("trigger patterns total: ") << QString::number(statsPatternsTotal) << QLatin1String("\n")
+        << QLatin1String("active patterns total: ") << QString::number(statsPatternsActive) << QLatin1String("\n");
+    return {
+        msg.join(QString()),
+        statsItemsTotal,
+        statsPatternsTotal,
+        statsTempItems,
+        statsActiveItems,
+        statsPatternsActive
+    };
 }
 
 void TriggerUnit::doCleanup()
 {
+    // Skip cleanup if we're currently processing triggers to prevent iterator invalidation
+    // Cleanup will be performed when processDataStream() completes
+    if (mIsProcessing) {
+        return;
+    }
+
     for (auto trigger : mCleanupList) {
         delete trigger;
     }

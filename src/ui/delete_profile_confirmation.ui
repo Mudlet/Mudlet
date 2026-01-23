@@ -48,23 +48,6 @@ If you are, please type in the profile name as a confirmation:</string>
      </property>
     </spacer>
    </item>
-   <item row="3" column="2">
-    <widget class="QPushButton" name="delete_button">
-     <property name="text">
-      <string>Delete</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <widget class="QPushButton" name="cancel_button">
-     <property name="text">
-      <string>Cancel</string>
-     </property>
-     <property name="default">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="0">
     <spacer name="horizontalSpacer">
      <property name="orientation">
@@ -77,6 +60,23 @@ If you are, please type in the profile name as a confirmation:</string>
       </size>
      </property>
     </spacer>
+   </item>
+   <item row="3" column="1">
+    <widget class="QPushButton" name="cancel_button">
+     <property name="text">
+      <string>Cancel</string>
+     </property>
+     <property name="default">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="delete_button">
+     <property name="text">
+      <string>Delete</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

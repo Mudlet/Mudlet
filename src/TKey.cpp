@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,28 +30,14 @@
 
 TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>( parent )
-, exportItem(true)
-, mModuleMasterFolder(false)
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mKeyCode()
-, mKeyModifier()
-, mRegisteredAnonymousLuaFunction(false)
+, mpHost(pHost)
 {
 }
 
 TKey::TKey(QString name, Host* pHost)
 : Tree<TKey>( nullptr )
-, exportItem( true )
-, mModuleMasterFolder( false )
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mKeyCode()
-, mKeyModifier()
-, mRegisteredAnonymousLuaFunction(false)
+, mpHost(pHost)
+, mName(name)
 {
 }
 
@@ -60,6 +47,14 @@ TKey::~TKey()
         return;
     }
     mpHost->getKeyUnit()->unregisterKey(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TKey::setName(const QString& name)
@@ -68,10 +63,10 @@ void TKey::setName(const QString& name)
         mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getKeyUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }
 
-bool TKey::match(int key, int modifier, const bool isToMatchAll)
+bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const bool isToMatchAll)
 {
     bool isAMatch = false;
     if (isActive()) {
@@ -135,8 +130,8 @@ void TKey::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> 0;
+        if (mudlet::smDebugMode) {
+            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
@@ -149,8 +144,8 @@ void TKey::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> 0;
+            if (mudlet::smDebugMode) {
+                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
@@ -170,10 +165,10 @@ bool TKey::setScript(const QString& script)
 
 bool TKey::compileScript()
 {
-    mFuncName = QString("Key") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = qsl("Key%1").arg(QString::number(mID));
+    const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, QString("Key: ") + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Key: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
@@ -186,7 +181,7 @@ bool TKey::compileScript()
 
 void TKey::execute()
 {
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {
@@ -205,4 +200,38 @@ void TKey::execute()
     }
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
+}
+
+QString TKey::packageName(TKey* pKey)
+{
+    if (!pKey) {
+        return QString();
+    }
+
+    if (!pKey->mPackageName.isEmpty()) {
+        return !mpHost->mModuleInfo.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
+    }
+
+    if (pKey->getParent()) {
+        return packageName(pKey->getParent());
+    }
+
+    return QString();
+}
+
+QString TKey::moduleName(TKey* pKey)
+{
+    if (!pKey) {
+        return QString();
+    }
+
+    if (!pKey->mPackageName.isEmpty()) {
+        return mpHost->mModuleInfo.contains(pKey->mPackageName) ? pKey->mPackageName : QString();
+    }
+
+    if (pKey->getParent()) {
+        return moduleName(pKey->getParent());
+    }
+
+    return QString();
 }
