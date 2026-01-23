@@ -438,19 +438,10 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("tempTriggers current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n")
-        << QLatin1String("trigger patterns total: ") << QString::number(statsPatternsTotal) << QLatin1String("\n")
-        << QLatin1String("active patterns total: ") << QString::number(statsPatternsActive) << QLatin1String("\n");
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsPatternsTotal,
-        statsTempItems,
-        statsActiveItems,
-        statsPatternsActive
-    };
+    msg << QLatin1String("triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("tempTriggers current total: ") << QString::number(statsTempItems)
+        << QLatin1String("\n") << QLatin1String("active triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n") << QLatin1String("trigger patterns total: ")
+        << QString::number(statsPatternsTotal) << QLatin1String("\n") << QLatin1String("active patterns total: ") << QString::number(statsPatternsActive) << QLatin1String("\n");
+    return {msg.join(QString()), statsItemsTotal, statsPatternsTotal, statsTempItems, statsActiveItems, statsPatternsActive};
 }
 
 void TriggerUnit::doCleanup()

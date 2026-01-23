@@ -90,7 +90,7 @@ void TLabel::setText(const QString& text)
 
         for (const auto& match : matches) {
             QString fullMatch = match.captured(0);
-            QString hrefPart = match.captured(1);  // The href="..." part
+            QString hrefPart = match.captured(1);   // The href="..." part
             QString otherAttrs = match.captured(2); // Other attributes
 
             // Extract the actual URL from hrefPart (remove quotes)
@@ -249,7 +249,6 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-
     if (mpHost && mWheelFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mWheelFunction, event);
         event->accept();
@@ -386,7 +385,7 @@ void TLabel::slot_linkActivated(const QString& link)
 
     if (colonPos > 0) {
         const QString scheme = link.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
-        const QString payload = link.mid(colonPos + 1); // Everything after the colon
+        const QString payload = link.mid(colonPos + 1);       // Everything after the colon
 
         // Handle custom Mudlet URL schemes for Lua commands
         if (scheme == qsl("send")) {

@@ -93,7 +93,7 @@ void dlgPackageManager::clearPackageDetails()
     pushButton_report->hide();
 }
 
-void dlgPackageManager::downloadIcon(const QString &packageName)
+void dlgPackageManager::downloadIcon(const QString& packageName)
 {
     QString iconPath;
 
@@ -109,22 +109,24 @@ void dlgPackageManager::downloadIcon(const QString &packageName)
         }
     }
 
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/") + iconPath));
     request.setTransferTimeout(10000);
-    QNetworkReply *reply = manager->get(request);
+    QNetworkReply* reply = manager->get(request);
     reply->setProperty("packageName", packageName);
-    connect(reply, &QNetworkReply::finished, this, [this, reply](){ slot_onIconDownloaded(reply); });
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        slot_onIconDownloaded(reply);
+    });
 }
 
 void dlgPackageManager::downloadRepositoryIndex()
 {
     const QString outputPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
-    QNetworkReply *reply = manager->get(request);
-    QFile *file = new QFile(outputPath);
+    QNetworkReply* reply = manager->get(request);
+    QFile* file = new QFile(outputPath);
 
     if (!file->open(QIODevice::WriteOnly)) {
         file->deleteLater();
@@ -158,7 +160,7 @@ void dlgPackageManager::downloadRepositoryIndex()
     });
 }
 
-void dlgPackageManager::fillPackageDetails(const QString &name, const QString &title, const QString &author, const QString &version)
+void dlgPackageManager::fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version)
 {
     const QFontMetrics metrics(label_packageName->font());
     const QString elidedText = metrics.elidedText(name, Qt::ElideRight, label_packageName->width());
@@ -196,7 +198,7 @@ bool dlgPackageManager::readPackageRepositoryFile()
 
     repositoryPackages = obj[qsl("packages")].toArray();
     packageLookup.clear();
-    for (const QJsonValue &val : repositoryPackages) {
+    for (const QJsonValue& val : repositoryPackages) {
         QJsonObject pkg = val.toObject();
         packageLookup.insert(pkg["mpackage"].toString(), pkg);
     }
@@ -283,7 +285,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
     progress->setMinimumDuration(0);
     progress->show();
 
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     auto pendingDownloads = std::make_shared<QHash<QString, QString>>();
     auto remainingDownloads = std::make_shared<int>(selected.size());
     auto activeReplies = std::make_shared<QList<QNetworkReply*>>();
@@ -336,10 +338,10 @@ void dlgPackageManager::slot_installPackageFromRepository()
         const QString outPath = outDir + QDir::separator() + remoteFileName;
         QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/%1").arg(QString::fromUtf8(encoded))));
         request.setTransferTimeout(30000);
-        QNetworkReply *reply = manager->get(request);
+        QNetworkReply* reply = manager->get(request);
         activeReplies->append(reply);
 
-        QFile *file = new QFile(outPath);
+        QFile* file = new QFile(outPath);
         if (!file->open(QIODevice::WriteOnly)) {
             (*remainingDownloads.get())--;
             file->deleteLater();
@@ -384,8 +386,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
             if (--(*remainingDownloads.get()) == 0) {
                 for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
-                    const QString &pkgName = it.key();
-                    const QString &filePath = it.value();
+                    const QString& pkgName = it.key();
+                    const QString& filePath = it.value();
 
                     if (mpHost) {
                         mpHost->installPackage(filePath, enums::PackageModuleType::Package);
@@ -449,10 +451,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
             label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         }
 
-        fillPackageDetails(packageName,
-                           packageInfo.value(qsl("title")),
-                           packageInfo.value(qsl("author")),
-                           packageInfo.value(qsl("version")));
+        fillPackageDetails(packageName, packageInfo.value(qsl("title")), packageInfo.value(qsl("author")), packageInfo.value(qsl("version")));
 
     } else if (status == statusAvailable) {
         pushButton_website->show();
@@ -461,16 +460,14 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
 
         if (packageLookup.contains(packageName)) {
             QJsonObject packageObj = packageLookup.value(packageName);
-            fillPackageDetails(packageObj.value(qsl("mpackage")).toString(),
-                               packageObj.value(qsl("title")).toString(),
-                               packageObj.value(qsl("author")).toString(),
-                               packageObj.value(qsl("version")).toString());
+            fillPackageDetails(
+                    packageObj.value(qsl("mpackage")).toString(), packageObj.value(qsl("title")).toString(), packageObj.value(qsl("author")).toString(), packageObj.value(qsl("version")).toString());
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
         }
     }
 }
 
-void dlgPackageManager::slot_onIconDownloaded(QNetworkReply *reply)
+void dlgPackageManager::slot_onIconDownloaded(QNetworkReply* reply)
 {
     if (!reply) {
         return;
@@ -532,24 +529,21 @@ void dlgPackageManager::slot_removePackages()
     }
 }
 
-void dlgPackageManager::slot_searchTextChanged(const QString &searchText)
+void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
 {
     const auto status = packageStatusList->currentItem();
     packageList->clear();
 
     if (status == statusInstalled) {
-        for (const auto &value : mpHost->mPackageInfo) {
+        for (const auto& value : mpHost->mPackageInfo) {
             const QString name = value.value(qsl("mpackage"));
             const QString title = value.value(qsl("title"));
             const QString description = value.value(qsl("description"));
             const QString author = value.value(qsl("author"));
 
-            if (name.contains(searchText, Qt::CaseInsensitive) ||
-                title.contains(searchText, Qt::CaseInsensitive) ||
-                description.contains(searchText, Qt::CaseInsensitive) ||
-                author.contains(searchText, Qt::CaseInsensitive)) {
-
-                QListWidgetItem *item = new QListWidgetItem(name);
+            if (name.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
+                || author.contains(searchText, Qt::CaseInsensitive)) {
+                QListWidgetItem* item = new QListWidgetItem(name);
                 if (!title.isEmpty()) {
                     item->setData(Qt::UserRole, title);
                 }
@@ -567,19 +561,16 @@ void dlgPackageManager::slot_searchTextChanged(const QString &searchText)
             }
         }
     } else if (status == statusAvailable) {
-        for (const QJsonValue &value : repositoryPackages) {
+        for (const QJsonValue& value : repositoryPackages) {
             const QJsonObject pkg = value.toObject();
             const QString name = pkg[qsl("mpackage")].toString();
             const QString title = pkg[qsl("title")].toString();
             const QString description = pkg[qsl("description")].toString();
             const QString author = pkg[qsl("author")].toString();
 
-            if (name.contains(searchText, Qt::CaseInsensitive) ||
-                title.contains(searchText, Qt::CaseInsensitive) ||
-                description.contains(searchText, Qt::CaseInsensitive) ||
-                author.contains(searchText, Qt::CaseInsensitive)) {
-
-                QListWidgetItem *item = new QListWidgetItem(name);
+            if (name.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
+                || author.contains(searchText, Qt::CaseInsensitive)) {
+                QListWidgetItem* item = new QListWidgetItem(name);
                 if (!title.isEmpty()) {
                     item->setData(Qt::UserRole, title);
                 }
@@ -631,7 +622,6 @@ void dlgPackageManager::slot_setPackageList()
             packageList->addItem(item);
         }
     } else if (status == statusAvailable) {
-
         if (!readPackageRepositoryFile()) {
             return;
         }

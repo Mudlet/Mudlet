@@ -44,7 +44,7 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pParentWidget)
 
     config->beginChanges();
 
-    config->setSmartTab(true); // enable the automatic addition of indents when inserting a newline
+    config->setSmartTab(true);    // enable the automatic addition of indents when inserting a newline
     config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
 
