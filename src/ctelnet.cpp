@@ -4485,7 +4485,7 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     int outSize = BUFFER_SIZE - mZstream.avail_out;
 
     if (zval != Z_OK && zval != Z_STREAM_END) {
-        qDebug() << "MCCP decompressBuffer: zlib error code:" << zval << "input:" << length << "output:" << outSize;
+        qWarning() << "MCCP decompressBuffer: zlib error code:" << zval << "input:" << length << "output:" << outSize;
     }
 
     length = mZstream.avail_in;
@@ -4879,11 +4879,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             char* compressedData = buffer + i + 1;
                             datalen = decompressBuffer(compressedData, restLength, out_buffer);
                             buffer = out_buffer;
-                            i = -1; // Restart processing from beginning of decompressed data
                         } else {
                             datalen = 0;
-                            i = -1; // End the loop
                         }
+                        i = -1;
                         goto MAIN_LOOP_END;
                     }
                 } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
