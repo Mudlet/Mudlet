@@ -391,6 +391,7 @@ private:
     void populateKeys();
     void saveOpenChanges();
     EditorViewType determineViewFromVisibleTree();
+    EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
     void saveTimer();

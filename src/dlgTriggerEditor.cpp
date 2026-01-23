@@ -10087,6 +10087,18 @@ EditorViewType dlgTriggerEditor::determineViewFromVisibleTree()
     return EditorViewType::cmUnknownView;
 }
 
+EditorViewType dlgTriggerEditor::resolveCurrentView()
+{
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        return mCurrentView;
+    }
+    EditorViewType resolved = determineViewFromVisibleTree();
+    if (resolved != EditorViewType::cmUnknownView) {
+        mCurrentView = resolved;
+    }
+    return mCurrentView;
+}
+
 void dlgTriggerEditor::timerEvent(QTimerEvent* event)
 {
     Q_UNUSED(event)
@@ -10721,17 +10733,7 @@ void dlgTriggerEditor::slot_showActions()
 
 void dlgTriggerEditor::slot_saveEdits()
 {
-    EditorViewType viewToUse = mCurrentView;
-
-    // If mCurrentView is unknown, try to determine from which tree widget is visible
-    if (viewToUse == EditorViewType::cmUnknownView) {
-        viewToUse = determineViewFromVisibleTree();
-        if (viewToUse != EditorViewType::cmUnknownView) {
-            mCurrentView = viewToUse;
-        }
-    }
-
-    switch (viewToUse) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         saveTrigger();
         break;
@@ -10763,17 +10765,7 @@ void dlgTriggerEditor::slot_saveEdits()
 
 void dlgTriggerEditor::slot_addNewItem()
 {
-    EditorViewType viewToUse = mCurrentView;
-
-    // If mCurrentView is unknown, try to determine from which tree widget is visible
-    if (viewToUse == EditorViewType::cmUnknownView) {
-        viewToUse = determineViewFromVisibleTree();
-        if (viewToUse != EditorViewType::cmUnknownView) {
-            mCurrentView = viewToUse;
-        }
-    }
-
-    switch (viewToUse) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         addTrigger(false); //add normal trigger
         mpTriggersMainArea->lineEdit_trigger_name->setFocus();
@@ -10816,17 +10808,7 @@ void dlgTriggerEditor::slot_addNewItem()
 
 void dlgTriggerEditor::slot_addNewGroup()
 {
-    EditorViewType viewToUse = mCurrentView;
-
-    // If mCurrentView is unknown, try to determine from which tree widget is visible
-    if (viewToUse == EditorViewType::cmUnknownView) {
-        viewToUse = determineViewFromVisibleTree();
-        if (viewToUse != EditorViewType::cmUnknownView) {
-            mCurrentView = viewToUse;
-        }
-    }
-
-    switch (viewToUse) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         addTrigger(true); //add trigger group
         mpTriggersMainArea->lineEdit_trigger_name->setFocus();
@@ -10869,17 +10851,7 @@ void dlgTriggerEditor::slot_addNewGroup()
 
 void dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag()
 {
-    EditorViewType viewToUse = mCurrentView;
-
-    // If mCurrentView is unknown, try to determine from which tree widget is visible
-    if (viewToUse == EditorViewType::cmUnknownView) {
-        viewToUse = determineViewFromVisibleTree();
-        if (viewToUse != EditorViewType::cmUnknownView) {
-            mCurrentView = viewToUse;
-        }
-    }
-
-    switch (viewToUse) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         activeToggle_trigger();
         break;
@@ -10997,17 +10969,7 @@ void dlgTriggerEditor::slot_sourceFindTextChanges()
 
 void dlgTriggerEditor::slot_deleteItemOrGroup()
 {
-    EditorViewType viewToUse = mCurrentView;
-
-    // If mCurrentView is unknown, try to determine from which tree widget is visible
-    if (viewToUse == EditorViewType::cmUnknownView) {
-        viewToUse = determineViewFromVisibleTree();
-        if (viewToUse != EditorViewType::cmUnknownView) {
-            mCurrentView = viewToUse;
-        }
-    }
-
-    switch (viewToUse) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         delete_trigger();
         break;
@@ -11036,17 +10998,7 @@ void dlgTriggerEditor::slot_deleteItemOrGroup()
 
 void dlgTriggerEditor::slot_saveSelectedItem()
 {
-    EditorViewType viewToUse = mCurrentView;
-
-    // If mCurrentView is unknown, try to determine from which tree widget is visible
-    if (viewToUse == EditorViewType::cmUnknownView) {
-        viewToUse = determineViewFromVisibleTree();
-        if (viewToUse != EditorViewType::cmUnknownView) {
-            mCurrentView = viewToUse;
-        }
-    }
-
-    switch (viewToUse) {
+    switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         saveTrigger();
         break;
