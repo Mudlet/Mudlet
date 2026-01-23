@@ -251,7 +251,8 @@ void dlgPackageManager::slot_installPackageFromFile()
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
     //: Package manager - import packages from file dialog (multi-select enabled)
-    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Import Mudlet Package"), lastDir);
+    //: Package manager - file filter for supported package types (mpackage, zip, xml)
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Import Mudlet Package"), lastDir, tr("Mudlet Packages (*.mpackage *.zip *.xml)"));
     if (fileNames.isEmpty()) {
         return;
     }
