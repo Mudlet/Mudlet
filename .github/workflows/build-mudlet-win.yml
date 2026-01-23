@@ -172,7 +172,7 @@ jobs:
     - name: (Windows) Upload unsigned binaries for signing
       id: upload-unsigned-binaries
       if: steps.prepare-signing.outcome == 'success'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unsigned-binaries
         path: ${{env.SIGNING_DIR}}
@@ -242,7 +242,7 @@ jobs:
         env.SIGNPATH_SIGNING_ENABLED == 'true' &&
         (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') &&
         contains(env.ARTIFACT_NAME, 'installer')
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unsigned-installer
         path: ${{env.ARTIFACT_WINPATHORFILE}}
