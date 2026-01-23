@@ -69,6 +69,12 @@ void TAlias::setName(const QString& name)
 
 bool TAlias::match(const QString& haystack)
 {
+    // Guard against accessing a partially destroyed object - if mpMyChildrenList
+    // is null, the destructor has run and this object is no longer valid
+    if (!mpMyChildrenList) {
+        return false;
+    }
+
     bool matchCondition = false;
     if (!isActive()) {
         if (isFolder()) {

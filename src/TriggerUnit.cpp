@@ -287,17 +287,20 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     memcpy(subject, utf8Ptr, utf8Length);
     subject[utf8Length] = '\0';
 
-    // Set processing flag to prevent re-entrant cleanup during trigger execution
-    mIsProcessing = true;
+    // Increment processing depth to prevent re-entrant cleanup during trigger execution
+    // Using a counter instead of bool handles nested calls from Lua scripts
+    mProcessingDepth++;
 
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }
     free(subject);
 
-    // Clear processing flag and perform any deferred cleanup
-    mIsProcessing = false;
-    doCleanup();
+    // Decrement processing depth and perform cleanup only when all processing is complete
+    mProcessingDepth--;
+    if (mProcessingDepth == 0) {
+        doCleanup();
+    }
 }
 
 void TriggerUnit::compileAll()
@@ -447,8 +450,8 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 void TriggerUnit::doCleanup()
 {
     // Skip cleanup if we're currently processing triggers to prevent iterator invalidation
-    // Cleanup will be performed when processDataStream() completes
-    if (mIsProcessing) {
+    // Cleanup will be performed when all nested processDataStream() calls complete
+    if (mProcessingDepth > 0) {
         return;
     }
 
