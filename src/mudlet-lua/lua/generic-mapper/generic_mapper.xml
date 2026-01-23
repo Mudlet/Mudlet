@@ -2790,6 +2790,10 @@ local function check_room(roomID, name, exits, onlyName)
                 map.echo("Room " .. roomID .. " rejected: description mismatch", true)
                 return false
             end
+        else
+            -- room matched by name+exits, store the description
+            setRoomUserData(roomID, "description", map.prompt.description)
+            map.echo("Stored description for room " .. roomID, true)
         end
     end
 
@@ -4597,6 +4601,13 @@ function map.roomLook(input)
         (getRoomUserData(num, "indoors") ~= '' and ", indoors" or '')
       )
     )
+    local description = getRoomUserData(num, "description")
+    if description and description ~= "" then
+      map.echo("Description:")
+      for line in description:gmatch("[^\n]+") do
+        echo("  " .. line .. "\n")
+      end
+    end
     map.echo(string.format("Exits (%d):", table.size(exits)))
     for exit, leadsto in pairs(exits) do
       echo(
