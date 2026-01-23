@@ -2213,7 +2213,9 @@ void mudlet::slot_timerFires()
         //        qDebug().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
         //        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
         pTT->execute();
-        if (pTT->checkRestart()) {
+        // Re-verify timer still exists after execute (script may have killed it)
+        pTT = pHost->getTimerUnit()->getTimer(id);
+        if (pTT && pTT->checkRestart()) {
             pTT->start();
         }
 
