@@ -2,6 +2,7 @@ name: Update texts for translators
 
 on:
   schedule:
+
     - cron: '0 0 * * fri'
 
   workflow_dispatch:
@@ -9,6 +10,7 @@ on:
 jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
+
     permissions:
       contents: write  # for gr2m/create-or-update-pull-request-action to push local changes
       pull-requests: write  # for gr2m/create-or-update-pull-request-action to create a PR
