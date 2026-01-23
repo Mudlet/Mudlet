@@ -101,6 +101,7 @@ private:
     int statsActiveItems = 0;
     int statsPatternsTotal = 0;
     int statsPatternsActive = 0;
+    // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
 };
 

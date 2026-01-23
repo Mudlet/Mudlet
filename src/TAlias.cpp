@@ -69,9 +69,10 @@ void TAlias::setName(const QString& name)
 
 bool TAlias::match(const QString& haystack)
 {
-    // Guard against accessing a partially destroyed object - if mpMyChildrenList
-    // is null, the destructor has run and this object is no longer valid
+    // Guard against re-entrancy: cleanup may have deleted this alias while
+    // match() was still on the call stack
     if (!mpMyChildrenList) {
+        qWarning() << "TAlias::match() called on destroyed alias - ID:" << mID << "Name:" << mName;
         return false;
     }
 

@@ -271,6 +271,7 @@ bool AliasUnit::processDataStream(const QString& data)
     }
 
     mProcessingDepth--;
+    Q_ASSERT(mProcessingDepth >= 0);
     if (mProcessingDepth == 0) {
         doCleanup();
     }

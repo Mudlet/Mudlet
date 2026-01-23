@@ -295,6 +295,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     free(subject);
 
     mProcessingDepth--;
+    Q_ASSERT(mProcessingDepth >= 0);
     if (mProcessingDepth == 0) {
         doCleanup();
     }

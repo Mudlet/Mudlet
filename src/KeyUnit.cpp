@@ -98,7 +98,6 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 
     for (auto keyObject : mKeyRootNodeList) {
         // Skip null or invalid key objects during profile closing/destruction
-        // Skip null or invalid key objects during profile closing/destruction
         if (!keyObject || !keyObject->isActive() || (keyObject->mpHost && keyObject->mpHost->isClosingDown())) {
             continue;
         }
@@ -106,6 +105,7 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
         if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
                 mProcessingDepth--;
+                Q_ASSERT(mProcessingDepth >= 0);
                 if (mProcessingDepth == 0) {
                     doCleanup();
                 }
@@ -116,6 +116,7 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
     }
 
     mProcessingDepth--;
+    Q_ASSERT(mProcessingDepth >= 0);
     if (mProcessingDepth == 0) {
         doCleanup();
     }
