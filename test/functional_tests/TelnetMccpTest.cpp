@@ -18,10 +18,13 @@
  ***************************************************************************/
 
 /*
- * Regression tests for MCCP (Mud Client Compression Protocol) packet boundary handling.
+ * Regression tests for MCCP (Mud Client Compression Protocol) handling.
  *
- * These tests verify fixes for issue #6624 where MCCP compression failed when
- * the start sequence (IAC SB COMPRESS2 IAC SE) was split across packet boundaries.
+ * These tests verify fixes for:
+ * - Issue #6624: MCCP compression failed when the start sequence
+ *   (IAC SB COMPRESS2 IAC SE) was split across packet boundaries.
+ * - Issue #8122: Uncompressed data following Z_STREAM_END in the same
+ *   packet was discarded when MCCP started mid-stream.
  *
  * Run with: ctest -R TelnetMccpTest -V
  */
@@ -254,6 +257,76 @@ private slots:
         QVERIFY2(consoleLine.contains(testMessage),
                  qPrintable(QString("Expected '%1' in console, got '%2'")
                             .arg(testMessage, consoleLine)));
+    }
+
+    /*
+     * Test: Leftover uncompressed data after Z_STREAM_END
+     *
+     * This is a regression test for issue #8122. When MCCP compression ends
+     * (Z_STREAM_END), any uncompressed data following in the same packet must
+     * be preserved and processed. The previous fix only handled this for data
+     * arriving when compression was already active, but not for the mid-stream
+     * MCCP start case (the common path for mccp2 command).
+     *
+     * Scenario: Server sends compressed data that ends (Z_STREAM_END) followed
+     * by uncompressed text in the same packet - all text must be displayed.
+     */
+    void test_MccpV2LeftoverDataAfterStreamEnd()
+    {
+        QVERIFY(mpHost != nullptr);
+
+        const QByteArray compressedText = "Compressed text\r\n";
+        uLongf compressedSize = compressBound(static_cast<uLong>(compressedText.size()));
+        QByteArray compressed;
+        compressed.resize(static_cast<int>(compressedSize));
+        const int result = compress2(reinterpret_cast<Bytef*>(compressed.data()),
+                                     &compressedSize,
+                                     reinterpret_cast<const Bytef*>(compressedText.constData()),
+                                     static_cast<uLong>(compressedText.size()),
+                                     Z_BEST_COMPRESSION);
+        QCOMPARE(result, Z_OK);
+        compressed.resize(static_cast<int>(compressedSize));
+
+        const QByteArray leftoverText = "Uncompressed after stream end\r\n";
+
+        // Step 1: Server offers MCCP v2
+        QByteArray willCompress2;
+        willCompress2.append(TN_IAC);
+        willCompress2.append(TN_WILL);
+        willCompress2.append(OPT_COMPRESS2);
+        mpHost->mTelnet.loopbackTest(willCompress2);
+
+        QTest::qWait(50);
+
+        // Step 2: MCCP start + compressed data + leftover uncompressed in one packet
+        // The compressed data will trigger Z_STREAM_END, then leftover must be processed
+        QByteArray packet;
+        packet.append(TN_IAC);
+        packet.append(TN_SB);
+        packet.append(OPT_COMPRESS2);
+        packet.append(TN_IAC);
+        packet.append(TN_SE);
+        packet.append(compressed);
+        packet.append(leftoverText);
+        mpHost->mTelnet.loopbackTest(packet);
+
+        QTest::qWait(200);
+
+        // Verify both compressed and leftover text appear
+        bool foundCompressed = false;
+        bool foundLeftover = false;
+        const int lineCount = mpHost->mpConsole->buffer.size();
+        for (int i = 0; i < lineCount; ++i) {
+            const QString line = mpHost->mpConsole->buffer.line(i);
+            if (line.contains(QLatin1String("Compressed text"))) {
+                foundCompressed = true;
+            }
+            if (line.contains(QLatin1String("Uncompressed after stream end"))) {
+                foundLeftover = true;
+            }
+        }
+        QVERIFY2(foundCompressed, "Compressed text not found in output");
+        QVERIFY2(foundLeftover, "Leftover uncompressed text after Z_STREAM_END not found - this is issue #8122");
     }
 
     void cleanup()

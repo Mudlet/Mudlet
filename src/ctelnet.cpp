@@ -4852,9 +4852,14 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                         // Data after current position (i+1) is compressed
                         int restLength = datalen - i - 1;
                         if (restLength > 0) {
-                            buffer += i + 1;
-                            datalen = decompressBuffer(buffer, restLength, out_buffer);
+                            char* compressedData = buffer + i + 1;
+                            datalen = decompressBuffer(compressedData, restLength, out_buffer);
                             buffer = out_buffer;
+
+                            if (!mNeedDecompression && restLength > 0) {
+                                memcpy(out_buffer + datalen, compressedData, restLength);
+                                datalen += restLength;
+                            }
                             i = -1;
                         } else {
                             datalen = 0;
@@ -4887,6 +4892,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             char* compressedData = buffer + i + 1;
                             datalen = decompressBuffer(compressedData, restLength, out_buffer);
                             buffer = out_buffer;
+
+                            if (!mNeedDecompression && restLength > 0) {
+                                memcpy(out_buffer + datalen, compressedData, restLength);
+                                datalen += restLength;
+                            }
                         } else {
                             datalen = 0;
                         }
