@@ -21,6 +21,9 @@
 #include "dlgMapLabel.h"
 #include "mudlet.h"
 #include "utils.h"
+#include <QColorDialog>
+#include <QFileDialog>
+#include <QFontDialog>
 #include <QSettings>
 
 static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
@@ -63,6 +66,8 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     font = QApplication::font();
     font.setStyle(QFont::StyleNormal);
     text = plainTextEdit_labelText->placeholderText();
+    //: Tooltip for font display in map label dialog
+    lineEdit_font->setToolTip(tr("Font size is automatically calculated to fit the label"));
 
     QSettings& settings = *mudlet::getQSettings();
     fgColor = settings.value("fgColorDialogMapLabel", fgColor).value<QColor>();
@@ -237,10 +242,12 @@ bool dlgMapLabel::stretchImage()
 
 void dlgMapLabel::slot_updateControls()
 {
-    lineEdit_font->setText(QString("%1, %2pt %3").arg(font.family(), QString::number(font.pointSize()), font.styleName()));
+    //: Font display format in map label dialog. %1 is font family name, %2 is style (e.g. "Bold", "Italic"). Size excluded since it auto-scales.
+    lineEdit_font->setText(tr("%1 %2").arg(font.family(), font.styleName()));
     pushButton_fgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(fgColor.red()), QString::number(fgColor.green()), QString::number(fgColor.blue()), QString::number(fgColor.alpha())));
     pushButton_bgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(bgColor.red()), QString::number(bgColor.green()), QString::number(bgColor.blue()), QString::number(bgColor.alpha())));
-    pushButton_outlineColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(outlineColor.red()), QString::number(outlineColor.green()), QString::number(outlineColor.blue()), QString::number(outlineColor.alpha())));
+    pushButton_outlineColor->setStyleSheet(
+            BUTTON_STYLESHEET.arg(QString::number(outlineColor.red()), QString::number(outlineColor.green()), QString::number(outlineColor.blue()), QString::number(outlineColor.alpha())));
     lineEdit_image->setText(imagePath);
 }
 

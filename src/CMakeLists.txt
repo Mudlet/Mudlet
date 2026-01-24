@@ -151,6 +151,8 @@ set(mudlet_SRCS
     TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
+    TMapView.cpp
+    TMapViewManager.cpp
     TMedia.cpp
     TMediaPlaylist.cpp
     TMxpElementDefinitionHandler.cpp
@@ -356,6 +358,8 @@ set(mudlet_HDRS
     TMainConsole.h
     TMap.h
     TMapLabel.h
+    TMapView.h
+    TMapViewManager.h
     TMatchState.h
     TMedia.h
     TMediaPlaylist.h
@@ -431,6 +435,8 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS CameraController.h)
   list(APPEND mudlet_SRCS GeometryManager.cpp)
   list(APPEND mudlet_HDRS GeometryManager.h)
+  list(APPEND mudlet_SRCS LabelTextureCache.cpp)
+  list(APPEND mudlet_HDRS LabelTextureCache.h)
   list(APPEND mudlet_SRCS RenderCommand.cpp)
   list(APPEND mudlet_HDRS RenderCommand.h)
   list(APPEND mudlet_SRCS RenderCommandQueue.cpp)

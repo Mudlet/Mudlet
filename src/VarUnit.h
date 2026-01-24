@@ -23,7 +23,7 @@
  ***************************************************************************/
 
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QMap>
 #include <QSet>
 #include <QStringList>

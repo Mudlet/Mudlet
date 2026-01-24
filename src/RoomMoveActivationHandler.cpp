@@ -19,6 +19,7 @@
 
 #include "RoomMoveActivationHandler.h"
 
+#include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include <QMouseEvent>
@@ -50,8 +51,7 @@ bool RoomMoveActivationHandler::matches(const T2DMap::MapInteractionContext& con
             return false;
         }
 
-        if (context.modifiers.testFlag(Qt::ShiftModifier) || context.modifiers.testFlag(Qt::ControlModifier)
-            || context.modifiers.testFlag(Qt::AltModifier)) {
+        if (context.modifiers.testFlag(Qt::ShiftModifier) || context.modifiers.testFlag(Qt::ControlModifier) || context.modifiers.testFlag(Qt::AltModifier)) {
             return false;
         }
 

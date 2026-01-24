@@ -35,7 +35,7 @@ TMxpTagHandlerResult TMxpMusicTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
         const QString type = extractType(tag);
         const QString url = extractUrl(tag);
 
-        TMediaData mediaData {};
+        TMediaData mediaData{};
 
         mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
         mediaData.setMediaType(TMediaData::MediaTypeMusic);

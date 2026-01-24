@@ -24,25 +24,21 @@
  ***************************************************************************/
 
 
-#include "TTextCodec.h"
+#include "TEncodingTable.h"
+#include "TLinkStore.h"
+#include "utils.h"
 
-#include <QApplication>
 #include <QChar>
 #include <QColor>
 #include <QDebug>
 #include <QMap>
-#include <QQueue>
 #include <QPoint>
 #include <QPointer>
+#include <QQueue>
+#include <QSet>
 #include <QString>
-#include <QStringBuilder>
 #include <QStringList>
-#include <QTime>
 #include <QVector>
-#include "TEncodingTable.h"
-#include "TLinkStore.h"
-#include "TMxpMudlet.h"
-#include "TMxpProcessor.h"
 
 #include <deque>
 #include <memory>
@@ -464,6 +460,8 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
+    void clearLinkState();
+    QSet<int> collectActiveLinkIds() const;
     void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
@@ -562,8 +560,6 @@ private:
     QColor parseColorValue(const QString& value);
     // Accessibility enhancements for hyperlink styling
     void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
-    // Helper function to check if OSC 8 visibility experiment is enabled
-    bool isOsc8VisibilityEnabled() const;
 
     QPointer<TConsole> mpConsole;
 

@@ -25,7 +25,8 @@
 #include <QDebug>
 #include <typeinfo>
 
-EditorUndoStack::EditorUndoStack(QObject* parent) : QUndoStack(parent)
+EditorUndoStack::EditorUndoStack(QObject* parent)
+: QUndoStack(parent)
 {
     // Connect to indexChanged signal to emit itemsChanged after undo/redo
     connect(this, &QUndoStack::indexChanged, this, [this](int newIndex) {
@@ -82,7 +83,9 @@ void EditorUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
             for (int id : itemIDs) {
                 if (id <= 0) {
                     allValid = false;
+#if defined(DEBUG_UNDO_REDO)
                     qWarning() << "EditorUndoStack::emitChangesForCommand() - Invalid item ID" << id << "found, skipping emission";
+#endif
                     break;
                 }
             }
@@ -106,9 +109,7 @@ void EditorUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorV
     }
 
 #if defined(DEBUG_UNDO_REDO)
-    qDebug() << "EditorUndoStack::collectAffectedItems() - Examining command:" << cmd->text()
-             << "pointer:" << static_cast<const void*>(cmd)
-             << "type:" << typeid(*cmd).name();
+    qDebug() << "EditorUndoStack::collectAffectedItems() - Examining command:" << cmd->text() << "pointer:" << static_cast<const void*>(cmd) << "type:" << typeid(*cmd).name();
 #endif
 
     // If this is a EditorCommand, collect its affected items
@@ -298,8 +299,7 @@ void EditorUndoStack::remapItemIDs(int oldID, int newID)
         }
 
 #if defined(DEBUG_UNDO_REDO)
-        qDebug() << "EditorUndoStack::remapItemIDs() - Remapping in command:" << cmd->text()
-                 << "pointer:" << static_cast<const void*>(cmd);
+        qDebug() << "EditorUndoStack::remapItemIDs() - Remapping in command:" << cmd->text() << "pointer:" << static_cast<const void*>(cmd);
 #endif
 
         // Remap this command

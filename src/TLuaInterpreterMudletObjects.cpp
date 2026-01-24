@@ -41,6 +41,7 @@
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -76,10 +77,10 @@
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
 
-static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
-static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
-static const char *bad_window_value = "window \"%s\" not found";
-static const char *bad_cmdline_value = "command line \"%s\" not found";
+static const char* bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
+static const char* bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
+static const char* bad_window_value = "window \"%s\" not found";
+static const char* bad_cmdline_value = "command line \"%s\" not found";
 // Not used: static const char *bad_label_value = "label \"%s\" not found";
 
 // No documentation available in wiki - internal function
@@ -94,76 +95,75 @@ static bool isMain(const QString& name)
     return false;
 }
 
-#define WINDOW_NAME(ARG_L, ARG_pos)                                                                      \
-    ({                                                                                                   \
-        int pos_ = (ARG_pos);                                                                            \
-        const char *res_;                                                                                \
-        if ((lua_gettop(ARG_L) < pos_) || lua_isnil(ARG_L, pos_)) {                                      \
-            res_ = "";                                                                                   \
-        } else {                                                                                         \
-            if (!lua_isstring(ARG_L, pos_)) {                                                            \
-                lua_pushfstring(ARG_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_)); \
-                return lua_error(ARG_L);                                                                 \
-            }                                                                                            \
-            res_ = lua_tostring(ARG_L, pos_);                                                            \
-        }                                                                                                \
-        res_;                                                                                            \
+#define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
+    ({                                                                                                                                                                                                 \
+        int pos_ = (ARG_pos);                                                                                                                                                                          \
+        const char* res_;                                                                                                                                                                              \
+        if ((lua_gettop(ARG_L) < pos_) || lua_isnil(ARG_L, pos_)) {                                                                                                                                    \
+            res_ = "";                                                                                                                                                                                 \
+        } else {                                                                                                                                                                                       \
+            if (!lua_isstring(ARG_L, pos_)) {                                                                                                                                                          \
+                lua_pushfstring(ARG_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));                                                                                               \
+                return lua_error(ARG_L);                                                                                                                                                               \
+            }                                                                                                                                                                                          \
+            res_ = lua_tostring(ARG_L, pos_);                                                                                                                                                          \
+        }                                                                                                                                                                                              \
+        res_;                                                                                                                                                                                          \
     })
 
-#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                 \
-    ({                                                                                               \
-        int pos_ = (ARG_pos);                                                                        \
-        if (!lua_isstring(ARG_L, pos_)) {                                                            \
-            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));\
-            return lua_error(ARG_L);                                                                 \
-        }                                                                                            \
-        lua_tostring(ARG_L, pos_);                                                                   \
+#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                                                                                                                   \
+    ({                                                                                                                                                                                                 \
+        int pos_ = (ARG_pos);                                                                                                                                                                          \
+        if (!lua_isstring(ARG_L, pos_)) {                                                                                                                                                              \
+            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));                                                                                                  \
+            return lua_error(ARG_L);                                                                                                                                                                   \
+        }                                                                                                                                                                                              \
+        lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
     })
 
-#define CONSOLE_NIL(ARG_L, ARG_name)                                                           \
-    ({                                                                                         \
-        auto name_ = (ARG_name);                                                               \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
-        console_;                                                                              \
+#define CONSOLE_NIL(ARG_L, ARG_name)                                                                                                                                                                   \
+    ({                                                                                                                                                                                                 \
+        auto name_ = (ARG_name);                                                                                                                                                                       \
+        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
+        console_;                                                                                                                                                                                      \
     })
 
-#define CONSOLE(ARG_L, ARG_name)                                                               \
-    ({                                                                                         \
-        auto name_ = (ARG_name);                                                               \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
-        if (!console_) {                                                                       \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());              \
-            return 2;                                                                          \
-        }                                                                                      \
-        console_;                                                                              \
+#define CONSOLE(ARG_L, ARG_name)                                                                                                                                                                       \
+    ({                                                                                                                                                                                                 \
+        auto name_ = (ARG_name);                                                                                                                                                                       \
+        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
+        if (!console_) {                                                                                                                                                                               \
+            lua_pushnil(ARG_L);                                                                                                                                                                        \
+            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());                                                                                                                      \
+            return 2;                                                                                                                                                                                  \
+        }                                                                                                                                                                                              \
+        console_;                                                                                                                                                                                      \
     })
 
-#define COMMANDLINE(ARG_L, ARG_name)                                                           \
-    ({                                                                                         \
-        const QString& name_ = (ARG_name);                                                     \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
-        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
-                                    : console_->mSubCommandLineMap.value(name_);               \
-        if (!cmdLine_) {                                                                       \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());             \
-            return 2;                                                                          \
-        }                                                                                      \
-        cmdLine_;                                                                              \
+#define COMMANDLINE(ARG_L, ARG_name)                                                                                                                                                                   \
+    ({                                                                                                                                                                                                 \
+        const QString& name_ = (ARG_name);                                                                                                                                                             \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
+        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine : console_->mSubCommandLineMap.value(name_);                                                                                         \
+        if (!cmdLine_) {                                                                                                                                                                               \
+            lua_pushnil(ARG_L);                                                                                                                                                                        \
+            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
+            return 2;                                                                                                                                                                                  \
+        }                                                                                                                                                                                              \
+        cmdLine_;                                                                                                                                                                                      \
     })
 
-#define LABEL(ARG_L, ARG_name)                                                                 \
-    ({                                                                                         \
-        const QString& name_ = (ARG_name);                                                     \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
-        auto label_ = console_->mLabelMap.value(name_);                                        \
-        if (!label_) {                                                                         \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());               \
-            return 2;                                                                          \
-        }                                                                                      \
-        label_;                                                                                \
+#define LABEL(ARG_L, ARG_name)                                                                                                                                                                         \
+    ({                                                                                                                                                                                                 \
+        const QString& name_ = (ARG_name);                                                                                                                                                             \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
+        auto label_ = console_->mLabelMap.value(name_);                                                                                                                                                \
+        if (!label_) {                                                                                                                                                                                 \
+            lua_pushnil(ARG_L);                                                                                                                                                                        \
+            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());                                                                                                                       \
+            return 2;                                                                                                                                                                                  \
+        }                                                                                                                                                                                              \
+        label_;                                                                                                                                                                                        \
     })
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
@@ -524,8 +524,7 @@ int TLuaInterpreter::exists(lua_State* L)
 
         count = host.getScriptUnit()->findItems(nameOrId).size();
     } else {
-        return warnArgumentValue(L, __func__, qsl(
-                "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+        return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
     // If we get here we have successfully identified a type and have looked for
     // the item type with a specific NAME - so now just return the count of
@@ -700,17 +699,17 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_settable(L, -3);
 
     // Gifs
-    lua_pushstring(L,"gifs");
+    lua_pushstring(L, "gifs");
     lua_newtable(L);
 
-    lua_pushstring(L,"total");
-    lua_pushnumber(L,gifsTotal);
-    lua_settable(L,-3);
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, gifsTotal);
+    lua_settable(L, -3);
 
-    lua_pushstring(L,"active");
-    lua_pushnumber(L,activeGifs);
-    lua_settable(L,-3);
-    lua_settable(L,-3);
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeGifs);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
 
     return 1;
 }
@@ -782,9 +781,8 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!result.first)) {
-            return warnArgumentValue(L, __func__, qsl(
-                "stopwatch with name '%1' (ID: %2) has disappeared - this should not happen, please report it to Mudlet developers")
-                .arg(name, QString::number(watchId)));
+            return warnArgumentValue(
+                    L, __func__, qsl("stopwatch with name '%1' (ID: %2) has disappeared - this should not happen, please report it to Mudlet developers").arg(name, QString::number(watchId)));
         }
     }
 
@@ -899,17 +897,13 @@ int TLuaInterpreter::isActive(lua_State* L)
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getTimerUnit()->getTimer(id);
-            cnt = (static_cast<bool>(pT)
-                   && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive())
-                   && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
+            cnt = (static_cast<bool>(pT) && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
         } else {
             auto itpItem = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
             while (itpItem != host.getTimerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
                 auto pT = itpItem.value();
                 // Offset timer have their active state recorded differently
-                if ((pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive())
-                    && (!checkAncestors || pT->shouldAncestorsBeActive())) {
-
+                if ((pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) {
                     ++cnt;
                 }
                 ++itpItem;
@@ -988,8 +982,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         }
 
     } else {
-        return warnArgumentValue(L, __func__, qsl(
-                "invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+        return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
     lua_pushnumber(L, cnt);
     return 1;
@@ -1087,7 +1080,7 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
     const QString luaFunction = lua_tostring(L, 3);
 
     auto [triggerID, message] = pLuaInterpreter->startPermPromptTrigger(triggerName, parentName, luaFunction);
-    if(triggerID == - 1) {
+    if (triggerID == -1) {
         lua_pushfstring(L, "permPromptTrigger: cannot create trigger (%s)", message.toUtf8().constData());
         return lua_error(L);
     }
@@ -1103,8 +1096,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
 
     QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushfstring(L, "permRegexTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)",
-                        luaL_typename(L, 3));
+        lua_pushfstring(L, "permRegexTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -1142,8 +1134,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
 
     QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)",
-                        luaL_typename(L, 3));
+        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -1180,8 +1171,7 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
     QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushfstring(L, "permSubstringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)",
-                        luaL_typename(L, 3));
+        lua_pushfstring(L, "permSubstringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -1203,8 +1193,45 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
 
     const QString script{lua_tostring(L, 4)};
     auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script);
-    if(triggerID == - 1) {
+    if (triggerID == -1) {
         lua_pushfstring(L, "permSubstringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerID);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permExactMatchTrigger
+int TLuaInterpreter::permExactMatchTrigger(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    const QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
+    QStringList patternList;
+    if (!lua_istable(L, 3)) {
+        lua_pushfstring(L, "permExactMatchTrigger: bad argument #3 type (exact match patterns list as table expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            patternList << lua_tostring(L, -1);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permExactMatchTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    const QString script{lua_tostring(L, 4)};
+    auto [triggerID, message] = pLuaInterpreter->startPermExactMatchTrigger(name, parent, patternList, script);
+    if (triggerID == -1) {
+        lua_pushfstring(L, "permExactMatchTrigger: cannot create trigger (%s)", message.toUtf8().constData());
         return lua_error(L);
     }
     lua_pushnumber(L, triggerID);
@@ -1277,7 +1304,7 @@ int TLuaInterpreter::permKey(lua_State* L)
 
     QString luaFunction{lua_tostring(L, argIndex)};
     auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
-    if(keyID == - 1) {
+    if (keyID == -1) {
         lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
         return lua_error(L);
     }
@@ -1309,7 +1336,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    TEvent event {};
+    TEvent event{};
 
     const int n = lua_gettop(L);
     // We go from the top of the stack down, because luaL_ref will
@@ -1375,7 +1402,7 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
         return lua_error(L);
     }
 
-    TEvent event {};
+    TEvent event{};
 
     for (int i = 1; i <= n; ++i) {
         // The sending profile of the event does not receive the event if
@@ -1772,9 +1799,8 @@ int TLuaInterpreter::stopStopWatch(lua_State* L)
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!watchId)) {
-            return warnArgumentValue(L, __func__, qsl(
-                "stopwatch with name '%1' (ID: %2) has disappeared - this should not happen, please report it to Mudlet developers")
-                .arg(name, QString::number(watchId)));
+            return warnArgumentValue(
+                    L, __func__, qsl("stopwatch with name '%1' (ID: %2) has disappeared - this should not happen, please report it to Mudlet developers").arg(name, QString::number(watchId)));
         }
     }
 
@@ -1797,51 +1823,56 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     int s = 0;
 
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
-                        s, TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, s));
+        lua_pushfstring(L,
+                        "tempAnsiColorTrigger: bad argument #%d type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
+                        s,
+                        TTrigger::scmIgnored,
+                        TTrigger::scmDefault,
+                        luaL_typename(L, s));
         return lua_error(L);
     }
-    {   // separate block so that "value" is not scoped to the whole function
+    { // separate block so that "value" is not scoped to the whole function
         const int value = lua_tointeger(L, s);
         if (value == TTrigger::scmIgnored && lua_gettop(L) < 2) {
-            return warnArgumentValue(L, __func__, qsl(
-                "invalid ANSI color number %1, it cannot be used (to ignore the foreground color) if the background color is omitted")
-                .arg(value));
+            return warnArgumentValue(L, __func__, qsl("invalid ANSI color number %1, it cannot be used (to ignore the foreground color) if the background color is omitted").arg(value));
         }
         // At present we limit the range to (Trigger::scmIgnored),
         // (Trigger::scmDefault) and 0-255 ANSI colors - in the future we could
         // extend it to other "coded" values for locally generated textual
         // content
         if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
-            return warnArgumentValue(L, __func__, qsl(
-                "invalid ANSI color number %1, only %2 (ignore foreground color), %3 (default foregroud color) or 0 to 255 recognised")
-                .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
+            return warnArgumentValue(L,
+                                     __func__,
+                                     qsl("invalid ANSI color number %1, only %2 (ignore foreground color), %3 (default foregroud color) or 0 to 255 recognised")
+                                             .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
         }
         if (value == TTrigger::scmIgnored && lua_gettop(L) < 4) {
-            return warnArgumentValue(L, __func__, qsl(
-                "invalid ANSI color number %1, you cannot ignore both foreground and background color (omitted)").arg(value));
+            return warnArgumentValue(L, __func__, qsl("invalid ANSI color number %1, you cannot ignore both foreground and background color (omitted)").arg(value));
         }
         ansiFgColor = value;
     }
 
     // s=1 at this point. If top=4 the next argument must be the BG color number,
     // otherwise it may have been omitted.
-    if (lua_gettop(L) < s+3 && !lua_isnumber(L, s+1)) {
+    if (lua_gettop(L) < s + 3 && !lua_isnumber(L, s + 1)) {
         // BG color omitted, skip this part
     } else if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (background color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
-                        s, TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, s));
+        lua_pushfstring(L,
+                        "tempAnsiColorTrigger: bad argument #%d type (background color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
+                        s,
+                        TTrigger::scmIgnored,
+                        TTrigger::scmDefault,
+                        luaL_typename(L, s));
         return lua_error(L);
     } else {
         const int value = lua_tointeger(L, s);
         if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
-            return warnArgumentValue(L, __func__, qsl(
-                "invalid ANSI color number %1, only %2 (ignore background color), %3 (default background color) or 0 to 255 recognised")
-                .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
+            return warnArgumentValue(L,
+                                     __func__,
+                                     qsl("invalid ANSI color number %1, only %2 (ignore background color), %3 (default background color) or 0 to 255 recognised")
+                                             .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
         } else if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
-                return warnArgumentValue(L, __func__, qsl(
-                    "invalid ANSI color number %1, you cannot ignore both foreground and background color")
-                    .arg(value));
+            return warnArgumentValue(L, __func__, qsl("invalid ANSI color number %1, you cannot ignore both foreground and background color").arg(value));
         } else {
             ansiBgColor = value;
         }
@@ -1860,8 +1891,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     if (lua_isnumber(L, ++s)) {
         expiryCount = static_cast<int>(lua_tonumber(L, s));
         if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, ++s)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
@@ -1880,7 +1910,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
-        lua_pushvalue(L, s-1);
+        lua_pushvalue(L, s - 1);
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
@@ -1896,7 +1926,6 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     if (lua_isfunction(L, 2)) {
-
         const int result = pLuaInterpreter->startTempAlias(regex, QString());
         if (result == -1) {
             lua_pushnumber(L, -1);
@@ -1942,8 +1971,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
         expiryCount = static_cast<int>(lua_tonumber(L, 3));
 
         if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -2118,7 +2146,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     // it will break the API for this lua function
     // other colours in ANSI 256 colours handled but not mentioned in Wiki
     default:    foregroundColor =  value;   break;
-    // clang-format on
+        // clang-format on
     }
 
     value = getVerifiedInt(L, __func__, 2, "background color");
@@ -2145,7 +2173,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     // The default includes case -1:    backgroundColor = TTrigger::scmIgnored
     // but this cannot be used for the foreground case at the same time:
     default:    backgroundColor =  value;   break;
-    // clang-format on
+        // clang-format on
     }
 
     if (foregroundColor == TTrigger::scmIgnored && backgroundColor == TTrigger::scmIgnored) {
@@ -2159,8 +2187,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
         expiryCount = static_cast<int>(lua_tonumber(L, 4));
 
         if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be greater than zero, got %1").arg(expiryCount));
+            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
@@ -2281,8 +2308,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         expiryCount = static_cast<int>(lua_tonumber(L, 14));
 
         if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 14)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 14));
@@ -2352,8 +2378,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
         expiryCount = static_cast<int>(lua_tonumber(L, 3));
 
         if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -2401,7 +2426,6 @@ int TLuaInterpreter::tempKey(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     if (lua_isfunction(L, ++argIndex)) {
-
         const int result = pLuaInterpreter->startTempKey(keyModifier, keyCode, QString());
         if (result == -1) {
             lua_pushnumber(L, -1);
@@ -2409,9 +2433,7 @@ int TLuaInterpreter::tempKey(lua_State* L)
         }
 
         TKey* key = host.getKeyUnit()->getKey(result);
-        Q_ASSERT_X(key,
-                   "TLuaInterpreter::tempKey(...)",
-                   "Got a positive result from LuaInterpreter::startTempKey(...) but that failed to produce pointer to it from Host::mKeyUnit::getKey(...)");
+        Q_ASSERT_X(key, "TLuaInterpreter::tempKey(...)", "Got a positive result from LuaInterpreter::startTempKey(...) but that failed to produce pointer to it from Host::mKeyUnit::getKey(...)");
         if (!key) {
             lua_pushnumber(L, -1);
             return 1;
@@ -2441,7 +2463,7 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     const int from = getVerifiedInt(L, __func__, 1, "line to start matching from");
-    const int howMany  = getVerifiedInt(L, __func__, 2, "how many lines to match for");
+    const int howMany = getVerifiedInt(L, __func__, 2, "how many lines to match for");
     int triggerID;
     // temp line triggers expire naturally on their own, thus don't need the expiry mechanism applicable to all other triggers
     const int dontExpire = -1;
@@ -2485,8 +2507,7 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
         expiryCount = static_cast<int>(lua_tonumber(L, 2));
 
         if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 2)) {
         lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 2));
@@ -2532,8 +2553,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
         expiryCount = static_cast<int>(lua_tonumber(L, 3));
 
         if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -2629,8 +2649,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
         expiryCount = static_cast<int>(lua_tonumber(L, 3));
 
         if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -2667,8 +2686,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath))
-                                   .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
 
@@ -2801,7 +2819,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
 
     auto profileIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
     if (profileIndex != -1) {
-        emit mudlet::self()->mpTabBar->tabCloseRequested(profileIndex);
+        emit mudlet::self() -> mpTabBar->tabCloseRequested(profileIndex);
         lua_pushboolean(L, true);
         return 1;
     }

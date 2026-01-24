@@ -30,6 +30,9 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QTimer>
+
+using namespace std::chrono_literals;
 
 
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
@@ -93,7 +96,7 @@ void dlgPackageManager::clearPackageDetails()
     pushButton_report->hide();
 }
 
-void dlgPackageManager::downloadIcon(const QString &packageName)
+void dlgPackageManager::downloadIcon(const QString& packageName)
 {
     QString iconPath;
 
@@ -109,22 +112,24 @@ void dlgPackageManager::downloadIcon(const QString &packageName)
         }
     }
 
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/") + iconPath));
     request.setTransferTimeout(10000);
-    QNetworkReply *reply = manager->get(request);
+    QNetworkReply* reply = manager->get(request);
     reply->setProperty("packageName", packageName);
-    connect(reply, &QNetworkReply::finished, this, [this, reply](){ slot_onIconDownloaded(reply); });
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        slot_onIconDownloaded(reply);
+    });
 }
 
 void dlgPackageManager::downloadRepositoryIndex()
 {
     const QString outputPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
-    QNetworkReply *reply = manager->get(request);
-    QFile *file = new QFile(outputPath);
+    QNetworkReply* reply = manager->get(request);
+    QFile* file = new QFile(outputPath);
 
     if (!file->open(QIODevice::WriteOnly)) {
         file->deleteLater();
@@ -134,11 +139,22 @@ void dlgPackageManager::downloadRepositoryIndex()
     }
 
     QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
-        file->write(reply->readAll());
+        const QByteArray data = reply->readAll();
+        if (file->write(data) != data.size()) {
+            qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write downloaded data:" << file->errorString();
+            reply->abort();
+        }
     });
 
     QObject::connect(reply, &QNetworkReply::finished, [reply, file, manager, this]() {
-        file->write(reply->readAll());
+        if (reply->error() != QNetworkReply::NoError) {
+            qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - network request failed:" << reply->errorString();
+        } else {
+            const QByteArray data = reply->readAll();
+            if (!data.isEmpty() && file->write(data) != data.size()) {
+                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write final data:" << file->errorString();
+            }
+        }
         file->close();
         reply->deleteLater();
         file->deleteLater();
@@ -147,7 +163,7 @@ void dlgPackageManager::downloadRepositoryIndex()
     });
 }
 
-void dlgPackageManager::fillPackageDetails(const QString &name, const QString &title, const QString &author, const QString &version)
+void dlgPackageManager::fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version)
 {
     const QFontMetrics metrics(label_packageName->font());
     const QString elidedText = metrics.elidedText(name, Qt::ElideRight, label_packageName->width());
@@ -185,7 +201,7 @@ bool dlgPackageManager::readPackageRepositoryFile()
 
     repositoryPackages = obj[qsl("packages")].toArray();
     packageLookup.clear();
-    for (const QJsonValue &val : repositoryPackages) {
+    for (const QJsonValue& val : repositoryPackages) {
         QJsonObject pkg = val.toObject();
         packageLookup.insert(pkg["mpackage"].toString(), pkg);
     }
@@ -236,26 +252,35 @@ void dlgPackageManager::slot_installPackageFromFile()
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
-    //: Package manager - import package from file dialog
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), lastDir);
-    if (fileName.isEmpty()) {
+    //: Package manager - import packages from file dialog (multi-select enabled)
+    //: Package manager - file filter for supported package types (mpackage, zip, xml)
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Import Mudlet Package"), lastDir, tr("Mudlet Packages (*.mpackage *.zip *.xml)"));
+    if (fileNames.isEmpty()) {
         return;
     }
 
-    lastDir = QFileInfo(fileName).absolutePath();
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        //: Package manager - error when attempting to read a file to import
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
-        return;
+    QStringList failedPackages;
+
+    for (const QString& fileName : fileNames) {
+        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
+        if (success) {
+            mpHost->waitForProfileSave();
+        } else {
+            const QString baseName = QFileInfo(fileName).fileName();
+            failedPackages << baseName;
+            qWarning() << "dlgPackageManager::slot_installPackageFromFile() ERROR - failed to import" << baseName << ":" << errorMsg;
+        }
     }
 
-    mpHost->installPackage(fileName, enums::PackageModuleType::Package);
-
-    // Refresh the package list to show newly installed package
     resetPackageList();
+
+    if (!failedPackages.isEmpty()) {
+        //: Package manager - status message shown when some packages failed to import. %1 is a comma-separated list of package names
+        showImportStatus(tr("Failed to import: %1").arg(failedPackages.join(qsl(", "))));
+    }
 }
 
 void dlgPackageManager::slot_installPackageFromRepository()
@@ -272,7 +297,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
     progress->setMinimumDuration(0);
     progress->show();
 
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     auto pendingDownloads = std::make_shared<QHash<QString, QString>>();
     auto remainingDownloads = std::make_shared<int>(selected.size());
     auto activeReplies = std::make_shared<QList<QNetworkReply*>>();
@@ -325,10 +350,10 @@ void dlgPackageManager::slot_installPackageFromRepository()
         const QString outPath = outDir + QDir::separator() + remoteFileName;
         QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/%1").arg(QString::fromUtf8(encoded))));
         request.setTransferTimeout(30000);
-        QNetworkReply *reply = manager->get(request);
+        QNetworkReply* reply = manager->get(request);
         activeReplies->append(reply);
 
-        QFile *file = new QFile(outPath);
+        QFile* file = new QFile(outPath);
         if (!file->open(QIODevice::WriteOnly)) {
             (*remainingDownloads.get())--;
             file->deleteLater();
@@ -337,13 +362,20 @@ void dlgPackageManager::slot_installPackageFromRepository()
         }
 
         QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
-            file->write(reply->readAll());
+            const QByteArray data = reply->readAll();
+            if (file->write(data) != data.size()) {
+                qWarning() << "dlgPackageManager::slot_installMultiple() ERROR - failed to write downloaded data:" << file->errorString();
+                reply->abort();
+            }
         });
 
         pendingDownloads->insert(packageName, outPath);
 
         QObject::connect(reply, &QNetworkReply::finished, this, [reply, file, this, outPath, packageName, pendingDownloads, remainingDownloads, manager, progress, cancelled, activeReplies]() {
-            file->write(reply->readAll());
+            const QByteArray data = reply->readAll();
+            if (!data.isEmpty() && file->write(data) != data.size()) {
+                qWarning() << "dlgPackageManager::slot_installMultiple() ERROR - failed to write final data:" << file->errorString();
+            }
             file->close();
             reply->deleteLater();
             file->deleteLater();
@@ -366,8 +398,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
             if (--(*remainingDownloads.get()) == 0) {
                 for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
-                    const QString &pkgName = it.key();
-                    const QString &filePath = it.value();
+                    const QString& pkgName = it.key();
+                    const QString& filePath = it.value();
 
                     if (mpHost) {
                         mpHost->installPackage(filePath, enums::PackageModuleType::Package);
@@ -431,10 +463,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
             label_icon->setPixmap(pixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         }
 
-        fillPackageDetails(packageName,
-                           packageInfo.value(qsl("title")),
-                           packageInfo.value(qsl("author")),
-                           packageInfo.value(qsl("version")));
+        fillPackageDetails(packageName, packageInfo.value(qsl("title")), packageInfo.value(qsl("author")), packageInfo.value(qsl("version")));
 
     } else if (status == statusAvailable) {
         pushButton_website->show();
@@ -443,16 +472,14 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
 
         if (packageLookup.contains(packageName)) {
             QJsonObject packageObj = packageLookup.value(packageName);
-            fillPackageDetails(packageObj.value(qsl("mpackage")).toString(),
-                               packageObj.value(qsl("title")).toString(),
-                               packageObj.value(qsl("author")).toString(),
-                               packageObj.value(qsl("version")).toString());
+            fillPackageDetails(
+                    packageObj.value(qsl("mpackage")).toString(), packageObj.value(qsl("title")).toString(), packageObj.value(qsl("author")).toString(), packageObj.value(qsl("version")).toString());
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
         }
     }
 }
 
-void dlgPackageManager::slot_onIconDownloaded(QNetworkReply *reply)
+void dlgPackageManager::slot_onIconDownloaded(QNetworkReply* reply)
 {
     if (!reply) {
         return;
@@ -514,24 +541,21 @@ void dlgPackageManager::slot_removePackages()
     }
 }
 
-void dlgPackageManager::slot_searchTextChanged(const QString &searchText)
+void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
 {
     const auto status = packageStatusList->currentItem();
     packageList->clear();
 
     if (status == statusInstalled) {
-        for (const auto &value : mpHost->mPackageInfo) {
+        for (const auto& value : mpHost->mPackageInfo) {
             const QString name = value.value(qsl("mpackage"));
             const QString title = value.value(qsl("title"));
             const QString description = value.value(qsl("description"));
             const QString author = value.value(qsl("author"));
 
-            if (name.contains(searchText, Qt::CaseInsensitive) ||
-                title.contains(searchText, Qt::CaseInsensitive) ||
-                description.contains(searchText, Qt::CaseInsensitive) ||
-                author.contains(searchText, Qt::CaseInsensitive)) {
-
-                QListWidgetItem *item = new QListWidgetItem(name);
+            if (name.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
+                || author.contains(searchText, Qt::CaseInsensitive)) {
+                QListWidgetItem* item = new QListWidgetItem(name);
                 if (!title.isEmpty()) {
                     item->setData(Qt::UserRole, title);
                 }
@@ -549,19 +573,16 @@ void dlgPackageManager::slot_searchTextChanged(const QString &searchText)
             }
         }
     } else if (status == statusAvailable) {
-        for (const QJsonValue &value : repositoryPackages) {
+        for (const QJsonValue& value : repositoryPackages) {
             const QJsonObject pkg = value.toObject();
             const QString name = pkg[qsl("mpackage")].toString();
             const QString title = pkg[qsl("title")].toString();
             const QString description = pkg[qsl("description")].toString();
             const QString author = pkg[qsl("author")].toString();
 
-            if (name.contains(searchText, Qt::CaseInsensitive) ||
-                title.contains(searchText, Qt::CaseInsensitive) ||
-                description.contains(searchText, Qt::CaseInsensitive) ||
-                author.contains(searchText, Qt::CaseInsensitive)) {
-
-                QListWidgetItem *item = new QListWidgetItem(name);
+            if (name.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
+                || author.contains(searchText, Qt::CaseInsensitive)) {
+                QListWidgetItem* item = new QListWidgetItem(name);
                 if (!title.isEmpty()) {
                     item->setData(Qt::UserRole, title);
                 }
@@ -613,7 +634,6 @@ void dlgPackageManager::slot_setPackageList()
             packageList->addItem(item);
         }
     } else if (status == statusAvailable) {
-
         if (!readPackageRepositoryFile()) {
             return;
         }
@@ -675,6 +695,14 @@ void dlgPackageManager::slot_toggleRemoveButton()
         pushButton_remove->setText(tr("Remove"));
         pushButton_remove->setEnabled(false);
     }
+}
+
+void dlgPackageManager::showImportStatus(const QString& message)
+{
+    label_importStatus->setText(message);
+    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
+    label_importStatus->show();
+    QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
 }
 
 void dlgPackageManager::closeEvent(QCloseEvent* event)

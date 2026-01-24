@@ -54,8 +54,10 @@ QString SecureStringUtils::getSSLBackendInfo()
 
         // Check supported protocols
         QStringList protocols;
-        if (QSslSocket::isProtocolSupported(QSsl::TlsV1_2)) protocols << "TLS 1.2";
-        if (QSslSocket::isProtocolSupported(QSsl::TlsV1_3)) protocols << "TLS 1.3";
+        if (QSslSocket::isProtocolSupported(QSsl::TlsV1_2))
+            protocols << "TLS 1.2";
+        if (QSslSocket::isProtocolSupported(QSsl::TlsV1_3))
+            protocols << "TLS 1.3";
         info << QString("Supported protocols: %1").arg(protocols.join(", "));
 
     } else {
@@ -377,16 +379,16 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     QDir dir;
 
     if (!dir.mkpath(profileDir)) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create profile directory for \""
-                                     << profileName << "\". Falling back to deterministic key derivation.";
+        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create profile directory for \"" << profileName
+                                     << "\". Falling back to deterministic key derivation.";
         return false;
     }
 
     QSaveFile file(keyFilePath);
 
     if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create encryption key file for profile \""
-                                     << profileName << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
+        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create encryption key file for profile \"" << profileName
+                                     << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
         return false;
     }
 
@@ -398,8 +400,8 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     ofs << base64Key;
 
     if (!file.commit()) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not save encryption key file for profile \""
-                                     << profileName << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
+        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not save encryption key file for profile \"" << profileName
+                                     << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
         return false;
     }
 
@@ -427,9 +429,7 @@ QByteArray SecureStringUtils::generateNonce()
     return nonce;
 }
 
-QByteArray SecureStringUtils::encryptData(const QByteArray& plaintext, const QByteArray& key,
-                                               const QByteArray& salt, const QByteArray& nonce,
-                                               QByteArray& hmac)
+QByteArray SecureStringUtils::encryptData(const QByteArray& plaintext, const QByteArray& key, const QByteArray& salt, const QByteArray& nonce, QByteArray& hmac)
 {
     if (plaintext.isEmpty() || key.size() != KEY_SIZE || salt.size() != SALT_SIZE || nonce.size() != NONCE_SIZE) {
         return QByteArray();
@@ -457,12 +457,9 @@ QByteArray SecureStringUtils::encryptData(const QByteArray& plaintext, const QBy
     return encrypted;
 }
 
-QByteArray SecureStringUtils::decryptData(const QByteArray& ciphertext, const QByteArray& key,
-                                               const QByteArray& salt, const QByteArray& nonce,
-                                               const QByteArray& hmac)
+QByteArray SecureStringUtils::decryptData(const QByteArray& ciphertext, const QByteArray& key, const QByteArray& salt, const QByteArray& nonce, const QByteArray& hmac)
 {
-    if (ciphertext.isEmpty() || key.size() != KEY_SIZE || salt.size() != SALT_SIZE ||
-        nonce.size() != NONCE_SIZE || hmac.size() != HMAC_SIZE) {
+    if (ciphertext.isEmpty() || key.size() != KEY_SIZE || salt.size() != SALT_SIZE || nonce.size() != NONCE_SIZE || hmac.size() != HMAC_SIZE) {
         return QByteArray();
     }
 

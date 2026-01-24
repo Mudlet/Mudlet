@@ -28,7 +28,7 @@ jobs:
         submodules: recursive
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.2.2
 
     - name: Install dependencies
       run: |
@@ -45,8 +45,8 @@ jobs:
 
     - name: Set build info
       run: |
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
 
     - name: Check ccache stats prior to build
       if: runner.os == 'Linux' || runner.os == 'macOS'

@@ -25,6 +25,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "TTimer.h"
+#include "TTrigger.h"
 #include "VarUnit.h"
 
 #include <QtEvents>
@@ -45,85 +46,11 @@ TTreeWidget::TTreeWidget(QWidget* pW)
     mIsDropAction = false;
     mpHost = nullptr;
     mOldParentID = 0;
-
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsAliasTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-    mIsVarTree = false;
 }
 
-void TTreeWidget::setIsAliasTree()
+void TTreeWidget::setTreeType(TreeType type)
 {
-    mIsAliasTree = true;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsVarTree()
-{
-    mIsVarTree = true;
-    mIsAliasTree = false;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsTriggerTree()
-{
-    mIsTriggerTree = true;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsActionTree()
-{
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsKeyTree = false;
-    mIsActionTree = true;
-}
-
-void TTreeWidget::setIsKeyTree()
-{
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = true;
-}
-
-void TTreeWidget::setIsTimerTree()
-{
-    mIsTimerTree = true;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsAliasTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsScriptTree()
-{
-    mIsScriptTree = true;
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
+    mTreeType = type;
 }
 
 void TTreeWidget::setHost(Host* pH)
@@ -142,7 +69,7 @@ void TTreeWidget::getAllChildren(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>
 void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if (mIsVarTree && indexClicked.isValid() && indexClicked.row() != 0 && mClickedItem == indexClicked) {
+    if (mTreeType == TreeType::Var && indexClicked.isValid() && indexClicked.row() != 0 && mClickedItem == indexClicked) {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
@@ -180,7 +107,7 @@ void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 void TTreeWidget::mousePressEvent(QMouseEvent* event)
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if (mIsVarTree && indexClicked.isValid()) {
+    if (mTreeType == TreeType::Var && indexClicked.isValid()) {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
@@ -288,28 +215,100 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
             // Emit signal for undo system before performing the move
             emit itemMoved(childID, moveInfo.oldParentID, newParentID, moveInfo.oldPosition, childPosition);
 
-            if (mIsTriggerTree) {
+            switch (mTreeType) {
+            case TreeType::Trigger: {
                 mpHost->getTriggerUnit()->reParentTrigger(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-            } else if (mIsAliasTree) {
+
+                // Update icons for affected triggers after the move
+                // 1. Update the new parent's icon (may become a filter chain)
+                QTreeWidgetItem* pNewParentItem = itemFromIndex(parent);
+                if (pNewParentItem && newParentID != 0) {
+                    updateTriggerIcon(pNewParentItem, newParentID);
+                }
+
+                // 2. Update the old parent's icon (may stop being a filter chain)
+                if (moveInfo.oldParentID != 0 && moveInfo.oldParentID != newParentID) {
+                    QTreeWidgetItem* pOldParentItem = findItemByTriggerID(invisibleRootItem(), moveInfo.oldParentID);
+                    if (pOldParentItem) {
+                        updateTriggerIcon(pOldParentItem, moveInfo.oldParentID);
+                    }
+                }
+
+                // 3. Update the moved child and all its descendants (ancestors may have changed)
+                if (pNewParentItem) {
+                    for (int i = 0; i < pNewParentItem->childCount(); ++i) {
+                        QTreeWidgetItem* pChildItem = pNewParentItem->child(i);
+                        if (pChildItem && pChildItem->data(0, Qt::UserRole).toInt() == childID) {
+                            updateTriggerIconsRecursively(pChildItem);
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+            case TreeType::Alias:
                 mpHost->getAliasUnit()->reParentAlias(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-            } else if (mIsKeyTree) {
+                break;
+            case TreeType::Key:
                 mpHost->getKeyUnit()->reParentKey(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-            } else if (mIsTimerTree) {
+                break;
+            case TreeType::Timer: {
                 mpHost->getTimerUnit()->reParentTimer(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
                 TTimer* pTChild = mpHost->getTimerUnit()->getTimer(childID);
                 if (pTChild) {
                     QIcon icon;
-                    if (pTChild->isOffsetTimer()) {
+                    if (pTChild->isFolder()) {
+                        // Timer folder
                         if (pTChild->shouldBeActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                            if (pTChild->ancestorsActive()) {
+                                if (!pTChild->mPackageName.isEmpty()) {
+                                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                                } else {
+                                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                                }
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            }
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                            if (pTChild->ancestorsActive()) {
+                                if (!pTChild->mPackageName.isEmpty()) {
+                                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                                } else {
+                                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                                }
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                            }
+                        }
+                    } else if (pTChild->isOffsetTimer()) {
+                        // Offset timer
+                        if (pTChild->shouldBeActive()) {
+                            if (pTChild->ancestorsActive()) {
+                                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                            }
+                        } else {
+                            if (pTChild->ancestorsActive()) {
+                                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                            }
                         }
                     } else {
+                        // Regular timer
                         if (pTChild->shouldBeActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            if (pTChild->ancestorsActive()) {
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                            }
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                            if (pTChild->ancestorsActive()) {
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_grey.png")), QIcon::Normal, QIcon::Off);
+                            }
                         }
                     }
                     QTreeWidgetItem* pParent = itemFromIndex(parent);
@@ -325,15 +324,19 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                         }
                     }
                 }
-            } else if (mIsScriptTree) {
+                break;
+            }
+            case TreeType::Script:
                 mpHost->getScriptUnit()->reParentScript(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
-            } else if (mIsActionTree) {
+                break;
+            case TreeType::Action:
                 mpHost->getActionUnit()->reParentAction(childID, moveInfo.oldParentID, newParentID, parentPosition, childPosition);
                 mpHost->getActionUnit()->updateToolbar();
-            } else {
+                break;
+            case TreeType::Var:
+            case TreeType::None:
                 qWarning().nospace().noquote() << "TTreeWidget::rowsInserted(...) WARNING - a TTreeWidget item which has not been classified as a mudlet type detected.";
-                // Consider marking this:
-                // Q_UNREACHABLE();
+                break;
             }
         }
 
@@ -383,7 +386,7 @@ void TTreeWidget::dropEvent(QDropEvent* event)
         event->ignore();
     }
 
-    if (mIsVarTree) {
+    if (mTreeType == TreeType::Var) {
         LuaInterface* lI = mpHost->getLuaInterface();
         auto [isValid, errorMsg] = lI->validMove(pItem);
         if (!isValid) {
@@ -422,4 +425,102 @@ void TTreeWidget::startDrag(Qt::DropActions supportedActions)
 bool TTreeWidget::dropMimeData(QTreeWidgetItem* parent, int index, const QMimeData* data, Qt::DropAction action)
 {
     return QTreeWidget::dropMimeData(parent, index, data, action);
+}
+
+// Helper to find a tree widget item by trigger ID
+QTreeWidgetItem* TTreeWidget::findItemByTriggerID(QTreeWidgetItem* pParent, int triggerID)
+{
+    if (!pParent) {
+        return nullptr;
+    }
+
+    for (int i = 0; i < pParent->childCount(); ++i) {
+        QTreeWidgetItem* pChild = pParent->child(i);
+        if (pChild->data(0, Qt::UserRole).toInt() == triggerID) {
+            return pChild;
+        }
+        QTreeWidgetItem* pFound = findItemByTriggerID(pChild, triggerID);
+        if (pFound) {
+            return pFound;
+        }
+    }
+    return nullptr;
+}
+
+// Update a single trigger item's icon based on its current state
+void TTreeWidget::updateTriggerIcon(QTreeWidgetItem* pItem, int triggerID)
+{
+    if (!pItem || !mpHost) {
+        return;
+    }
+
+    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    if (!pT) {
+        return;
+    }
+
+    QIcon icon;
+    if (pT->state()) {
+        if (pT->isFilterChain()) {
+            if (pT->isActive()) {
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            } else {
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else if (pT->isFolder()) {
+            if (pT->isActive()) {
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            } else {
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        } else {
+            if (pT->isActive()) {
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            } else {
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+        }
+    } else {
+        icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+    }
+    pItem->setIcon(0, icon);
+}
+
+// Recursively update trigger icons for an item and all its children
+void TTreeWidget::updateTriggerIconsRecursively(QTreeWidgetItem* pItem)
+{
+    if (!pItem || !mpHost) {
+        return;
+    }
+
+    int triggerID = pItem->data(0, Qt::UserRole).toInt();
+    updateTriggerIcon(pItem, triggerID);
+
+    for (int i = 0; i < pItem->childCount(); ++i) {
+        updateTriggerIconsRecursively(pItem->child(i));
+    }
 }

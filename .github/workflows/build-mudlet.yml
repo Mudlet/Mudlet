@@ -76,7 +76,7 @@ jobs:
         modules: qt5compat qtmultimedia
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.2.2
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -213,8 +213,8 @@ jobs:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         sudo apt-get -y install pcre2-utils
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
 
     - name: (macOS) Set build info
       if: runner.os == 'macOS'
@@ -222,14 +222,27 @@ jobs:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
         brew install pcre2
-        ${{github.workspace}}/CI/travis.validate_deployment.sh
-        ${{github.workspace}}/CI/travis.set-build-info.sh
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
         echo "CXX=clang++" >> $GITHUB_ENV
         echo "CC=clang" >> $GITHUB_ENV
 
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
+
+    - name: Get sentry-native commit hash
+      id: sentry-hash
+      run: echo "hash=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Cache sentry-native
+      id: cache-sentry
+      uses: actions/cache@v5
+      with:
+        path: |
+          3rdparty/sentry-native/install_without_transport
+          3rdparty/sentry-native/install_with_transport
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.hash }}
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
@@ -331,7 +344,7 @@ jobs:
           export ARCH_DBLSQD=$ARCH
           echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
         fi
-        ${{github.workspace}}/CI/travis.after_success.sh
+        ${{github.workspace}}/CI/after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}

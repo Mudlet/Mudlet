@@ -29,7 +29,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     QString href = extractHref(tag);
     QString hint = extractHint(tag);
     QString expireName;
-    
+
     // Extract expire name if present
     if (tag->hasAttribute(ATTR_EXPIRE)) {
         expireName = tag->getAttributeValue(ATTR_EXPIRE);
@@ -126,7 +126,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 {
     Q_UNUSED(ctx)
     Q_UNUSED(tag)
-    
+
     // Only process link-related logic if a link was actually created
     if (mLinkId != 0) {
         if (mIsHrefInContent) {

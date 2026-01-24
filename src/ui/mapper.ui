@@ -271,6 +271,25 @@
           </widget>
          </item>
          <item>
+          <widget class="QToolButton" name="toolButton_saveWarning">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string notr="true">⚠</string>
+           </property>
+           <property name="toolTip">
+            <string>Map autosave failed - click for options</string>
+           </property>
+           <property name="visible">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QToolButton" name="toolButton_mapperMenu">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">

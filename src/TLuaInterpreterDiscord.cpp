@@ -40,6 +40,7 @@
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TLabel.h"
+#include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -564,4 +565,3 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
-
