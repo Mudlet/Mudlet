@@ -145,10 +145,7 @@ void cTelnet::reset()
     command = "";
     mMudData = "";
 
-    // Reset character mode detection state
     mServerRequestedSGA = false;
-
-    // Reset ECHO abuse detection state
     mEchoToggleCount = 0;
     mEchoAbuseDetected = false;
 
@@ -5285,7 +5282,6 @@ void cTelnet::checkCharacterModePattern()
 
 bool cTelnet::checkEchoAbusePattern()
 {
-    // Once abuse is detected, always return true to block further ECHO negotiations
     if (mEchoAbuseDetected) {
         return true;
     }

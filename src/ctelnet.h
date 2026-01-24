@@ -473,10 +473,7 @@ private:
     int mNaws_x = 0;
     int mNaws_y = 0;
 
-    // Character mode detection - tracks if server requested SGA this connection
     bool mServerRequestedSGA = false;
-
-    // ECHO abuse detection
     QElapsedTimer mEchoToggleTimer;
     int mEchoToggleCount = 0;
     bool mEchoAbuseDetected = false;
@@ -486,7 +483,6 @@ private:
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;
 
-    // Character mode / ECHO abuse detection helpers
     void checkCharacterModePattern();
     bool checkEchoAbusePattern();
 };
