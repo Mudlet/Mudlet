@@ -145,6 +145,13 @@ void cTelnet::reset()
     command = "";
     mMudData = "";
 
+    // Reset character mode detection state
+    mServerRequestedSGA = false;
+
+    // Reset ECHO abuse detection state
+    mEchoToggleCount = 0;
+    mEchoAbuseDetected = false;
+
     mNegotiationOrder.clear();
 }
 
@@ -2712,6 +2719,24 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             break;
         }
 
+        if (option == OPT_SUPPRESS_GO_AHEAD) {
+            sendTelnetOption(TN_DONT, option);
+            hisOptionState[idxOption] = false;
+            mServerRequestedSGA = true;
+            qDebug() << "SUPPRESS-GO-AHEAD: Rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "SUPPRESS_GO_AHEAD");
+            checkCharacterModePattern();
+            break;
+        }
+
+        if (option == OPT_LINEMODE) {
+            sendTelnetOption(TN_DONT, option);
+            hisOptionState[idxOption] = false;
+            qDebug() << "LINEMODE: Server's WILL rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "LINEMODE");
+            break;
+        }
+
         heAnnouncedState[idxOption] = true;
         if (triedToEnable[idxOption]) {
             hisOptionState[idxOption] = true;
@@ -2723,31 +2748,38 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 //unless explicitly requested)
 
                 if (option == OPT_ECHO) {
-                    sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
-                    mpHost->setRemoteEchoingActive(true);
-                    qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                    if (checkEchoAbusePattern()) {
+                        sendTelnetOption(TN_DONT, option);
+                        hisOptionState[idxOption] = false;
+                        qDebug() << "ECHO: Rejecting due to abuse pattern detection";
+                    } else {
+                        sendTelnetOption(TN_DO, option);
+                        hisOptionState[idxOption] = true;
+                        mpHost->setRemoteEchoingActive(true);
+                        qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                        checkCharacterModePattern();
 
-                    // Start a safety timeout for password mode, but only during
-                    // the first 5 minutes of a connection (login phase). This
-                    // protects against servers that fail to send WONT ECHO due
-                    // to network issues or bugs, while not affecting legitimate
-                    // password prompts later in the session (e.g., admin commands).
-                    // Skip this if the user has disabled password masking entirely.
-                    constexpr auto LOGIN_PHASE_MS = 5min;
-                    constexpr auto PASSWORD_TIMEOUT_MS = 60s;
-                    if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
-                        if (!mTimerPasswordModeTimeout) {
-                            mTimerPasswordModeTimeout = new QTimer(this);
-                            mTimerPasswordModeTimeout->setSingleShot(true);
-                            connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
-                                if (mpHost && mpHost->isRemoteEchoingActive()) {
-                                    qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
-                                    mpHost->setRemoteEchoingActive(false);
-                                }
-                            });
+                        // Start a safety timeout for password mode, but only during
+                        // the first 5 minutes of a connection (login phase). This
+                        // protects against servers that fail to send WONT ECHO due
+                        // to network issues or bugs, while not affecting legitimate
+                        // password prompts later in the session (e.g., admin commands).
+                        // Skip this if the user has disabled password masking entirely.
+                        constexpr auto LOGIN_PHASE_MS = 5min;
+                        constexpr auto PASSWORD_TIMEOUT_MS = 60s;
+                        if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
+                            if (!mTimerPasswordModeTimeout) {
+                                mTimerPasswordModeTimeout = new QTimer(this);
+                                mTimerPasswordModeTimeout->setSingleShot(true);
+                                connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
+                                    if (mpHost && mpHost->isRemoteEchoingActive()) {
+                                        qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
+                                        mpHost->setRemoteEchoingActive(false);
+                                    }
+                                });
+                            }
+                            mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                         }
-                        mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
                     }
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
@@ -2880,12 +2912,17 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState[idxOption] = false;
 
                 if (option == OPT_ECHO) {
-                    // Cancel any pending password mode timeout since we got the proper WONT ECHO
-                    if (mTimerPasswordModeTimeout) {
-                        mTimerPasswordModeTimeout->stop();
+                    if (mEchoAbuseDetected) {
+                        qDebug() << "ECHO: Ignoring WONT due to abuse pattern";
+                    } else {
+                        checkEchoAbusePattern();
+                        // Cancel any pending password mode timeout since we got the proper WONT ECHO
+                        if (mTimerPasswordModeTimeout) {
+                            mTimerPasswordModeTimeout->stop();
+                        }
+                        mpHost->setRemoteEchoingActive(false);
+                        qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                     }
-                    mpHost->setRemoteEchoingActive(false);
-                    qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
                 if (option == OPT_COMPRESS) {
@@ -2933,6 +2970,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
             }
 
+            break;
+        }
+
+        if (option == OPT_LINEMODE) {
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+            qDebug() << "LINEMODE: Rejected (Mudlet operates in line mode only)";
+            raiseProtocolEvent("sysProtocolRejected", "LINEMODE");
             break;
         }
 
@@ -5217,4 +5263,49 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     static const QRegularExpression isRawIPv6AddressRegExp(qsl("^[0-9a-f:]+$"));
 
     return isRawIPv6AddressRegExp.match(text).hasMatch();
+}
+
+void cTelnet::checkCharacterModePattern()
+{
+    if (!mServerRequestedSGA || !mpHost || !mpHost->isRemoteEchoingActive()) {
+        return;
+    }
+
+    raiseProtocolEvent("sysCharacterModeDetected", "");
+    qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA)";
+
+    if (mudlet::self()->showCharacterModeWarning()) {
+        mudlet::self()->showedCharacterModeWarning();
+        //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
+        postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
+                       "which Mudlet does not support. Input may not work as expected. "
+                       "Consider using keybindings for immediate key response instead."));
+    }
+}
+
+bool cTelnet::checkEchoAbusePattern()
+{
+    if (mEchoToggleTimer.isValid() && mEchoToggleTimer.elapsed() < ECHO_ABUSE_WINDOW_MS) {
+        mEchoToggleCount++;
+
+        if (mEchoToggleCount >= ECHO_ABUSE_THRESHOLD && !mEchoAbuseDetected) {
+            mEchoAbuseDetected = true;
+
+            raiseProtocolEvent("sysEchoAbuseDetected", "");
+            qWarning() << "ECHO abuse pattern detected - disabling ECHO response to protect TCommandLine";
+
+            if (mudlet::self()->showEchoAbuseWarning()) {
+                mudlet::self()->showedEchoAbuseWarning();
+                //: Warning shown when server rapidly toggles ECHO mode abnormally
+                postMessage(tr("[ WARN ]  - Unusual ECHO negotiation pattern detected. "
+                               "This game may be using character mode or have compatibility issues. "
+                               "Password masking has been disabled to prevent input disruption."));
+            }
+            return true;
+        }
+    } else {
+        mEchoToggleCount = 1;
+    }
+    mEchoToggleTimer.restart();
+    return false;
 }
