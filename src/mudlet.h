@@ -727,10 +727,10 @@ private:
     int mCharacterModeWarningsShown = 0; // Character-at-a-time mode detection
     int mEchoAbuseWarningsShown = 0;     // ECHO abuse detection
     // show the tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3;   // Split screen
-    static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
-    static const int mCharacterModeWarningsMax = 3; // Character mode
-    static const int mEchoAbuseWarningsMax = 3;     // ECHO abuse
+    static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
+    static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
+    static constexpr int mCharacterModeWarningsMax = 3; // Character mode
+    static constexpr int mEchoAbuseWarningsMax = 3;     // ECHO abuse
 
     // AI/LlamaFile integration
     std::unique_ptr<LlamafileManager> mpLlamafileManager;

@@ -2766,9 +2766,9 @@ void mudlet::readLateSettings(const QSettings& settings)
         setToolBarIconSize(settings.value(qsl("mainiconsize")).toInt());
     }
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
-    mScrollbackTutorialsShown = settings.value("scrollbackTutorialsShown", QVariant(0)).toInt();
-    mCharacterModeWarningsShown = settings.value("characterModeWarningsShown", QVariant(0)).toInt();
-    mEchoAbuseWarningsShown = settings.value("echoAbuseWarningsShown", QVariant(0)).toInt();
+    mScrollbackTutorialsShown = qBound(0, settings.value("scrollbackTutorialsShown", QVariant(0)).toInt(), mScrollbackTutorialsMax);
+    mCharacterModeWarningsShown = qBound(0, settings.value("characterModeWarningsShown", QVariant(0)).toInt(), mCharacterModeWarningsMax);
+    mEchoAbuseWarningsShown = qBound(0, settings.value("echoAbuseWarningsShown", QVariant(0)).toInt(), mEchoAbuseWarningsMax);
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
@@ -6815,7 +6815,7 @@ bool mudlet::showCharacterModeWarning()
 
 void mudlet::showedCharacterModeWarning()
 {
-    mCharacterModeWarningsShown++;
+    mCharacterModeWarningsShown = std::min(mCharacterModeWarningsShown + 1, mCharacterModeWarningsMax);
 }
 
 bool mudlet::showEchoAbuseWarning()
@@ -6825,7 +6825,7 @@ bool mudlet::showEchoAbuseWarning()
 
 void mudlet::showedEchoAbuseWarning()
 {
-    mEchoAbuseWarningsShown++;
+    mEchoAbuseWarningsShown = std::min(mEchoAbuseWarningsShown + 1, mEchoAbuseWarningsMax);
 }
 
 // returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic

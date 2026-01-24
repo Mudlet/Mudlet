@@ -486,7 +486,7 @@ private:
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;
 
-private:
+    // Character mode / ECHO abuse detection helpers
     void checkCharacterModePattern();
     bool checkEchoAbusePattern();
 };

@@ -5285,10 +5285,15 @@ void cTelnet::checkCharacterModePattern()
 
 bool cTelnet::checkEchoAbusePattern()
 {
+    // Once abuse is detected, always return true to block further ECHO negotiations
+    if (mEchoAbuseDetected) {
+        return true;
+    }
+
     if (mEchoToggleTimer.isValid() && mEchoToggleTimer.elapsed() < ECHO_ABUSE_WINDOW_MS) {
         mEchoToggleCount++;
 
-        if (mEchoToggleCount >= ECHO_ABUSE_THRESHOLD && !mEchoAbuseDetected) {
+        if (mEchoToggleCount >= ECHO_ABUSE_THRESHOLD) {
             mEchoAbuseDetected = true;
 
             raiseProtocolEvent("sysEchoAbuseDetected", "");
