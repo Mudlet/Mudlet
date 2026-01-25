@@ -4175,6 +4175,28 @@ int TLuaInterpreter::getRoomHidden(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHiddenRooms
+int TLuaInterpreter::getHiddenRooms(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    lua_newtable(L);
+    int i = 0;
+    QHashIterator<int, TRoom*> it(host.mpMap->mpRoomDB->getRoomMap());
+    while (it.hasNext()) {
+        it.next();
+        if (it.value()->isHidden()) {
+            lua_pushnumber(L, ++i);
+            lua_pushnumber(L, it.key());
+            lua_settable(L, -3);
+        }
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unHighlightRoom
 int TLuaInterpreter::unHighlightRoom(lua_State* L)
 {
