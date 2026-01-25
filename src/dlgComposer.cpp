@@ -64,7 +64,7 @@ void dlgComposer::slot_save()
     this->hide();
 }
 
-void dlgComposer::init(const QString &newTitle, const QString &newText)
+void dlgComposer::init(const QString& newTitle, const QString& newText)
 {
     title->setText(newTitle);
     edit->setPlainText(newText);
@@ -229,8 +229,7 @@ void dlgComposer::slot_contextMenu(const QPoint& pos)
     if (mpHost && mpHost->mEnableSpellCheck) {
         // Convert from widget coordinates to viewport coordinates
         QPoint viewportPos = edit->viewport()->mapFromParent(pos);
-        QMouseEvent mouseEvent(QEvent::MouseButtonPress, viewportPos, edit->mapToGlobal(pos),
-                               Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+        QMouseEvent mouseEvent(QEvent::MouseButtonPress, viewportPos, edit->mapToGlobal(pos), Qt::RightButton, Qt::RightButton, Qt::NoModifier);
         fillSpellCheckList(&mouseEvent, popup);
     }
 

@@ -26,6 +26,7 @@
 
 #include <QtGlobal>
 #include <QColor>
+#include <QFont>
 #include <QPixmap>
 #include <QSizeF>
 #include <QVector3D>
@@ -43,6 +44,7 @@ public:
     QColor fgColor = QColorConstants::Black;
     QColor bgColor = QColorConstants::Black;
     QColor outlineColor = QColorConstants::Black;
+    QFont font;
     QPixmap pix;
     bool highlight = false;
     bool showOnTop = false;

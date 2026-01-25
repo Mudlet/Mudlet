@@ -58,7 +58,7 @@ void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 }
 
 
-void AliasUnit::uninstall(const QString &packageName)
+void AliasUnit::uninstall(const QString& packageName)
 {
     for (auto rootAlias : mAliasRootNodeList) {
         if (rootAlias->mPackageName == packageName) {
@@ -261,8 +261,7 @@ bool AliasUnit::processDataStream(const QString& data)
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
     auto copyOfNodeList = mAliasRootNodeList;
 
-    // Set processing flag to prevent re-entrant cleanup during alias execution
-    mIsProcessing = true;
+    mProcessingDepth++;
 
     for (auto alias : copyOfNodeList) {
         // = data.replace( "\n", "" );
@@ -271,9 +270,11 @@ bool AliasUnit::processDataStream(const QString& data)
         }
     }
 
-    // Clear processing flag and perform any deferred cleanup
-    mIsProcessing = false;
-    doCleanup();
+    mProcessingDepth--;
+    Q_ASSERT(mProcessingDepth >= 0);
+    if (mProcessingDepth == 0) {
+        doCleanup();
+    }
 
     // the idea to get "command" after alias processing is finished and send its value
     // was too difficult for users because if multiple alias change the value of command it becomes too difficult to handle for many users
@@ -400,22 +401,14 @@ std::tuple<QString, int, int, int> AliasUnit::assembleReport()
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("Aliases current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("tempAliases current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active Aliases: ") << QString::number(statsActiveItems) << QLatin1String("\n");
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsTempItems,
-        statsActiveItems
-    };
+    msg << QLatin1String("Aliases current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("tempAliases current total: ") << QString::number(statsTempItems)
+        << QLatin1String("\n") << QLatin1String("active Aliases: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    return {msg.join(QString()), statsItemsTotal, statsTempItems, statsActiveItems};
 }
 
 void AliasUnit::doCleanup()
 {
-    // Skip cleanup if we're currently processing aliases to prevent iterator invalidation
-    // Cleanup will be performed when processDataStream() completes
-    if (mIsProcessing) {
+    if (mProcessingDepth > 0) {
         return;
     }
 

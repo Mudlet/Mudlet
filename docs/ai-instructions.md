@@ -152,9 +152,18 @@ if (!file.open(QIODevice::ReadOnly)) {
 ## Build system notes
 
 - **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
-- Use `.clang-format` configuration in `src/` for C++ code style
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
+
+### Code formatting
+
+After editing any C++ files (`.cpp`, `.h`), run clang-format before committing:
+
+```bash
+clang-format -i path/to/edited/file.cpp path/to/edited/file.h
+```
+
+The project uses the `.clang-format` configuration in `src/`. This ensures consistent code style across the codebase.
 
 ### Static analysis
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GitHub Actions packages artifacts as ZIP files, so zip-file is the root element -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="mudlet.exe">
+      <authenticode-sign/>
+    </pe-file>
+    <pe-file path="MudletCrashReporter.exe">
+      <authenticode-sign/>
+    </pe-file>
+    <pe-file path="crashpad_handler.exe">
+      <authenticode-sign/>
+    </pe-file>
+    <pe-file path="crashpad_wer.dll">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
