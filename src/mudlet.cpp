@@ -5839,9 +5839,7 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 
 bool mudlet::needsCustomDarkTheme()
 {
-#if defined(Q_OS_WINDOWS)
-    return QSysInfo::productVersion() == qsl("10");
-#elif defined(Q_OS_LINUX)
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
     return true;
 #else
     return false;
