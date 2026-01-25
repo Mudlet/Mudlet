@@ -41,7 +41,8 @@ class AliasUnit
 public:
     explicit AliasUnit(Host* pHost)
     : mpHost(pHost)
-    {}
+    {
+    }
     ~AliasUnit();
 
     std::list<TAlias*> getAliasRootNodeList() { return mAliasRootNodeList; }
@@ -90,7 +91,8 @@ private:
     int statsItemsTotal = 0;
     int statsTempItems = 0;
     int statsActiveItems = 0;
-    bool mIsProcessing = false;
+    // Counter for nested processing; cleanup deferred until 0
+    int mProcessingDepth = 0;
 };
 
 #endif // MUDLET_ALIASUNIT_H

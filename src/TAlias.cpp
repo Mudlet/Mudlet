@@ -69,6 +69,13 @@ void TAlias::setName(const QString& name)
 
 bool TAlias::match(const QString& haystack)
 {
+    // Guard against re-entrancy: cleanup may have deleted this alias while
+    // match() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TAlias::match() called on destroyed alias - ID:" << mID << "Name:" << mName;
+        return false;
+    }
+
     bool matchCondition = false;
     if (!isActive()) {
         if (isFolder()) {

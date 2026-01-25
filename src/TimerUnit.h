@@ -35,6 +35,10 @@ class Host;
 class TTimer;
 class QTimer;
 
+// Note: Unlike AliasUnit/TriggerUnit/KeyUnit, TimerUnit does not use mProcessingDepth
+// because timers execute via Qt's event loop (QTimer signals), not synchronous loops.
+// Protection against re-entrancy is provided by the guard in TTimer::execute() and
+// by re-verifying timer existence after execute() in mudlet::slot_timerFires().
 class TimerUnit
 {
     friend class XMLexport;
@@ -43,7 +47,8 @@ class TimerUnit
 public:
     explicit TimerUnit(Host* pHost)
     : mpHost(pHost)
-    {}
+    {
+    }
     ~TimerUnit();
 
     void resetStats();

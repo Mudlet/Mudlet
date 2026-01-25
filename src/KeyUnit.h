@@ -39,22 +39,19 @@ class KeyUnit : public QObject
 {
     Q_OBJECT // Needed for a couple of translations
 
-    friend class XMLexport;
+            friend class XMLexport;
     friend class XMLimport;
 
 public:
     explicit KeyUnit(Host* pHost);
     ~KeyUnit();
 
-    std::list<TKey*> getKeyRootNodeList()
-    {
-        return mKeyRootNodeList;
-    }
+    std::list<TKey*> getKeyRootNodeList() { return mKeyRootNodeList; }
 
     TKey* getKey(int id);
     void removeAllTempKeys();
     void compileAll();
-    TKey* findFirstKey(QString & name);
+    TKey* findFirstKey(QString& name);
     std::vector<int> findItems(const QString& name, const bool exactMatch, const bool caseSensitive);
     bool enableKey(const QString& name);
     bool disableKey(const QString& name);
@@ -69,7 +66,7 @@ public:
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);
     bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
-    void markCleanup( TKey * pT );
+    void markCleanup(TKey* pT);
     void doCleanup();
     void stopAllTriggers();
     void reenableAllTriggers();
@@ -105,7 +102,8 @@ private:
     int statsItemsTotal = 0;
     int statsTempItems = 0;
     int statsActiveItems = 0;
-    bool mIsProcessing = false;
+    // Counter for nested processing; cleanup deferred until 0
+    int mProcessingDepth = 0;
 };
 
 #endif // MUDLET_KEYUNIT_H

@@ -269,17 +269,18 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
 #endif
 
-    // Set processing flag to prevent re-entrant cleanup during trigger execution
-    mIsProcessing = true;
+    mProcessingDepth++;
 
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }
     free(subject);
 
-    // Clear processing flag and perform any deferred cleanup
-    mIsProcessing = false;
-    doCleanup();
+    mProcessingDepth--;
+    Q_ASSERT(mProcessingDepth >= 0);
+    if (mProcessingDepth == 0) {
+        doCleanup();
+    }
 }
 
 void TriggerUnit::compileAll()
@@ -437,9 +438,7 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 
 void TriggerUnit::doCleanup()
 {
-    // Skip cleanup if we're currently processing triggers to prevent iterator invalidation
-    // Cleanup will be performed when processDataStream() completes
-    if (mIsProcessing) {
+    if (mProcessingDepth > 0) {
         return;
     }
 
