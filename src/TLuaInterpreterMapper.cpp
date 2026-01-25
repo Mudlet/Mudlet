@@ -4150,7 +4150,7 @@ int TLuaInterpreter::setRoomHidden(lua_State* L)
 
     pR->setHidden(hidden);
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
+    host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;
 }
