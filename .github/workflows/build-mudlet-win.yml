@@ -70,6 +70,19 @@ jobs:
         CCACHE_DIR: ${{runner.workspace}}/ccache
       run: ccache --zero-stats --show-stats
 
+    - name: Get sentry-native commit hash
+      id: sentry-hash
+      run: echo "hash=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Cache sentry-native
+      id: cache-sentry
+      uses: actions/cache@v5
+      with:
+        path: |
+          3rdparty/sentry-native/install_without_transport
+          3rdparty/sentry-native/install_with_transport
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.hash }}
+
     - name: (Windows) Build
       shell: msys2 {0}
       env:
@@ -159,7 +172,7 @@ jobs:
     - name: (Windows) Upload unsigned binaries for signing
       id: upload-unsigned-binaries
       if: steps.prepare-signing.outcome == 'success'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unsigned-binaries
         path: ${{env.SIGNING_DIR}}
@@ -229,7 +242,7 @@ jobs:
         env.SIGNPATH_SIGNING_ENABLED == 'true' &&
         (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') &&
         contains(env.ARTIFACT_NAME, 'installer')
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unsigned-installer
         path: ${{env.ARTIFACT_WINPATHORFILE}}

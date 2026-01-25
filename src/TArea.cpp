@@ -399,8 +399,8 @@ void TArea::calcSpan()
             zLevels.push_back(pR->z());
             xminForZ.insert(pR->z(), pR->x());
             xmaxForZ.insert(pR->z(), pR->x());
-            yminForZ.insert(pR->z(), pR->y());
-            ymaxForZ.insert(pR->z(), pR->y());
+            yminForZ.insert(pR->z(), (-1 * pR->y()));
+            ymaxForZ.insert(pR->z(), (-1 * pR->y()));
             isFirstDone = true;
             continue;
         } else {
