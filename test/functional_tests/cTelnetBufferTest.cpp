@@ -134,10 +134,17 @@ private slots:
       // Pass size (not size+1) to simulate the exact amount received
       QByteArray dataToProcess = testData.left(size);
       mpHost->mTelnet.loopbackTest(dataToProcess);
-    }
 
-    // If we got here without crashing, the buffer handling is correct
-    QVERIFY(true);
+      QTest::qWait(50);
+
+      // Verify the garbage '!' character was not included in the output
+      // The off-by-one bug would place the null terminator too far, including it
+      QString displayedText = mpHost->mpConsole->getCurrentLine("");
+      QVERIFY2(!displayedText.contains('!'),
+               qPrintable(QString("Size %1: Garbage '!' found in output, off-by-one bug present. Got: '%2'")
+                              .arg(size)
+                              .arg(displayedText)));
+    }
   }
 
   // Test that text is displayed correctly through the full pipeline
@@ -165,12 +172,23 @@ private slots:
   void testEmptyDataHandling() {
     QVERIFY(mpHost != nullptr);
 
-    // Empty data should be handled gracefully without crashes
+    // First send some known data to establish baseline
+    QByteArray baselineData = "Baseline\r\n";
+    mpHost->mTelnet.loopbackTest(baselineData);
+    QTest::qWait(50);
+
+    QString beforeEmpty = mpHost->mpConsole->getCurrentLine("");
+
+    // Empty data should be handled gracefully without corrupting state
     QByteArray emptyData;
     mpHost->mTelnet.loopbackTest(emptyData);
+    QTest::qWait(50);
 
-    // If we got here, empty data was handled correctly
-    QVERIFY(true);
+    // Verify console state wasn't corrupted by empty data
+    QString afterEmpty = mpHost->mpConsole->getCurrentLine("");
+    QVERIFY2(afterEmpty == beforeEmpty,
+             qPrintable(QString("Console state changed after empty data. Before: '%1', After: '%2'")
+                            .arg(beforeEmpty, afterEmpty)));
   }
 
   // Test processing of data with ANSI escape sequences at boundaries
@@ -201,9 +219,12 @@ private slots:
     dataWithGA.append('\xf9'); // GA
 
     mpHost->mTelnet.loopbackTest(dataWithGA);
+    QTest::qWait(50);
 
-    // Should process without issues
-    QVERIFY(true);
+    // Verify the text portion was processed correctly
+    QString displayedText = mpHost->mpConsole->getCurrentLine("");
+    QVERIFY2(displayedText.contains("Prompt>"),
+             qPrintable(QString("Expected 'Prompt>' but got: '%1'").arg(displayedText)));
   }
 
   void cleanup() {
