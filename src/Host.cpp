@@ -981,6 +981,17 @@ void Host::waitForProfileSave()
     if (mModuleFuture.isRunning()) {
         mModuleFuture.waitForFinished();
     }
+    int iterations = 0;
+    while (currentlySavingProfile()) {
+        if (++iterations > 1000) {
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. "
+                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules
+                                 << ", writers pending=" << writers.size()
+                                 << ". Continuing without waiting.";
+            break;
+        }
+        qApp->processEvents();
+    }
 }
 
 void Host::setMmpMapLocation(const QString& data)

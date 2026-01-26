@@ -262,6 +262,70 @@ void GeometryManager::clearPlayerIconTemplate()
     mPlayerIconTemplate.reset();
 }
 
+GeometryData GeometryManager::generateBillboardGeometry(float centerX, float centerY, float centerZ,
+                                                        float width, float height,
+                                                        const QVector3D& cameraRight,
+                                                        const QVector3D& cameraUp,
+                                                        GLuint textureId)
+{
+    GeometryData result;
+
+    // Calculate half dimensions
+    float halfWidth = width / 2.0f;
+    float halfHeight = height / 2.0f;
+
+    // Calculate the four corners of the billboard quad using camera vectors
+    // This makes the quad always face the camera
+    QVector3D center(centerX, centerY, centerZ);
+    QVector3D bottomLeft = center - cameraRight * halfWidth - cameraUp * halfHeight;
+    QVector3D bottomRight = center + cameraRight * halfWidth - cameraUp * halfHeight;
+    QVector3D topRight = center + cameraRight * halfWidth + cameraUp * halfHeight;
+    QVector3D topLeft = center - cameraRight * halfWidth + cameraUp * halfHeight;
+
+    // Calculate normal pointing toward camera
+    // cross(up, right) points toward viewer in right-handed coordinate system
+    QVector3D normal = QVector3D::crossProduct(cameraUp, cameraRight).normalized();
+
+    // Add vertices (positions only, 3 floats per vertex)
+    // Two triangles forming a quad, CCW winding order when viewed from front
+    // Triangle 1: bottomLeft, topLeft, topRight
+    result.vertices << bottomLeft.x() << bottomLeft.y() << bottomLeft.z();
+    result.vertices << topLeft.x() << topLeft.y() << topLeft.z();
+    result.vertices << topRight.x() << topRight.y() << topRight.z();
+
+    // Triangle 2: bottomLeft, topRight, bottomRight
+    result.vertices << bottomLeft.x() << bottomLeft.y() << bottomLeft.z();
+    result.vertices << topRight.x() << topRight.y() << topRight.z();
+    result.vertices << bottomRight.x() << bottomRight.y() << bottomRight.z();
+
+    // Add normals (separate array, 3 floats per vertex)
+    for (int i = 0; i < 6; ++i) {
+        result.normals << normal.x() << normal.y() << normal.z();
+    }
+
+    // Add texture coordinates (UV)
+    // Mirror horizontally (1-u) so text reads correctly
+    // Triangle 1: bottomLeft, topLeft, topRight
+    result.textureCoords << 1.0f << 0.0f;  // bottomLeft (mirrored: was 0,0)
+    result.textureCoords << 1.0f << 1.0f;  // topLeft (mirrored: was 0,1)
+    result.textureCoords << 0.0f << 1.0f;  // topRight (mirrored: was 1,1)
+
+    // Triangle 2: bottomLeft, topRight, bottomRight
+    result.textureCoords << 1.0f << 0.0f;  // bottomLeft (mirrored: was 0,0)
+    result.textureCoords << 0.0f << 1.0f;  // topRight (mirrored: was 1,1)
+    result.textureCoords << 0.0f << 0.0f;  // bottomRight (mirrored: was 1,0)
+
+    // Add white color for all vertices (texture will provide actual color)
+    for (int i = 0; i < 6; ++i) {
+        result.colors << 1.0f << 1.0f << 1.0f << 1.0f;
+    }
+
+    // Set texture ID
+    result.textureId = textureId;
+
+    return result;
+}
+
 void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY, float rotZ)
 {
     GeometryData result;
@@ -523,6 +587,7 @@ void GeometryManager::renderGeometry(
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
 
     // Upload vertex data (cached)
+    // Shader layout: location 0 = aPos (vec3)
     vertexBuffer.bind();
     if (!geometry.verticesUploaded) {
         vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
@@ -531,22 +596,24 @@ void GeometryManager::renderGeometry(
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
 
-    // Upload color data (cached)
-    colorBuffer.bind();
-    if (!geometry.colorsUploaded) {
-        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
-        geometry.colorsUploaded = true;
-    }
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(1);
-
     // Upload normal data (cached)
+    // Shader layout: location 1 = aNormal (vec3)
     normalBuffer.bind();
     if (!geometry.normalsUploaded) {
         normalBuffer.allocate(geometry.normals.data(), geometry.normals.size() * sizeof(float));
         geometry.normalsUploaded = true;
     }
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
+
+    // Upload color data (cached)
+    // Shader layout: location 2 = aColor (vec4)
+    colorBuffer.bind();
+    if (!geometry.colorsUploaded) {
+        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
+        geometry.colorsUploaded = true;
+    }
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
 
     // Draw the geometry - use indexed rendering if indices are available
@@ -639,6 +706,7 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     }
 
     // Upload vertex data (cached)
+    // Shader layout: location 0 = aPos (vec3)
     vertexBuffer.bind();
     if (!geometry.verticesUploaded) {
         vertexBuffer.allocate(geometry.vertices.data(), geometry.vertices.size() * sizeof(float));
@@ -647,22 +715,24 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
 
-    // Upload color data (cached)
-    colorBuffer.bind();
-    if (!geometry.colorsUploaded) {
-        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
-        geometry.colorsUploaded = true;
-    }
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(1);
-
     // Upload normal data (cached)
+    // Shader layout: location 1 = aNormal (vec3)
     normalBuffer.bind();
     if (!geometry.normalsUploaded) {
         normalBuffer.allocate(geometry.normals.data(), geometry.normals.size() * sizeof(float));
         geometry.normalsUploaded = true;
     }
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
+
+    // Upload color data (cached)
+    // Shader layout: location 2 = aColor (vec4)
+    colorBuffer.bind();
+    if (!geometry.colorsUploaded) {
+        colorBuffer.allocate(geometry.colors.data(), geometry.colors.size() * sizeof(float));
+        geometry.colorsUploaded = true;
+    }
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
 
     // Upload texture coordinate data if available (cached)

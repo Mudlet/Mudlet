@@ -30,6 +30,9 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QTimer>
+
+using namespace std::chrono_literals;
 
 
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
@@ -249,26 +252,35 @@ void dlgPackageManager::slot_installPackageFromFile()
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
-    //: Package manager - import package from file dialog
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), lastDir);
-    if (fileName.isEmpty()) {
+    //: Package manager - import packages from file dialog (multi-select enabled)
+    //: Package manager - file filter for supported package types (mpackage, zip, xml)
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Import Mudlet Package"), lastDir, tr("Mudlet Packages (*.mpackage *.zip *.xml)"));
+    if (fileNames.isEmpty()) {
         return;
     }
 
-    lastDir = QFileInfo(fileName).absolutePath();
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        //: Package manager - error when attempting to read a file to import
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
-        return;
+    QStringList failedPackages;
+
+    for (const QString& fileName : fileNames) {
+        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
+        if (success) {
+            mpHost->waitForProfileSave();
+        } else {
+            const QString baseName = QFileInfo(fileName).fileName();
+            failedPackages << baseName;
+            qWarning() << "dlgPackageManager::slot_installPackageFromFile() ERROR - failed to import" << baseName << ":" << errorMsg;
+        }
     }
 
-    mpHost->installPackage(fileName, enums::PackageModuleType::Package);
-
-    // Refresh the package list to show newly installed package
     resetPackageList();
+
+    if (!failedPackages.isEmpty()) {
+        //: Package manager - status message shown when some packages failed to import. %1 is a comma-separated list of package names
+        showImportStatus(tr("Failed to import: %1").arg(failedPackages.join(qsl(", "))));
+    }
 }
 
 void dlgPackageManager::slot_installPackageFromRepository()
@@ -683,6 +695,14 @@ void dlgPackageManager::slot_toggleRemoveButton()
         pushButton_remove->setText(tr("Remove"));
         pushButton_remove->setEnabled(false);
     }
+}
+
+void dlgPackageManager::showImportStatus(const QString& message)
+{
+    label_importStatus->setText(message);
+    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
+    label_importStatus->show();
+    QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
 }
 
 void dlgPackageManager::closeEvent(QCloseEvent* event)

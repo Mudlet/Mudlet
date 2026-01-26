@@ -117,7 +117,8 @@ public:
     QString formatLuaCode(const QString&);
     void loadGlobal();
     QString getLuaString(const QString& stringName);
-    struct ExitWeightFilterResult {
+    struct ExitWeightFilterResult
+    {
         bool blocked = false;
         std::optional<int> weightOverride;
     };
@@ -376,6 +377,9 @@ public:
     static int pasteWindow(lua_State*);
     static int setRoomWeight(lua_State*);
     static int getRoomWeight(lua_State*);
+    static int setRoomHidden(lua_State*);
+    static int getRoomHidden(lua_State*);
+    static int getHiddenRooms(lua_State*);
     static int gotoRoom(lua_State*);
     static int permKey(lua_State*);
     static int tempKey(lua_State*);
@@ -738,34 +742,13 @@ public:
     void freeAllInLuaRegistry(TEvent);
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
-        {Qt::NoButton, qsl("NoButton")},
-        {Qt::LeftButton, qsl("LeftButton")},
-        {Qt::RightButton, qsl("RightButton")},
-        {Qt::MiddleButton, qsl("MidButton")},
-        {Qt::BackButton, qsl("BackButton")},
-        {Qt::ForwardButton, qsl("ForwardButton")},
-        {Qt::TaskButton, qsl("TaskButton")},
-        {Qt::ExtraButton4, qsl("ExtraButton4")},
-        {Qt::ExtraButton5, qsl("ExtraButton5")},
-        {Qt::ExtraButton6, qsl("ExtraButton6")},
-        {Qt::ExtraButton7, qsl("ExtraButton7")},
-        {Qt::ExtraButton8, qsl("ExtraButton8")},
-        {Qt::ExtraButton9, qsl("ExtraButton9")},
-        {Qt::ExtraButton10, qsl("ExtraButton10")},
-        {Qt::ExtraButton11, qsl("ExtraButton11")},
-        {Qt::ExtraButton12, qsl("ExtraButton12")},
-        {Qt::ExtraButton13, qsl("ExtraButton13")},
-        {Qt::ExtraButton14, qsl("ExtraButton14")},
-        {Qt::ExtraButton15, qsl("ExtraButton15")},
-        {Qt::ExtraButton16, qsl("ExtraButton16")},
-        {Qt::ExtraButton17, qsl("ExtraButton17")},
-        {Qt::ExtraButton18, qsl("ExtraButton18")},
-        {Qt::ExtraButton19, qsl("ExtraButton19")},
-        {Qt::ExtraButton20, qsl("ExtraButton20")},
-        {Qt::ExtraButton21, qsl("ExtraButton21")},
-        {Qt::ExtraButton22, qsl("ExtraButton22")},
-        {Qt::ExtraButton23, qsl("ExtraButton23")},
-        {Qt::ExtraButton24, qsl("ExtraButton24")}};
+            {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
+            {Qt::BackButton, qsl("BackButton")},       {Qt::ForwardButton, qsl("ForwardButton")}, {Qt::TaskButton, qsl("TaskButton")},       {Qt::ExtraButton4, qsl("ExtraButton4")},
+            {Qt::ExtraButton5, qsl("ExtraButton5")},   {Qt::ExtraButton6, qsl("ExtraButton6")},   {Qt::ExtraButton7, qsl("ExtraButton7")},   {Qt::ExtraButton8, qsl("ExtraButton8")},
+            {Qt::ExtraButton9, qsl("ExtraButton9")},   {Qt::ExtraButton10, qsl("ExtraButton10")}, {Qt::ExtraButton11, qsl("ExtraButton11")}, {Qt::ExtraButton12, qsl("ExtraButton12")},
+            {Qt::ExtraButton13, qsl("ExtraButton13")}, {Qt::ExtraButton14, qsl("ExtraButton14")}, {Qt::ExtraButton15, qsl("ExtraButton15")}, {Qt::ExtraButton16, qsl("ExtraButton16")},
+            {Qt::ExtraButton17, qsl("ExtraButton17")}, {Qt::ExtraButton18, qsl("ExtraButton18")}, {Qt::ExtraButton19, qsl("ExtraButton19")}, {Qt::ExtraButton20, qsl("ExtraButton20")},
+            {Qt::ExtraButton21, qsl("ExtraButton21")}, {Qt::ExtraButton22, qsl("ExtraButton22")}, {Qt::ExtraButton23, qsl("ExtraButton23")}, {Qt::ExtraButton24, qsl("ExtraButton24")}};
 
     static const QString csmInvalidRoomID;
     static const QString csmInvalidStopWatchID;
@@ -838,7 +821,7 @@ private:
     bool callReference(lua_State*, QString name, int parameters);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
-    std::pair<bool, QString> validLuaCode(const QString &code);
+    std::pair<bool, QString> validLuaCode(const QString& code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State*);
@@ -850,15 +833,15 @@ private:
 #endif
 
     void insertColorTableEntry(lua_State*, const QColor&, const QString&);
-    struct lua_state_deleter {
-        void operator()(lua_State* ptr) const noexcept {
-            lua_close(ptr);
-        }
+    struct lua_state_deleter
+    {
+        void operator()(lua_State* ptr) const noexcept { lua_close(ptr); }
     };
     void updateEditor();
 
 
-    bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+    bool loadLuaModule(
+            QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State*);
 
 

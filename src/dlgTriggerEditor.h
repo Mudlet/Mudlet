@@ -390,6 +390,8 @@ private:
     void populateActions();
     void populateKeys();
     void saveOpenChanges();
+    EditorViewType determineViewFromVisibleTree();
+    EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
     void saveTimer();
@@ -711,6 +713,19 @@ private:
     QByteArray mTimerEditorSplitterState;
     QByteArray mVarEditorSplitterState;
     QByteArray mSearchSplitterState;
+
+    struct EditorState {
+        int caretLine = 0;
+        int caretColumn = 0;
+        int verticalScrollPos = 0;
+        int horizontalScrollPos = 0;
+    };
+
+    QMap<EditorViewType, QMap<int, EditorState>> mEditorStates;
+
+    void saveEditorState(EditorViewType viewType, int itemId);
+    void restoreEditorState(EditorViewType viewType, int itemId);
+    void clearEditorState(EditorViewType viewType, int itemId);
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;

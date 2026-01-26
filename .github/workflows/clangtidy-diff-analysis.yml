@@ -83,7 +83,7 @@ jobs:
       shell: bash
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.2.2
 
     - name: (Linux) Install Lua via GitHub Actions
       uses: leafo/gh-actions-lua@v12
