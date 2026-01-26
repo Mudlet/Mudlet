@@ -123,8 +123,4 @@ if(USE_OWN_QTKEYCHAIN)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
 
-# Test for issue #1065: Off-by-one error in cTelnet buffer handling
-add_executable(cTelnetBufferTest cTelnetBufferTest.cpp)
-add_test(NAME cTelnetBufferTest COMMAND cTelnetBufferTest)
-
 add_subdirectory(functional_tests)

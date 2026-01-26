@@ -5,6 +5,7 @@ endif()
 set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
     TelnetBenchmark.cpp
+    cTelnetBufferTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
