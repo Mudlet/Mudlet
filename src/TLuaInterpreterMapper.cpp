@@ -525,7 +525,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
         pR->calcRoomDimensions();
         host.mpMap->setUnsaved(__func__);
-        host.mpMap->update();
+        host.mpMap->updateArea(pR->getArea());
 
         lua_pushboolean(L, true);
         return 1;
@@ -1487,7 +1487,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 
         const Host& host = getHostFromLua(L);
         lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName, QColor(olr, olg, olb, foregroundTransparency)));
-        host.mpMap->update();
+        host.mpMap->updateArea(area);
         return 1;
     }
 
