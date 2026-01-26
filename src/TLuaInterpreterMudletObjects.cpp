@@ -2306,7 +2306,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         QColor hlFgColor, hlBgColor;
         bool isCodeFunction = false;
         QString codeString;
-        int codeStackIndex = -1; // To track where the function is on the stack
+        int codeFunctionRef = LUA_NOREF; // Reference to store the function in the registry
 
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
@@ -2325,9 +2325,9 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
             } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) || !key.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
                 if (lua_isfunction(L, -1)) {
                     isCodeFunction = true;
-                    // Store the function in a safe place on the stack
+                    // Store a reference to the function in the registry (luaL_ref pops the value)
                     lua_pushvalue(L, -1);
-                    codeStackIndex = lua_gettop(L);
+                    codeFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
                 } else if (lua_isstring(L, -1)) {
                     codeString = QString::fromUtf8(lua_tostring(L, -1));
                 }
@@ -2389,7 +2389,8 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                 if (lua_isnumber(L, -1)) {
                     expiryCount = lua_tonumber(L, -1);
                     if (expiryCount < 1) {
-                        lua_pop(L, codeStackIndex > 0 ? 3 : 2);
+                        lua_pop(L, 2);
+                        luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
                         return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
                     }
                 }
@@ -2399,50 +2400,42 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         }
 
         if (!hasName) {
-            if (codeStackIndex > 0)
-                lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'name' or 'triggerName' in table");
             return lua_error(L);
         }
         if (!hasPattern) {
-            if (codeStackIndex > 0)
-                lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'regex' or 'pattern' in table");
             return lua_error(L);
         }
         if (!hasCode) {
-            if (codeStackIndex > 0)
-                lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'code' or 'script' in table");
             return lua_error(L);
         }
         if (!hasMultiline) {
-            if (codeStackIndex > 0)
-                lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'multiline' or 'multiLine' in table");
             return lua_error(L);
         }
         if (!hasFilter) {
-            if (codeStackIndex > 0)
-                lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'filter' in table");
             return lua_error(L);
         }
         if (!hasMatchAll) {
-            if (codeStackIndex > 0)
-                lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'matchAll' in table");
             return lua_error(L);
         }
         if (!hasFireLength) {
-            if (codeStackIndex > 0)
-                lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'fireLength' in table");
             return lua_error(L);
         }
         if (!hasLineDelta) {
-            if (codeStackIndex > 0)
-                lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'lineDelta' in table");
             return lua_error(L);
         }
@@ -2486,9 +2479,9 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
             pT->setScript(QString());
             pT->mRegisteredAnonymousLuaFunction = true;
             lua_pushlightuserdata(L, pT);
-            lua_pushvalue(L, codeStackIndex);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, codeFunctionRef);
             lua_settable(L, LUA_REGISTRYINDEX);
-            lua_pop(L, 1); // Pop the stored function
+            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
         } else {
             pT->setScript(codeString);
         }

@@ -560,7 +560,7 @@ describe("Tests Other.lua functions", function()
     it("should accept positional arguments with string code", function()
       local result = pcall(tempComplexRegexTrigger,
         "test" .. os.time(), ".*test.*", "echo('found')",
-        false, 0, 0, false, false,
+        0, 0, 0, 0, 0,
         0, 0, "", 0, 0, -1
       )
       assert.is_true(result)
