@@ -7,9 +7,9 @@ on:
 
 env:
   APP_ID: org.mudlet.mudlet
-  DOCKER_REGISTRY: "docker.io/bilelmoussaoui/flatpak-github-actions"
+  DOCKER_REGISTRY: "ghcr.io/flathub-infra/flatpak-github-actions"
   RUNTIME_NAME: "kde"
-  RUNTIME_VERSION: "5.15-23.08"
+  RUNTIME_VERSION: "6.10"
   GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
   GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
   GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
@@ -18,7 +18,7 @@ jobs:
   build-flatpak:
     runs-on: ubuntu-latest
     container:
-      image: docker.io/bilelmoussaoui/flatpak-github-actions:kde-5.15-23.08
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
     steps:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
         gpg-connect-agent reloadagent /bye
         echo $GPG_PASSPHRASE | /usr/libexec/gpg-preset-passphrase --preset $GPG_KEY_GREP
         echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import --batch
-    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6.6
       with:
         bundle: mudlet.flatpak
         manifest-path: CI/org.mudlet.mudlet.yml
@@ -59,7 +59,7 @@ jobs:
     needs: build-flatpak
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Download Flatpak Repo Artifact
       uses: actions/download-artifact@v4
       with:

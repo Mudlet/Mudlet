@@ -12,7 +12,7 @@ jobs:
     name: "Flatpak"
     runs-on: ubuntu-latest
     container:
-      image: bilelmoussaoui/flatpak-github-actions:kde-5.15-23.08
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
       options: --privileged
     steps:
     - name: Checkout Mudlet source code
@@ -27,14 +27,14 @@ jobs:
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       run: |
-        yum install -q -y pinentry
+        dnf install -q -y pinentry
         gpg --list-keys --with-keygrip
 
         echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
         gpg-connect-agent reloadagent /bye
         echo $GPG_PASSPHRASE | /usr/libexec/gpg-preset-passphrase --preset $GPG_KEY_GREP
         echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import --batch
-    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6.6
       with:
         bundle: mudlet.flatpak
         manifest-path: CI/org.mudlet.mudlet.yml

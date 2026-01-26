@@ -1,6 +1,6 @@
 id: org.mudlet.mudlet
 runtime: org.kde.Platform
-runtime-version: '6.8'
+runtime-version: '6.10'
 sdk: org.kde.Sdk
 command: mudlet
 rename-desktop-file: mudlet.desktop
@@ -56,8 +56,8 @@ modules:
       # https://gitlab.gnome.org/GNOME/libsecret/-/issues/49
       - -Dgcrypt=false
     sources:
-      - commit: 3fe635e64efd4b8dbc9ec3548b0bc8034c7665c4
-        tag: 0.20.4
+      - commit: 0936f740c02b60f02657729cd99f581db4517a41
+        tag: 0.21.7
         type: git
         url: https://gitlab.gnome.org/GNOME/libsecret.git
     cleanup:
@@ -76,8 +76,8 @@ modules:
     - "/lib/*.la"
     sources:
     - type: archive
-      url: https://libzip.org/download/libzip-1.9.2.tar.xz
-      sha256: c93e9852b7b2dc931197831438fee5295976ee0ba24f8524a8907be5c2ba5937
+      url: https://libzip.org/download/libzip-1.11.4.tar.xz
+      sha256: 8a247f57d1e3e6f6d11413b12a6f28a9d388de110adc0ec608d893180ed7097b
 
   - name: pugixml
     buildsystem: cmake-ninja
@@ -85,8 +85,8 @@ modules:
       - -DBUILD_SHARED_LIBS=on .
     sources:
       - type: archive
-        url: https://github.com/zeux/pugixml/releases/download/v1.11.4/pugixml-1.11.4.tar.gz
-        sha256: 8ddf57b65fb860416979a3f0640c2ad45ddddbbafa82508ef0a0af3ce7061716
+        url: https://github.com/zeux/pugixml/releases/download/v1.15/pugixml-1.15.tar.gz
+        sha256: 655ade57fa703fb421c2eb9a0113b5064bddb145d415dd1f88c79353d90d511a
 
   - name: yajl
     buildsystem: cmake-ninja
@@ -112,8 +112,8 @@ modules:
       no-debuginfo-compression: true
     sources:
       - type: archive
-        url: 'https://github.com/luarocks/luarocks/archive/refs/tags/v3.9.2.tar.gz'
-        sha256: a0b36cd68586cd79966d0106bb2e5a4f5523327867995fd66bee4237062b3e3b
+        url: 'https://github.com/luarocks/luarocks/archive/refs/tags/v3.12.2.tar.gz'
+        sha256: 9c25fa7ab5017d60b25137ab1a4cb76e3185df1fe02df1f577f57d1a6b548a2a
     cleanup:
       - /bin/luarocks*
       - /share/luarocks
@@ -124,8 +124,8 @@ modules:
       - CFLAGS=-O2 -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_RTREE
     sources:
       - type: archive
-        url: 'https://www.sqlite.org/2021/sqlite-autoconf-3360000.tar.gz'
-        sha256: bd90c3eb96bee996206b83be7065c9ce19aef38c3f4fb53073ada0d0b69bbce3
+        url: 'https://www.sqlite.org/2025/sqlite-autoconf-3510200.tar.gz'
+        sha256: 2515deb547c6391e020559d320b375e15f8cfef116f3550ffea8ef25f0807a58
     cleanup:
       - /bin/sqlite3
 
@@ -150,8 +150,8 @@ modules:
       - cp -r * /app/include
     sources:
       - type: archive
-        url: 'https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2'
-        sha256: 6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e
+        url: 'https://archives.boost.io/release/1.90.0/source/boost_1_90_0.tar.bz2'
+        sha256: 49551aff3b22cbc5c5a9ed3dbc92f0e23ea50a0f7325b0d198b705e8ee3fc305
 
   - name: luarucks-mods
     buildsystem: simple
