@@ -8096,14 +8096,13 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    if (pItem == mpCurrentTriggerItem) {
-        return;
+    // Only save previous item if switching to a different item
+    if (pItem != mpCurrentTriggerItem) {
+        if (mpCurrentTriggerItem) {
+            saveEditorState(EditorViewType::cmTriggerView, mpCurrentTriggerItem->data(0, Qt::UserRole).toInt());
+        }
+        saveTrigger();
     }
-
-    if (mpCurrentTriggerItem) {
-        saveEditorState(EditorViewType::cmTriggerView, mpCurrentTriggerItem->data(0, Qt::UserRole).toInt());
-    }
-    saveTrigger();
 
     // Disable updates during document loading to prevent visual flicker
     mpSourceEditorEdbee->setUpdatesEnabled(false);
@@ -8298,14 +8297,13 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    if (pItem == mpCurrentAliasItem) {
-        return;
+    // Only save previous item if switching to a different item
+    if (pItem != mpCurrentAliasItem) {
+        if (mpCurrentAliasItem) {
+            saveEditorState(EditorViewType::cmAliasView, mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
+        }
+        saveAlias();
     }
-
-    if (mpCurrentAliasItem) {
-        saveEditorState(EditorViewType::cmAliasView, mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
-    }
-    saveAlias();
 
     // Disable updates during document loading to prevent visual flicker
     mpSourceEditorEdbee->setUpdatesEnabled(false);
@@ -8383,14 +8381,13 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    if (pItem == mpCurrentKeyItem) {
-        return;
+    // Only save previous item if switching to a different item
+    if (pItem != mpCurrentKeyItem) {
+        if (mpCurrentKeyItem) {
+            saveEditorState(EditorViewType::cmKeysView, mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
+        }
+        saveKey();
     }
-
-    if (mpCurrentKeyItem) {
-        saveEditorState(EditorViewType::cmKeysView, mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
-    }
-    saveKey();
 
     // Disable updates during document loading to prevent visual flicker
     mpSourceEditorEdbee->setUpdatesEnabled(false);
@@ -8752,14 +8749,13 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    if (pItem == mpCurrentActionItem) {
-        return;
+    // Only save previous item if switching to a different item
+    if (pItem != mpCurrentActionItem) {
+        if (mpCurrentActionItem) {
+            saveEditorState(EditorViewType::cmActionView, mpCurrentActionItem->data(0, Qt::UserRole).toInt());
+        }
+        saveAction();
     }
-
-    if (mpCurrentActionItem) {
-        saveEditorState(EditorViewType::cmActionView, mpCurrentActionItem->data(0, Qt::UserRole).toInt());
-    }
-    saveAction();
 
     // Disable updates during document loading to prevent visual flicker
     mpSourceEditorEdbee->setUpdatesEnabled(false);
@@ -8943,14 +8939,13 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
 
-    if (pItem == mpCurrentScriptItem) {
-        return;
+    // Only save previous item if switching to a different item
+    if (pItem != mpCurrentScriptItem) {
+        if (mpCurrentScriptItem) {
+            saveEditorState(EditorViewType::cmScriptView, mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
+        }
+        saveScript();
     }
-
-    if (mpCurrentScriptItem) {
-        saveEditorState(EditorViewType::cmScriptView, mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
-    }
-    saveScript();
 
     // Disable updates during document loading to prevent visual flicker
     mpSourceEditorEdbee->setUpdatesEnabled(false);
@@ -9029,14 +9024,13 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    if (pItem == mpCurrentTimerItem) {
-        return;
+    // Only save previous item if switching to a different item
+    if (pItem != mpCurrentTimerItem) {
+        if (mpCurrentTimerItem) {
+            saveEditorState(EditorViewType::cmTimerView, mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
+        }
+        saveTimer();
     }
-
-    if (mpCurrentTimerItem) {
-        saveEditorState(EditorViewType::cmTimerView, mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
-    }
-    saveTimer();
 
     // Disable updates during document loading to prevent visual flicker
     mpSourceEditorEdbee->setUpdatesEnabled(false);
