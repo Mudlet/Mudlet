@@ -28,8 +28,6 @@
 
 #include "TLuaInterpreter.h"
 
-#include "LuaStackDebug.h"
-
 #include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
@@ -2285,30 +2283,18 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
 // (echo|insert|set)|(Link|Popup) functions
 void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* functionName, int& index, QString& command, int& luaFunctionNumber)
 {
-    const int initialStackSize = lua_gettop(lState);
-    DEBUG_PARSE_CMD_BEFORE(lState, functionName, index);
-
     if (!(lua_isstring(lState, index) || lua_isfunction(lState, index))) {
-        qDebug() << "[ParseCmd] ERROR - invalid type at index" << index << "type:" << lua_typename(lState, lua_type(lState, index)) << "stack size:" << lua_gettop(lState);
-        LUA_STACK_DEBUG(lState, functionName, "before error");
         lua_pushfstring(lState, "%s: bad argument #%d type (command as string or function expected, got %s!)", functionName, index, luaL_typename(lState, index));
         lua_error(lState);
         Q_UNREACHABLE();
     }
 
     if (lua_isfunction(lState, index)) {
-        qDebug() << "[ParseCmd] Function detected at index" << index << "- creating ref";
         lua_pushvalue(lState, index);
         luaFunctionNumber = luaL_ref(lState, LUA_REGISTRYINDEX);
-        const int finalStackSize = lua_gettop(lState);
-        if (finalStackSize != initialStackSize) {
-            qCritical() << "[ParseCmd] STACK IMBALANCE after luaL_ref! initial:" << initialStackSize << "final:" << finalStackSize;
-        }
-        DEBUG_PARSE_CMD_AFTER(lState, functionName, index, luaFunctionNumber);
         return;
     }
     command = lua_tostring(lState, index);
-    DEBUG_PARSE_CMD_AFTER(lState, functionName, index, luaFunctionNumber);
 }
 
 // No documentation available in wiki - internal function
