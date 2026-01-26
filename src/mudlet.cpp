@@ -86,6 +86,7 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSplitter>
+#include <QStandardPaths>
 #include <QStyleFactory>
 #include <QStyleHints>
 #include <QTableWidget>
@@ -879,7 +880,13 @@ static void migrateConfig(QSettings& settings)
 
 void mudlet::setupConfig()
 {
-    QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    // Sandboxed environments (Flatpak/Snap) override XDG paths - use QStandardPaths to respect them
+    QString confDirDefault;
+    if (qEnvironmentVariableIsSet("FLATPAK_ID") || qEnvironmentVariableIsSet("SNAP")) {
+        confDirDefault = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    } else {
+        confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    }
     QString execDir = findExecutableDir();
     QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
