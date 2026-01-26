@@ -326,13 +326,11 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             }
             const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) ||
-                !key.compare(QLatin1String("fromRoomID"), Qt::CaseInsensitive) ||
-                !key.compare(QLatin1String("id_from"), Qt::CaseInsensitive)) {
+            if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fromRoomID"), Qt::CaseInsensitive)
+                || !key.compare(QLatin1String("id_from"), Qt::CaseInsensitive)) {
                 id_from = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasRoomID = true;
-            } else if (!key.compare(QLatin1String("toRoomID"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("id_to"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("toRoomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("id_to"), Qt::CaseInsensitive)) {
                 id_to = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasToRoomIDOrCoords = true;
             } else if (!key.compare(QLatin1String("coordinates"), Qt::CaseInsensitive)) {
@@ -361,9 +359,15 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                                 return warnArgumentValue(L, __func__, qsl("coordinates table item #%1 inner item #%2 must be a number").arg(i).arg(j));
                             }
                             switch (j) {
-                            case 1: tx = lua_tonumber(L, -1); break;
-                            case 2: ty = lua_tonumber(L, -1); break;
-                            case 3: tz = static_cast<int>(lua_tonumber(L, -1)); break;
+                            case 1:
+                                tx = lua_tonumber(L, -1);
+                                break;
+                            case 2:
+                                ty = lua_tonumber(L, -1);
+                                break;
+                            case 3:
+                                tz = static_cast<int>(lua_tonumber(L, -1));
+                                break;
                             }
                         }
                         lua_pop(L, 1);
@@ -377,8 +381,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             } else if (!key.compare(QLatin1String("direction"), Qt::CaseInsensitive)) {
                 direction = dirToString(L, -1);
                 hasDirection = !direction.isEmpty();
-            } else if (!key.compare(QLatin1String("style"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("lineStyle"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("style"), Qt::CaseInsensitive) || !key.compare(QLatin1String("lineStyle"), Qt::CaseInsensitive)) {
                 QString styleStr = getVerifiedString(L, __func__, -1, qPrintable(key));
                 if (!styleStr.compare(QLatin1String("solid line"))) {
                     line_style = Qt::SolidLine;
@@ -395,8 +398,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                     return warnArgumentValue(L, __func__, qsl("invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'").arg(styleStr));
                 }
                 hasStyle = true;
-            } else if (!key.compare(QLatin1String("color"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("lineColor"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("color"), Qt::CaseInsensitive) || !key.compare(QLatin1String("lineColor"), Qt::CaseInsensitive)) {
                 if (!lua_istable(L, -1)) {
                     lua_pop(L, 2);
                     return warnArgumentValue(L, __func__, "color must be a table with {r, g, b} values");
@@ -415,16 +417,21 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                             return warnArgumentValue(L, __func__, qsl("color component #%1 is %2, must be 0-255").arg(colorIndex).arg(component));
                         }
                         switch (colorIndex) {
-                        case 1: r = component; break;
-                        case 2: g = component; break;
-                        case 3: b = component; break;
+                        case 1:
+                            r = component;
+                            break;
+                        case 2:
+                            g = component;
+                            break;
+                        case 3:
+                            b = component;
+                            break;
                         }
                     }
                     lua_pop(L, 1);
                 }
                 hasColor = true;
-            } else if (!key.compare(QLatin1String("arrow"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("endWithArrow"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("arrow"), Qt::CaseInsensitive) || !key.compare(QLatin1String("endWithArrow"), Qt::CaseInsensitive)) {
                 if (!lua_isboolean(L, -1)) {
                     lua_pop(L, 2);
                     return warnArgumentValue(L, __func__, "arrow must be a boolean");
@@ -476,10 +483,11 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             const int area = pR->getArea();
             const int area_to = pR_to->getArea();
             if (area != area_to) {
-                return warnArgumentValue(L, __func__, qsl(
-                    "target room is in area '%1' (ID: %2) which is not the one '%3' (ID: %4) in which this custom line is to be drawn")
-                    .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
-                            (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
+                return warnArgumentValue(
+                        L,
+                        __func__,
+                        qsl("target room is in area '%1' (ID: %2) which is not the one '%3' (ID: %4) in which this custom line is to be drawn")
+                                .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to), (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
             }
         }
 
@@ -749,26 +757,22 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
             }
             const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("uniquename"), Qt::CaseInsensitive) ||
-                !key.compare(QLatin1String("uniqueName"), Qt::CaseInsensitive)) {
+            if (!key.compare(QLatin1String("uniquename"), Qt::CaseInsensitive) || !key.compare(QLatin1String("uniqueName"), Qt::CaseInsensitive)) {
                 uniqueName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasUniqueName = true;
-            } else if (!key.compare(QLatin1String("eventname"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("eventName"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("event"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("eventname"), Qt::CaseInsensitive) || !key.compare(QLatin1String("eventName"), Qt::CaseInsensitive)
+                       || !key.compare(QLatin1String("event"), Qt::CaseInsensitive)) {
                 eventName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasEventName = true;
             } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
                 if (lua_isstring(L, -1)) {
                     parent = QString::fromUtf8(lua_tostring(L, -1));
                 }
-            } else if (!key.compare(QLatin1String("displayname"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("displayName"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("displayname"), Qt::CaseInsensitive) || !key.compare(QLatin1String("displayName"), Qt::CaseInsensitive)) {
                 if (lua_isstring(L, -1)) {
                     displayName = QString::fromUtf8(lua_tostring(L, -1));
                 }
-            } else if (!key.compare(QLatin1String("arguments"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("args"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("arguments"), Qt::CaseInsensitive) || !key.compare(QLatin1String("args"), Qt::CaseInsensitive)) {
                 if (lua_istable(L, -1)) {
                     lua_pushnil(L);
                     while (lua_next(L, -2) != 0) {
@@ -1357,47 +1361,37 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
             }
             const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("area"), Qt::CaseInsensitive) ||
-                !key.compare(QLatin1String("areaID"), Qt::CaseInsensitive)) {
+            if (!key.compare(QLatin1String("area"), Qt::CaseInsensitive) || !key.compare(QLatin1String("areaID"), Qt::CaseInsensitive)) {
                 area = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasArea = true;
             } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
                 text = getVerifiedString(L, __func__, -1, qPrintable(key));
                 hasText = true;
-            } else if (!key.compare(QLatin1String("posX"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("posX"), Qt::CaseInsensitive) || !key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
                 posx = getVerifiedFloat(L, __func__, -1, qPrintable(key));
                 hasPosX = true;
-            } else if (!key.compare(QLatin1String("posY"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("posY"), Qt::CaseInsensitive) || !key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
                 posy = getVerifiedFloat(L, __func__, -1, qPrintable(key));
                 hasPosY = true;
-            } else if (!key.compare(QLatin1String("posZ"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("z"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("posZ"), Qt::CaseInsensitive) || !key.compare(QLatin1String("z"), Qt::CaseInsensitive)) {
                 posz = getVerifiedFloat(L, __func__, -1, qPrintable(key));
                 hasPosZ = true;
-            } else if (!key.compare(QLatin1String("fgRed"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("fgR"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("fgRed"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgR"), Qt::CaseInsensitive)) {
                 fgr = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasFgR = true;
-            } else if (!key.compare(QLatin1String("fgGreen"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("fgG"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("fgGreen"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgG"), Qt::CaseInsensitive)) {
                 fgg = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasFgG = true;
-            } else if (!key.compare(QLatin1String("fgBlue"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("fgB"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("fgBlue"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgB"), Qt::CaseInsensitive)) {
                 fgb = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasFgB = true;
-            } else if (!key.compare(QLatin1String("bgRed"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("bgR"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("bgRed"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgR"), Qt::CaseInsensitive)) {
                 bgr = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasBgR = true;
-            } else if (!key.compare(QLatin1String("bgGreen"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("bgG"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("bgGreen"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgG"), Qt::CaseInsensitive)) {
                 bgg = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasBgG = true;
-            } else if (!key.compare(QLatin1String("bgBlue"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("bgB"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("bgBlue"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgB"), Qt::CaseInsensitive)) {
                 bgb = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasBgB = true;
             } else if (!key.compare(QLatin1String("zoom"), Qt::CaseInsensitive)) {
@@ -1410,23 +1404,18 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
                 noScaling = getVerifiedBool(L, __func__, -1, qPrintable(key));
             } else if (!key.compare(QLatin1String("fontName"), Qt::CaseInsensitive)) {
                 fontName = getVerifiedString(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("foregroundTransparency"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("fgAlpha"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("foregroundTransparency"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgAlpha"), Qt::CaseInsensitive)) {
                 foregroundTransparency = getVerifiedInt(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("backgroundTransparency"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("bgAlpha"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("backgroundTransparency"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgAlpha"), Qt::CaseInsensitive)) {
                 backgroundTransparency = getVerifiedInt(L, __func__, -1, qPrintable(key));
             } else if (!key.compare(QLatin1String("temporary"), Qt::CaseInsensitive)) {
                 temporary = getVerifiedBool(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("outlineRed"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("olR"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("outlineRed"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olR"), Qt::CaseInsensitive)) {
                 olr = getVerifiedInt(L, __func__, -1, qPrintable(key));
                 hasOutlineColor = true;
-            } else if (!key.compare(QLatin1String("outlineGreen"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("olG"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("outlineGreen"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olG"), Qt::CaseInsensitive)) {
                 olg = getVerifiedInt(L, __func__, -1, qPrintable(key));
-            } else if (!key.compare(QLatin1String("outlineBlue"), Qt::CaseInsensitive) ||
-                       !key.compare(QLatin1String("olB"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("outlineBlue"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olB"), Qt::CaseInsensitive)) {
                 olb = getVerifiedInt(L, __func__, -1, qPrintable(key));
             }
 
@@ -1486,7 +1475,21 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
         }
 
         const Host& host = getHostFromLua(L);
-        lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName, QColor(olr, olg, olb, foregroundTransparency)));
+        lua_pushinteger(L,
+                        host.mpMap->createMapLabel(area,
+                                                   text,
+                                                   posx,
+                                                   posy,
+                                                   posz,
+                                                   QColor(fgr, fgg, fgb, foregroundTransparency),
+                                                   QColor(bgr, bgg, bgb, backgroundTransparency),
+                                                   showOnTop,
+                                                   noScaling,
+                                                   temporary,
+                                                   zoom,
+                                                   fontSize,
+                                                   fontName,
+                                                   QColor(olr, olg, olb, foregroundTransparency)));
         host.mpMap->updateArea(area);
         return 1;
     }
@@ -1581,7 +1584,8 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
             if (!key.compare(QLatin1String("areaID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("area"), Qt::CaseInsensitive)) {
                 area = getVerifiedInt(L, __func__, -1, "areaID");
                 hasAreaID = true;
-            } else if (!key.compare(QLatin1String("imagePath"), Qt::CaseInsensitive) || !key.compare(QLatin1String("imagePathFileName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("filePath"), Qt::CaseInsensitive)) {
+            } else if (!key.compare(QLatin1String("imagePath"), Qt::CaseInsensitive) || !key.compare(QLatin1String("imagePathFileName"), Qt::CaseInsensitive)
+                       || !key.compare(QLatin1String("filePath"), Qt::CaseInsensitive)) {
                 imagePathFileName = getVerifiedString(L, __func__, -1, "imagePath");
                 hasImagePath = true;
             } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive) || !key.compare(QLatin1String("posX"), Qt::CaseInsensitive)) {
@@ -1690,8 +1694,7 @@ int TLuaInterpreter::createMapper(lua_State* L)
             }
             const QString key = getVerifiedString(L, __func__, -2, "table key");
 
-            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) ||
-                !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+            if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
                 windowName = getVerifiedString(L, __func__, -1, qPrintable(key));
                 if (isMain(windowName)) {
                     windowName.clear();

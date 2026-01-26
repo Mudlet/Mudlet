@@ -67,13 +67,17 @@ inline void debugPrintStack(lua_State* L, const char* location, const char* func
 }
 
 // RAII helper to track stack balance
-class LuaStackGuard {
+class LuaStackGuard
+{
 public:
     LuaStackGuard(lua_State* L, const char* funcName, const char* location, int expectedDelta = 0)
-        : mL(L), mFuncName(funcName), mLocation(location), mInitialTop(lua_gettop(L)), mExpectedDelta(expectedDelta)
+    : mL(L)
+    , mFuncName(funcName)
+    , mLocation(location)
+    , mInitialTop(lua_gettop(L))
+    , mExpectedDelta(expectedDelta)
     {
-        qDebug() << "[LuaStackGuard] ENTER" << mFuncName << "@" << mLocation
-                 << "- initial stack:" << mInitialTop << ", expected delta:" << mExpectedDelta;
+        qDebug() << "[LuaStackGuard] ENTER" << mFuncName << "@" << mLocation << "- initial stack:" << mInitialTop << ", expected delta:" << mExpectedDelta;
     }
 
     ~LuaStackGuard()
@@ -81,21 +85,18 @@ public:
         int finalTop = lua_gettop(mL);
         int actualDelta = finalTop - mInitialTop;
         if (actualDelta != mExpectedDelta) {
-            qCritical() << "[LuaStackGuard] STACK IMBALANCE in" << mFuncName << "@" << mLocation
-                        << "- initial:" << mInitialTop << ", final:" << finalTop
-                        << ", expected delta:" << mExpectedDelta << ", actual delta:" << actualDelta;
+            qCritical() << "[LuaStackGuard] STACK IMBALANCE in" << mFuncName << "@" << mLocation << "- initial:" << mInitialTop << ", final:" << finalTop << ", expected delta:" << mExpectedDelta
+                        << ", actual delta:" << actualDelta;
             debugPrintStack(mL, "on imbalance", mFuncName);
         } else {
-            qDebug() << "[LuaStackGuard] EXIT" << mFuncName << "@" << mLocation
-                     << "- final stack:" << finalTop << "(OK)";
+            qDebug() << "[LuaStackGuard] EXIT" << mFuncName << "@" << mLocation << "- final stack:" << finalTop << "(OK)";
         }
     }
 
     void checkPoint(const char* desc)
     {
         int currentTop = lua_gettop(mL);
-        qDebug() << "[LuaStackGuard] CHECKPOINT" << mFuncName << "@" << desc
-                 << "- current stack:" << currentTop << "(delta from start:" << (currentTop - mInitialTop) << ")";
+        qDebug() << "[LuaStackGuard] CHECKPOINT" << mFuncName << "@" << desc << "- current stack:" << currentTop << "(delta from start:" << (currentTop - mInitialTop) << ")";
     }
 
 private:
@@ -113,22 +114,15 @@ private:
 #define LUA_STACK_CHECKPOINT(guard, desc) guard.checkPoint(desc)
 
 // Special macro for tracking table iteration
-#define LUA_TABLE_ITER_DEBUG(L, func, iteration) \
-    qDebug() << "[LuaTableIter]" << func << "iteration #" << iteration \
-             << "- key type:" << lua_typename(L, lua_type(L, -2)) \
-             << ", value type:" << lua_typename(L, lua_type(L, -1)) \
+#define LUA_TABLE_ITER_DEBUG(L, func, iteration)                                                                                                                                                       \
+    qDebug() << "[LuaTableIter]" << func << "iteration #" << iteration << "- key type:" << lua_typename(L, lua_type(L, -2)) << ", value type:" << lua_typename(L, lua_type(L, -1))                     \
              << ", stack size:" << lua_gettop(L)
 
 // Debug macro to check parseCommandOrFunction specifically
-#define DEBUG_PARSE_CMD_BEFORE(L, func, index) \
-    qDebug() << "[ParseCmd] BEFORE" << func << "- index:" << index \
-             << ", stack size:" << lua_gettop(L) \
-             << ", type at index:" << lua_typename(L, lua_type(L, index))
+#define DEBUG_PARSE_CMD_BEFORE(L, func, index)                                                                                                                                                         \
+    qDebug() << "[ParseCmd] BEFORE" << func << "- index:" << index << ", stack size:" << lua_gettop(L) << ", type at index:" << lua_typename(L, lua_type(L, index))
 
-#define DEBUG_PARSE_CMD_AFTER(L, func, index, luaRef) \
-    qDebug() << "[ParseCmd] AFTER" << func << "- index:" << index \
-             << ", stack size:" << lua_gettop(L) \
-             << ", luaRef:" << luaRef
+#define DEBUG_PARSE_CMD_AFTER(L, func, index, luaRef) qDebug() << "[ParseCmd] AFTER" << func << "- index:" << index << ", stack size:" << lua_gettop(L) << ", luaRef:" << luaRef
 
 #else
 
