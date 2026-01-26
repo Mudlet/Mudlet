@@ -3836,7 +3836,7 @@ local function name_search()
         room_name = mudlet.custom_name_search(lines)
     else
         local line_count = #lines + 1
-        local cur_line, last_line
+        local cur_line, last_line, last_line_index
         local room_name_line
         local prompt_pattern = map.save.prompt_pattern[map.character]
         if not prompt_pattern then return end
@@ -3854,7 +3854,7 @@ local function name_search()
                     room_name_line = line_count
                 else
                     room_name = last_line
-                    room_name_line = line_count - 1
+                    room_name_line = last_line_index
                 end
             elseif line_count == 1 then
                 cur_line = string.trim(cur_line)
@@ -3863,10 +3863,11 @@ local function name_search()
                     room_name_line = line_count
                 else
                     room_name = last_line
-                    room_name_line = line_count - 1
+                    room_name_line = last_line_index
                 end
             elseif not string.match(cur_line,"^%s*$") then
                 last_line = cur_line
+                last_line_index = line_count
             end
         end
         -- extract description lines (lines after the room name but before prompt/exits)
