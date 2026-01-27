@@ -51,7 +51,7 @@ jobs:
       shell: msys2 {0}
       env:
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event_name == 'pull_request') && '1' || '0' }}
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
@@ -90,8 +90,8 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        # Enable debug sending only for tags and scheduled builds (Release builds and PTB builds)
-        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+        # Enable debug sending for tags, scheduled builds, and PRs (Release builds, PTB builds, and PR builds)
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event_name == 'pull_request') && '1' || '0' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         WITH_SENTRY: "ON"
