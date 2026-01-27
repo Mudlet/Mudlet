@@ -92,6 +92,7 @@ modules:
     builddir: true
     config-opts:
       - '-DCMAKE_BUILD_TYPE=Release'
+      - '-DCMAKE_POLICY_VERSION_MINIMUM=3.5'
     sources:
       - type: archive
         url: 'https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz'
