@@ -156,14 +156,11 @@ modules:
   - name: lua-yajl
     buildsystem: simple
     build-commands:
-      - luarocks make --tree="/app" lua-yajl-2.1-0.rockspec YAJL_INCDIR="/app/include" YAJL_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
+      - luarocks install --tree="/app" lua-yajl-2.0-1.src.rock YAJL_INCDIR="/app/include" YAJL_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
     sources:
-      - type: archive
-        url: 'https://github.com/brimworks/lua-yajl/archive/refs/tags/v2.1.tar.gz'
-        sha256: d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed
       - type: file
-        url: 'https://luarocks.org/manifests/brimworks/lua-yajl-2.1-0.rockspec'
-        sha256: 39d9184c8c184066ebcade2f54a4aa0a76ada66bf5496838c1e30e54487b540a
+        url: 'https://luarocks.org/manifests/brimworks/lua-yajl-2.0-1.src.rock'
+        sha256: 8e5c5bde4ae4aac336c5ce6da2aef94bf4f69f37e921d718647914bd5328552f
 
   - name: luautf8
     buildsystem: simple
