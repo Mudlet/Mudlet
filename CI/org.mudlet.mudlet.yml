@@ -55,10 +55,9 @@ modules:
       - -Dintrospection=false
       - -Dcrypto=disabled
     sources:
-      - commit: 0936f740c02b60f02657729cd99f581db4517a41
-        tag: 0.21.7
-        type: git
-        url: https://gitlab.gnome.org/GNOME/libsecret.git
+      - type: archive
+        url: https://download.gnome.org/sources/libsecret/0.21/libsecret-0.21.7.tar.xz
+        sha256: 6b452e4750590a2b5617adc40026f28d2f4903de15f1250e1d1c40bfd68ed55e
     cleanup:
       - /bin/secret-tool
 
