@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.mudlet.mudlet</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <name>Mudlet</name>
+  <summary>Play online text-based games (MUDs)</summary>
+
+  <description>
+    <p>
+      Mudlet is a quality MUD client, designed to take mudding to a new level.
+      It's a modern, fast, and feature-rich client with Lua scripting, advanced
+      mapping, and powerful trigger and alias systems.
+    </p>
+    <p>
+      Features include:
+    </p>
+    <ul>
+      <li>Lua scripting for powerful automation and customization</li>
+      <li>2D and 3D mapping with automatic room creation</li>
+      <li>Advanced trigger system with regex support</li>
+      <li>Aliases, keybindings, and timers</li>
+      <li>Multi-profile support for connecting to multiple games</li>
+      <li>Package system for sharing scripts with other players</li>
+      <li>Discord Rich Presence integration</li>
+    </ul>
+    <p>
+      Connect to any MUD, MUSH, MUCK, MOO, or other text-based online game
+      using telnet or secure connections.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">mudlet.desktop</launchable>
+
+  <url type="homepage">https://www.mudlet.org</url>
+  <url type="bugtracker">https://github.com/Mudlet/Mudlet/issues</url>
+  <url type="help">https://wiki.mudlet.org</url>
+  <url type="donation">https://www.mudlet.org/donate</url>
+  <url type="vcs-browser">https://github.com/Mudlet/Mudlet</url>
+
+  <developer id="org.mudlet">
+    <name>Mudlet Makers</name>
+  </developer>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Sample Mudlet user interfaces</caption>
+      <image>https://github.com/Mudlet/artwork/raw/master/sample-mudlet-uis.gif</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="4.19.1" date="2025-01-01">
+      <description>
+        <p>Hotfix release with bug fixes:</p>
+        <ul>
+          <li>Fixed matches[] in temp*Trigger functions not always working</li>
+          <li>Fixed mapper ignoring nil room titles</li>
+          <li>Added StickMUD and Medievia sponsorship to about menu</li>
+        </ul>
+      </description>
+    </release>
+    <release version="4.19.0" date="2024-12-26">
+      <description>
+        <p>New release with improvements:</p>
+        <ul>
+          <li>More intuitive package exporter with fewer required fields</li>
+          <li>Fixed duplication of module contents after saving with module running on multiple profiles</li>
+          <li>Fixed sendAll() to call send immediately if not delayed</li>
+          <li>Fixed crash on installing packages on Windows</li>
+          <li>New translation updates</li>
+        </ul>
+      </description>
+    </release>
+    <release version="4.18.5" date="2024-07-26">
+      <description>
+        <p>Hotfix release:</p>
+        <ul>
+          <li>Fixed editor not showing any items</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">intense</content_attribute>
+  </content_rating>
+
+  <categories>
+    <category>Game</category>
+    <category>AdventureGame</category>
+    <category>RolePlaying</category>
+  </categories>
+
+  <keywords>
+    <keyword>MUD</keyword>
+    <keyword>MUSH</keyword>
+    <keyword>MUCK</keyword>
+    <keyword>MOO</keyword>
+    <keyword>telnet</keyword>
+    <keyword>text game</keyword>
+    <keyword>RPG</keyword>
+    <keyword>multiplayer</keyword>
+  </keywords>
+
+  <provides>
+    <binary>mudlet</binary>
+  </provides>
+
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+</component>
