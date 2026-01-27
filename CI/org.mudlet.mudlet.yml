@@ -93,6 +93,7 @@ modules:
     config-opts:
       - '-DCMAKE_BUILD_TYPE=Release'
       - '-DCMAKE_POLICY_VERSION_MINIMUM=3.5'
+      - '-DCMAKE_POLICY_DEFAULT_CMP0026=OLD'
     sources:
       - type: archive
         url: 'https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz'
