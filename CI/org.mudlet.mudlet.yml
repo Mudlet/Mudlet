@@ -145,14 +145,13 @@ modules:
     - /bin/pcretest
 
   - name: boost
-    buildsystem: 'simple'
+    buildsystem: simple
     build-commands:
-      # we don't need to build boost, only using it for headers
-      - cp -r * /app/include
+      - cp -r boost /app/include/
     sources:
       - type: archive
-        url: 'https://archives.boost.io/release/1.90.0/source/boost_1_90_0.tar.bz2'
-        sha256: 49551aff3b22cbc5c5a9ed3dbc92f0e23ea50a0f7325b0d198b705e8ee3fc305
+        url: https://archives.boost.io/release/1.87.0/source/boost_1_87_0.tar.bz2
+        sha256: af57be25cb4c4f4b413ed692fe378affb4352ea50fbe294a11ef548f4d527d89
 
   - name: lua-yajl
     buildsystem: simple
@@ -231,3 +230,6 @@ modules:
     sources:
       - type: dir
         path: ../
+      - type: shell
+        commands:
+          - sed -i 's/find_package(Boost 1.44 CONFIG REQUIRED)/find_package(Boost 1.44 REQUIRED)/' src/CMakeLists.txt
