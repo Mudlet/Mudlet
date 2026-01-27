@@ -36,6 +36,8 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
+            # Enable AddressSanitizer for PTB and testing builds, but not release
+            # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
           - os: ubuntu-22.04
             # Another try to use GCC12
@@ -77,7 +79,7 @@ jobs:
         modules: qt5compat qtmultimedia
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.2.2
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -232,6 +234,19 @@ jobs:
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
+    - name: Get sentry-native commit hash
+      id: sentry-hash
+      run: echo "hash=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Cache sentry-native
+      id: cache-sentry
+      uses: actions/cache@v5
+      with:
+        path: |
+          3rdparty/sentry-native/install_without_transport
+          3rdparty/sentry-native/install_with_transport
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.hash }}
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
@@ -241,11 +256,10 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DVCPKG_APPLOCAL_DEPS=OFF
-          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && 'Address' || '' }}
+          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DWITH_SENTRY=ON
-          -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+          -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event_name == 'pull_request') && '1' || '0' }}
           -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '

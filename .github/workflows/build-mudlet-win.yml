@@ -51,7 +51,7 @@ jobs:
       shell: msys2 {0}
       env:
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event_name == 'pull_request') && '1' || '0' }}
       run: |
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
@@ -70,6 +70,19 @@ jobs:
         CCACHE_DIR: ${{runner.workspace}}/ccache
       run: ccache --zero-stats --show-stats
 
+    - name: Get sentry-native commit hash
+      id: sentry-hash
+      run: echo "hash=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Cache sentry-native
+      id: cache-sentry
+      uses: actions/cache@v5
+      with:
+        path: |
+          3rdparty/sentry-native/install_without_transport
+          3rdparty/sentry-native/install_with_transport
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.hash }}
+
     - name: (Windows) Build
       shell: msys2 {0}
       env:
@@ -77,8 +90,8 @@ jobs:
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        # Enable debug sending only for tags and scheduled builds (Release builds and PTB builds)
-        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+        # Enable debug sending for tags, scheduled builds, and PRs (Release builds, PTB builds, and PR builds)
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event_name == 'pull_request') && '1' || '0' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         WITH_SENTRY: "ON"
@@ -159,7 +172,7 @@ jobs:
     - name: (Windows) Upload unsigned binaries for signing
       id: upload-unsigned-binaries
       if: steps.prepare-signing.outcome == 'success'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unsigned-binaries
         path: ${{env.SIGNING_DIR}}
@@ -179,6 +192,7 @@ jobs:
         wait-for-completion: true
         output-artifact-directory: ${{steps.prepare-signing.outputs.signing_dir}}
         wait-for-completion-timeout-in-seconds: 600
+        github-policies-file: '.signpath/github-policies.yaml'
 
     - name: (Windows) Replace binaries with signed versions
       if: steps.sign-binaries.outcome == 'success'
@@ -229,7 +243,7 @@ jobs:
         env.SIGNPATH_SIGNING_ENABLED == 'true' &&
         (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') &&
         contains(env.ARTIFACT_NAME, 'installer')
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unsigned-installer
         path: ${{env.ARTIFACT_WINPATHORFILE}}
@@ -249,6 +263,7 @@ jobs:
         wait-for-completion: true
         output-artifact-directory: ${{github.workspace}}/signed-installer
         wait-for-completion-timeout-in-seconds: 600
+        github-policies-file: '.signpath/github-policies.yaml'
 
     - name: (Windows) Replace installer with signed version
       if: steps.sign-installer.outcome == 'success'

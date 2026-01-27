@@ -43,6 +43,7 @@ public:
         QHash<QString, int>& pSymbols,
         QHash<int, int>& pWeights,
         QHash<bool, int> lockStatus,
+        QHash<bool, int> hiddenStatus,
         QSet<TRoom*>& pRooms);
     void accept() override;
     void reject() override;
@@ -55,6 +56,7 @@ signals:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, std::optional<bool> newLockStatus,
+        bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
         bool changeBorderColor, QColor newBorderColor,
         bool changeBorderThickness, int newBorderThickness,
         QSet<TRoom*> mpRooms);
@@ -72,6 +74,7 @@ private:
     void initWeightInstructions();
     QStringList getComboBoxWeightItems();
     void initLockInstructions();
+    void initHiddenInstructions();
     void initBorderInstructions();
     void emitBorderPreview();
     void restoreOriginalBorders();

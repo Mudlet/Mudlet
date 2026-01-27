@@ -1,0 +1,9 @@
+github-policies:
+  - organization: "Mudlet"
+    repository: "Mudlet"
+    branches:
+      - "development"
+      - "master"
+      - "release-*"
+    tags:
+      - "Mudlet-*"

@@ -292,6 +292,12 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
     case DISABLE_DEPTH_TEST:
         gl->glDisable(GL_DEPTH_TEST);
         break;
+    case ENABLE_DEPTH_WRITE:
+        gl->glDepthMask(GL_TRUE);
+        break;
+    case DISABLE_DEPTH_WRITE:
+        gl->glDepthMask(GL_FALSE);
+        break;
     case ENABLE_BLEND:
         gl->glEnable(GL_BLEND);
         break;
@@ -302,4 +308,82 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         break;
     }
+}
+
+RenderLabelCommand::RenderLabelCommand(float centerX, float centerY, float centerZ,
+                                       float width, float height,
+                                       GLuint textureId,
+                                       const QVector3D& cameraRight,
+                                       const QVector3D& cameraUp,
+                                       bool highlight,
+                                       const QMatrix4x4& projectionMatrix,
+                                       const QMatrix4x4& viewMatrix,
+                                       const QMatrix4x4& modelMatrix)
+    : mCenterX(centerX), mCenterY(centerY), mCenterZ(centerZ)
+    , mWidth(width), mHeight(height)
+    , mTextureId(textureId)
+    , mCameraRight(cameraRight), mCameraUp(cameraUp)
+    , mHighlight(highlight)
+    , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
+{
+}
+
+void RenderLabelCommand::execute(QOpenGLFunctions* gl,
+                                QOpenGLShaderProgram* shader,
+                                GeometryManager* geometryManager,
+                                ResourceManager* resourceManager,
+                                QOpenGLVertexArrayObject& vao,
+                                QOpenGLBuffer& vertexBuffer,
+                                QOpenGLBuffer& colorBuffer,
+                                QOpenGLBuffer& normalBuffer,
+                                QOpenGLBuffer& indexBuffer,
+                                QOpenGLBuffer& texCoordBuffer)
+{
+    Q_UNUSED(gl)
+
+    if (mTextureId == 0) {
+        return;
+    }
+
+    // Generate billboard geometry
+    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(
+        mCenterX, mCenterY, mCenterZ,
+        mWidth, mHeight,
+        mCameraRight, mCameraUp,
+        mTextureId);
+
+    if (labelGeometry.isEmpty()) {
+        return;
+    }
+
+    // If highlighted, modify colors to add orange overlay
+    if (mHighlight) {
+        for (int i = 0; i < labelGeometry.colors.size(); i += 4) {
+            // Mix with orange (1.0, 0.5, 0.0)
+            labelGeometry.colors[i] = 1.0f;     // R
+            labelGeometry.colors[i + 1] = 0.65f; // G
+            labelGeometry.colors[i + 2] = 0.0f;  // B
+            // Keep alpha
+        }
+    }
+
+    // Set uniforms
+    QMatrix4x4 mvp = mProjectionMatrix * mViewMatrix * mModelMatrix;
+    shader->setUniformValue("uMVP", mvp);
+    shader->setUniformValue("uModel", mModelMatrix);
+    shader->setUniformValue("uUseInstancing", false);
+    shader->setUniformValue("uUsePBR", false);
+    shader->setUniformValue("uUseTexture", true);
+    shader->setUniformValue("uDisableLighting", true);
+    shader->setUniformValue("uTexture", 0);
+
+    // Normal matrix (inverse transpose of model matrix)
+    QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
+    shader->setUniformValue("uNormalMatrix", normalMatrix);
+
+    // Use textured rendering method
+    geometryManager->renderGeometry(labelGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer, resourceManager, GL_TRIANGLES);
+
+    // Reset lighting for subsequent draw calls
+    shader->setUniformValue("uDisableLighting", false);
 }

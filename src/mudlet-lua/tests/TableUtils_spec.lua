@@ -743,5 +743,46 @@ describe("Tests TableUtils.lua functions", function()
       local actual = table.update(tblA, tblB)
       assert.same(expected, actual)
     end)
+
+    -- Tests for #8694: table.update should not error when t1 has non-table and t2 has table
+    it("should replace non-table value with table value at same key", function()
+      local tblA = {x = 1}
+      local tblB = {x = {y = 2}}
+      local expected = {x = {y = 2}}
+      local actual = table.update(tblA, tblB)
+      assert.same(expected, actual)
+    end)
+
+    it("should replace table value with non-table value at same key", function()
+      local tblA = {x = {y = 2}}
+      local tblB = {x = 1}
+      local expected = {x = 1}
+      local actual = table.update(tblA, tblB)
+      assert.same(expected, actual)
+    end)
+
+    it("should merge nested tables when both have table at same key", function()
+      local tblA = {x = {a = 1, b = 2}}
+      local tblB = {x = {b = 3, c = 4}}
+      local expected = {x = {a = 1, b = 3, c = 4}}
+      local actual = table.update(tblA, tblB)
+      assert.same(expected, actual)
+    end)
+
+    it("should handle string value being replaced by table", function()
+      local tblA = {config = "old"}
+      local tblB = {config = {setting = true}}
+      local expected = {config = {setting = true}}
+      local actual = table.update(tblA, tblB)
+      assert.same(expected, actual)
+    end)
+
+    it("should handle boolean value being replaced by table", function()
+      local tblA = {enabled = true}
+      local tblB = {enabled = {feature1 = true, feature2 = false}}
+      local expected = {enabled = {feature1 = true, feature2 = false}}
+      local actual = table.update(tblA, tblB)
+      assert.same(expected, actual)
+    end)
   end)
 end)

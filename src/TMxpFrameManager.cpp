@@ -144,7 +144,9 @@ bool TMxpFrameManager::closeFrame(const QString& name)
 {
     auto* frame = getFrame(name);
     if (!frame) {
-        return false;
+        // Frame doesn't exist - treat as success since it's already "closed"
+        // This prevents literal MXP tags from appearing when closing non-existent frames
+        return true;
     }
 
     if (mCurrentDestination == name) {

@@ -1072,6 +1072,9 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
                                    const bool showRoomCollision)
 {
     const int currentRoomId = pRoom->getId();
+    if (pRoom->isHidden()) {
+        return;
+    }
     pRoom->rendered = false;
     QRectF roomRectangle;
     QRectF roomNameRectangle;
@@ -1802,7 +1805,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         if (areaMaxY - areaMinY <= yspan) {
-            mMapCenterY = (areaMinY + areaMaxY) / 2.0;
+            // Negate because areaMinY/areaMaxY are in room coords, but mMapCenterY uses screen coords (-room.y())
+            mMapCenterY = -((areaMinY + areaMaxY) / 2.0);
         }
     }
 
@@ -2379,6 +2383,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         if (!room) {
             continue;
         }
+        if (room->isHidden()) {
+            continue;
+        }
         const float rx = room->x() * mRoomWidth + mRX;
         const float ry = room->y() * -1 * mRoomHeight + mRY;
         const int rz = room->z();
@@ -2422,72 +2429,72 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         if (!room->customLines.empty()) {
             // This room has custom exit lines:
             if (!room->customLines.contains(key_n)) {
-                exitList.push_back(room->getNorth());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorth());
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(room->getNorth());
                     if (pER->getSouth() != _id) {
                         oneWayExits.push_back(room->getNorth());
                     }
                 }
             }
             if (!room->customLines.contains(key_ne)) {
-                exitList.push_back(room->getNortheast());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNortheast());
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(room->getNortheast());
                     if (pER->getSouthwest() != _id) {
                         oneWayExits.push_back(room->getNortheast());
                     }
                 }
             }
             if (!room->customLines.contains(key_e)) {
-                exitList.push_back(room->getEast());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getEast());
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(room->getEast());
                     if (pER->getWest() != _id) {
                         oneWayExits.push_back(room->getEast());
                     }
                 }
             }
             if (!room->customLines.contains(key_se)) {
-                exitList.push_back(room->getSoutheast());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSoutheast());
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(room->getSoutheast());
                     if (pER->getNorthwest() != _id) {
                         oneWayExits.push_back(room->getSoutheast());
                     }
                 }
             }
             if (!room->customLines.contains(key_s)) {
-                exitList.push_back(room->getSouth());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouth());
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(room->getSouth());
                     if (pER->getNorth() != _id) {
                         oneWayExits.push_back(room->getSouth());
                     }
                 }
             }
             if (!room->customLines.contains(key_sw)) {
-                exitList.push_back(room->getSouthwest());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouthwest());
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(room->getSouthwest());
                     if (pER->getNortheast() != _id) {
                         oneWayExits.push_back(room->getSouthwest());
                     }
                 }
             }
             if (!room->customLines.contains(key_w)) {
-                exitList.push_back(room->getWest());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getWest());
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(room->getWest());
                     if (pER->getEast() != _id) {
                         oneWayExits.push_back(room->getWest());
                     }
                 }
             }
             if (!room->customLines.contains(key_nw)) {
-                exitList.push_back(room->getNorthwest());
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorthwest());
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(room->getNorthwest());
                     if (pER->getSoutheast() != _id) {
                         oneWayExits.push_back(room->getNorthwest());
                     }
@@ -2496,9 +2503,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         } else {
             int exitRoomId = room->getNorth();
             if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(exitRoomId);
                     if (pER->getSouth() != _id) {
                         oneWayExits.push_back(exitRoomId);
                     }
@@ -2506,9 +2513,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
             exitRoomId = room->getNortheast();
             if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(exitRoomId);
                     if (pER->getSouthwest() != _id) {
                         oneWayExits.push_back(exitRoomId);
                     }
@@ -2516,9 +2523,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
             exitRoomId = room->getEast();
             if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(exitRoomId);
                     if (pER->getWest() != _id) {
                         oneWayExits.push_back(exitRoomId);
                     }
@@ -2526,9 +2533,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
             exitRoomId = room->getSoutheast();
             if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(exitRoomId);
                     if (pER->getNorthwest() != _id) {
                         oneWayExits.push_back(exitRoomId);
                     }
@@ -2536,9 +2543,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
             exitRoomId = room->getSouth();
             if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(exitRoomId);
                     if (pER->getNorth() != _id) {
                         oneWayExits.push_back(exitRoomId);
                     }
@@ -2546,9 +2553,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
             exitRoomId = room->getSouthwest();
             if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(exitRoomId);
                     if (pER->getNortheast() != _id) {
                         oneWayExits.push_back(exitRoomId);
                     }
@@ -2556,9 +2563,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
             exitRoomId = room->getWest();
             if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(exitRoomId);
                     if (pER->getEast() != _id) {
                         oneWayExits.push_back(exitRoomId);
                     }
@@ -2566,9 +2573,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
             exitRoomId = room->getNorthwest();
             if (exitRoomId > 0) {
-                exitList.push_back(exitRoomId);
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER) {
+                if (pER && !pER->isHidden()) {
+                    exitList.push_back(exitRoomId);
                     if (pER->getSoutheast() != _id) {
                         oneWayExits.push_back(exitRoomId);
                     }
@@ -3916,6 +3923,7 @@ void T2DMap::slot_showPropertiesDialog()
     QHash<QString, int> usedSymbols;
     QHash<int, int> usedWeights; // key is weight, value is count of uses
     QHash<bool, int> usedLockStatus;
+    QHash<bool, int> usedHiddenStatus;
 
     while (itRoom.hasNext()) {
         TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -3970,6 +3978,14 @@ void T2DMap::slot_showPropertiesDialog()
         } else {
             usedLockStatus[thisLockStatus] = 1;
         }
+
+        // Scan and count all the different hidden status used
+        const bool thisHiddenStatus = room->isHidden();
+        if (usedHiddenStatus.contains(thisHiddenStatus)) {
+            (usedHiddenStatus[thisHiddenStatus])++;
+        } else {
+            usedHiddenStatus[thisHiddenStatus] = 1;
+        }
     }
 
     // No need to show dialog if no rooms were found
@@ -3978,7 +3994,7 @@ void T2DMap::slot_showPropertiesDialog()
     }
 
     mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, roomPtrsSet);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, usedHiddenStatus, roomPtrsSet);
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
@@ -4001,6 +4017,8 @@ void T2DMap::slot_setRoomProperties(bool changeName,
                                     int newWeight,
                                     bool changeLockStatus,
                                     std::optional<bool> newLockStatus,
+                                    bool changeHiddenStatus,
+                                    std::optional<bool> newHiddenStatus,
                                     bool changeBorderColor,
                                     QColor newBorderColor,
                                     bool changeBorderThickness,
@@ -4052,6 +4070,9 @@ void T2DMap::slot_setRoomProperties(bool changeName,
         }
         if (changeLockStatus && newLockStatus.has_value()) {
             room->isLocked = newLockStatus.value();
+        }
+        if (changeHiddenStatus && newHiddenStatus.has_value()) {
+            room->setHidden(newHiddenStatus.value());
         }
         if (changeBorderColor) {
             room->mBorderColor = newBorderColor;
