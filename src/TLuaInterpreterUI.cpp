@@ -74,11 +74,11 @@
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
 
-static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
-static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
-static const char *bad_window_value = "window \"%s\" not found";
-static const char *bad_cmdline_value = "command line \"%s\" not found";
-static const char *bad_label_value = "label \"%s\" not found";
+static const char* bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
+static const char* bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
+static const char* bad_window_value = "window \"%s\" not found";
+static const char* bad_cmdline_value = "command line \"%s\" not found";
+static const char* bad_label_value = "label \"%s\" not found";
 
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
@@ -92,80 +92,79 @@ static bool isMain(const QString& name)
     return false;
 }
 
-#define WINDOW_NAME(ARG_L, ARG_pos)                                                                      \
-    ({                                                                                                   \
-        int pos_ = (ARG_pos);                                                                            \
-        const char *res_;                                                                                \
-        if ((lua_gettop(ARG_L) < pos_) || lua_isnil(ARG_L, pos_)) {                                      \
-            res_ = "";                                                                                   \
-        } else {                                                                                         \
-            if (!lua_isstring(ARG_L, pos_)) {                                                            \
-                lua_pushfstring(ARG_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_)); \
-                return lua_error(ARG_L);                                                                 \
-            }                                                                                            \
-            res_ = lua_tostring(ARG_L, pos_);                                                            \
-        }                                                                                                \
-        res_;                                                                                            \
+#define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
+    ({                                                                                                                                                                                                 \
+        int pos_ = (ARG_pos);                                                                                                                                                                          \
+        const char* res_;                                                                                                                                                                              \
+        if ((lua_gettop(ARG_L) < pos_) || lua_isnil(ARG_L, pos_)) {                                                                                                                                    \
+            res_ = "";                                                                                                                                                                                 \
+        } else {                                                                                                                                                                                       \
+            if (!lua_isstring(ARG_L, pos_)) {                                                                                                                                                          \
+                lua_pushfstring(ARG_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));                                                                                               \
+                return lua_error(ARG_L);                                                                                                                                                               \
+            }                                                                                                                                                                                          \
+            res_ = lua_tostring(ARG_L, pos_);                                                                                                                                                          \
+        }                                                                                                                                                                                              \
+        res_;                                                                                                                                                                                          \
     })
 
-#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                 \
-    ({                                                                                               \
-        int pos_ = (ARG_pos);                                                                        \
-        if (!lua_isstring(ARG_L, pos_)) {                                                            \
-            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));\
-            return lua_error(ARG_L);                                                                 \
-        }                                                                                            \
-        lua_tostring(ARG_L, pos_);                                                                   \
+#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                                                                                                                   \
+    ({                                                                                                                                                                                                 \
+        int pos_ = (ARG_pos);                                                                                                                                                                          \
+        if (!lua_isstring(ARG_L, pos_)) {                                                                                                                                                              \
+            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));                                                                                                  \
+            return lua_error(ARG_L);                                                                                                                                                                   \
+        }                                                                                                                                                                                              \
+        lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
     })
 
-#define CONSOLE_NIL(ARG_L, ARG_name)                                                           \
-    ({                                                                                         \
-        auto name_ = (ARG_name);                                                               \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
-        console_;                                                                              \
+#define CONSOLE_NIL(ARG_L, ARG_name)                                                                                                                                                                   \
+    ({                                                                                                                                                                                                 \
+        auto name_ = (ARG_name);                                                                                                                                                                       \
+        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
+        console_;                                                                                                                                                                                      \
     })
 
-#define CONSOLE(ARG_L, ARG_name)                                                               \
-    ({                                                                                         \
-        auto name_ = (ARG_name);                                                               \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
-        if (!console_) {                                                                       \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());              \
-            return 2;                                                                          \
-        }                                                                                      \
-        console_;                                                                              \
+#define CONSOLE(ARG_L, ARG_name)                                                                                                                                                                       \
+    ({                                                                                                                                                                                                 \
+        auto name_ = (ARG_name);                                                                                                                                                                       \
+        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
+        if (!console_) {                                                                                                                                                                               \
+            lua_pushnil(ARG_L);                                                                                                                                                                        \
+            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());                                                                                                                      \
+            return 2;                                                                                                                                                                                  \
+        }                                                                                                                                                                                              \
+        console_;                                                                                                                                                                                      \
     })
 
-#define COMMANDLINE(ARG_L, ARG_name)                                                           \
-    ({                                                                                         \
-        const QString& name_ = (ARG_name);                                                     \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
-        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
-                                    : console_->mSubCommandLineMap.value(name_);               \
-        if (!cmdLine_) {                                                                       \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());             \
-            return 2;                                                                          \
-        }                                                                                      \
-        cmdLine_;                                                                              \
+#define COMMANDLINE(ARG_L, ARG_name)                                                                                                                                                                   \
+    ({                                                                                                                                                                                                 \
+        const QString& name_ = (ARG_name);                                                                                                                                                             \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
+        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine : console_->mSubCommandLineMap.value(name_);                                                                                         \
+        if (!cmdLine_) {                                                                                                                                                                               \
+            lua_pushnil(ARG_L);                                                                                                                                                                        \
+            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
+            return 2;                                                                                                                                                                                  \
+        }                                                                                                                                                                                              \
+        cmdLine_;                                                                                                                                                                                      \
     })
 
-#define LABEL(ARG_L, ARG_name)                                                                 \
-    ({                                                                                         \
-        const QString& name_ = (ARG_name);                                                     \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
-        auto label_ = console_->mLabelMap.value(name_);                                        \
-        if (!label_) {                                                                         \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());               \
-            return 2;                                                                          \
-        }                                                                                      \
-        label_;                                                                                \
+#define LABEL(ARG_L, ARG_name)                                                                                                                                                                         \
+    ({                                                                                                                                                                                                 \
+        const QString& name_ = (ARG_name);                                                                                                                                                             \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
+        auto label_ = console_->mLabelMap.value(name_);                                                                                                                                                \
+        if (!label_) {                                                                                                                                                                                 \
+            lua_pushnil(ARG_L);                                                                                                                                                                        \
+            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());                                                                                                                       \
+            return 2;                                                                                                                                                                                  \
+        }                                                                                                                                                                                              \
+        label_;                                                                                                                                                                                        \
     })
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
-int TLuaInterpreter::addCommandLineMenuEvent(lua_State * L)
+int TLuaInterpreter::addCommandLineMenuEvent(lua_State* L)
 {
     int args = 1;
     const int argsCount = lua_gettop(L);
@@ -187,7 +186,7 @@ int TLuaInterpreter::addCommandLineMenuEvent(lua_State * L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addMouseEvent
-int TLuaInterpreter::addMouseEvent(lua_State * L)
+int TLuaInterpreter::addMouseEvent(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     QStringList actionInfo;
@@ -221,7 +220,7 @@ int TLuaInterpreter::addMouseEvent(lua_State * L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendBuffer
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->appendBuffer();
     return 0;
@@ -237,8 +236,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
     // font name and size are passed in as arguments
     if (lua_gettop(L) == 2) {
-        auto font = QFont(getVerifiedString(L, __func__, 2, "font name"),
-                          getVerifiedInt(L, __func__, 1, "font size"), QFont::Normal);
+        auto font = QFont(getVerifiedString(L, __func__, 2, "font name"), getVerifiedInt(L, __func__, 1, "font size"), QFont::Normal);
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
 
@@ -527,7 +525,7 @@ int TLuaInterpreter::deleteScrollBox(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteLine
 int TLuaInterpreter::deleteLine(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->skipLine();
     return 0;
@@ -536,7 +534,7 @@ int TLuaInterpreter::deleteLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deselect
 int TLuaInterpreter::deselect(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->deselect();
     lua_pushboolean(L, true);
@@ -546,7 +544,7 @@ int TLuaInterpreter::deselect(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableClickthrough
 int TLuaInterpreter::disableClickthrough(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
 
@@ -583,7 +581,7 @@ int TLuaInterpreter::disableCommandLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableHorizontalScrollBar
 int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->setHorizontalScrollBar(false);
     return 0;
@@ -592,7 +590,7 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrollBar
 int TLuaInterpreter::disableScrollBar(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->setScrollBarVisible(false);
     return 0;
@@ -601,7 +599,7 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableTimeStamps
 int TLuaInterpreter::disableTimeStamps(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto pConsole = CONSOLE(L, windowName);
     // *pConsole can be the main console as well as any user one
     if (!pConsole->showTimeStamps()) {
@@ -677,7 +675,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoUserWindow
 int TLuaInterpreter::echoUserWindow(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     const QString text = getVerifiedString(L, __func__, 2, "text");
     Host& host = getHostFromLua(L);
     host.echoWindow(windowName, text);
@@ -728,7 +726,10 @@ int TLuaInterpreter::echoPopup(lua_State* L)
 
     if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
         lua_pushnil(L);
-        lua_pushfstring(L, "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup", commandList.size(), hintList.size());
+        lua_pushfstring(L,
+                        "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
+                        commandList.size(),
+                        hintList.size());
         return 2;
     }
 
@@ -741,7 +742,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableClickthrough
 int TLuaInterpreter::enableClickthrough(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
 
@@ -826,7 +827,7 @@ int TLuaInterpreter::enableCommandLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableHorizontalScrollBar
 int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->setHorizontalScrollBar(true);
     return 0;
@@ -835,7 +836,7 @@ int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
 int TLuaInterpreter::enableScrollBar(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->setScrollBarVisible(true);
     return 0;
@@ -844,7 +845,7 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableTimeStamps
 int TLuaInterpreter::enableTimeStamps(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto pConsole = CONSOLE(L, windowName);
     // *pConsole can be the main console as well as any user one
     if (pConsole->showTimeStamps()) {
@@ -990,7 +991,7 @@ int TLuaInterpreter::getClipboardText(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnCount
 int TLuaInterpreter::getColumnCount(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     int columns;
     auto console = CONSOLE(L, windowName);
@@ -1015,7 +1016,7 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = getHostFromLua(L).findConsole(windowName);
     if (!console) {
         // the next line should be "pushnil"; compatibility with old bugs and all that
@@ -1074,7 +1075,7 @@ int TLuaInterpreter::getFont(lua_State* L)
 int TLuaInterpreter::getFontSize(lua_State* L)
 {
     int rval = -1;
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     rval = console->mUpperPane->font().pointSize();
 
@@ -1139,7 +1140,7 @@ int TLuaInterpreter::getLabelStyleSheet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLastLineNumber
 int TLuaInterpreter::getLastLineNumber(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE_NIL(L, windowName);
     const int number = console ? console->getLastLineNumber() : -1;
     lua_pushnumber(L, number);
@@ -1212,7 +1213,7 @@ int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMouseEvents
-int TLuaInterpreter::getMouseEvents(lua_State * L)
+int TLuaInterpreter::getMouseEvents(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     // create the result table
@@ -1276,7 +1277,7 @@ int TLuaInterpreter::getMainWindowSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRowCount
 int TLuaInterpreter::getRowCount(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     int rows;
     auto console = CONSOLE(L, windowName);
@@ -1441,7 +1442,7 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#timeStampsEnabled
 int TLuaInterpreter::timeStampsEnabled(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto pConsole = CONSOLE(L, windowName);
     // *pConsole can be the main console as well as any user one
     lua_pushboolean(L, pConsole->showTimeStamps());
@@ -1451,7 +1452,7 @@ int TLuaInterpreter::timeStampsEnabled(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getUserWindowSize
 int TLuaInterpreter::getUserWindowSize(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     const Host& host = getHostFromLua(L);
     const QSize userWindowSize = host.mpConsole->getUserWindowSize(windowName);
@@ -1464,7 +1465,7 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowWrap
 int TLuaInterpreter::getWindowWrap(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->getWrapAt());
@@ -1482,7 +1483,7 @@ int TLuaInterpreter::hasFocus(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideToolBar
 int TLuaInterpreter::hideToolBar(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
     host.getActionUnit()->hideToolBar(windowName);
@@ -1599,7 +1600,10 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 
     if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
         lua_pushnil(L);
-        lua_pushfstring(L, "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup", commandList.size(), hintList.size());
+        lua_pushfstring(L,
+                        "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
+                        commandList.size(),
+                        hintList.size());
         return 2;
     }
 
@@ -1824,7 +1828,7 @@ int TLuaInterpreter::loadWindowLayout(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lowerWindow
 int TLuaInterpreter::lowerWindow(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpConsole->lowerWindow(windowName));
     return 1;
@@ -1851,7 +1855,7 @@ int TLuaInterpreter::moveCursor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveCursorEnd
 int TLuaInterpreter::moveCursorEnd(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->moveCursorEnd();
     return 0;
@@ -1927,14 +1931,14 @@ int TLuaInterpreter::pauseMovie(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseWindow
 int TLuaInterpreter::raiseWindow(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpConsole->raiseWindow(windowName));
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCommandLineMenuEvent
-int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
+int TLuaInterpreter::removeCommandLineMenuEvent(lua_State* L)
 {
     int args = 1;
     const int argsCount = lua_gettop(L);
@@ -1959,7 +1963,7 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeMouseEvent
-int TLuaInterpreter::removeMouseEvent(lua_State * L)
+int TLuaInterpreter::removeMouseEvent(lua_State* L)
 {
     const QString uniqueName = getVerifiedString(L, __func__, 1, "event name");
     Host& host = getHostFromLua(L);
@@ -1989,7 +1993,8 @@ int TLuaInterpreter::replace(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetCmdLineAction
-int TLuaInterpreter::resetCmdLineAction(lua_State* L){
+int TLuaInterpreter::resetCmdLineAction(lua_State* L)
+{
     Host& host = getHostFromLua(L);
     const QString name = getVerifiedString(L, __func__, 1, "command line name");
     if (name.isEmpty()) {
@@ -2025,7 +2030,7 @@ int TLuaInterpreter::resetBackgroundImage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetFormat
 int TLuaInterpreter::resetFormat(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     auto console = CONSOLE(L, windowName);
     console->reset();
     lua_pushboolean(L, true);
@@ -2058,17 +2063,15 @@ int TLuaInterpreter::scaleMovie(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCaptureGroup
-int TLuaInterpreter::selectCaptureGroup(lua_State *L)
+int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 {
     if (!(lua_isnumber(L, 1) || lua_isstring(L, 1))) {
-        lua_pushfstring(L,
-                        "selectCaptureGroup: bad argument #1 type (capture group as number or capture group name as string expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "selectCaptureGroup: bad argument #1 type (capture group as number or capture group name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
-    Host &host = getHostFromLua(L);
-    TLuaInterpreter *pL = host.getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pL = host.getLuaInterpreter();
     int begin = 0;
     int length = 0;
 
@@ -2084,7 +2087,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State *L)
             auto iti = pL->mCaptureGroupPosList.begin();
             auto its = pL->mCaptureGroupList.begin();
             begin = *iti;
-            std::string &s = *its;
+            std::string& s = *its;
 
             for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
                 begin = *iti;
@@ -2175,7 +2178,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     const QString searchText = getVerifiedString(L, __func__, s++, "text to select");
     // CHECK: Do we need to qualify this for a non-blank string?
 
-    qint64 const numOfMatch = static_cast <qint64> (getVerifiedInt(L, __func__, s, "match count {1 for first}"));
+    qint64 const numOfMatch = static_cast<qint64>(getVerifiedInt(L, __func__, s, "match count {1 for first}"));
 
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->select(searchText, numOfMatch));
@@ -2222,7 +2225,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    TEvent event {};
+    TEvent event{};
     event.mArgumentList.append(QLatin1String("sysAppStyleSheetChange"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(tag);
@@ -2313,8 +2316,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     }
 
     if (mode < 1 || mode > 4) {
-        return warnArgumentValue(L, __func__, qsl(
-            "%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'").arg(mode));
+        return warnArgumentValue(L, __func__, qsl("%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'").arg(mode));
     }
 
     Host* host = &getHostFromLua(L);
@@ -2332,7 +2334,9 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     QString windowName;
     int r, g, b, alpha;
 
-    auto validRange = [](int number) { return number >= 0 && number <= 255; };
+    auto validRange = [](int number) {
+        return number >= 0 && number <= 255;
+    };
 
     int s = 1;
     if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
@@ -2468,7 +2472,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
         auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
         host.setBorders({width, top, width, bottom});
         break;
-        }
+    }
     default: {
         auto top = getVerifiedInt(L, __func__, 1, "new top size");
         auto right = getVerifiedInt(L, __func__, 2, "new right size");
@@ -2496,7 +2500,9 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 {
     int s = 0;
     const int n = lua_gettop(L);
-    auto validRange = [](int number) { return number >= 0 && number <= 255; };
+    auto validRange = [](int number) {
+        return number >= 0 && number <= 255;
+    };
     QString windowName;
     if (n > 3) {
         windowName = WINDOW_NAME(L, ++s);
@@ -2618,7 +2624,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     if (!mudlet::self()->getAvailableFonts().contains(fontName, Qt::CaseInsensitive)) {
         // Font not found - try parsing as a static font name with style
         auto [baseName, weight] = host.parseFontNameAndStyle(fontName);
-        
+
         if (mudlet::self()->getAvailableFonts().contains(baseName, Qt::CaseInsensitive)) {
             // Found the base font family, use it with the parsed weight
             effectiveFontName = baseName;
@@ -2772,11 +2778,16 @@ int TLuaInterpreter::setLabelReleaseCallback(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelStyleSheet
 int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
 {
-    std::string label = getVerifiedString(L, __func__, 1, "label").toStdString();
-    std::string markup = getVerifiedString(L, __func__, 2, "markup").toStdString();
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    const QString stylesheet = getVerifiedString(L, __func__, 2, "stylesheet");
     const Host& host = getHostFromLua(L);
-    host.mpConsole->setLabelStyleSheet(label, markup);
-    return 0;
+
+    if (auto [success, message] = host.mpConsole->setLabelStyleSheet(labelName, stylesheet); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelCursor
@@ -2958,7 +2969,10 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
         lua_pushnil(L);
-        lua_pushfstring(L, "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup", commandList.size(), hintList.size());
+        lua_pushfstring(L,
+                        "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
+                        commandList.size(),
+                        hintList.size());
         return 2;
     }
 
@@ -3020,7 +3034,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     const int n = lua_gettop(L);
 
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
     colorComponents[0] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 2, "red background color component"), 255.0));
@@ -3037,8 +3051,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     } else if (lua_isnumber(L, s)) {
         bold = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
     } else {
-        lua_pushfstring(L, "setTextFormat: bad argument #%d type (bold format as boolean or number {true/non-zero to enable} expected, got %s!)",
-                        s, luaL_typename(L, s));
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (bold format as boolean or number {true/non-zero to enable} expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 
@@ -3048,8 +3061,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     } else if (lua_isnumber(L, s)) {
         underline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
     } else {
-        lua_pushfstring(L, "setTextFormat: bad argument #%d type (underline format as boolean or number {true/non-zero to enable} expected, got %s!)",
-                        s, luaL_typename(L, s));
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (underline format as boolean or number {true/non-zero to enable} expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 
@@ -3059,8 +3071,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     } else if (lua_isnumber(L, s)) {
         italics = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
     } else {
-        lua_pushfstring(L, "setTextFormat: bad argument #%d type (italic format as boolean or number {true/non-zero to enable} expected, got %s!)",
-                        s, luaL_typename(L, s));
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (italic format as boolean or number {true/non-zero to enable} expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 
@@ -3073,8 +3084,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         } else if (lua_isnumber(L, s)) {
             strikeout = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
         } else {
-            lua_pushfstring(L, "setTextFormat: bad argument #%d type (strikeout format as boolean or number {true/non-zero to enable} is optional, got %s!)",
-                            s, luaL_typename(L, s));
+            lua_pushfstring(L, "setTextFormat: bad argument #%d type (strikeout format as boolean or number {true/non-zero to enable} is optional, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         }
     }
@@ -3087,8 +3097,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         } else if (lua_isnumber(L, s)) {
             overline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
         } else {
-            lua_pushfstring(L, "setTextFormat: bad argument #%d type (overline format as boolean or number {true/non-zero to enable} is optional, got %s!)",
-                            s, luaL_typename(L, s));
+            lua_pushfstring(L, "setTextFormat: bad argument #%d type (overline format as boolean or number {true/non-zero to enable} is optional, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         }
     }
@@ -3101,23 +3110,16 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         } else if (lua_isnumber(L, s)) {
             reverse = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
         } else {
-            lua_pushfstring(L, "setTextFormat: bad argument #%d type (reverse format as boolean or number {true/non-zero to enable} is optional, got %s!)",
-                            s, luaL_typename(L, s));
+            lua_pushfstring(L, "setTextFormat: bad argument #%d type (reverse format as boolean or number {true/non-zero to enable} is optional, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         }
     }
 
-    TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None)
-            | (italics ? TChar::Italic : TChar::None)
-            | (overline ? TChar::Overline : TChar::None)
-            | (reverse ? TChar::Reverse : TChar::None)
-            | (strikeout ? TChar::StrikeOut : TChar::None)
-            | (underline ? TChar::Underline : TChar::None);
+    TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None) | (italics ? TChar::Italic : TChar::None) | (overline ? TChar::Overline : TChar::None)
+                                        | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None);
 
-    if (!host.mpConsole->setTextFormat(windowName,
-                                      QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
-                                      QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
-                                      flags)) {
+    if (!host.mpConsole->setTextFormat(
+                windowName, QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)), QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)), flags)) {
         return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName), true);
     }
 
@@ -3180,7 +3182,7 @@ int TLuaInterpreter::setWindow(lua_State* L)
     int x = 0, y = 0;
     bool show = true;
 
-    const QString windowname {WINDOW_NAME(L, 1)};
+    const QString windowname{WINDOW_NAME(L, 1)};
 
     if (lua_type(L, 2) != LUA_TSTRING) {
         lua_pushfstring(L, "setWindow: bad argument #2 type (element name as string expected, got %s!)", luaL_typename(L, 2));
@@ -3219,7 +3221,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapIndent
 int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setIndentCount(luaFrom);
@@ -3229,7 +3231,7 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
 //Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapHangingIndent
 int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setHangingIndentCount(luaFrom);
@@ -3254,7 +3256,7 @@ int TLuaInterpreter::startMovie(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showToolBar
 int TLuaInterpreter::showToolBar(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
     host.getActionUnit()->showToolBar(windowName);
@@ -3469,7 +3471,7 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
         lua_pushfstring(L, "pasteWindow: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     Host& host = getHostFromLua(L);
     host.pasteWindow(windowName);
     return 0;
@@ -3478,7 +3480,7 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrolling
 int TLuaInterpreter::enableScrolling(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
         lua_pushnil(L);
         lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
@@ -3494,7 +3496,7 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrolling
 int TLuaInterpreter::disableScrolling(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
         lua_pushnil(L);
         lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
@@ -3510,7 +3512,7 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollingActive
 int TLuaInterpreter::scrollingActive(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
+    const QString windowName{WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
         // Handle the main console case:
         lua_pushboolean(L, true);
@@ -3554,7 +3556,9 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         }
         movie->setScaledSize(pN->size());
         if (autoScale) {
-            connect(pN, &TLabel::resized, pN, [=] { movie->setScaledSize(pN->size()); });
+            connect(pN, &TLabel::resized, pN, [=] {
+                movie->setScaledSize(pN->size());
+            });
         } else {
             pN->disconnect(SIGNAL(resized()));
         }

@@ -30,13 +30,13 @@
 #include "utils.h"
 
 ShaderManager::ShaderManager(ResourceManager* resourceManager, QObject* parent)
-    : QObject(parent)
-    , mDevelopmentMode(false)
-    , mInitialized(false)
-    , mUniformMVP(-1)
-    , mUniformModel(-1)
-    , mUniformNormalMatrix(-1)
-    , mResourceManager(resourceManager)
+: QObject(parent)
+, mDevelopmentMode(false)
+, mInitialized(false)
+, mUniformMVP(-1)
+, mUniformModel(-1)
+, mUniformNormalMatrix(-1)
+, mResourceManager(resourceManager)
 {
     mReloadTimer = new QTimer(this);
     mReloadTimer->setSingleShot(true);
@@ -62,18 +62,16 @@ bool ShaderManager::initialize()
 
     if (mDevelopmentMode) {
         // Try multiple well-known locations for shader files
-        QStringList possiblePaths = {
-            // CMake build from build/src/
-            qsl("../src/shaders/"),
-            // CMake build from build/
-            qsl("src/shaders/"),
-            // In-source build
-            qsl("../../src/shaders/"),
-            // Qt Creator build
-            qsl("../../../src/shaders/"),
-            // Relative to current directory
-            qsl("shaders/")
-        };
+        QStringList possiblePaths = {// CMake build from build/src/
+                                     qsl("../src/shaders/"),
+                                     // CMake build from build/
+                                     qsl("src/shaders/"),
+                                     // In-source build
+                                     qsl("../../src/shaders/"),
+                                     // Qt Creator build
+                                     qsl("../../../src/shaders/"),
+                                     // Relative to current directory
+                                     qsl("shaders/")};
 
         QString appDir = QCoreApplication::applicationDirPath();
         QString foundPath;
@@ -81,9 +79,7 @@ bool ShaderManager::initialize()
         for (const QString& relativePath : possiblePaths) {
             QString testPath = QDir(appDir).filePath(relativePath);
             QDir testDir(testPath);
-            if (testDir.exists() &&
-                QFile::exists(testDir.filePath(qsl("vertex.glsl"))) &&
-                QFile::exists(testDir.filePath(qsl("fragment.glsl")))) {
+            if (testDir.exists() && QFile::exists(testDir.filePath(qsl("vertex.glsl"))) && QFile::exists(testDir.filePath(qsl("fragment.glsl")))) {
                 foundPath = testPath;
                 break;
             }
@@ -251,5 +247,3 @@ bool ShaderManager::detectDevelopmentMode()
     return false;
 #endif
 }
-
-

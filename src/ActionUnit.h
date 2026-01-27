@@ -46,6 +46,7 @@ public:
     explicit ActionUnit(Host* pHost)
     : mpHost(pHost)
     {}
+    ~ActionUnit();
 
     std::list<TAction*> getActionRootNodeList()
     {

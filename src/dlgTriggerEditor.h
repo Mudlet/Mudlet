@@ -390,6 +390,8 @@ private:
     void populateActions();
     void populateKeys();
     void saveOpenChanges();
+    EditorViewType determineViewFromVisibleTree();
+    EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
     void saveTimer();
@@ -660,8 +662,9 @@ private:
     QAction* mpAction_restoreEditorActionsToolbar = nullptr;
     QAction* mpAction_restoreEditorItemsToolbar = nullptr;
 
-    // We need to keep a record of this button as we have to disable it
+    // We need to keep a record of these buttons as we have to disable them
     // for the "Variables" view:
+    QAction* mpAction_toggleActive = nullptr;
     QAction* mpExportAction = nullptr;
     QAction* mpCreateModuleAction = nullptr;
 
@@ -710,6 +713,19 @@ private:
     QByteArray mTimerEditorSplitterState;
     QByteArray mVarEditorSplitterState;
     QByteArray mSearchSplitterState;
+
+    struct EditorState {
+        int caretLine = 0;
+        int caretColumn = 0;
+        int verticalScrollPos = 0;
+        int horizontalScrollPos = 0;
+    };
+
+    QMap<EditorViewType, QMap<int, EditorState>> mEditorStates;
+
+    void saveEditorState(EditorViewType viewType, int itemId);
+    void restoreEditorState(EditorViewType viewType, int itemId);
+    void clearEditorState(EditorViewType viewType, int itemId);
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax = 0;

@@ -6,6 +6,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
     TelnetBenchmark.cpp
     cTelnetBufferTest.cpp
+    TOscTerminatorTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS

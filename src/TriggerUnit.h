@@ -45,13 +45,11 @@ public:
     : mpHost(pHost)
     , mMaxID(0)
     , mModuleMember()
-    {}
+    {
+    }
     ~TriggerUnit();
 
-    std::list<TTrigger*> getTriggerRootNodeList()
-    {
-        return mTriggerRootNodeList;
-    }
+    std::list<TTrigger*> getTriggerRootNodeList() { return mTriggerRootNodeList; }
 
     void resetStats();
     TTrigger* getTrigger(int id);
@@ -103,7 +101,8 @@ private:
     int statsActiveItems = 0;
     int statsPatternsTotal = 0;
     int statsPatternsActive = 0;
-    bool mIsProcessing = false;
+    // Counter for nested processing; cleanup deferred until 0
+    int mProcessingDepth = 0;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

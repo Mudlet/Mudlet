@@ -50,9 +50,13 @@
 
 namespace {
 
+// Maximum length for an OSC sequence before aborting (defense against malformed sequences)
+constexpr size_t MAX_OSC_SEQUENCE_LENGTH = 4096;
+
 // Helper to interpret JSON values as boolean
 // Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
-bool jsonBoolValue(const QJsonValue& val) {
+bool jsonBoolValue(const QJsonValue& val)
+{
     return val.toBool() || (val.isDouble() && val.toDouble() != 0);
 }
 
@@ -173,7 +177,9 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 , mTagWatchdog(std::make_unique<QTimer>())
 {
     mTagWatchdog->setSingleShot(true);
-    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() {
+        processMxpWatchdogCallback();
+    });
     // All additions to the buffer must use append()/appendLine() to preserve formatting via TChar.
     // Direct modification of the `buffer` vector may bypass formatting and should be avoided.
     clear();
@@ -189,6 +195,9 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 
 TBuffer::~TBuffer()
 {
+    if (mTagWatchdog) {
+        mTagWatchdog->stop();
+    }
 }
 
 TBuffer::TBuffer(const TBuffer& other)
@@ -268,7 +277,9 @@ TBuffer::TBuffer(const TBuffer& other)
 , mCurrentFocusedLinkIndex(other.mCurrentFocusedLinkIndex)
 {
     mTagWatchdog->setSingleShot(true);
-    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() {
+        processMxpWatchdogCallback();
+    });
 }
 
 TBuffer& TBuffer::operator=(const TBuffer& other)
@@ -347,18 +358,21 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mCurrentHoveredLinkIndex = other.mCurrentHoveredLinkIndex;
         mCurrentActiveLinkIndex = other.mCurrentActiveLinkIndex;
         mCurrentFocusedLinkIndex = other.mCurrentFocusedLinkIndex;
-        
+
         mTagWatchdog = std::make_unique<QTimer>();
         mTagWatchdog->setSingleShot(true);
-        QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() { processMxpWatchdogCallback(); });
+        QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() {
+            processMxpWatchdogCallback();
+        });
     }
     return *this;
 }
 
 // user-defined literal to represent megabytes
-auto operator""_MB(unsigned long long const x)
-        -> long
-{ return 1024L*1024L*x; }
+auto operator""_MB(unsigned long long const x) -> long
+{
+    return 1024L * 1024L * x;
+}
 
 void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
 {
@@ -371,8 +385,7 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     // clip the maximum to something reasonable that the machine can handle
     auto max = getMaxBufferSize();
     if (requestedLinesLimit > max) {
-        qWarning().nospace() << "setBufferSize(): " << requestedLinesLimit <<
-                "lines for buffer requested but your computer can only handle " << max << ", clipping it";
+        qWarning().nospace() << "setBufferSize(): " << requestedLinesLimit << "lines for buffer requested but your computer can only handle " << max << ", clipping it";
         mLinesLimit = max;
     } else {
         mLinesLimit = requestedLinesLimit;
@@ -576,9 +589,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         // sequences that were not complete at the end of the last packet:
         if (!mIncompleteSequenceBytes.empty()) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
-            qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no longer be usable!";
+            qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no "
+                        "longer be usable!";
 #endif
-            mIncompleteSequenceBytes.clear();;
+            mIncompleteSequenceBytes.clear();
+            ;
         }
     }
 
@@ -678,8 +693,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength
-                   && ((((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0))
-                      ||((spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0))) {
+                   && ((((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0)) || ((spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0))) {
                 ++spanEnd;
             }
 
@@ -690,7 +704,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // the reserved characters ('<', '=', '>' or '?') which we
                 // can/do not handle
 
-                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI"
+                                             << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
                 // So skip over it as far as we can - will still possibly have
                 // garbage beyond the end which will still be shown...
                 localBufferPosition += 1 + spanEnd - spanStart;
@@ -722,9 +737,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // afterwards is as it might help to debug things
                 if (spanEnd + 1 < localBufferLength) {
                     // Yeah there is another byte we can report as the final byte
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd] << "') and a 'final' byte ('" << localBuffer[spanEnd+1] << "') which Mudlet cannot interpret.";
+                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
+                                                 << "') and a 'final' byte ('" << localBuffer[spanEnd + 1] << "') which Mudlet cannot interpret.";
                 } else {
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd] << "') which Mudlet cannot interpret.";
+                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
+                                                 << "') which Mudlet cannot interpret.";
                 }
                 // So skip over it as far as we can - will still be possible to
                 // have garbage beyond the end which will still be shown...
@@ -780,13 +797,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             mMudBuffer.push_back(c);
                         }
                         // For debugging:
-//                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - CUF (cursor forward) sequence of form CSI" << temp << "C received, converting into " << spacesNeeded << " spaces.";
+                        //                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - CUF (cursor forward) sequence of form CSI" << temp << "C received, converting into " << spacesNeeded << " spaces.";
                     } else {
-                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp << "C received, that is supposed to be a CUF (cursor forward) sequence but doesn't make sense, Mudlet will ignore it.";
+                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp
+                                                     << "C received, that is supposed to be a CUF (cursor forward) sequence but doesn't make sense, Mudlet will ignore it.";
                     }
 
-                }
-                    break;
+                } break;
 
                 case static_cast<quint8>('J'): {
                     /*
@@ -805,23 +822,26 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     const int argValue = temp.toInt(&isOk);
                     if (isOk) {
                         if (argValue >= 0 && argValue < 3) {
-                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - ED (erase in display) sequence of form CSI" << temp << "J received,\nrejecting as incompatible with Mudlet.";
+                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - ED (erase in display) sequence of form CSI" << temp
+                                                         << "J received,\nrejecting as incompatible with Mudlet.";
                         } else {
-                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Invalid ED (erase in display) sequence of form CSI" << temp << "J received,\nwhich Mudlet will ignore.";
+                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Invalid ED (erase in display) sequence of form CSI" << temp
+                                                         << "J received,\nwhich Mudlet will ignore.";
                         }
                     } else {
-                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp << "J received, that is supposed to\nbe a ED (erase in display) sequence but it doesn't make sense, Mudlet will ignore it.";
+                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp
+                                                     << "J received, that is supposed to\nbe a ED (erase in display) sequence but it doesn't make sense, Mudlet will ignore it.";
                     }
-                }
-                    break;
+                } break;
 
                 default: // Unhandled other (valid) CSI final byte sequences will end up here
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << localBuffer[spanEnd] << " received, Mudlet will ignore it.";
 
                 } // End of switch(modeChar) {}
             } else {
-                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected an invalid CSI sequence beginning with \"CSI" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << " which Mudlet will ignore.";
-            }  // End of (isAValidFinalByte) {}
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected an invalid CSI sequence beginning with \"CSI"
+                                             << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << " which Mudlet will ignore.";
+            } // End of (isAValidFinalByte) {}
 
             mGotCSI = false;
             localBufferPosition += 1 + spanEnd - spanStart;
@@ -831,9 +851,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         } // End of if (mGotCSI)
 
         if (mGotOSC) {
-            // Lookahead and find end of sequence (the ST string terminator)
-            // DANGER, WILL ROBINSON! Should an OSC be received without a
-            // terminator then all data will just be swallowed into the buffer
+            // Lookahead and find end of sequence - valid terminators are:
+            // - ST (String Terminator): ESC followed by '\' (backslash)
+            // - BEL (0x07): Common alternative used by xterm and many MUDs
 
             // Valid characters inside an OSC are: a "command string" or a
             // "character string".
@@ -848,27 +868,60 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             // It is safe to look at spanEnd-1 even at the starting position
             // because we already know that the localBuffer extends backwards
             // that far (it will be the ']' character!)
-            while (spanEnd < localBufferLength
-                   && (spanEnd == 0 || localBuffer[spanEnd-1] != '\033')
-                   && (localBuffer[spanEnd] != '\\')) {
+            // Loop until we find ST (ESC \), BEL, exceed length limit, or run out of data
+            while (spanEnd < localBufferLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07'
+                   && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
                 ++spanEnd;
             }
 
-            if (localBuffer[spanEnd] != '\\') {
-                // The last character in the buffer is NOT the expected ST
-                // - therefore we have probably got a split between
-                // data packets and are not in a position to process the
-                // current line further...
+            // Determine what terminated the loop
+            bool const foundBEL = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
+            bool const foundST = (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
+            bool const exceededLength = ((spanEnd - spanStart) >= MAX_OSC_SEQUENCE_LENGTH);
 
+            if (foundBEL) {
+                // BEL terminator - sequence content excludes the BEL
+                decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart).c_str()));
+                mGotOSC = false;
+                localBufferPosition = spanEnd + 1; // Skip past BEL
+                continue;
+            } else if (foundST) {
+                // ST terminator (ESC \) - sequence content excludes the ESC before backslash
+                decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart - 1).c_str()));
+                mGotOSC = false;
+                localBufferPosition = spanEnd + 1; // Skip past backslash
+                continue;
+            } else if (exceededLength) {
+                // Length limit exceeded - scan forward for a terminator to skip the malformed sequence
+                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - OSC sequence exceeded " << MAX_OSC_SEQUENCE_LENGTH
+                                               << " bytes without terminator, scanning for terminator to recover.";
+                // Continue scanning from where we left off to find a terminator
+                while (spanEnd < localBufferLength && localBuffer[spanEnd] != '\x07' && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
+                    ++spanEnd;
+                }
+                // Check if we found a terminator
+                if (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07') {
+                    // Found BEL - skip to after it
+                    mGotOSC = false;
+                    localBufferPosition = spanEnd + 1;
+                    continue;
+                } else if (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\') {
+                    // Found ST - skip to after it
+                    mGotOSC = false;
+                    localBufferPosition = spanEnd + 1;
+                    continue;
+                } else {
+                    // No terminator found yet - wait for more data
+                    // Store from current position to avoid re-scanning the entire sequence
+                    mIncompleteSequenceBytes = localBuffer.substr(spanEnd);
+                    return;
+                }
+            } else {
+                // Incomplete sequence - not enough data yet, wait for more
+                // (This is safe because we're under the length limit)
                 mIncompleteSequenceBytes = localBuffer.substr(spanStart);
                 return;
             }
-
-            decodeOSC(QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart - 1).c_str()));
-            mGotOSC = false;
-            localBufferPosition += 1 + spanEnd - spanStart;
-            // Go around while loop again:
-            continue;
         }
 
         // We are outside of a CSI or OSC sequence if we get to here:
@@ -878,11 +931,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The comparison signals to the processor, if custom entities may be resolved
                     // (countermeasure against infinite recursion)
-                    TMxpProcessingResult const result =
-                            mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
-                    if (!mTagWatchdog->isActive()
-                    && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()
-                    && !mpHost->mMxpProcessor.getMxpTagBuilder().getRawTagContent().empty()) {
+                    TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+                    if (!mTagWatchdog->isActive() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag() && !mpHost->mMxpProcessor.getMxpTagBuilder().getRawTagContent().empty()) {
                         mWatchdogPhase = WatchdogPhase::Phase1_Snapshot;
                         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
                     }
@@ -971,9 +1021,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 } else if (mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
                     // Mode is LOCKED but we're inside a tag that started in a different mode.
                     // We need to continue feeding characters to the tag builder to complete the tag.
-                    TMxpProcessingResult const result =
-                            mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
-                    
+                    TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+
                     switch (result) {
                     case HANDLER_NEXT_CHAR:
                         localBufferPosition++;
@@ -1022,7 +1071,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
         }
 
-COMMIT_LINE:
+    COMMIT_LINE:
         if (commitLine(ch, localBufferPosition)) {
             continue;
         }
@@ -1095,10 +1144,8 @@ COMMIT_LINE:
             if (!mLinkOriginalCharacters.contains(mCurrentHyperlinkLinkId)) {
                 mLinkOriginalCharacters[mCurrentHyperlinkLinkId] = c;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug().nospace().noquote() << "TBuffer::translateToPlainText(): Stored original character for link " << mCurrentHyperlinkLinkId
-                                              << " with ANSI colors: fg=" << c.mFgColor.name()
-                                              << " bg=" << c.mBgColor.name()
-                                              << " flags=" << c.mFlags;
+                qDebug().nospace().noquote() << "TBuffer::translateToPlainText(): Stored original character for link " << mCurrentHyperlinkLinkId << " with ANSI colors: fg=" << c.mFgColor.name()
+                                             << " bg=" << c.mBgColor.name() << " flags=" << c.mFlags;
 #endif
             }
 
@@ -1110,7 +1157,7 @@ COMMIT_LINE:
             if (mCurrentHyperlinkStyling.hasBackgroundColor) {
                 c.mBgColor = mCurrentHyperlinkStyling.backgroundColor;
             }
-            
+
             // For preset-only links, base styling may be empty but pseudo-class styling exists
             // Apply effective styling with :link pseudo-class to ensure preset colors show
             Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(mCurrentHyperlinkLinkId);
@@ -1130,19 +1177,19 @@ COMMIT_LINE:
                 if (effectiveStyling.isUnderlined) {
                     c.mFlags |= TChar::Underline;
                     switch (effectiveStyling.underlineStyle) {
-                        case Mudlet::HyperlinkStyling::UnderlineWavy:
-                            c.mFlags |= TChar::UnderlineWavy;
-                            break;
-                        case Mudlet::HyperlinkStyling::UnderlineDotted:
-                            c.mFlags |= TChar::UnderlineDotted;
-                            break;
-                        case Mudlet::HyperlinkStyling::UnderlineDashed:
-                            c.mFlags |= TChar::UnderlineDashed;
-                            break;
-                        case Mudlet::HyperlinkStyling::UnderlineSolid:
-                        case Mudlet::HyperlinkStyling::UnderlineNone:
-                        default:
-                            break;
+                    case Mudlet::HyperlinkStyling::UnderlineWavy:
+                        c.mFlags |= TChar::UnderlineWavy;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDotted:
+                        c.mFlags |= TChar::UnderlineDotted;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDashed:
+                        c.mFlags |= TChar::UnderlineDashed;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineSolid:
+                    case Mudlet::HyperlinkStyling::UnderlineNone:
+                    default:
+                        break;
                     }
                 }
                 if (effectiveStyling.isOverlined) {
@@ -1169,19 +1216,19 @@ COMMIT_LINE:
                     c.mFlags |= TChar::Underline;
 
                     switch (mCurrentHyperlinkStyling.underlineStyle) {
-                        case Mudlet::HyperlinkStyling::UnderlineWavy:
-                            c.mFlags |= TChar::UnderlineWavy;
-                            break;
-                        case Mudlet::HyperlinkStyling::UnderlineDotted:
-                            c.mFlags |= TChar::UnderlineDotted;
-                            break;
-                        case Mudlet::HyperlinkStyling::UnderlineDashed:
-                            c.mFlags |= TChar::UnderlineDashed;
-                            break;
-                        case Mudlet::HyperlinkStyling::UnderlineSolid:
-                        case Mudlet::HyperlinkStyling::UnderlineNone:
-                        default:
-                            break;
+                    case Mudlet::HyperlinkStyling::UnderlineWavy:
+                        c.mFlags |= TChar::UnderlineWavy;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDotted:
+                        c.mFlags |= TChar::UnderlineDotted;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDashed:
+                        c.mFlags |= TChar::UnderlineDashed;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineSolid:
+                    case Mudlet::HyperlinkStyling::UnderlineNone:
+                    default:
+                        break;
                     }
                 }
 
@@ -1238,7 +1285,7 @@ COMMIT_LINE:
             if (mHyperlinkActive) {
                 // Capture the column position when the first character of the hyperlink is added
                 if (mCurrentHyperlinkText.isEmpty()) {
-                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 2;  // -2 because we just added 2 chars
+                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 2; // -2 because we just added 2 chars
                 }
                 mCurrentHyperlinkText += QString(QChar(ch));
                 mCurrentHyperlinkText += QString(QChar(ch));
@@ -1248,7 +1295,7 @@ COMMIT_LINE:
             if (mHyperlinkActive) {
                 // Capture the column position when the first character of the hyperlink is added
                 if (mCurrentHyperlinkText.isEmpty()) {
-                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1;  // -1 because we just added 1 char
+                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1; // -1 because we just added 1 char
                 }
                 mCurrentHyperlinkText += QString(QChar(ch));
             }
@@ -1263,7 +1310,7 @@ void TBuffer::flushPendingDestinationContent()
     if (!mpHost || mMudLine.isEmpty()) {
         return;
     }
-    
+
     if (mpHost->mMxpFrameManager.hasActiveDestination()) {
         TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
 
@@ -1280,7 +1327,7 @@ void TBuffer::resetCurrentTextFormat()
     if (!mpHost) {
         return;
     }
-    
+
     // Reset to default colors and attributes - equivalent to SGR 0
     mIsDefaultColor = true;
     mForeGroundColor = mpHost->mFgColor;
@@ -1345,7 +1392,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 
         if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
             qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
-                        "data character and attribute data items!";
+                          "data character and attribute data items!";
         }
         if (!lineBuffer.back().isEmpty()) {
             if (!mMudLine.isEmpty()) {
@@ -1416,9 +1463,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
             // (translateToPlainText(...)) method is ONLY for that one:
             shrinkBuffer();
         }
-        
+
         applyPendingSelectionStyling();
-        
+
         return true;
     }
     return false;
@@ -1426,56 +1473,58 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
 
 void TBuffer::processMxpWatchdogCallback()
 {
-    TMxpNodeBuilder&    tagBuilder = mpHost->mMxpProcessor.getMxpTagBuilder();
-    std::string         currentTagContent = tagBuilder.getRawTagContent();
-    bool                isMxpParserFrozen = !currentTagContent.empty()
-                                            && currentTagContent.starts_with(mWatchdogTagSnapshot)
-                                            && tagBuilder.isInsideTag();
+    if (!mpHost) {
+        mWatchdogPhase = WatchdogPhase::None;
+        return;
+    }
+
+    TMxpNodeBuilder& tagBuilder = mpHost->mMxpProcessor.getMxpTagBuilder();
+    std::string currentTagContent = tagBuilder.getRawTagContent();
+    bool isMxpParserFrozen = !currentTagContent.empty() && currentTagContent.starts_with(mWatchdogTagSnapshot) && tagBuilder.isInsideTag();
 
     if (mWatchdogPhase == WatchdogPhase::Phase1_Snapshot) {
         mWatchdogTagSnapshot = currentTagContent;
         mWatchdogPhase = WatchdogPhase::Phase2_Unfreeze;
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
-        if (isMxpParserFrozen) {
+        if (isMxpParserFrozen && mpConsole) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
-            QTimer::singleShot(0, [this] () {
-                const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
-                QString     lastEntityValue = mpHost->mMxpProcessor.getEntityValue();
-                size_t      unusedBufferPosition = 0;
+            const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+            QPointer<Host> hostGuard = mpHost;
+            QPointer<TConsole> consoleGuard = mpConsole;
+            QTimer::singleShot(0, mpConsole, [this, style, hostGuard, consoleGuard]() {
+                if (!hostGuard || !consoleGuard) {
+                    return;
+                }
+                QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
+                size_t unusedBufferPosition = 0;
 
                 mMudLine.append(lastEntityValue);
                 for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
                     mMudBuffer.push_back(style);
                 }
                 commitLine('\r', unusedBufferPosition);
-                mpHost->mMxpProcessor.getMxpTagBuilder().reset();
-                mpHost->mpConsole->finalize();
+                hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
+                hostGuard->mpConsole->finalize();
             });
         }
         mWatchdogPhase = WatchdogPhase::None;
     }
 }
 
-TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const {
-    return ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
-            | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
-            | (mOverline ? TChar::Overline : TChar::None)
-            | (mReverse ? TChar::Reverse : TChar::None)
-            | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-            | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
-            | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
-            | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
-            | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
-            | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
-            | (TChar::alternateFontFlag(mAltFont))
-            | (mConcealed ? TChar::Concealed : TChar::None);
+TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const
+{
+    return ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None) | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
+           | (mOverline ? TChar::Overline : TChar::None) | (mReverse ? TChar::Reverse : TChar::None) | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+           | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None) | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
+           | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None) | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
+           | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink : TChar::None)) | (TChar::alternateFontFlag(mAltFont)) | (mConcealed ? TChar::Concealed : TChar::None);
 }
 
 void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
-    qDebug() << "    TBuffer::decodeSGR38(" << parameters << "," << isColonSeparated <<") INFO - called";
+    qDebug() << "    TBuffer::decodeSGR38(" << parameters << "," << isColonSeparated << ") INFO - called";
 #endif
     if (parameters.at(1) == QLatin1String("5")) {
         int tag = 0;
@@ -1485,9 +1534,11 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 #if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
                 if (isColonSeparated) {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2) << ":...;...m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
+                                                 << ":...;...m sequence treating it as a zero!";
                 } else {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2) << ";...m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
+                                                 << ";...m sequence treating it as a zero!";
                 }
             }
 #endif
@@ -1548,7 +1599,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 
         } else if (tag < 232) {
             // because color 1-15 behave like normal ANSI colors
-           tag -= 16;
+            tag -= 16;
             // 6x6x6 RGB color space
             quint8 const r = tag / 36;
             quint8 const g = (tag - (r * 36)) / 6;
@@ -1557,9 +1608,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             // To match the common terminal palettes, the values are
             // scaled as follows:
             // 0: 0, 1: 95, 2:135, 3:175, 4:215, 5:255
-            mForeGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
-                                      g == 0 ? 0 : (g - 1) * 40 + 95,
-                                      b == 0 ? 0 : (b - 1) * 40 + 95);
+            mForeGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95, g == 0 ? 0 : (g - 1) * 40 + 95, b == 0 ? 0 : (b - 1) * 40 + 95);
             mForeGroundColorLight = mForeGroundColor;
 
         } else {
@@ -1583,7 +1632,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             // but green and blue components are
             // zero
             mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
-        } else  {
+        } else {
             // No codes left for any colour
             // components so colour must be black,
             // as all of red, green and blue
@@ -1593,22 +1642,22 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
             if (!isColonSeparated) {
-#if ! defined(DEBUG_SGR_PROCESSING)
-                qDebug() << "Unhandled color space identifier in a SGR...;38;2;" << parameters.at(2) << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special Options tab of the preferences when it is not needed!";
+#if !defined(DEBUG_SGR_PROCESSING)
+                qDebug() << "Unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
+                         << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special "
+                            "Options tab of the preferences when it is not needed!";
 #else
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38;2;" << parameters.at(2) << ";...m sequence treating it as the default (empty) case!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
+                                             << ";...m sequence treating it as the default (empty) case!";
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38:2:" << parameters.at(2) << ":...;...m sequence treating it as the default (empty) case!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38:2:" << parameters.at(2)
+                                             << ":...;...m sequence treating it as the default (empty) case!";
 #endif
             }
         }
         mForeGroundColorLight = mForeGroundColor;
 
-    } else if (parameters.at(1) == QLatin1String("4")
-            || parameters.at(1) == QLatin1String("3")
-            || parameters.at(1) == QLatin1String("1")
-            || parameters.at(1) == QLatin1String("0")) {
-
+    } else if (parameters.at(1) == QLatin1String("4") || parameters.at(1) == QLatin1String("3") || parameters.at(1) == QLatin1String("1") || parameters.at(1) == QLatin1String("0")) {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
             qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
@@ -1618,7 +1667,6 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 #endif
 
     } else {
-
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
             qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpected SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
@@ -1626,14 +1674,13 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpected SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
-
     }
 }
 
 void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
-    qDebug() << "    TBuffer::decodeSGR48(" << parameters << "," << isColonSeparated <<") INFO - called";
+    qDebug() << "    TBuffer::decodeSGR48(" << parameters << "," << isColonSeparated << ") INFO - called";
 #endif
     bool useLightColor = false;
 
@@ -1645,9 +1692,11 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 #if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
                 if (isColonSeparated) {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2) << ":...;...m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
+                                                 << ":...;...m sequence treating it as a zero!";
                 } else {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2) << ";...m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
+                                                 << ";...m sequence treating it as a zero!";
                 }
             }
 #endif
@@ -1721,9 +1770,7 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
             // To match the common terminal palettes, the values are
             // scaled as follows:
             // 0: 0, 1: 95, 2:135, 3:175, 4:215, 5:255
-            mBackGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
-                                      g == 0 ? 0 : (g - 1) * 40 + 95,
-                                      b == 0 ? 0 : (b - 1) * 40 + 95);
+            mBackGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95, g == 0 ? 0 : (g - 1) * 40 + 95, b == 0 ? 0 : (b - 1) * 40 + 95);
 
         } else {
             const int value = (tag - 232) * 10 + 8;
@@ -1748,7 +1795,7 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
             // zero
             mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
 
-        } else  {
+        } else {
             // No codes left for any colour
             // components so colour must be black,
             // as all of red, green and blue
@@ -1758,21 +1805,21 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
             if (!isColonSeparated) {
-#if ! defined(DEBUG_SGR_PROCESSING)
-                qDebug() << "Unhandled color space identifier in a SGR...;48;2;" << parameters.at(2) << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special Options tab of the preferences when it is not needed!";
+#if !defined(DEBUG_SGR_PROCESSING)
+                qDebug() << "Unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
+                         << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special "
+                            "Options tab of the preferences when it is not needed!";
 #else
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48;2;" << parameters.at(2) << ";...m sequence treating it as the default (empty) case!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
+                                             << ";...m sequence treating it as the default (empty) case!";
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48:2:" << parameters.at(2) << ":...;...m sequence treating it as the default (empty) case!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48:2:" << parameters.at(2)
+                                             << ":...;...m sequence treating it as the default (empty) case!";
 #endif
             }
         }
 
-    } else if (parameters.at(1) == QLatin1String("4")
-            || parameters.at(1) == QLatin1String("3")
-            || parameters.at(1) == QLatin1String("1")
-            || parameters.at(1) == QLatin1String("0")) {
-
+    } else if (parameters.at(1) == QLatin1String("4") || parameters.at(1) == QLatin1String("3") || parameters.at(1) == QLatin1String("1") || parameters.at(1) == QLatin1String("0")) {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
             qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
@@ -1782,7 +1829,6 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 #endif
 
     } else {
-
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
             qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpected SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
@@ -1791,7 +1837,6 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
         }
 #endif
     }
-
 }
 
 void TBuffer::decodeSGR(const QString& sequence)
@@ -1831,7 +1876,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     // Okay we have one more parameter at least - so examine it
                     // and grab the needed number of arguments:
                     QStringList madeElements;
-                    madeElements << parameterStrings.at(paraIndex); // "38"
+                    madeElements << parameterStrings.at(paraIndex);     // "38"
                     madeElements << parameterStrings.at(paraIndex + 1); // "2" or "5" hopefully
                     bool isOk = false;
                     const int sgr38_type = madeElements.at(1).toInt(&isOk);
@@ -1907,9 +1952,8 @@ void TBuffer::decodeSGR(const QString& sequence)
                     default:
                         break;
                     }
-
                 }
-            // End of if (parameterElements.at(0) == QLatin1String("38"))
+                // End of if (parameterElements.at(0) == QLatin1String("38"))
             } else if (parameterElements.at(0) == QLatin1String("48")) {
                 if (parameterElements.count() >= 2) {
                     decodeSGR48(parameterElements, true);
@@ -2004,16 +2048,16 @@ void TBuffer::decodeSGR(const QString& sequence)
                     default:
                         break;
                     }
-
                 }
-            // End of if (parameterElements.at(0) == QLatin1String("48"))
+                // End of if (parameterElements.at(0) == QLatin1String("48"))
             } else if (parameterElements.at(0) == QLatin1String("4")) {
                 // New way of controlling underline
                 bool isOk = false;
                 const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
+                                                 << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
                 }
                 switch (value) {
                 case 0: // Underline off
@@ -2047,7 +2091,9 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mUnderlineDashed = false;
                     break;
                 default: // Something unexpected
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
+                                                 << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1)
+                                                 << ";../m sequence treating it as a zero!";
                     mUnderline = false;
                     mUnderlineWavy = false;
                     mUnderlineDotted = false;
@@ -2060,7 +2106,8 @@ void TBuffer::decodeSGR(const QString& sequence)
                 const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - failed to detect italic parameter element (the second part) in a SGR...;3:?;../m sequence assuming it is a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
+                                                 << "\") ERROR - failed to detect italic parameter element (the second part) in a SGR...;3:?;../m sequence assuming it is a zero!";
                 }
                 switch (value) {
                 case 0: // Italics/Slant off
@@ -2070,16 +2117,20 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mItalics = true;
                     break;
                 case 2: // Slant on - not supported, treat as italics
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unsupported italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1) << ";../m sequence treating it as a one!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
+                                                 << "\") ERROR - unsupported italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
+                                                 << ";../m sequence treating it as a one!";
                     mUnderline = true;
                     break;
                 default: // Something unexpected
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1) << ";../m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
+                                                 << ";../m sequence treating it as a zero!";
                     mUnderline = false;
                     break;
                 }
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - parameter string with an unexpected initial parameter element in a SGR...;" << parameterElements.at(0) << ":" << parameterElements.at(1) << "...;.../m sequence, ignoring it!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - parameter string with an unexpected initial parameter element in a SGR...;"
+                                             << parameterElements.at(0) << ":" << parameterElements.at(1) << "...;.../m sequence, ignoring it!";
             }
         } else {
             /******************************************************************
@@ -2348,8 +2399,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     default:
                         break;
                     }
-                }
-                    break;
+                } break;
                 case 39: //default foreground color
                     mForeGroundColor = pHost->mFgColor;
                     break;
@@ -2465,8 +2515,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     default:
                         break;
                     }
-                }
-                    break;
+                } break;
                 case 49: // default background color
                     mBackGroundColor = pHost->mBgColor;
                     break;
@@ -2569,6 +2618,11 @@ void TBuffer::decodeSGR(const QString& sequence)
 
 void TBuffer::decodeOSC(const QString& sequence)
 {
+    if (sequence.isEmpty()) {
+        qWarning() << "TBuffer::decodeOSC(...) WARNING - Received empty OSC sequence, ignoring.";
+        return;
+    }
+
     Host* pHost = mpHost;
     if (!pHost) {
         qWarning() << "TBuffer::decodeOSC(...) ERROR - Called when mpHost pointer is nullptr";
@@ -2672,12 +2726,14 @@ void TBuffer::decodeOSC(const QString& sequence)
 
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Unable to parse this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
+                    qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence
+                                                 << "\") ERROR - Unable to parse this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
 #endif
                 }
             } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Wrong length of string, unable to decode this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
+                qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence
+                                             << "\") ERROR - Wrong length of string, unable to decode this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
 #endif
             }
         }
@@ -2688,7 +2744,7 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
         break;
     case static_cast<quint8>('8'): {
-        QStringView rest = QStringView(sequence).mid(1);  // skip selector "8"
+        QStringView rest = QStringView(sequence).mid(1); // skip selector "8"
         int firstSemi = rest.indexOf(';');
 
         if (firstSemi == -1) {
@@ -2715,8 +2771,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
 #if defined(DEBUG_OSC_PROCESSING)
         if (!rawUrl.isEmpty()) {
-            qDebug().noquote().nospace() << "[OSC] Received OSC 8 sequence with URL (length=" << rawUrl.length() << "): " 
-                                         << (rawUrl.length() > 80 ? rawUrl.left(80) + "..." : rawUrl);
+            qDebug().noquote().nospace() << "[OSC] Received OSC 8 sequence with URL (length=" << rawUrl.length() << "): " << (rawUrl.length() > 80 ? rawUrl.left(80) + "..." : rawUrl);
         }
 #endif
 
@@ -2725,15 +2780,13 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug().noquote() << "[OSC] Hyperlink terminator - closing active hyperlink";
 #endif
-            
+
             // Apply initial selection/disabled state styling when link closes (from selection branch)
             // OR apply :link pseudo-class styling for preset-only links (from compact branch)
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId
-                         << "selected:" << mCurrentHyperlinkStyling.selection.selected
-                         << "disabled:" << mCurrentHyperlinkStyling.selection.disabled
-                         << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
+                qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId << "selected:" << mCurrentHyperlinkStyling.selection.selected
+                         << "disabled:" << mCurrentHyperlinkStyling.selection.disabled << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
 #endif
                 if (mCurrentHyperlinkStyling.selection.selected) {
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
@@ -2751,18 +2804,18 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // severe performance degradation with many links.
                 // The :link styling will be applied when characters are created in COMMIT_LINE.
             }
-            
+
             // For spoilers, capture original text BEFORE any visibility concealment
             // This ensures spoiler reveal works even when combined with visibility actions
             if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
                 int currentColumn = mMudLine.length();
                 int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
-                
+
                 if (linkLength > 0) {
                     // Store the original text before any replacements
                     QString originalText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
                     mLinkOriginalText[mCurrentHyperlinkLinkId] = originalText;
-                    
+
 #if defined(DEBUG_OSC_PROCESSING)
                     qDebug() << "[OSC] Spoiler link" << mCurrentHyperlinkLinkId << "- storing original text:" << originalText << "and replacing with spaces, length:" << linkLength;
 #endif
@@ -2771,36 +2824,25 @@ void TBuffer::decodeOSC(const QString& sequence)
                     mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
                 }
             }
-            
+
             // Register with visibility manager if visibility settings exist
             // Visibility currently only supports single-line hyperlinks
             // Multi-line links will not have visibility management applied
-            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings 
-                && mpConsole
-                && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
-                
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mpConsole && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
                 int currentColumn = mMudLine.length();
                 int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
 
                 if (linkLength > 0) {
                     // Only register if we have a valid link range
                     QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
-                    
+
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Registering hyperlink" << mCurrentHyperlinkLinkId
-                             << "line:" << mCurrentHyperlinkStartLine
-                             << "col:" << mCurrentHyperlinkStartColumn
-                             << "length:" << linkLength
+                    qDebug() << "[OSC] Registering hyperlink" << mCurrentHyperlinkLinkId << "line:" << mCurrentHyperlinkStartLine << "col:" << mCurrentHyperlinkStartColumn << "length:" << linkLength
                              << "text:" << linkText;
 #endif
                     bool shouldStartConcealed = mpConsole->getHyperlinkVisibilityManager().registerHyperlink(
-                        mCurrentHyperlinkLinkId,
-                        mCurrentHyperlinkStartLine,
-                        mCurrentHyperlinkStartColumn,
-                        linkLength,
-                        linkText,
-                        mCurrentHyperlinkStyling);
-                    
+                            mCurrentHyperlinkLinkId, mCurrentHyperlinkStartLine, mCurrentHyperlinkStartColumn, linkLength, linkText, mCurrentHyperlinkStyling);
+
                     // If link should start concealed, replace its text with spaces in mMudLine
                     // Skip if spoiler already did this to avoid double-replacement
                     if (shouldStartConcealed && !mCurrentHyperlinkStyling.isSpoiler) {
@@ -2818,16 +2860,13 @@ void TBuffer::decodeOSC(const QString& sequence)
                     qDebug() << "[OSC] Skipping registration for hyperlink with invalid length:" << linkLength;
 #endif
                 }
-            } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings
-                       && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
+            } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Skipping visibility registration for multi-line hyperlink"
-                         << "(visibility only applies to single-line links)"
-                         << "- started on line" << mCurrentHyperlinkStartLine
+                qDebug() << "[OSC] Skipping visibility registration for multi-line hyperlink" << "(visibility only applies to single-line links)" << "- started on line" << mCurrentHyperlinkStartLine
                          << "ending on line" << static_cast<int>(lineBuffer.size()) - 1;
 #endif
             }
-            
+
             mCurrentHyperlinkCommand.clear();
             mCurrentHyperlinkHint.clear();
             mCurrentHyperlinkLinkId = 0;
@@ -2855,7 +2894,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Extract preset name (between "preset:" and "?")
                 int queryStart = rawUrl.indexOf('?');
                 QString presetName = (queryStart > 7) ? rawUrl.mid(7, queryStart - 7) : rawUrl.mid(7);
-                
+
                 // Extract config parameter manually to avoid QUrl parsing issues with custom schemes
                 QString configParam;
                 if (queryStart != -1) {
@@ -2868,12 +2907,12 @@ void TBuffer::decodeOSC(const QString& sequence)
                 qDebug() << "[OSC] Config param length:" << configParam.length();
                 qDebug() << "[OSC] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
 #endif
-                
+
                 if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole) {
                     // Parse the JSON configuration
                     QJsonParseError parseError;
                     QJsonDocument doc = QJsonDocument::fromJson(configParam.toUtf8(), &parseError);
-                    
+
                     if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
                         mpConsole->getHyperlinkCompactManager().registerPreset(presetName, doc.object());
 #if defined(DEBUG_OSC_PROCESSING)
@@ -2887,10 +2926,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                     }
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() 
-                             << "configParam empty:" << configParam.isEmpty()
-                             << "mpConsole:" << (mpConsole != nullptr)
-                             << "mpHyperlinkCompactManager:" << (mpConsole != nullptr);
+                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() << "configParam empty:" << configParam.isEmpty()
+                             << "mpConsole:" << (mpConsole != nullptr) << "mpHyperlinkCompactManager:" << (mpConsole != nullptr);
 #endif
                 }
                 // Preset definitions don't create visible hyperlinks
@@ -2968,19 +3005,19 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                command = { qsl("send([[%1]])").arg(innerCommand) };
-                hint = { qsl("%1: %2").arg(QObject::tr("Send"), innerCommand) };
+                command = {qsl("send([[%1]])").arg(innerCommand)};
+                hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
-                command = { qsl("sendCmdLine([[%1]])").arg(innerCommand) };
-                hint = { qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand) };
+                command = {qsl("sendCmdLine([[%1]])").arg(innerCommand)};
+                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand)};
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
                 if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
-                    command = { qsl("openUrl([[%1]])").arg(baseUrl) };
-                    hint = { qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl) };
+                    command = {qsl("openUrl([[%1]])").arg(baseUrl)};
+                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl)};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -2990,7 +3027,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             // Add standalone tooltip support (for links without menus)
             if (!customTooltip.isEmpty() && (mCurrentHyperlinkMenu.isEmpty() || mCurrentHyperlinkMenu.size() < 2)) {
                 // Replace the default hint with the custom tooltip
-                hint = { customTooltip };
+                hint = {customTooltip};
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Added standalone tooltip:" << customTooltip;
 #endif
@@ -3072,14 +3109,13 @@ void TBuffer::decodeOSC(const QString& sequence)
             if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpConsole) {
                 const QString& group = mCurrentHyperlinkStyling.selection.group;
                 const QString& value = mCurrentHyperlinkStyling.selection.value;
-                
+
                 // Configure group exclusivity mode
                 mpConsole->getHyperlinkSelectionManager().setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
-                
+
                 // Register the link with the selection manager
-                mpConsole->getHyperlinkSelectionManager().setSelected(group, value, 
-                    mCurrentHyperlinkStyling.selection.selected);
-                
+                mpConsole->getHyperlinkSelectionManager().setSelected(group, value, mCurrentHyperlinkStyling.selection.selected);
+
                 // Update link selection state (visual styling will be applied when link closes)
                 setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
                 if (mCurrentHyperlinkStyling.selection.selected) {
@@ -3088,10 +3124,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
                 }
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:"
-                         << "group=" << group << "value=" << value 
-                         << "selected=" << mCurrentHyperlinkStyling.selection.selected 
-                         << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
+                qDebug() << "[OSC] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:" << "group=" << group << "value=" << value
+                         << "selected=" << mCurrentHyperlinkStyling.selection.selected << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
 #endif
             }
 
@@ -3099,7 +3133,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             qDebug().noquote() << "[OSC] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
 #endif
             mHyperlinkActive = true;
-            
+
             // Record start position for visibility manager registration
             // Use mMudLine.length() since that's where link text will be added
             // (mMudLine is the current line being built, lineBuffer contains completed lines)
@@ -3226,10 +3260,10 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
         if (!configJson.isEmpty()) {
             QJsonParseError parseError;
             QJsonDocument overrideDoc = QJsonDocument::fromJson(configJson.toUtf8(), &parseError);
-            
+
             if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
                 QJsonObject overrideConfig = overrideDoc.object();
-                
+
                 if (!baseConfig.isEmpty() && mpConsole) {
                     // Deep merge: override takes precedence
                     baseConfig = mpConsole->getHyperlinkCompactManager().mergeConfigs(baseConfig, overrideConfig);
@@ -3262,17 +3296,17 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
     if (!mpConsole) {
         return obj; // No manager available, return unchanged
     }
-    
+
     QJsonObject result;
-    
+
     for (auto it = obj.begin(); it != obj.end(); ++it) {
         QString originalKey = it.key();
         QJsonValue value = it.value();
-        
+
         QMap<QString, QString> singleKeyMap;
         singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
         QMap<QString, QString> expandedMap = mpConsole->getHyperlinkCompactManager().expandShorthand(singleKeyMap);
-        
+
         // Guard against empty or multi-key expanded maps to prevent assertion/UB
         QString resultKey;
         if (expandedMap.isEmpty()) {
@@ -3285,27 +3319,26 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
             // Unexpected: multiple keys from single input - use first deterministically and log
             resultKey = expandedMap.firstKey();
 #if defined(DEBUG_OSC_PROCESSING)
-            qWarning() << "[OSC] expandShorthand returned multiple keys for single input:" << originalKey 
-                       << "-> expanded to:" << expandedMap.keys() << "using first key:" << resultKey;
+            qWarning() << "[OSC] expandShorthand returned multiple keys for single input:" << originalKey << "-> expanded to:" << expandedMap.keys() << "using first key:" << resultKey;
 #endif
         }
-        
+
         // Recursively expand nested objects
         QJsonValue resultValue = value.isObject() ? expandJsonShorthands(value.toObject()) : value;
-        
+
         // Handle duplicate keys by merging objects (e.g., both "style" and "s" -> "style")
         if (result.contains(resultKey) && result[resultKey].isObject() && resultValue.isObject()) {
             // Merge the objects using the compact manager's deep merge functionality
             QJsonObject existing = result[resultKey].toObject();
             QJsonObject toAdd = resultValue.toObject();
-            
+
             // When both shorthand and full names exist, shorthand takes precedence
             result[resultKey] = mpConsole->getHyperlinkCompactManager().mergeConfigs(toAdd, existing);
         } else {
             result[resultKey] = resultValue;
         }
     }
-    
+
     return result;
 }
 
@@ -3396,16 +3429,14 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
         styling.isSpoiler = jsonBoolValue(root[qsl("spoiler")]);
         if (styling.isSpoiler) {
             styling.hasCustomStyling = true;
-            
+
             if (!styling.hasBackgroundColor) {
                 QColor spoilerBackground = mBackGroundColor;
-                
-                qreal luminance = 0.2126 * spoilerBackground.redF() + 
-                                 0.7152 * spoilerBackground.greenF() + 
-                                 0.0722 * spoilerBackground.blueF();
-                
+
+                qreal luminance = 0.2126 * spoilerBackground.redF() + 0.7152 * spoilerBackground.greenF() + 0.0722 * spoilerBackground.blueF();
+
                 QColor originalBackground = spoilerBackground;
-                
+
                 if (luminance < 0.5) {
                     if (luminance < 0.1) {
                         spoilerBackground = QColor(40, 40, 40);
@@ -3415,14 +3446,12 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
                 } else {
                     spoilerBackground = spoilerBackground.darker(140);
                 }
-                
+
                 styling.backgroundColor = spoilerBackground;
                 styling.hasBackgroundColor = true;
-                
+
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] EARLY SPOILER BACKGROUND: Generated" << spoilerBackground.name()
-                         << "from original" << originalBackground.name()
-                         << "luminance:" << luminance;
+                qDebug() << "[OSC] EARLY SPOILER BACKGROUND: Generated" << spoilerBackground.name() << "from original" << originalBackground.name() << "luminance:" << luminance;
 #endif
             }
         }
@@ -3637,7 +3666,7 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
             qWarning() << "[OSC] FOUND REVEAL ACTION - setting isConcealed=true";
 #endif
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
-            settings.isConcealed = true;  // Start concealed, will be revealed later
+            settings.isConcealed = true; // Start concealed, will be revealed later
 #if defined(DEBUG_OSC_PROCESSING)
             qWarning() << "[OSC] Setting reveal action: isConcealed=true, action=Reveal";
 #endif
@@ -3651,9 +3680,8 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
         }
     } else if (actionValue.isArray()) {
         QJsonArray actionArray = actionValue.toArray();
-        if (actionArray.size() == 2 
-            && actionArray[0].isString() && actionArray[0].toString().toLower() == qsl("reveal")
-            && actionArray[1].isString() && actionArray[1].toString().toLower() == qsl("conceal")) {
+        if (actionArray.size() == 2 && actionArray[0].isString() && actionArray[0].toString().toLower() == qsl("reveal") && actionArray[1].isString()
+            && actionArray[1].toString().toLower() == qsl("conceal")) {
             settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
             settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
         } else {
@@ -3678,8 +3706,8 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
                 qWarning() << "TBuffer::parseVisibilityFromJson: Delay cannot be negative:" << delayDouble << "(using 0)";
                 settings.delayMs = 0;
             } else if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
-                qWarning() << "TBuffer::parseVisibilityFromJson: Delay exceeds maximum ("
-                           << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble << "(clamping to maximum)";
+                qWarning() << "TBuffer::parseVisibilityFromJson: Delay exceeds maximum (" << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble
+                           << "(clamping to maximum)";
                 settings.delayMs = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
             } else {
                 settings.delayMs = static_cast<quint32>(delayDouble);
@@ -3695,19 +3723,19 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
     // Parse expire triggers (optional)
     if (visibilityObj.contains(qsl("expire")) && visibilityObj[qsl("expire")].isObject()) {
         QJsonObject expireObj = visibilityObj[qsl("expire")].toObject();
-        
+
         if (expireObj.contains(qsl("input"))) {
             settings.expireOnInput = jsonBoolValue(expireObj[qsl("input")]);
         }
-        
+
         if (expireObj.contains(qsl("prompt"))) {
             settings.expireOnPrompt = jsonBoolValue(expireObj[qsl("prompt")]);
         }
-        
+
         if (expireObj.contains(qsl("output"))) {
             settings.expireOnOutput = jsonBoolValue(expireObj[qsl("output")]);
         }
-        
+
         if (expireObj.contains(qsl("outputDelay"))) {
             QJsonValue outputDelayValue = expireObj[qsl("outputDelay")];
             if (outputDelayValue.isDouble()) {
@@ -3716,8 +3744,8 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
                     qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay cannot be negative:" << delayDouble << "(using 0)";
                     settings.outputDelayMs = 0;
                 } else if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
-                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay exceeds maximum ("
-                               << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble << "(clamping to maximum)";
+                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay exceeds maximum (" << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble
+                               << "(clamping to maximum)";
                     settings.outputDelayMs = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
                 } else {
                     settings.outputDelayMs = static_cast<quint32>(delayDouble);
@@ -3792,7 +3820,7 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
     }
 
     std::deque<TChar>& line = buffer[lineNumber];
-    
+
     // Extra safety: ensure we don't go out of bounds
     if (line.empty()) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -3800,16 +3828,15 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
 #endif
         return;
     }
-    
+
     startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
-    
+
     int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
-    
+
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC] clearLinkIndices: line" << lineNumber << "startCol" << startColumn << "length" << length 
-             << "endCol" << endColumn << "lineSize" << line.size();
+    qDebug() << "[OSC] clearLinkIndices: line" << lineNumber << "startCol" << startColumn << "length" << length << "endCol" << endColumn << "lineSize" << line.size();
 #endif
-    
+
     for (int col = startColumn; col < endColumn; ++col) {
         // Additional bounds check inside the loop
         if (col >= static_cast<int>(line.size())) {
@@ -3839,7 +3866,7 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
     }
 
     std::deque<TChar>& line = buffer[lineNumber];
-    
+
     // Extra safety: ensure we don't go out of bounds
     if (line.empty()) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -3847,11 +3874,11 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
 #endif
         return;
     }
-    
+
     startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
-    
+
     int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
-    
+
     for (int col = startColumn; col < endColumn; ++col) {
         // Additional bounds check inside the loop
         if (col >= static_cast<int>(line.size())) {
@@ -3859,7 +3886,7 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
         }
         line[col].mLinkIndex = linkId;
     }
-    
+
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] Link" << linkId << "restored";
 #endif
@@ -3952,11 +3979,9 @@ void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudl
     }
 
     // Update hasCustomStyling flag if any pseudo-class states have custom styling
-    if (styling.linkStyle.hasCustomStyling || styling.visitedStyle.hasCustomStyling ||
-        styling.hoverStyle.hasCustomStyling || styling.activeStyle.hasCustomStyling ||
-        styling.focusStyle.hasCustomStyling || styling.focusVisibleStyle.hasCustomStyling ||
-        styling.anyLinkStyle.hasCustomStyling || styling.selectedStyle.hasCustomStyling ||
-        styling.disabledStyle.hasCustomStyling) {
+    if (styling.linkStyle.hasCustomStyling || styling.visitedStyle.hasCustomStyling || styling.hoverStyle.hasCustomStyling || styling.activeStyle.hasCustomStyling
+        || styling.focusStyle.hasCustomStyling || styling.focusVisibleStyle.hasCustomStyling || styling.anyLinkStyle.hasCustomStyling || styling.selectedStyle.hasCustomStyling
+        || styling.disabledStyle.hasCustomStyling) {
         styling.hasCustomStyling = true;
     }
 
@@ -4086,8 +4111,7 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
 
     // Check for text/formatting size mismatch - this is a programming error
     if (text.size() != static_cast<qsizetype>(formatting.size())) {
-        qWarning() << "TBuffer::appendFormatted: text size" << text.size() 
-                   << "differs from formatting size" << formatting.size()
+        qWarning() << "TBuffer::appendFormatted: text size" << text.size() << "differs from formatting size" << formatting.size()
                    << "- using longer length with default formatting for missing entries";
     }
 
@@ -4104,27 +4128,25 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
         if (i >= text.size()) {
             break;
         }
-        
+
         const QChar ch = text.at(i);
         if (ch == QChar::LineFeed) {
             firstChar = true;
             appendEmptyLine();
             continue;
         }
-        
+
         const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
-        
+
         const int sourceLinkId = srcChar.linkIndex();
         if (sourceLinkId && (oldSourceLinkId != sourceLinkId)) {
-            destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), 
-                                              sourceLinkStore.getHintsConst(sourceLinkId), 
-                                              mpHost);
+            destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), mpHost);
             mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
             oldSourceLinkId = sourceLinkId;
         } else if (!sourceLinkId) {
             destLinkId = 0;
         }
-        
+
         lineBuffer.back().append(ch);
         TChar destChar(srcChar);
         destChar.mLinkIndex = destLinkId;
@@ -4154,9 +4176,7 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
     }
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end,
-                     const QColor& fgColor, const QColor& bgColor,
-                     TChar::AttributeFlags flags, int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
     const int lastLineBeforeWrap = buffer.size() - 1;
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
@@ -4185,9 +4205,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end,
     }
 }
 
-void TBuffer::appendLine(const QString& text, const int sub_start, const int sub_end,
-                         const QColor& fgColor, const QColor& bgColor,
-                         const TChar::AttributeFlags flags, const int linkID)
+void TBuffer::appendLine(const QString& text, const int sub_start, const int sub_end, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags flags, const int linkID)
 {
     if (sub_end < 0) {
         return;
@@ -4215,9 +4233,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         appendEmptyLine();
         lastLine = 0;
         // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
-        const TChar styling(fgColor, bgColor,
-                (mEchoingText ? (TChar::Echo | (flags & TChar::TestMask))
-                 : (flags & TChar::TestMask)));
+        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | (flags & TChar::TestMask)) : (flags & TChar::TestMask)));
         buffer.back().push_back(styling);
     }
 
@@ -4445,8 +4461,7 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 }
 
 // find lindbreaks and indents (if not necessary, return empty list)
-inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline,
-    const int maxWidth, const int indent, const int hangingIndent)
+inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent)
 {
     QList<WrapInfo> output;
     if (lineText.isEmpty()) {
@@ -4491,8 +4506,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
         const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
         // Safety check: during destruction, mpHost might be null
-        const int charWidth = mpHost ? graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs())
-                                     : graphemeInfo::getWidth(unicode, false);
+        const int charWidth = mpHost ? graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs()) : graphemeInfo::getWidth(unicode, false);
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
             if (isNewline) {
@@ -4589,7 +4603,7 @@ void TBuffer::logRemainingOutput()
 }
 
 // logs a string directly to the log file
-void TBuffer::appendLog(const QString &text)
+void TBuffer::appendLog(const QString& text)
 {
     TBuffer* pB = &mpHost->mpConsole->buffer;
     if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
@@ -4963,7 +4977,7 @@ void TBuffer::shrinkBuffer()
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
-    if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
+    if (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
         bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
@@ -5071,7 +5085,7 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                         return true;
                     }
                 }
-                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags &~(attributes)) | (state ? attributes : TChar::None);
+                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags & ~(attributes)) | (state ? attributes : TChar::None);
                 ++x;
             }
         }
@@ -5179,9 +5193,7 @@ QStringList TBuffer::getEndLines(int n)
 // Note: spacePadding is expected to be non-zero on ONLY the first call to this
 // method - it is needed to pad the first line out when the first line of a
 // selection is not a complete line of text and there are more lines to follow
-QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int row /*= -1*/,
-                              const int endColumn /*= -1*/, const int startColumn /*= 0*/,
-                              int spacePadding /*= 0*/)
+QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int row /*= -1*/, const int endColumn /*= -1*/, const int startColumn /*= 0*/, int spacePadding /*= 0*/)
 {
     int pos = startColumn;
     QString s;
@@ -5247,11 +5259,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
 
     for (auto cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
         // Do we need to start a new span?
-        if (firstSpan
-            || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor
-            || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
+        if (firstSpan || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
             || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags) {
-
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
@@ -5379,19 +5388,19 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isValid = false;
                 isToUseReplacementMark = true;
             } else if (((bufferData.at(pos) & 0x07) > 0x04) || (((bufferData.at(pos) & 0x07) == 0x04) && ((bufferData.at(pos + 1) & 0x3F) > 0x0F))) {
-// For 4 byte values the bits are distributed:
-//  Byte 1    Byte 2    Byte 3    Byte 4
-// 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
-// U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
-// So this (the maximum valid character) is:
-//      ABC    DEFGHI    JKLMNO    PQRSTU
-//      100    001111    111111    111111
-// So if the first byte bufferData.at(pos] & 0x07 is:
-//  < 0x04 then must be in range
-//  > 0x04 then must be out of range
-// == 0x04 then consider bufferData.at(pos+1] & 0x3F:
-//     <= 001111 0x0F then must be in range
-//      > 001111 0x0F then must be out of range
+                // For 4 byte values the bits are distributed:
+                //  Byte 1    Byte 2    Byte 3    Byte 4
+                // 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
+                // U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
+                // So this (the maximum valid character) is:
+                //      ABC    DEFGHI    JKLMNO    PQRSTU
+                //      100    001111    111111    111111
+                // So if the first byte bufferData.at(pos] & 0x07 is:
+                //  < 0x04 then must be in range
+                //  > 0x04 then must be out of range
+                // == 0x04 then consider bufferData.at(pos+1] & 0x3F:
+                //     <= 001111 0x0F then must be in range
+                //      > 001111 0x0F then must be out of range
 
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 4 byte UTF-8 sequence is valid but is beyond range of legal codepoints!";
@@ -5400,7 +5409,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
 
-        // Fall-through
+            // Fall-through
             [[fallthrough]];
         case 3:
             // Check the 3rd byte is a valid continuation byte (2 MS-Bits are 10)
@@ -5451,10 +5460,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 #endif
                 isValid = false;
                 isToUseReplacementMark = true;
-            } else if (   (static_cast<quint8>(bufferData.at(pos + 2)) == 0xBF)
-                       && (static_cast<quint8>(bufferData.at(pos + 1)) == 0xBB)
-                       && (static_cast<quint8>(bufferData.at(pos    )) == 0xEF)) {
-
+            } else if ((static_cast<quint8>(bufferData.at(pos + 2)) == 0xBF) && (static_cast<quint8>(bufferData.at(pos + 1)) == 0xBB) && (static_cast<quint8>(bufferData.at(pos)) == 0xEF)) {
                 // Got caught out by this one - it is the UTF-8 BOM (or
                 // Zero-Width No-Break Space) and needs to be detected specially
                 // as Qt's codec ignores it and transcodes it to NO codepoints!
@@ -5465,7 +5471,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseByteOrderMark = true;
             }
 
-        // Fall-through
+            // Fall-through
             [[fallthrough]];
         case 2:
             // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
@@ -5485,7 +5491,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             if (  ( ((static_cast<quint8>(bufferData.at(pos    )) & 0xFE) == 0xC0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) == 0x80) )
                 ||( ( static_cast<quint8>(bufferData.at(pos    )        ) == 0xE0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xE0) == 0x80) )
                 ||( ( static_cast<quint8>(bufferData.at(pos    )        ) == 0xF0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xF0) == 0x80) ) ) {
-// clang-format on
+                // clang-format on
 
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug().nospace() << "TBuffer::processUtf8Sequence(...) Overlong " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
@@ -5526,8 +5532,9 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 mMudLine.append(codePoint);
                 break;
             case 0:
-                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, but it did not encode to "
-                                                                                                      "ANY QChar(s)!!!";
+                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength
+                                     << "-byte UTF-8 sequence accepted, but it did not encode to "
+                                        "ANY QChar(s)!!!";
                 isValid = false;
                 isToUseReplacementMark = true;
             }
@@ -5561,15 +5568,15 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
 bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFromServer, const bool isGB18030, const size_t len, size_t& pos, bool& isNonBmpCharacter)
 {
-// In GBK/GB18030 mode we have to process the data more than one byte at a
-// time because there is not necessarily a one-byte to one TChar
-// mapping, instead we use one TChar per QChar - and that has to be
-// tweaked for non-BMP characters that use TWO QChars per codepoint.
-// GB2312 is the predecessor to both and - according to Wikipedia (EN) covers
-// over 99% of the characters of contemporary usage.
-// GBK is a sub-set of GB18030 so can be processed in the same method
-// Assume we are at the first byte of a single (ASCII), pair (GBK/GB18030)
-// or four byte (GB18030) sequence
+    // In GBK/GB18030 mode we have to process the data more than one byte at a
+    // time because there is not necessarily a one-byte to one TChar
+    // mapping, instead we use one TChar per QChar - and that has to be
+    // tweaked for non-BMP characters that use TWO QChars per codepoint.
+    // GB2312 is the predecessor to both and - according to Wikipedia (EN) covers
+    // over 99% of the characters of contemporary usage.
+    // GBK is a sub-set of GB18030 so can be processed in the same method
+    // Assume we are at the first byte of a single (ASCII), pair (GBK/GB18030)
+    // or four byte (GB18030) sequence
 
 #if defined(DEBUG_GB_PROCESSING)
     std::string dataIdentity;
@@ -5611,8 +5618,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-// clang-format on
-// GBK Area 3 sequence
+                // clang-format on
+                // GBK Area 3 sequence
 
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 3";
@@ -5621,8 +5628,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 // clang-format off
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-// clang-format on
-// GBK Area 1 (& GB2312) sequence
+                // clang-format on
+                // GBK Area 1 (& GB2312) sequence
 
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 1 (or GB2312)";
@@ -5631,8 +5638,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 // clang-format off
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xB0) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xF7)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-// clang-format on
-// GBK Area 2 (& GB2312) sequence
+                // clang-format on
+                // GBK Area 2 (& GB2312) sequence
 
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 2 (or GB2312)";
@@ -5642,8 +5649,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-// clang-format on
-// GBK/5 sequence
+                // clang-format on
+                // GBK/5 sequence
 
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 5";
@@ -5653,8 +5660,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-// clang-format on
-// GBK/4 sequence
+                // clang-format on
+                // GBK/4 sequence
 
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 4";
@@ -5663,9 +5670,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 // clang-format off
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xAF)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-// clang-format on
-// User Defined 1 sequence - possibly invalid for us but if the
-// MUD supplies their own font it could be used:
+                // clang-format on
+                // User Defined 1 sequence - possibly invalid for us but if the
+                // MUD supplies their own font it could be used:
 
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 1";
@@ -5674,9 +5681,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 // clang-format off
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xF8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-// clang-format on
-// User Defined 2 sequence - possibly invalid for us but if the
-// MUD supplies their own font it could be used:
+                // clang-format on
+                // User Defined 2 sequence - possibly invalid for us but if the
+                // MUD supplies their own font it could be used:
 
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 2";
@@ -5686,9 +5693,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA7)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-// clang-format on
-// User Defined 3 sequence - possibly invalid for us but if the
-// MUD supplies their own font it could be used:
+                // clang-format on
+                // User Defined 3 sequence - possibly invalid for us but if the
+                // MUD supplies their own font it could be used:
 
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 3";
@@ -5697,9 +5704,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 // clang-format off
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x90) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xE3)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
-// clang-format on
-// First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
-// codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
+                // clang-format on
+                // First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
+                // codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
                 isValid = false;
                 isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -5710,9 +5717,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 // clang-format off
             } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xFD) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
                       && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
-// clang-format on
-// First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
-// codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
+                // clang-format on
+                // First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
+                // codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
                 isValid = false;
                 isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -5827,7 +5834,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     dataIdentity = "GBK Area 3";
 #endif
 
-                // clang-format off
+                    // clang-format off
                 } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
                     // clang-format on
@@ -5837,7 +5844,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     dataIdentity = "GBK Area 1";
 #endif
 
-                // clang-format off
+                    // clang-format off
                 } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xB0) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xF7)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
                     // clang-format on
@@ -5847,7 +5854,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     dataIdentity = "GBK Area 2";
 #endif
 
-                // clang-format off
+                    // clang-format off
                 } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
@@ -5858,7 +5865,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     dataIdentity = "GBK Area 5";
 #endif
 
-                // clang-format off
+                    // clang-format off
                 } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
@@ -5869,7 +5876,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     dataIdentity = "GBK Area 4";
 #endif
 
-                // clang-format off
+                    // clang-format off
                 } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xAF)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
                     // clang-format on
@@ -5880,7 +5887,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     dataIdentity = "User Defined (PU) Area 1";
 #endif
 
-                // clang-format off
+                    // clang-format off
                 } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xF8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
                     // clang-format on
@@ -5891,7 +5898,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     dataIdentity = "User Defined (PU) Area 2";
 #endif
 
-                // clang-format off
+                    // clang-format off
                 } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA7)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
                           && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
@@ -5922,9 +5929,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             // we only have one - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to complete GB18030 sequence, need at least:"
-                                   << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length()
-                                   << " bytes (which we will store for next call to this method)...";
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to complete GB18030 sequence, need at least:" << gbSequenceLength
+                                   << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                 mIncompleteSequenceBytes = bufferData.substr(pos);
             }
@@ -5952,7 +5958,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 break;
             case 2:
                 isNonBmpCharacter = true;
-            // Fall-through
+                // Fall-through
                 [[fallthrough]];
             case 1:
 #if defined(DEBUG_GB_PROCESSING)
@@ -6044,7 +6050,6 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
         }
-
     }
 
     // At this point we know how many bytes to consume, and whether they are in
@@ -6058,34 +6063,33 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
             codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, big5SequenceLength).c_str(), big5SequenceLength), mEncoding);
             switch (codePoint.size()) {
-                default:
-                    Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                    qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, and it encoded to "
-                                         << codePoint.size() << " QChars which does not make sense!!!";
+            default:
+                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, and it encoded to " << codePoint.size()
+                                     << " QChars which does not make sense!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+                break;
+            case 2:
+                // Fall-through
+                [[fallthrough]];
+            case 1:
+                // If Qt's decoder found bad characters, update status flags to reflect that.
+                if (codePoint.contains(QChar::ReplacementCharacter)) {
                     isValid = false;
                     isToUseReplacementMark = true;
                     break;
-                case 2:
-                    // Fall-through
-                    [[fallthrough]];
-                case 1:
-                    // If Qt's decoder found bad characters, update status flags to reflect that.
-                    if (codePoint.contains(QChar::ReplacementCharacter)) {
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                        break;
-                    }
+                }
 #if defined(DEBUG_BIG5_PROCESSING)
-                    qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size()
-                                   << " QChar(s) long [" << codePoint << "] and is in the " << dataIdentity.c_str() << " range";
+                qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size() << " QChar(s) long [" << codePoint
+                                   << "] and is in the " << dataIdentity.c_str() << " range";
 #endif
-                    mMudLine.append(codePoint);
-                    break;
-                case 0:
-                    qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5"
-                                   << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
-                    isValid = false;
-                    isToUseReplacementMark = true;
+                mMudLine.append(codePoint);
+                break;
+            case 0:
+                qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5" << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
             }
         } else {
             // Unable to decode it - no Qt decoder...!
@@ -6151,23 +6155,22 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
             // Not enough bytes to process yet - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_EUC_KR_PROCESSING)
-                    qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) Insufficient bytes in buffer to "
-                                          "complete EUC-KR sequence, need at least: "
-                                       << eucSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) Insufficient bytes in buffer to "
+                                      "complete EUC-KR sequence, need at least: "
+                                   << eucSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
-                    mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos);
             }
             return false; // Bail out
         } else {
             // check if second byte range is valid
             auto val2 = static_cast<quint8>(bufferData.at(pos + 1));
             if (val2 < 0xA1 || val2 == 0xFF) {
-                    // second byte range is invalid
-                    isValid = false;
-                    isToUseReplacementMark = true;
+                // second byte range is invalid
+                isValid = false;
+                isToUseReplacementMark = true;
             }
         }
-
     }
 
     // At this point we know how many bytes to consume, and whether they are in
@@ -6182,33 +6185,32 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
             codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, eucSequenceLength).c_str(), eucSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
-                    Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                    qWarning().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, and it encoded to "
-                                         << codePoint.size() << " QChars which does not make sense!!!";
-                    isValid = false;
-                    isToUseReplacementMark = true;
-                    break;
+                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                qWarning().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, and it encoded to " << codePoint.size()
+                                     << " QChars which does not make sense!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+                break;
             case 2:
-                    // Fall-through
-                    [[fallthrough]];
+                // Fall-through
+                [[fallthrough]];
             case 1:
-                    // If Qt's decoder found bad characters, update status flags to reflect that.
-                    if (codePoint.contains(QChar::ReplacementCharacter)) {
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                        break;
-                    }
-#if defined(DEBUG_EUC_KR_PROCESSING)
-                    qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, it is " << codePoint.size()
-                                       << " QChar(s) long [" << codePoint << "] and is in the " << dataIdentity.c_str() << " range";
-#endif
-                    mMudLine.append(codePoint);
-                    break;
-            case 0:
-                    qWarning().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR"
-                                         << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                // If Qt's decoder found bad characters, update status flags to reflect that.
+                if (codePoint.contains(QChar::ReplacementCharacter)) {
                     isValid = false;
                     isToUseReplacementMark = true;
+                    break;
+                }
+#if defined(DEBUG_EUC_KR_PROCESSING)
+                qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, it is " << codePoint.size() << " QChar(s) long [" << codePoint
+                                   << "] and is in the " << dataIdentity.c_str() << " range";
+#endif
+                mMudLine.append(codePoint);
+                break;
+            case 0:
+                qWarning().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR" << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
             }
         } else {
             // Unable to decode it - no Qt decoder...!
@@ -6273,7 +6275,7 @@ int TBuffer::lengthInGraphemes(const QString& text)
 
 const QList<QByteArray> TBuffer::getEncodingNames()
 {
-     return csmEncodingTable.getEncodingNames();
+    return csmEncodingTable.getEncodingNames();
 }
 
 void TBuffer::clearSearchHighlights()
@@ -6339,9 +6341,11 @@ void TBuffer::injectOSC8DocumentationExamples()
     // 4. MENUS & TOOLTIPS
     // ═══════════════════════════════════════════════════════════════════
     output += "── MENUS & TOOLTIPS ───────────────────────────────────────────────────\n";
-    output += "Menu: \x1b]8;;send:attack?config={\"menu\":[{\"Strike\":\"send:strike\"},{\"Power\":\"send:power\"},\"-\",{\"Flee\":\"send:flee\"}]}\x1b\\⚔️ Combat\x1b]8;;\x1b\\ ← right-click (left=primary, \"-\"=separator)\n";
+    output += "Menu: \x1b]8;;send:attack?config={\"menu\":[{\"Strike\":\"send:strike\"},{\"Power\":\"send:power\"},\"-\",{\"Flee\":\"send:flee\"}]}\x1b\\⚔️ Combat\x1b]8;;\x1b\\ ← right-click "
+              "(left=primary, \"-\"=separator)\n";
     output += "Tip:  \x1b]8;;send:item?config={\"tooltip\":\"Legendary sword +5 damage\",\"style\":{\"color\":\"orange\"}}\x1b\\🗡️ Flaming Blade\x1b]8;;\x1b\\ ← hover for tooltip\n";
-    output += "Both: \x1b]8;;send:spell?config={\"menu\":[{\"Fire\":\"send:fireball\"},{\"Ice\":\"send:icebolt\"}],\"tooltip\":\"Magic spells\",\"style\":{\"color\":\"#9966ff\"}}\x1b\\✨ Magic\x1b]8;;\x1b\\\n\n";
+    output += "Both: \x1b]8;;send:spell?config={\"menu\":[{\"Fire\":\"send:fireball\"},{\"Ice\":\"send:icebolt\"}],\"tooltip\":\"Magic spells\",\"style\":{\"color\":\"#9966ff\"}}\x1b\\✨ "
+              "Magic\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
     // 5. VISIBILITY - Hide/reveal
@@ -6349,7 +6353,8 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "── VISIBILITY (auto-hide/reveal) ──────────────────────────────────────\n";
     output += "Click-hide: \x1b]8;;send:h1?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\I vanish 2s after click\x1b]8;;\x1b\\\n";
     output += "Expire:     \x1b]8;;send:h2?config={\"style\":{\"color\":\"cyan\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Send any command to hide\x1b]8;;\x1b\\\n";
-    output += "Reveal:     Wait... \x1b]8;;send:h3?config={\"style\":{\"color\":\"lime\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":5000}}\x1b\\I APPEAR!\x1b]8;;\x1b\\ (5 seconds)\n";
+    output += "Reveal:     Wait... \x1b]8;;send:h3?config={\"style\":{\"color\":\"lime\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":5000}}\x1b\\I APPEAR!\x1b]8;;\x1b\\ (5 "
+              "seconds)\n";
     output += "Wide chars: \x1b]8;;send:h4?config={\"style\":{\"bg\":\"blue\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\🎉🚀💎\x1b]8;;\x1b\\ ← emojis handled correctly\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
@@ -6373,12 +6378,15 @@ void TBuffer::injectOSC8DocumentationExamples()
     // ═══════════════════════════════════════════════════════════════════
     output += "── SELECTION (stateful toggles) ───────────────────────────────────────\n";
     output += "Radio:    ";
-    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"diff\",\"value\":\"easy\",\"exclusive\":true},\"style\":{\"color\":\"#8f8\",\"selected\":{\"bg\":\"green\",\"bold\":true}}}\x1b\\Easy\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"diff\",\"value\":\"hard\",\"exclusive\":true},\"style\":{\"color\":\"#f88\",\"selected\":{\"bg\":\"red\",\"bold\":true}}}\x1b\\Hard\x1b]8;;\x1b\\ (one at a time)\n";
+    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"diff\",\"value\":\"easy\",\"exclusive\":true},\"style\":{\"color\":\"#8f8\",\"selected\":{\"bg\":\"green\",\"bold\":true}}}"
+              "\x1b\\Easy\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"diff\",\"value\":\"hard\",\"exclusive\":true},\"style\":{\"color\":\"#f88\",\"selected\":{\"bg\":\"red\",\"bold\":true}}}"
+              "\x1b\\Hard\x1b]8;;\x1b\\ (one at a time)\n";
     output += "Checkbox: ";
     output += "\x1b]8;;send:b1?config={\"selection\":{\"group\":\"buffs\",\"value\":\"str\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#f60\",\"bold\":true}}}\x1b\\[STR]\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:b2?config={\"selection\":{\"group\":\"buffs\",\"value\":\"dex\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#08f\",\"bold\":true}}}\x1b\\[DEX]\x1b]8;;\x1b\\ ";
-    output += "\x1b]8;;send:b3?config={\"selection\":{\"group\":\"buffs\",\"value\":\"int\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#a0f\",\"bold\":true}}}\x1b\\[INT]\x1b]8;;\x1b\\ (multi-select)\n";
+    output += "\x1b]8;;send:b3?config={\"selection\":{\"group\":\"buffs\",\"value\":\"int\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#a0f\",\"bold\":true}}}\x1b\\[INT]\x1b]8;;\x1b\\ "
+              "(multi-select)\n";
     output += "Server receives: &selected=true/false in callback\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
@@ -6414,7 +6422,9 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:south?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\South\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:east?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\East\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:west?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\West\x1b]8;;\x1b\\\n";
-    output += "Item: \x1b]8;;send:sword?config={\"style\":{\"color\":\"#f80\",\"bold\":true,\"hover\":{\"bg\":\"#fc9\",\"color\":\"black\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:exam\"},\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"+5 Fire Damage\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
+    output += "Item: "
+              "\x1b]8;;send:sword?config={\"style\":{\"color\":\"#f80\",\"bold\":true,\"hover\":{\"bg\":\"#fc9\",\"color\":\"black\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:exam\"}"
+              ",\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"+5 Fire Damage\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
 
     output += "───────────────────────────────────────────────────────────────────────\n";
     output += "Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol\n";
@@ -6458,11 +6468,16 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
 
     // Apply :any-link styles (applies to both :link and :visited)
     if (anyLinkStyle.hasCustomStyling) {
-        if (anyLinkStyle.hasForegroundColor) effective.foregroundColor = anyLinkStyle.foregroundColor;
-        if (anyLinkStyle.hasBackgroundColor) effective.backgroundColor = anyLinkStyle.backgroundColor;
-        if (anyLinkStyle.hasUnderlineColor) effective.underlineColor = anyLinkStyle.underlineColor;
-        if (anyLinkStyle.hasOverlineColor) effective.overlineColor = anyLinkStyle.overlineColor;
-        if (anyLinkStyle.hasStrikeoutColor) effective.strikeoutColor = anyLinkStyle.strikeoutColor;
+        if (anyLinkStyle.hasForegroundColor)
+            effective.foregroundColor = anyLinkStyle.foregroundColor;
+        if (anyLinkStyle.hasBackgroundColor)
+            effective.backgroundColor = anyLinkStyle.backgroundColor;
+        if (anyLinkStyle.hasUnderlineColor)
+            effective.underlineColor = anyLinkStyle.underlineColor;
+        if (anyLinkStyle.hasOverlineColor)
+            effective.overlineColor = anyLinkStyle.overlineColor;
+        if (anyLinkStyle.hasStrikeoutColor)
+            effective.strikeoutColor = anyLinkStyle.strikeoutColor;
         effective.isBold = anyLinkStyle.isBold;
         effective.isItalic = anyLinkStyle.isItalic;
         effective.isUnderlined = anyLinkStyle.isUnderlined;
@@ -6476,60 +6491,60 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     const StateStyle* stateStyle = nullptr;
 
     switch (currentState) {
-        case StateDisabled:
-            if (disabledStyle.hasCustomStyling) {
-                stateStyle = &disabledStyle;
+    case StateDisabled:
+        if (disabledStyle.hasCustomStyling) {
+            stateStyle = &disabledStyle;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Using disabled style - hasCustomStyling:" << disabledStyle.hasCustomStyling
-                         << "hasForegroundColor:" << disabledStyle.hasForegroundColor 
-                         << "foregroundColor:" << (disabledStyle.hasForegroundColor ? disabledStyle.foregroundColor.name() : "none")
-                         << "hasBackgroundColor:" << disabledStyle.hasBackgroundColor 
-                         << "backgroundColor:" << (disabledStyle.hasBackgroundColor ? disabledStyle.backgroundColor.name() : "none")
-                         << "isBold:" << disabledStyle.isBold
-                         << "isStrikeOut:" << disabledStyle.isStrikeOut;
+            qDebug() << "[OSC] Using disabled style - hasCustomStyling:" << disabledStyle.hasCustomStyling << "hasForegroundColor:" << disabledStyle.hasForegroundColor
+                     << "foregroundColor:" << (disabledStyle.hasForegroundColor ? disabledStyle.foregroundColor.name() : "none") << "hasBackgroundColor:" << disabledStyle.hasBackgroundColor
+                     << "backgroundColor:" << (disabledStyle.hasBackgroundColor ? disabledStyle.backgroundColor.name() : "none") << "isBold:" << disabledStyle.isBold
+                     << "isStrikeOut:" << disabledStyle.isStrikeOut;
 #endif
-            } else {
+        } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Disabled style has no custom styling - hasCustomStyling:" << disabledStyle.hasCustomStyling;
+            qDebug() << "[OSC] Disabled style has no custom styling - hasCustomStyling:" << disabledStyle.hasCustomStyling;
 #endif
-            }
-            break;
-        case StateSelected:
-            if (selectedStyle.hasCustomStyling) {
-                stateStyle = &selectedStyle;
+        }
+        break;
+    case StateSelected:
+        if (selectedStyle.hasCustomStyling) {
+            stateStyle = &selectedStyle;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Using selected style - hasCustomStyling:" << selectedStyle.hasCustomStyling
-                         << "hasForegroundColor:" << selectedStyle.hasForegroundColor 
-                         << "foregroundColor:" << (selectedStyle.hasForegroundColor ? selectedStyle.foregroundColor.name() : "none")
-                         << "hasBackgroundColor:" << selectedStyle.hasBackgroundColor 
-                         << "backgroundColor:" << (selectedStyle.hasBackgroundColor ? selectedStyle.backgroundColor.name() : "none")
-                         << "isBold:" << selectedStyle.isBold;
+            qDebug() << "[OSC] Using selected style - hasCustomStyling:" << selectedStyle.hasCustomStyling << "hasForegroundColor:" << selectedStyle.hasForegroundColor
+                     << "foregroundColor:" << (selectedStyle.hasForegroundColor ? selectedStyle.foregroundColor.name() : "none") << "hasBackgroundColor:" << selectedStyle.hasBackgroundColor
+                     << "backgroundColor:" << (selectedStyle.hasBackgroundColor ? selectedStyle.backgroundColor.name() : "none") << "isBold:" << selectedStyle.isBold;
 #endif
-            } else {
+        } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Selected style has no custom styling - hasCustomStyling:" << selectedStyle.hasCustomStyling;
+            qDebug() << "[OSC] Selected style has no custom styling - hasCustomStyling:" << selectedStyle.hasCustomStyling;
 #endif
-            }
-            break;
-        case StateVisited:
-            if (visitedStyle.hasCustomStyling) stateStyle = &visitedStyle;
-            break;
-        case StateHover:
-            if (hoverStyle.hasCustomStyling) stateStyle = &hoverStyle;
-            break;
-        case StateActive:
-            if (activeStyle.hasCustomStyling) stateStyle = &activeStyle;
-            break;
-        case StateFocus:
-            if (focusStyle.hasCustomStyling) stateStyle = &focusStyle;
-            break;
-        case StateFocusVisible:
-            if (focusVisibleStyle.hasCustomStyling) stateStyle = &focusVisibleStyle;
-            break;
-        case StateDefault:
-        default:
-            if (linkStyle.hasCustomStyling) stateStyle = &linkStyle;
-            break;
+        }
+        break;
+    case StateVisited:
+        if (visitedStyle.hasCustomStyling)
+            stateStyle = &visitedStyle;
+        break;
+    case StateHover:
+        if (hoverStyle.hasCustomStyling)
+            stateStyle = &hoverStyle;
+        break;
+    case StateActive:
+        if (activeStyle.hasCustomStyling)
+            stateStyle = &activeStyle;
+        break;
+    case StateFocus:
+        if (focusStyle.hasCustomStyling)
+            stateStyle = &focusStyle;
+        break;
+    case StateFocusVisible:
+        if (focusVisibleStyle.hasCustomStyling)
+            stateStyle = &focusVisibleStyle;
+        break;
+    case StateDefault:
+    default:
+        if (linkStyle.hasCustomStyling)
+            stateStyle = &linkStyle;
+        break;
     }
 
     // Apply the selected state style
@@ -6568,11 +6583,8 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     // This ensures ANSI base links with only :hover (but no :link) styling get updated.
     if (!effective.hasCustomStyling) {
         // Check if ANY pseudo-class state has custom styling
-        if (linkStyle.hasCustomStyling || visitedStyle.hasCustomStyling ||
-            hoverStyle.hasCustomStyling || activeStyle.hasCustomStyling ||
-            focusStyle.hasCustomStyling || focusVisibleStyle.hasCustomStyling ||
-            anyLinkStyle.hasCustomStyling || selectedStyle.hasCustomStyling ||
-            disabledStyle.hasCustomStyling) {
+        if (linkStyle.hasCustomStyling || visitedStyle.hasCustomStyling || hoverStyle.hasCustomStyling || activeStyle.hasCustomStyling || focusStyle.hasCustomStyling
+            || focusVisibleStyle.hasCustomStyling || anyLinkStyle.hasCustomStyling || selectedStyle.hasCustomStyling || disabledStyle.hasCustomStyling) {
             effective.hasCustomStyling = true;
         }
     }
@@ -6607,14 +6619,30 @@ void TBuffer::setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState st
 #if defined(DEBUG_OSC_PROCESSING)
     QString stateName;
     switch (state) {
-        case Mudlet::HyperlinkStyling::StateDefault: stateName = "Default"; break;
-        case Mudlet::HyperlinkStyling::StateVisited: stateName = "Visited"; break;
-        case Mudlet::HyperlinkStyling::StateHover: stateName = "Hover"; break;
-        case Mudlet::HyperlinkStyling::StateActive: stateName = "Active"; break;
-        case Mudlet::HyperlinkStyling::StateFocus: stateName = "Focus"; break;
-        case Mudlet::HyperlinkStyling::StateFocusVisible: stateName = "FocusVisible"; break;
-        case Mudlet::HyperlinkStyling::StateSelected: stateName = "Selected"; break;
-        case Mudlet::HyperlinkStyling::StateDisabled: stateName = "Disabled"; break;
+    case Mudlet::HyperlinkStyling::StateDefault:
+        stateName = "Default";
+        break;
+    case Mudlet::HyperlinkStyling::StateVisited:
+        stateName = "Visited";
+        break;
+    case Mudlet::HyperlinkStyling::StateHover:
+        stateName = "Hover";
+        break;
+    case Mudlet::HyperlinkStyling::StateActive:
+        stateName = "Active";
+        break;
+    case Mudlet::HyperlinkStyling::StateFocus:
+        stateName = "Focus";
+        break;
+    case Mudlet::HyperlinkStyling::StateFocusVisible:
+        stateName = "FocusVisible";
+        break;
+    case Mudlet::HyperlinkStyling::StateSelected:
+        stateName = "Selected";
+        break;
+    case Mudlet::HyperlinkStyling::StateDisabled:
+        stateName = "Disabled";
+        break;
     }
     qDebug() << "[OSC] Link" << linkIndex << "state changed to:" << stateName;
 #endif
@@ -6647,15 +6675,10 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
         auto effective = styling.getEffectiveStyle();
 
 #if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "[OSC] getEffectiveHyperlinkStyling for link" << linkIndex
-                 << "state:" << styling.currentState
-                 << "isSpoiler:" << styling.isSpoiler
-                 << "base hasBackgroundColor:" << styling.hasBackgroundColor
-                 << "base backgroundColor:" << (styling.hasBackgroundColor ? styling.backgroundColor.name() : "none")
-                 << "effective hasForegroundColor:" << effective.hasForegroundColor 
-                 << "effective foregroundColor:" << (effective.hasForegroundColor ? effective.foregroundColor.name() : "none")
-                 << "effective hasBackgroundColor:" << effective.hasBackgroundColor 
-                 << "effective backgroundColor:" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
+        qDebug() << "[OSC] getEffectiveHyperlinkStyling for link" << linkIndex << "state:" << styling.currentState << "isSpoiler:" << styling.isSpoiler
+                 << "base hasBackgroundColor:" << styling.hasBackgroundColor << "base backgroundColor:" << (styling.hasBackgroundColor ? styling.backgroundColor.name() : "none")
+                 << "effective hasForegroundColor:" << effective.hasForegroundColor << "effective foregroundColor:" << (effective.hasForegroundColor ? effective.foregroundColor.name() : "none")
+                 << "effective hasBackgroundColor:" << effective.hasBackgroundColor << "effective backgroundColor:" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
                  << "effective isBold:" << effective.isBold;
 #endif
 
@@ -6690,9 +6713,8 @@ Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) co
                 styling.hasBackgroundColor = true;
                 styling.hasCustomStyling = true;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] SPOILER FIX: Forced spoiler background" << baseStyling.backgroundColor.name() 
-                         << "over effective background" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
-                         << "for link" << linkIndex;
+                qDebug() << "[OSC] SPOILER FIX: Forced spoiler background" << baseStyling.backgroundColor.name() << "over effective background"
+                         << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none") << "for link" << linkIndex;
 #endif
             }
         }
@@ -6734,8 +6756,7 @@ void TBuffer::setHoveredLink(int linkIndex)
         auto currentState = getLinkState(linkIndex);
         // Don't override active or disabled states with hover
         // Disabled links should stay disabled and show their disabled styling
-        if (currentState != Mudlet::HyperlinkStyling::StateActive && 
-            currentState != Mudlet::HyperlinkStyling::StateDisabled) {
+        if (currentState != Mudlet::HyperlinkStyling::StateActive && currentState != Mudlet::HyperlinkStyling::StateDisabled) {
             setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateHover);
             updateLinkCharacters(linkIndex); // Update displayed characters
         }
@@ -6749,7 +6770,6 @@ void TBuffer::setActiveLink(int linkIndex)
 
     // Reset previous active link
     if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
-
         // Return to appropriate state based on priority: disabled > hover > selected > visited > default
         Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
         if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
@@ -6844,7 +6864,7 @@ void TBuffer::revealSpoilerLink(int linkIndex)
     }
 
     QString originalText = mLinkOriginalText[linkIndex];
-    
+
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] Revealing spoiler link" << linkIndex << "with text:" << originalText;
 #endif
@@ -6854,12 +6874,12 @@ void TBuffer::revealSpoilerLink(int linkIndex)
     }
 
     Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
-    
+
     if (styling.isSpoiler) {
         QStringList hints = mLinkStore.getHintsConst(linkIndex);
         if (!hints.isEmpty() && hints.first() == QObject::tr("Click to reveal")) {
             mLinkStore.getHints(linkIndex).clear();
-            
+
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Cleared auto-generated 'Click to reveal' tooltip for spoiler link" << linkIndex;
 #endif
@@ -6868,9 +6888,9 @@ void TBuffer::revealSpoilerLink(int linkIndex)
         if (styling.hasBackgroundColor && mLinkOriginalBackgrounds.contains(linkIndex)) {
             QColor originalBackground = mLinkOriginalBackgrounds[linkIndex];
             styling.backgroundColor = originalBackground;
-            
+
             mLinkStore.setStyling(linkIndex, styling);
-            
+
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Restored original background color for spoiler link" << linkIndex;
 #endif
@@ -6883,7 +6903,7 @@ void TBuffer::revealSpoilerLink(int linkIndex)
         auto& line = buffer[lineNum];
         QString lineText = lineBuffer.at(static_cast<int>(lineNum));
         bool lineModified = false;
-        
+
         for (size_t charPos = 0; charPos < line.size(); ++charPos) {
             if (line[charPos].linkIndex() == linkIndex && charIndex < originalText.length()) {
                 // Replace the space character with the original character
@@ -6895,7 +6915,7 @@ void TBuffer::revealSpoilerLink(int linkIndex)
                 charIndex++;
             }
         }
-        
+
         if (lineModified) {
             lineBuffer[static_cast<int>(lineNum)] = lineText;
         }
@@ -6904,7 +6924,7 @@ void TBuffer::revealSpoilerLink(int linkIndex)
     updateLinkCharacters(linkIndex);
 
     mLinkOriginalText.remove(linkIndex);
-    
+
     if (mpConsole) {
         mpConsole->update();
     }
@@ -6914,38 +6934,34 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
 {
     int maxLinkId = mLinkStore.getCurrentLinkID();
     int clearedCount = 0;
-    
+
     for (int linkIndex = 1; linkIndex <= maxLinkId; ++linkIndex) {
         if (!mLinkStore.hasStyling(linkIndex)) {
             continue;
         }
-        
+
         auto styling = mLinkStore.getStyling(linkIndex);
-        if (styling.selection.hasSelectionSettings && 
-            styling.selection.group == group && 
-            styling.selection.value != exceptValue) {
-            
+        if (styling.selection.hasSelectionSettings && styling.selection.group == group && styling.selection.value != exceptValue) {
             if (mpConsole) {
                 mpConsole->getHyperlinkSelectionManager().setSelected(styling.selection.group, styling.selection.value, false);
             }
-            
+
             setLinkSelected(linkIndex, false);
             if (styling.selection.disabled) {
                 setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
             } else {
                 setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
             }
-            
+
             updateLinkCharacters(linkIndex);
             clearedCount++;
-            
+
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC] clearGroupSelection: Deselected link" << linkIndex 
-                     << "group:" << group << "value:" << styling.selection.value;
+            qDebug() << "[OSC] clearGroupSelection: Deselected link" << linkIndex << "group:" << group << "value:" << styling.selection.value;
 #endif
         }
     }
-    
+
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] clearGroupSelection: Cleared" << clearedCount << "links in group" << group;
 #endif
@@ -6994,13 +7010,9 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC] Link" << linkIndex << "effective styling:"
-             << "hasFg:" << effectiveStyling.hasForegroundColor
-             << "fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none")
-             << "hasBg:" << effectiveStyling.hasBackgroundColor
-             << "bold:" << effectiveStyling.isBold
-             << "underline:" << effectiveStyling.isUnderlined
-             << "hasCustom:" << effectiveStyling.hasCustomStyling;
+    qDebug() << "[OSC] Link" << linkIndex << "effective styling:" << "hasFg:" << effectiveStyling.hasForegroundColor
+             << "fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none") << "hasBg:" << effectiveStyling.hasBackgroundColor
+             << "bold:" << effectiveStyling.isBold << "underline:" << effectiveStyling.isUnderlined << "hasCustom:" << effectiveStyling.hasCustomStyling;
 #endif
 
     // IMPORTANT: If this link has no custom styling at all (neither base nor pseudo-class),
@@ -7019,8 +7031,8 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     bool useAnsiBase = false;
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling
-             << "currentState:" << effectiveStyling.currentState << "useAnsiBase:" << useAnsiBase;
+    qDebug() << "[OSC] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling << "currentState:" << effectiveStyling.currentState
+             << "useAnsiBase:" << useAnsiBase;
 #endif
 
     // Debug: Count how many characters we're checking and how many match
@@ -7042,9 +7054,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                 matchingCharacters++;
                 static int charUpdateCount = 0;
                 if (charUpdateCount++ < 2) { // Only log first 2 characters to avoid spam
-                    qDebug() << "[OSC] Before update - char with linkIndex" << linkIndex
-                             << "- FgColor:" << tchar.mFgColor.name()
-                             << "hasFg:" << effectiveStyling.hasForegroundColor
+                    qDebug() << "[OSC] Before update - char with linkIndex" << linkIndex << "- FgColor:" << tchar.mFgColor.name() << "hasFg:" << effectiveStyling.hasForegroundColor
                              << "new fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none");
                 }
 #endif
@@ -7056,12 +7066,8 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                 if (useAnsiBase && mLinkOriginalCharacters.contains(linkIndex)) {
                     TChar originalChar = mLinkOriginalCharacters.value(linkIndex);
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Restoring ANSI base for link" << linkIndex
-                             << "- Original FgColor:" << originalChar.mFgColor.name()
-                             << "Original BgColor:" << originalChar.mBgColor.name()
-                             << "Original Bold:" << bool(originalChar.mFlags & TChar::Bold)
-                             << "Current FgColor:" << tchar.mFgColor.name()
-                             << "Current Bold:" << bool(tchar.mFlags & TChar::Bold);
+                    qDebug() << "[OSC] Restoring ANSI base for link" << linkIndex << "- Original FgColor:" << originalChar.mFgColor.name() << "Original BgColor:" << originalChar.mBgColor.name()
+                             << "Original Bold:" << bool(originalChar.mFlags & TChar::Bold) << "Current FgColor:" << tchar.mFgColor.name() << "Current Bold:" << bool(tchar.mFlags & TChar::Bold);
 #endif
                     // Restore ANSI base - these will be overridden below if styling specifies them
                     tchar.mFgColor = originalChar.mFgColor;
@@ -7086,8 +7092,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 #if defined(DEBUG_OSC_PROCESSING)
                     static int fgUpdateCount = 0;
                     if (fgUpdateCount++ < 2) {
-                        qDebug() << "[OSC] Applied FG color to link" << linkIndex
-                                 << "- New FgColor:" << tchar.mFgColor.name();
+                        qDebug() << "[OSC] Applied FG color to link" << linkIndex << "- New FgColor:" << tchar.mFgColor.name();
                     }
 #endif
                 }
@@ -7109,17 +7114,17 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
 
                     switch (effectiveStyling.underlineStyle) {
-                        case Mudlet::HyperlinkStyling::UnderlineWavy:
-                            tchar.mFlags |= TChar::UnderlineWavy;
-                            break;
-                        case Mudlet::HyperlinkStyling::UnderlineDotted:
-                            tchar.mFlags |= TChar::UnderlineDotted;
-                            break;
-                        case Mudlet::HyperlinkStyling::UnderlineDashed:
-                            tchar.mFlags |= TChar::UnderlineDashed;
-                            break;
-                        default:
-                            break;
+                    case Mudlet::HyperlinkStyling::UnderlineWavy:
+                        tchar.mFlags |= TChar::UnderlineWavy;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDotted:
+                        tchar.mFlags |= TChar::UnderlineDotted;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDashed:
+                        tchar.mFlags |= TChar::UnderlineDashed;
+                        break;
+                    default:
+                        break;
                     }
                 } else {
                     tchar.mFlags &= ~TChar::Underline;
@@ -7167,9 +7172,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 
     // Debug: Report search results
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC] Character search completed for link" << linkIndex 
-             << "- Total characters searched:" << totalCharacters
-             << "- Matching characters found:" << matchingCharacters;
+    qDebug() << "[OSC] Character search completed for link" << linkIndex << "- Total characters searched:" << totalCharacters << "- Matching characters found:" << matchingCharacters;
 #endif
 
     // Refresh the display to show the updated character styling

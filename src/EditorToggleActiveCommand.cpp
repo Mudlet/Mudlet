@@ -28,7 +28,12 @@
 #include "TTrigger.h"
 
 EditorToggleActiveCommand::EditorToggleActiveCommand(EditorViewType viewType, int itemID, bool oldState, bool newState, const QString& itemName, Host* host)
-: EditorCommand(generateText(viewType, itemName, newState), host), mViewType(viewType), mItemID(itemID), mOldActiveState(oldState), mNewActiveState(newState), mItemName(itemName)
+: EditorCommand(generateText(viewType, itemName, newState), host)
+, mViewType(viewType)
+, mItemID(itemID)
+, mOldActiveState(oldState)
+, mNewActiveState(newState)
+, mItemName(itemName)
 {
 }
 

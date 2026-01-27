@@ -38,7 +38,7 @@ extern "C" {
 // Windows: in the registry at HKEY_CURRENT_USER\Software\mudlet\CrashReporter
 // Linux: in a file at ~/.config/Mudlet/CrashReporter.conf
 // macOS: in a file at ~/Library/Preferences/com.Mudlet.CrashReporter.plist
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     if (argc < 2) {
         qWarning() << "Error: This program requires the path to a .envelope file as an argument.";
@@ -58,7 +58,8 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void showCrashDialogAndSend(const char *envelopePath, QSettings &settings) {
+void showCrashDialogAndSend(const char* envelopePath, QSettings& settings)
+{
     TCrashSendOption result = createCrashDialog();
 
     if (result == AlwaysSend) {
@@ -69,22 +70,22 @@ void showCrashDialogAndSend(const char *envelopePath, QSettings &settings) {
     }
 }
 
-TCrashSendOption createCrashDialog() {
+TCrashSendOption createCrashDialog()
+{
     QDialog dialog;
     dialog.setWindowTitle(QCoreApplication::translate("CrashReporter", "Mudlet Crash"));
 
-    QVBoxLayout *vLayout = new QVBoxLayout(&dialog);
-    QLabel *label = new QLabel(QCoreApplication::translate(
-        "CrashReporter",
-        "<div align='center'><b>Mudlet has encountered a problem.</b><br><br>"
-        "You can choose to send a crash report to help us improve the application.</div>"));
+    QVBoxLayout* vLayout = new QVBoxLayout(&dialog);
+    QLabel* label = new QLabel(QCoreApplication::translate("CrashReporter",
+                                                           "<div align='center'><b>Mudlet has encountered a problem.</b><br><br>"
+                                                           "You can choose to send a crash report to help us improve the application.</div>"));
     label->setAlignment(Qt::AlignCenter);
     vLayout->addWidget(label);
 
-    QHBoxLayout *hLayout = new QHBoxLayout();
-    QPushButton *sendBtn   = new QPushButton(QCoreApplication::translate("CrashReporter", "Send this time"));
-    QPushButton *alwaysBtn = new QPushButton(QCoreApplication::translate("CrashReporter", "Always send"));
-    QPushButton *dontBtn   = new QPushButton(QCoreApplication::translate("CrashReporter", "Don't send"));
+    QHBoxLayout* hLayout = new QHBoxLayout();
+    QPushButton* sendBtn = new QPushButton(QCoreApplication::translate("CrashReporter", "Send this time"));
+    QPushButton* alwaysBtn = new QPushButton(QCoreApplication::translate("CrashReporter", "Always send"));
+    QPushButton* dontBtn = new QPushButton(QCoreApplication::translate("CrashReporter", "Don't send"));
 
     hLayout->addStretch();
     hLayout->addWidget(sendBtn);
@@ -93,21 +94,27 @@ TCrashSendOption createCrashDialog() {
     hLayout->addStretch();
     vLayout->addLayout(hLayout);
 
-    QObject::connect(sendBtn,   &QPushButton::clicked, [&dialog](){ dialog.done(static_cast<int>(SendThisTime)); });
-    QObject::connect(alwaysBtn, &QPushButton::clicked, [&dialog](){ dialog.done(static_cast<int>(AlwaysSend)); });
-    QObject::connect(dontBtn,   &QPushButton::clicked, [&dialog](){ dialog.done(static_cast<int>(DontSend)); });
+    QObject::connect(sendBtn, &QPushButton::clicked, [&dialog]() {
+        dialog.done(static_cast<int>(SendThisTime));
+    });
+    QObject::connect(alwaysBtn, &QPushButton::clicked, [&dialog]() {
+        dialog.done(static_cast<int>(AlwaysSend));
+    });
+    QObject::connect(dontBtn, &QPushButton::clicked, [&dialog]() {
+        dialog.done(static_cast<int>(DontSend));
+    });
 
     sendBtn->setDefault(true);
 
     return static_cast<TCrashSendOption>(dialog.exec());
 }
 
-void sendCrashReport(const char *envelopePath)
+void sendCrashReport(const char* envelopePath)
 {
-    sentry_options_t*  opts = sentry_options_new();
+    sentry_options_t* opts = sentry_options_new();
     sentry_envelope_t* envelope = sentry_envelope_read_from_file(envelopePath);
-    const char*        effectiveDsn = nullptr;
-    const char*        sentry_dsn_from_environment = std::getenv("SENTRY_DSN");
+    const char* effectiveDsn = nullptr;
+    const char* sentry_dsn_from_environment = std::getenv("SENTRY_DSN");
 
     if (!opts || !envelope) {
         return;

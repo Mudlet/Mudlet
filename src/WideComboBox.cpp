@@ -22,7 +22,8 @@
 #include <QScrollBar>
 #include <QAbstractItemView>
 
-void WideComboBox::showPopup() {
+void WideComboBox::showPopup()
+{
     // compute width of widest content.
     int maxWidth = view()->sizeHintForColumn(0);
     if (maxWidth > 0) {
