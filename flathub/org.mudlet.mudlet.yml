@@ -228,5 +228,8 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
     sources:
-      - type: dir
-        path: ../
+      - type: git
+        url: https://github.com/Mudlet/Mudlet.git
+        # Update tag and commit for each release
+        tag: Mudlet-4.19.1
+        commit: f5516c367ab04977cee2cab604cd76c20e7efbab
