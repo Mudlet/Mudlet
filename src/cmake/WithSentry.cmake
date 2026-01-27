@@ -172,10 +172,9 @@ endif()
 
 if(SENTRY_SEND_DEBUG)
     if(NOT DEFINED ENV{SENTRY_AUTH_TOKEN} OR "$ENV{SENTRY_AUTH_TOKEN}" STREQUAL "")
-        message(FATAL_ERROR
+        message(WARNING
             "[Option SENTRY_SEND_DEBUG enabled] The environment variable SENTRY_AUTH_TOKEN is missing.\n"
-            "SENTRY_AUTH_TOKEN is required to authenticate with Sentry before uploading debug files.\n"
-            "Fix: try exporting SENTRY_AUTH_TOKEN=\"...\""
+            "Skipping debug symbol upload to Sentry."
         )
     else()
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
