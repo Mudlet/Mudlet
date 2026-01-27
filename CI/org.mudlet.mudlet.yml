@@ -53,8 +53,7 @@ modules:
       - -Dvapi=false
       - -Dgtk_doc=false
       - -Dintrospection=false
-      # https://gitlab.gnome.org/GNOME/libsecret/-/issues/49
-      - -Dgcrypt=false
+      - -Dcrypto=disabled
     sources:
       - commit: 0936f740c02b60f02657729cd99f581db4517a41
         tag: 0.21.7
