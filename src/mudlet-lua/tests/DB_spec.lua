@@ -1278,5 +1278,88 @@ describe("Tests DB.lua functions", function()
       end
       assert.is_true(found_replaced)
     end)
+    
+    it("should error when constraint changes result in data loss", function()
+      -- Create initial database where violations of compound unique constraint are FAILed.
+      mydb = db:create(
+        test_db_name,
+        {
+          records = {
+            name     = "",
+            category = "",
+            value    =  0,
+
+            _unique     = { {"name", "category"} },
+            _violations = "FAIL"
+          }
+        }
+      )
+      
+      -- Add test data
+      db:add(mydb.records, {name = "Item1", category = "A", value = 10})
+      db:add(mydb.records, {name = "Item1", category = "B", value = 20})
+      db:close()
+
+      assert.has_error(
+        function()
+          -- Re-create sheet where violations of non-compound unique constraint are REPLACEd.
+          db:create(
+            test_db_name,
+            {
+              records = {
+                name     = "",
+                category = "",
+                value    =  0,
+
+                _unique     = {"name", "category"},
+                _violations = "REPLACE"
+              }
+            }
+          )
+        end
+      )
+
+    end)
+    
+    it("should allow forced data loss during constraint change migrations", function()
+      -- Create initial database where violations of compound unique constraint are FAILed.
+      mydb = db:create(
+        test_db_name,
+        {
+          records = {
+            name     = "",
+            category = "",
+            value    =  0,
+
+            _unique     = { {"name", "category"} },
+            _violations = "FAIL"
+          }
+        }
+      )
+      
+      -- Add test data
+      db:add(mydb.records, {name = "Item1", category = "A", value = 10})
+      db:add(mydb.records, {name = "Item1", category = "B", value = 20})
+
+      -- Re-create sheet where violations of non-compound unique constraint are REPLACEd forecfully.
+      db:close()
+      db:create(
+        test_db_name,
+        {
+          records = {
+            name     = "",
+            category = "",
+            value    =  0,
+
+            _unique     = {"name", "category"},
+            _violations = "REPLACE"
+          }
+        },
+        true
+      )
+      
+      local results = db:fetch(mydb.records, db:eq(mydb.records.name, "Item1"))
+      assert.are.equal(1, #results)
+    end)
   end)
 end)

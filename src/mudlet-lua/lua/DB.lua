@@ -448,6 +448,17 @@ end
 
 
 
+local function count_rows(s_name)
+  local count_cursor, count_err = conn:execute("SELECT COUNT(*) as cnt FROM " .. s_name);
+  assert(count_cursor, count_err);
+
+  local count = count_cursor:fetch({}, "a").cnt;
+  count_cursor:close();
+
+  return count;
+end
+
+
 -- NOT LUADOC
 -- The migrate function is meant to upgrade an existing database live, to maintain a consistent
 -- and correct set of sheets and fields, along with their indexes. It should be safe to run
@@ -594,6 +605,10 @@ function db:_migrate(db_name, s_name, force)
         if not row or not row.sql then
           error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
         end
+
+        local original_count = count_rows(s_name);
+
+        db:_begin()
         
         -- Create temporary backup table, recreate main table, copy data
         local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
@@ -614,11 +629,25 @@ function db:_migrate(db_name, s_name, force)
           local ret, str = conn:execute(sql)
           
           if not ret then
+            db:_rollback()
             error("Migration failed at chunk " .. i .. ": " .. tostring(str))
           end
         end
-        
+
+        local migrated_count = count_rows(s_name)
+
+        if (original_count ~= migrated_count and not force) then
+            db:_rollback()
+            error(
+               "db:_migrate halted for ".. s_name .."during constraint migrations due to data loss."
+               .."\n\t".. (original_count - migrated_count) .."rows would be lost with new constraints."
+               .."\nUse force option to migrate anyway."
+            )
+        end
+
+
         -- Commit the migration transaction
+        db:_end()
         conn:commit()
         
         -- After recreating the table with new constraints, add any new columns that didn't exist before
