@@ -921,6 +921,7 @@ void T2DMap::addTextLabelToCache(const QString& key, const TMapLabel& label, con
     QRectF targetRect(0, 0, targetSize.width(), targetSize.height());
     if (!sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
         // Font too small to be legible - fall back to smooth-scaled original pixmap
+        painter.end();
         pixmap = std::make_unique<QPixmap>(label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         if (!mTextLabelPixmapCache.insert(key, pixmap.release())) {
             qWarning("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full for key: %s", qUtf8Printable(key));
