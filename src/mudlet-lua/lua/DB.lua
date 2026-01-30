@@ -639,8 +639,8 @@ function db:_migrate(db_name, s_name, force)
         if (original_count ~= migrated_count and not force) then
             db:_rollback()
             error(
-               "db:_migrate halted for ".. s_name .."during constraint migrations due to data loss."
-               .."\n\t".. (original_count - migrated_count) .."rows would be lost with new constraints."
+               "db:_migrate halted for ".. s_name .." during constraint migrations due to data loss."
+               .."\n\t".. (original_count - migrated_count) .." rows would be lost with new constraints."
                .."\nUse force option to migrate anyway."
             )
         end
