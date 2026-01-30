@@ -610,8 +610,6 @@ function db:_migrate(db_name, s_name, force)
 
         local original_count, og_count_err = count_rows(s_name);
         assert(original_count, og_count_err);
-
-        db:_begin()
         
         -- Create temporary backup table, recreate main table, copy data
         local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
@@ -632,22 +630,19 @@ function db:_migrate(db_name, s_name, force)
           local ret, str = conn:execute(sql)
           
           if not ret then
-            db:_rollback()
-            db:_end()
+            conn:rollback()
             error("Migration failed at chunk " .. i .. ": " .. tostring(str))
           end
         end
 
         local migrated_count, migrated_count_err = count_rows(s_name)
         if migrated_count_err then
-          db:_rollback()
-          db:_end()
+          conn:rollback()
           error(migrated_count_err);
         end
 
         if (original_count ~= migrated_count and not force) then
-            db:_rollback()
-            db:_end()
+            conn:rollback()
             error(
                "db:_migrate halted for ".. s_name .." during constraint migrations due to data loss."
                .."\n\t".. (original_count - migrated_count) .." rows would be lost with new constraints."
@@ -655,9 +650,7 @@ function db:_migrate(db_name, s_name, force)
             )
         end
 
-
         -- Commit the migration transaction
-        db:_end()
         conn:commit()
         
         -- After recreating the table with new constraints, add any new columns that didn't exist before
