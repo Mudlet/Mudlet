@@ -450,12 +450,14 @@ end
 
 local function count_rows(s_name)
   local count_cursor, count_err = conn:execute("SELECT COUNT(*) as cnt FROM " .. s_name);
-  assert(count_cursor, count_err);
+  if count_err then
+    return count_cursor, count_err
+  end
 
   local count = count_cursor:fetch({}, "a").cnt;
   count_cursor:close();
 
-  return count;
+  return count, nil;
 end
 
 
@@ -606,7 +608,8 @@ function db:_migrate(db_name, s_name, force)
           error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
         end
 
-        local original_count = count_rows(s_name);
+        local original_count, og_count_err = count_rows(s_name);
+        assert(original_count, og_count_err);
 
         db:_begin()
         
@@ -634,7 +637,11 @@ function db:_migrate(db_name, s_name, force)
           end
         end
 
-        local migrated_count = count_rows(s_name)
+        local migrated_count, migrated_count_err = count_rows(s_name)
+        if migrated_count_err then
+          db:_rollback();
+          error(migrated_count_err);
+        end
 
         if (original_count ~= migrated_count and not force) then
             db:_rollback()
