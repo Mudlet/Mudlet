@@ -1123,7 +1123,7 @@ describe("Tests DB.lua functions", function()
   end)
 
   describe("Tests, if hanging indexes are removed", function()
-    local test_db_name = "remove_indexes_test"
+    local test_db_name = db:safe_name("remove_indexes_test")
     local test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
 
 
