@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
             const QString exeName = appInfo.fileName();
 
             if (arg.startsWith(qsl("--squirrel-install")) || arg.startsWith(qsl("--squirrel-updated"))) {
-                QProcess::execute(updateExe, {qsl("--createShortcut"), exeName, qsl("--shortcut-locations"), qsl("StartMenu")});
+                QProcess::execute(updateExe, {qsl("--createShortcut"), exeName, qsl("--shortcut-locations"), qsl("StartMenu,Desktop")});
             } else if (arg.startsWith(qsl("--squirrel-uninstall"))) {
                 QProcess::execute(updateExe, {qsl("--removeShortcut"), exeName});
             }
