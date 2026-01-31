@@ -1125,9 +1125,13 @@ describe("Tests DB.lua functions", function()
   describe("Tests, if hanging indexes are removed", function()
     local test_db_name = db:safe_name("remove_indexes_test")
     local test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
+    local cur;
 
 
     after_each(function()
+      if cur then
+        cur:close()
+      end
       db:close()
       os.remove(test_db_file)
     end)
@@ -1157,7 +1161,7 @@ describe("Tests DB.lua functions", function()
         }
       );
       local conn = db.__conn[test_db_name]
-      local cur, _ = conn:execute([[
+      cur, _ = conn:execute([[
         SELECT
           name,
           tbl_name,
@@ -1166,7 +1170,6 @@ describe("Tests DB.lua functions", function()
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
       assert.is_nil(cur:fetch({}, "a"))
-      cur:close();
     end)
 
 
@@ -1194,7 +1197,7 @@ describe("Tests DB.lua functions", function()
         }
       );
       local conn = db.__conn[test_db_name]
-      local cur, _ = conn:execute([[
+      cur, _ = conn:execute([[
         SELECT
           name,
           tbl_name,
@@ -1203,7 +1206,6 @@ describe("Tests DB.lua functions", function()
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
       assert.is_nil(cur:fetch({}, "a"))
-      cur:close();
     end)
 
 
@@ -1220,6 +1222,7 @@ describe("Tests DB.lua functions", function()
       -- simulate creating a unique index, as Mudlet no longer creates them.
       local conn = db.__conn[test_db_name]
       conn:execute([[CREATE UNIQUE INDEX idx_test_c_name ON test ("name")]])
+      conn:commit()
       db:close();
 
       db:create(
@@ -1231,7 +1234,8 @@ describe("Tests DB.lua functions", function()
           }
         }
       );
-      local cur, _ = conn:execute([[
+      conn = db.__conn[test_db_name]
+      cur, _ = conn:execute([[
         SELECT
           name,
           tbl_name,
@@ -1240,7 +1244,6 @@ describe("Tests DB.lua functions", function()
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
       assert.is_nil(cur:fetch({}, "a"))
-      cur:close();
     end)
 
     it("should remove unique compound index", function()
@@ -1256,6 +1259,7 @@ describe("Tests DB.lua functions", function()
       -- simulate creating a unique index, as Mudlet no longer creates them.
       local conn = db.__conn[test_db_name]
       conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON test ("name", "city")]])
+      conn:commit()
       db:close();
 
       db:create(
@@ -1267,7 +1271,8 @@ describe("Tests DB.lua functions", function()
           }
         }
       );
-      local cur, _ = conn:execute([[
+      conn = db.__conn[test_db_name]
+      cur, _ = conn:execute([[
         SELECT
           name,
           tbl_name,
@@ -1276,7 +1281,6 @@ describe("Tests DB.lua functions", function()
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
       assert.is_nil(cur:fetch({}, "a"))
-      cur:close();
     end)
   end)
 
@@ -1520,4 +1524,5 @@ describe("Tests DB.lua functions", function()
       assert.are.equal(1, #results)
     end)
   end)
+
 end)

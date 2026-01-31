@@ -862,6 +862,7 @@ end
 
 
 -- Checks for any hanging indexes for a sql table and conditionally removes them.
+
 function db:_remove_hanging_indexes(conn, s_name, schema)
   local cur, err;
 
@@ -871,29 +872,39 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
       tbl_name,
       sql
     FROM sqlite_master a
-      WHERE type = 'index' AND tbl_name = '%s' AND a.sql is not NULL;
-  ]]):format(s_name)
+    WHERE
+        type = 'index'
+        AND tbl_name = '%s'
+        AND a.sql IS NOT NULL;
+  ]]):format(s_name):trim():gsub("%s+", " ")
 
   local sql_drop_index = "DROP INDEX IF EXISTS %s"
 
   db:echo_sql(sql)
   cur, err = conn:execute(sql)
   if cur == nil then
+    display(err);
     return nil, err
   end
 
 
   local row = cur:fetch({}, "a")
+  local drops = {}
 
   -- No indexes should exist for the sheet, should remove all indexes for the table.
   if not schema.options._index then
     while row do
-      sql = sql_drop_index:format(row.name)
-      db:echo_sql(sql)
-      conn:execute(sql)
+      table.insert(
+        drops,
+        sql_drop_index:format(row.name)
+      )
       row = cur:fetch({}, "a")
     end
     cur:close()
+    for _, drop in ipairs(drops) do
+      db:echo_sql(drop)
+      conn:execute(drop);
+    end
     return true, nil
   end
 
@@ -912,7 +923,6 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
       index_strs[i] = index
     end
   end
-
 
   local cols         = {}
   local index_match  = ""
@@ -934,7 +944,7 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
 
     elseif index_match then
       cols = {}
-      for col in index_match:gmatch('"%w"') do
+      for col in index_match:gmatch('"(%w+)"') do
         table.insert(cols, col)
       end
       table.sort(cols)
@@ -950,9 +960,10 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
       end
 
       if is_dangling then
-        sql = sql_drop_index:format(row.name)
-        db:echo_sql(sql)
-        conn:execute(sql)
+        table.insert(
+          drops,
+          sql_drop_index:format(row.name)
+        )
       end
 
     end
@@ -960,6 +971,10 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
     row = cur:fetch({}, "a")
   end
   cur:close()
+  for _, drop in ipairs(drops) do
+    db:echo_sql(drop)
+    conn:execute(drop)
+  end
 
   return true, nil
 end
