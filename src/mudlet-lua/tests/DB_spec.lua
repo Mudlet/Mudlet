@@ -1221,7 +1221,7 @@ describe("Tests DB.lua functions", function()
       );
       -- simulate creating a unique index, as Mudlet no longer creates them.
       local conn = db.__conn[test_db_name]
-      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name ON test ("name")]])
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name ON people ("name")]])
       conn:commit()
       db:close();
 
@@ -1258,7 +1258,7 @@ describe("Tests DB.lua functions", function()
       );
       -- simulate creating a unique index, as Mudlet no longer creates them.
       local conn = db.__conn[test_db_name]
-      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON test ("name", "city")]])
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON people ("name", "city")]])
       conn:commit()
       db:close();
 
@@ -1297,7 +1297,7 @@ describe("Tests DB.lua functions", function()
       );
       -- simulate creating a unique index, as Mudlet no longer creates them.
       local conn = db.__conn[test_db_name]
-      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON test ("name", "city")]])
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON people ("name", "city")]])
       conn:commit()
       db:close();
 
@@ -1319,7 +1319,7 @@ describe("Tests DB.lua functions", function()
         FROM sqlite_master
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
-      assert.are.equal(cur:fetch({}, "a").sql, [[CREATE INDEX idx_test_c_city ON test ("city")]]);
+      assert.are.equal([[CREATE INDEX idx_people_c_city ON people ("city")]], cur:fetch({}, "a").sql);
       assert.is_nil(cur:fetch({}, "a"))
     end)
   end)
