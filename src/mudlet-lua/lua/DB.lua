@@ -938,9 +938,10 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
 
     -- matched unique index.  Mudlet doesn't make these anymore, so it should be removed.
     if unique_match then
-        sql = sql_drop_index:format(row.name)
-        db:echo_sql(sql)
-        conn:execute(sql)
+        table.insert(
+          drops,
+          sql_drop_index:format(row.name)
+        )
 
     elseif index_match then
       cols = {}
@@ -971,9 +972,11 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
     row = cur:fetch({}, "a")
   end
   cur:close()
-  for _, drop in ipairs(drops) do
-    db:echo_sql(drop)
-    conn:execute(drop)
+
+  if #drops > 0 then
+    sql = table.concat(drops, "\n")
+    db:echo_sql(sql)
+    conn:execute(sql);
   end
 
   return true, nil
