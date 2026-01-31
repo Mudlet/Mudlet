@@ -1173,7 +1173,7 @@ describe("Tests DB.lua functions", function()
     end)
 
 
-    it("should remove compound index", function()
+    it("should remove a compound index", function()
       db:create(
         test_db_name,
         {
@@ -1209,7 +1209,7 @@ describe("Tests DB.lua functions", function()
     end)
 
 
-    it("should remove unique index", function()
+    it("should remove a unique index", function()
       db:create(
         test_db_name,
         {
@@ -1246,7 +1246,7 @@ describe("Tests DB.lua functions", function()
       assert.is_nil(cur:fetch({}, "a"))
     end)
 
-    it("should remove unique compound index", function()
+    it("should remove a unique compound index", function()
       db:create(
         test_db_name,
         {
@@ -1280,6 +1280,46 @@ describe("Tests DB.lua functions", function()
         FROM sqlite_master
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
+      assert.is_nil(cur:fetch({}, "a"))
+    end)
+
+    it("should remove a unique compound index but keep normal index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+
+            _index = {"city"}
+          }
+        }
+      );
+      -- simulate creating a unique index, as Mudlet no longer creates them.
+      local conn = db.__conn[test_db_name]
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON test ("name", "city")]])
+      conn:commit()
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+
+            _index = {"city"}
+          }
+        }
+      );
+      conn = db.__conn[test_db_name]
+      cur, _ = conn:execute([[
+        SELECT
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.are.equal([[CREATE INDEX idx_test_c_name_city ON test ("name", "city")]], cur:fetch({}, "a").sql);
       assert.is_nil(cur:fetch({}, "a"))
     end)
   end)

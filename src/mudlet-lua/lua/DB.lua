@@ -933,8 +933,8 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
   while row do
     cols = {}
     sql = normalize_sql(row.sql)
-    index_match  = sql:match("create%s+index%s+idx[%w_]+%s+on%s+[%w_]+%s%((.+)%)")
-    unique_match = sql:match("create%s+unique%s+index%s+idx[%w_]+%s+on%s+[%w_]+%s%(([%w_]+)%)")
+    index_match  = sql:match("create%s+index%s+idx[%w_]+%s+on%s+[%w_]+%s+%((.+)%)")
+    unique_match = sql:match("create%s+unique%s+index%s+idx[%w_]+%s+on%s+[%w_]+%s+%((.+)%)")
 
     -- matched unique index.  Mudlet doesn't make these anymore, so it should be removed.
     if unique_match then
