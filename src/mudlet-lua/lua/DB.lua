@@ -411,38 +411,38 @@ function db:_extract_table_constraints(sql)
   if not sql or sql == "" then
     return ""
   end
-  
+
   -- Normalize whitespace and case for consistent comparison
   local normalized = sql:lower()
   normalized = normalized:gsub("\n", " ")
   normalized = normalized:gsub("\r", " ")
   normalized = normalized:gsub("%s+", " ")
   normalized = normalized:gsub("^%s*(.-)%s*$", "%1")
-  
+
   -- Extract the part between the parentheses of CREATE TABLE
   local content = normalized:match("create%s+table%s+[%w_\"]+%s*%((.+)%)")
   if not content then
     return ""
   end
-  
+
   local constraints = {}
-  
+
   -- Find table-level UNIQUE constraints
   -- They look like: UNIQUE("col1") ON CONFLICT REPLACE or UNIQUE("col1", "col2") ON CONFLICT FAIL
   for constraint in content:gmatch('unique%s*%([^)]+%)%s+on%s+conflict%s+%w+') do
     table.insert(constraints, constraint)
   end
-  
+
   -- Find column-level UNIQUE constraints
   -- They look like: "col1" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT REPLACE
   -- We need to extract just the "UNIQUE ON CONFLICT X" part for comparison
   for constraint in content:gmatch('unique%s+on%s+conflict%s+%w+') do
     table.insert(constraints, constraint)
   end
-  
+
   -- Sort for consistent comparison
   table.sort(constraints)
-  
+
   return table.concat(constraints, "|")
 end
 
@@ -524,7 +524,7 @@ function db:_migrate(db_name, s_name, force)
   else
     -- At this point we know that the sheet already exists, but we are concerned if the current
     -- definition includes columns which may be added.
-    
+
     -- Check if the table-level constraints have changed (e.g., _violations option changed)
     -- by comparing only the UNIQUE constraint definitions, not the column list
     local expected_sql = db:_build_create_table_sql(schema, s_name)
@@ -532,27 +532,27 @@ function db:_migrate(db_name, s_name, force)
                            "WHERE type = 'table' AND name = '" .. s_name .. "'"
     local sql_cur, sql_err = conn:execute(get_actual_sql)
     local table_constraints_changed = false
-    
+
     if sql_cur and type(sql_cur) ~= "number" then
       local sql_row = sql_cur:fetch({}, "a")
       sql_cur:close()
-      
+
       if sql_row and sql_row.sql then
         local actual_sql = sql_row.sql
         local expected_constraints = db:_extract_table_constraints(expected_sql)
         local actual_constraints = db:_extract_table_constraints(actual_sql)
-        
+
         if expected_constraints ~= actual_constraints then
           table_constraints_changed = true
         end
       end
     end
-    
+
     -- If the table-level constraints have changed, we need to recreate the table
     if table_constraints_changed then
       -- Commit any pending transaction before table recreation
       conn:commit()
-      
+
       -- Check if we're deleting columns that contain data (unless force flag is set)
       local redundant_columns = {}
       for k, _ in pairs(current_columns) do
@@ -560,7 +560,7 @@ function db:_migrate(db_name, s_name, force)
           redundant_columns[#redundant_columns + 1] = k
         end
       end
-      
+
       if #redundant_columns > 0 and not force then
         -- Check if any of the redundant columns contain non-null data
         local not_blank = {}
@@ -568,22 +568,22 @@ function db:_migrate(db_name, s_name, force)
           local check_sql = string.format('SELECT COUNT(*) AS cnt FROM %s WHERE "%s" IS NOT NULL', s_name, col)
           local check_cur, check_err = conn:execute(check_sql)
           assert(check_cur, check_err)
-          
+
           if type(check_cur) ~= "number" then
             local check_row = check_cur:fetch({}, "a")
             check_cur:close()
-            
+
             if check_row and check_row.cnt and tonumber(check_row.cnt) > 0 then
               not_blank[#not_blank + 1] = col
             end
           end
         end
-        
+
         assert(not not_blank[1] or force,
                "db:_migrate halted due to data present in undefined columns: " .. table.concat(not_blank, ", ") ..
                "\nuse force option to drop anyway.")
       end
-      
+
       -- Build the list of columns to preserve (only columns that exist in both current and new schema)
       local fields = { "_row_id" }
       for k, _ in pairs(schema.columns) do
@@ -592,17 +592,17 @@ function db:_migrate(db_name, s_name, force)
         end
       end
       local fields_sql = table.concat(fields, ", ")
-      
+
       -- Get the current CREATE TABLE statement to use for the backup
       local get_create = "SELECT sql FROM sqlite_master " ..
                         "WHERE type = 'table' AND name = '" .. s_name .. "'"
       local create_cur, create_err = conn:execute(get_create)
       assert(create_cur, create_err)
-      
+
       if type(create_cur) ~= "number" then
         local row = create_cur:fetch({}, "a")
         create_cur:close()
-        
+
         -- Ensure we got a result
         if not row or not row.sql then
           error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
@@ -610,25 +610,25 @@ function db:_migrate(db_name, s_name, force)
 
         local original_count, og_count_err = count_rows(conn, s_name);
         assert(original_count, og_count_err);
-        
+
         -- Create temporary backup table, recreate main table, copy data
         local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
         create_tmp = create_tmp:gsub("TABLE", "TEMPORARY TABLE")
-        
+
         local sql_chunks = {}
         sql_chunks[#sql_chunks + 1] = create_tmp .. ";"
         sql_chunks[#sql_chunks + 1] = "INSERT INTO " .. s_name .. "_bak SELECT * FROM " .. s_name .. ";"
         sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
-        
+
         local new_create_sql = db:_build_create_table_sql(schema, s_name)
-        
+
         sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
         sql_chunks[#sql_chunks + 1] = string.format("INSERT INTO %s SELECT %s FROM %s_bak;", s_name, fields_sql, s_name)
         sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
-        
+
         for i, sql in ipairs(sql_chunks) do
           local ret, str = conn:execute(sql)
-          
+
           if not ret then
             conn:rollback()
             error("Migration failed at chunk " .. i .. ": " .. tostring(str))
@@ -652,7 +652,7 @@ function db:_migrate(db_name, s_name, force)
 
         -- Commit the migration transaction
         conn:commit()
-        
+
         -- After recreating the table with new constraints, add any new columns that didn't exist before
         for k, v in pairs(schema.columns) do
           if not current_columns[k] then
@@ -706,7 +706,7 @@ function db:_migrate(db_name, s_name, force)
           table.insert(redundant_columns, k)
         end
       end
-      
+
       --check if any of the redundant columns are non-empty
       local max_redundant = {}
       for i, v in ipairs(redundant_columns) do
@@ -721,10 +721,10 @@ function db:_migrate(db_name, s_name, force)
       for k, _ in pairs(blank_results) do
         table.insert(not_blank, k)
       end
-      
+
       -- don't drop non-empty columns unless force flag is provided
       assert(not not_blank[1] or force, "db:_migrate halted due to data present in undefined columns: "..table.concat(not_blank, ","))
-      
+
       local get_create = "SELECT sql FROM sqlite_master " ..
       "WHERE type = 'table' AND " ..
       "name = '" .. s_name .. "'"
@@ -734,12 +734,12 @@ function db:_migrate(db_name, s_name, force)
       if type(cur) ~= "number" then
         local row = cur:fetch({}, "a");
         cur:close()
-        
+
         -- Ensure we got a result
         if not row or not row.sql then
           error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
         end
-        
+
         local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
         local sql_chunks = {}
         local fields = { "_row_id" }
@@ -1747,14 +1747,14 @@ function db:close(db_name)
 
   if db.__conn[db_name]:close() then
     db.__conn[db_name] = nil
-    
+
     return true, ""
   else
-    
+
     return false, "database object is already closed."
   end
 
-  
+
 end
 
 
