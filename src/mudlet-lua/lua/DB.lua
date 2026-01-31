@@ -893,7 +893,8 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
       conn:execute(sql)
       row = cursor:fetch({}, "a")
     end
-    return true, nil;
+    cursor:close()
+    return true, nil
   end
 
 
@@ -958,8 +959,9 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
 
     row = cursor:fetch({}, "a")
   end
+  cursor:close()
 
-  return true, nil;
+  return true, nil
 end
 
 
