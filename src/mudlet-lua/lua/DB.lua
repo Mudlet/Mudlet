@@ -870,8 +870,8 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
       name,
       tbl_name,
       sql
-    FROM sqlite_master
-      WHERE type = 'index' AND tbl_name = '%s' AND sql is not NULL;
+    FROM sqlite_master a
+      WHERE type = 'index' AND tbl_name = '%s' AND a.sql is not NULL;
   ]]):format(s_name)
 
   local sql_drop_index = "DROP INDEX IF EXISTS %s"
