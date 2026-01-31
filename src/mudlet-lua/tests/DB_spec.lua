@@ -1156,6 +1156,7 @@ describe("Tests DB.lua functions", function()
           }
         }
       );
+      local conn = db.__conn[test_db_name]
       local cur, _ = conn:execute([[
         SELECT
           name,
@@ -1191,6 +1192,7 @@ describe("Tests DB.lua functions", function()
           }
         }
       );
+      local conn = db.__conn[test_db_name]
       local cur, _ = conn:execute([[
         SELECT
           name,
@@ -1214,6 +1216,7 @@ describe("Tests DB.lua functions", function()
         }
       );
       -- simulate creating a unique index, as Mudlet no longer creates them.
+      local conn = db.__conn[test_db_name]
       conn:execute([[CREATE UNIQUE INDEX idx_test_c_name ON test ("name")]])
       db:close();
 
@@ -1248,6 +1251,7 @@ describe("Tests DB.lua functions", function()
         }
       );
       -- simulate creating a unique index, as Mudlet no longer creates them.
+      local conn = db.__conn[test_db_name]
       conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON test ("name", "city")]])
       db:close();
 
