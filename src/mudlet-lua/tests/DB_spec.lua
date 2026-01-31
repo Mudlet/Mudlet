@@ -1165,7 +1165,8 @@ describe("Tests DB.lua functions", function()
         FROM sqlite_master
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
-      assert.is_nil(cur)
+      assert.is_nil(cur:fetch({}, "a"))
+      cur:close();
     end)
 
 
@@ -1201,7 +1202,8 @@ describe("Tests DB.lua functions", function()
         FROM sqlite_master
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
-      assert.is_nil(cur)
+      assert.is_nil(cur:fetch({}, "a"))
+      cur:close();
     end)
 
 
@@ -1237,7 +1239,8 @@ describe("Tests DB.lua functions", function()
         FROM sqlite_master
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
-      assert.is_nil(cur)
+      assert.is_nil(cur:fetch({}, "a"))
+      cur:close();
     end)
 
     it("should remove unique compound index", function()
@@ -1272,7 +1275,8 @@ describe("Tests DB.lua functions", function()
         FROM sqlite_master
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
-      assert.is_nil(cur)
+      assert.is_nil(cur:fetch({}, "a"))
+      cur:close();
     end)
   end)
 
