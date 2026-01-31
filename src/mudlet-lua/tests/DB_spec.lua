@@ -1122,6 +1122,156 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests, if hanging indexes are removed", function()
+    local test_db_name = "remove_indexes_test"
+    local test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
+
+
+    after_each(function()
+      db:close()
+      os.remove(test_db_file)
+    end)
+
+
+    it("should remove an index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+
+            _index = { "name" }
+          }
+        }
+      );
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      local cur, _ = conn:execute([[
+        SELECT
+          name,
+          tbl_name,
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.is_nil(cur)
+    end)
+
+
+    it("should remove compound index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+
+            _index = { {"name", "city" } }
+          }
+        }
+      );
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      local cur, _ = conn:execute([[
+        SELECT
+          name,
+          tbl_name,
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.is_nil(cur)
+    end)
+
+
+    it("should remove unique index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      -- simulate creating a unique index, as Mudlet no longer creates them.
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name ON test ("name")]])
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      local cur, _ = conn:execute([[
+        SELECT
+          name,
+          tbl_name,
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.is_nil(cur)
+    end)
+
+    it("should remove unique compound index", function()
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      -- simulate creating a unique index, as Mudlet no longer creates them.
+      conn:execute([[CREATE UNIQUE INDEX idx_test_c_name_city ON test ("name", "city")]])
+      db:close();
+
+      db:create(
+        test_db_name,
+        {
+          people = {
+            name = "",
+            city = "",
+          }
+        }
+      );
+      local cur, _ = conn:execute([[
+        SELECT
+          name,
+          tbl_name,
+          sql
+        FROM sqlite_master
+          WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
+      ]])
+      assert.is_nil(cur)
+    end)
+  end)
+
   describe("Tests that _violations changes trigger table migration", function()
     local test_db_name = "violations_migration_test"
     local test_db_file
