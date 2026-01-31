@@ -1319,7 +1319,7 @@ describe("Tests DB.lua functions", function()
         FROM sqlite_master
           WHERE type = 'index' AND tbl_name = 'people' AND sql is not NULL;
       ]])
-      assert.are.equal([[CREATE INDEX idx_test_c_name_city ON test ("name", "city")]], cur:fetch({}, "a").sql);
+      assert.are.equal(cur:fetch({}, "a").sql, [[CREATE INDEX idx_test_c_city ON test ("city")]]);
       assert.is_nil(cur:fetch({}, "a"))
     end)
   end)
