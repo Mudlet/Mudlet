@@ -35,6 +35,8 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
+            # Enable AddressSanitizer for PTB and testing builds, but not release
+            # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
           - os: ubuntu-22.04
             # Another try to use GCC12
@@ -76,7 +78,7 @@ jobs:
         modules: qt5compat qtmultimedia
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.2.2
+      uses: lukka/get-cmake@v4.2.3
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -253,7 +255,7 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && 'Address' || '' }}
+          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}

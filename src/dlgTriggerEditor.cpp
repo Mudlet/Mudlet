@@ -729,7 +729,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost(mpHost);
@@ -738,7 +737,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
     treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_actions->hide();
     treeWidget_actions->setHost(mpHost);
@@ -747,7 +745,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
     treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_timers->hide();
     treeWidget_timers->setHost(mpHost);
@@ -756,7 +753,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
     treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_variables->hide();
     treeWidget_variables->setHost(mpHost);
@@ -766,7 +762,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->header()->hide();
     treeWidget_variables->setRootIsDecorated(false);
     treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_keys->hide();
     treeWidget_keys->setHost(mpHost);
@@ -775,7 +770,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
     treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost(mpHost);
@@ -784,7 +778,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     QAction* viewTriggerAction = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
@@ -3660,7 +3653,8 @@ void dlgTriggerEditor::delete_alias()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TAlias* pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TAlias* pT = mpHost->getAliasUnit()->getAlias(itemId);
 
         if (pT) {
             if (!newSelection) {
@@ -3680,6 +3674,7 @@ void dlgTriggerEditor::delete_alias()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmAliasView, itemId);
             delete pT;
         }
     }
@@ -3800,14 +3795,13 @@ void dlgTriggerEditor::delete_action()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TAction* pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TAction* pT = mpHost->getActionUnit()->getAction(itemId);
 
         if (pT) {
-            // if active, deactivate.
             if (pT->isActive()) {
                 pT->deactivate();
             }
-            // set this and the parent TActions as changed so the toolbar is updated.
             pT->setDataChanged();
 
             if (!newSelection) {
@@ -3827,6 +3821,7 @@ void dlgTriggerEditor::delete_action()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmActionView, itemId);
             delete pT;
         }
     }
@@ -4025,7 +4020,8 @@ void dlgTriggerEditor::delete_script()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TScript* pT = mpHost->getScriptUnit()->getScript(itemId);
 
         if (pT) {
             if (!newSelection) {
@@ -4045,6 +4041,7 @@ void dlgTriggerEditor::delete_script()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmScriptView, itemId);
             delete pT;
         }
     }
@@ -4165,7 +4162,8 @@ void dlgTriggerEditor::delete_key()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TKey* pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TKey* pT = mpHost->getKeyUnit()->getKey(itemId);
 
         if (pT) {
             if (!newSelection) {
@@ -4185,6 +4183,7 @@ void dlgTriggerEditor::delete_key()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmKeysView, itemId);
             delete pT;
         }
     }
@@ -4310,7 +4309,8 @@ void dlgTriggerEditor::delete_trigger()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(itemId);
 
         if (pT) {
             if (!newSelection) {
@@ -4330,6 +4330,7 @@ void dlgTriggerEditor::delete_trigger()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmTriggerView, itemId);
             delete pT;
         }
     }
@@ -4450,7 +4451,8 @@ void dlgTriggerEditor::delete_timer()
     QTreeWidgetItem* newSelection = nullptr;
     for (QTreeWidgetItem* pItem : selectedItems) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TTimer* pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
+        const int itemId = pItem->data(0, Qt::UserRole).toInt();
+        TTimer* pT = mpHost->getTimerUnit()->getTimer(itemId);
 
         if (pT) {
             if (!newSelection) {
@@ -4470,6 +4472,7 @@ void dlgTriggerEditor::delete_timer()
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
             }
+            clearEditorState(EditorViewType::cmTimerView, itemId);
             delete pT;
         }
     }
@@ -8093,10 +8096,16 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current trigger before switching to the new one
+    // Only save previous item if switching to a different item
     if (pItem != mpCurrentTriggerItem) {
+        if (mpCurrentTriggerItem) {
+            saveEditorState(EditorViewType::cmTriggerView, mpCurrentTriggerItem->data(0, Qt::UserRole).toInt());
+        }
         saveTrigger();
     }
+
+    // Disable updates during document loading to prevent visual flicker
+    mpSourceEditorEdbee->setUpdatesEnabled(false);
 
     // Block property saves while loading the new item to prevent spurious undo entries
     mBlockPropertySave = true;
@@ -8245,6 +8254,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         checkForMoreThanOneTriggerItem();
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
+        restoreEditorState(EditorViewType::cmTriggerView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
@@ -8269,11 +8279,10 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
                 }
             }
         }
-
     } else {
-        // No details to show - as will be the case if the top item (ID = 0) is
-        // selected - so show the help message:
         clearTriggerForm();
+        // Re-enable updates since restoreEditorState won't be called
+        mpSourceEditorEdbee->setUpdatesEnabled(true);
     }
 
     // Unblock property saves now that item loading is complete
@@ -8288,10 +8297,16 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current alias before switching to the new one
+    // Only save previous item if switching to a different item
     if (pItem != mpCurrentAliasItem) {
+        if (mpCurrentAliasItem) {
+            saveEditorState(EditorViewType::cmAliasView, mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
+        }
         saveAlias();
     }
+
+    // Disable updates during document loading to prevent visual flicker
+    mpSourceEditorEdbee->setUpdatesEnabled(false);
 
     // Block property saves while loading the new item to prevent spurious undo entries
     mBlockPropertySave = true;
@@ -8320,6 +8335,7 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         mpAliasMainArea->label_idNumber->setText(QString::number(ID));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
+        restoreEditorState(EditorViewType::cmAliasView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
@@ -8349,6 +8365,8 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
         clearAliasForm();
+        // Re-enable updates since restoreEditorState won't be called
+        mpSourceEditorEdbee->setUpdatesEnabled(true);
     }
 
     // Unblock property saves now that item loading is complete
@@ -8363,10 +8381,16 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current key before switching to the new one
+    // Only save previous item if switching to a different item
     if (pItem != mpCurrentKeyItem) {
+        if (mpCurrentKeyItem) {
+            saveEditorState(EditorViewType::cmKeysView, mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
+        }
         saveKey();
     }
+
+    // Disable updates during document loading to prevent visual flicker
+    mpSourceEditorEdbee->setUpdatesEnabled(false);
 
     // Block property saves while loading the new item to prevent spurious undo entries
     mBlockPropertySave = true;
@@ -8394,6 +8418,7 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
         mpKeysMainArea->lineEdit_key_binding->setText(keyName);
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
+        restoreEditorState(EditorViewType::cmKeysView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
@@ -8419,9 +8444,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
             }
         }
     } else {
-        // No details to show - as will be the case if the top item (ID = 0) is
-        // selected - so show the help message:
         clearKeyForm();
+        // Re-enable updates since restoreEditorState won't be called
+        mpSourceEditorEdbee->setUpdatesEnabled(true);
     }
 
     // Unblock property saves now that item loading is complete
@@ -8724,10 +8749,16 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current action before switching to the new one
+    // Only save previous item if switching to a different item
     if (pItem != mpCurrentActionItem) {
+        if (mpCurrentActionItem) {
+            saveEditorState(EditorViewType::cmActionView, mpCurrentActionItem->data(0, Qt::UserRole).toInt());
+        }
         saveAction();
     }
+
+    // Disable updates during document loading to prevent visual flicker
+    mpSourceEditorEdbee->setUpdatesEnabled(false);
 
     // Block property saves while loading the new item to prevent spurious undo entries
     mBlockPropertySave = true;
@@ -8770,6 +8801,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         mpActionsMainArea->lineEdit_action_button_command_up->setText(pT->getCommandButtonUp());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
+        restoreEditorState(EditorViewType::cmActionView, ID);
 
         // location = 1 = location = bottom is no longer supported
         int location = pT->mLocation;
@@ -8855,6 +8887,8 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
     } else {
         // On root of treewidget_actions: - show help message instead
         clearActionForm();
+        // Re-enable updates since restoreEditorState won't be called
+        mpSourceEditorEdbee->setUpdatesEnabled(true);
     }
 
     mBlockPropertySave = false;
@@ -8905,10 +8939,16 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
 
-    // save the current script before switching to the new one
+    // Only save previous item if switching to a different item
     if (pItem != mpCurrentScriptItem) {
+        if (mpCurrentScriptItem) {
+            saveEditorState(EditorViewType::cmScriptView, mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
+        }
         saveScript();
     }
+
+    // Disable updates during document loading to prevent visual flicker
+    mpSourceEditorEdbee->setUpdatesEnabled(false);
 
     // Block property saves while loading the new item to prevent spurious undo entries
     mBlockPropertySave = true;
@@ -8933,6 +8973,7 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
         }
         const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
+        restoreEditorState(EditorViewType::cmScriptView, ID);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
         mpScriptsMainArea->label_idNumber->setText(QString::number(ID));
@@ -8968,6 +9009,8 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
         clearScriptForm();
+        // Re-enable updates since restoreEditorState won't be called
+        mpSourceEditorEdbee->setUpdatesEnabled(true);
     }
 
     mBlockPropertySave = false;
@@ -8981,10 +9024,16 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    // save the current timer before switching to the new one
+    // Only save previous item if switching to a different item
     if (pItem != mpCurrentTimerItem) {
+        if (mpCurrentTimerItem) {
+            saveEditorState(EditorViewType::cmTimerView, mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
+        }
         saveTimer();
     }
+
+    // Disable updates during document loading to prevent visual flicker
+    mpSourceEditorEdbee->setUpdatesEnabled(false);
 
     // Block property saves while loading the new item to prevent spurious undo entries
     mBlockPropertySave = true;
@@ -9018,6 +9067,7 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, time.msec()));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
+        restoreEditorState(EditorViewType::cmTimerView, ID);
 
         if (!pT->state()) {
             showError(pT->getError());
@@ -9043,9 +9093,9 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
             }
         }
     } else {
-        // No details to show - as will be the case if the top item (ID = 0) is
-        // selected - so show the help message:
         clearTimerForm();
+        // Re-enable updates since restoreEditorState won't be called
+        mpSourceEditorEdbee->setUpdatesEnabled(true);
     }
 
     mBlockPropertySave = false;
@@ -10034,28 +10084,46 @@ void dlgTriggerEditor::saveOpenChanges()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
+        if (mpCurrentTriggerItem) {
+            saveEditorState(EditorViewType::cmTriggerView, mpCurrentTriggerItem->data(0, Qt::UserRole).toInt());
+        }
         saveTrigger();
         break;
     case EditorViewType::cmTimerView:
+        if (mpCurrentTimerItem) {
+            saveEditorState(EditorViewType::cmTimerView, mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
+        }
         saveTimer();
         break;
     case EditorViewType::cmAliasView:
+        if (mpCurrentAliasItem) {
+            saveEditorState(EditorViewType::cmAliasView, mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
+        }
         saveAlias();
         break;
     case EditorViewType::cmScriptView:
+        if (mpCurrentScriptItem) {
+            saveEditorState(EditorViewType::cmScriptView, mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
+        }
         saveScript();
         break;
     case EditorViewType::cmActionView:
+        if (mpCurrentActionItem) {
+            saveEditorState(EditorViewType::cmActionView, mpCurrentActionItem->data(0, Qt::UserRole).toInt());
+        }
         saveAction();
         break;
     case EditorViewType::cmKeysView:
+        if (mpCurrentKeyItem) {
+            saveEditorState(EditorViewType::cmKeysView, mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
+        }
         saveKey();
         break;
     case EditorViewType::cmVarsView:
         saveVar();
         break;
     case EditorViewType::cmUnknownView:
-        return; // Silently ignore this case
+        return;
     }
 }
 
@@ -10133,7 +10201,6 @@ void dlgTriggerEditor::enterEvent(TEnterEvent* event)
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
     Q_UNUSED(pE)
-    qDebug() << "focusInEvent fired!!";
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -10213,6 +10280,34 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     mpSourceEditorEdbee->setEnabled(true);
 
     if (mCurrentView != view) {
+        // Clear the current item pointer for the old view so that when we return,
+        // the item will be properly reloaded (not considered "same")
+        switch (mCurrentView) {
+        case EditorViewType::cmTriggerView:
+            mpCurrentTriggerItem = nullptr;
+            break;
+        case EditorViewType::cmTimerView:
+            mpCurrentTimerItem = nullptr;
+            break;
+        case EditorViewType::cmAliasView:
+            mpCurrentAliasItem = nullptr;
+            break;
+        case EditorViewType::cmScriptView:
+            mpCurrentScriptItem = nullptr;
+            break;
+        case EditorViewType::cmActionView:
+            mpCurrentActionItem = nullptr;
+            break;
+        case EditorViewType::cmKeysView:
+            mpCurrentKeyItem = nullptr;
+            break;
+        case EditorViewType::cmVarsView:
+        case EditorViewType::cmUnknownView:
+            break;
+        }
+        // Disable updates during view change to prevent visual flicker
+        // (selection handler's restoreEditorState will re-enable)
+        mpSourceEditorEdbee->setUpdatesEnabled(false);
         clearDocument(mpSourceEditorEdbee); // Change View
     }
     mCurrentView = view;
@@ -10345,6 +10440,17 @@ void dlgTriggerEditor::changeView(EditorViewType view)
 
     // Update undo/redo button states when changing views
     slot_updateUndoRedoButtonStates();
+
+    // If we disabled updates during view change, ensure they get re-enabled
+    // (selection handlers will also re-enable via restoreEditorState, but this
+    // is a fallback in case no item is selected in the new view)
+    if (mpSourceEditorEdbee && !mpSourceEditorEdbee->updatesEnabled()) {
+        QTimer::singleShot(0, this, [this]() {
+            if (mpSourceEditorEdbee) {
+                mpSourceEditorEdbee->setUpdatesEnabled(true);
+            }
+        });
+    }
 }
 
 void dlgTriggerEditor::slot_showTimers()
@@ -13190,6 +13296,90 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     mpSourceEditorEdbeeDocument->setText(initialText);
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
+}
+
+void dlgTriggerEditor::saveEditorState(EditorViewType viewType, int itemId)
+{
+    if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
+        return;
+    }
+
+    EditorState state;
+
+    if (auto* controller = mpSourceEditorEdbee->controller(); controller && controller->textSelection()) {
+        const int caretOffset = controller->textSelection()->range(0).anchor();
+        state.caretLine = mpSourceEditorEdbeeDocument->lineFromOffset(caretOffset);
+        const int lineStart = mpSourceEditorEdbeeDocument->offsetFromLine(state.caretLine);
+        state.caretColumn = caretOffset - lineStart;
+    }
+
+    if (auto* scrollBar = mpSourceEditorEdbee->verticalScrollBar()) {
+        state.verticalScrollPos = scrollBar->value();
+    }
+    if (auto* scrollBar = mpSourceEditorEdbee->horizontalScrollBar()) {
+        state.horizontalScrollPos = scrollBar->value();
+    }
+
+    mEditorStates[viewType][itemId] = state;
+}
+
+// Defers restoration using QTimer::singleShot to ensure the document and scroll bars
+// are fully initialized after clearDocument(). Also re-enables widget updates that were
+// disabled before document loading to prevent visual flicker.
+void dlgTriggerEditor::restoreEditorState(EditorViewType viewType, int itemId)
+{
+    if (!mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument) {
+        if (mpSourceEditorEdbee) {
+            mpSourceEditorEdbee->setUpdatesEnabled(true);
+        }
+        return;
+    }
+
+    const bool hasState = mEditorStates.contains(viewType) && mEditorStates[viewType].contains(itemId);
+    const EditorState state = hasState ? mEditorStates[viewType][itemId] : EditorState{};
+
+    QTimer::singleShot(0, this, [this, state, hasState]() {
+        if (!mpSourceEditorEdbee) {
+            return;
+        }
+
+        if (!mpSourceEditorEdbeeDocument) {
+            mpSourceEditorEdbee->setUpdatesEnabled(true);
+            return;
+        }
+
+        if (hasState) {
+            auto* vScrollBar = mpSourceEditorEdbee->verticalScrollBar();
+            auto* hScrollBar = mpSourceEditorEdbee->horizontalScrollBar();
+
+            if (auto* controller = mpSourceEditorEdbee->controller()) {
+                const auto lineCount = mpSourceEditorEdbeeDocument->lineCount();
+                const auto maxLine = lineCount > 0 ? lineCount - 1 : 0;
+                const auto line = std::min(static_cast<decltype(maxLine)>(state.caretLine), maxLine);
+                const auto lineLength = mpSourceEditorEdbeeDocument->lineLength(line);
+                const auto column = std::min(static_cast<decltype(lineLength)>(state.caretColumn), lineLength);
+
+                controller->moveCaretTo(line, column, false);
+            }
+
+            if (vScrollBar) {
+                vScrollBar->setValue(state.verticalScrollPos);
+            }
+            if (hScrollBar) {
+                hScrollBar->setValue(state.horizontalScrollPos);
+            }
+        }
+
+        // Re-enable updates now that scroll position is restored (or immediately if no state)
+        mpSourceEditorEdbee->setUpdatesEnabled(true);
+    });
+}
+
+void dlgTriggerEditor::clearEditorState(EditorViewType viewType, int itemId)
+{
+    if (mEditorStates.contains(viewType)) {
+        mEditorStates[viewType].remove(itemId);
+    }
 }
 
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)

@@ -1306,6 +1306,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->getWeight();
         ofs << pR->name;
         ofs << pR->isLocked;
+        if (mSaveVersion >= 22) {
+            ofs << pR->hidden;
+        }
         if (mSaveVersion >= 21) {
             ofs << pR->getSpecialExits();
         } else {
@@ -1848,6 +1851,16 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         }
 
         restore16ColorSet();
+
+        // Recalculate area bounds to fix any corrupted yminForZ/ymaxForZ values
+        // from older map files (bug where first room's Y wasn't negated)
+        const QList<int> areaIds = mpRoomDB->getAreaIDList();
+        for (int areaId : areaIds) {
+            TArea* pA = mpRoomDB->getArea(areaId);
+            if (pA) {
+                pA->calcSpan();
+            }
+        }
 
         const QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
                                  "consistency details...")

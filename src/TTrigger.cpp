@@ -925,6 +925,13 @@ void TTrigger::processExactMatch(const QString& line, int patternNumber, int pos
 // posOffset: position in the line to start matching from; used by child triggers
 bool TTrigger::match(char* haystackC, const QString& haystack, int line, int posOffset)
 {
+    // Guard against re-entrancy: cleanup may have deleted this trigger while
+    // match() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TTrigger::match() called on destroyed trigger - ID:" << mID << "Name:" << mName;
+        return false;
+    }
+
     bool ret = false;
     if (isActive()) {
         if (mIsLineTrigger) {

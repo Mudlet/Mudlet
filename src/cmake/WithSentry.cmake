@@ -25,10 +25,6 @@ set(SENTRY_COMMON_ARGS
     -G Ninja
 )
 
-if(UNIX AND NOT APPLE)
-    list(APPEND SENTRY_CMAKE_ARGS -DSENTRY_TRANSPORT=none)
-endif()
-
 if(APPLE)
     execute_process(
         COMMAND xcrun --sdk macosx --show-sdk-path
