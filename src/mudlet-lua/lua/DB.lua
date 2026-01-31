@@ -456,8 +456,8 @@ end
 
 local function count_rows(conn, s_name)
   local count_cursor, count_err = conn:execute("SELECT COUNT(*) as cnt FROM " .. s_name);
-  if count_err then
-    return count_cursor, count_err
+  if count_cursor == nil then
+    return nil, count_err
   end
 
   local count = count_cursor:fetch({}, "a").cnt;
@@ -863,7 +863,7 @@ end
 
 -- Checks for any hanging indexes for a sql table and conditionally removes them.
 function db:_remove_hanging_indexes(conn, s_name, schema)
-  local cursor, err;
+  local cur, err;
 
   local sql = ([[
     SELECT
@@ -877,13 +877,13 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
   local sql_drop_index = "DROP INDEX IF EXISTS %s"
 
   db:echo_sql(sql)
-  cursor, err = conn:execute(sql)
-  if err then
+  cur, err = conn:execute(sql)
+  if cur == nil then
     return nil, err
   end
 
 
-  local row = cursor:fetch({}, "a")
+  local row = cur:fetch({}, "a")
 
   -- No indexes should exist for the sheet, should remove all indexes for the table.
   if not schema.options._index then
@@ -891,9 +891,9 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
       sql = sql_drop_index:format(row.name)
       db:echo_sql(sql)
       conn:execute(sql)
-      row = cursor:fetch({}, "a")
+      row = cur:fetch({}, "a")
     end
-    cursor:close()
+    cur:close()
     return true, nil
   end
 
@@ -957,9 +957,9 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
 
     end
 
-    row = cursor:fetch({}, "a")
+    row = cur:fetch({}, "a")
   end
-  cursor:close()
+  cur:close()
 
   return true, nil
 end
