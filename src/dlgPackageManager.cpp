@@ -455,9 +455,14 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
             if (--(*remainingDownloads.get()) == 0) {
                 for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
+                    const QString& packageName = it.key();
                     const QString& filePath = it.value();
 
                     if (mpHost) {
+                        // Uninstall existing package first if this is an update
+                        if (mpHost->mInstalledPackages.contains(packageName)) {
+                            mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
+                        }
                         mpHost->installPackage(filePath, enums::PackageModuleType::Package);
                     }
                     QFile::remove(filePath);
@@ -796,6 +801,8 @@ void dlgPackageManager::slot_toggleInstallRepoButton()
                 //: Message on button in package manager for updates view when no packages are selected
                 pushButton_installRepo->setText(tr("Update"));
             }
+            //: Tooltip for button in package manager when in Updates view
+            pushButton_installRepo->setToolTip(tr("Update selected packages"));
         } else {
             if (selectionCount) {
                 //: Message on button in package manager to install one or more (%n is the count of) selected package(s).
@@ -804,11 +811,15 @@ void dlgPackageManager::slot_toggleInstallRepoButton()
                 //: Message on button in package manager initially and when there is no packages to install
                 pushButton_installRepo->setText(tr("Install"));
             }
+            //: Tooltip for button in package manager when in Explore view
+            pushButton_installRepo->setToolTip(tr("Install package from repository"));
         }
     } else {
         //: Message on button in package manager initially and when there is no packages to install
         pushButton_installRepo->setText(tr("Install"));
         pushButton_installRepo->setEnabled(false);
+        //: Tooltip for button in package manager when in Explore view
+        pushButton_installRepo->setToolTip(tr("Install package from repository"));
     }
 }
 
