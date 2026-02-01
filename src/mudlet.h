@@ -234,6 +234,9 @@ public:
     bool isGoingDown() { return mIsGoingDown; }
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
+    // telnet:// URL support - finds existing profile by server or creates new one
+    QString findProfileByServer(const QString& host, int port) const;
+    bool connectToTelnetUrl(const QString& urlString);
     bool loadWindowLayout();
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool migratePasswordsToProfileStorage();

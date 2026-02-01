@@ -59,6 +59,7 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "TelnetUrlHandler.h"
 #include "TMediaData.h"
 #include "VarUnit.h"
 
@@ -5417,6 +5418,103 @@ void mudlet::showChangelogIfUpdated()
     pUpdater->showChangelog();
 }
 #endif // INCLUDE_UPDATER
+
+// Searches all existing profiles for one that matches the given server host and port.
+// Returns the profile name if found, empty string otherwise.
+QString mudlet::findProfileByServer(const QString& host, int port) const
+{
+    const QStringList profileList = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time);
+
+    for (const QString& profileName : profileList) {
+        // Read profile URL
+        const QString urlPath = getMudletPath(enums::profileDataItemPath, profileName, qsl("url"));
+        QFile urlFile(urlPath);
+        QString profileUrl;
+        if (urlFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            profileUrl = QString::fromUtf8(urlFile.readAll()).trimmed();
+            urlFile.close();
+        }
+
+        // Read profile port
+        const QString portPath = getMudletPath(enums::profileDataItemPath, profileName, qsl("port"));
+        QFile portFile(portPath);
+        int profilePort = 23;
+        if (portFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            profilePort = QString::fromUtf8(portFile.readAll()).trimmed().toInt();
+            portFile.close();
+        }
+
+        // Compare host (case-insensitive) and port
+        if (QString::compare(profileUrl, host, Qt::CaseInsensitive) == 0 && profilePort == port) {
+            return profileName;
+        }
+    }
+
+    return QString();
+}
+
+// Handles a telnet:// URL by finding an existing profile or creating a new one.
+// Returns true if the connection was initiated successfully.
+bool mudlet::connectToTelnetUrl(const QString& urlString)
+{
+    const TelnetUrlHandler::TelnetUrl telnetUrl = TelnetUrlHandler::parse(urlString);
+    if (!telnetUrl.isValid) {
+        qWarning() << "mudlet::connectToTelnetUrl() - Invalid telnet URL:" << urlString;
+        return false;
+    }
+
+    qDebug() << "mudlet::connectToTelnetUrl() - Connecting to" << telnetUrl.host << ":" << telnetUrl.port;
+
+    // First, check if we already have a profile for this server
+    QString existingProfile = findProfileByServer(telnetUrl.host, telnetUrl.port);
+
+    if (!existingProfile.isEmpty()) {
+        // Found an existing profile - load and connect
+        qDebug() << "mudlet::connectToTelnetUrl() - Found existing profile:" << existingProfile;
+        Host* pHost = loadProfile(existingProfile, true);
+        return pHost != nullptr;
+    }
+
+    // No existing profile - create a new one
+    // Use the host name as the profile name, sanitized for filesystem use
+    QString profileName = telnetUrl.host;
+    // Append port if non-standard
+    if (telnetUrl.port != 23) {
+        profileName = qsl("%1_%2").arg(telnetUrl.host).arg(telnetUrl.port);
+    }
+
+    // Ensure the profile name is unique
+    const QStringList existingProfiles = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    QString uniqueProfileName = profileName;
+    int suffix = 1;
+    while (existingProfiles.contains(uniqueProfileName, Qt::CaseInsensitive)) {
+        uniqueProfileName = qsl("%1_%2").arg(profileName).arg(suffix++);
+    }
+    profileName = uniqueProfileName;
+
+    qDebug() << "mudlet::connectToTelnetUrl() - Creating new profile:" << profileName;
+
+    // Create the profile directory
+    const QString profilePath = getMudletPath(enums::profileHomePath, profileName);
+    QDir().mkpath(profilePath);
+
+    // Write the connection data
+    writeProfileData(profileName, qsl("url"), telnetUrl.host);
+    writeProfileData(profileName, qsl("port"), QString::number(telnetUrl.port));
+
+    // Load and connect to the new profile
+    Host* pHost = loadProfile(profileName, true);
+    if (pHost) {
+        // Set the connection details on the host object
+        pHost->setUrl(telnetUrl.host);
+        pHost->setPort(telnetUrl.port);
+        // Initiate connection
+        pHost->mTelnet.connectIt(telnetUrl.host, telnetUrl.port);
+        return true;
+    }
+
+    return false;
+}
 
 Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, const QString& saveFileName)
 {

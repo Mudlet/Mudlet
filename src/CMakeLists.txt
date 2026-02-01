@@ -77,6 +77,7 @@ set(mudlet_SRCS
     EAction.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
+    TelnetUrlHandler.cpp
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
@@ -292,6 +293,7 @@ set(mudlet_HDRS
     EAction.h
     exitstreewidget.h
     FileOpenHandler.h
+    TelnetUrlHandler.h
     FontManager.h
     GifTracker.h
     GMCPAuthenticator.h
@@ -772,6 +774,7 @@ if(APPLE)
     MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${APP_BUILD}
     MACOSX_BUNDLE_GUI_IDENTIFIER org.mudlet.mudlet
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${APP_VERSION}
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in
   )
 
   if(${APP_BUILD} MATCHES "-ptb.+")

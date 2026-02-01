@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2024-2024 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2024-2025 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2025 by Mudlet makers - mudlet.org                      *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,6 +21,7 @@
 #include "FileOpenHandler.h"
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
+#include "TelnetUrlHandler.h"
 
 FileOpenHandler::FileOpenHandler(QObject* parent)
 : QObject(parent)
@@ -35,6 +37,16 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
             qWarning() << "FileOpenHandler::eventFilter() - mudlet instance not available, cannot process file open event";
             return false;
         }
+
+        // Check if this is a telnet:// URL
+        const QUrl url = openEvent->url();
+        if (url.isValid() && url.scheme().compare(QLatin1String("telnet"), Qt::CaseInsensitive) == 0) {
+            qDebug() << "FileOpenHandler::eventFilter() - Received telnet URL:" << url.toString();
+            mudlet::self()->connectToTelnetUrl(url.toString());
+            return true;
+        }
+
+        // Handle as regular file/package
         MudletInstanceCoordinator* instanceCoordinator = mudlet::self()->getInstanceCoordinator();
         if (!instanceCoordinator) {
             qWarning() << "FileOpenHandler::eventFilter() - Instance coordinator not available, cannot process file open event";
