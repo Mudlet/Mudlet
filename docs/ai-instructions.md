@@ -198,8 +198,8 @@ cd /path/to/Mudlet/build
 cmake ../../Mudlet -DCMAKE_PREFIX_PATH=`brew --prefix qt6`
 make -j `sysctl -n hw.ncpu`
 
-# Run
-cd /path/to/Mudlet/build && ./src/mudlet.app/Contents/MacOS/mudlet
+# Run Mudlet - use absolute path to avoid directory confusion
+/path/to/Mudlet/build/src/mudlet.app/Contents/MacOS/mudlet
 ```
 
 ### Building on Linux
