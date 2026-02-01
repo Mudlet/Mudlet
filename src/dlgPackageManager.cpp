@@ -794,21 +794,21 @@ void dlgPackageManager::slot_toggleInstallRepoButton()
         pushButton_installRepo->setEnabled(selectionCount);
 
         if (mCurrentView == NavigationView::Updates) {
-            if (selectionCount) {
-                //: Message on button in package manager to update one or more (%n is the count of) selected package(s).
+            if (selectionCount > 1) {
+                //: Message on button in package manager to update multiple (%n is the count of) selected packages.
                 pushButton_installRepo->setText(tr("Update (%n)", nullptr, selectionCount));
             } else {
-                //: Message on button in package manager for updates view when no packages are selected
+                //: Message on button in package manager for updates view when zero or one package is selected
                 pushButton_installRepo->setText(tr("Update"));
             }
             //: Tooltip for button in package manager when in Updates view
             pushButton_installRepo->setToolTip(tr("Update selected packages"));
         } else {
-            if (selectionCount) {
-                //: Message on button in package manager to install one or more (%n is the count of) selected package(s).
+            if (selectionCount > 1) {
+                //: Message on button in package manager to install multiple (%n is the count of) selected packages.
                 pushButton_installRepo->setText(tr("Install (%n)", nullptr, selectionCount));
             } else {
-                //: Message on button in package manager initially and when there is no packages to install
+                //: Message on button in package manager initially and when zero or one package is selected
                 pushButton_installRepo->setText(tr("Install"));
             }
             //: Tooltip for button in package manager when in Explore view
