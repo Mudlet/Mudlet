@@ -829,11 +829,11 @@ void dlgPackageManager::slot_toggleRemoveButton()
         const QList selection = packageList->selectedItems();
         const int selectionCount = selection.size();
         pushButton_remove->setEnabled(selectionCount);
-        if (selectionCount) {
-            //: Message on button in package manager to remove one or more (%n is the count of) selected package(s).
+        if (selectionCount > 1) {
+            //: Message on button in package manager to remove multiple (%n is the count of) selected packages.
             pushButton_remove->setText(tr("Remove (%n)", nullptr, selectionCount));
         } else {
-            //: Message on button in package manager initially and when there is no packages to remove
+            //: Message on button in package manager initially and when zero or one package is selected
             pushButton_remove->setText(tr("Remove"));
         }
     } else {
