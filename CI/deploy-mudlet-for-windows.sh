@@ -254,7 +254,7 @@ else
     NAME_SUFFIX='_64_-PublicTestBuild'
     INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet_ptb.ico")
     ID='Mudlet_64_-PublicTestBuild'
-    TITLE='Mudlet x64 (Public Test Build)'
+    TITLE='Mudlet (Public Test Build)'
     LOADING_GIF="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/splash-installing-ptb-2x.png")"
     # Because the packaging tools use "Semantic Versioning" it makes sense
     # use the date in a number year-first form rather than the SHA1 as
