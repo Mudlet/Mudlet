@@ -567,17 +567,18 @@ local errorLogged = false
 function logTestError()
   if errorLogged then return end
 
-  if getOS() == "linux" then
+  local os_name = getOS()
+  if os_name == "linux" or os_name == "mac" then
     file = io.open("/tmp/busted-tests-failed", "w")
     file:write("Lua busted tests failed")
     file:close()
-  elseif getOS() == "windows" then
+  elseif os_name == "windows" then
     temp_directory = os.getenv("TEMP")
     file = io.open(temp_directory.."\\busted-tests-failed", "w")
     file:write("Lua busted tests failed")
     file:close()
   else
-    ioprint("Tests failed, but did not know how to log the error for "..getOS())
+    ioprint("Tests failed, but did not know how to log the error for "..os_name)
   end
   errorLogged = true
 end</script>
