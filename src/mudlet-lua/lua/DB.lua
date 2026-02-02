@@ -921,7 +921,7 @@ function db:fetch_sql(sheet, sql)
     local row = cur:fetch({}, "a")
 
     while row do
-      results[#results + 1] = db:_coerce_sheet(columns, sheet, row)
+      results[#results + 1] = db:_coerce_sheet(sheet, row, columns)
       row = cur:fetch({}, "a")
     end
     cur:close()
@@ -1358,8 +1358,9 @@ end
 -- After a table so retrieved from the database, this function coerces values to
 -- their proper types. Specifically, numbers and datetimes become the proper
 -- types.
-function db:_coerce_sheet(columns, sheet, tbl)
+function db:_coerce_sheet(sheet, tbl, columns)
   if tbl then
+    columns = columns or table.keys(tbl)
     tbl._row_id = tonumber(tbl._row_id)
 
     for _, k in pairs(columns) do
