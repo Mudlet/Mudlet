@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024-2026 by Stephen Lyons  *
+ *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024-2025 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -41,7 +41,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 {
     setupUi(this);
 
-    QImage splashImage = mudlet::getSplashScreen(mudlet::self()->releaseVersion, mudlet::self()->publicTestVersion);
+    QImage splashImage = mudlet::self()->getSplashScreen();
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
@@ -86,7 +86,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2026");
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2025");
         QFont font(qsl("Bitstream Vera Serif"), 16, 75);
         font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
@@ -922,12 +922,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                     "<a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a></h2>"
                                     "<h3>Copyright © 2019 Egor-Skriptunoff</h3>"));
 
-#if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
-    QString SentryHeader(tr("<h2><u>Sentry Native - Crash reporting SDK</u></h2>"
-                            "<h3>Copyright © 2019 Sentry (https://sentry.io) and individual contributors.<br>"
-                            "All rights reserved.</h3>"));
-#endif
-
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(qsl("<html>%1<body>%2<hr>")
@@ -1028,12 +1022,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(Utf8_filenamesHeader,                   // 41 - utf8_filename header - translatable
                                        MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
 
-#if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%1%2")
-                                  .arg(SentryHeader,                           // Sentry header - translatable
-                                       MIT_Body));                             // Sentry body MIT - not translatable
-#endif
-
     QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
                                "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
                                "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
@@ -1121,140 +1109,32 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 
 QString dlgAboutDialog::createBuildInfo() const
 {
+    if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
+        return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
+                   "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
+                   "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
+                   "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
+                   "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
+                   "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
+                   "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
+                   "</table>")
+                .arg(tr("Technical information:"),  // %1
+                     tr("Version"),                 // %2
+                     mudlet::self()->scmVersion,    // %3
+                     tr("OS"),                      // %4
+                     QSysInfo::prettyProductName(), // %5
 #if defined(Q_OS_WINDOWS)
-    // The build environment is for Windows one - which could be run
-    // native on a 32-bit or 64-bit CPU or inside the WOW64 sub-system on a
-    // 64-bit one:
-
-    auto hProcess = GetCurrentProcess();
-    BOOL value = false;
-    std::optional<bool> isWow64Process;
-    auto result = IsWow64Process(hProcess, &value); // hProcess is a "HANDLE"
-    if (!result) {
-        // Failed to work - so there is no value to assign to isWow64Process:
-        qWarning().nospace().noquote() << "dlgAboutDialog::createBuildInfo() WARNING - IsWow64Process(...) failed, WOW64 status unknown.";
-    } else {
-        isWow64Process = static_cast<bool>(value);
-    }
-#if defined(Q_OS_WIN64)
-    const bool is64BitBuild = true;
+                     /*: In the past when building for Windows we used to
+                      * support builds on both 32 and 64 bits and needed to
+                      * show which - but now we only have 64-bit builds,
+                      * but keep the text the same as used in the past for
+                      * that.
+                      */
+                     tr("CPU (64-bits)"), // %6
 #else
-    const bool is64BitBuild = false;
-#endif
-    const QString upgradeTo64Bits = (isWow64Process.has_value() && isWow64Process.value())
-                                            ? qsl("<tr><td colspan=\"2\" style=\"padding-right: 10px; padding-top: 10px;\"><b>%1</b></td></tr>\n")
-                                                      .arg(mudlet::self()->releaseVersion
-                                                                   //: This text is shown on 32-Bit builds of Mudlet of release builds only when run on 64-Bit Windows
-                                                                   ? tr("You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. "
-                                                                        "You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet's website).")
-                                                                   //: This text is shown on 32-Bit builds of Mudlet of all but release builds when run on 64-Bit Windows
-                                                                   : tr("This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows."))
-                                            : QString();
-
-    if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
-        return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-                   "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
-                   "%12"
-                   "</table>")
-                .arg(tr("Technical information:"),  // %1
-                     tr("Version"),                 // %2
-                     mudlet::self()->scmVersion,    // %3
-                     tr("OS"),                      // %4
-                     QSysInfo::prettyProductName(), // %5
-                     /*: This is shown for 32-Bit Windows builds when run on a
-                      *64-Bit OS. \"WoW64\" stands for WindowOnWindows64.
-                      */
-                     isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
-                                                                          /*: This is shown for 32-Bit or 64-Bit Windows builds when
-                      *run on a Windows OS of the same bitness. It is the
-                      *opposite case to that when \"WoW64\" is included - in
-                      *those cases a 32-Bit application is run on 64-Bit
-                      *hardware via an extra WindowOnWindows64 software layer.
-                      */
-                                                                          : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
-                                                /*: This is shown for 32-Bit or 64-Bit Windows builds if
-                      *the Windows API call to detect whether the WoW64 system
-                      *is in use fails to work.
-                      */
-                                                : tr("CPU"), // %6
-                     QSysInfo::currentCpuArchitecture(),     // %7
-                     /*: This is shown when the Qt version used at run-time
-                      *is different to that used during compilation - it not
-                      *the usual case.
-                      */
-                     tr("Qt version (compilation)"), // %8
-                     QLatin1String(QT_VERSION_STR))  // %9
-                                                     /*: This is shown when the Qt version used at run-time
-                      *is different to that used during compilation - it not
-                      *the usual case.
-                      */
-                .arg(tr("Qt version (run-time)"),    // %10
-                     qVersion(),                     // %11
-                     upgradeTo64Bits);               // %12
-    }
-
-    // Else they are the same:
-    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-               "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
-               "%10"
-               "</table>")
-            .arg(tr("Technical information:"),  // %1
-                 tr("Version"),                 // %2
-                 mudlet::self()->scmVersion,    // %3
-                 tr("OS"),                      // %4
-                 QSysInfo::prettyProductName(), // %5
-                 /*: This is shown for 32-Bit Windows builds when run on a
-                  *64-Bit OS. \"WoW64\" stands for WindowOnWindows64.
-                  */
-                 isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
-                                                                      /*: This is shown for 32-Bit or 64-Bit Windows builds when
-                  *a Windows OS of the same size. It is the opposite case
-                  *to that when \"WoW64\" is included - in those cases a
-                  *32-Bit application is run on 64-Bit hardware via an
-                  *extra WindowOnWindows64 software layer.
-                  */
-                                                                      : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
-                                            /*: This is shown when something has gone wrong and it is not
-                  *possible to correctly determine whether there is an extra
-                  *software layer being used to run a 32-Bit Windows build
-                  *on 64-Bit hardware/OS.
-                  */
-                                            : tr("CPU"), // %6
-                 QSysInfo::currentCpuArchitecture(),     // %7
-                 /*: This is shown when the same Qt version is used at run-time
-                  *as was used during compilation - it is the usual case.
-                  */
-                 tr("Qt version"),              // %8
-                 QLatin1String(QT_VERSION_STR), // %9
-                 upgradeTo64Bits);              // %10
-#else
-
-    // Anything else
-    if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
-        return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-                   "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
-                   "</table>")
-                .arg(tr("Technical information:"),  // %1
-                     tr("Version"),                 // %2
-                     mudlet::self()->scmVersion,    // %3
-                     tr("OS"),                      // %4
-                     QSysInfo::prettyProductName(), // %5
                      //: This is shown for all other OSes than Windows.
-                     tr("CPU"),                          // %6
+                     tr("CPU"), // %6
+#endif
                      QSysInfo::currentCpuArchitecture(), // %7
                      /*: This is shown when the Qt version used at run-time
                       *is different to that used during compilation - it not
@@ -1283,13 +1163,22 @@ QString dlgAboutDialog::createBuildInfo() const
                  mudlet::self()->scmVersion,    // %3
                  tr("OS"),                      // %4
                  QSysInfo::prettyProductName(), // %5
+#if defined(Q_OS_WINDOWS)
+                 /*: In the past when building for Windows we used to
+                  * support builds on both 32 and 64 bits and needed to
+                  * show which - but now we only have 64-bit builds,
+                  * but keep the text the same as used in the past for
+                  * that.
+                  */
+                 tr("CPU (64-bits)"), // %6
+#else
                  //: This is shown for all other OSes than Windows.
-                 tr("CPU"),                          // %6
+                 tr("CPU"), // %6
+#endif
                  QSysInfo::currentCpuArchitecture(), // %7
                  /*: This is shown when the same Qt version is used at run-time
                   *as was used during compilation - it is the usual case.
                   */
                  tr("Qt version"),               // %8
                  QLatin1String(QT_VERSION_STR)); // %9
-#endif
 }

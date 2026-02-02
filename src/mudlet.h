@@ -107,6 +107,13 @@ public:
     mudlet();
     ~mudlet() override;
 
+    enum class BuildType {
+        Unknown = 0, // Uninitialized state (should never be used)
+        NotUpdateable, // Development or distribution package build
+        Release, // Official release build with updater
+        PublicTest // Public test build (PTB) with updater
+    };
+
     static QString getMudletPath(enums::mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
@@ -119,16 +126,8 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
-    static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
-    QString mAppBuild;
-    // final, official release
-    bool releaseVersion;
-    // unofficial "nightly" build - still a type of a release
-    bool publicTestVersion;
-    // used by developers in everyday coding:
-    bool developmentVersion;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around
@@ -318,6 +317,11 @@ public:
     bool showMuteAllMediaTutorial();
     void showedMuteAllMediaTutorial();
     bool experiencedMudletPlayer();
+    BuildType getBuildType() const;
+    bool updateableBuild() const;
+    QImage getSplashScreen();
+
+    QString mAppBuild;
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -550,8 +554,6 @@ private slots:
 
 
 private:
-
-
     void assignKeySequences();
     QString autodetectPreferredLanguage();
     static bool needsCustomDarkTheme();
@@ -581,7 +583,10 @@ private:
 
 
     inline static QPointer<mudlet> smpSelf = nullptr;
-
+    // Try to avoid reading this value directly but instead access it via
+    // getBuildType() so that usages before it has been initialised can be
+    // trapped:
+    BuildType mBuildType = BuildType::Unknown;
 
     bool mDarkMode = false;
     QString mDefaultStyle;

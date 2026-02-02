@@ -332,7 +332,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::self()->publicTestVersion) {
+    if (mudlet::BuildType::PublicTest == mudlet::self()->getBuildType()) {
         thankForUsingPTB();
     }
 
