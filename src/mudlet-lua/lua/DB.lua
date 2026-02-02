@@ -797,7 +797,8 @@ function db:_migrate(db_name, s_name, force)
     current_columns[key] = db:_sql_type(value)
   end
 
-  db:_remove_hanging_indexes(conn, s_name, schema)
+  local res_drops, msg = db:_drop_orphaned_indexes(conn, s_name, schema)
+  assert(res_drops, msg)
   db:_migrate_indexes(conn, s_name, schema, current_columns)
   db:echo_sql("COMMIT")
   conn:commit()
@@ -861,9 +862,8 @@ function db:_build_create_table_sql(schema, s_name)
 end
 
 
--- Checks for any hanging indexes for a sql table and conditionally removes them.
-
-function db:_remove_hanging_indexes(conn, s_name, schema)
+-- Conditionally drops orphaned indexes.
+function db:_drop_orphaned_indexes(conn, s_name, schema)
   local cur, err;
 
   local sql = ([[
@@ -878,12 +878,11 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
         AND a.sql IS NOT NULL;
   ]]):format(s_name):trim():gsub("%s+", " ")
 
-  local sql_drop_index = "DROP INDEX IF EXISTS %s"
+  local sql_drop_index = "DROP INDEX IF EXISTS %s;"
 
   db:echo_sql(sql)
   cur, err = conn:execute(sql)
   if cur == nil then
-    display(err);
     return nil, err
   end
 
@@ -903,7 +902,10 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
     cur:close()
     for _, drop in ipairs(drops) do
       db:echo_sql(drop)
-      conn:execute(drop);
+      cur, err = conn:execute(drop)
+      if cur == nil then
+        return nil, err;
+      end
     end
     return true, nil
   end
@@ -920,7 +922,7 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
       table.sort(t);
       index_strs[i] = table.concat(t, ',')
     else
-      index_strs[i] = index
+      index_strs[i] = index:lower()
     end
   end
 
@@ -973,10 +975,12 @@ function db:_remove_hanging_indexes(conn, s_name, schema)
   end
   cur:close()
 
-  if #drops > 0 then
-    sql = table.concat(drops, "\n")
-    db:echo_sql(sql)
-    conn:execute(sql);
+  for _, drop in ipairs(drops) do
+    db:echo_sql(drop)
+    cur, err = conn:execute(drop)
+    if cur == nil then
+      return nil, err;
+    end
   end
 
   return true, nil
