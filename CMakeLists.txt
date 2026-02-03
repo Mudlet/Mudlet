@@ -136,9 +136,6 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
-                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
-                        READABLE_NAME "own QtKeychain library")
 
 find_package(Qt6 6.8.2 REQUIRED)
 
@@ -149,8 +146,6 @@ find_package(Lua 5.1 EXACT)
 
 # Set Qt version for edbee-lib and dblsqd
 option(BUILD_WITH_QT5 "" OFF)
-# Set Qt version for qtkeychain
-option(BUILD_WITH_QT6 "" ON)
 
 include(InitGitSubmodule)
 
@@ -161,21 +156,6 @@ git_submodule_init(
   git_submodule_init(
     CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
     "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
-
-if(USE_OWN_QTKEYCHAIN)
-  git_submodule_init(
-    CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
-    SUBMODULE_PATH "3rdparty/qtkeychain"
-    READABLE_NAME "QtKeychain")
-  add_subdirectory(3rdparty/qtkeychain)
-
-  # Handle both old (files in qtkeychain/) and new (files in qtkeychain/qtkeychain/) directory structures
-  # so includes via <qtkeychain/keychain.h> work in both cases
-  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qtkeychain/qtkeychain/keychain.h")
-    # Old structure: add 3rdparty to include path so <qtkeychain/keychain.h> resolves correctly
-    target_include_directories(qt6keychain PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty>)
-  endif()
-endif()
 
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"

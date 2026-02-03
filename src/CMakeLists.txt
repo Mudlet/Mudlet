@@ -528,14 +528,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
   find_library(KVM_LIBRARY NAMES kvm)
 endif()
 
-if(NOT USE_OWN_QTKEYCHAIN)
-  # Only use this when we are using a system package and NOT our own local build
-  find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
-
-  # No need to test for it being found as the REQUIRED will make it error out
-  # if it is NOT found!
-  message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
-endif()
+find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
+message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
 
 if(USE_3DMAPPER)
   if(POLICY CMP0072)
@@ -646,11 +640,6 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
     APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
-
-if(USE_OWN_QTKEYCHAIN)
-    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
-    target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
-endif()
 
 # Define shader hot-reloading if enabled
 if(USE_SHADER_HOT_RELOAD AND USE_3DMAPPER)
