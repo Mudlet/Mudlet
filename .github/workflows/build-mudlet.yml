@@ -205,7 +205,7 @@ jobs:
         cd xcb-util-cursor-0.1.5
 
         # Configure and build
-        ./configure --prefix=/usr
+        ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu
         make -j$(nproc)
 
         # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
