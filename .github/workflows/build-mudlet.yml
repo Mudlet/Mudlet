@@ -118,7 +118,8 @@ jobs:
 
         # Set CMAKE_PREFIX_PATH to include both Qt and Homebrew directories
         # Qt is installed by install-qt-action, Homebrew has qtkeychain
-        echo "CMAKE_PREFIX_PATH=${QT_ROOT_DIR};${HOMEBREW_PREFIX}" >> $GITHUB_ENV
+        # Use : as separator (Unix) not ; (Windows)
+        echo "CMAKE_PREFIX_PATH=${QT_ROOT_DIR}:${HOMEBREW_PREFIX}" >> $GITHUB_ENV
 
         # Help CMake find Lua installed by gh-actions-lua
         # The action installs to .lua/ and .luarocks/ in the runner home
