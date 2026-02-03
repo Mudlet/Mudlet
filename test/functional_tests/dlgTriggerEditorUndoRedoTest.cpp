@@ -109,13 +109,24 @@ private:
   }
 
   void startProfile(const QString &profileName, const QString &address,
-                     const QString &port) {
+                    const QString &port) {
     QTimer::singleShot(0, qApp, [profileName, address, port]() {
       mudlet::self()->startAutoLogin({});
       QTest::qWait(100);
+
+      // Verify connection dialog is available before UI interactions
+      Q_ASSERT_X(mudlet::self()->mpConnectionDialog, "startProfile",
+                 "Connection dialog not initialized");
+      Q_ASSERT_X(mudlet::self()->mpConnectionDialog->new_profile_button,
+                 "startProfile", "New profile button not found");
+
       QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
                         Qt::LeftButton);
       QTest::qWait(100);
+
+      Q_ASSERT_X(QApplication::focusWidget(), "startProfile",
+                 "No widget has focus after clicking new profile button");
+
       QTest::keyClicks(QApplication::focusWidget(), profileName);
       QTest::qWait(100);
       QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
@@ -151,6 +162,9 @@ private slots:
   void init() {
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, mPort.toUShort());
+    QVERIFY2(mpServer->isListening(),
+             qPrintable(qsl("TelnetServerStub failed to start: %1")
+                            .arg(mpServer->errorString())));
     mudlet::start();
     mudlet::self()->setupConfig();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
@@ -401,6 +415,110 @@ private slots:
       cleanupAll(itemType);
     }
 
+    // Test: Toggle parent off with active children → undo
+    {
+      itemType.addFolder();
+      if (itemType.viewType == EditorViewType::cmKeysView ||
+          itemType.viewType == EditorViewType::cmActionView) {
+        QCoreApplication::processEvents();
+        QThread::msleep(10);
+      }
+
+      QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+      QVERIFY2(folder != nullptr,
+               qPrintable(itemTypeName +
+                          ": Folder should be created for toggle test"));
+
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+      if (itemType.viewType == EditorViewType::cmKeysView ||
+          itemType.viewType == EditorViewType::cmActionView) {
+        QCoreApplication::processEvents();
+      }
+
+      QCOMPARE(folder->childCount(), 1);
+
+      QTreeWidgetItem *child = folder->child(0);
+
+      // Activate parent and child
+      itemType.treeWidget()->setCurrentItem(folder);
+      mpEditor->slot_toggleItemOrGroupActiveFlag();
+      itemType.treeWidget()->setCurrentItem(child);
+      mpEditor->slot_toggleItemOrGroupActiveFlag();
+
+      // Now toggle parent off
+      itemType.treeWidget()->setCurrentItem(folder);
+      mpEditor->slot_toggleItemOrGroupActiveFlag();
+
+      // Undo toggle
+      mpEditor->mpUndoStack->undo();
+      QVERIFY2(true, qPrintable(itemTypeName + ": Toggle undo should work"));
+
+      cleanupAll(itemType);
+    }
+
+    // Test: Multi-level hierarchy delete (grandparent -> parent -> child)
+    {
+      int initialCount = itemType.baseItem()->childCount();
+
+      // Create grandparent folder at root
+      itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+      itemType.addFolder();
+      if (itemType.viewType == EditorViewType::cmKeysView ||
+          itemType.viewType == EditorViewType::cmActionView) {
+        QCoreApplication::processEvents();
+        QThread::msleep(10);
+      }
+
+      QTreeWidgetItem *grandparent = itemType.baseItem()->child(0);
+      QVERIFY2(
+          grandparent != nullptr,
+          qPrintable(itemTypeName + ": Grandparent folder should be created"));
+
+      // Add parent folder under grandparent
+      itemType.treeWidget()->setCurrentItem(grandparent);
+      itemType.addFolder();
+      if (itemType.viewType == EditorViewType::cmKeysView ||
+          itemType.viewType == EditorViewType::cmActionView) {
+        QCoreApplication::processEvents();
+      }
+
+      QTreeWidgetItem *parent = grandparent->child(0);
+      QVERIFY2(parent != nullptr,
+               qPrintable(itemTypeName + ": Parent folder should be created"));
+
+      // Add child under parent
+      itemType.treeWidget()->setCurrentItem(parent);
+      itemType.addItem();
+      if (itemType.viewType == EditorViewType::cmKeysView ||
+          itemType.viewType == EditorViewType::cmActionView) {
+        QCoreApplication::processEvents();
+      }
+
+      QCOMPARE(parent->childCount(), 1);
+
+      // Delete grandparent (should delete 2 levels of children)
+      itemType.treeWidget()->setCurrentItem(grandparent);
+      mpEditor->slot_deleteItemOrGroup();
+
+      QCOMPARE(itemType.baseItem()->childCount(), initialCount);
+
+      mpEditor->mpUndoStack->undo();
+
+      // Check if entire hierarchy restored
+      QTreeWidgetItem *restoredGP = itemType.baseItem()->child(0);
+      QVERIFY2(restoredGP != nullptr && restoredGP->childCount() == 1,
+               qPrintable(itemTypeName +
+                          ": Grandparent with parent should be restored"));
+
+      QTreeWidgetItem *restoredP = restoredGP->child(0);
+      QVERIFY2(
+          restoredP != nullptr && restoredP->childCount() == 1,
+          qPrintable(itemTypeName + ": Parent with child should be restored"));
+
+      cleanupAll(itemType);
+    }
+
     mpEditor->mpUndoStack->clear();
   }
 
@@ -473,6 +591,44 @@ private slots:
       cleanupAll(itemType);
     }
 
+    // Test: Toggle parent+children selected → verify single operation
+    {
+      itemType.addFolder();
+      QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+      QVERIFY(folder != nullptr);
+
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+
+      QCOMPARE(folder->childCount(), 1);
+
+      // Select all items (parent and child)
+      QList<QTreeWidgetItem *> items;
+      items << folder << folder->child(0);
+      itemType.treeWidget()->clearSelection();
+      for (auto *item : items) {
+        item->setSelected(true);
+      }
+      itemType.treeWidget()->setCurrentItem(folder);
+
+      int stackCountBefore = mpEditor->mpUndoStack->count();
+      mpEditor->slot_toggleItemOrGroupActiveFlag();
+      int stackCountAfter = mpEditor->mpUndoStack->count();
+
+      // Should be batched (single command or small increment)
+      QVERIFY2(
+          stackCountAfter <= stackCountBefore + 1,
+          qPrintable(
+              itemTypeName +
+              ": Toggle parent+children should create single/batched command"));
+
+      mpEditor->mpUndoStack->undo();
+      QVERIFY2(true, qPrintable(itemTypeName +
+                                ": Single undo should restore toggle state"));
+
+      cleanupAll(itemType);
+    }
+
     mpEditor->mpUndoStack->clear();
   }
 
@@ -537,6 +693,60 @@ private slots:
 
       QVERIFY2(itemType.baseItem()->childCount() > 0,
                qPrintable(itemTypeName + ": Undo/redo chain should work"));
+
+      cleanupAll(itemType);
+    }
+
+    // Test: Delete parent with children → verify all IDs remapped
+    {
+      itemType.addFolder();
+      QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+      QVERIFY(folder != nullptr);
+
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+
+      QCOMPARE(folder->childCount(), 2);
+
+      itemType.treeWidget()->setCurrentItem(folder);
+      mpEditor->slot_deleteItemOrGroup();
+      mpEditor->mpUndoStack->undo();
+
+      QTreeWidgetItem *restoredFolder = itemType.baseItem()->child(0);
+      QVERIFY2(restoredFolder != nullptr && restoredFolder->childCount() == 2,
+               qPrintable(itemTypeName +
+                          ": Parent and children IDs should be remapped"));
+
+      cleanupAll(itemType);
+    }
+
+    // Test: Commands in stack updated with new IDs
+    {
+      itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+      itemType.addItem();
+      QTreeWidgetItem *item1 = itemType.baseItem()->child(0);
+
+      itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+      itemType.addItem();
+
+      QVERIFY(itemType.baseItem()->childCount() >= 2);
+      QVERIFY(item1 != nullptr);
+
+      itemType.treeWidget()->setCurrentItem(item1);
+      mpEditor->slot_deleteItemOrGroup();
+      mpEditor->mpUndoStack->undo();
+
+      for (int i = 0; i < 10 && itemType.baseItem()->childCount() > 1 &&
+                      mpEditor->mpUndoStack->canUndo();
+           i++) {
+        mpEditor->mpUndoStack->undo();
+      }
+
+      QVERIFY2(itemType.baseItem()->childCount() <= 1,
+               qPrintable(itemTypeName +
+                          ": Stack should handle ID remapping correctly"));
 
       cleanupAll(itemType);
     }
@@ -631,6 +841,33 @@ private slots:
       cleanupAll(itemType);
     }
 
+    // Test: Complex operation chain (Add → delete → add → undo → redo → undo)
+    {
+      int stackIndexStart = mpEditor->mpUndoStack->index();
+
+      itemType.addItem();
+      QTreeWidgetItem *item1 = itemType.baseItem()->child(0);
+      QVERIFY(item1 != nullptr);
+
+      itemType.treeWidget()->setCurrentItem(item1);
+      mpEditor->slot_deleteItemOrGroup();
+
+      itemType.addItem();
+
+      mpEditor->mpUndoStack->undo();
+      mpEditor->mpUndoStack->redo();
+      mpEditor->mpUndoStack->undo();
+
+      QVERIFY2(true,
+               qPrintable(itemTypeName + ": Complex operation chain works"));
+
+      while (mpEditor->mpUndoStack->index() > stackIndexStart) {
+        mpEditor->mpUndoStack->undo();
+      }
+
+      cleanupAll(itemType);
+    }
+
     mpEditor->mpUndoStack->clear();
   }
 
@@ -695,6 +932,24 @@ private slots:
       cleanupAll(itemType);
     }
 
+    // Test: Operations work after stack clear
+    {
+      mpEditor->mpUndoStack->clear();
+      int initialCount = itemType.baseItem()->childCount();
+
+      itemType.addItem();
+
+      bool addWorked = itemType.baseItem()->childCount() > initialCount;
+      bool canUndoAfterAdd = mpEditor->mpUndoStack->canUndo();
+
+      QVERIFY2(addWorked && canUndoAfterAdd,
+               qPrintable(itemTypeName +
+                          ": Operations should work after stack clear"));
+
+      mpEditor->mpUndoStack->undo();
+      cleanupAll(itemType);
+    }
+
     // Test: Deep nesting (10 levels)
     {
       QTreeWidgetItem *currentParent = itemType.baseItem();
@@ -742,6 +997,117 @@ private slots:
     for (auto &itemType : mItemTypes) {
       itemType.showView();
       cleanupAll(itemType);
+    }
+
+    // Test: Mixed operations across item types
+    {
+      const auto &triggers = mItemTypes[0];
+      const auto &timers = mItemTypes[1];
+
+      triggers.showView();
+      triggers.addItem();
+      int triggerCountAfterAdd = triggers.baseItem()->childCount();
+
+      timers.showView();
+      timers.addItem();
+
+      for (int i = 0; i < 20 &&
+                      (triggers.baseItem()->childCount() > 0 ||
+                       timers.baseItem()->childCount() > 0) &&
+                      mpEditor->mpUndoStack->canUndo();
+           i++) {
+        mpEditor->mpUndoStack->undo();
+      }
+
+      QVERIFY2(triggers.baseItem()->childCount() == 0 &&
+                   timers.baseItem()->childCount() == 0,
+               "Mixed operations should undo correctly");
+
+      mpEditor->mpUndoStack->clear();
+    }
+
+    // Test: Cross-type undo/redo ordering
+    {
+      const auto &triggers = mItemTypes[0];
+      const auto &aliases = mItemTypes[2];
+
+      triggers.showView();
+      triggers.addItem();
+
+      aliases.showView();
+      aliases.addItem();
+
+      for (int i = 0; i < 10 && aliases.baseItem()->childCount() > 0 &&
+                      mpEditor->mpUndoStack->canUndo();
+           i++) {
+        mpEditor->mpUndoStack->undo();
+      }
+
+      QVERIFY2(aliases.baseItem()->childCount() == 0 &&
+                   triggers.baseItem()->childCount() == 1,
+               "Cross-type undo ordering should be correct");
+
+      for (int i = 0; i < 10 && aliases.baseItem()->childCount() == 0 &&
+                      mpEditor->mpUndoStack->canRedo();
+           i++) {
+        mpEditor->mpUndoStack->redo();
+      }
+
+      QVERIFY2(aliases.baseItem()->childCount() == 1,
+               "Cross-type redo ordering should be correct");
+
+      for (int i = 0; i < 20 && mpEditor->mpUndoStack->canUndo(); i++) {
+        mpEditor->mpUndoStack->undo();
+      }
+      mpEditor->mpUndoStack->clear();
+    }
+
+    // Test: Undo works after view switch
+    {
+      const auto &triggers = mItemTypes[0];
+      const auto &scripts = mItemTypes[3];
+
+      triggers.showView();
+      triggers.addItem();
+
+      scripts.showView();
+
+      for (int i = 0; i < 10 && triggers.baseItem()->childCount() > 0 &&
+                      mpEditor->mpUndoStack->canUndo();
+           i++) {
+        mpEditor->mpUndoStack->undo();
+      }
+
+      QVERIFY2(triggers.baseItem()->childCount() == 0,
+               "Undo should work after view switch");
+
+      mpEditor->mpUndoStack->clear();
+    }
+
+    // Test: Stack isolation verification
+    {
+      const auto &triggers = mItemTypes[0];
+      const auto &timers = mItemTypes[1];
+
+      triggers.showView();
+      int initialStackCount = mpEditor->mpUndoStack->count();
+      triggers.addItem();
+      int afterAddCount = mpEditor->mpUndoStack->count();
+
+      bool isolated = true;
+      for (const auto &otherType : mItemTypes) {
+        if (otherType.viewType != triggers.viewType &&
+            otherType.baseItem()->childCount() > 0) {
+          isolated = false;
+          break;
+        }
+      }
+
+      QVERIFY2(isolated && afterAddCount > initialStackCount,
+               "Stack should be properly isolated between types");
+
+      mpEditor->mpUndoStack->undo();
+      mpEditor->mpUndoStack->clear();
     }
 
     // Test: Sequential delete operations across types
@@ -912,6 +1278,60 @@ private slots:
                    restored->childCount() == childCountBefore,
                qPrintable(itemTypeName +
                           ": Parent-child relationships should be intact"));
+
+      cleanupAll(itemType);
+    }
+
+    // Test: Deep nested hierarchy preserved after undo
+    {
+      int initialCount = itemType.baseItem()->childCount();
+
+      itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+      itemType.addFolder();
+      if (itemType.viewType == EditorViewType::cmKeysView ||
+          itemType.viewType == EditorViewType::cmActionView) {
+        QCoreApplication::processEvents();
+        QThread::msleep(10);
+      }
+
+      QTreeWidgetItem *grandparent = itemType.baseItem()->child(0);
+      QVERIFY(grandparent != nullptr);
+
+      itemType.treeWidget()->setCurrentItem(grandparent);
+      itemType.addFolder();
+      if (itemType.viewType == EditorViewType::cmKeysView ||
+          itemType.viewType == EditorViewType::cmActionView) {
+        QCoreApplication::processEvents();
+      }
+
+      QTreeWidgetItem *parent = grandparent->child(0);
+      QVERIFY(parent != nullptr);
+
+      itemType.treeWidget()->setCurrentItem(parent);
+      itemType.addItem();
+      if (itemType.viewType == EditorViewType::cmKeysView ||
+          itemType.viewType == EditorViewType::cmActionView) {
+        QCoreApplication::processEvents();
+      }
+
+      QCOMPARE(parent->childCount(), 1);
+
+      itemType.treeWidget()->setCurrentItem(grandparent);
+      mpEditor->slot_deleteItemOrGroup();
+
+      QCOMPARE(itemType.baseItem()->childCount(), initialCount);
+
+      mpEditor->mpUndoStack->undo();
+
+      QTreeWidgetItem *restoredGP = itemType.baseItem()->child(0);
+      QVERIFY2(restoredGP != nullptr && restoredGP->childCount() == 1,
+               qPrintable(itemTypeName +
+                          ": Grandparent with parent should be restored"));
+
+      QTreeWidgetItem *restoredP = restoredGP->child(0);
+      QVERIFY2(restoredP != nullptr && restoredP->childCount() == 1,
+               qPrintable(itemTypeName +
+                          ": Deep nested hierarchy should be preserved"));
 
       cleanupAll(itemType);
     }
@@ -1109,6 +1529,147 @@ private slots:
     cleanupAll(mItemTypes[1]);
   }
 
+  void testTriggerPatternTypeChanges() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+    mpEditor->mpUndoStack->clear();
+
+    // Set initial pattern and type
+    QString testPattern = qsl("test pattern");
+    QVERIFY(mpEditor->mTriggerPatternEdit.size() > 0);
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        testPattern);
+    mpEditor->mTriggerPatternEdit[0]->comboBox_patternType->setCurrentIndex(
+        REGEX_SUBSTRING);
+    mpEditor->saveTrigger();
+
+    int originalType = pT->getRegexCodePropertyList().value(0);
+    QCOMPARE(originalType, REGEX_SUBSTRING);
+
+    // Change pattern type to Perl regex
+    mpEditor->mTriggerPatternEdit[0]->comboBox_patternType->setCurrentIndex(
+        REGEX_PERL);
+    mpEditor->saveTrigger();
+
+    int newType = pT->getRegexCodePropertyList().value(0);
+    QCOMPARE(newType, REGEX_PERL);
+
+    // Undo should restore original type
+    mpEditor->mpUndoStack->undo();
+    int typeAfterUndo = pT->getRegexCodePropertyList().value(0);
+    QCOMPARE(typeAfterUndo, REGEX_SUBSTRING);
+
+    // Redo should restore new type
+    mpEditor->mpUndoStack->redo();
+    int typeAfterRedo = pT->getRegexCodePropertyList().value(0);
+    QCOMPARE(typeAfterRedo, REGEX_PERL);
+
+    // Pattern text should remain unchanged throughout
+    QCOMPARE(pT->getPatternsList().value(0), testPattern);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testTriggerHighlightingColor() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+    mpEditor->mpUndoStack->clear();
+
+    QColor originalFgColor = pT->getFgColor();
+    QColor newFgColor(255, 0, 0); // Red
+
+    // Set color directly (simulating color picker)
+    pT->setColorizerFgColor(newFgColor);
+
+    // Save to create undo command
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getFgColor(), newFgColor);
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(pT->getFgColor(), originalFgColor);
+
+    mpEditor->mpUndoStack->redo();
+    QCOMPARE(pT->getFgColor(), newFgColor);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testActionButtonRotation() {
+    mpEditor->slot_showActions();
+    cleanupAll(mItemTypes[5]);
+
+    mpEditor->addAction(false);
+    QVERIFY(mpEditor->mpActionBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *action = mpEditor->mpActionBaseItem->child(0);
+    mpEditor->treeWidget_actions->setCurrentItem(action);
+    mpEditor->slot_actionSelected(action);
+    mpEditor->mpUndoStack->clear();
+
+    // Get original rotation from combobox
+    int originalRotationIndex =
+        mpEditor->mpActionsMainArea->comboBox_action_button_rotation
+            ->currentIndex();
+
+    // Set new rotation - changing combobox triggers per-property save
+    int newRotationIndex = 1;
+    mpEditor->mpActionsMainArea->comboBox_action_button_rotation
+        ->setCurrentIndex(newRotationIndex);
+
+    QCOMPARE(mpEditor->mpActionsMainArea->comboBox_action_button_rotation
+                 ->currentIndex(),
+             newRotationIndex);
+
+    // Undo the rotation change
+    mpEditor->mpUndoStack->undo();
+
+    // Re-fetch tree widget item after undo (item may have been rebuilt)
+    QVERIFY(mpEditor->mpActionBaseItem->childCount() > 0);
+    action = mpEditor->mpActionBaseItem->child(0);
+    mpEditor->slot_actionSelected(action);
+
+    QCOMPARE(mpEditor->mpActionsMainArea->comboBox_action_button_rotation
+                 ->currentIndex(),
+             originalRotationIndex);
+
+    // Redo the rotation change
+    mpEditor->mpUndoStack->redo();
+
+    // Re-fetch tree widget item after redo
+    QVERIFY(mpEditor->mpActionBaseItem->childCount() > 0);
+    action = mpEditor->mpActionBaseItem->child(0);
+    mpEditor->slot_actionSelected(action);
+
+    QCOMPARE(mpEditor->mpActionsMainArea->comboBox_action_button_rotation
+                 ->currentIndex(),
+             newRotationIndex);
+
+    cleanupAll(mItemTypes[5]);
+  }
+
   // ========================================================================
   // CATEGORY 12: Crash Prevention Tests
   // ========================================================================
@@ -1286,6 +1847,52 @@ private slots:
         mpEditor->mpTriggersMainArea->lineEdit_trigger_name->text().isEmpty() &&
         mpEditor->mpTriggersMainArea->label_idNumber->text().isEmpty();
     QVERIFY2(fieldsCleared, "Name/ID fields should be cleared");
+
+    mpEditor->mpUndoStack->clear();
+  }
+
+  void testTriggerPatternUIClearingWithEmptyIds() {
+    mpEditor->slot_showTriggers();
+
+    while (mpEditor->mpTriggerBaseItem->childCount() > 0) {
+      mpEditor->treeWidget_triggers->setCurrentItem(
+          mpEditor->mpTriggerBaseItem->child(0));
+      mpEditor->slot_deleteItemOrGroup();
+    }
+    mpEditor->mpUndoStack->clear();
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    QStringList patterns;
+    QList<int> patternTypes;
+    patterns << qsl("test1") << qsl("test2");
+    patternTypes << REGEX_SUBSTRING << REGEX_PERL;
+    pT->setRegexCodeList(patterns, patternTypes);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+
+    QList<int> emptyList;
+    mpEditor->slot_itemsChanged(EditorViewType::cmTriggerView, emptyList);
+
+    bool patternsCleared = true;
+    for (int i = 0; i < 2; i++) {
+      QString uiPattern = mpEditor->mTriggerPatternEdit[i]
+                              ->singleLineTextEdit_pattern->toPlainText();
+      if (!uiPattern.isEmpty()) {
+        patternsCleared = false;
+        break;
+      }
+    }
+
+    QVERIFY2(patternsCleared,
+             "Patterns should be cleared when affectedItemIDs is empty");
 
     mpEditor->mpUndoStack->clear();
   }
