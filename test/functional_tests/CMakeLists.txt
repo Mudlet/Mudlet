@@ -6,6 +6,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetTextDisplayedTest.cpp
     TelnetBenchmark.cpp
     TOscTerminatorTest.cpp
+    dlgTriggerEditorUndoRedoTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -25,3 +26,6 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
         TIMEOUT 60  # seconds
     )
 endforeach()
+
+# Undo/redo tests need a longer timeout due to large batch operations
+set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
