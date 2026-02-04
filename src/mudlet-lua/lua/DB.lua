@@ -400,6 +400,16 @@ function db:create(db_name, sheets, force)
 end
 
 
+local function normalize_sql(sql)
+  return (
+    sql:lower()
+    :gsub("\n", " ")
+    :gsub("\r", " ")
+    :gsub("%s+", " ")
+    :gsub("^%s*(.-)%s*$", "%1")
+  )
+end
+
 
 -- NOT LUADOC
 -- Extracts UNIQUE constraints with ON CONFLICT clauses from a CREATE TABLE statement.
@@ -411,41 +421,50 @@ function db:_extract_table_constraints(sql)
   if not sql or sql == "" then
     return ""
   end
-  
+
   -- Normalize whitespace and case for consistent comparison
-  local normalized = sql:lower()
-  normalized = normalized:gsub("\n", " ")
-  normalized = normalized:gsub("\r", " ")
-  normalized = normalized:gsub("%s+", " ")
-  normalized = normalized:gsub("^%s*(.-)%s*$", "%1")
-  
+  local normalized = normalize_sql(sql)
+
   -- Extract the part between the parentheses of CREATE TABLE
   local content = normalized:match("create%s+table%s+[%w_\"]+%s*%((.+)%)")
   if not content then
     return ""
   end
-  
+
   local constraints = {}
-  
+
   -- Find table-level UNIQUE constraints
   -- They look like: UNIQUE("col1") ON CONFLICT REPLACE or UNIQUE("col1", "col2") ON CONFLICT FAIL
   for constraint in content:gmatch('unique%s*%([^)]+%)%s+on%s+conflict%s+%w+') do
     table.insert(constraints, constraint)
   end
-  
+
   -- Find column-level UNIQUE constraints
   -- They look like: "col1" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT REPLACE
   -- We need to extract just the "UNIQUE ON CONFLICT X" part for comparison
   for constraint in content:gmatch('unique%s+on%s+conflict%s+%w+') do
     table.insert(constraints, constraint)
   end
-  
+
   -- Sort for consistent comparison
   table.sort(constraints)
-  
+
   return table.concat(constraints, "|")
 end
 
+
+
+local function count_rows(conn, s_name)
+  local count_cursor, count_err = conn:execute("SELECT COUNT(*) as cnt FROM " .. s_name);
+  if count_cursor == nil then
+    return nil, count_err
+  end
+
+  local count = count_cursor:fetch({}, "a").cnt;
+  count_cursor:close();
+
+  return count, nil;
+end
 
 
 -- NOT LUADOC
@@ -462,6 +481,7 @@ function db:_migrate(db_name, s_name, force)
   -- The PRAGMA table_info command is a query which returns all of the columns currently
   -- defined in the specified table. The purpose of this section is to see if any new columns
   -- have been added.
+  db:echo_sql("PRAGMA table_info('" .. s_name .. "')")
   local cur = conn:execute("PRAGMA table_info('" .. s_name .. "')") -- currently broken - LuaSQL bug, needs to be upgraded for new sqlite API
 
   if type(cur) == "userdata" then
@@ -511,35 +531,37 @@ function db:_migrate(db_name, s_name, force)
   else
     -- At this point we know that the sheet already exists, but we are concerned if the current
     -- definition includes columns which may be added.
-    
+
     -- Check if the table-level constraints have changed (e.g., _violations option changed)
     -- by comparing only the UNIQUE constraint definitions, not the column list
     local expected_sql = db:_build_create_table_sql(schema, s_name)
     local get_actual_sql = "SELECT sql FROM sqlite_master " ..
                            "WHERE type = 'table' AND name = '" .. s_name .. "'"
+    db:echo_sql(get_actual_sql)
     local sql_cur, sql_err = conn:execute(get_actual_sql)
     local table_constraints_changed = false
-    
+
     if sql_cur and type(sql_cur) ~= "number" then
       local sql_row = sql_cur:fetch({}, "a")
       sql_cur:close()
-      
+
       if sql_row and sql_row.sql then
         local actual_sql = sql_row.sql
         local expected_constraints = db:_extract_table_constraints(expected_sql)
         local actual_constraints = db:_extract_table_constraints(actual_sql)
-        
+
         if expected_constraints ~= actual_constraints then
           table_constraints_changed = true
         end
       end
     end
-    
+
     -- If the table-level constraints have changed, we need to recreate the table
     if table_constraints_changed then
       -- Commit any pending transaction before table recreation
+      db:echo_sql("COMMIT")
       conn:commit()
-      
+
       -- Check if we're deleting columns that contain data (unless force flag is set)
       local redundant_columns = {}
       for k, _ in pairs(current_columns) do
@@ -547,30 +569,31 @@ function db:_migrate(db_name, s_name, force)
           redundant_columns[#redundant_columns + 1] = k
         end
       end
-      
+
       if #redundant_columns > 0 and not force then
         -- Check if any of the redundant columns contain non-null data
         local not_blank = {}
         for _, col in ipairs(redundant_columns) do
           local check_sql = string.format('SELECT COUNT(*) AS cnt FROM %s WHERE "%s" IS NOT NULL', s_name, col)
+          db:echo_sql(check_sql)
           local check_cur, check_err = conn:execute(check_sql)
           assert(check_cur, check_err)
-          
+
           if type(check_cur) ~= "number" then
             local check_row = check_cur:fetch({}, "a")
             check_cur:close()
-            
+
             if check_row and check_row.cnt and tonumber(check_row.cnt) > 0 then
               not_blank[#not_blank + 1] = col
             end
           end
         end
-        
+
         assert(not not_blank[1] or force,
                "db:_migrate halted due to data present in undefined columns: " .. table.concat(not_blank, ", ") ..
                "\nuse force option to drop anyway.")
       end
-      
+
       -- Build the list of columns to preserve (only columns that exist in both current and new schema)
       local fields = { "_row_id" }
       for k, _ in pairs(schema.columns) do
@@ -579,48 +602,70 @@ function db:_migrate(db_name, s_name, force)
         end
       end
       local fields_sql = table.concat(fields, ", ")
-      
+
       -- Get the current CREATE TABLE statement to use for the backup
       local get_create = "SELECT sql FROM sqlite_master " ..
                         "WHERE type = 'table' AND name = '" .. s_name .. "'"
+      db:echo_sql(get_create)
       local create_cur, create_err = conn:execute(get_create)
       assert(create_cur, create_err)
-      
+
       if type(create_cur) ~= "number" then
         local row = create_cur:fetch({}, "a")
         create_cur:close()
-        
+
         -- Ensure we got a result
         if not row or not row.sql then
           error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
         end
-        
+
+        local original_count, og_count_err = count_rows(conn, s_name);
+        assert(original_count, og_count_err);
+
         -- Create temporary backup table, recreate main table, copy data
         local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
         create_tmp = create_tmp:gsub("TABLE", "TEMPORARY TABLE")
-        
+
         local sql_chunks = {}
         sql_chunks[#sql_chunks + 1] = create_tmp .. ";"
         sql_chunks[#sql_chunks + 1] = "INSERT INTO " .. s_name .. "_bak SELECT * FROM " .. s_name .. ";"
         sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
-        
+
         local new_create_sql = db:_build_create_table_sql(schema, s_name)
-        
+
         sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
         sql_chunks[#sql_chunks + 1] = string.format("INSERT INTO %s SELECT %s FROM %s_bak;", s_name, fields_sql, s_name)
         sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
-        
+
         for i, sql in ipairs(sql_chunks) do
+          db:echo_sql(sql)
           local ret, str = conn:execute(sql)
-          
+
           if not ret then
+            conn:rollback()
             error("Migration failed at chunk " .. i .. ": " .. tostring(str))
           end
         end
-        
+
+        local migrated_count, migrated_count_err = count_rows(conn, s_name)
+        if migrated_count_err then
+          conn:rollback()
+          error(migrated_count_err);
+        end
+
+        if (original_count ~= migrated_count and not force) then
+            conn:rollback()
+            error(
+               "db:_migrate halted for ".. s_name .." during constraint migrations due to data loss."
+               .."\n\t".. (original_count - migrated_count) .." rows would be lost with new constraints."
+               .."\nUse force option to migrate anyway."
+            )
+        end
+
         -- Commit the migration transaction
+        db:echo_sql("COMMIT")
         conn:commit()
-        
+
         -- After recreating the table with new constraints, add any new columns that didn't exist before
         for k, v in pairs(schema.columns) do
           if not current_columns[k] then
@@ -628,8 +673,8 @@ function db:_migrate(db_name, s_name, force)
             local t = db:_sql_type(v)
             local def = db:_sql_convert(v)
             local sql = sql_add:format(s_name, k, t, def)
-            conn:execute(sql)
             db:echo_sql(sql)
+            conn:execute(sql)
             -- Update current_columns to reflect the newly added column
             current_columns[k] = ""
           end
@@ -659,8 +704,8 @@ function db:_migrate(db_name, s_name, force)
         local t = db:_sql_type(v.default)
         local def = db:_sql_convert(v.default)
         local sql = sql_add:format(s_name, v.name, t, def)
-        conn:execute(sql)
         db:echo_sql(sql)
+        conn:execute(sql)
       end
     elseif
     #missing + table.size(current_columns) > table.size(schema.columns) + 1
@@ -674,7 +719,7 @@ function db:_migrate(db_name, s_name, force)
           table.insert(redundant_columns, k)
         end
       end
-      
+
       --check if any of the redundant columns are non-empty
       local max_redundant = {}
       for i, v in ipairs(redundant_columns) do
@@ -682,6 +727,7 @@ function db:_migrate(db_name, s_name, force)
       end
       local sql_check_blank = [[SELECT %s from %s;]]
       local sql = sql_check_blank:format(table.concat(max_redundant, ", "), s_name)
+      db:echo_sql(sql)
       local blank_cur = conn:execute(sql)
       local blank_results = blank_cur:fetch({}, "a")
       blank_cur:close()
@@ -689,25 +735,26 @@ function db:_migrate(db_name, s_name, force)
       for k, _ in pairs(blank_results) do
         table.insert(not_blank, k)
       end
-      
+
       -- don't drop non-empty columns unless force flag is provided
       assert(not not_blank[1] or force, "db:_migrate halted due to data present in undefined columns: "..table.concat(not_blank, ","))
-      
+
       local get_create = "SELECT sql FROM sqlite_master " ..
       "WHERE type = 'table' AND " ..
       "name = '" .. s_name .. "'"
       local ret_str
+      db:echo_sql(get_create)
       cur, ret_str = conn:execute(get_create)
       assert(cur, ret_str)
       if type(cur) ~= "number" then
         local row = cur:fetch({}, "a");
         cur:close()
-        
+
         -- Ensure we got a result
         if not row or not row.sql then
           error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
         end
-        
+
         local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
         local sql_chunks = {}
         local fields = { "_row_id" }
@@ -744,14 +791,14 @@ function db:_migrate(db_name, s_name, force)
   -- On every invocation of db:create we run the code that creates indexes, as that code will
   -- do nothing if the specific indexes already exist. This is enforced by the db:_index_name
   -- function creating a unique index.
-  --
-  -- Note that in no situation will an existing index be deleted.
 
   -- make up current_columns, as pragma_info currently does not populate it, due to luasql bug
   for key, value in pairs(schema.columns) do
     current_columns[key] = db:_sql_type(value)
   end
 
+  local res_drops, msg = db:_drop_orphaned_indexes(conn, s_name, schema)
+  assert(res_drops, msg)
   db:_migrate_indexes(conn, s_name, schema, current_columns)
   db:echo_sql("COMMIT")
   conn:commit()
@@ -812,6 +859,131 @@ function db:_build_create_table_sql(schema, s_name)
   end
 
   return "CREATE TABLE " .. s_name.. " ("..table.concat(sql_chunks, ", ")..")"
+end
+
+
+-- Conditionally drops orphaned indexes.
+function db:_drop_orphaned_indexes(conn, s_name, schema)
+  local cur, err;
+
+  local sql = ([[
+    SELECT
+      name,
+      tbl_name,
+      sql
+    FROM sqlite_master a
+    WHERE
+        type = 'index'
+        AND tbl_name = '%s'
+        AND a.sql IS NOT NULL;
+  ]]):format(s_name):trim():gsub("%s+", " ")
+
+  local sql_drop_index = "DROP INDEX IF EXISTS %s;"
+
+  db:echo_sql(sql)
+  cur, err = conn:execute(sql)
+  if cur == nil then
+    return nil, err
+  end
+
+
+  local row = cur:fetch({}, "a")
+  local drops = {}
+
+  -- No indexes should exist for the sheet, should remove all indexes for the table.
+  if not schema.options._index then
+    while row do
+      table.insert(
+        drops,
+        sql_drop_index:format(row.name)
+      )
+      row = cur:fetch({}, "a")
+    end
+    cur:close()
+    for _, drop in ipairs(drops) do
+      db:echo_sql(drop)
+      cur, err = conn:execute(drop)
+      if cur == nil then
+        return nil, err;
+      end
+    end
+    return true, nil
+  end
+
+
+  local index_strs = {}
+
+  for i, index in ipairs(schema.options._index) do
+    if type(index) == "table" then
+      local t = {}
+      for j, col_name in ipairs(index) do
+        t[j] = col_name:lower()
+      end
+      table.sort(t);
+      index_strs[i] = table.concat(t, ',')
+    else
+      index_strs[i] = index:lower()
+    end
+  end
+
+  local cols         = {}
+  local index_match  = ""
+  local is_dangling  = true;
+  local cols_str     = ""
+  local unique_match = ""
+
+  while row do
+    cols = {}
+    sql = normalize_sql(row.sql)
+    index_match  = sql:match("create%s+index%s+idx[%w_]+%s+on%s+[%w_]+%s+%((.+)%)")
+    unique_match = sql:match("create%s+unique%s+index%s+idx[%w_]+%s+on%s+[%w_]+%s+%((.+)%)")
+
+    -- matched unique index.  Mudlet doesn't make these anymore, so it should be removed.
+    if unique_match then
+        table.insert(
+          drops,
+          sql_drop_index:format(row.name)
+        )
+
+    elseif index_match then
+      cols = {}
+      for col in index_match:gmatch('"(%w+)"') do
+        table.insert(cols, col)
+      end
+      table.sort(cols)
+      cols_str = table.concat(cols, ',')
+
+      is_dangling = true
+
+      for _, index_str in ipairs(index_strs) do
+        if cols_str == index_str then
+          is_dangling = false
+          break
+        end
+      end
+
+      if is_dangling then
+        table.insert(
+          drops,
+          sql_drop_index:format(row.name)
+        )
+      end
+
+    end
+
+    row = cur:fetch({}, "a")
+  end
+  cur:close()
+
+  for _, drop in ipairs(drops) do
+    db:echo_sql(drop)
+    cur, err = conn:execute(drop)
+    if cur == nil then
+      return nil, err;
+    end
+  end
+
+  return true, nil
 end
 
 
@@ -1715,14 +1887,14 @@ function db:close(db_name)
 
   if db.__conn[db_name]:close() then
     db.__conn[db_name] = nil
-    
+
     return true, ""
   else
-    
+
     return false, "database object is already closed."
   end
 
-  
+
 end
 
 

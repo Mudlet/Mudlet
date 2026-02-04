@@ -206,7 +206,7 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
-    void deleteProfileData(const QString &profile, const QString &item);
+    void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
@@ -333,7 +333,7 @@ public:
     // entries in their system if they do not appear in this and thus get
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
-    QHash<QString, QString>mDictionaryLanguageCodeMap;
+    QHash<QString, QString> mDictionaryLanguageCodeMap;
     Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
@@ -436,6 +436,7 @@ public slots:
     void slot_reattachAllDetachedWindows();
     void slot_toggleAlwaysOnTop();
     void slot_minimize();
+    void slot_newMapWindow();
     void updateWindowMenu();
     void slot_activateMainWindow();
     void slot_activateDetachedWindow();
@@ -467,7 +468,7 @@ public slots:
     static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
     void updateMainWindowTabBarAutoHide();
-    void updateTabIndicators(); // Update all tab indicators (main window)
+    void updateTabIndicators();               // Update all tab indicators (main window)
     void updateDetachedWindowTabIndicators(); // Update all detached window tab indicators
     void slot_showActionDialog();
     void slot_showAliasDialog();
@@ -512,7 +513,7 @@ signals:
     void signal_passwordsMigratedToProfiles();
     void signal_passwordsMigratedToSecure();
     void signal_characterPasswordsMigrated();
-    void signal_profileActivated(Host *, quint8);
+    void signal_profileActivated(Host*, quint8);
     void signal_profileMapReloadRequested(QList<QString>);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
@@ -549,13 +550,11 @@ private slots:
 
 
 private:
-
-
     void assignKeySequences();
     QString autodetectPreferredLanguage();
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
-    int getDictionaryWordCount(const QString &dictionaryPath);
+    int getDictionaryWordCount(const QString& dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
     void initEdbee();
     void installModulesList(Host*, QStringList);
@@ -719,10 +718,10 @@ private:
     QAction* mWindowListSeparator = nullptr;
 
     // amount of times the shortcut has been shown help educate new users
-    int mScrollbackTutorialsShown = 0; // Cancel split screen
+    int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
     // show the tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3; // Split screen
+    static const int mScrollbackTutorialsMax = 3;   // Split screen
     static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 
     // AI/LlamaFile integration
@@ -761,7 +760,6 @@ private:
 };
 
 
-
 class TConsoleMonitor : public QObject
 {
     Q_OBJECT
@@ -770,7 +768,8 @@ public:
     Q_DISABLE_COPY(TConsoleMonitor)
     explicit TConsoleMonitor(QObject* parent)
     : QObject(parent)
-    {}
+    {
+    }
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
@@ -789,7 +788,8 @@ class translation
 public:
     explicit translation(const int translationPercent = -1)
     : mTranslatedPercentage(translationPercent)
-    {}
+    {
+    }
 
     const QString& getNativeName() const { return mNativeName; }
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }

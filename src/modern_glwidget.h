@@ -45,6 +45,7 @@
 #include <QEasingCurve>
 
 #include "GeometryManager.h"
+#include "LabelTextureCache.h"
 #include "RenderCommandQueue.h"
 #include "ResourceManager.h"
 #include "ShaderManager.h"
@@ -144,6 +145,9 @@ private:
     // Camera management
     CameraController mCameraController;
 
+    // Label texture cache
+    LabelTextureCache mLabelTextureCache;
+
     // Host reference
     QPointer<Host> mpHost;
 
@@ -207,6 +211,8 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
+    void renderBackgroundLabels();
+    void renderForegroundLabels();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
     void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);

@@ -257,17 +257,58 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                 TTimer* pTChild = mpHost->getTimerUnit()->getTimer(childID);
                 if (pTChild) {
                     QIcon icon;
-                    if (pTChild->isOffsetTimer()) {
+                    if (pTChild->isFolder()) {
+                        // Timer folder
                         if (pTChild->shouldBeActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                            if (pTChild->ancestorsActive()) {
+                                if (!pTChild->mPackageName.isEmpty()) {
+                                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                                } else {
+                                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                                }
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            }
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                            if (pTChild->ancestorsActive()) {
+                                if (!pTChild->mPackageName.isEmpty()) {
+                                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                                } else {
+                                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                                }
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                            }
+                        }
+                    } else if (pTChild->isOffsetTimer()) {
+                        // Offset timer
+                        if (pTChild->shouldBeActive()) {
+                            if (pTChild->ancestorsActive()) {
+                                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                            }
+                        } else {
+                            if (pTChild->ancestorsActive()) {
+                                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                            }
                         }
                     } else {
+                        // Regular timer
                         if (pTChild->shouldBeActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            if (pTChild->ancestorsActive()) {
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                            }
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                            if (pTChild->ancestorsActive()) {
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                            } else {
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_grey.png")), QIcon::Normal, QIcon::Off);
+                            }
                         }
                     }
                     QTreeWidgetItem* pParent = itemFromIndex(parent);
