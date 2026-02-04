@@ -146,6 +146,7 @@ find_package(Lua 5.1 EXACT)
 
 # Set Qt version for edbee-lib and dblsqd
 option(BUILD_WITH_QT5 "" OFF)
+option(BUILD_WITH_QT6 "" ON)
 
 include(InitGitSubmodule)
 
@@ -156,6 +157,19 @@ git_submodule_init(
   git_submodule_init(
     CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
     "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+
+# TODO: On macOS, we need to build qtkeychain from source because Homebrew's
+# qtkeychain package is built against Homebrew's Qt, which is incompatible with
+# the Qt installed by jurplel/install-qt-action in CI.
+# See: https://github.com/Mudlet/Mudlet/issues/8875
+if(APPLE)
+  set(USE_OWN_QTKEYCHAIN ON)
+  git_submodule_init(
+    CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
+    SUBMODULE_PATH "3rdparty/qtkeychain"
+    READABLE_NAME "QtKeychain")
+  add_subdirectory(3rdparty/qtkeychain)
+endif()
 
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"

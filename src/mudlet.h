@@ -53,7 +53,11 @@
 #include <QTime>
 #include <QVersionNumber>
 #include <QWindow>
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
+#include <qtkeychain/keychain.h>
+#else
 #include <qt6keychain/keychain.h>
+#endif
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>

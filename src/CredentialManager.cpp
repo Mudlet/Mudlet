@@ -33,7 +33,11 @@
 #include <QStandardPaths>
 #include <QTimer>
 #include <QVersionNumber>
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
+#include <qtkeychain/keychain.h>
+#else
 #include <qt6keychain/keychain.h>
+#endif
 
 // Forward declaration to avoid including mudlet.h
 class mudlet;

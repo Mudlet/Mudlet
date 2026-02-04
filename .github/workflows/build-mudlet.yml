@@ -100,7 +100,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # Install all required dependencies
-        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost qtkeychain
+        brew install libzzip libzip ccache expect assimp hunspell pcre2 pugixml sqlite yajl boost
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 

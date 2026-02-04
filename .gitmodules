@@ -10,6 +10,9 @@
 [submodule "3rdparty/qt-tags-widget"]
 	path = 3rdparty/qt-tags-widget
 	url = https://github.com/julian-go/qt-tags-widget.git
+[submodule "3rdparty/qtkeychain"]
+	path = 3rdparty/qtkeychain
+	url = https://github.com/frankosterfeld/qtkeychain.git
 [submodule "3rdparty/sentry-native"]
 	path = 3rdparty/sentry-native
 	url = https://github.com/getsentry/sentry-native.git

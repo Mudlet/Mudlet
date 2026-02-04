@@ -35,7 +35,9 @@ link_libraries(
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
 # Configure QtKeychain linking
-find_package(Qt6Keychain REQUIRED)
+if(NOT USE_OWN_QTKEYCHAIN)
+    find_package(Qt6Keychain REQUIRED)
+endif()
 set(KEYCHAIN_LIBRARY qt6keychain)
 
 
@@ -92,10 +94,16 @@ target_link_libraries(
 
 add_executable(SecureStringUtilsTest SecureStringUtilsTest.cpp ../src/SecureStringUtils.cpp)
 target_link_libraries(SecureStringUtilsTest ${KEYCHAIN_LIBRARY})
+if(USE_OWN_QTKEYCHAIN)
+    target_compile_definitions(SecureStringUtilsTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
 add_test(NAME SecureStringUtilsTest COMMAND SecureStringUtilsTest)
 
 add_executable(CredentialManagerTest CredentialManagerTest.cpp ../src/CredentialManager.cpp ../src/SecureStringUtils.cpp)
 target_link_libraries(CredentialManagerTest ${KEYCHAIN_LIBRARY})
+if(USE_OWN_QTKEYCHAIN)
+    target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
 
 add_subdirectory(functional_tests)
