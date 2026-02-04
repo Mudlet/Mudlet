@@ -176,6 +176,7 @@ jobs:
         WITH_SENTRY: "ON"
 
     - name: (Windows) Deploy
+      continue-on-error: true
       shell: msys2 {0}
       env:
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}

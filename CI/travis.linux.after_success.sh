@@ -117,68 +117,81 @@ then
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else
-      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
-      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
-        echo "Error: release not found as expected at $DEPLOY_URL"
-        exit 1
-      fi
-
-      # upload an unzipped, unversioned release for appimage.github.io
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
-
-      SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
-      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-      read -r day month year hour minute second <<< "$current_timestamp"
-
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
-      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
-      -F "file_type=2" \
-      -F "file_remote=$DEPLOY_URL" \
-      -F "file_name=Mudlet ${VERSION} (Linux)" \
-      -F "file_des=sha256: $SHA256SUM" \
-      -F "file_cat=5" \
-      -F "file_permission=-1" \
-      -F "file_timestamp_day=$day" \
-      -F "file_timestamp_month=$month" \
-      -F "file_timestamp_year=$year" \
-      -F "file_timestamp_hour=$hour" \
-      -F "file_timestamp_minute=$minute" \
-      -F "file_timestamp_second=$second" \
-      -F "output=json" \
-      -F "do=Add File"
-
-      echo "=== Uploading portable version ==="
+      # Set up artifact upload for release builds (allows download from GitHub if mudlet.org is unreachable)
+      echo "=== Setting up for Github artifact upload ==="
+      mkdir -p "upload/"
+      cp "Mudlet-${VERSION}-linux-x64.AppImage.tar" "upload/"
       PORTABLE_NAME="Mudlet-${VERSION}-linux-x64-portable"
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+      cp "${PORTABLE_NAME}.tar.gz" "upload/"
+      {
+        echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
+        echo "UPLOAD_FILENAME=Mudlet-${VERSION}-linux-x64"
+      } >> "$GITHUB_ENV"
 
-      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
-        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
-        exit 1
+      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+      if scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@mudlet.org:${DEPLOY_PATH}"; then
+        DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
+        if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+          echo "Warning: release not found as expected at $DEPLOY_URL"
+        fi
+
+        # upload an unzipped, unversioned release for appimage.github.io
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@mudlet.org:${DEPLOY_PATH}" || true
+        DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
+
+        SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
+        current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+        read -r day month year hour minute second <<< "$current_timestamp"
+
+        curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+        -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+        -F "file_type=2" \
+        -F "file_remote=$DEPLOY_URL" \
+        -F "file_name=Mudlet ${VERSION} (Linux)" \
+        -F "file_des=sha256: $SHA256SUM" \
+        -F "file_cat=5" \
+        -F "file_permission=-1" \
+        -F "file_timestamp_day=$day" \
+        -F "file_timestamp_month=$month" \
+        -F "file_timestamp_year=$year" \
+        -F "file_timestamp_hour=$hour" \
+        -F "file_timestamp_minute=$minute" \
+        -F "file_timestamp_second=$second" \
+        -F "output=json" \
+        -F "do=Add File" || true
+
+        echo "=== Uploading portable version ==="
+        if scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"; then
+          PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+
+          if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
+            echo "Warning: portable release not found as expected at $PORTABLE_DEPLOY_URL"
+          fi
+
+          PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
+
+          curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+          -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+          -F "file_type=2" \
+          -F "file_remote=$PORTABLE_DEPLOY_URL" \
+          -F "file_name=Mudlet ${VERSION} (Linux Portable)" \
+          -F "file_des=sha256: $PORTABLE_SHA256SUM" \
+          -F "file_cat=5" \
+          -F "file_permission=-1" \
+          -F "file_timestamp_day=$day" \
+          -F "file_timestamp_month=$month" \
+          -F "file_timestamp_year=$year" \
+          -F "file_timestamp_hour=$hour" \
+          -F "file_timestamp_minute=$minute" \
+          -F "file_timestamp_second=$second" \
+          -F "output=json" \
+          -F "do=Add File" || true
+        else
+          echo "Warning: Failed to upload portable version to mudlet.org"
+        fi
+      else
+        echo "Warning: Failed to upload to mudlet.org - artifacts will be available via GitHub"
       fi
-
-      PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
-
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
-      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
-      -F "file_type=2" \
-      -F "file_remote=$PORTABLE_DEPLOY_URL" \
-      -F "file_name=Mudlet ${VERSION} (Linux Portable)" \
-      -F "file_des=sha256: $PORTABLE_SHA256SUM" \
-      -F "file_cat=5" \
-      -F "file_permission=-1" \
-      -F "file_timestamp_day=$day" \
-      -F "file_timestamp_month=$month" \
-      -F "file_timestamp_year=$year" \
-      -F "file_timestamp_hour=$hour" \
-      -F "file_timestamp_minute=$minute" \
-      -F "file_timestamp_second=$second" \
-      -F "output=json" \
-      -F "do=Add File"
     fi
 
     # push release to DBLSQD
@@ -199,7 +212,7 @@ then
       # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}" || true
     fi
 
     if [ "${public_test_build}" != "true" ]; then
@@ -213,28 +226,31 @@ then
       chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
       xz "Mudlet-${VERSION}.tar"
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-      FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
-      SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}.tar.xz" | awk '{print $1}')
-      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-      read -r day month year hour minute second <<< "$current_timestamp"
+      if scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@mudlet.org:${DEPLOY_PATH}"; then
+        FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
+        SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}.tar.xz" | awk '{print $1}')
+        current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+        read -r day month year hour minute second <<< "$current_timestamp"
 
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
-      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
-      -F "file_type=2" \
-      -F "file_remote=$FILE_URL" \
-      -F "file_name=Mudlet ${VERSION} (Source Code)" \
-      -F "file_des=sha256: $SHA256SUM" \
-      -F "file_cat=6" \
-      -F "file_permission=-1" \
-      -F "file_timestamp_day=$day" \
-      -F "file_timestamp_month=$month" \
-      -F "file_timestamp_year=$year" \
-      -F "file_timestamp_hour=$hour" \
-      -F "file_timestamp_minute=$minute" \
-      -F "file_timestamp_second=$second" \
-      -F "output=json" \
-      -F "do=Add File"
+        curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+        -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+        -F "file_type=2" \
+        -F "file_remote=$FILE_URL" \
+        -F "file_name=Mudlet ${VERSION} (Source Code)" \
+        -F "file_des=sha256: $SHA256SUM" \
+        -F "file_cat=6" \
+        -F "file_permission=-1" \
+        -F "file_timestamp_day=$day" \
+        -F "file_timestamp_month=$month" \
+        -F "file_timestamp_year=$year" \
+        -F "file_timestamp_hour=$hour" \
+        -F "file_timestamp_minute=$minute" \
+        -F "file_timestamp_second=$second" \
+        -F "output=json" \
+        -F "do=Add File" || true
+      else
+        echo "Warning: Failed to upload source tarball to mudlet.org"
+      fi
     fi
   fi
   export DEPLOY_URL

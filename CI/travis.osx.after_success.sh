@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+# set -e  # Disabled to allow graceful handling of upload failures
+set -x
 
 sign_and_notarize () {
 
@@ -143,16 +144,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
     else
-      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
-
-      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
-        echo "Error: release not found as expected at $DEPLOY_URL"
-        exit 1
-      fi
-
-      SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" | awk '{print $1}')
+      # Set up artifact upload for release builds (allows download from GitHub if mudlet.org is unreachable)
+      echo "=== Setting up for Github artifact upload ==="
+      mkdir -p "${BUILD_DIR}/upload/"
+      cp "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "${BUILD_DIR}/upload/"
 
       # Create portable version (compressed .app bundle)
       echo "=== Creating portable version ==="
@@ -169,79 +164,98 @@ if [ "${DEPLOY}" = "deploy" ]; then
           touch "${MACOS_DIR}/portable.txt"
           echo "Created portable.txt at: ${MACOS_DIR}/portable.txt"
         else
-          echo "Error: Could not find MacOS directory at: $MACOS_DIR"
-          exit 1
+          echo "Warning: Could not find MacOS directory at: $MACOS_DIR"
         fi
 
         # Sign the app bundle specifically for portable version
         if [ -n "$MACOS_SIGNING_PASS" ]; then
           echo "Signing app bundle for portable version"
-          sign_app_bundle "$APP_PATH"
+          sign_app_bundle "$APP_PATH" || true
         fi
 
         tar -czf "${PORTABLE_NAME}.tar.gz" -C "$APP_DIR" "mudlet.app"
+        cp "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "${BUILD_DIR}/upload/"
       else
-        echo "Error: Could not find mudlet.app anywhere in ${BUILD_DIR}"
+        echo "Warning: Could not find mudlet.app anywhere in ${BUILD_DIR}"
         echo "Directory contents:"
         find "${BUILD_DIR}" -name "*.app" -type d
-        exit 1
-      fi
-      PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
-
-      echo "=== Uploading portable version ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
-
-      if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
-        echo "Error: portable release not found as expected at $PORTABLE_DEPLOY_URL"
-        exit 1
       fi
 
-      if [ "${ARCH}" = "arm64" ]; then
-        FILE_CATEGORY="4"
+      {
+        echo "FOLDER_TO_UPLOAD=${BUILD_DIR}/upload"
+        echo "UPLOAD_FILENAME=Mudlet-${VERSION}-${ARCH}"
+      } >> "$GITHUB_ENV"
+
+      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+      if scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"; then
+        DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-${ARCH}.dmg"
+
+        if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+          echo "Warning: release not found as expected at $DEPLOY_URL"
+        fi
+
+        SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}-${ARCH}.dmg" | awk '{print $1}')
+        PORTABLE_SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" | awk '{print $1}')
+
+        echo "=== Uploading portable version ==="
+        if scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/${PORTABLE_NAME}.tar.gz" "mudmachine@mudlet.org:${DEPLOY_PATH}"; then
+          PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_NAME}.tar.gz"
+
+          if ! curl --output /dev/null --silent --head --fail "$PORTABLE_DEPLOY_URL"; then
+            echo "Warning: portable release not found as expected at $PORTABLE_DEPLOY_URL"
+          fi
+        else
+          echo "Warning: Failed to upload portable version to mudlet.org"
+        fi
+
+        if [ "${ARCH}" = "arm64" ]; then
+          FILE_CATEGORY="4"
+        else
+          FILE_CATEGORY="3"
+        fi
+
+        # Get current timestamp
+        current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+        read -r day month year hour minute second <<< "$current_timestamp"
+
+        # Upload regular DMG version
+        curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+        -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+        -F "file_type=2" \
+        -F "file_remote=$DEPLOY_URL" \
+        -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS)" \
+        -F "file_des=sha256: $SHA256SUM" \
+        -F "file_cat=${FILE_CATEGORY}" \
+        -F "file_permission=-1" \
+        -F "file_timestamp_day=$day" \
+        -F "file_timestamp_month=$month" \
+        -F "file_timestamp_year=$year" \
+        -F "file_timestamp_hour=$hour" \
+        -F "file_timestamp_minute=$minute" \
+        -F "file_timestamp_second=$second" \
+        -F "output=json" \
+        -F "do=Add File" || true
+
+        # Upload portable version
+        curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+        -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+        -F "file_type=2" \
+        -F "file_remote=$PORTABLE_DEPLOY_URL" \
+        -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS Portable)" \
+        -F "file_des=sha256: $PORTABLE_SHA256SUM" \
+        -F "file_cat=${FILE_CATEGORY}" \
+        -F "file_permission=-1" \
+        -F "file_timestamp_day=$day" \
+        -F "file_timestamp_month=$month" \
+        -F "file_timestamp_year=$year" \
+        -F "file_timestamp_hour=$hour" \
+        -F "file_timestamp_minute=$minute" \
+        -F "file_timestamp_second=$second" \
+        -F "output=json" \
+        -F "do=Add File" || true
       else
-        FILE_CATEGORY="3"
+        echo "Warning: Failed to upload to mudlet.org - artifacts will be available via GitHub"
       fi
-
-      # Get current timestamp
-      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-      read -r day month year hour minute second <<< "$current_timestamp"
-
-      # Upload regular DMG version
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
-      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
-      -F "file_type=2" \
-      -F "file_remote=$DEPLOY_URL" \
-      -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS)" \
-      -F "file_des=sha256: $SHA256SUM" \
-      -F "file_cat=${FILE_CATEGORY}" \
-      -F "file_permission=-1" \
-      -F "file_timestamp_day=$day" \
-      -F "file_timestamp_month=$month" \
-      -F "file_timestamp_year=$year" \
-      -F "file_timestamp_hour=$hour" \
-      -F "file_timestamp_minute=$minute" \
-      -F "file_timestamp_second=$second" \
-      -F "output=json" \
-      -F "do=Add File"
-
-      # Upload portable version
-      curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
-      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
-      -F "file_type=2" \
-      -F "file_remote=$PORTABLE_DEPLOY_URL" \
-      -F "file_name=Mudlet ${VERSION}-${ARCH} (macOS Portable)" \
-      -F "file_des=sha256: $PORTABLE_SHA256SUM" \
-      -F "file_cat=${FILE_CATEGORY}" \
-      -F "file_permission=-1" \
-      -F "file_timestamp_day=$day" \
-      -F "file_timestamp_month=$month" \
-      -F "file_timestamp_year=$year" \
-      -F "file_timestamp_hour=$hour" \
-      -F "file_timestamp_minute=$minute" \
-      -F "file_timestamp_second=$second" \
-      -F "output=json" \
-      -F "do=Add File"
 
     fi
 
@@ -263,7 +277,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}"
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}" || true
     fi
   fi
 

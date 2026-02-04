@@ -298,6 +298,7 @@ jobs:
 
     - name: package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      continue-on-error: true
       run: |
         export ARCH=$(uname -m)
         echo "ARCH=$ARCH" >> $GITHUB_ENV

@@ -313,6 +313,19 @@ else
     DBLSQD_CHANNEL="public-test-build"
     CHANGELOG_MODE="ptb"
   else
+    # Set up artifact upload for release builds (allows download from GitHub if mudlet.org is unreachable)
+    echo "=== Preparing artifact for release build for upload to make.mudlet.org ==="
+    UPLOAD_PATH=$(cygpath -au "${GITHUB_WORKSPACE}/upload")
+    mkdir -p "${UPLOAD_PATH}"
+    cp -vp "${INSTALLER_EXE_PATHFILE}" "${UPLOAD_PATH}"
+    ARTIFACT_NAME="Mudlet-${VERSION}-windows-64-installer.exe"
+    ARTIFACT_WINPATHORFILE="$(cygpath -aw "${UPLOAD_PATH}")"
+    {
+      echo "ARTIFACT_NAME=${ARTIFACT_NAME}"
+      echo "ARTIFACT_WINPATHORFILE=${ARTIFACT_WINPATHORFILE}"
+      echo "ARTIFACT_COMPRESSION=0"
+      echo "ARTIFACT_UNZIP=1"
+    } >> "${GITHUB_ENV}"
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
     echo "${DEPLOY_SSH_KEY}" > temp_key_file
@@ -320,100 +333,47 @@ else
     echo "Fixing permissions of private key file"
     powershell.exe -Command "icacls.exe temp_key_file /inheritance:r"
 
-    powershell.exe <<EOF
+    SCP_SUCCESS=false
+    if powershell.exe <<EOF
 \$installerExePath = "${INSTALLER_EXE_WINPATHFILE}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
 scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@mudlet.org:\${DEPLOY_PATH}
 EOF
+    then
+      SCP_SUCCESS=true
+    fi
 
     shred -u temp_key_file
 
-    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-installer.exe"
+    if [[ "${SCP_SUCCESS}" == "true" ]]; then
+      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-64-installer.exe"
 
-    if ! curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; then
-      echo "Error: release not found as expected at ${DEPLOY_URL}"
-      exit 1
-    fi
-
-    SHA256SUM=$(shasum -a 256 "${INSTALLER_EXE_PATHFILE}" | awk '{print $1}')
-
-    current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-    read -r day month year hour minute second <<< "${current_timestamp}"
-
-    # blank echo to remove the stray 'PS D:\a\Mudlet\Mudlet\installers\windows> ' that shows up otherwise
-
-    echo ""
-    echo "=== Updating WP-Download-Manager ==="
-    echo "sha256 of installer: ${SHA256SUM}"
-
-    FILE_CATEGORY="2"
-
-    current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-    read -r day month year hour minute second <<< "${current_timestamp}"
-
-    curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
-    -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
-    -F "file_type=2" \
-    -F "file_remote=${DEPLOY_URL}" \
-    -F "file_name=Mudlet ${VERSION} (windows-64)" \
-    -F "file_des=sha256: ${SHA256SUM}" \
-    -F "file_cat=${FILE_CATEGORY}" \
-    -F "file_permission=-1" \
-    -F "file_timestamp_day=${day}" \
-    -F "file_timestamp_month=${month}" \
-    -F "file_timestamp_year=${year}" \
-    -F "file_timestamp_hour=${hour}" \
-    -F "file_timestamp_minute=${minute}" \
-    -F "file_timestamp_second=${second}" \
-    -F "output=json" \
-    -F "do=Add File"
-
-    echo "=== Uploading portable ZIP to mudlet.org ==="
-    # Define portable ZIP paths
-    PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
-    PORTABLE_ZIP_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
-
-    # Check if portable ZIP exists
-    if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then
-      echo "Found portable ZIP at: ${PORTABLE_ZIP_PATH}"
-
-      # Create SSH key file for portable upload
-      echo "${DEPLOY_SSH_KEY}" > temp_key_file_portable
-      powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
-
-      # Upload portable ZIP via SCP with proper naming
-      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
-      powershell.exe <<EOF
-\$portableZipPath = "${PORTABLE_ZIP_PATH}"
-\$DEPLOY_PATH = "${DEPLOY_PATH}"
-\$remoteFileName = "${PORTABLE_REMOTE_NAME}"
-scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
-EOF
-
-      shred -u temp_key_file_portable
-
-      # Define portable ZIP URL - should match the naming convention
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
-
-      # Verify portable ZIP was uploaded
-      if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
-        echo "Error: portable ZIP not found as expected at ${PORTABLE_DEPLOY_URL}"
-        exit 1
+      if ! curl --output /dev/null --silent --head --fail "${DEPLOY_URL}"; then
+        echo "Warning: release not found as expected at ${DEPLOY_URL}"
       fi
 
-      # Calculate SHA256 for portable ZIP
-      PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_ZIP_PATH}" | awk '{print $1}')
+      SHA256SUM=$(shasum -a 256 "${INSTALLER_EXE_PATHFILE}" | awk '{print $1}')
 
-      echo "=== Registering portable ZIP with WP-Download-Manager ==="
-      echo "sha256 of portable ZIP: ${PORTABLE_SHA256SUM}"
+      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+      read -r day month year hour minute second <<< "${current_timestamp}"
 
-      # Register portable ZIP with download manager
+      # blank echo to remove the stray 'PS D:\a\Mudlet\Mudlet\installers\windows> ' that shows up otherwise
+
+      echo ""
+      echo "=== Updating WP-Download-Manager ==="
+      echo "sha256 of installer: ${SHA256SUM}"
+
+      FILE_CATEGORY="2"
+
+      current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
+      read -r day month year hour minute second <<< "${current_timestamp}"
+
       curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
       -F "file_type=2" \
-      -F "file_remote=${PORTABLE_DEPLOY_URL}" \
-      -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
-      -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
+      -F "file_remote=${DEPLOY_URL}" \
+      -F "file_name=Mudlet ${VERSION} (windows-64)" \
+      -F "file_des=sha256: ${SHA256SUM}" \
       -F "file_cat=${FILE_CATEGORY}" \
       -F "file_permission=-1" \
       -F "file_timestamp_day=${day}" \
@@ -423,11 +383,77 @@ EOF
       -F "file_timestamp_minute=${minute}" \
       -F "file_timestamp_second=${second}" \
       -F "output=json" \
-      -F "do=Add File"
+      -F "do=Add File" || true
 
-      echo "Portable ZIP uploaded and registered successfully"
+      echo "=== Uploading portable ZIP to mudlet.org ==="
+      # Define portable ZIP paths
+      PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
+      PORTABLE_ZIP_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
+
+      # Check if portable ZIP exists
+      if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then
+        echo "Found portable ZIP at: ${PORTABLE_ZIP_PATH}"
+
+        # Copy portable to upload folder for artifact
+        cp -vp "${PORTABLE_ZIP_PATH}" "${UPLOAD_PATH}/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+
+        # Create SSH key file for portable upload
+        echo "${DEPLOY_SSH_KEY}" > temp_key_file_portable
+        powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
+
+        # Upload portable ZIP via SCP with proper naming
+        PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+        if powershell.exe <<EOF
+\$portableZipPath = "${PORTABLE_ZIP_PATH}"
+\$DEPLOY_PATH = "${DEPLOY_PATH}"
+\$remoteFileName = "${PORTABLE_REMOTE_NAME}"
+scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
+EOF
+        then
+          shred -u temp_key_file_portable
+
+          # Define portable ZIP URL - should match the naming convention
+          PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+
+          # Verify portable ZIP was uploaded
+          if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
+            echo "Warning: portable ZIP not found as expected at ${PORTABLE_DEPLOY_URL}"
+          fi
+
+          # Calculate SHA256 for portable ZIP
+          PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_ZIP_PATH}" | awk '{print $1}')
+
+          echo "=== Registering portable ZIP with WP-Download-Manager ==="
+          echo "sha256 of portable ZIP: ${PORTABLE_SHA256SUM}"
+
+          # Register portable ZIP with download manager
+          curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
+          -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
+          -F "file_type=2" \
+          -F "file_remote=${PORTABLE_DEPLOY_URL}" \
+          -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
+          -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
+          -F "file_cat=${FILE_CATEGORY}" \
+          -F "file_permission=-1" \
+          -F "file_timestamp_day=${day}" \
+          -F "file_timestamp_month=${month}" \
+          -F "file_timestamp_year=${year}" \
+          -F "file_timestamp_hour=${hour}" \
+          -F "file_timestamp_minute=${minute}" \
+          -F "file_timestamp_second=${second}" \
+          -F "output=json" \
+          -F "do=Add File" || true
+
+          echo "Portable ZIP uploaded and registered successfully"
+        else
+          shred -u temp_key_file_portable
+          echo "Warning: Failed to upload portable ZIP to mudlet.org"
+        fi
+      else
+        echo "Warning: Portable ZIP not found at ${PORTABLE_ZIP_PATH}, skipping portable upload"
+      fi
     else
-      echo "Warning: Portable ZIP not found at ${PORTABLE_ZIP_PATH}, skipping portable upload"
+      echo "Warning: Failed to upload to mudlet.org - artifacts will be available via GitHub"
     fi
 
     DBLSQD_CHANNEL="release"
@@ -475,7 +501,7 @@ EOF
   if [[ "${DBLSQD_CHANNEL}" == "release" ]]; then
     echo "=== Registering release with Dblsqd ==="
     echo "dblsqd push -a mudlet -c \"${DBLSQD_CHANNEL}\" -r \"${DBLSQD_VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64 \"${DEPLOY_URL}\""
-    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${DEPLOY_URL}"
+    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${DEPLOY_URL}" || true
   fi
 
 fi
