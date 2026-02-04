@@ -114,14 +114,14 @@ jobs:
         mkdir -p "${SIGNING_DIR}"
 
         cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/mudlet.exe" "${SIGNING_DIR}/"
-        cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/MudletCrashReporter.exe" "${SIGNING_DIR}/"
+        # cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/MudletCrashReporter.exe" "${SIGNING_DIR}/"
 
-        if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" ]; then
-          cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" "${SIGNING_DIR}/"
-        fi
-        if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" ]; then
-          cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" "${SIGNING_DIR}/"
-        fi
+        # if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" ]; then
+        #   cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" "${SIGNING_DIR}/"
+        # fi
+        # if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" ]; then
+        #   cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" "${SIGNING_DIR}/"
+        # fi
 
         echo "SIGNING_DIR=$(cygpath -aw "${SIGNING_DIR}")" >> $GITHUB_ENV
         echo "signing_dir=${SIGNING_DIR}" >> $GITHUB_OUTPUT
@@ -158,14 +158,14 @@ jobs:
         BUILD_DIR="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
 
         cp -v "${SIGNING_DIR}/mudlet.exe" "${BUILD_DIR}/"
-        cp -v "${SIGNING_DIR}/MudletCrashReporter.exe" "${BUILD_DIR}/"
+        # cp -v "${SIGNING_DIR}/MudletCrashReporter.exe" "${BUILD_DIR}/"
 
-        if [ -f "${SIGNING_DIR}/crashpad_handler.exe" ]; then
-          cp -v "${SIGNING_DIR}/crashpad_handler.exe" "${BUILD_DIR}/"
-        fi
-        if [ -f "${SIGNING_DIR}/crashpad_wer.dll" ]; then
-          cp -v "${SIGNING_DIR}/crashpad_wer.dll" "${BUILD_DIR}/"
-        fi
+        # if [ -f "${SIGNING_DIR}/crashpad_handler.exe" ]; then
+        #   cp -v "${SIGNING_DIR}/crashpad_handler.exe" "${BUILD_DIR}/"
+        # fi
+        # if [ -f "${SIGNING_DIR}/crashpad_wer.dll" ]; then
+        #   cp -v "${SIGNING_DIR}/crashpad_wer.dll" "${BUILD_DIR}/"
+        # fi
 
         echo "Binary signing complete."
 
