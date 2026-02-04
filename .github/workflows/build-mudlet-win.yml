@@ -149,6 +149,7 @@ jobs:
         wait-for-completion: true
         output-artifact-directory: ${{steps.prepare-signing.outputs.signing_dir}}
         wait-for-completion-timeout-in-seconds: 600
+        github-policies-file: '.signpath/github-policies.yaml'
 
     - name: (Windows) Replace binaries with signed versions
       if: steps.sign-binaries.outcome == 'success'
@@ -218,6 +219,7 @@ jobs:
         wait-for-completion: true
         output-artifact-directory: ${{github.workspace}}/signed-installer
         wait-for-completion-timeout-in-seconds: 600
+        github-policies-file: '.signpath/github-policies.yaml'
 
     - name: (Windows) Replace installer with signed version
       if: steps.sign-installer.outcome == 'success'
