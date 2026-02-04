@@ -173,6 +173,8 @@ jobs:
           libsqlite3-dev \
           qtkeychain-qt6-dev \
           libxkbcommon-x11-0 \
+          libxcb-render-util0-dev \
+          libxcb-image0-dev \
           libyajl-dev \
           libzip-dev \
           pcre2-utils \
@@ -197,6 +199,26 @@ jobs:
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+
+    - name: (Linux) Build xcb-util-cursor 0.1.5
+      if: runner.os == 'Linux'
+      run: |
+        # Download and extract xcb-util-cursor 0.1.5
+        # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
+        # that causes PTB builds to crash with AddressSanitizer
+        wget -q https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        tar xf xcb-util-cursor-0.1.5.tar.xz
+        cd xcb-util-cursor-0.1.5
+
+        # Configure and build
+        ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu
+        make -j$(nproc)
+
+        # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
+        sudo make install
+
+        # Update library cache so linker finds new version
+        sudo ldconfig
 
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
