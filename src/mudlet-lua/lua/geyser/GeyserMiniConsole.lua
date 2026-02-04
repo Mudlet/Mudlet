@@ -446,14 +446,14 @@ function Geyser.MiniConsole:resetAutoWrap()
   local consoleWidth = self.get_width()
 
   -- Cache width and use cached value if current drops significantly (indicates background profile, #8273)
-  local AUTO_WRAP_SHRINK_THRESHOLD = 0.6
-  local MIN_CACHEABLE_WIDTH = 1
+  local autoWrapShrinkThreshold = 0.6
+  local minCacheableWidth = 1
   local cachedWidth = self.cachedAutoWrapWidth
-  local isShrunk = cachedWidth and consoleWidth < cachedWidth * AUTO_WRAP_SHRINK_THRESHOLD
+  local isShrunk = cachedWidth and consoleWidth < cachedWidth * autoWrapShrinkThreshold
 
   if isShrunk then
     consoleWidth = cachedWidth
-  elseif consoleWidth > MIN_CACHEABLE_WIDTH then
+  elseif consoleWidth > minCacheableWidth then
     self.cachedAutoWrapWidth = consoleWidth
   end
 
