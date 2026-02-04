@@ -117,15 +117,18 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 
 
 # Set Mudlet version (update in CMakeLists.txt as well)
-VERSION = 4.19.1
+VERSION = 4.20.0
 
 # Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
-BUILD = $$(MUDLET_VERSION_BUILD)
-!isEmpty(BUILD) {
-    BUILD = $${BUILD}-$${GIT_SHA1}
-} else {
-    BUILD = "-dev-"$${GIT_SHA1}
-}
+# BUILD = $$(MUDLET_VERSION_BUILD)
+# !isEmpty(BUILD) {
+#     BUILD = $${BUILD}-$${GIT_SHA1}
+# } else {
+#     BUILD = "-dev-"$${GIT_SHA1}
+# }
+
+# For release builds, comment out the above and uncomment below:
+BUILD = ""
 
 # Write BUILD to app-build.txt, note that this adds a newline to the file
 write_file(app-build.txt, BUILD)
