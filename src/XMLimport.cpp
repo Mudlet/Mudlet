@@ -1182,7 +1182,9 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("mFgColor")) {
                 pHost->mFgColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mBgColor")) {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mBgColor = QColor::fromString(readElementText());
+                pHost->mBgColor.setAlpha(alpha);
             } else if (name() == qsl("mCommandFgColor")) {
                 pHost->mCommandFgColor = QColor::fromString(readElementText());
             } else if (name() == qsl("mCommandBgColor")) {
