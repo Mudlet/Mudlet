@@ -206,11 +206,11 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
         QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
+        TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
+
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
             mMXP_MODE = mMXP_DEFAULT;
         }
-
-        TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
 
         // If tag was not handled (not valid MXP and not a custom element), display it as-is
         // Use HANDLER_INSERT_ENTITY_SYS so the Unicode content is inserted directly
