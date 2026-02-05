@@ -1378,6 +1378,100 @@ void XMLimport::readHost(Host* pHost)
     pHost->loadPackageInfo();
 }
 
+bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
+{
+    // Simple colors (no alpha channel)
+    static const QHash<QString, QColor Host::*> simpleColors = {
+            {qsl("mCommandLineFgColor"), &Host::mCommandLineFgColor},
+            {qsl("mCommandLineBgColor"), &Host::mCommandLineBgColor},
+            {qsl("mFgColor"), &Host::mFgColor},
+            {qsl("mCommandFgColor"), &Host::mCommandFgColor},
+            {qsl("mCommandBgColor"), &Host::mCommandBgColor},
+            {qsl("mBlack"), &Host::mBlack},
+            {qsl("mLightBlack"), &Host::mLightBlack},
+            {qsl("mRed"), &Host::mRed},
+            {qsl("mLightRed"), &Host::mLightRed},
+            {qsl("mBlue"), &Host::mBlue},
+            {qsl("mLightBlue"), &Host::mLightBlue},
+            {qsl("mGreen"), &Host::mGreen},
+            {qsl("mLightGreen"), &Host::mLightGreen},
+            {qsl("mYellow"), &Host::mYellow},
+            {qsl("mLightYellow"), &Host::mLightYellow},
+            {qsl("mCyan"), &Host::mCyan},
+            {qsl("mLightCyan"), &Host::mLightCyan},
+            {qsl("mMagenta"), &Host::mMagenta},
+            {qsl("mLightMagenta"), &Host::mLightMagenta},
+            {qsl("mWhite"), &Host::mWhite},
+            {qsl("mLightWhite"), &Host::mLightWhite},
+            {qsl("mFgColor2"), &Host::mFgColor_2},
+            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
+            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
+            {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
+            {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
+            {qsl("mBlack2"), &Host::mBlack_2},
+            {qsl("mLightBlack2"), &Host::mLightBlack_2},
+            {qsl("mRed2"), &Host::mRed_2},
+            {qsl("mLightRed2"), &Host::mLightRed_2},
+            {qsl("mBlue2"), &Host::mBlue_2},
+            {qsl("mLightBlue2"), &Host::mLightBlue_2},
+            {qsl("mGreen2"), &Host::mGreen_2},
+            {qsl("mLightGreen2"), &Host::mLightGreen_2},
+            {qsl("mYellow2"), &Host::mYellow_2},
+            {qsl("mLightYellow2"), &Host::mLightYellow_2},
+            {qsl("mCyan2"), &Host::mCyan_2},
+            {qsl("mLightCyan2"), &Host::mLightCyan_2},
+            {qsl("mMagenta2"), &Host::mMagenta_2},
+            {qsl("mLightMagenta2"), &Host::mLightMagenta_2},
+            {qsl("mWhite2"), &Host::mWhite_2},
+            {qsl("mLightWhite2"), &Host::mLightWhite_2},
+    };
+
+    // Colors that support alpha channel
+    static const QHash<QString, QColor Host::*> alphaColors = {
+            {qsl("mBgColor"), &Host::mBgColor},
+            {qsl("mBgColor2"), &Host::mBgColor_2},
+            {qsl("mMapGridColor"), &Host::mMapGridColor},
+            {qsl("mMapInfoBg"), &Host::mMapInfoBg},
+    };
+
+    const QString elemName = elementName.toString();
+
+    if (auto it = simpleColors.find(elemName); it != simpleColors.end()) {
+        pHost->*it.value() = QColor::fromString(readElementText());
+        return true;
+    }
+
+    if (auto it = alphaColors.find(elemName); it != alphaColors.end()) {
+        const int alpha = attributes().hasAttribute(qsl("alpha")) ? attributes().value(qsl("alpha")).toInt() : 255;
+        pHost->*it.value() = QColor::fromString(readElementText());
+        (pHost->*it.value()).setAlpha(alpha);
+        return true;
+    }
+
+    return false;
+}
+
+bool XMLimport::readHostBorderElement(QMargins& borders, QStringView elementName)
+{
+    if (elementName == qsl("borderTopHeight")) {
+        borders.setTop(readElementText().toInt());
+        return true;
+    }
+    if (elementName == qsl("borderBottomHeight")) {
+        borders.setBottom(readElementText().toInt());
+        return true;
+    }
+    if (elementName == qsl("borderLeftWidth")) {
+        borders.setLeft(readElementText().toInt());
+        return true;
+    }
+    if (elementName == qsl("borderRightWidth")) {
+        borders.setRight(readElementText().toInt());
+        return true;
+    }
+    return false;
+}
+
 bool XMLimport::readDefaultTrueBool(QString name)
 {
     return attributes().value(name) == YES || !attributes().hasAttribute(name);
