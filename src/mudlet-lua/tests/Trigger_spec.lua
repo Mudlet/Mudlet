@@ -126,4 +126,59 @@ describe("Trigger processing", function()
         end)
 
     end)
+
+    -- Test for issue #8824: cecho behavior with newlines and creplaceLine
+    -- Previously, cecho("\n") followed by creplaceLine and then another cecho
+    -- would place the second cecho on a different line than expected
+    describe("cecho with newlines and creplaceLine (issue #8824)", function()
+
+        it("should append text on same line after creplaceLine", function()
+            local result_line = nil
+            local trigger_id = tempRegexTrigger("^REPLACE_ME_TEST_8824$", function()
+                -- This is the exact sequence from the bug report
+                cecho("\n")
+                selectCurrentLine()
+                creplaceLine("<red>REPLACED")
+                cecho("(cecho)")
+
+                -- Get the current line to verify the result
+                selectCurrentLine()
+                result_line = getSelection()
+            end)
+
+            -- Trigger the pattern
+            feedTriggers("\nREPLACE_ME_TEST_8824\n")
+
+            -- The text should be on the same line: "REPLACED(cecho)"
+            -- Before the fix, "(cecho)" would be on a separate line
+            assert.is_not_nil(result_line, "Should have captured the result line")
+            assert.are.equal("REPLACED(cecho)", result_line,
+                "cecho text should appear on same line as creplaceLine text")
+
+            killTrigger(trigger_id)
+        end)
+
+        it("should handle multiple cecho calls after creplaceLine", function()
+            local result_line = nil
+            local trigger_id = tempRegexTrigger("^MULTI_ECHO_TEST_8824$", function()
+                cecho("\n")
+                selectCurrentLine()
+                creplaceLine("<green>START")
+                cecho("<yellow>-MIDDLE")
+                cecho("<blue>-END")
+
+                selectCurrentLine()
+                result_line = getSelection()
+            end)
+
+            feedTriggers("\nMULTI_ECHO_TEST_8824\n")
+
+            assert.is_not_nil(result_line, "Should have captured the result line")
+            assert.are.equal("START-MIDDLE-END", result_line,
+                "All cecho text should appear on same line")
+
+            killTrigger(trigger_id)
+        end)
+
+    end)
 end)
