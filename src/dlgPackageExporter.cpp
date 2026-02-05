@@ -122,8 +122,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     dlgPackageExporter* te_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     te_parent->mPlainDescription = ui->textEdit_description->toPlainText();
 
-    ui->packageList->addItem(tr("update installed package"));
-
     populateDependencies();
 
     listTriggers();
@@ -428,6 +426,9 @@ void dlgPackageExporter::populateDependencies()
 {
     ui->DependencyList->clear();
     ui->DependencyList->addItem(tr("add dependencies"));
+    ui->packageList->clear();
+    //: First item in package selection dropdown - when selected, allows updating an existing installed package
+    ui->packageList->addItem(tr("update installed package"));
     ui->packageList->addItems(mpHost->mInstalledPackages);
     ui->DependencyList->addItems(mpHost->mInstalledPackages);
     auto modules = mpHost->mInstalledModules;
