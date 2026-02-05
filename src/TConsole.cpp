@@ -1912,7 +1912,7 @@ void TConsole::printSystemMessage(const QString& msg)
 void TConsole::echo(const QString& msg)
 {
     if (mTriggerEngineMode) {
-        buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes(), 0, false);
     } else {
         print(msg);
     }

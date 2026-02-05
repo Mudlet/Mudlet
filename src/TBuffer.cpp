@@ -4205,7 +4205,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
 }
 
-void TBuffer::appendLine(const QString& text, const int sub_start, const int sub_end, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags flags, const int linkID)
+void TBuffer::appendLine(
+        const QString& text, const int sub_start, const int sub_end, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags flags, const int linkID, const bool handleNewlines)
 {
     if (sub_end < 0) {
         return;
@@ -4252,7 +4253,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
         const QChar thisChar = text.at(i);
 
-        if (thisChar == QChar::LineFeed) {
+        if (handleNewlines && thisChar == QChar::LineFeed) {
             firstChar = true;
             appendEmptyLine();
             continue;
