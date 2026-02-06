@@ -1912,7 +1912,13 @@ void TConsole::printSystemMessage(const QString& msg)
 void TConsole::echo(const QString& msg)
 {
     if (mTriggerEngineMode) {
-        buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes(), 0, false);
+        // Only convert \n to new lines when the message contains actual text.
+        // Pure-newline messages (e.g. cecho("\n")) are kept literal so that
+        // a subsequent creplaceLine can replace them along with the line content
+        // (see issue #8824). Messages with text (e.g. cecho("\n text")) still
+        // get proper newline handling (see PR #8896 discussion).
+        const bool handleNewlines = (msg.count(QChar::LineFeed) != msg.size());
+        buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes(), 0, handleNewlines);
     } else {
         print(msg);
     }

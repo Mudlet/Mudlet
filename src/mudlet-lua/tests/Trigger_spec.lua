@@ -180,5 +180,27 @@ describe("Trigger processing", function()
             killTrigger(trigger_id)
         end)
 
+        it("should create new lines when cecho contains text after newline", function()
+            local next_line = nil
+            local trigger_id = tempRegexTrigger("^NEWLINE_ECHO_TEST_8896$", function()
+                -- cecho with text after \n should create a new line and display
+                -- the text on it (reported in PR #8896 discussion)
+                cecho("\n newline echo")
+
+                -- Move to the line after the trigger line to check the echoed text
+                moveCursor(0, getLineNumber() + 1)
+                selectCurrentLine()
+                next_line = getSelection()
+            end)
+
+            feedTriggers("\nNEWLINE_ECHO_TEST_8896\n")
+
+            assert.is_not_nil(next_line, "Should have captured the next line")
+            assert.are.equal(" newline echo", next_line,
+                "cecho with \\n and text should create a new line with the text")
+
+            killTrigger(trigger_id)
+        end)
+
     end)
 end)
