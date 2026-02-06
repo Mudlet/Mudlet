@@ -1130,7 +1130,6 @@ QString dlgAboutDialog::createBuildInfo() const
                    "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
                    "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
                    "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
-                   "%12"
                    "</table>")
                 .arg(tr("Technical information:"),  // %1
                      tr("Version"),                 // %2
@@ -1139,14 +1138,14 @@ QString dlgAboutDialog::createBuildInfo() const
                      QSysInfo::prettyProductName(), // %5
                      tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
                                                     // used to use when we did 32 as well for consistency
-                     QSysInfo::currentCpuArchitecture(),     // %7
+                     QSysInfo::currentCpuArchitecture(), // %7
                      /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it not
+ is different to that used during compilation - it is not
  the usual case.*/
                      tr("Qt version (compilation)"), // %8
                      QLatin1String(QT_VERSION_STR))  // %9
                      /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it not
+ is different to that used during compilation - it is not
  the usual case.*/
                 .arg(tr("Qt version (run-time)"),    // %10
                      qVersion());                    // %11
@@ -1159,7 +1158,6 @@ QString dlgAboutDialog::createBuildInfo() const
                "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
                "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
                "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
-               "%10"
                "</table>")
             .arg(tr("Technical information:"),  // %1
                  tr("Version"),                 // %2
@@ -1172,8 +1170,7 @@ QString dlgAboutDialog::createBuildInfo() const
                  /*: This is shown when the same Qt version is used at run-time
  as was used during compilation - it is the usual case.*/
                  tr("Qt version"),              // %8
-                 QLatin1String(QT_VERSION_STR), // %9
-                 upgradeTo64Bits);              // %10
+                 QLatin1String(QT_VERSION_STR)); // %9
 #else
     // Anything else
     if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
@@ -1194,12 +1191,12 @@ QString dlgAboutDialog::createBuildInfo() const
                      tr("CPU"),                          // %6
                      QSysInfo::currentCpuArchitecture(), // %7
                      /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it not
+ is different to that used during compilation - it is not
 the usual case.*/
                      tr("Qt version (compilation)"), // %8
                      QLatin1String(QT_VERSION_STR))  // %9
                      /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it not
+ is different to that used during compilation - it is not
  the usual case.*/
                 .arg(tr("Qt version (run-time)"),    // %10
                      qVersion());                    // %11
