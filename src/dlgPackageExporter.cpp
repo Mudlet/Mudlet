@@ -1327,14 +1327,13 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, ze);
         /*: This zipError message is shown when the libzip library code is unable
-         * to open the file that was to be the end result of the export process.
-         * As this may be an existing file anywhere in the computer's
-         * file-system(s) it is possible that permissions on the directory or an
-         * existing file that is to be overwritten may be a source of problems
-         * here.
-        */
+ to open the file that was to be the end result of the export process.
+ As this may be an existing file anywhere in the computer's
+ file-system(s) it is possible that permissions on the directory or an
+ existing file that is to be overwritten may be a source of problems
+ here.*/
         const QString errMsg = tr("Failed to open package file. Error is: \"%1\".")
-                                 .arg(zip_error_strerror(&zipError));
+                                       .arg(zip_error_strerror(&zipError));
         zip_error_fini(&zipError);
         return {false, errMsg};
     }
@@ -1492,11 +1491,10 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             }
 
             /*: This error message is displayed at the final stage of exporting
-             * a package when all the sourced files are finally put into the
-             * archive. Unfortunately this may be the point at which something
-             * breaks because a problem was not spotted/detected in the process
-             * earlier...
-             */
+ a package when all the sourced files are finally put into the
+ archive. Unfortunately this may be the point at which something
+ breaks because a problem was not spotted/detected in the process
+ earlier...*/
             const QString errorMsg = tr("Failed to zip up the package. Error is: \"%1\".").arg(zipError);
             zip_discard(archive);
             // In libzip 0.11 a function was added to clean up

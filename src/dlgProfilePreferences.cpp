@@ -3289,17 +3289,13 @@ void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
     pushButton_copyMap->setText(tr("copy to %n destination(s)", nullptr, selectionCount));
     if (selectionCount) {
         pushButton_copyMap->setEnabled(true);
-        /*:
-        text on button to select other profiles to receive the map from this profile,
-        %n is the number of other profiles that have already been selected to receive it and will always be 1 or more
-        */
+        /*: text on button to select other profiles to receive the map from this profile,
+ %n is the number of other profiles that have already been selected to receive it and will always be 1 or more*/
         pushButton_chooseProfiles->setText(tr("%n selected - change destinations...", nullptr, selectionCount));
     } else {
         pushButton_copyMap->setEnabled(false);
-        /*:
-        text on button to select other profiles to receive the map from this profile,
-        this is used when no profiles have been selected
-        */
+        /*: text on button to select other profiles to receive the map from this profile,
+ this is used when no profiles have been selected*/
         pushButton_chooseProfiles->setText(tr("pick destinations..."));
     }
 }

@@ -1905,14 +1905,16 @@ bool dlgConnectionProfiles::validateProfile()
             // Qt::AutoFormat won't detect that rich-text is present in this text!
             notificationAreaMessageBox->setTextFormat(Qt::RichText);
             /*: Please use two line-feeds after the first line so the second
-             *  line can be italicised and spaced out - if appropriate for
-             *  the locale.
-             */
-            notificationAreaMessageBox->setText(qsl("%1%2\n\n%3").arg(!notificationAreaMessageBox->text().isEmpty() ? notificationAreaMessageBox->text().append(QChar::LineFeed) : QString(),
-                                                                      tr("Please enter the URL of the Game server.\n\n"
-                                                                         "<i>SSL/TLS connections require a URL, as an IP address is not a suitable "
-                                                                         "identifier for the certification of the Game Server.</i>"),
-                                                                      check.errorString()));
+ line can be italicised and spaced out - if appropriate for
+ the locale.*/
+            notificationAreaMessageBox->setText(qsl("%1%2\n\n%3")
+                                                        .arg(!notificationAreaMessageBox->text().isEmpty()
+                                                                     ? notificationAreaMessageBox->text().append(QChar::LineFeed)
+                                                                     : QString(),
+                                                             tr("Please enter the URL of the Game server.\n\n"
+                                                                "<i>SSL/TLS connections require a URL, as an IP address is not a suitable "
+                                                                "identifier for the certification of the Game Server.</i>"),
+                                                             check.errorString()));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;

@@ -581,7 +581,7 @@ void dlgPackageManager::slot_setPackageList()
         return;
     }
 
-    if (lineEdit_searchBar->text().length() > 0) {
+    if (!lineEdit_searchBar->text().isEmpty()) {
         slot_searchTextChanged(lineEdit_searchBar->text());
         return;
     }

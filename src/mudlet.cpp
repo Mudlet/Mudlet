@@ -1304,15 +1304,13 @@ void mudlet::loadMaps()
                         {"WINDOWS-1258", tr("WINDOWS-1258 (Vietnamese)")}};
 
     /*: This represents the format of the timestamps shown alongside the texts
-     * in a console and might require translation for a few locales; the content
-     * is as per QDateTime::toString(...) and needs to follow the rules for that
-     * function as well as being suitable for the translation locale.
-     */
+ in a console and might require translation for a few locales; the content
+ is as per QDateTime::toString(...) and needs to follow the rules for that
+ function as well as being suitable for the translation locale.*/
     smTimeStampFormat = tr("hh:mm:ss.zzz ");
     /*: This represents the format of the timestamps shown for lines that do not
-     * have a timestamp in a console that is showing them. If localised this
-     * should be set to the same format and length as the smTimeStampFormat:
-     */
+ have a timestamp in a console that is showing them. If localised this
+ should be set to the same format and length as the smTimeStampFormat:*/
     smBlankTimeStamp = tr("------------ ");
 }
 

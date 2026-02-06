@@ -1132,7 +1132,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
 
             } else if (mudlet::smDebugMode) {
                 // FIXME: This message is translated - but most other TDebug ones are not!
-                TDebug(Qt::yellow, Qt::darkMagenta) << qsl("%1\n").arg(tr("Trigger name=%1 will fire %n more time(s).", "", mExpiryCount).arg(mName)) >> mpHost;
+                TDebug(Qt::yellow, Qt::darkMagenta) << qsl("%1\n").arg(tr("Trigger name=%1 will fire %n more time(s).", nullptr, mExpiryCount).arg(mName)) >> mpHost;
             }
         }
 
