@@ -2536,16 +2536,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 socketOutRaw(output);
 
                 // send client configurable variables e.g.
-                // IAC SB MSDP MSDP_VAR "CLIENT" MSDP_VAL "Mudlet" MSDP_VAR "VERSION" MSDP_VAL "4.19" IAC SE
+                // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
                 output = TN_IAC;
                 output += TN_SB;
                 output += OPT_MSDP;
                 output += MSDP_VAR;
-                output += "CLIENT";
+                output += "CLIENT_NAME";
                 output += MSDP_VAL;
-                output += "Mudlet";
+                output += "MUDLET";
                 output += MSDP_VAR;
-                output += "VERSION";
+                output += "CLIENT_VERSION";
                 output += MSDP_VAL;
                 output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
                 output += TN_IAC;
