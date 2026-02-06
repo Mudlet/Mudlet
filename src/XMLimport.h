@@ -105,6 +105,8 @@ private:
     void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
     bool readDefaultTrueBool(QString name);
+    bool readHostColorElement(Host* pHost, QStringView elementName);
+    bool readHostBorderElement(QMargins& borders, QStringView elementName);
 
     QPointer<Host> mpHost;
     QString mPackageName;
