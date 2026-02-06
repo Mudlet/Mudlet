@@ -56,7 +56,9 @@
 #include <QScrollBar>
 #include <QStringRef>
 #include <QTextBoundaryFinder>
+#include <QLabel>
 #include <QToolTip>
+#include <QWidgetAction>
 #include <QVersionNumber>
 
 // Renders text on screen
@@ -2333,6 +2335,41 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
+                        popup->setFont(font());
+
+                        if (!hyperlinkStyling.menuTitle.isEmpty()) {
+                            auto titleLabel = new QLabel(hyperlinkStyling.menuTitle, popup);
+                            titleLabel->setFont(font());
+
+                            // Build stylesheet from title style properties
+                            QStringList styleProps;
+                            styleProps << qsl("padding: 4px 20px");
+
+                            if (hyperlinkStyling.menuTitleStyle.hasForegroundColor) {
+                                styleProps << qsl("color: %1").arg(hyperlinkStyling.menuTitleStyle.foregroundColor.name());
+                            } else {
+                                styleProps << qsl("color: #5fbdaf"); // Default teal
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.hasBackgroundColor) {
+                                styleProps << qsl("background-color: %1").arg(hyperlinkStyling.menuTitleStyle.backgroundColor.name());
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.isBold) {
+                                styleProps << qsl("font-weight: bold");
+                            }
+
+                            if (hyperlinkStyling.menuTitleStyle.isItalic) {
+                                styleProps << qsl("font-style: italic");
+                            }
+
+                            titleLabel->setStyleSheet(styleProps.join(qsl("; ")));
+                            auto titleWidgetAction = new QWidgetAction(popup);
+                            titleWidgetAction->setDefaultWidget(titleLabel);
+                            popup->addAction(titleWidgetAction);
+                            popup->addSeparator();
+                        }
+
                         mPopupCommands.clear();
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA = nullptr;

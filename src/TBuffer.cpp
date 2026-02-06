@@ -2943,6 +2943,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 customTooltip = queryParams.value(qsl("tooltip"));
             }
 
+            // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
+
             QString baseUrl = rawUrl;
 
             if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
@@ -3376,6 +3378,27 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Tooltip parameter added:" << root[qsl("tooltip")].toString();
 #endif
+    }
+
+    if (root.contains(qsl("title"))) {
+        QJsonValue titleValue = root[qsl("title")];
+        if (titleValue.isString()) {
+            styling.menuTitle = titleValue.toString();
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Title parameter added:" << titleValue.toString();
+#endif
+        } else if (titleValue.isObject()) {
+            QJsonObject titleObj = titleValue.toObject();
+            if (titleObj.contains(qsl("text")) && titleObj[qsl("text")].isString()) {
+                styling.menuTitle = titleObj[qsl("text")].toString();
+            }
+            if (titleObj.contains(qsl("style")) && titleObj[qsl("style")].isObject()) {
+                parseJsonStateStyle(titleObj[qsl("style")].toObject(), styling.menuTitleStyle);
+            }
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Title object parsed - text:" << styling.menuTitle << "hasColor:" << styling.menuTitleStyle.hasForegroundColor;
+#endif
+        }
     }
 
     if (root.contains(qsl("selection")) && root[qsl("selection")].isObject()) {
