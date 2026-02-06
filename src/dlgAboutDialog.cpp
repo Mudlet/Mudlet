@@ -1122,35 +1122,6 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 QString dlgAboutDialog::createBuildInfo() const
 {
 #if defined(Q_OS_WINDOWS)
-    // The build environment is for Windows one - which could be run
-    // native on a 32-bit or 64-bit CPU or inside the WOW64 sub-system on a
-    // 64-bit one:
-
-    auto hProcess = GetCurrentProcess();
-    BOOL value = false;
-    std::optional<bool> isWow64Process;
-    auto result = IsWow64Process(hProcess, &value); // hProcess is a "HANDLE"
-    if (!result) {
-        // Failed to work - so there is no value to assign to isWow64Process:
-        qWarning().nospace().noquote() << "dlgAboutDialog::createBuildInfo() WARNING - IsWow64Process(...) failed, WOW64 status unknown.";
-    } else {
-        isWow64Process = static_cast<bool>(value);
-    }
-#if defined(Q_OS_WIN64)
-    const bool is64BitBuild = true;
-#else
-    const bool is64BitBuild = false;
-#endif
-    const QString upgradeTo64Bits = (isWow64Process.has_value() && isWow64Process.value())
-                                            ? qsl("<tr><td colspan=\"2\" style=\"padding-right: 10px; padding-top: 10px;\"><b>%1</b></td></tr>\n")
-                                                      .arg(mudlet::self()->releaseVersion
-                                                                   //: This text is shown on 32-Bit builds of Mudlet of release builds only when run on 64-Bit Windows
-                                                                   ? tr("You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. "
-                                                                        "You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet's website).")
-                                                                   //: This text is shown on 32-Bit builds of Mudlet of all but release builds when run on 64-Bit Windows
-                                                                   : tr("This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows."))
-                                            : QString();
-
     if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
         return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                    "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
@@ -1166,36 +1137,19 @@ QString dlgAboutDialog::createBuildInfo() const
                      mudlet::self()->scmVersion,    // %3
                      tr("OS"),                      // %4
                      QSysInfo::prettyProductName(), // %5
-                     /*: This is shown for 32-Bit Windows builds when run on a
-                      *64-Bit OS. \"WoW64\" stands for WindowOnWindows64.
-                      */
-                     isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
-                                                                          /*: This is shown for 32-Bit or 64-Bit Windows builds when
-                      *run on a Windows OS of the same bitness. It is the
-                      *opposite case to that when \"WoW64\" is included - in
-                      *those cases a 32-Bit application is run on 64-Bit
-                      *hardware via an extra WindowOnWindows64 software layer.
-                      */
-                                                                          : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
-                                                /*: This is shown for 32-Bit or 64-Bit Windows builds if
-                      *the Windows API call to detect whether the WoW64 system
-                      *is in use fails to work.
-                      */
-                                                : tr("CPU"), // %6
+                     tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
+                                                    // used to use when we did 32 as well for consistency
                      QSysInfo::currentCpuArchitecture(),     // %7
                      /*: This is shown when the Qt version used at run-time
-                      *is different to that used during compilation - it not
-                      *the usual case.
-                      */
+ is different to that used during compilation - it not
+ the usual case.*/
                      tr("Qt version (compilation)"), // %8
                      QLatin1String(QT_VERSION_STR))  // %9
-                                                     /*: This is shown when the Qt version used at run-time
-                      *is different to that used during compilation - it not
-                      *the usual case.
-                      */
+                     /*: This is shown when the Qt version used at run-time
+ is different to that used during compilation - it not
+ the usual case.*/
                 .arg(tr("Qt version (run-time)"),    // %10
-                     qVersion(),                     // %11
-                     upgradeTo64Bits);               // %12
+                     qVersion());                    // %11
     }
 
     // Else they are the same:
@@ -1212,32 +1166,15 @@ QString dlgAboutDialog::createBuildInfo() const
                  mudlet::self()->scmVersion,    // %3
                  tr("OS"),                      // %4
                  QSysInfo::prettyProductName(), // %5
-                 /*: This is shown for 32-Bit Windows builds when run on a
-                  *64-Bit OS. \"WoW64\" stands for WindowOnWindows64.
-                  */
-                 isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
-                                                                      /*: This is shown for 32-Bit or 64-Bit Windows builds when
-                  *a Windows OS of the same size. It is the opposite case
-                  *to that when \"WoW64\" is included - in those cases a
-                  *32-Bit application is run on 64-Bit hardware via an
-                  *extra WindowOnWindows64 software layer.
-                  */
-                                                                      : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
-                                            /*: This is shown when something has gone wrong and it is not
-                  *possible to correctly determine whether there is an extra
-                  *software layer being used to run a 32-Bit Windows build
-                  *on 64-Bit hardware/OS.
-                  */
-                                            : tr("CPU"), // %6
+                 tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
+                                                // used to use when we did 32 as well for consistency
                  QSysInfo::currentCpuArchitecture(),     // %7
                  /*: This is shown when the same Qt version is used at run-time
-                  *as was used during compilation - it is the usual case.
-                  */
+ as was used during compilation - it is the usual case.*/
                  tr("Qt version"),              // %8
                  QLatin1String(QT_VERSION_STR), // %9
                  upgradeTo64Bits);              // %10
 #else
-
     // Anything else
     if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
         return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
@@ -1257,15 +1194,13 @@ QString dlgAboutDialog::createBuildInfo() const
                      tr("CPU"),                          // %6
                      QSysInfo::currentCpuArchitecture(), // %7
                      /*: This is shown when the Qt version used at run-time
-                      *is different to that used during compilation - it not
-                      *the usual case.
-                      */
+ is different to that used during compilation - it not
+the usual case.*/
                      tr("Qt version (compilation)"), // %8
                      QLatin1String(QT_VERSION_STR))  // %9
-                                                     /*: This is shown when the Qt version used at run-time
-                      *is different to that used during compilation - it not
-                      *the usual case.
-                      */
+                     /*: This is shown when the Qt version used at run-time
+ is different to that used during compilation - it not
+ the usual case.*/
                 .arg(tr("Qt version (run-time)"),    // %10
                      qVersion());                    // %11
     }
@@ -1287,8 +1222,7 @@ QString dlgAboutDialog::createBuildInfo() const
                  tr("CPU"),                          // %6
                  QSysInfo::currentCpuArchitecture(), // %7
                  /*: This is shown when the same Qt version is used at run-time
-                  *as was used during compilation - it is the usual case.
-                  */
+ as was used during compilation - it is the usual case.*/
                  tr("Qt version"),               // %8
                  QLatin1String(QT_VERSION_STR)); // %9
 #endif
