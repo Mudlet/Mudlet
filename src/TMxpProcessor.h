@@ -32,12 +32,24 @@ class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
 
-// MXP mode control codes sent via CSI n z sequences (per MXP 0.4 spec)
-// Modes 5-7 set both the current mode AND the persistent default mode
-constexpr int MXP_MODE_CODE_LOCK_OPEN = 5;   // Lock OPEN as default mode
-constexpr int MXP_MODE_CODE_LOCK_SECURE = 6; // Lock SECURE as default mode
-constexpr int MXP_MODE_CODE_LOCK_LOCKED = 7; // Lock LOCKED as default mode
-enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE, HANDLER_INSERT_ENTITY_CUST, HANDLER_INSERT_ENTITY_SYS, HANDLER_INSERT_ENTITY_LIT, HANDLER_INSERT_AND_REPROCESS };
+// Mode codes 0-2 set only the current mode
+constexpr int MXP_MODE_CODE_OPEN = 0;
+constexpr int MXP_MODE_CODE_SECURE = 1;
+constexpr int MXP_MODE_CODE_LOCKED = 2;
+// Mode codes 5-7 also set the default mode that newlines reset to
+constexpr int MXP_MODE_CODE_LOCK_OPEN = 5;
+constexpr int MXP_MODE_CODE_LOCK_SECURE = 6;
+constexpr int MXP_MODE_CODE_LOCK_LOCKED = 7;
+
+enum TMxpProcessingResult {
+    HANDLER_FALL_THROUGH,
+    HANDLER_NEXT_CHAR,
+    HANDLER_COMMIT_LINE,
+    HANDLER_INSERT_ENTITY_CUST,
+    HANDLER_INSERT_ENTITY_SYS,
+    HANDLER_INSERT_ENTITY_LIT,
+    HANDLER_INSERT_AND_REPROCESS
+};
 
 // handles the MXP protocol
 class TMxpProcessor
@@ -54,6 +66,7 @@ public:
     bool setMode(const QString& code);
     bool setMode(int modeCode);
     TMXPMode mode() const;
+    TMXPMode defaultMode() const;
 
     void enable();
     void disable();

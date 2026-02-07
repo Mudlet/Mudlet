@@ -31,8 +31,5 @@ TMxpTagHandlerResult TMxpStatTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     qDebug() << "  Handling" << tag->getName() << "tag (silently consumed)";
 #endif
 
-    // Silently consume the tag - Mudlet doesn't have a built-in status bar.
-    // The tag is still queued as an MXP event by TMxpMudlet::tagHandled()
-    // if it's a custom element, allowing Lua scripts to handle it.
     return MXP_TAG_HANDLED;
 }

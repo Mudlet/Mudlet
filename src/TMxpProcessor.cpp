@@ -134,6 +134,12 @@ TMXPMode TMxpProcessor::mode() const
 {
     return mMXP_MODE;
 }
+
+TMXPMode TMxpProcessor::defaultMode() const
+{
+    return mMXP_DEFAULT;
+}
+
 bool TMxpProcessor::isEnabled() const
 {
     return mMXP;

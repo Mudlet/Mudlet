@@ -23,11 +23,7 @@
 #include "TMxpContext.h"
 #include "TMxpTagHandler.h"
 
-// <STAT EntityName [Max=EntityName] [Caption=text]>
-// <GAUGE EntityName [Max=EntityName] [Caption=text] [Color=color]>
-// These tags create status bar entries from MXP entities.
-// Mudlet doesn't have a built-in status bar, so we silently consume these
-// tags and queue an MXP event so Lua scripts can handle them.
+// Handles STAT/GAUGE tags - silently consumed since Mudlet has no built-in status bar
 class TMxpStatTagHandler : public TMxpTagHandler
 {
 public:
