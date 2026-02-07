@@ -32,6 +32,7 @@
 
 #include "Host.h"
 #include "TBuffer.h"
+#include "TMxpProcessor.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -3471,8 +3472,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         if (option == OPT_MXP) {
             if (mpHost->mEnableMXP) {
                 enableMXP = true;
-                mpHost->mMxpProcessor.enable();
                 qDebug() << "MXP enabled via subnegotiation";
+                mpHost->mMxpProcessor.enable();
+                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             }
             return;
