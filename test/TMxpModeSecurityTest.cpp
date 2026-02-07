@@ -186,15 +186,18 @@ private slots:
         processor.setMode(2);
         QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
         
-        // Try to process formatting tags - even these should be blocked
+        // Try to process formatting tags - in LOCKED mode, text is not parsed
+        // at all, so < and > pass through as literal characters
         std::string input = "<B>bold</B>";
 
         for (char ch : input) {
             processor.processMxpInput(ch, true);
         }
         
-        // Tags should have been rejected
-        QVERIFY(client.rejectedTagCount > 0);
+        // Per MXP spec: "no MXP or HTML commands are allowed in the line.
+        // The line is not parsed for any tags at all."
+        // Since no parsing occurs, no tags are rejected - the text just passes through
+        QCOMPARE(client.rejectedTagCount, 0);
     }
 
     void testModeTransitions()

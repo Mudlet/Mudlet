@@ -160,6 +160,12 @@ void TMxpProcessor::disable()
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
+    // LOCKED mode: per MXP spec, line is not parsed for any tags at all
+    if (mMXP_MODE == MXP_MODE_LOCKED) {
+        mMxpTagProcessor.handleContent(ch);
+        return HANDLER_FALL_THROUGH;
+    }
+
     if (ch == '<' && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.isQuotedSequence() && !mMxpTagBuilder.isInsideComment()) {
         // Error recovery: nested '<' inside a tag
         // Output the incomplete tag as text and prepare to process the new '<' as a tag start
