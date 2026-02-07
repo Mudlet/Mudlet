@@ -3473,6 +3473,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 enableMXP = true;
                 mpHost->mMxpProcessor.enable();
                 qDebug() << "MXP enabled via subnegotiation";
+                raiseProtocolEvent("sysProtocolEnabled", "MXP");
             }
             return;
         }
