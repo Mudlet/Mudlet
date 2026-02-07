@@ -39,6 +39,7 @@
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
+#include <QPointer>
 #include <QRandomGenerator>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -620,27 +621,60 @@ void dlgConnectionProfiles::slot_saveName()
     // a previously deleted profile (deleted outside Mudlet interface)
     if (mudlet::self()->storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(mudlet::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
         // Check if there are orphaned keychain entries for this profile name
+        // Use QPointer to safely detect if dialog is destroyed during async operations
+        QPointer<dlgConnectionProfiles> safeThis = this;
         auto* credManager = new CredentialManager(this);
+
         credManager->retrievePassword(
                 newProfileName,
                 "character",
-                [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl](bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
+                [safeThis, credManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl](
+                        bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
                     Q_UNUSED(characterPassword)
                     Q_UNUSED(errorMessage)
+
+                    // Check if dialog was destroyed during async operation
+                    if (!safeThis) {
+                        qDebug() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
+                        credManager->deleteLater();
+                        return;
+                    }
 
                     credManager->retrievePassword(
                             newProfileName,
                             "proxy",
-                            [this, credManager, newProfileName, pItem, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry](
+                            [safeThis, credManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry](
                                     bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
                                 Q_UNUSED(proxyPassword)
                                 Q_UNUSED(errorMessage)
 
+                                // Check if dialog was destroyed during async operation
+                                if (!safeThis) {
+                                    qDebug() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
+                                    credManager->deleteLater();
+                                    return;
+                                }
+
                                 // Define a helper lambda to continue after cleanup is done
                                 // CredentialManager only supports one operation at a time, so we must chain removals
-                                auto continueAfterCleanup = [this, credManager, pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl]() {
+                                // Capture only data values, not pointers to potentially-deleted objects
+                                auto continueAfterCleanup = [safeThis, credManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl]() {
                                     credManager->deleteLater();
-                                    continueProfileSave(pItem, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
+
+                                    // Final safety check before accessing dialog members
+                                    if (!safeThis) {
+                                        qDebug() << "dlgConnectionProfiles: Dialog destroyed before continueProfileSave, aborting";
+                                        return;
+                                    }
+
+                                    // Find the current item by the old profile name instead of using a captured pointer
+                                    auto items = safeThis->findData(*safeThis->listWidget_profiles, currentProfileEditName, csmNameRole);
+                                    if (items.isEmpty()) {
+                                        qWarning() << "dlgConnectionProfiles: Could not find profile item for" << currentProfileEditName << "after async operation";
+                                        return;
+                                    }
+
+                                    safeThis->continueProfileSave(items.first(), newProfileName, newProfileHost, newProfilePort, newProfileSslTsl);
                                 };
 
                                 // If we found any orphaned entries, clean them up (chained to avoid crashes)
