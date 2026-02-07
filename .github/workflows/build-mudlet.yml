@@ -75,7 +75,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
-        modules: qt5compat qtmultimedia
+        modules: qt5compat qtmultimedia qtspeech
 
     - name: Use CMake 3.30.3
       uses: lukka/get-cmake@v4.2.3
@@ -176,6 +176,7 @@ jobs:
           libxcb-render-util0-dev \
           libxcb-image0-dev \
           libyajl-dev \
+          libqt6texttospeech6-dev \
           libzip-dev \
           pcre2-utils \
           pkg-config \
