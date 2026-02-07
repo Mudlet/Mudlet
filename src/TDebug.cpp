@@ -81,7 +81,7 @@ TDebug& TDebug::operator>>(Host* pHost)
             return *this;
         }
 
-        // Safety check: if pHost is not null but not in smIdentifierMap, 
+        // Safety check: if pHost is not null but not in smIdentifierMap,
         // the Host is probably being destroyed, so treat as system message
         if (pHost && !smIdentifierMap.contains(pHost)) {
             QPointer<TConsole> localDebugConsole = debugConsole;
@@ -211,12 +211,9 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 /* static */ void TDebug::addHost(Host* pHost, const QString hostName)
 {
     if (!initialised) {
-        smAvailableIdentifiers << qsl("[A] ") << qsl("[B] ") << qsl("[C] ") << qsl("[D] ") << qsl("[E] ")
-                               << qsl("[F] ") << qsl("[G] ") << qsl("[H] ") << qsl("[I] ") << qsl("[J] ")
-                               << qsl("[K] ") << qsl("[L] ") << qsl("[M] ") << qsl("[N] ") << qsl("[O] ")
-                               << qsl("[P] ") << qsl("[Q] ") << qsl("[R] ") << qsl("[S] ") << qsl("[T] ")
-                               << qsl("[U] ") << qsl("[V] ") << qsl("[W] ") << qsl("[X] ") << qsl("[Y] ")
-                               << qsl("[Z] ");
+        smAvailableIdentifiers << qsl("[A] ") << qsl("[B] ") << qsl("[C] ") << qsl("[D] ") << qsl("[E] ") << qsl("[F] ") << qsl("[G] ") << qsl("[H] ") << qsl("[I] ") << qsl("[J] ") << qsl("[K] ")
+                               << qsl("[L] ") << qsl("[M] ") << qsl("[N] ") << qsl("[O] ") << qsl("[P] ") << qsl("[Q] ") << qsl("[R] ") << qsl("[S] ") << qsl("[T] ") << qsl("[U] ") << qsl("[V] ")
+                               << qsl("[W] ") << qsl("[X] ") << qsl("[Y] ") << qsl("[Z] ");
         initialised = true;
     }
 
@@ -251,7 +248,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 /* static */ void TDebug::removeHost(Host* pHost, const QString hostName)
 {
     QPair<QString, QString> identifier;
-    
+
     if (pHost) {
         // Normal case: remove by Host pointer
         identifier = TDebug::smIdentifierMap.take(pHost);
@@ -271,7 +268,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
             smIdentifierMap.remove(foundHost);
         }
     }
-    
+
     // Check for the use of non-profile specific tags:
     if (identifier.second != csmTagOverflow && identifier.second != csmTagSystemMessage && identifier.second != csmTagFault) {
         // is a normal identifier so push it in at the back of the queue for reuse:
@@ -310,7 +307,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     // because the default size will clip the text otherwise, unless the
     // user resizes the CDC:
     messageLines.prepend(qsl("%1 profiles active now. Each message from a profile \n"
-                                        "will be prefixed as follows:")
+                             "will be prefixed as follows:")
                                  .arg(TDebug::smIdentifierMap.count()));
 
     return messageLines.join(QChar::LineFeed).append(QChar::LineFeed);

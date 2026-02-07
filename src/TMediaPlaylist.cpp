@@ -19,19 +19,17 @@
 
 #include "TMediaPlaylist.h"
 
-#include "pre_guard.h"
 #include <QRandomGenerator>
-#include "post_guard.h"
 
 TMediaPlaylist::TMediaPlaylist()
 : mCurrentIndex(0)
 , mPlaybackMode(Sequential)
-{}
+{
+}
 
-TMediaPlaylist::~TMediaPlaylist()
-{}
+TMediaPlaylist::~TMediaPlaylist() {}
 
-void TMediaPlaylist::addMedia(const QUrl &url)
+void TMediaPlaylist::addMedia(const QUrl& url)
 {
     mMediaList.append(url);
 }
@@ -55,7 +53,8 @@ int TMediaPlaylist::mediaCount() const
     return mMediaList.count();
 }
 
-bool TMediaPlaylist::isEmpty() const {
+bool TMediaPlaylist::isEmpty() const
+{
     return mMediaList.isEmpty();
 }
 

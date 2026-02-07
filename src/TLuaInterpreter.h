@@ -25,13 +25,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMap.h"
 #include "TMediaData.h"
-#include "TTextCodec.h"
 #include "TTrigger.h"
 #include "utils.h"
 
-#include "pre_guard.h"
 #include <QEvent>
 #include <QFileSystemWatcher>
 #include <QNetworkAccessManager>
@@ -47,7 +44,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -64,13 +60,13 @@ extern "C" {
 #include <list>
 #include <string>
 #include <memory>
+#include <optional>
 
 class Host;
 class TAction;
 class TEvent;
 class TLuaThread;
 class TMapLabel;
-class TTrigger;
 
 
 #define SERVEROUTPUT 1
@@ -113,7 +109,7 @@ public:
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     void setAtcpTable(const QString&, const QString&);
-    void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions);
+    void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption = QString());
     void setGMCPTable(QString&, const QString&);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
@@ -121,6 +117,14 @@ public:
     QString formatLuaCode(const QString&);
     void loadGlobal();
     QString getLuaString(const QString& stringName);
+    struct ExitWeightFilterResult
+    {
+        bool blocked = false;
+        std::optional<int> weightOverride;
+    };
+
+    ExitWeightFilterResult applyExitWeightFilter(int roomId, const QString& exitCommand);
+    bool hasExitWeightFilter() const;
     int check_for_mappingscript();
     int check_for_custom_speedwalk();
     void set_lua_integer(const QString& varName, int varValue);
@@ -156,6 +160,7 @@ public:
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
     std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermExactMatchTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
@@ -177,6 +182,7 @@ public:
     static int setDoor(lua_State*);
     static int getDoors(lua_State*);
     static int setExitWeight(lua_State*);
+    static int setExitWeightFilter(lua_State*);
     static int getExitWeights(lua_State*);
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State*);
@@ -234,6 +240,7 @@ public:
     static int mmcpDisconnect(lua_State*);
     static int mmcpGetClientList(lua_State*);
     static int sendIrc(lua_State*);
+    static int openIRC(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);
     static int getIrcChannels(lua_State*);
@@ -252,6 +259,12 @@ public:
     static int setRoomCharColor(lua_State*);
     static int unsetRoomCharColor(lua_State*);
     static int getRoomCharColor(lua_State*);
+    static int setRoomBorderColor(lua_State*);
+    static int getRoomBorderColor(lua_State*);
+    static int clearRoomBorderColor(lua_State*);
+    static int setRoomBorderThickness(lua_State*);
+    static int getRoomBorderThickness(lua_State*);
+    static int clearRoomBorderThickness(lua_State*);
     static int deleteArea(lua_State*);
     static int deleteRoom(lua_State*);
     static int getRoomAreaName(lua_State*);
@@ -262,6 +275,7 @@ public:
     static int sendSocket(lua_State*);
     static int openUrl(lua_State*);
     static int getRoomsByPosition(lua_State*);
+    static int getRoomsByPosition1(lua_State*);
     static int getRoomEnv(lua_State*);
     static int downloadFile(lua_State*);
     static int setRoomUserData(lua_State*);
@@ -304,7 +318,16 @@ public:
     static int denyCurrentSend(lua_State*);
     static int tempBeginOfLineTrigger(lua_State*);
     static int tempExactMatchTrigger(lua_State*);
+#if defined(INCLUDE_3DMAPPER)
+    static int shiftMapPerspective(lua_State*);
+    static int setMapPerspective(lua_State*);
+#endif
     static int centerview(lua_State*);
+    static int createMapView(lua_State*);
+    static int closeMapView(lua_State*);
+    static int closeAllMapViews(lua_State*);
+    static int getMapViewIds(lua_State*);
+    static int getMapViewInfo(lua_State*);
     static int getAreaTable(lua_State*);
     static int getAreaTableSwap(lua_State*);
     static int getPath(lua_State*);
@@ -379,6 +402,9 @@ public:
     static int pasteWindow(lua_State*);
     static int setRoomWeight(lua_State*);
     static int getRoomWeight(lua_State*);
+    static int setRoomHidden(lua_State*);
+    static int getRoomHidden(lua_State*);
+    static int getHiddenRooms(lua_State*);
     static int gotoRoom(lua_State*);
     static int permKey(lua_State*);
     static int tempKey(lua_State*);
@@ -421,6 +447,9 @@ public:
     static int createLabelMainWindow(lua_State*, const QString& labelName);
     static int createLabelUserWindow(lua_State*, const QString& windowName, const QString& labelName);
     static int deleteLabel(lua_State*);
+    static int deleteMiniConsole(lua_State*);
+    static int deleteCommandLine(lua_State*);
+    static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
@@ -512,6 +541,7 @@ public:
     static int getBorderLeft(lua_State*);
     static int getBorderRight(lua_State*);
     static int getBorderSizes(lua_State*);
+    static int getBorderColor(lua_State*);
     static int getConsoleBufferSize(lua_State*);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
@@ -525,6 +555,10 @@ public:
     static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
+    static int setLabelStyleSheet(lua_State*);
+    static int setLinkStyle(lua_State*);
+    static int resetLinkStyle(lua_State*);
+    static int clearVisitedLinks(lua_State*);
     static int startLogging(lua_State*);
     static int appendLog(lua_State*);
     static int calcFontWidth(int size);
@@ -532,6 +566,7 @@ public:
     static int calcFontSize(lua_State*);
     static int permRegexTrigger(lua_State*);
     static int permSubstringTrigger(lua_State*);
+    static int permExactMatchTrigger(lua_State*);
     static int permTimer(lua_State*);
     static int permScript(lua_State*);
     static int getScript(lua_State*);
@@ -548,7 +583,6 @@ public:
     static int disableAlias(lua_State*);
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
-    static int setLabelStyleSheet(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
@@ -718,6 +752,7 @@ public:
     static int loadProfile(lua_State*);
     static int closeProfile(lua_State*);
     static int getCollisionLocationsInArea(lua_State*);
+    static int exportAreaImage(lua_State*);
     static int disableTimeStamps(lua_State*);
     static int enableTimeStamps(lua_State*);
     static int timeStampsEnabled(lua_State*);
@@ -732,34 +767,13 @@ public:
     void freeAllInLuaRegistry(TEvent);
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
-        {Qt::NoButton, qsl("NoButton")},
-        {Qt::LeftButton, qsl("LeftButton")},
-        {Qt::RightButton, qsl("RightButton")},
-        {Qt::MiddleButton, qsl("MidButton")},
-        {Qt::BackButton, qsl("BackButton")},
-        {Qt::ForwardButton, qsl("ForwardButton")},
-        {Qt::TaskButton, qsl("TaskButton")},
-        {Qt::ExtraButton4, qsl("ExtraButton4")},
-        {Qt::ExtraButton5, qsl("ExtraButton5")},
-        {Qt::ExtraButton6, qsl("ExtraButton6")},
-        {Qt::ExtraButton7, qsl("ExtraButton7")},
-        {Qt::ExtraButton8, qsl("ExtraButton8")},
-        {Qt::ExtraButton9, qsl("ExtraButton9")},
-        {Qt::ExtraButton10, qsl("ExtraButton10")},
-        {Qt::ExtraButton11, qsl("ExtraButton11")},
-        {Qt::ExtraButton12, qsl("ExtraButton12")},
-        {Qt::ExtraButton13, qsl("ExtraButton13")},
-        {Qt::ExtraButton14, qsl("ExtraButton14")},
-        {Qt::ExtraButton15, qsl("ExtraButton15")},
-        {Qt::ExtraButton16, qsl("ExtraButton16")},
-        {Qt::ExtraButton17, qsl("ExtraButton17")},
-        {Qt::ExtraButton18, qsl("ExtraButton18")},
-        {Qt::ExtraButton19, qsl("ExtraButton19")},
-        {Qt::ExtraButton20, qsl("ExtraButton20")},
-        {Qt::ExtraButton21, qsl("ExtraButton21")},
-        {Qt::ExtraButton22, qsl("ExtraButton22")},
-        {Qt::ExtraButton23, qsl("ExtraButton23")},
-        {Qt::ExtraButton24, qsl("ExtraButton24")}};
+            {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
+            {Qt::BackButton, qsl("BackButton")},       {Qt::ForwardButton, qsl("ForwardButton")}, {Qt::TaskButton, qsl("TaskButton")},       {Qt::ExtraButton4, qsl("ExtraButton4")},
+            {Qt::ExtraButton5, qsl("ExtraButton5")},   {Qt::ExtraButton6, qsl("ExtraButton6")},   {Qt::ExtraButton7, qsl("ExtraButton7")},   {Qt::ExtraButton8, qsl("ExtraButton8")},
+            {Qt::ExtraButton9, qsl("ExtraButton9")},   {Qt::ExtraButton10, qsl("ExtraButton10")}, {Qt::ExtraButton11, qsl("ExtraButton11")}, {Qt::ExtraButton12, qsl("ExtraButton12")},
+            {Qt::ExtraButton13, qsl("ExtraButton13")}, {Qt::ExtraButton14, qsl("ExtraButton14")}, {Qt::ExtraButton15, qsl("ExtraButton15")}, {Qt::ExtraButton16, qsl("ExtraButton16")},
+            {Qt::ExtraButton17, qsl("ExtraButton17")}, {Qt::ExtraButton18, qsl("ExtraButton18")}, {Qt::ExtraButton19, qsl("ExtraButton19")}, {Qt::ExtraButton20, qsl("ExtraButton20")},
+            {Qt::ExtraButton21, qsl("ExtraButton21")}, {Qt::ExtraButton22, qsl("ExtraButton22")}, {Qt::ExtraButton23, qsl("ExtraButton23")}, {Qt::ExtraButton24, qsl("ExtraButton24")}};
 
     static const QString csmInvalidRoomID;
     static const QString csmInvalidStopWatchID;
@@ -832,7 +846,7 @@ private:
     bool callReference(lua_State*, QString name, int parameters);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
-    std::pair<bool, QString> validLuaCode(const QString &code);
+    std::pair<bool, QString> validLuaCode(const QString& code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State*);
@@ -844,15 +858,15 @@ private:
 #endif
 
     void insertColorTableEntry(lua_State*, const QColor&, const QString&);
-    struct lua_state_deleter {
-        void operator()(lua_State* ptr) const noexcept {
-            lua_close(ptr);
-        }
+    struct lua_state_deleter
+    {
+        void operator()(lua_State* ptr) const noexcept { lua_close(ptr); }
     };
     void updateEditor();
 
 
-    bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+    bool loadLuaModule(
+            QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State*);
 
 
@@ -879,6 +893,9 @@ private:
     QStringList mPossiblePaths;
 
     static std::pair<bool, QString> aiEnabled(lua_State*);
+    void storeExitWeightFilter(lua_State* L, int index);
+    void clearExitWeightFilter(lua_State* L);
+    int mExitWeightFilterRef = LUA_NOREF;
 };
 
 Host& getHostFromLua(lua_State*);

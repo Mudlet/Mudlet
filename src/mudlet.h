@@ -32,8 +32,6 @@
 #include "LlamaFileManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
-#include "TDetachedWindow.h"
-#include "TMediaData.h"
 #include "utils.h"
 #include <memory>
 
@@ -41,9 +39,7 @@
 #include "updater.h"
 #endif
 
-#include "pre_guard.h"
 #include "ui_main_window.h"
-#include "edbee/views/texttheme.h"
 #include <QAction>
 #include <QDir>
 #include <QFlags>
@@ -57,43 +53,14 @@
 #include <QTime>
 #include <QVersionNumber>
 #include <QWindow>
-#include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
-#include <../3rdparty/qtkeychain/keychain.h>
+#include <qtkeychain/keychain.h>
 #else
 #include <qt6keychain/keychain.h>
 #endif
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
-
-// for system physical memory info
-#if defined(Q_OS_WINDOWS)
-#include <Windows.h>
-#include <Psapi.h>
-#elif defined(Q_OS_MACOS)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <array>
-#elif defined(Q_OS_HURD)
-#include <errno.h>
-#include <unistd.h>
-#elif defined(Q_OS_OPENBSD)
-// OpenBSD doesn't have a sysinfo.h
-#include <sys/sysctl.h>
-#include <unistd.h>
-#elif defined(Q_OS_UNIX)
-// Including both GNU/Linux and FreeBSD
-#include <sys/resource.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// Any other OS?
-#endif
-#include "post_guard.h"
 
 class QCloseEvent;
 class QMediaPlayer;
@@ -112,10 +79,16 @@ class QTimer;
 class dlgAboutDialog;
 class dlgConnectionProfiles;
 class dlgIRC;
+class dlgNotepad;
+class dlgPackageManager;
+class dlgModuleManager;
+class dlgPackageExporter;
 class dlgProfilePreferences;
+class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
 class TConsole;
+class TDetachedWindow;
 class TDockWidget;
 class TEvent;
 class TLabel;
@@ -233,11 +206,12 @@ public:
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
-    void deleteProfileData(const QString &profile, const QString &item);
+    void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
+    void updateMainWindowTitle();
     void forceClose();
     void armForceClose();
     Host* getActiveHost();
@@ -245,6 +219,7 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     HostManager& getHostManager() { return mHostManager; }
+    ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
@@ -267,7 +242,7 @@ public:
     bool isVersionAtLeast(const QString& minVersion);
     void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
-    
+
     // Profile validation and orphan detection
     bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
@@ -314,7 +289,7 @@ public:
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
-    void setupPreInstallPackages(const QString&);
+    void setupPreInstallPackages(const QString&, const QString&);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
@@ -327,6 +302,7 @@ public:
     void showOptionsDialog(const QString&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
@@ -357,7 +333,7 @@ public:
     // entries in their system if they do not appear in this and thus get
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
-    QHash<QString, QString>mDictionaryLanguageCodeMap;
+    QHash<QString, QString> mDictionaryLanguageCodeMap;
     Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
@@ -437,7 +413,6 @@ public slots:
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
     void slot_handleToolbarVisibilityChanged(bool);
-    void slot_irc();
 #if defined(INCLUDE_UPDATER)
     void slot_manualUpdateCheck();
     void slot_showFullChangelog();
@@ -461,6 +436,7 @@ public slots:
     void slot_reattachAllDetachedWindows();
     void slot_toggleAlwaysOnTop();
     void slot_minimize();
+    void slot_newMapWindow();
     void updateWindowMenu();
     void slot_activateMainWindow();
     void slot_activateDetachedWindow();
@@ -492,7 +468,7 @@ public slots:
     static QIcon createConnectionStatusIcon(bool isConnected, bool isConnecting, bool hasError);
     void updateMainWindowTabIndicators();
     void updateMainWindowTabBarAutoHide();
-    void updateTabIndicators(); // Update all tab indicators (main window)
+    void updateTabIndicators();               // Update all tab indicators (main window)
     void updateDetachedWindowTabIndicators(); // Update all detached window tab indicators
     void slot_showActionDialog();
     void slot_showAliasDialog();
@@ -501,6 +477,13 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    static void restoreProfileFocus(const QString& profileName);
+    static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
+    void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
+    void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
+    void setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager);
+    void setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter);
+    void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);
     void slot_toggleMainToolBar();
@@ -530,7 +513,7 @@ signals:
     void signal_passwordsMigratedToProfiles();
     void signal_passwordsMigratedToSecure();
     void signal_characterPasswordsMigrated();
-    void signal_profileActivated(Host *, quint8);
+    void signal_profileActivated(Host*, quint8);
     void signal_profileMapReloadRequested(QList<QString>);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
@@ -543,7 +526,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
-
+    void signal_profileLoaded();
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
@@ -567,12 +550,11 @@ private slots:
 
 
 private:
-
-
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+    static bool needsCustomDarkTheme();
     void closeHost(const QString&);
-    int getDictionaryWordCount(const QString &dictionaryPath);
+    int getDictionaryWordCount(const QString& dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
     void initEdbee();
     void installModulesList(Host*, QStringList);
@@ -651,7 +633,6 @@ private:
     QPointer<QAction> mpActionDiscord;
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
-    QPointer<QAction> mpActionIRC;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
     QPointer<QAction> mpActionModuleManager;
@@ -689,6 +670,7 @@ private:
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
     QPointer<QLabel> mpLabelReplayTime;
+    QPointer<QWidget> mpFocusWidgetBeforeDeactivate;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
     // a list of character passwords currently being migrated to secure storage
@@ -736,10 +718,10 @@ private:
     QAction* mWindowListSeparator = nullptr;
 
     // amount of times the shortcut has been shown help educate new users
-    int mScrollbackTutorialsShown = 0; // Cancel split screen
+    int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
     // show the tutorial maximum 3 times on a new Mudlet
-    static const int mScrollbackTutorialsMax = 3; // Split screen
+    static const int mScrollbackTutorialsMax = 3;   // Split screen
     static const int mMuteAllMediaTutorialsMax = 3; // Mute all media
 
     // AI/LlamaFile integration
@@ -778,7 +760,6 @@ private:
 };
 
 
-
 class TConsoleMonitor : public QObject
 {
     Q_OBJECT
@@ -787,7 +768,8 @@ public:
     Q_DISABLE_COPY(TConsoleMonitor)
     explicit TConsoleMonitor(QObject* parent)
     : QObject(parent)
-    {}
+    {
+    }
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
@@ -806,7 +788,8 @@ class translation
 public:
     explicit translation(const int translationPercent = -1)
     : mTranslatedPercentage(translationPercent)
-    {}
+    {
+    }
 
     const QString& getNativeName() const { return mNativeName; }
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }

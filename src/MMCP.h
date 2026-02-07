@@ -20,9 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
 #include <QFlags>
-#include "post_guard.h"
 
 inline static uint16_t csDefaultMMCPHostPort{4050};
 inline static QLatin1String csDefaultMMCPChatName{"Mudlet"};

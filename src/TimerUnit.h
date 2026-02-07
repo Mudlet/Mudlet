@@ -24,12 +24,12 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "utils.h"
+
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
@@ -37,6 +37,10 @@ class Host;
 class TTimer;
 class QTimer;
 
+// Note: Unlike AliasUnit/TriggerUnit/KeyUnit, TimerUnit does not use mProcessingDepth
+// because timers execute via Qt's event loop (QTimer signals), not synchronous loops.
+// Protection against re-entrancy is provided by the guard in TTimer::execute() and
+// by re-verifying timer existence after execute() in mudlet::slot_timerFires().
 class TimerUnit
 {
     friend class XMLexport;
@@ -45,7 +49,8 @@ class TimerUnit
 public:
     explicit TimerUnit(Host* pHost)
     : mpHost(pHost)
-    {}
+    {
+    }
     ~TimerUnit();
 
     void resetStats();
@@ -63,6 +68,7 @@ public:
     bool registerTimer(TTimer* pT);
     void unregisterTimer(TTimer* pT);
     void reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     void stopAllTriggers();
     void reenableAllTriggers();
     void markCleanup(TTimer*);

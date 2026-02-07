@@ -528,8 +528,8 @@ function table.update(t1, t2)
     tbl[k] = v
   end
   for k, v in pairs(t2) do
-    if type(v) == "table" then
-      tbl[k] = table.update(tbl[k] or {}, v)
+    if type(v) == "table" and type(tbl[k]) == "table" then
+      tbl[k] = table.update(tbl[k], v)
     else
       tbl[k] = v
     end

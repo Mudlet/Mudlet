@@ -24,15 +24,11 @@
  ***************************************************************************/
 
 
-#include "Host.h"
-
-#include "pre_guard.h"
 #include <QMap>
 #include <QString>
 #include <QSharedPointer>
-#include "post_guard.h"
 
-
+class Host;
 class TEvent;
 typedef QMap<QString, QSharedPointer<Host>> HostMap;
 

@@ -26,6 +26,25 @@
 #include "Host.h"
 #include "TScript.h"
 
+#include <functional>
+
+ScriptUnit::~ScriptUnit()
+{
+    for (auto script : mScriptRootNodeList) {
+        script->mpHost = nullptr;
+        std::function<void(TScript*)> nullifyChildren = [&nullifyChildren](TScript* s) {
+            for (auto child : *s->mpMyChildrenList) {
+                child->mpHost = nullptr;
+                nullifyChildren(child);
+            }
+        };
+        nullifyChildren(script);
+    }
+    for (auto script : mScriptRootNodeList) {
+        delete script;
+    }
+}
+
 void ScriptUnit::resetStats()
 {
     statsItemsTotal = 0;
@@ -115,6 +134,16 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
     }
 }
 
+void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
+{
+    if (mode == TreeItemInsertMode::Append) {
+        reParentScript(childID, oldParentID, newParentID, -1, -1);
+    } else {
+        // AtPosition mode - use 0 for parentPosition to enable position-based insertion
+        reParentScript(childID, oldParentID, newParentID, 0, position);
+    }
+}
+
 void ScriptUnit::removeScriptRootNode(TScript* pT)
 {
     if (!pT) {
@@ -127,18 +156,16 @@ TScript* ScriptUnit::getScript(int id)
 {
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TScript* ScriptUnit::getScriptPrivate(int id)
 {
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 bool ScriptUnit::registerScript(TScript* pT)
@@ -265,13 +292,7 @@ std::tuple<QString, int, int, int> ScriptUnit::assembleReport()
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("Scripts current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("tempScripts current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active Scripts: ") << QString::number(statsActiveItems) << QLatin1String("\n");
-    return {
-        msg.join(QString()),
-        statsItemsTotal,
-        statsTempItems,
-        statsActiveItems
-    };
+    msg << QLatin1String("Scripts current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n") << QLatin1String("tempScripts current total: ") << QString::number(statsTempItems)
+        << QLatin1String("\n") << QLatin1String("active Scripts: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    return {msg.join(QString()), statsItemsTotal, statsTempItems, statsActiveItems};
 }

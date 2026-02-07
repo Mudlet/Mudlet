@@ -24,11 +24,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_color_trigger.h"
-#include <QSignalMapper>
+
 #include <QPointer>
-#include "post_guard.h"
 
 class Host;
 class TTrigger;
@@ -58,7 +56,6 @@ public slots:
 private:
     void setupBasicButton(QPushButton*, const int, const QColor&, const QString&);
 
-    QSignalMapper* mSignalMapper = nullptr;
     TTrigger* mpTrigger = nullptr;
     bool mIsBackground = false;
     QColor mRgbAnsiColor;

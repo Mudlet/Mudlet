@@ -11,15 +11,15 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       name: Checkout source code
 
-    - uses: leafo/gh-actions-lua@v11
+    - uses: leafo/gh-actions-lua@v12
       name: Install Lua
       with:
         luaVersion: "5.1.5"
 
-    - uses: leafo/gh-actions-luarocks@v5
+    - uses: leafo/gh-actions-luarocks@v6
       name: Install LuaRocks
 
     - name: Install LDoc

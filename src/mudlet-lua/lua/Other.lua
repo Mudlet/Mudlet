@@ -1268,10 +1268,14 @@ function getConfig(...)
       "logDirectory",                    -- read-only in getConfig
       "logInHTML",
       "mapExitSize",
+      "mapInfoColor",
       "mapperPanelVisible", 
       "mapRoomSize",
       "mapRoundRooms",
+      "mapShowGrid",
       "mapShowRoomBorders",
+      "muteMediaAPI",
+      "muteMediaGame",
       "promptForMXPProcessorOn",
       "promptForVersionInTTYPE",
       "show3dMapView",
@@ -1299,7 +1303,8 @@ function getConfig(...)
     return result
   end
 
-  return oldgetConfig(args[1])
+  -- Pass all arguments to the C++ function to support enhanced API
+  return oldgetConfig(unpack(args))
 end
 
 function openMudletHomeDir()

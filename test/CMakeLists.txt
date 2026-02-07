@@ -34,28 +34,11 @@ link_libraries(
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
-# Include the same keychain configuration as main project
-include(IncludeOptionalModule)
-include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
-                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
-                        READABLE_NAME "own QtKeychain library")
-
-if(NOT DEFINED USE_OWN_QTKEYCHAIN)
-    # Check the parent project's setting
-    get_directory_property(parent_USE_OWN_QTKEYCHAIN PARENT_DIRECTORY USE_OWN_QTKEYCHAIN)
-    if(DEFINED parent_USE_OWN_QTKEYCHAIN)
-        set(USE_OWN_QTKEYCHAIN ${parent_USE_OWN_QTKEYCHAIN})
-    endif()
-endif()
-
 # Configure QtKeychain linking
-if(USE_OWN_QTKEYCHAIN)
-    # Link to the already built qt6keychain target from parent
-    set(KEYCHAIN_LIBRARY qt6keychain)
-else()
+if(NOT USE_OWN_QTKEYCHAIN)
     find_package(Qt6Keychain REQUIRED)
-    set(KEYCHAIN_LIBRARY Qt6::Keychain)
 endif()
+set(KEYCHAIN_LIBRARY qt6keychain)
 
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
@@ -71,8 +54,9 @@ add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 
 target_compile_definitions(TLinkStoreTest PRIVATE LinkStore_Test)
 
-file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp)
+file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp ../src/TEncodingHelper.cpp ../src/TTextCodec.cpp ../src/TEncodingTable.cpp)
 list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
+list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpFrameManager.cpp")
 
 add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp)
 add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
@@ -83,6 +67,9 @@ add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
 add_executable(TMxpEntityTagHandlerTest TMxpEntityTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpEntityTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
 add_test(NAME TMxpEntityTagHandlerTest COMMAND TMxpEntityTagHandlerTest)
 
+add_executable(TMxpFrameDestTagHandlerTest TMxpFrameDestTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpFrameTagHandler.cpp ../src/TMxpDestTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpFrameDestTagHandlerTest COMMAND TMxpFrameDestTagHandlerTest)
+
 add_executable(TMxpVersionTagTest TMxpVersionTagTest.cpp ../src/TMxpVersionTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpTagHandler.cpp)
 add_test(NAME TMxpVersionTagTest COMMAND TMxpVersionTagTest)
 
@@ -91,6 +78,11 @@ add_test(NAME TMxpFormattingTagsTest COMMAND TMxpFormattingTagsTest)
 
 add_executable(TMxpCustomElementTagHandlerTest TMxpCustomElementTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
 add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandlerTest)
+
+add_executable(TMxpModeSecurityTest TMxpModeSecurityTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpModeSecurityTest COMMAND TMxpModeSecurityTest)
+add_executable(TMxpElementDefinitionHandlerTest TMxpElementDefinitionHandlerTest.cpp ${MXP_SOURCE})
+add_test(NAME TMxpElementDefinitionHandlerTest COMMAND TMxpElementDefinitionHandlerTest)
 
 add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp ../src/TVar.cpp ../src/VarUnit.cpp)
 add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)
@@ -113,3 +105,5 @@ if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(CredentialManagerTest PRIVATE INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 add_test(NAME CredentialManagerTest COMMAND CredentialManagerTest)
+
+add_subdirectory(functional_tests)

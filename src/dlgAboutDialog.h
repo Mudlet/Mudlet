@@ -23,10 +23,8 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_about_dialog.h"
 #include <memory>
-#include "post_guard.h"
 
 struct aboutMaker {
     bool big = false;

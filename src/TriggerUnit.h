@@ -23,17 +23,17 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "utils.h"
+
 #include <QMultiMap>
 #include <QPointer>
+#include <QSet>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
 
 class Host;
 class TTrigger;
-
 
 class TriggerUnit
 {
@@ -45,12 +45,11 @@ public:
     : mpHost(pHost)
     , mMaxID(0)
     , mModuleMember()
-    {}
-
-    std::list<TTrigger*> getTriggerRootNodeList()
     {
-        return mTriggerRootNodeList;
     }
+    ~TriggerUnit();
+
+    std::list<TTrigger*> getTriggerRootNodeList() { return mTriggerRootNodeList; }
 
     void resetStats();
     TTrigger* getTrigger(int id);
@@ -63,6 +62,9 @@ public:
     bool killTrigger(const QString& name);
     bool registerTrigger(TTrigger* pT);
     void unregisterTrigger(TTrigger* pT);
+    // Enum-based API for clear insertion mode specification
+    void reParentTrigger(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
+    // Legacy integer-based position API - delegates to enum-based version
     void reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void processDataStream(const QString&, int);
     void compileAll();
@@ -70,7 +72,7 @@ public:
     void stopAllTriggers();
     void reenableAllTriggers();
     std::tuple<QString, int, int, int, int, int> assembleReport();
-    std::list<TTrigger*> mCleanupList;
+    QSet<TTrigger*> mCleanupSet;
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
@@ -99,6 +101,8 @@ private:
     int statsActiveItems = 0;
     int statsPatternsTotal = 0;
     int statsPatternsActive = 0;
+    // Counter for nested processing; cleanup deferred until 0
+    int mProcessingDepth = 0;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

@@ -26,17 +26,13 @@
 #include "TRoom.h"
 
 #ifndef Q_MOC_RUN
-#include "pre_guard.h"
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/graphviz.hpp>
-#include "post_guard.h"
 #endif
 
-#include "pre_guard.h"
 #include <QDebug>
 #include <QString>
-#include "post_guard.h"
 
 #include <math.h> // for sqrt
 

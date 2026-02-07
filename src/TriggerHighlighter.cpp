@@ -21,10 +21,9 @@
 #include "edbee/views/texttheme.h"
 #include "edbee/models/textdocumentscopes.h"
 
-TriggerHighlighter::TriggerHighlighter(QTextDocument *parent)
-    : QSyntaxHighlighter(parent)
+TriggerHighlighter::TriggerHighlighter(QTextDocument* parent)
+: QSyntaxHighlighter(parent)
 {
-    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
     setTheme("Mudlet"); // start with the default theme
 }
 
@@ -34,13 +33,13 @@ void TriggerHighlighter::setHighlightingEnabled(bool enabled)
     rehighlight();
 }
 
-void TriggerHighlighter::highlightBlock(const QString &text)
+void TriggerHighlighter::highlightBlock(const QString& text)
 {
     if (!highlightingEnabled) {
         return;
     }
 
-    for (const HighlightingRule &rule : highlightingRules) {
+    for (const HighlightingRule& rule : highlightingRules) {
         QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
         while (matchIterator.hasNext()) {
             QRegularExpressionMatch match = matchIterator.next();
@@ -58,32 +57,30 @@ void TriggerHighlighter::setTheme(const QString& themeName)
     edbee::TextTheme* theme = themeManager->theme(themeName);
 
     // set defaults from chosen theme
-    edbee::TextThemeRule* defaultRule = new edbee::TextThemeRule("default", "selector", theme->foregroundColor(), theme->backgroundColor(), false, false, false);
-    applyFormatting(anchorFormat, defaultRule);
-    applyFormatting(charClassFormat, defaultRule);
-    applyFormatting(escapeCharFormat, defaultRule);
-    applyFormatting(groupFormat, defaultRule);
-    applyFormatting(quantifierFormat, defaultRule);
+    edbee::TextThemeRule defaultRule("default", "selector", theme->foregroundColor(), theme->backgroundColor(), false, false, false);
+    applyFormatting(anchorFormat, &defaultRule);
+    applyFormatting(charClassFormat, &defaultRule);
+    applyFormatting(escapeCharFormat, &defaultRule);
+    applyFormatting(groupFormat, &defaultRule);
+    applyFormatting(quantifierFormat, &defaultRule);
 
     QList<edbee::TextThemeRule*> rules = theme->rules();
 
     // override defaults in theme using scopes which map to regex formats
     // check a few as some themes don't provide all of them
-    std::map<QString, QTextCharFormat&> scopeMap = {
-        {"comment", anchorFormat},
-        {"keyword", charClassFormat},
-        {"keyword.control", charClassFormat},
-        {"keyword.operator", charClassFormat},
-        {"constant", escapeCharFormat},
-        {"constant.numeric", escapeCharFormat},
-        {"constant.language", escapeCharFormat},
-        {"constant.character.escape", escapeCharFormat},
-        {"string", groupFormat},
-        {"variable", quantifierFormat},
-        {"variable.language", quantifierFormat},
-        {"variable.parameter", quantifierFormat},
-        {"variable.function", quantifierFormat}
-    };
+    std::map<QString, QTextCharFormat&> scopeMap = {{"comment", anchorFormat},
+                                                    {"keyword", charClassFormat},
+                                                    {"keyword.control", charClassFormat},
+                                                    {"keyword.operator", charClassFormat},
+                                                    {"constant", escapeCharFormat},
+                                                    {"constant.numeric", escapeCharFormat},
+                                                    {"constant.language", escapeCharFormat},
+                                                    {"constant.character.escape", escapeCharFormat},
+                                                    {"string", groupFormat},
+                                                    {"variable", quantifierFormat},
+                                                    {"variable.language", quantifierFormat},
+                                                    {"variable.parameter", quantifierFormat},
+                                                    {"variable.function", quantifierFormat}};
 
     for (auto& rule : rules) {
         QString scope = rule->scopeSelector()->toString();

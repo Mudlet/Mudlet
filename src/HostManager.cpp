@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016, 2018, 2020, 2024, 2025 by Stephen Lyons           *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,8 +23,10 @@
 
 #include "HostManager.h"
 
+#include "Host.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "TMap.h"
 
 void HostManager::deleteHost(const QString& hostname)
 {
@@ -131,15 +134,14 @@ void HostManager::changeAllHostColour(const Host* pHost)
         return;
     }
     //change all main and subconsoles color
-    const QList<QSharedPointer<Host>> hostList = mHostPool.values();
-    for (int i = 0; i < hostList.size(); i++) {
-        hostList.at(i)->mpConsole->changeColors();
+    for (QSharedPointer<Host> host : mHostPool.values()) {
+        host->mpConsole->changeColors();
         // Mapper also needs a refresh of its colours
-        auto mapper = hostList.at(i)->mpMap->mpMapper;
+        auto mapper = host->mpMap->mpMapper;
         if (mapper) {
             mapper->setPalette(QApplication::palette());
         }
-        QMutableMapIterator<QString, TConsole*> itSubConsole(hostList.at(i)->mpConsole->mSubConsoleMap);
+        QMutableMapIterator<QString, TConsole*> itSubConsole(host->mpConsole->mSubConsoleMap);
         while (itSubConsole.hasNext()) {
             itSubConsole.next();
             itSubConsole.value()->changeColors();
@@ -162,12 +164,12 @@ HostManager::Iter::Iter(HostManager* manager, bool at_start)
     }
 }
 
-bool HostManager::Iter::operator== (const Iter& other) const
+bool HostManager::Iter::operator==(const Iter& other) const
 {
     return it == other.it;
 }
 
-bool HostManager::Iter::operator!= (const Iter& other) const
+bool HostManager::Iter::operator!=(const Iter& other) const
 {
     return it != other.it;
 }

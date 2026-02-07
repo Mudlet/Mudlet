@@ -23,17 +23,17 @@ jobs:
 
     steps:
     - name: Checkout Mudlet repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: Install Lua 5.1.5
-      uses: leafo/gh-actions-lua@v11
+      uses: leafo/gh-actions-lua@v12
       with:
         luaVersion: "5.1.5"
 
     - name: Install Luarocks
-      uses: leafo/gh-actions-luarocks@v5
+      uses: leafo/gh-actions-luarocks@v6
 
     - name: Install Lua dependencies
       run: |
@@ -69,7 +69,7 @@ jobs:
         echo $changelog
 
     - name: Upload changelog as ${{matrix.format}}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: changelog.${{matrix.format}}
         path: changelog.${{matrix.format}}

@@ -20,14 +20,57 @@
 #include "updater.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
+#include <QDateTime>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
-#include "post_guard.h"
+
+#if defined(Q_OS_WINDOWS)
+#include <windows.h>
+#endif
 
 using namespace std::chrono_literals;
+
+#if defined(Q_OS_WINDOWS)
+// Helper function to clean up .nupkg files from SquirrelTemp directory
+// This prevents cross-contamination with other Squirrel-based apps
+static void cleanupSquirrelTempFiles()
+{
+    QString squirrelTempPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + qsl("/SquirrelTemp");
+    QDir squirrelTempDir(squirrelTempPath);
+
+    if (!squirrelTempDir.exists()) {
+        return;
+    }
+
+    qDebug() << "Cleaning up Mudlet files from SquirrelTemp:" << squirrelTempPath;
+
+    // Find all Mudlet-related .nupkg files
+    QStringList filters;
+    filters << qsl("Mudlet*.nupkg") << qsl("mudlet*.nupkg");
+    QFileInfoList nupkgFiles = squirrelTempDir.entryInfoList(filters, QDir::Files);
+
+    int removedCount = 0;
+    qint64 freedSpace = 0;
+
+    for (const QFileInfo& fileInfo : nupkgFiles) {
+        qint64 fileSize = fileInfo.size();
+        if (QFile::remove(fileInfo.absoluteFilePath())) {
+            removedCount++;
+            freedSpace += fileSize;
+            qDebug() << "Removed:" << fileInfo.fileName() << "(" << (fileSize / 1024 / 1024) << "MB)";
+        } else {
+            qWarning() << "Failed to remove:" << fileInfo.absoluteFilePath();
+        }
+    }
+
+    if (removedCount > 0) {
+        qWarning() << "Cleaned up" << removedCount << "Mudlet .nupkg files from SquirrelTemp, freed" << (freedSpace / 1024 / 1024) << "MB of disk space";
+    }
+}
+#endif // Q_OS_WINDOWS
 
 // update flows:
 // linux: new AppImage is downloaded, unzipped, and put in place of the old one
@@ -37,8 +80,8 @@ using namespace std::chrono_literals;
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObject(parent)
-, updateDialog(nullptr)
+Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
+: QObject(parent)
 , mpInstallOrRestart(new QPushButton(tr("Update")))
 , mUpdateInstalled(false)
 {
@@ -83,15 +126,31 @@ void Updater::checkUpdatesOnStart()
 
     mDailyCheck->setInterval(12h);
     connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
-          auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-          qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
-          if (updates.isEmpty()) {
-              return;
-          } else if (!updateAutomatically()) {
-              emit signal_updateAvailable(updates.size());
-          } else {
-              feed->downloadRelease(updates.first());
-          }
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, this, [this]() {
+            auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+            qWarning() << "Bi-daily check for updates:" << updates.size() << "update(s) available";
+            if (updates.isEmpty()) {
+                return;
+            }
+
+            if (!updateAutomatically()) {
+                emit signal_updateAvailable(updates.size());
+                return;
+            }
+
+            const auto& release = updates.first();
+            const QUrl downloadUrl = release.getDownloadUrl();
+            if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+                qWarning() << "Bi-daily update check: invalid download URL for release" << release.getVersion();
+                return;
+            }
+
+            feed->downloadRelease(release);
+        });
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::loadError, this, [](const QString& error) {
+            qWarning() << "Bi-daily update check: failed to load feed:" << error;
+        });
+        feed->load();
     });
     mDailyCheck->start();
 }
@@ -145,7 +204,9 @@ void Updater::showChangelog() const
 void Updater::showFullChangelog() const
 {
     if (!feed->isReady()) {
-        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=, this]() { showChangelog(); });
+        KDToolBox::connectSingleShot(feed, &dblsqd::Feed::ready, feed, [=, this]() {
+            showChangelog();
+        });
         feed->load();
         return;
     }
@@ -164,6 +225,8 @@ void Updater::finishSetup()
     qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).constFirst().getVersion();
 #elif defined(Q_OS_WINDOWS)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).first().getVersion() << "on restart";
+    // Clean up .nupkg files from SquirrelTemp to prevent cross-app contamination
+    cleanupSquirrelTempFiles();
 #endif
     recordUpdateTime();
     recordUpdatedVersion();
@@ -182,6 +245,9 @@ void Updater::setupOnMacOS()
 #if defined(Q_OS_WINDOWS)
 void Updater::setupOnWindows()
 {
+    // Clean up old .nupkg files on startup
+    cleanupSquirrelTempFiles();
+
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, feed, [=, this]() {
         if (mudlet::self()->developmentVersion) {
@@ -206,8 +272,15 @@ void Updater::setupOnWindows()
             return;
         }
 
+        auto* downloadFile = feed->getDownloadFile();
+        if (!downloadFile) {
+            qWarning() << "Download finished but no download file available - feed URL:" << feed->getUrl();
+            return;
+        }
+        const QString fileName = downloadFile->fileName();
+
         QFuture<void> future = QtConcurrent::run([=, this]() {
-            prepareSetupOnWindows(feed->getDownloadFile()->fileName());
+            prepareSetupOnWindows(fileName);
         });
 
         // replace current binary with the unzipped one
@@ -223,22 +296,11 @@ void Updater::setupOnWindows()
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
-// moved the new updater to the same directory as mudlet.exe so it is run on the next
-// launch. Don't run it ourselves right now since it insists on launching Mudlet when it's done
+// Store the path to the downloaded installer for use when user clicks "Restart to update"
 void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 {
-    QDir dir;
-    auto newPath = qsl("%1/new-mudlet-setup.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
-    QFileInfo newPathFileInfo(newPath);
-    if (newPathFileInfo.exists() && !dir.remove(newPathFileInfo.absoluteFilePath())) {
-        qDebug() << "Couldn't delete the old installer";
-    }
-
-    // dir.rename actually moves a file
-    if (!dir.rename(downloadedSetupName, newPath)) {
-        qWarning() << "Moving new installer into " << newPath << "failed";
-        return;
-    }
+    mDownloadedInstallerPath = downloadedSetupName;
+    qWarning() << "Installer ready at:" << mDownloadedInstallerPath;
 }
 #endif // Q_OS_WIN
 
@@ -274,7 +336,16 @@ void Updater::setupOnLinux()
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run([&]() { untarOnLinux(feed->getDownloadFile()->fileName()); });
+        auto* downloadFile = feed->getDownloadFile();
+        if (!downloadFile) {
+            qWarning() << "Download finished but no download file available - feed URL:" << feed->getUrl();
+            return;
+        }
+        const QString fileName = downloadFile->fileName();
+
+        QFuture<void> future = QtConcurrent::run([=, this]() {
+            untarOnLinux(fileName);
+        });
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
@@ -313,9 +384,7 @@ void Updater::slot_updateLinuxBinary()
 
     QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + unzippedBinaryName);
     auto systemEnvironment = QProcessEnvironment::systemEnvironment();
-    auto appimageLocation = systemEnvironment.contains(qsl("APPIMAGE")) ?
-                systemEnvironment.value(qsl("APPIMAGE"), QString()) :
-                QCoreApplication::applicationFilePath();
+    auto appimageLocation = systemEnvironment.contains(qsl("APPIMAGE")) ? systemEnvironment.value(qsl("APPIMAGE"), QString()) : QCoreApplication::applicationFilePath();
 
     const QString& installedBinaryPath(appimageLocation);
 
@@ -358,6 +427,68 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             updateDialog->done(0);
         });
 
+#if defined(Q_OS_WINDOWS)
+        // On Windows, launch the installer directly with a delay to ensure Mudlet
+        // has fully exited. This prevents "file in use" errors during the update.
+        // The installer will relaunch Mudlet after the update completes.
+        if (mDownloadedInstallerPath.isEmpty() || !QFile::exists(mDownloadedInstallerPath)) {
+            qWarning() << "Installer not found at:" << mDownloadedInstallerPath;
+            QMessageBox::warning(nullptr, tr("Update Error"), tr("The update installer could not be found. Please try checking for updates again."));
+            return;
+        }
+
+        // Copy the installer to a permanent location - the source is a QTemporaryFile
+        // that will be deleted when Mudlet exits. We copy (not move) because AV
+        // may still have a lock on the file, and copy only needs read access.
+        // Use a unique filename with timestamp to avoid conflicts with locked files.
+        QString installerPath = qsl("%1/mudlet-setup-%2.exe").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).arg(QDateTime::currentSecsSinceEpoch());
+        if (!QFile::copy(mDownloadedInstallerPath, installerPath)) {
+            qWarning() << "Failed to copy installer from" << mDownloadedInstallerPath << "to" << installerPath;
+            QMessageBox::warning(nullptr, tr("Update Error"), tr("Could not prepare the update installer. Please try again or download the update manually from https://www.mudlet.org/download/"));
+            return;
+        }
+
+        // Create a batch file that waits for Mudlet and crashpad_handler to exit before launching installer
+        // this avoids shell quoting issues that happen with QProcess::startDetached
+        QString batchPath = qsl("%1/mudlet-update.bat").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+        QFile batchFile(batchPath);
+        if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QString exeName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+            // Uses ping for delay instead of timeout.exe because timeout doesn't work when stdin is redirected.
+            // Change to temp directory immediately to release handle on Mudlet's app folder.
+            QString batchContent = qsl("@echo off\r\n"
+                                       "cd /d %TEMP%\r\n"
+                                       "echo Mudlet updater: waiting for %1 to exit...\r\n"
+                                       ":wait_mudlet\r\n"
+                                       "tasklist /FI \"IMAGENAME eq %1\" 2>NUL | C:\\Windows\\System32\\find.exe /I \"%1\" >NUL\r\n"
+                                       "if %ERRORLEVEL%==0 (\r\n"
+                                       "    echo Mudlet updater: %1 still running, waiting...\r\n"
+                                       "    ping -n 2 127.0.0.1 > nul\r\n"
+                                       "    goto wait_mudlet\r\n"
+                                       ")\r\n"
+                                       "echo Mudlet updater: %1 exited, waiting for cleanup...\r\n"
+                                       "ping -n 4 127.0.0.1 > nul\r\n"
+                                       "echo Mudlet updater: launching installer...\r\n"
+                                       "echo Mudlet updater: running %2\r\n"
+                                       "\"%2\"\r\n"
+                                       "echo Mudlet updater: installer finished with exit code %ERRORLEVEL%\r\n")
+                                           .arg(exeName, QDir::toNativeSeparators(installerPath));
+            batchFile.write(batchContent.toLocal8Bit());
+            batchFile.close();
+
+            QProcess::startDetached(batchPath, QStringList());
+            qWarning() << "Launching installer via batch file:" << installerPath;
+        } else {
+            qWarning() << "Failed to create batch file, attempting direct launch";
+            QProcess::startDetached(installerPath, QStringList());
+        }
+
+        if (mudlet::self()) {
+            mudlet::self()->forceClose();
+        }
+        // Don't restart Mudlet - the installer will do it after the update
+        return;
+#else
         // if the updater is launched manually instead of when Mudlet is quit,
         // close Mudlet ourselves
         if (mudlet::self()) {
@@ -365,13 +496,18 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         }
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
         return;
+#endif
     }
 
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
-    QFuture<void> future = QtConcurrent::run([&, filePath]() { untarOnLinux(filePath); });
+    QFuture<void> future = QtConcurrent::run([&, filePath]() {
+        untarOnLinux(filePath);
+    });
 #elif defined(Q_OS_WINDOWS)
-    QFuture<void> future = QtConcurrent::run([&, filePath]() { prepareSetupOnWindows(filePath); });
+    QFuture<void> future = QtConcurrent::run([&, filePath]() {
+        prepareSetupOnWindows(filePath);
+    });
 #endif
 
     // replace current binary with the unzipped one
@@ -503,9 +639,8 @@ bool Updater::is64BitCompatible() const
 #endif
 
     BOOL isWow64 = FALSE;
-    typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
-    LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)
-        GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+    typedef BOOL(WINAPI * LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
+    LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
 
     if (fnIsWow64Process) {
         if (fnIsWow64Process(GetCurrentProcess(), &isWow64)) {

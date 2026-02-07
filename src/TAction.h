@@ -26,13 +26,11 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QColor>
 #include <QDebug>
 #include <QIcon>
 #include <QObject>
 #include <QPointer>
-#include "post_guard.h"
 
 class EAction;
 class Host;

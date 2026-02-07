@@ -24,13 +24,12 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QString>
-#include "post_guard.h"
 
 #include <iostream>
 #include <list>
 
+#include "utils.h"
 
 template <class T>
 class Tree
@@ -47,6 +46,9 @@ public:
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
     virtual void setID(const int id) { mID = id; }
+    // Enum-based API for clear insertion mode specification
+    void addChild(T* newChild, TreeItemInsertMode mode, int position = 0);
+    // Legacy integer-based position API - delegates to enum-based version
     void addChild(T* newChild, int parentPostion = -1, int parentPosition = -1);
     bool popChild(T* removeChild);
     void setParent(T* parent);
@@ -145,6 +147,7 @@ Tree<T>::~Tree()
         delete pChild;
     }
     delete mpMyChildrenList;
+    mpMyChildrenList = nullptr;
     if (mpParent) {
         mpParent->popChild(static_cast<T*>(this)); // tell parent about my death
         if (std::uncaught_exceptions()) {
@@ -233,6 +236,10 @@ void Tree<T>::deactivate()
 template <class T>
 bool Tree<T>::isActive() const
 {
+    // Check if object is in a valid state (not being destroyed)
+    if (!mpMyChildrenList) {
+        return false;
+    }
     return (mActive && canBeActivated());
 }
 
@@ -254,21 +261,33 @@ void Tree<T>::disableFamily()
     }
 }
 
+// Enum-based addChild implementation
 template <class T>
-void Tree<T>::addChild(T* newChild, int parentPosition, int childPosition)
+void Tree<T>::addChild(T* newChild, TreeItemInsertMode mode, int position)
 {
-    if ((parentPosition == -1) || (childPosition >= static_cast<int>(mpMyChildrenList->size()))) {
+    if (mode == TreeItemInsertMode::Append || position >= static_cast<int>(mpMyChildrenList->size())) {
         mpMyChildrenList->push_back(newChild);
     } else {
         // insert item at proper position
         int cnt = 0;
         for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++) {
-            if (cnt >= childPosition) {
+            if (cnt >= position) {
                 mpMyChildrenList->insert(it, newChild);
                 break;
             }
             cnt++;
         }
+    }
+}
+
+// Legacy integer-based addChild - delegates to enum-based version
+template <class T>
+void Tree<T>::addChild(T* newChild, int parentPosition, int childPosition)
+{
+    if (parentPosition == -1 || childPosition == -1) {
+        addChild(newChild, TreeItemInsertMode::Append, 0);
+    } else {
+        addChild(newChild, TreeItemInsertMode::AtPosition, childPosition);
     }
 }
 

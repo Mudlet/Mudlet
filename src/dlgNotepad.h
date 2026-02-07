@@ -24,12 +24,18 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_notes_editor.h"
 #include <QPointer>
-#include "post_guard.h"
 
 class Host;
+class QCloseEvent;
+class QLabel;
+class QLineEdit;
+class QPlainTextEdit;
+class QShortcut;
+class QTimer;
+class QTimerEvent;
+class QToolButton;
 
 
 class dlgNotepad : public QMainWindow, public Ui::notes_editor
@@ -43,17 +49,67 @@ public:
 
     void save();
     void restore();
+    void saveSettings();
+    void restoreSettings();
     void setFont(const QFont &);
+    void setTabsStyleSheet(const QString& styleSheet);
+
+signals:
+    void notepadClosing(const QString& profileName);
+
+public slots:
+    int addTab(const QString& name = QString(), const QString& content = QString());
+    void closeTab(int index);
+    void renameTab(int index);
 
 private slots:
-    void slot_textWritten();
+    void slot_tabCloseRequested(int index);
+    void slot_tabContextMenu(const QPoint& pos);
+    void slot_addTabClicked();
+    void slot_textChanged();
+    void slot_sendAll();
+    void slot_sendLine();
+    void slot_sendSelection();
+    void slot_sendNextLine();
+    void slot_stopSending();
+    void slot_toggleSendControls(bool checked);
+    void slot_showFindBar();
+    void slot_hideFindBar();
+    void slot_findNext();
+    void slot_findPrevious();
+    void slot_findTextChanged(const QString& text);
+    void slot_currentTabChanged(int index);
 
 private:
     void timerEvent(QTimerEvent *event) override;
-    void restoreFile(const QString&, const bool);
+    void closeEvent(QCloseEvent *event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
+    QPlainTextEdit* currentTextEdit() const;
+    void setupAddTabButton();
+    void setupFindBar();
+    void highlightAllMatches();
+    void clearSearchHighlights();
+    bool migrateOldNotesFile();
+    void startSendingLines(const QStringList& lines);
 
     QPointer<Host> mpHost;
+    QToolButton* mpAddTabButton = nullptr;
     bool mNeedToSave = false;
+    QAction* action_stop = nullptr;
+    QAction* action_prependText = nullptr;
+    QAction* action_prependTextLabel = nullptr;
+    QLabel* label_prependText = nullptr;
+    QLineEdit* lineEdit_prependText = nullptr;
+    QStringList mLinesToSend;
+    QTimer* mSendTimer = nullptr;
+    int mCurrentLineIndex = 0;
+
+    QWidget* mpFindBar = nullptr;
+    QLineEdit* mpFindLineEdit = nullptr;
+    QToolButton* mpFindPrevButton = nullptr;
+    QToolButton* mpFindNextButton = nullptr;
+    QToolButton* mpFindCloseButton = nullptr;
+    QShortcut* mpFindShortcut = nullptr;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

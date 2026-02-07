@@ -24,12 +24,9 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
-#include <QApplication>
 #include <QHash>
 #include <QMap>
 #include <QString>
-#include "post_guard.h"
 
 #include "utils.h"
 
@@ -42,6 +39,8 @@ extern const QString ROOM_UI_SHOWNAME;
 extern const QString ROOM_UI_NAMEPOS;
 extern const QString ROOM_UI_NAMEFONT;  // global only
 extern const QString ROOM_UI_NAMESIZE;  // TODO
+extern const QString ROOM_UI_BORDERCOLOR;
+extern const QString ROOM_UI_BORDERTHICKNESS;
 
 class TRoomDB
 {
@@ -49,6 +48,7 @@ class TRoomDB
 
 public:
     explicit TRoomDB(TMap*);
+    ~TRoomDB();
 
     TRoom* getRoom(int id);
     TArea* getArea(int id);
@@ -86,7 +86,7 @@ public:
     int getAreaID(TArea* pA);
     void restoreAreaMap(QDataStream&);
     void restoreSingleArea(int, TArea*);
-    void restoreSingleRoom(int, TRoom*);
+    bool restoreSingleRoom(int, TRoom*);
     qreal get2DMapZoom(const int areaId) const;
     bool set2DMapZoom(const int areaId, const qreal zoom) const;
 
@@ -112,9 +112,12 @@ private:
     QMap<int, TArea*> areas;
     QMap<int, QString> areaNamesMap;
     TMap* mpMap;
-    QSet<int>* mpTempRoomDeletionSet; // Used during bulk room deletion
+    QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
+    // Flag to prevent expensive individual cleanup during bulk destruction
+    bool mBulkDeletionMode = false;
 
     friend class TRoom;
+    friend class TArea;
     friend class XMLexport;
     friend class XMLimport;
 };
