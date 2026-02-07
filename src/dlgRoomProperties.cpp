@@ -52,7 +52,13 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, QHash<bool, int> lockStatus, QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(QHash<QString, int> usedNames,
+                             QHash<int, int>& pColors,
+                             QHash<QString, int>& pSymbols,
+                             QHash<int, int>& pWeights,
+                             QHash<bool, int> lockStatus,
+                             QHash<bool, int> hiddenStatus,
+                             QSet<TRoom*>& pRooms)
 {
     // Configure name display
     if (usedNames.size() > 1) {
@@ -151,6 +157,20 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
     }
     initLockInstructions();
 
+    // Configure hidden display
+    // Are all hidden statuses the same or mixed? Then show dialog in tristate.
+    if (hiddenStatus.contains(true) && hiddenStatus.contains(false)) {
+        checkBox_hidden->setTristate(true);
+        checkBox_hidden->setCheckState(Qt::PartiallyChecked);
+    } else if (hiddenStatus.contains(true)) {
+        checkBox_hidden->setTristate(false);
+        checkBox_hidden->setCheckState(Qt::Checked);
+    } else { // hiddenStatus.contains(false)
+        checkBox_hidden->setTristate(false);
+        checkBox_hidden->setCheckState(Qt::Unchecked);
+    }
+    initHiddenInstructions();
+
     // Configure border display
     selectedBorderColor = pFirstRoom->mBorderColor;
     mBorderThickness = pFirstRoom->mBorderThickness;
@@ -171,11 +191,22 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
 
 void dlgRoomProperties::initLockInstructions()
 {
+    //: room properties dialog, setting lock status
     const QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
                                     // Intentional comment to separate arguments!
                                     "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
                                     mpRooms.size());
     checkBox_locked->setText(instructions);
+}
+
+void dlgRoomProperties::initHiddenInstructions()
+{
+    //: room properties dialog, setting hidden status
+    const QString instructions = tr("Hide room(s) from the map display",
+                                    // Intentional comment to separate arguments!
+                                    "This text will be shown at a checkbox, where you can set/unset a number of room's hidden status.",
+                                    mpRooms.size());
+    checkBox_hidden->setText(instructions);
 }
 
 
@@ -364,6 +395,21 @@ void dlgRoomProperties::accept()
         }
     }
 
+    // Find hidden status to return back
+    Qt::CheckState const newHiddenCheckState = checkBox_hidden->checkState();
+    bool changeHiddenStatus = true;
+    std::optional<bool> newHiddenStatus;
+    if (newHiddenCheckState == Qt::PartiallyChecked) {
+        // We don't want to change then
+        changeHiddenStatus = false;
+    } else {
+        if (newHiddenCheckState == Qt::Checked) {
+            newHiddenStatus = true;
+        } else { // Qt::Unchecked
+            newHiddenStatus = false;
+        }
+    }
+
     // Find border settings to return back
     bool changeBorderColor = mBorderColorWasChanged;
     QColor newBorderColor = selectedBorderColor;
@@ -382,6 +428,8 @@ void dlgRoomProperties::accept()
                             newWeight,
                             changeLockStatus,
                             newLockStatus,
+                            changeHiddenStatus,
+                            newHiddenStatus,
                             changeBorderColor,
                             newBorderColor,
                             changeBorderThickness,

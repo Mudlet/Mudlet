@@ -70,6 +70,7 @@ ModernGLWidget::~ModernGLWidget()
 void ModernGLWidget::cleanup()
 {
     makeCurrent();
+    mLabelTextureCache.cleanup();
     mResourceManager.cleanup();
     mRenderCommandQueue.cleanup();
     mGeometryManager.cleanup();
@@ -136,6 +137,9 @@ void ModernGLWidget::initializeGL()
 
     // Initialize resource manager
     mResourceManager.initialize();
+
+    // Initialize label texture cache
+    mLabelTextureCache.initialize();
 }
 
 
@@ -323,9 +327,15 @@ void ModernGLWidget::paintGL()
     // Enable room flattening
     zFlattening = 8.0f;
 
-    // Build up render commands - render connections first so rooms appear above them
+    // Build up render commands in correct order:
+    // 1. Connections (bottom layer)
+    // 2. Background labels (showOnTop=false)
+    // 3. Rooms
+    // 4. Foreground labels (showOnTop=true)
     renderConnections();
+    renderBackgroundLabels();
     renderRooms();
+    renderForegroundLabels();
 
     // Execute all queued commands
     mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer, mTexCoordBuffer);
@@ -382,6 +392,10 @@ void ModernGLWidget::renderRooms()
         int currentRoomId = itRoom.next();
         TRoom* pR = mpMap->mpRoomDB->getRoom(currentRoomId);
         if (!pR) {
+            continue;
+        }
+
+        if (pR->isHidden()) {
             continue;
         }
 
@@ -622,6 +636,10 @@ void ModernGLWidget::renderConnections()
             continue;
         }
 
+        if (pR->isHidden()) {
+            continue;
+        }
+
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
         auto rz = static_cast<float>(pR->z());
@@ -676,6 +694,10 @@ void ModernGLWidget::renderConnections()
 
             TRoom* pExit = mpMap->mpRoomDB->getRoom(k);
             if (!pExit) {
+                continue;
+            }
+
+            if (pExit->isHidden()) {
                 continue;
             }
 
@@ -1519,6 +1541,163 @@ QColor ModernGLWidget::getEnvironmentColor(TRoom* pRoom)
     }
 
     return roomColor;
+}
+
+void ModernGLWidget::renderBackgroundLabels()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
+    if (!pArea || pArea->mMapLabels.isEmpty()) {
+        return;
+    }
+
+    // Disable depth writing for transparent labels
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+
+    float pz = static_cast<float>(mMapCenterZ);
+
+    for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
+        const TMapLabel& label = it.value();
+        int labelId = it.key();
+
+        // Only render labels with showOnTop=false in this pass
+        if (label.showOnTop) {
+            continue;
+        }
+
+        // Z-level filtering - same logic as rooms
+        float labelZ = label.pos.z();
+        if (labelZ > pz) {
+            if (std::abs(labelZ - pz) > mShowTopLevels) {
+                continue;
+            }
+        }
+        if (labelZ < pz) {
+            if (std::abs(labelZ - pz) > mShowBottomLevels) {
+                continue;
+            }
+        }
+
+        // Skip labels without a pixmap
+        if (label.pix.isNull()) {
+            continue;
+        }
+
+        // Get or create texture for this label
+        GLuint textureId = mLabelTextureCache.getTexture(mAID, labelId, label.pix);
+        if (textureId == 0) {
+            continue;
+        }
+
+        // Calculate label dimensions - size is in map coordinates
+        float labelWidth = static_cast<float>(label.size.width());
+        float labelHeight = static_cast<float>(label.size.height());
+
+        // In 2D, label.pos is the top-left corner and extends right and down
+        // (with Y inverted). For 3D billboard, we need the center position.
+        // Offset: center = pos + (width/2, -height/2, 0)
+        float centerX = label.pos.x() + labelWidth / 2.0f;
+        float centerY = label.pos.y() - labelHeight / 2.0f;
+        float centerZ = label.pos.z();
+
+        // Create render command for this label
+        auto command = std::make_unique<RenderLabelCommand>(
+            centerX, centerY, centerZ,
+            labelWidth, labelHeight,
+            textureId,
+            mCameraController.getRightVector(),
+            mCameraController.getUpVector(),
+            label.highlight,
+            mCameraController.getProjectionMatrix(),
+            mCameraController.getViewMatrix(),
+            mCameraController.getModelMatrix());
+
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    // Re-enable depth writing for subsequent geometry
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+}
+
+void ModernGLWidget::renderForegroundLabels()
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
+    if (!pArea || pArea->mMapLabels.isEmpty()) {
+        return;
+    }
+
+    // Disable depth writing for transparent labels
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+
+    float pz = static_cast<float>(mMapCenterZ);
+
+    for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
+        const TMapLabel& label = it.value();
+        int labelId = it.key();
+
+        // Only render labels with showOnTop=true in this pass
+        if (!label.showOnTop) {
+            continue;
+        }
+
+        // Z-level filtering - same logic as rooms
+        float labelZ = label.pos.z();
+        if (labelZ > pz) {
+            if (std::abs(labelZ - pz) > mShowTopLevels) {
+                continue;
+            }
+        }
+        if (labelZ < pz) {
+            if (std::abs(labelZ - pz) > mShowBottomLevels) {
+                continue;
+            }
+        }
+
+        // Skip labels without a pixmap
+        if (label.pix.isNull()) {
+            continue;
+        }
+
+        // Get or create texture for this label
+        GLuint textureId = mLabelTextureCache.getTexture(mAID, labelId, label.pix);
+        if (textureId == 0) {
+            continue;
+        }
+
+        // Calculate label dimensions
+        float labelWidth = static_cast<float>(label.size.width());
+        float labelHeight = static_cast<float>(label.size.height());
+
+        // In 2D, label.pos is the top-left corner and extends right and down
+        // (with Y inverted). For 3D billboard, we need the center position.
+        float centerX = label.pos.x() + labelWidth / 2.0f;
+        float centerY = label.pos.y() - labelHeight / 2.0f;
+        float centerZ = label.pos.z();
+
+        // Create render command for this label
+        auto command = std::make_unique<RenderLabelCommand>(
+            centerX, centerY, centerZ,
+            labelWidth, labelHeight,
+            textureId,
+            mCameraController.getRightVector(),
+            mCameraController.getUpVector(),
+            label.highlight,
+            mCameraController.getProjectionMatrix(),
+            mCameraController.getViewMatrix(),
+            mCameraController.getModelMatrix());
+
+        mRenderCommandQueue.addCommand(std::move(command));
+    }
+
+    // Re-enable depth writing
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
 
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)

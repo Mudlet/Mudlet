@@ -1231,7 +1231,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                      // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -1735,22 +1735,22 @@ void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonColor(pushButton_black_2, pHost->mBlack_2, true);
-        setButtonColor(pushButton_Lblack_2, pHost->mLightBlack_2, true);
-        setButtonColor(pushButton_green_2, pHost->mGreen_2, true);
-        setButtonColor(pushButton_Lgreen_2, pHost->mLightGreen_2, true);
-        setButtonColor(pushButton_red_2, pHost->mRed_2, true);
-        setButtonColor(pushButton_Lred_2, pHost->mLightRed_2, true);
-        setButtonColor(pushButton_blue_2, pHost->mBlue_2, true);
-        setButtonColor(pushButton_Lblue_2, pHost->mLightBlue_2, true);
-        setButtonColor(pushButton_yellow_2, pHost->mYellow_2, true);
-        setButtonColor(pushButton_Lyellow_2, pHost->mLightYellow_2, true);
-        setButtonColor(pushButton_cyan_2, pHost->mCyan_2, true);
-        setButtonColor(pushButton_Lcyan_2, pHost->mLightCyan_2, true);
-        setButtonColor(pushButton_magenta_2, pHost->mMagenta_2, true);
-        setButtonColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2, true);
-        setButtonColor(pushButton_white_2, pHost->mWhite_2, true);
-        setButtonColor(pushButton_Lwhite_2, pHost->mLightWhite_2, true);
+        setButtonColor(pushButton_black_2, pHost->mBlack_2);
+        setButtonColor(pushButton_Lblack_2, pHost->mLightBlack_2);
+        setButtonColor(pushButton_green_2, pHost->mGreen_2);
+        setButtonColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
+        setButtonColor(pushButton_red_2, pHost->mRed_2);
+        setButtonColor(pushButton_Lred_2, pHost->mLightRed_2);
+        setButtonColor(pushButton_blue_2, pHost->mBlue_2);
+        setButtonColor(pushButton_Lblue_2, pHost->mLightBlue_2);
+        setButtonColor(pushButton_yellow_2, pHost->mYellow_2);
+        setButtonColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
+        setButtonColor(pushButton_cyan_2, pHost->mCyan_2);
+        setButtonColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
+        setButtonColor(pushButton_magenta_2, pHost->mMagenta_2);
+        setButtonColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
+        setButtonColor(pushButton_white_2, pHost->mWhite_2);
+        setButtonColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
 
         setButtonColor(pushButton_foreground_color_2, pHost->mFgColor_2);
         setButtonColor(pushButton_background_color_2, pHost->mBgColor_2);
@@ -1959,7 +1959,7 @@ void dlgProfilePreferences::slot_setBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_background_color, pHost->mBgColor);
+        setButtonAndProfileColor(pushButton_background_color, pHost->mBgColor, true);
     }
 }
 
@@ -2207,7 +2207,7 @@ void dlgProfilePreferences::slot_setMapColorBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2, true);
+        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2);
     }
 }
 
@@ -2215,7 +2215,7 @@ void dlgProfilePreferences::slot_setMapColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2, true);
+        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2);
     }
 }
 
@@ -2223,7 +2223,7 @@ void dlgProfilePreferences::slot_setMapColorRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2, true);
+        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2);
     }
 }
 
@@ -2231,7 +2231,7 @@ void dlgProfilePreferences::slot_setMapColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2, true);
+        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2);
     }
 }
 
@@ -2239,7 +2239,7 @@ void dlgProfilePreferences::slot_setMapColorGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2, true);
+        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2);
     }
 }
 
@@ -2247,7 +2247,7 @@ void dlgProfilePreferences::slot_setMapColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2, true);
+        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
     }
 }
 
@@ -2255,7 +2255,7 @@ void dlgProfilePreferences::slot_setMapColorBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2, true);
+        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2);
     }
 }
 
@@ -2263,7 +2263,7 @@ void dlgProfilePreferences::slot_setMapColorLightBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2, true);
+        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2);
     }
 }
 
@@ -2271,7 +2271,7 @@ void dlgProfilePreferences::slot_setMapColorYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2, true);
+        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2);
     }
 }
 
@@ -2279,7 +2279,7 @@ void dlgProfilePreferences::slot_setMapColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2, true);
+        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
     }
 }
 
@@ -2287,7 +2287,7 @@ void dlgProfilePreferences::slot_setMapColorCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2, true);
+        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2);
     }
 }
 
@@ -2295,7 +2295,7 @@ void dlgProfilePreferences::slot_setMapColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2, true);
+        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
     }
 }
 
@@ -2303,7 +2303,7 @@ void dlgProfilePreferences::slot_setMapColorMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2, true);
+        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2);
     }
 }
 
@@ -2311,7 +2311,7 @@ void dlgProfilePreferences::slot_setMapColorLightMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2, true);
+        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
     }
 }
 
@@ -2319,7 +2319,7 @@ void dlgProfilePreferences::slot_setMapColorWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2, true);
+        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2);
     }
 }
 
@@ -2327,7 +2327,7 @@ void dlgProfilePreferences::slot_setMapColorLightWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2, true);
+        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
     }
 }
 

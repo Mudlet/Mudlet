@@ -5244,6 +5244,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "sendTelnetChannel102", TLuaInterpreter::sendTelnetChannel102);
     lua_register(pGlobalLua, "setRoomWeight", TLuaInterpreter::setRoomWeight);
     lua_register(pGlobalLua, "getRoomWeight", TLuaInterpreter::getRoomWeight);
+    lua_register(pGlobalLua, "setRoomHidden", TLuaInterpreter::setRoomHidden);
+    lua_register(pGlobalLua, "getRoomHidden", TLuaInterpreter::getRoomHidden);
+    lua_register(pGlobalLua, "getHiddenRooms", TLuaInterpreter::getHiddenRooms);
     lua_register(pGlobalLua, "gotoRoom", TLuaInterpreter::gotoRoom);
     lua_register(pGlobalLua, "getRoomExits", TLuaInterpreter::getRoomExits);
     lua_register(pGlobalLua, "lockRoom", TLuaInterpreter::lockRoom);

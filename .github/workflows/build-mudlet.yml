@@ -35,6 +35,8 @@ jobs:
             qt: '6.9.0'
             deploy: 'deploy'
             run_tests: 'true'
+            # Enable AddressSanitizer for PTB and testing builds, but not release
+            # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
           - os: ubuntu-22.04
             # Another try to use GCC12
@@ -76,7 +78,7 @@ jobs:
         modules: qt5compat qtmultimedia
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v3.30.3
+      uses: lukka/get-cmake@v4.2.3
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -113,6 +115,11 @@ jobs:
           HOMEBREW_PREFIX=/usr/local
         fi
         echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
+
+        # Set CMAKE_PREFIX_PATH to include both Qt and Homebrew directories
+        # Qt is installed by install-qt-action, Homebrew has qtkeychain
+        # Use : as separator (Unix) not ; (Windows)
+        echo "CMAKE_PREFIX_PATH=${QT_ROOT_DIR}:${HOMEBREW_PREFIX}" >> $GITHUB_ENV
 
         # Help CMake find Lua installed by gh-actions-lua
         # The action installs to .lua/ and .luarocks/ in the runner home
@@ -164,7 +171,10 @@ jobs:
           libpugixml-dev \
           libsecret-1-dev \
           libsqlite3-dev \
+          qtkeychain-qt6-dev \
           libxkbcommon-x11-0 \
+          libxcb-render-util0-dev \
+          libxcb-image0-dev \
           libyajl-dev \
           libzip-dev \
           pcre2-utils \
@@ -189,6 +199,26 @@ jobs:
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+
+    - name: (Linux) Build xcb-util-cursor 0.1.5
+      if: runner.os == 'Linux'
+      run: |
+        # Download and extract xcb-util-cursor 0.1.5
+        # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
+        # that causes PTB builds to crash with AddressSanitizer
+        wget -q https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        tar xf xcb-util-cursor-0.1.5.tar.xz
+        cd xcb-util-cursor-0.1.5
+
+        # Configure and build
+        ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu
+        make -j$(nproc)
+
+        # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
+        sudo make install
+
+        # Update library cache so linker finds new version
+        sudo ldconfig
 
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
@@ -231,6 +261,19 @@ jobs:
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
+    - name: Get sentry-native commit hash
+      id: sentry-hash
+      run: echo "hash=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Cache sentry-native
+      id: cache-sentry
+      uses: actions/cache@v5
+      with:
+        path: |
+          3rdparty/sentry-native/install_without_transport
+          3rdparty/sentry-native/install_with_transport
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.hash }}
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
@@ -239,8 +282,8 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Ninja
-          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && 'Address' || '' }}
+          -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
+          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}

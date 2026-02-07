@@ -266,7 +266,9 @@ public:
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
-    // Replaced CURRENT_MAP_VERSION, default map version that new maps will get:
+    // WARNING: Do not change this value without careful consideration - increasing
+    // the default map format makes it difficult for players to share maps with
+    // others who may be using older Mudlet versions.
     const int mDefaultVersion = 20;
 
     // Normally the same as mDefaultVersion but can be higher for development
@@ -288,6 +290,8 @@ public:
      *   directly into the TArea class serialization - for lower map versions it
      *   is placed into a "system.fallback_map2DZoom" value in the Area userdata.
      *   SlySven - 2023/03
+     * * Version 22 adds the 'hidden' property to rooms, allowing rooms and their
+     *   exits to be hidden from display in the mapper.
      */
     const int mMaxVersion = 20;
 

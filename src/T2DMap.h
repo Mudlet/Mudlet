@@ -329,6 +329,7 @@ public slots:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, std::optional<bool> newLockStatus,
+        bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
         bool changeBorderColor, QColor newBorderColor,
         bool changeBorderThickness, int newBorderThickness,
         QSet<TRoom*> rooms);

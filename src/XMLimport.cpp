@@ -1179,7 +1179,6 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mCommandLineFgColor"), &Host::mCommandLineFgColor},
             {qsl("mCommandLineBgColor"), &Host::mCommandLineBgColor},
             {qsl("mFgColor"), &Host::mFgColor},
-            {qsl("mBgColor"), &Host::mBgColor},
             {qsl("mCommandFgColor"), &Host::mCommandFgColor},
             {qsl("mCommandBgColor"), &Host::mCommandBgColor},
             {qsl("mBlack"), &Host::mBlack},
@@ -1223,6 +1222,7 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
 
     // Colors that support alpha channel
     static const QHash<QString, QColor Host::*> alphaColors = {
+            {qsl("mBgColor"), &Host::mBgColor},
             {qsl("mBgColor2"), &Host::mBgColor_2},
             {qsl("mMapGridColor"), &Host::mMapGridColor},
             {qsl("mMapInfoBg"), &Host::mMapInfoBg},

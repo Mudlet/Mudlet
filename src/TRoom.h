@@ -86,6 +86,8 @@ public:
         mZ += deltaZ;
     }
     int getWeight() const { return weight; }
+    bool isHidden() const { return hidden; }
+    void setHidden(bool isHidden);
     int getNorth() const { return north; }
     void setNorth(int id) { north = id; }
     int getNorthwest() const { return northwest; }
@@ -139,6 +141,7 @@ public:
     int environment = -1;
 
     bool isLocked = false;
+    bool hidden = false;
     qreal min_x = 0.0;
     qreal min_y = 0.0;
     qreal max_x = 0.0;
