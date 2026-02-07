@@ -57,8 +57,7 @@ private:
 
   void processInput(TMxpProcessor &processor, const std::string &input) {
     for (char ch : input) {
-      char c = ch;
-      processor.processMxpInput(c, true);
+      processor.processMxpInput(ch, true);
     }
   }
 
@@ -184,6 +183,7 @@ private slots:
         TMxpTagParser::parseToMxpNodeList(qsl("<GAUGE mana>"));
     QVERIFY(!nodes.isEmpty());
     QVERIFY(nodes.first()->isTag());
+    QVERIFY(!nodes.first()->asTag()->isEndTag());
 
     MxpStartTag *tag = static_cast<MxpStartTag *>(nodes.first()->asTag());
     QCOMPARE(tag->getName(), qsl("GAUGE"));

@@ -41,7 +41,7 @@ private:
   // Extended stub client that tracks mode and validates tags
   class TMxpModeTestClient : public TMxpStubClient {
   private:
-    TMxpProcessor *mpProcessor;
+    TMxpProcessor *mpProcessor = nullptr;
 
   public:
     int rejectedTagCount = 0;
@@ -79,11 +79,6 @@ private:
       // In SECURE or TEMP_SECURE mode, all tags are allowed
       if (mode == MXP_MODE_SECURE || mode == MXP_MODE_TEMP_SECURE) {
         return true;
-      }
-
-      // In LOCKED mode, no tags are allowed
-      if (mode == MXP_MODE_LOCKED) {
-        return false;
       }
 
       // In OPEN mode, only specific formatting tags are allowed

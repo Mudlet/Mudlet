@@ -26,6 +26,7 @@ TMxpTagHandlerResult TMxpStatTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 {
     Q_UNUSED(ctx)
     Q_UNUSED(client)
+    Q_UNUSED(tag)
 
 #ifdef DEBUG_MXP_PROCESSING
     qDebug() << "  Handling" << tag->getName() << "tag (silently consumed)";

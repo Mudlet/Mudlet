@@ -32,11 +32,13 @@ class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
 
-// Mode codes 0-2 set only the current mode
+// MXP mode codes sent by the server via ESC[#z sequences.
+// Codes 0-4 only affect the current line; codes 5-7 also set the default mode.
 constexpr int MXP_MODE_CODE_OPEN = 0;
 constexpr int MXP_MODE_CODE_SECURE = 1;
 constexpr int MXP_MODE_CODE_LOCKED = 2;
-// Mode codes 5-7 also set the default mode that newlines reset to
+constexpr int MXP_MODE_CODE_RESET = 3;
+constexpr int MXP_MODE_CODE_TEMP_SECURE = 4;
 constexpr int MXP_MODE_CODE_LOCK_OPEN = 5;
 constexpr int MXP_MODE_CODE_LOCK_SECURE = 6;
 constexpr int MXP_MODE_CODE_LOCK_LOCKED = 7;

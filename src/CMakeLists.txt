@@ -388,7 +388,7 @@ set(mudlet_HDRS
     TMxpSendTagHandler.h
     TMxpSoundTagHandler.h
     TMxpStatTagHandler.h
-    TMxpSupportTagHandler.cpp
+    TMxpSupportTagHandler.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
