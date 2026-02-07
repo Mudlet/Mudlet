@@ -703,11 +703,11 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, err);
         /*: This zipError message is shown when the libzip library code is unable
-         * to open the file that was to be the end result of the export process.
-         * As this may be an existing file anywhere in the computer's
-         * file-system(s) it is possible that permissions on the directory or an
-         * existing file that is to be overwritten may be a source of problems
-         * here.
+ to open the file that was to be the end result of the export process.
+ As this may be an existing file anywhere in the computer's
+ file-system(s) it is possible that permissions on the directory or an
+ existing file that is to be overwritten may be a source of problems
+ here.
         */
         qWarning().noquote().nospace() << "Host::updateModuleZips(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open module to update it, error: \""
                                        << zip_error_strerror(&zipError) << "\"";
