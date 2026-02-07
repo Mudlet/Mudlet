@@ -1186,12 +1186,6 @@ QString dlgAboutDialog::createBuildInfo() const
                      /*: This is shown when the Qt version used at run-time
  is different to that used during compilation - it is not
  the usual case.*/
-                .arg(tr("Qt version (run-time)"), // %10
-                     qVersion()); // %11
-                     QLatin1String(QT_VERSION_STR))  // %9
-                     /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it is not
- the usual case.*/
                 .arg(tr("Qt version (run-time)"),    // %10
                      qVersion());                    // %11
     }
