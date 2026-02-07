@@ -3467,6 +3467,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             return;
         }
 
+        // Some servers require this subnegotiation before processing MXP escape sequences
+        if (option == OPT_MXP) {
+            if (mpHost->mEnableMXP) {
+                enableMXP = true;
+                mpHost->mMxpProcessor.enable();
+                qDebug() << "MXP enabled via subnegotiation";
+            }
+            return;
+        }
+
         if (option == OPT_102) {
             QByteArray payload = telnetCommand.c_str();
             if (payload.size() < 6) {
