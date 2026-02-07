@@ -46,8 +46,6 @@ MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
 : mpHost(pHost)
 , mpMMCPServer(pServer)
 , mTcpSocket(this)
-, mId(0)
-, mPeerPort(0)
 , mLastColorBold(false)
 , mNeedsColorTracking(false)
 , mNeedsColorSkip(false)
@@ -204,6 +202,24 @@ void MMCPClient::slot_readData()
         }
 
         const QByteArray peerName = mPeerBuffer.mid(5, nlPos - 5);
+
+        // The spec really doesnt dictate a max length, but we should have one to avoid abuse
+        if (peerName.length() > 64) {
+            qWarning() << "MMCPClient::slot_readData() - Rejecting connection: peer name too long (" << peerName.length() << " bytes)";
+            mState = Disconnected;
+            writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
+            disconnect();
+
+            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied (Peer name too long (64 chars max)).")
+                                            .arg(mPeerName,
+                                                 convertToIPv4(mTcpSocket.peerAddress()),
+                                                 QString::number(mTcpSocket.peerPort()));
+
+            mpHost->postMessage(infoMsg);
+
+            return;
+        }
+
         const QByteArray ipAndPort = mPeerBuffer.mid(nlPos + 1);
 
         // Validate that we have enough data for IP and port (at least 5 chars for port)
@@ -335,7 +351,10 @@ void MMCPClient::slot_readData()
             return;
         }
 
-        handleConnectedState(mPeerBuffer);
+        if (!handleConnectedState(mPeerBuffer)) {
+            // We had a partial command in the buffer, wait for more data before clearing the buffer
+            return;
+        }
         break;
 
     case Pending:
@@ -412,8 +431,8 @@ void MMCPClient::slot_displayError(QAbstractSocket::SocketError socketError)
 
     mpHost->postMessage(message);
 
-    // If we failed to connect and are not yet in the peers list, we need to clean up
-    if (mState == ConnectingOut && !mpMMCPServer->getClients().contains(this)) {
+    // If we failed to connect, we are not yet in the peers list and need to clean up
+    if (mState == ConnectingOut) {
         deleteLater();
     }
 }
@@ -507,7 +526,7 @@ bool MMCPClient::setGroup(const QString& group)
  */
 void MMCPClient::writeData(const QString& data)
 {
-    quint64 bytesWritten = mTcpSocket.write(data.toLatin1());
+    qint64 bytesWritten = mTcpSocket.write(data.toLatin1());
     if (bytesWritten <= 0) {
         const QString identifier = mPeerName.isEmpty() ? convertToIPv4(mTcpSocket.peerAddress()) : mPeerName;
         if (bytesWritten == 0) {
@@ -520,7 +539,7 @@ void MMCPClient::writeData(const QString& data)
 
 void MMCPClient::writeData(const QByteArray& data)
 {
-    quint64 bytesWritten = mTcpSocket.write(data);
+    qint64 bytesWritten = mTcpSocket.write(data);
     if (bytesWritten <= 0) {
         const QString identifier = mPeerName.isEmpty() ? convertToIPv4(mTcpSocket.peerAddress()) : mPeerName;
         if (bytesWritten == 0) {
@@ -545,8 +564,10 @@ void MMCPClient::snoop()
 /**
  * Process incoming data from this client socket.
  * Find and handle chat commands.
+ * @return True if we completely processed the buffer
+ * @return False if we encountered a partial command need to wait for additional data
  */
-void MMCPClient::handleConnectedState(const QByteArray& bytes)
+bool MMCPClient::handleConnectedState(const QByteArray& bytes)
 {
     const char* data = bytes.data();
     int cmdIdx = 0;
@@ -556,7 +577,7 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
         const int endIdx = bytes.indexOf(MMCPChatCommand::End, cmdIdx);
         if (endIdx == -1) {
             qDebug().noquote().nospace() << "MMCPClient::handleConnectedState(...) INFO - partial buffer detected...";
-            return;
+            return false;
         }
 
         const QString stringData = QString::fromLatin1(data + cmdIdx + 1, (endIdx - cmdIdx) - 1);
@@ -628,6 +649,8 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
 
         cmdIdx = endIdx + 1;
     }
+
+    return true;
 }
 
 

@@ -21,14 +21,14 @@
  ***************************************************************************/
 
 
-inline static const uint16_t csDefaultMMCPHostPort{4050};
-inline static const QLatin1String csDefaultMMCPChatName{"Mudlet"};
-inline static const QLatin1String csDefaultMMCPGroupName{"<none>"};
-inline static const QLatin1String csDefaultChatPrefix{"<CHAT>"};
-inline static const QLatin1String csMMCPChatChannelEvent{"sysMMCPChatMessage"};
-inline static const QLatin1String csMMCPChatSideChannelEvent{"sysMMCPSideChannelMessage"};
-inline static const QLatin1String csMMCPIncomingSnoopEvent{"sysMMCPIncomingSnoopMessage"};
-inline static const QLatin1String csMMCPPeerUpdateEvent{"sysMMCPPeerUpdateEvent"};
+inline const uint16_t csDefaultMMCPHostPort{4050};
+inline const QLatin1String csDefaultMMCPChatName{"Mudlet"};
+inline const QLatin1String csDefaultMMCPGroupName{"<none>"};
+inline const QLatin1String csDefaultChatPrefix{"<CHAT>"};
+inline const QLatin1String csMMCPChatChannelEvent{"sysMMCPChatMessage"};
+inline const QLatin1String csMMCPChatSideChannelEvent{"sysMMCPSideChannelMessage"};
+inline const QLatin1String csMMCPIncomingSnoopEvent{"sysMMCPIncomingSnoopMessage"};
+inline const QLatin1String csMMCPPeerUpdateEvent{"sysMMCPPeerUpdateEvent"};
 
 enum MMCPChatCommand {
     NameChange = 1,

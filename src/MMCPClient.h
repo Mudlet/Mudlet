@@ -120,7 +120,7 @@ private:
     ClientState mState = Disconnected;
     QTcpSocket mTcpSocket;
     QString mGroup = csDefaultMMCPGroupName;
-    int mId;
+    int mId = 0;
     bool mEnableSnooping = false;
     QString mPeerName;
     //auto ignore or ignorelist match?
@@ -136,7 +136,7 @@ private:
     // is this client snooping US?
     bool mIsSnooping = false;
     QString mPeerAddress;
-    quint16 mPeerPort;
+    quint16 mPeerPort = 0;
     QByteArray mPeerBuffer;
     QString mPeerVersion;
     QTimer mPendingTimer;
@@ -149,7 +149,7 @@ private:
     bool mNeedsColorSkip;
 
     void sendVersion();
-    void handleConnectedState(const QByteArray&);
+    bool handleConnectedState(const QByteArray&);
     void handleIncomingChatEveryone(const QString&);
     void handleIncomingChatPersonal(const QString&);
     void handleIncomingChatGroup(const QString&);

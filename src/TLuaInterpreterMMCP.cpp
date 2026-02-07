@@ -528,7 +528,7 @@ int TLuaInterpreter::mmcpGetClientList(lua_State* L) {
         
         lua_pushnumber(L, ++i); // Push outer table key (index)
         lua_insert(L, -2);  // Swap the inner table and key so that the table is on top
-        lua_settable(L, -3);;   // Set the inner table in the outer table.
+        lua_settable(L, -3);   // Set the inner table in the outer table.
     }
 
     return 1;

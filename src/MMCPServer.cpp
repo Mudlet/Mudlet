@@ -216,9 +216,8 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port)
 
     pClient = new MMCPClient(mpHost, this);
 
-    // Add to list immediately so we can track it even if connection fails
-    mPeersList.append(pClient);
-
+    // Don't add to the connection list here, we'll add it if the connection is
+    // successful in the slot_connected() handler of MMCPClient
     pClient->tryConnect(host, port);
 
     return {true, QString()};
@@ -349,7 +348,6 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
         }
     }
 
-    using namespace AnsiColors;
     /*: %1 and %3 are ASCII ESC color codes that need to be included BEFORE a
      * portion of text (the main message %5) and (the group name %4)
      * respectively and %6 is another code at the very end to reset the colors
@@ -838,7 +836,7 @@ quint16 MMCPServer::addConnectedClient(MMCPClient* pClient)
     if (!mPeersList.contains(pClient)) {
         mPeersList.append(pClient);
     }
-    
+
     pClient->setId(mPeersList.indexOf(pClient) + 1);
 
     // Raise event after client has been added to mPeersList
