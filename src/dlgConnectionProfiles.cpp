@@ -621,45 +621,61 @@ void dlgConnectionProfiles::slot_saveName()
     // a previously deleted profile (deleted outside Mudlet interface)
     if (mudlet::self()->storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(mudlet::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
         // Check if there are orphaned keychain entries for this profile name
-        // Use QPointer to safely detect if dialog is destroyed during async operations
+        // Use QPointer to safely detect if dialog or credManager is destroyed during async operations
+        // Create CredentialManager without a parent to avoid destruction when dialog closes
         QPointer<dlgConnectionProfiles> safeThis = this;
-        auto* credManager = new CredentialManager(this);
+        QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
 
-        credManager->retrievePassword(
+        safeCredManager->retrievePassword(
                 newProfileName,
                 "character",
-                [safeThis, credManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl](
+                [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl](
                         bool foundCharacterEntry, const QString& characterPassword, const QString& errorMessage) {
                     Q_UNUSED(characterPassword)
                     Q_UNUSED(errorMessage)
 
-                    // Check if dialog was destroyed during async operation
-                    if (!safeThis) {
-                        qDebug() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
-                        credManager->deleteLater();
+                    // Check if credManager was destroyed
+                    if (!safeCredManager) {
+                        qDebug() << "dlgConnectionProfiles: CredentialManager destroyed during keychain operation, aborting";
                         return;
                     }
 
-                    credManager->retrievePassword(
+                    // Check if dialog was destroyed during async operation
+                    if (!safeThis) {
+                        qDebug() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
+                        safeCredManager->deleteLater();
+                        return;
+                    }
+
+                    safeCredManager->retrievePassword(
                             newProfileName,
                             "proxy",
-                            [safeThis, credManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry](
+                            [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl, foundCharacterEntry](
                                     bool foundProxyEntry, const QString& proxyPassword, const QString& errorMessage) {
                                 Q_UNUSED(proxyPassword)
                                 Q_UNUSED(errorMessage)
 
+                                // Check if credManager was destroyed
+                                if (!safeCredManager) {
+                                    qDebug() << "dlgConnectionProfiles: CredentialManager destroyed during keychain operation, aborting";
+                                    return;
+                                }
+
                                 // Check if dialog was destroyed during async operation
                                 if (!safeThis) {
                                     qDebug() << "dlgConnectionProfiles: Dialog destroyed during keychain operation, aborting";
-                                    credManager->deleteLater();
+                                    safeCredManager->deleteLater();
                                     return;
                                 }
 
                                 // Define a helper lambda to continue after cleanup is done
                                 // CredentialManager only supports one operation at a time, so we must chain removals
                                 // Capture only data values, not pointers to potentially-deleted objects
-                                auto continueAfterCleanup = [safeThis, credManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl]() {
-                                    credManager->deleteLater();
+                                auto continueAfterCleanup = [safeThis, safeCredManager, currentProfileEditName, newProfileName, newProfileHost, newProfilePort, newProfileSslTsl]() {
+                                    // Clean up credManager if still valid
+                                    if (safeCredManager) {
+                                        safeCredManager->deleteLater();
+                                    }
 
                                     // Final safety check before accessing dialog members
                                     if (!safeThis) {
@@ -680,12 +696,17 @@ void dlgConnectionProfiles::slot_saveName()
                                 // If we found any orphaned entries, clean them up (chained to avoid crashes)
                                 if (foundCharacterEntry && foundProxyEntry) {
                                     // Both need cleanup - chain them
-                                    credManager->removeCredential(newProfileName, "character", [credManager, newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                    safeCredManager->removeCredential(newProfileName, "character", [safeCredManager, newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
                                         if (!success) {
                                             qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
                                         }
+                                        // Check credManager before chaining next operation
+                                        if (!safeCredManager) {
+                                            qDebug() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                                            return;
+                                        }
                                         // Now clean up proxy (chained)
-                                        credManager->removeCredential(newProfileName, "proxy", [newProfileName, continueAfterCleanup](bool proxySuccess, const QString& proxyError) {
+                                        safeCredManager->removeCredential(newProfileName, "proxy", [newProfileName, continueAfterCleanup](bool proxySuccess, const QString& proxyError) {
                                             if (!proxySuccess) {
                                                 qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << proxyError;
                                             }
@@ -693,14 +714,14 @@ void dlgConnectionProfiles::slot_saveName()
                                         });
                                     });
                                 } else if (foundCharacterEntry) {
-                                    credManager->removeCredential(newProfileName, "character", [newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                    safeCredManager->removeCredential(newProfileName, "character", [newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
                                         if (!success) {
                                             qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned character password for" << newProfileName << ":" << errorMessage;
                                         }
                                         continueAfterCleanup();
                                     });
                                 } else if (foundProxyEntry) {
-                                    credManager->removeCredential(newProfileName, "proxy", [newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
+                                    safeCredManager->removeCredential(newProfileName, "proxy", [newProfileName, continueAfterCleanup](bool success, const QString& errorMessage) {
                                         if (!success) {
                                             qWarning() << "dlgConnectionProfiles: Failed to clean up orphaned proxy password for" << newProfileName << ":" << errorMessage;
                                         }
@@ -856,23 +877,32 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     // Note: CredentialManager only supports one operation at a time, so we must
     // chain the operations - the second removal starts only after the first completes.
     // This prevents crashes from aborting in-progress keychain operations.
+    // Create CredentialManager without a parent to avoid destruction when dialog closes
     if (mudlet::self()->storingPasswordsSecurely()) {
-        auto* credManager = new CredentialManager(this);
+        QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
 
         // Clean up character password entry first, then chain proxy cleanup
-        credManager->removeCredential(profile, "character", [credManager, profile](bool success, const QString& errorMessage) {
+        safeCredManager->removeCredential(profile, "character", [safeCredManager, profile](bool success, const QString& errorMessage) {
             if (!success) {
                 qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
             }
 
+            // Check if credManager was destroyed before chaining next operation
+            if (!safeCredManager) {
+                qDebug() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                return;
+            }
+
             // Now clean up proxy password entry (chained after character password removal completes)
-            credManager->removeCredential(profile, "proxy", [credManager, profile](bool proxySuccess, const QString& proxyErrorMessage) {
+            safeCredManager->removeCredential(profile, "proxy", [safeCredManager, profile](bool proxySuccess, const QString& proxyErrorMessage) {
                 if (!proxySuccess) {
                     qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << proxyErrorMessage;
                 }
 
-                // Clean up the credential manager after both operations complete
-                credManager->deleteLater();
+                // Clean up the credential manager after both operations complete (if still valid)
+                if (safeCredManager) {
+                    safeCredManager->deleteLater();
+                }
             });
         });
     }
