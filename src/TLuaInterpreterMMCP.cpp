@@ -34,11 +34,11 @@ int TLuaInterpreter::mmcpChatTo(lua_State* L)
     const QString msg = getVerifiedString(L, sFunc, 2, "message");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->chatTo(target, msg);
+    const auto result = pHost->mMMCPServer->chatTo(target, msg);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -53,11 +53,11 @@ int TLuaInterpreter::mmcpAccept(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->chatAccept(target);
+    const auto result = pHost->mMMCPServer->chatAccept(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -72,11 +72,11 @@ int TLuaInterpreter::mmcpChatAll(lua_State* L)
     const QString msg = getVerifiedString(L, sFunc, 1, "message");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->chatAll(msg);
+    const auto result = pHost->mMMCPServer->chatAll(msg);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -91,11 +91,11 @@ int TLuaInterpreter::mmcpAllowSnoop(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->allowSnoop(target);
+    const auto result = pHost->mMMCPServer->allowSnoop(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -119,11 +119,11 @@ int TLuaInterpreter::mmcpCall(lua_State* L)
     }
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->call(host, port);
+    const auto result = pHost->mMMCPServer->call(host, port);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -138,11 +138,11 @@ int TLuaInterpreter::mmcpDeny(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->chatDeny(target);
+    const auto result = pHost->mMMCPServer->chatDeny(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -154,11 +154,11 @@ int TLuaInterpreter::mmcpDeny(lua_State* L)
 int TLuaInterpreter::mmcpDoNotDisturb(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    pHost->mmcpServer->toggleDoNotDisturb();
+    pHost->mMMCPServer->toggleDoNotDisturb();
 
     lua_pushboolean(L, true);
     return 1;
@@ -170,11 +170,11 @@ int TLuaInterpreter::mmcpEmoteAll(lua_State* L)
     const QString msg = getVerifiedString(L, sFunc, 1, "message");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->emoteAll(msg);
+    const auto result = pHost->mMMCPServer->emoteAll(msg);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -190,11 +190,11 @@ int TLuaInterpreter::mmcpChatGroup(lua_State* L)
     const QString msg = getVerifiedString(L, sFunc, 2, "message");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->chatGroup(group, msg);
+    const auto result = pHost->mMMCPServer->chatGroup(group, msg);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -209,11 +209,11 @@ int TLuaInterpreter::mmcpIgnore(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->ignore(target);
+    const auto result = pHost->mMMCPServer->ignore(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -226,11 +226,11 @@ int TLuaInterpreter::mmcpDisplayClientList(lua_State* L)
 {
     const char* sFunc = "mmcp.displayClientList";
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->displayClientList();
+    const auto result = pHost->mMMCPServer->displayClientList();
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -243,7 +243,7 @@ int TLuaInterpreter::mmcpChatName(lua_State* L)
 {
     const char* sFunc = "mmcp.chatName";
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
@@ -251,14 +251,14 @@ int TLuaInterpreter::mmcpChatName(lua_State* L)
     QString name;
     if (n > 0) {
         name = getVerifiedString(L, sFunc, 1, "name");
-        const auto result = pHost->mmcpServer->chatName(name);
+        const auto result = pHost->mMMCPServer->chatName(name);
         if (!result.first) {
             return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
         }
 
         lua_pushboolean(L, true);
     } else {
-        name = pHost->mmcpServer->getChatName();
+        name = pHost->mMMCPServer->getChatName();
         lua_pushstring(L, name.toUtf8().constData());
     }
 
@@ -272,11 +272,11 @@ int TLuaInterpreter::mmcpPing(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->ping(target);
+    const auto result = pHost->mMMCPServer->ping(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -291,11 +291,11 @@ int TLuaInterpreter::mmcpPeekConnections(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->peek(target);
+    const auto result = pHost->mMMCPServer->peek(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -310,11 +310,11 @@ int TLuaInterpreter::mmcpPrivate(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->chatPrivate(target);
+    const auto result = pHost->mMMCPServer->chatPrivate(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -329,11 +329,11 @@ int TLuaInterpreter::mmcpRequestConnections(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->request(target);
+    const auto result = pHost->mMMCPServer->request(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -348,11 +348,11 @@ int TLuaInterpreter::mmcpServe(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->serve(target);
+    const auto result = pHost->mMMCPServer->serve(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -368,11 +368,11 @@ int TLuaInterpreter::mmcpSetGroup(lua_State* L)
     const QString group = getVerifiedString(L, sFunc, 2, "group");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->chatSetGroup(target, group);
+    const auto result = pHost->mMMCPServer->chatSetGroup(target, group);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -388,11 +388,11 @@ int TLuaInterpreter::mmcpSendSideChannel(lua_State* L)
     const QString message = getVerifiedString(L, sFunc, 2, "message");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->sendSideChannel(channel, message);
+    const auto result = pHost->mMMCPServer->sendSideChannel(channel, message);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -407,11 +407,11 @@ int TLuaInterpreter::mmcpSnoop(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->snoop(target);
+    const auto result = pHost->mMMCPServer->snoop(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -424,7 +424,7 @@ int TLuaInterpreter::mmcpStartServer(lua_State* L)
 {
     const char* sFunc = "mmcp.startServer";
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
@@ -436,7 +436,7 @@ int TLuaInterpreter::mmcpStartServer(lua_State* L)
         }
     }
 
-    const auto result = pHost->mmcpServer->startServer(port);
+    const auto result = pHost->mMMCPServer->startServer(port);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -449,8 +449,8 @@ int TLuaInterpreter::mmcpStopServer(lua_State* L)
 {
     const char* sFunc = "mmcp.stopServer";
     Host* pHost = &getHostFromLua(L);
-    if (pHost->mmcpServer) {
-        const auto result = pHost->mmcpServer->stopServer();
+    if (pHost->mMMCPServer) {
+        const auto result = pHost->mMMCPServer->stopServer();
         if (!result.first) {
             return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
         }
@@ -466,11 +466,11 @@ int TLuaInterpreter::mmcpDisconnect(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->disconnect(target);
+    const auto result = pHost->mMMCPServer->disconnect(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }
@@ -482,21 +482,25 @@ int TLuaInterpreter::mmcpDisconnect(lua_State* L)
 int TLuaInterpreter::mmcpGetClientList(lua_State* L) {
     Host* pHost = &getHostFromLua(L);
 
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    QList<QPointer<MMCPClient>>* clients = pHost->mmcpServer->getClients();
-    if (clients->isEmpty()) {
+    const QList<QPointer<MMCPClient>>& clients = pHost->mMMCPServer->getClients();
+    if (clients.isEmpty()) {
         lua_pushnil(L);
         return 1;
     }
     lua_newtable(L);
 
     int i = 0;
-    QListIterator<QPointer<MMCPClient>> it(*clients);
+    QListIterator<QPointer<MMCPClient>> it(clients);
     while (it.hasNext()) {
         MMCPClient* pClient = it.next();
+
+        if (!pClient) {
+            continue;
+        }
 
         // Create a new inner table for the client.
         lua_newtable(L);
@@ -536,11 +540,11 @@ int TLuaInterpreter::mmcpGetClientFlags(lua_State* L)
     const QString target = getVerifiedString(L, sFunc, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
+    if (!pHost->mMMCPServer) {
         pHost->initMMCPServer();
     }
 
-    const auto result = pHost->mmcpServer->getClientFlags(target);
+    const auto result = pHost->mMMCPServer->getClientFlags(target);
     if (!result.first) {
         return warnArgumentValue(L, sFunc, result.second.toUtf8().constData());
     }

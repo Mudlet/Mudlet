@@ -72,7 +72,7 @@ public:
     void clientMessage(const QString&, const QString&);
     void snoopMessage(const std::string&);
 
-    QList<QPointer<MMCPClient>>* getClients() { return &mPeersList; }
+    const QList<QPointer<MMCPClient>>& getClients() const { return mPeersList; }
 
     void decrementSnoopCount() { --mSnoopCount; }
     void incrementSnoopCount() { ++mSnoopCount; }
@@ -81,9 +81,7 @@ public:
     void sendPublicPeek(MMCPClient*);
     void sendServedMessage(MMCPClient*, const QString&, bool);
 
-    bool autoAcceptIncomingCalls();
     quint16 addConnectedClient(MMCPClient*);
-    void disconnectClient(MMCPClient*);
 
     QString getChatName() const { return mChatName; }
     void setChatName(const QString&);

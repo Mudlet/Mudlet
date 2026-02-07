@@ -94,7 +94,7 @@ void MMCPServer::sendSnoopData(std::string& lines)
         outData2.append(line.data(), line.size());
 
         // If line already had an 0xff at the end, don't bother adding one back here
-        if (static_cast<unsigned char>(line.back()) != static_cast<unsigned char>(End)) {
+        if (!line.empty() && static_cast<unsigned char>(line.back()) != static_cast<unsigned char>(End)) {
             outData1.append(static_cast<char>(End));
             outData2.append(static_cast<char>(End));
         }
@@ -216,6 +216,9 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port)
 
     pClient = new MMCPClient(mpHost, this);
 
+    // Add to list immediately so we can track it even if connection fails
+    mPeersList.append(pClient);
+
     pClient->tryConnect(host, port);
 
     return {true, QString()};
@@ -300,7 +303,7 @@ QPair<bool, QString> MMCPServer::chatAccept(const QVariant& target)
         return {true, QString()};
     }
 
-    return {false, qsl("accepted incoming call")};
+    return {false, qsl("failed to accept incoming call")};
 }
 
 QPair<bool, QString> MMCPServer::chatDeny(const QVariant& target)
@@ -316,7 +319,7 @@ QPair<bool, QString> MMCPServer::chatDeny(const QVariant& target)
         return {true, QString()};
     }
 
-    return {false, qsl("denied incoming call")};
+    return {false, qsl("failed to deny incoming call")};
 }
 
 /**
@@ -381,6 +384,9 @@ QPair<bool, QString> MMCPServer::displayClientList()
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* pClient = it.next();
+        if (!pClient) {
+            continue;
+        }
        
         peersList << qsl("%1%2 %3%4 %5")
                             .arg(pClient->isPending() ? FBLDYEL : FBLDGRN)
@@ -829,7 +835,10 @@ QPair<bool, QString> MMCPServer::disconnect(const QVariant& target)
 
 quint16 MMCPServer::addConnectedClient(MMCPClient* pClient)
 {
-    mPeersList.append(pClient);
+    if (!mPeersList.contains(pClient)) {
+        mPeersList.append(pClient);
+    }
+    
     pClient->setId(mPeersList.indexOf(pClient) + 1);
 
     // Raise event after client has been added to mPeersList
@@ -851,6 +860,9 @@ void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
+        if (!cl) {
+            continue;
+        }
         cl->setId(mPeersList.indexOf(cl) + 1);
     }
 
@@ -862,6 +874,7 @@ void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     mpHost->raiseEvent(event);
 
+    pClient->deleteLater();
 }
 
 void MMCPServer::postChatMessage(const QString &peerName, const QString& msg) {

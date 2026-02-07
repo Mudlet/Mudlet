@@ -237,7 +237,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
 , mpDlgIRC(nullptr)
-, mmcpServer(nullptr)
+, mMMCPServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
 , mMMCPChatPort(csDefaultMMCPHostPort)
 , mMMCPChatPrefix(qsl("<CHAT>"))
@@ -3038,11 +3038,11 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
 
 void Host::initMMCPServer()
 {
-    if (mmcpServer) {
+    if (mMMCPServer) {
         return;
     }
 
-    mmcpServer = new MMCPServer(this);
+    mMMCPServer = new MMCPServer(this);
 }
 
 /**

@@ -20,16 +20,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QFlags>
 
-inline static uint16_t csDefaultMMCPHostPort{4050};
-inline static QLatin1String csDefaultMMCPChatName{"Mudlet"};
-inline static QLatin1String csDefaultMMCPGroupName{"<none>"};
-inline static QLatin1String csDefaultChatPrefix{"<CHAT>"};
-inline static QLatin1String csMMCPChatChannelEvent{"sysMMCPChatMessage"};
-inline static QLatin1String csMMCPChatSideChannelEvent{"sysMMCPSideChannelMessage"};
-inline static QLatin1String csMMCPIncomingSnoopEvent{"sysMMCPIncomingSnoopMessage"};
-inline static QLatin1String csMMCPPeerUpdateEvent{"sysMMCPPeerUpdateEvent"};
+inline static const uint16_t csDefaultMMCPHostPort{4050};
+inline static const QLatin1String csDefaultMMCPChatName{"Mudlet"};
+inline static const QLatin1String csDefaultMMCPGroupName{"<none>"};
+inline static const QLatin1String csDefaultChatPrefix{"<CHAT>"};
+inline static const QLatin1String csMMCPChatChannelEvent{"sysMMCPChatMessage"};
+inline static const QLatin1String csMMCPChatSideChannelEvent{"sysMMCPSideChannelMessage"};
+inline static const QLatin1String csMMCPIncomingSnoopEvent{"sysMMCPIncomingSnoopMessage"};
+inline static const QLatin1String csMMCPPeerUpdateEvent{"sysMMCPPeerUpdateEvent"};
 
 enum MMCPChatCommand {
     NameChange = 1,
@@ -58,7 +57,6 @@ enum MMCPChatCommand {
     ChannelData = 240,
     End = 255
 };
-Q_DECLARE_FLAGS(MMCPChatCommands, MMCPChatCommand)
 
 namespace AnsiColors {
 constexpr char const* RST = "\x1b[0m";

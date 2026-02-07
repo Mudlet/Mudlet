@@ -21,9 +21,10 @@
  ***************************************************************************/
 
 
-#include <QtNetwork>
+#include <QTcpSocket>
 #include <QObject>
 #include <QString>
+#include <QTimer>
 
 #include "MMCP.h"
 
@@ -109,6 +110,7 @@ signals:
 private slots:
     void slot_connected();
     void slot_disconnected();
+    void slot_pendingTimeout();
     void slot_readData();
     void slot_displayError(QAbstractSocket::SocketError socketError);
 
@@ -137,6 +139,7 @@ private:
     quint16 mPeerPort;
     QByteArray mPeerBuffer;
     QString mPeerVersion;
+    QTimer mPendingTimer;
 
     // Snoop color handling
     std::string mLastSnoopColor;
@@ -147,14 +150,12 @@ private:
 
     void sendVersion();
     void handleConnectedState(const QByteArray&);
-    void handleIncomingChannelData(const QString&);
     void handleIncomingChatEveryone(const QString&);
     void handleIncomingChatPersonal(const QString&);
     void handleIncomingChatGroup(const QString&);
     void handleIncomingClientVersion(const QString&);
     void handleIncomingConnectionList(const QString&);
     void handleIncomingConnectionsRequest();
-    void handleIncomingMessage(const QString&);
     void handleIncomingNameChange(const QString&);
     void handleIncomingPeekConnections();
     void handleIncomingPeekList(const QString&);

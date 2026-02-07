@@ -46,6 +46,8 @@ MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
 : mpHost(pHost)
 , mpMMCPServer(pServer)
 , mTcpSocket(this)
+, mId(0)
+, mPeerPort(0)
 , mLastColorBold(false)
 , mNeedsColorTracking(false)
 , mNeedsColorSkip(false)
@@ -56,12 +58,12 @@ MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
     connect(&mTcpSocket, &QTcpSocket::connected, this, &MMCPClient::slot_connected);
     connect(&mTcpSocket, &QTcpSocket::disconnected, this, &MMCPClient::slot_disconnected);
     connect(&mTcpSocket, &QTcpSocket::readyRead, this, &MMCPClient::slot_readData);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(&mTcpSocket, &QAbstractSocket::errorOccurred, this, &MMCPClient::slot_displayError);
-#else
-    connect(&mTcpSocket, static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error), this, &MMCPClient::slot_displayError);
-#endif
     connect(this, &MMCPClient::signal_clientDisconnected, mpMMCPServer, &MMCPServer::slot_clientDisconnected);
+
+    // Setup pending connection timeout
+    mPendingTimer.setSingleShot(true);
+    connect(&mPendingTimer, &QTimer::timeout, this, &MMCPClient::slot_pendingTimeout);
 }
 
 /**
@@ -125,6 +127,11 @@ void MMCPClient::slot_connected()
  */
 void MMCPClient::slot_disconnected()
 {
+    // Stop pending timer if it's running
+    if (mPendingTimer.isActive()) {
+        mPendingTimer.stop();
+    }
+
     /*: This message is used when a MMCP peer without a name disconnects,
      * %1 is the peer's IP address (numbers or URL), %2 is the port they are
      * listening on. Should be similiar to the one when we do have a name.
@@ -148,6 +155,25 @@ void MMCPClient::slot_disconnected()
     }
 
     emit signal_clientDisconnected(this);
+}
+
+/**
+ * Pending connection was never accepted or denied by us.
+ * Notify the user and disconnect.
+ */
+void MMCPClient::slot_pendingTimeout()
+{
+    if (mState == Pending) {
+        const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 timed out (not accepted or denied by you).")
+                                        .arg(mPeerName,
+                                            convertToIPv4(mTcpSocket.peerAddress()),
+                                            QString::number(mTcpSocket.peerPort()));
+        mpHost->postMessage(infoMsg);
+        
+        mState = Disconnected;
+        writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
+        disconnect();
+    }
 }
 
 /**
@@ -179,6 +205,15 @@ void MMCPClient::slot_readData()
 
         const QByteArray peerName = mPeerBuffer.mid(5, nlPos - 5);
         const QByteArray ipAndPort = mPeerBuffer.mid(nlPos + 1);
+
+        // Validate that we have enough data for IP and port (at least 5 chars for port)
+        if (ipAndPort.size() < 5) {
+            qWarning() << "MMCPClient::slot_readData() - Malformed handshake: insufficient data for IP and port";
+            mState = Disconnected;
+            disconnect();
+            return;
+        }
+
         // Exclude the last 5 characters for the IP address
         const QByteArray ipAddress = ipAndPort.left(ipAndPort.size() - 5);
         // Last 5 characters for the port
@@ -225,6 +260,11 @@ void MMCPClient::slot_readData()
                                                     .arg(clientId);
 
                     mpHost->postMessage(infoMsg);
+
+                    // Start 60 second timeout for pending connection
+                    // We don't know what client the peer is using, their client may timeout the socket, or may not
+                    // Regardless, we'll time it out after 60 seconds
+                    mPendingTimer.start(60000);
                 }
             }
         }
@@ -238,7 +278,9 @@ void MMCPClient::slot_readData()
         const int colonPos = mPeerBuffer.indexOf(':');
         const int nlPos = mPeerBuffer.indexOf('\n');
 
-        if (!(mPeerBuffer.startsWith("YES:") || mPeerBuffer.startsWith("NO:")) || nlPos == -1 || colonPos == -1) {
+        bool isNo = mPeerBuffer.startsWith("NO:");
+
+        if (!(mPeerBuffer.startsWith("YES:") || isNo) || nlPos == -1 || colonPos == -1) {
             mState = Disconnected;
 
             // In this case we do not get details of the connection from the
@@ -248,6 +290,18 @@ void MMCPClient::slot_readData()
                                             .arg(convertToIPv4(mTcpSocket.peerAddress()),
                                                  QString::number(mTcpSocket.peerPort()));
             mpHost->postMessage(infoMsg);
+
+        } else if (isNo) {
+            // We were rejected by the other end, but we do get details of the connection from them, so we can report that:
+            mState = Disconnected;
+            const QByteArray peerName = mPeerBuffer.mid(colonPos + 1, nlPos - colonPos - 1);
+            const QString rejectedBy = QString::fromUtf8(peerName);
+            const QString infoMsg = tr("[ CHAT ]  - Connection to %1 at %2:%3 rejected.")
+                                            .arg(rejectedBy,
+                                                convertToIPv4(mTcpSocket.peerAddress()),
+                                                QString::number(mTcpSocket.peerPort()));
+            mpHost->postMessage(infoMsg);
+
         } else {
             // We have got a "YES:" - yippee!
             const QByteArray peerName = mPeerBuffer.mid(colonPos + 1, nlPos - colonPos - 1);
@@ -301,6 +355,7 @@ void MMCPClient::slot_readData()
  * and our client version to the new peer
  */
 void MMCPClient::acceptCall() {
+    mPendingTimer.stop();  // Stop timeout
     mState = Connected;
     writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
 
@@ -319,6 +374,7 @@ void MMCPClient::acceptCall() {
  * 
  */
 void MMCPClient::denyCall() {
+    mPendingTimer.stop();  // Stop timeout
     mState = Disconnected;
 
     writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
@@ -355,6 +411,11 @@ void MMCPClient::slot_displayError(QAbstractSocket::SocketError socketError)
     }
 
     mpHost->postMessage(message);
+
+    // If we failed to connect and are not yet in the peers list, we need to clean up
+    if (mState == ConnectingOut && !mpMMCPServer->getClients().contains(this)) {
+        deleteLater();
+    }
 }
 
 
@@ -446,12 +507,28 @@ bool MMCPClient::setGroup(const QString& group)
  */
 void MMCPClient::writeData(const QString& data)
 {
-    mTcpSocket.write(data.toLatin1());
+    quint64 bytesWritten = mTcpSocket.write(data.toLatin1());
+    if (bytesWritten <= 0) {
+        const QString identifier = mPeerName.isEmpty() ? convertToIPv4(mTcpSocket.peerAddress()) : mPeerName;
+        if (bytesWritten == 0) {
+            qWarning() << "MMCPClient::writeData(QString&) Failed to write data to socket for client " << identifier;
+        } else if (bytesWritten == -1) {
+            qWarning() << "MMCPClient::writeData(QString&) - Failed to write data to socket:" << mTcpSocket.errorString() << " for client " << identifier;
+        }
+    }
 }
 
 void MMCPClient::writeData(const QByteArray& data)
 {
-    mTcpSocket.write(data);
+    quint64 bytesWritten = mTcpSocket.write(data);
+    if (bytesWritten <= 0) {
+        const QString identifier = mPeerName.isEmpty() ? convertToIPv4(mTcpSocket.peerAddress()) : mPeerName;
+        if (bytesWritten == 0) {
+            qWarning() << "MMCPClient::writeData(QByteArray&) Failed to write data to socket for client " << identifier;
+        } else if (bytesWritten == -1) {
+            qWarning() << "MMCPClient::writeData(QByteArray&) - Failed to write data to socket:" << mTcpSocket.errorString() << " for client " << identifier;
+        }
+    }
 }
 
 /**
@@ -577,7 +654,7 @@ void MMCPClient::handleIncomingConnectionList(const QString& list)
     QStringList parts = list.split(',');
 
     if (parts.size() % 2 != 0) {
-        mpHost->postMessage(qsl("[ CHAT ]  - Badly formatted connection list from %1")
+        mpHost->postMessage(tr("[ CHAT ]  - Badly formatted connection list from %1")
             .arg(mPeerName));
         return;
     }
@@ -587,12 +664,12 @@ void MMCPClient::handleIncomingConnectionList(const QString& list)
         uint16_t port = parts[++i].toUInt(&ok);
 
         if (!ok) {
-            mpHost->postMessage(qsl("[ CHAT ]  - Error parsing host value from connection: %1")
+            mpHost->postMessage(tr("[ CHAT ]  - Error parsing host value from connection: %1")
                 .arg(parts[i]));
             continue;
         }
 
-        mpHost->postMessage(qsl("[ CHAT ]  - Attempting to connect to %1:%2 provided by %3")
+        mpHost->postMessage(tr("[ CHAT ]  - Attempting to connect to %1:%2 provided by %3")
             .arg(host).arg(port).arg(mPeerName));
 
         mpMMCPServer->call(host, port);
@@ -782,6 +859,10 @@ void MMCPClient::handleIncomingPingResponse(const QString& data)
 /**
  * This client sent a request to snoop you (the user).
  * Apparently the client is responsible for telling the connecting user.
+ * 
+ * We're sending a message back to the client to let them know if they
+ * can or cannot snoop us. We don't know what language the remote client is using...
+ * Send it in English for now and hope for the best? Maybe noone is using this snoop feature?
  */
 void MMCPClient::handleIncomingSnoop()
 {
@@ -834,13 +915,10 @@ void MMCPClient::updateSgrState(const std::string &ansiSeq)
                 mLastColorBold = false;
             } else {
                 // Check for standard foreground color codes (30-37 or 90-97).
-                try {
-                    int val = std::stoi(token);
-                    if ((val >= 30 && val <= 37) || (val >= 90 && val <= 97)) {
-                        mLastSnoopColor = token;
-                    }
-                } catch (...) {
-                    // ignore tokens that aren't numbers
+                bool ok = false;
+                int val = QString::fromStdString(token).toInt(&ok);
+                if (ok && ((val >= 30 && val <= 37) || (val >= 90 && val <= 97))) {
+                    mLastSnoopColor = token;
                 }
             }
         }
@@ -888,6 +966,11 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     // skip over it as we'll be using our own.
     // MudMaster seems to do this, other clients (TT++) may not
     if (mNeedsColorSkip) {
+        if (len < 4) {
+            // Not enough data to skip color prefix - malformed packet?
+            qWarning() << "MMCPClient::handleIncomingSnoopData() - Insufficient data for color skip (len=" << len << ")";
+            return;
+        }
         inScan += 4;
     }
 
