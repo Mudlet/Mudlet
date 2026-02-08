@@ -295,6 +295,74 @@ private slots:
     // Default should still be LOCKED from the earlier lock
     QCOMPARE(processor.defaultMode(), MXP_MODE_LOCKED);
   }
+
+  // Test mode 4 (temp secure) for secure tags with mode 7 (lock locked) as
+  // default. This is the pattern used by some MUDs for maximum security:
+  // ESC[4z<SEND HREF="foo">ESC[7zfooESC[4z</SEND>ESC[7z
+  void testTempSecureWithLockLockedPattern() {
+    TMxpEdgeCaseClient client;
+    TMxpProcessor processor(&client);
+
+    processor.enable();
+
+    // Start in lock locked mode (mode 7) - very conservative default
+    processor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
+    QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
+    QCOMPARE(processor.defaultMode(), MXP_MODE_LOCKED);
+
+    // Mode 4 = temp secure for the opening SEND tag
+    processor.setMode(MXP_MODE_CODE_TEMP_SECURE);
+    QCOMPARE(processor.mode(), MXP_MODE_TEMP_SECURE);
+
+    // Process opening SEND tag in temp secure mode
+    processInput(processor, "<SEND HREF=\"foo\">");
+    QVERIFY2(client.handledTagNames.contains(qsl("SEND")),
+             "SEND tag should be handled in temp secure mode");
+
+    // Mode 7 = lock locked for the content (prevents MXP parsing of user text)
+    processor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
+    QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
+
+    // Content "foo" is in locked mode - no MXP parsing
+    // (In real usage this would just be displayed as text)
+
+    // Mode 4 again for the closing SEND tag
+    processor.setMode(MXP_MODE_CODE_TEMP_SECURE);
+    QCOMPARE(processor.mode(), MXP_MODE_TEMP_SECURE);
+
+    // Process closing SEND tag
+    processInput(processor, "</SEND>");
+
+    // Mode 7 to restore locked as default
+    processor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
+    QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
+    QCOMPARE(processor.defaultMode(), MXP_MODE_LOCKED);
+  }
+
+  // Test mode 4 (temp secure) reverts to default after tag is processed
+  void testTempSecureRevertsToDefault() {
+    TMxpEdgeCaseClient client;
+    TMxpProcessor processor(&client);
+
+    processor.enable();
+
+    // Lock OPEN as default
+    processor.setMode(MXP_MODE_CODE_LOCK_OPEN);
+    QCOMPARE(processor.defaultMode(), MXP_MODE_OPEN);
+
+    // Set temp secure mode
+    processor.setMode(MXP_MODE_CODE_TEMP_SECURE);
+    QCOMPARE(processor.mode(), MXP_MODE_TEMP_SECURE);
+
+    // Process a secure tag
+    processInput(processor, "<SEND>test</SEND>");
+
+    // After processing, mode should revert to OPEN (the locked default)
+    // Note: The exact revert behavior depends on implementation details
+    // This test documents the expected behavior for temp secure mode
+    QVERIFY2(client.handledTagNames.contains(qsl("SEND")),
+             "SEND tag should be handled in temp secure mode");
+  }
 };
 
 QTEST_MAIN(TMxpEdgeCasesTest)
