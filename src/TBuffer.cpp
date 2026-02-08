@@ -4241,7 +4241,9 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         return;
     }
 
-    bool firstChar = (lineBuffer.back().isEmpty());
+    if (lineBuffer.back().isEmpty()) {
+        timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+    }
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
     int lineEndPos = sub_end;
 
@@ -4252,12 +4254,6 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
         const QChar thisChar = text.at(i);
 
-        if (thisChar == QChar::LineFeed) {
-            firstChar = true;
-            appendEmptyLine();
-            continue;
-        }
-
         lineBuffer.back().append(thisChar);
         const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(styling);
@@ -4266,10 +4262,6 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         // translateToPlainText() where the TChar is created with ANSI formatting
         // before JSON styling is applied
 
-        if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
-            firstChar = false;
-        }
     }
 }
 
@@ -4481,6 +4473,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     int totalWidth = 0;
     int firstChar = 0;
     bool needsIndent = isNewline;
+    bool hasLineFeed = false;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total and indexOfChar >= 0;) {
@@ -4494,6 +4487,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         }
         // handle embedded linefeed
         if (c == QChar::LineFeed) {
+            hasLineFeed = true;
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             indexOfChar++;
             boundaryFinder.setPosition(indexOfChar);
@@ -4538,7 +4532,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         indexOfChar = nextBoundary;
     }
     // it's possible that no wrapping is needed
-    if (totalWidth <= mWrapAt) {
+    if (!hasLineFeed && totalWidth <= mWrapAt) {
         output.clear();
         return output;
     }
