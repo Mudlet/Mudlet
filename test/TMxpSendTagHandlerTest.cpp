@@ -2,9 +2,9 @@
 #include "TMxpSendTagHandler.h"
 #include "TMxpStubClient.h"
 #include <QTest>
-#include <TMxpProcessor.h>
-#include <TMxpTagParser.h>
-#include <TMxpTagProcessor.h>
+#include "TMxpProcessor.h"
+#include "TMxpTagParser.h"
+#include "TMxpTagProcessor.h"
 
 class TMxpSendTagHandlerTest : public QObject {
   Q_OBJECT
