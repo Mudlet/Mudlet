@@ -338,15 +338,19 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         // Character consumed, tag still building - validate the tag name
         // against known MXP tags for early rejection of non-MXP content.
-        // We only reject when the tag name is fully determined (i.e. the
-        // builder has seen a boundary character like space or '>').  We
-        // intentionally do NOT reject based on partial prefix matching
-        // because a prefix like "SE" might not match any OPEN-mode tag
-        // yet still be a legitimate MXP tag (SEND) that we need to
-        // collect fully before deciding.
-        if (mMxpTagBuilder.isTagNameComplete()) {
-            const std::string partialName = mMxpTagBuilder.getPartialTagName();
-            if (!partialName.empty()) {
+        const std::string partialName = mMxpTagBuilder.getPartialTagName();
+        if (!partialName.empty()) {
+            // First check: reject immediately if tag name contains invalid characters
+            // like %, ^, @, etc. This catches non-MXP content like <%^BOLD immediately
+            if (!isValidTagName(partialName)) {
+                return rejectCurrentTag();
+            }
+            // Second check: if tag name is complete (hit a boundary), validate
+            // against known MXP tags. We intentionally do NOT reject based on
+            // partial prefix matching because "SE" might not match any OPEN-mode
+            // tag yet still be a legitimate MXP tag (SEND) that we need to
+            // collect fully before deciding.
+            if (mMxpTagBuilder.isTagNameComplete()) {
                 const QString qPartialName = QString::fromStdString(partialName);
                 if (!isTagAllowedInCurrentMode(qPartialName)) {
                     return rejectCurrentTag();
@@ -420,6 +424,25 @@ QString TMxpProcessor::decodeRawBytes(const std::string& raw, const QByteArray& 
     } else {
         return TEncodingHelper::decode(QByteArray::fromRawData(raw.c_str(), raw.length()), encoding);
     }
+}
+
+bool TMxpProcessor::isValidTagName(const std::string& tagName) const
+{
+    if (tagName.empty()) {
+        return true;
+    }
+    for (char ch : tagName) {
+        // Valid tag name characters: A-Z, a-z, 0-9, hyphen, slash (for closing tags), exclamation mark (for !ELEMENT)
+        if (!((ch >= 'A' && ch <= 'Z') || 
+              (ch >= 'a' && ch <= 'z') || 
+              (ch >= '0' && ch <= '9') || 
+              ch == '-' || 
+              ch == '/' ||
+              ch == '!')) {
+            return false;
+        }
+    }
+    return true;
 }
 
 TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
