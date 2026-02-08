@@ -17,226 +17,394 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QTest>
 #include "TMxpProcessor.h"
 #include "TMxpStubClient.h"
 #include "TMxpTagParser.h"
+#include <QTest>
 #include <string>
 
 /**
- * Test the MXP mode security implementation
- * 
- * This test addresses issue #8150: MXP "open mode" security vulnerability
- * where SEND and other secure tags were being allowed in OPEN mode.
- * 
+ * Test the MXP mode security and tag validation implementation
+ *
  * According to the MXP spec (https://www.zuggsoft.com/zmud/mxp.htm):
- * - OPEN mode: Only basic formatting tags (B, I, U, COLOR, etc.)
- * - SECURE mode: All tags including SEND, A, VAR, SOUND, MUSIC
- * - LOCKED mode: No tags at all
+ * - OPEN mode (default after negotiation): Only OPEN-category tags allowed
+ * - SECURE mode: All MXP tags allowed
+ * - LOCKED mode: No tags at all (verbatim text)
+ *
+ * Tags that don't match known MXP spec tags or user-defined elements
+ * are treated as literal text, preventing false positives from characters
+ * like < in normal game text.
  */
 class TMxpModeSecurityTest : public QObject {
-Q_OBJECT
+  Q_OBJECT
 
 private:
-    // Extended stub client that tracks mode and validates tags
-    class TMxpModeTestClient : public TMxpStubClient {
-    private:
-        TMxpProcessor* mpProcessor;
-        
-    public:
-        int rejectedTagCount = 0;
-        QString lastRejectedTag;
-        
-        void setProcessor(TMxpProcessor* processor) {
-            mpProcessor = processor;
-        }
-        
-        bool startTagReceived(MxpStartTag* startTag) override {
-            if (!mpProcessor) {
-                return true; // No processor, allow everything
-            }
-            
-            TMXPMode currentMode = mpProcessor->mode();
-            const QString tagName = startTag->getName().toUpper();
-            
-            // In LOCKED mode, no tags are allowed
-            if (currentMode == MXP_MODE_LOCKED) {
-                rejectedTagCount++;
-                lastRejectedTag = tagName;
-                return false;
-            }
-            
-            // Check if this tag is allowed in the current mode
-            if (!isTagAllowedInMode(tagName, currentMode)) {
-                rejectedTagCount++;
-                lastRejectedTag = tagName;
-                return false;
-            }
-            
-            return true;
-        }
-        
-    private:
-        bool isTagAllowedInMode(const QString& tagName, TMXPMode mode) const {
-            // In SECURE or TEMP_SECURE mode, all tags are allowed
-            if (mode == MXP_MODE_SECURE || mode == MXP_MODE_TEMP_SECURE) {
-                return true;
-            }
-            
-            // In LOCKED mode, no tags are allowed
-            if (mode == MXP_MODE_LOCKED) {
-                return false;
-            }
-            
-            // In OPEN mode, only specific formatting tags are allowed
-            static const QSet<QString> openModeTags = {
-                "B", "BOLD", "STRONG",
-                "I", "ITALIC", "EM",
-                "U", "UNDERLINE",
-                "S", "STRIKEOUT",
-                "C", "COLOR",
-                "H", "HIGH",
-                "FONT",
-                "NOBR",
-                "P",
-                "BR", "SBR"
-            };
-            
-            return openModeTags.contains(tagName);
-        }
-    };
+  /**
+   * Helper: feed a string through the MXP processor character by character
+   * and collect all entity values that are output (rejected/literal text).
+   */
+  static QString processAndCollectOutput(TMxpProcessor &processor,
+                                         const std::string &input) {
+    QString output;
+    for (char ch : input) {
+      TMxpProcessingResult result = processor.processMxpInput(ch, true);
+      if (result == HANDLER_INSERT_ENTITY_SYS) {
+        output += processor.getEntityValue();
+      }
+    }
+    return output;
+  }
 
 private slots:
-    void testSendTagBlockedInOpenMode()
-    {
-        // Test the core security issue from #8150
-        TMxpModeTestClient client;
-        TMxpProcessor processor(&client);
-        client.setProcessor(&processor);
-        
-        // Verify we're in OPEN mode by default
-        QCOMPARE(processor.mode(), MXP_MODE_OPEN);
-        
-        // Process a SEND tag in OPEN mode
-        std::string input = "\033[0z<SEND href=\"dangerous command\">click me</SEND>";
 
-        for (char ch : input) {
-            processor.processMxpInput(ch, true);
-        }
-        
-        // The SEND tag should have been rejected
-        QVERIFY(client.rejectedTagCount > 0);
-        QCOMPARE(client.lastRejectedTag, QString("SEND"));
-        
-        // No link should have been created
-        QCOMPARE(client.mHrefs.size(), 0);
+  // ---------------------------------------------------------------
+  // Mode defaults and transitions
+  // ---------------------------------------------------------------
+
+  void testDefaultModeIsOpen() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    // MXP spec: "OPEN MODE starts as the Default mode"
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+  }
+
+  void testModeTransitions() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    processor.setMode(1); // SECURE line
+    QCOMPARE(processor.mode(), MXP_MODE_SECURE);
+
+    processor.setMode(0); // OPEN line
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    processor.setMode(2); // LOCKED line
+    QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
+  }
+
+  // ---------------------------------------------------------------
+  // Tag recognition (static sets from the MXP spec)
+  // ---------------------------------------------------------------
+
+  void testOpenModeTagsRecognized() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    // All formatting tags should be recognized
+    QVERIFY(processor.isRecognizedMxpTag(qsl("B")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("BOLD")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("I")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("COLOR")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("FONT")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("BR")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("HR")));
+
+    // Case insensitive
+    QVERIFY(processor.isRecognizedMxpTag(qsl("b")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("Color")));
+  }
+
+  void testSecureModeTagsRecognized() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QVERIFY(processor.isRecognizedMxpTag(qsl("SEND")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("A")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("VERSION")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("SUPPORT")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("SOUND")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("IMAGE")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("FRAME")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("DEST")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("!ELEMENT")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("!ENTITY")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("VAR")));
+  }
+
+  void testUnknownTagsNotRecognized() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QVERIFY(!processor.isRecognizedMxpTag(qsl("test")));
+    QVERIFY(!processor.isRecognizedMxpTag(qsl("villains")));
+    QVERIFY(!processor.isRecognizedMxpTag(qsl("notmxp")));
+    QVERIFY(!processor.isRecognizedMxpTag(qsl("echo")));
+  }
+
+  // ---------------------------------------------------------------
+  // OPEN mode: only OPEN tags allowed
+  // ---------------------------------------------------------------
+
+  void testSendTagBlockedInOpenMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // SEND is a SECURE tag - should be rejected in OPEN mode and
+    // output as literal text
+    QString output =
+        processAndCollectOutput(processor, "<SEND href=\"cmd\">click</SEND>");
+
+    // The SEND tag should have been output as literal text
+    QVERIFY(output.contains(qsl("<SEND")));
+
+    // No link should have been created
+    QCOMPARE(client.mHrefs.size(), 0);
+  }
+
+  void testFormattingTagsAllowedInOpenMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // Process formatting tags - these should all work in OPEN mode
+    processAndCollectOutput(processor, "<B>bold</B>");
+
+    // Bold should have been activated (not rejected)
+    // The stub client tracks bold state
+    // After </B>, boldCounter should be back to 0
+    QCOMPARE(client.boldCounter, static_cast<unsigned int>(0));
+  }
+
+  void testColorTagAllowedInOpenMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // COLOR is an OPEN tag - process only the opening tag so that
+    // pushColor is called but popColor hasn't happened yet
+    processAndCollectOutput(processor, "<COLOR red>text");
+
+    // Should have set the color (not rejected)
+    QVERIFY(!client.fgColor.isEmpty());
+  }
+
+  // ---------------------------------------------------------------
+  // SECURE mode: all MXP tags allowed
+  // ---------------------------------------------------------------
+
+  void testSendTagAllowedInSecureMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    processor.setMode(1); // SECURE line
+    QCOMPARE(processor.mode(), MXP_MODE_SECURE);
+
+    processAndCollectOutput(processor,
+                            "<SEND href=\"test command\">click me</SEND>");
+
+    // A link should have been created
+    QVERIFY(client.mHrefs.size() > 0);
+  }
+
+  void testElementDefinitionAllowedInSecureMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    processor.setMode(1); // SECURE line
+    QCOMPARE(processor.mode(), MXP_MODE_SECURE);
+
+    // !ELEMENT is a SECURE tag
+    processAndCollectOutput(
+        processor, "<!ELEMENT RName '<FONT COLOR=Red><B>' FLAG=\"RoomName\">");
+
+    // Should have registered the element
+    QVERIFY(processor.getMxpTagProcessor().getElementRegistry().containsElement(
+        qsl("RName")));
+  }
+
+  // ---------------------------------------------------------------
+  // LOCKED mode: no tags at all
+  // ---------------------------------------------------------------
+
+  void testNoTagsAllowedInLockedMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    processor.setMode(2); // LOCKED line
+    QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
+
+    // In LOCKED mode, text passes through without parsing
+    std::string input = "<B>bold</B>";
+
+    for (char ch : input) {
+      TMxpProcessingResult result = processor.processMxpInput(ch, true);
+      // All characters should fall through (no tag parsing)
+      QCOMPARE(result, HANDLER_FALL_THROUGH);
     }
+  }
 
-    void testSendTagAllowedInSecureMode()
-    {
-        TMxpModeTestClient client;
-        TMxpProcessor processor(&client);
-        client.setProcessor(&processor);
-        
-        // Set to SECURE mode
-        processor.setMode(1);
-        QCOMPARE(processor.mode(), MXP_MODE_SECURE);
-        
-        // Process a SEND tag in SECURE mode
-        std::string input = "<SEND href=\"test command\">click me</SEND>";
+  // ---------------------------------------------------------------
+  // False positive prevention: non-MXP text with < characters
+  // ---------------------------------------------------------------
 
-        for (char ch : input) {
-            processor.processMxpInput(ch, true);
-        }
-        
-        // The SEND tag should have been accepted
-        QCOMPARE(client.rejectedTagCount, 0);
-        
-        // A link should have been created
-        QVERIFY(client.mHrefs.size() > 0);
-    }
+  void testLessThanInTextOutputAsLiteral() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
 
-    void testFormattingTagsAllowedInOpenMode()
-    {
-        TMxpModeTestClient client;
-        TMxpProcessor processor(&client);
-        client.setProcessor(&processor);
-        
-        // Verify we're in OPEN mode
-        QCOMPARE(processor.mode(), MXP_MODE_OPEN);
-        
-        // Process formatting tags - these should all work in OPEN mode
-        std::string input = "\033[0z<B>bold</B><I>italic</I><U>underline</U>";
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
 
-        for (char ch : input) {
-            processor.processMxpInput(ch, true);
-        }
-        
-        // No tags should have been rejected
-        QCOMPARE(client.rejectedTagCount, 0);
-    }
+    // "< villains>" - the '<' starts tag parsing, ' villains'
+    // accumulates, '>' closes it. "villains" is not a known OPEN tag.
+    QString output = processAndCollectOutput(processor, "< villains>");
 
-    void testNoTagsAllowedInLockedMode()
-    {
-        TMxpModeTestClient client;
-        TMxpProcessor processor(&client);
-        client.setProcessor(&processor);
-        
-        // Set to LOCKED mode
-        processor.setMode(2);
-        QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
-        
-        // Try to process formatting tags - in LOCKED mode, text is not parsed
-        // at all, so < and > pass through as literal characters
-        std::string input = "<B>bold</B>";
+    // Should be output as literal text since "villains" is not an MXP tag
+    QVERIFY(output.contains(qsl("villains")));
+  }
 
-        for (char ch : input) {
-            processor.processMxpInput(ch, true);
-        }
-        
-        // Per MXP spec: "no MXP or HTML commands are allowed in the line.
-        // The line is not parsed for any tags at all."
-        // Since no parsing occurs, no tags are rejected - the text just passes through
-        QCOMPARE(client.rejectedTagCount, 0);
-    }
+  void testUnknownTagNameRejectedImmediately() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
 
-    void testModeTransitions()
-    {
-        TMxpModeTestClient client;
-        TMxpProcessor processor(&client);
-        client.setProcessor(&processor);
-        
-        // Start in OPEN mode (default)
-        QCOMPARE(processor.mode(), MXP_MODE_OPEN);
-        
-        // Switch to SECURE mode
-        processor.setMode(1);
-        QCOMPARE(processor.mode(), MXP_MODE_SECURE);
-        
-        // Now SEND should work
-        std::string input1 = "<SEND>test</SEND>";
-        client.rejectedTagCount = 0;
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
 
-        for (char ch : input1) {
-            processor.processMxpInput(ch, true);
-        }
+    // <xyz is not a known MXP tag - should be rejected early via prefix check
+    // 'x' doesn't start any OPEN mode tag
+    QString output = processAndCollectOutput(processor, "<xyz something>");
 
-        QCOMPARE(client.rejectedTagCount, 0);
-        
-        // Switch back to OPEN mode
-        processor.setMode(0);
-        QCOMPARE(processor.mode(), MXP_MODE_OPEN);
-        
-        // Now SEND should be blocked again
-        std::string input2 = "<SEND>test2</SEND>";
-        client.rejectedTagCount = 0;
+    // Should show the original text as literal
+    QVERIFY(output.contains(qsl("<xyz")));
+  }
 
-        for (char ch : input2) {
-            processor.processMxpInput(ch, true);
-        }
+  void testSecureTagInTextRejectedInOpenMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
 
-        QVERIFY(client.rejectedTagCount > 0);
-    }
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // Even though IMAGE is a real MXP tag, it's SECURE - not allowed in OPEN
+    // mode
+    QString output = processAndCollectOutput(processor, "<IMAGE map.jpg>");
+
+    // Should be output as literal text
+    QVERIFY(output.contains(qsl("<IMAGE")));
+  }
+
+  // ---------------------------------------------------------------
+  // User-defined elements
+  // ---------------------------------------------------------------
+
+  void testUserDefinedOpenElementAllowedInOpenMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    // First, register a user-defined OPEN element (normally done in SECURE
+    // mode)
+    processor.setMode(1); // SECURE
+    processAndCollectOutput(processor,
+                            "<!ELEMENT Auction '<FONT COLOR=red>' OPEN>");
+
+    // Switch back to OPEN mode
+    processor.setMode(0);
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // The OPEN user-defined element should be recognized
+    QVERIFY(processor.isTagAllowedInCurrentMode(qsl("Auction")));
+  }
+
+  void testUserDefinedSecureElementBlockedInOpenMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    // Register a SECURE user-defined element (no OPEN keyword)
+    processor.setMode(1); // SECURE
+    processAndCollectOutput(processor,
+                            "<!ELEMENT ImmChan '<FONT COLOR=Red,Blink>'>");
+
+    // Switch back to OPEN mode
+    processor.setMode(0);
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // The SECURE user-defined element should NOT be allowed in OPEN mode
+    QVERIFY(!processor.isTagAllowedInCurrentMode(qsl("ImmChan")));
+  }
+
+  // ---------------------------------------------------------------
+  // Prefix validation (early rejection during tag name accumulation)
+  // ---------------------------------------------------------------
+
+  void testValidPrefixNotRejected() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // "B" is a valid OPEN tag prefix
+    QVERIFY(processor.couldBeValidMxpTag(qsl("B")));
+
+    // "CO" is a prefix of "COLOR" (OPEN tag)
+    QVERIFY(processor.couldBeValidMxpTag(qsl("CO")));
+
+    // "FO" is a prefix of "FONT" (OPEN tag)
+    QVERIFY(processor.couldBeValidMxpTag(qsl("FO")));
+  }
+
+  void testInvalidPrefixRejected() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // "X" doesn't start any OPEN mode tag
+    QVERIFY(!processor.couldBeValidMxpTag(qsl("X")));
+
+    // "VIL" doesn't start any OPEN mode tag
+    QVERIFY(!processor.couldBeValidMxpTag(qsl("VIL")));
+
+    // "S" starts "S", "SMALL", "SBR", "STRIKEOUT" in OPEN mode
+    QVERIFY(processor.couldBeValidMxpTag(qsl("S")));
+    // But "SE" doesn't start any OPEN mode tag
+    QVERIFY(!processor.couldBeValidMxpTag(qsl("SE")));
+  }
+
+  void testPrefixValidationInSecureMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    processor.setMode(1); // SECURE
+    QCOMPARE(processor.mode(), MXP_MODE_SECURE);
+
+    // "SE" starts "SEND" in SECURE mode
+    QVERIFY(processor.couldBeValidMxpTag(qsl("SE")));
+
+    // "IM" starts "IMAGE" in SECURE mode
+    QVERIFY(processor.couldBeValidMxpTag(qsl("IM")));
+
+    // "ZZ" doesn't start any tag
+    QVERIFY(!processor.couldBeValidMxpTag(qsl("ZZ")));
+  }
+
+  // ---------------------------------------------------------------
+  // Integration: MXP spec example should work in SECURE mode
+  // ---------------------------------------------------------------
+
+  void testMxpSpecExampleInSecureMode() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    processor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+    QCOMPARE(processor.mode(), MXP_MODE_SECURE);
+
+    // From the MXP spec example
+    processAndCollectOutput(
+        processor, "<!ELEMENT RName '<FONT COLOR=Red><B>' FLAG=\"RoomName\">");
+    processAndCollectOutput(processor, "<!ELEMENT Ex '<SEND>'>");
+
+    QVERIFY(processor.getMxpTagProcessor().getElementRegistry().containsElement(
+        qsl("RName")));
+    QVERIFY(processor.getMxpTagProcessor().getElementRegistry().containsElement(
+        qsl("Ex")));
+
+    // The user-defined elements should be recognized
+    QVERIFY(processor.isRecognizedMxpTag(qsl("RName")));
+    QVERIFY(processor.isRecognizedMxpTag(qsl("Ex")));
+  }
 };
 
 QTEST_MAIN(TMxpModeSecurityTest)

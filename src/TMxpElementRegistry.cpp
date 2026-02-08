@@ -35,3 +35,34 @@ void TMxpElementRegistry::unregisterElement(const QString& name)
 {
     mMXP_Elements.remove(name.toUpper());
 }
+
+bool TMxpElementRegistry::isOpenElement(const QString& name) const
+{
+    const auto it = mMXP_Elements.constFind(name.toUpper());
+    if (it != mMXP_Elements.constEnd()) {
+        return it->open;
+    }
+    return false;
+}
+
+bool TMxpElementRegistry::hasElementWithPrefix(const QString& prefix) const
+{
+    const QString upper = prefix.toUpper();
+    for (auto it = mMXP_Elements.constBegin(); it != mMXP_Elements.constEnd(); ++it) {
+        if (it.key().startsWith(upper)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TMxpElementRegistry::hasOpenElementWithPrefix(const QString& prefix) const
+{
+    const QString upper = prefix.toUpper();
+    for (auto it = mMXP_Elements.constBegin(); it != mMXP_Elements.constEnd(); ++it) {
+        if (it.key().startsWith(upper) && it.value().open) {
+            return true;
+        }
+    }
+    return false;
+}

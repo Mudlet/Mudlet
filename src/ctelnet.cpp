@@ -2700,7 +2700,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             mpHost->mMxpProcessor.enable();
 
             qDebug() << "MXP enabled";
-            mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
             raiseProtocolEvent("sysProtocolEnabled", "MXP");
             break;
         }
@@ -3048,7 +3047,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 enableMXP = true;
                 sendTelnetOption(TN_WILL, OPT_MXP);
                 mpHost->mMxpProcessor.enable();
-                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);

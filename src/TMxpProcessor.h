@@ -28,6 +28,8 @@
 #include "TMxpNodeBuilder.h"
 #include "TMxpTagProcessor.h"
 
+#include <QSet>
+
 class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
@@ -37,7 +39,15 @@ enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_S
 constexpr int MXP_MODE_CODE_LOCK_OPEN = 5;   // Lock OPEN as default mode
 constexpr int MXP_MODE_CODE_LOCK_SECURE = 6; // Lock SECURE as default mode
 constexpr int MXP_MODE_CODE_LOCK_LOCKED = 7; // Lock LOCKED as default mode
-enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE, HANDLER_INSERT_ENTITY_CUST, HANDLER_INSERT_ENTITY_SYS, HANDLER_INSERT_ENTITY_LIT, HANDLER_INSERT_AND_REPROCESS };
+enum TMxpProcessingResult {
+    HANDLER_FALL_THROUGH,
+    HANDLER_NEXT_CHAR,
+    HANDLER_COMMIT_LINE,
+    HANDLER_INSERT_ENTITY_CUST,
+    HANDLER_INSERT_ENTITY_SYS,
+    HANDLER_INSERT_ENTITY_LIT,
+    HANDLER_INSERT_AND_REPROCESS
+};
 
 // handles the MXP protocol
 class TMxpProcessor
@@ -67,7 +77,32 @@ public:
     TMxpTagProcessor& getMxpTagProcessor() { return mMxpTagProcessor; }
     TMxpNodeBuilder& getMxpTagBuilder() { return mMxpTagBuilder; }
 
+    // Tag recognition: checks if the tag name is a known MXP tag from the spec
+    // or a user-defined element registered in the element registry
+    bool isRecognizedMxpTag(const QString& tagName);
+
+    // Mode-aware check: is this tag allowed given the current MXP mode?
+    // In OPEN mode, only OPEN tags + OPEN user-defined elements are allowed
+    // In SECURE/TEMP_SECURE mode, all recognized tags are allowed
+    bool isTagAllowedInCurrentMode(const QString& tagName);
+
+    // Prefix check: could this partial tag name eventually match a known tag?
+    // Used for early rejection during character-by-character tag building
+    bool couldBeValidMxpTag(const QString& partialName);
+
+    // All MXP tags defined in the specification (case-insensitive, stored uppercase)
+    static const QSet<QString>& allMxpTags();
+    // MXP tags allowed in OPEN mode per the specification
+    static const QSet<QString>& openModeTags();
+
 private:
+    // Helper to reject the current tag being built and output accumulated
+    // content as literal text
+    TMxpProcessingResult rejectCurrentTag();
+
+    // Helper to decode raw bytes using the appropriate encoding
+    QString decodeRawBytes(const std::string& raw, const QByteArray& encoding) const;
+
     // State of MXP system:
     bool mMXP = false;
     TMXPMode mMXP_MODE = MXP_MODE_OPEN;

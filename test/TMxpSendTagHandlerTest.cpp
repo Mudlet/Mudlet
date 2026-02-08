@@ -1,317 +1,312 @@
 
-#include <QTest>
 #include "TMxpSendTagHandler.h"
 #include "TMxpStubClient.h"
+#include <QTest>
+#include <TMxpProcessor.h>
 #include <TMxpTagParser.h>
 #include <TMxpTagProcessor.h>
-#include <TMxpProcessor.h>
 
 class TMxpSendTagHandlerTest : public QObject {
-Q_OBJECT
+  Q_OBJECT
 
 private:
+  QSharedPointer<MxpNode> parseNode(const QString &tagText) const {
+    auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
+    return nodes.size() > 0 ? nodes.first() : nullptr;
+  }
 
 private slots:
-    QSharedPointer<MxpNode> parseNode(const QString& tagText) const
-    {
-        auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
-        return nodes.size() > 0 ? nodes.first() : nullptr;
+  void testSendHrefUTF8FromMxpProcessor() {
+    // issue #4368
+    TMxpStubClient stub;
+    TMxpProcessor processor(&stub);
+    processor.setMode(6); // SEND is a SECURE tag
+
+    std::string input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
+    for (char &ch : input) {
+      processor.processMxpInput(ch, true);
     }
 
-    void testSendHrefUTF8FromMxpProcessor()
-    {
-        // issue #4368
-        TMxpStubClient stub;
-        TMxpProcessor processor(&stub);
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
 
-        std::string input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
-        for (char &ch : input) {
-          processor.processMxpInput(ch, true);
-        }
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "áéíóúñ");
+  }
 
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+  void testSendHrefUTF8() {
+    // issue #4368
+    QString input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
 
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "áéíóúñ");
+    TMxpTagProcessor processor;
+    TMxpStubClient stub;
 
+    auto nodes = TMxpTagParser::parseToMxpNodeList(input, false);
+    QCOMPARE(nodes.size(), 3);
+    for (const auto &node : nodes) {
+      processor.handleNode(processor, stub, node.get());
     }
 
-    void testSendHrefUTF8()
-    {
-        // issue #4368
-        QString input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
 
-        TMxpTagProcessor processor;
-        TMxpStubClient stub;
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "áéíóúñ");
+  }
 
-        auto nodes = TMxpTagParser::parseToMxpNodeList(input, false);
-        QCOMPARE(nodes.size(), 3);
-        for (const auto &node : nodes) {
-          processor.handleNode(processor, stub, node.get());
-        }
+  void testStaticText() {
+    // <SEND "tell Zugg " PROMPT>Zugg</SEND>
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
 
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+    auto startTag = parseNode("<SEND \"tell Zugg \" PROMPT>");
+    auto endTag = parseNode("</SEND>");
 
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "áéíóúñ");
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("Zugg");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "printCmdLine([[tell Zugg ]])");
+
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "tell Zugg ");
+  }
+
+  void testSimpleSend() {
+    // <SEND>north</SEND>
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
+
+    MxpStartTag startTag("SEND");
+    MxpEndTag endTag("SEND");
+
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+
+    tagHandler.handleTag(ctx, stub, &startTag);
+    tagHandler.handleContent("north");
+    tagHandler.handleTag(ctx, stub, &endTag);
+
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[north]])");
+
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "north");
+  }
+
+  void testSendPrompt() {
+    // <SEND href="&text;" PROMPT>north</SEND>
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
+
+    auto startTag = parseNode("<SEND href=\"&text;\" PROMPT>");
+    auto endTag = parseNode("</SEND>");
+
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("north");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "printCmdLine([[north]])");
+
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "north");
+  }
+
+  void testSendHrefTextEntity() {
+    // Example from Age of Elements
+    QString input = "<send 'push &text;' HINT='push button'>button</send>";
+
+    TMxpTagProcessor processor;
+    TMxpStubClient stub;
+
+    auto nodes = TMxpTagParser::parseToMxpNodeList(input, false);
+    for (const auto &node : nodes) {
+      processor.handleNode(processor, stub, node.get());
     }
 
-    void testStaticText()
-    {
-        // <SEND "tell Zugg " PROMPT>Zugg</SEND>
-        TMxpStubContext ctx;
-        TMxpStubClient stub;
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[push button]])");
 
-        auto startTag = parseNode("<SEND \"tell Zugg \" PROMPT>");
-        auto endTag = parseNode("</SEND>");
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "push button");
+  }
 
-        TMxpSendTagHandler sendTagHandler;
-        TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("Zugg");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+  void testResolvingEntity() {
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
 
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "printCmdLine([[tell Zugg ]])");
+    ctx.getEntityResolver().registerEntity("&charName;", "Gandalf");
 
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "tell Zugg ");
-    }
+    auto startTag = parseNode("<SEND href=\"say I am &charName;\">");
+    auto endTag = parseNode("</SEND>");
 
-    void testSimpleSend()
-    {
-        // <SEND>north</SEND>
-        TMxpStubContext ctx;
-        TMxpStubClient stub;
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("TAG CONTENT");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
-        MxpStartTag startTag("SEND");
-        MxpEndTag endTag("SEND");
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[say I am Gandalf]])");
 
-        TMxpSendTagHandler sendTagHandler;
-        TMxpTagHandler& tagHandler = sendTagHandler;
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "say I am Gandalf");
+  }
 
-        tagHandler.handleTag(ctx, stub, &startTag);
-        tagHandler.handleContent("north");
-        tagHandler.handleTag(ctx, stub, &endTag);
+  void testResolvingEntityWithPipe() {
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
 
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[north]])");
+    ctx.getEntityResolver().registerEntity("&frontHint;", "");
+    ctx.getEntityResolver().registerEntity("&frontHref;", "");
 
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "north");
-    }
+    ctx.getEntityResolver().registerEntity("&backHints;", "");
+    ctx.getEntityResolver().registerEntity("&backHrefs;", "");
 
-    void testSendPrompt()
-    {
-        // <SEND href="&text;" PROMPT>north</SEND>
-        TMxpStubContext ctx;
-        TMxpStubClient stub;
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
 
-        auto startTag = parseNode("<SEND href=\"&text;\" PROMPT>");
-        auto endTag = parseNode("</SEND>");
+    // First check the SEND TAG with empty entities
+    auto startTag =
+        parseNode("<SEND href=\"&frontHref;look|say hello&backHrefs;\" "
+                  "hint=\"&frontHint;LOOK AROUND|SAY HELLO&backHints;\">");
+    auto endTag = parseNode("</SEND>");
 
-        TMxpSendTagHandler sendTagHandler;
-        TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("north");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("TAG CONTENT");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "printCmdLine([[north]])");
+    QCOMPARE(stub.mHrefs.size(), 2);
+    QCOMPARE(stub.mHrefs[0], "send([[look]])");
+    QCOMPARE(stub.mHrefs[1], "send([[say hello]])");
 
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "north");
-    }
+    QCOMPARE(stub.mHints.size(), 2);
+    QCOMPARE(stub.mHints[0], "LOOK AROUND");
+    QCOMPARE(stub.mHints[1], "SAY HELLO");
 
-    void testSendHrefTextEntity() {
-        // Example from Age of Elements
-        QString input = "<send 'push &text;' HINT='push button'>button</send>";
+    // Now add top menu entries
 
-        TMxpTagProcessor processor;
-        TMxpStubClient stub;
+    ctx.getEntityResolver().registerEntity("&frontHint;", "WHO IS ONLINE?|");
+    ctx.getEntityResolver().registerEntity("&frontHref;", "who|");
 
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("TAG CONTENT");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
-        auto nodes = TMxpTagParser::parseToMxpNodeList(input, false);
-        for (const auto& node : nodes) {
-            processor.handleNode(processor, stub, node.get());
-        }
+    QCOMPARE(stub.mHrefs.size(), 3);
+    QCOMPARE(stub.mHrefs[0], "send([[who]])");
+    QCOMPARE(stub.mHrefs[1], "send([[look]])");
+    QCOMPARE(stub.mHrefs[2], "send([[say hello]])");
 
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[push button]])");
+    QCOMPARE(stub.mHints.size(), 3);
+    QCOMPARE(stub.mHints[0], "WHO IS ONLINE?");
+    QCOMPARE(stub.mHints[1], "LOOK AROUND");
+    QCOMPARE(stub.mHints[2], "SAY HELLO");
 
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "push button");
-    }
+    // Finally add something to the end of the menu
 
-    void testResolvingEntity()
-    {
-        TMxpStubContext ctx;
-        TMxpStubClient stub;
+    ctx.getEntityResolver().registerEntity("&backHints;",
+                                           "|KNOCK AT THE DOOR|BREAK THE DOOR");
+    ctx.getEntityResolver().registerEntity("&backHrefs;",
+                                           "|knock at door|break door");
 
-        ctx.getEntityResolver().registerEntity("&charName;", "Gandalf");
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("TAG CONTENT");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
-        auto startTag = parseNode("<SEND href=\"say I am &charName;\">");
-        auto endTag = parseNode("</SEND>");
+    QCOMPARE(stub.mHrefs.size(), 5);
+    QCOMPARE(stub.mHrefs[0], "send([[who]])");
+    QCOMPARE(stub.mHrefs[1], "send([[look]])");
+    QCOMPARE(stub.mHrefs[2], "send([[say hello]])");
+    QCOMPARE(stub.mHrefs[3], "send([[knock at door]])");
+    QCOMPARE(stub.mHrefs[4], "send([[break door]])");
 
-        TMxpSendTagHandler sendTagHandler;
-        TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("TAG CONTENT");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+    QCOMPARE(stub.mHints.size(), 5);
+    QCOMPARE(stub.mHints[0], "WHO IS ONLINE?");
+    QCOMPARE(stub.mHints[1], "LOOK AROUND");
+    QCOMPARE(stub.mHints[2], "SAY HELLO");
+    QCOMPARE(stub.mHints[3], "KNOCK AT THE DOOR");
+    QCOMPARE(stub.mHints[4], "BREAK THE DOOR");
+  }
 
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[say I am Gandalf]])");
+  void testSendHrefHintMismatch() {
+    // Example from starmourn on WARES command from NPCs
+    // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see
+    // command menu">30901</SEND>
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
 
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "say I am Gandalf");
-    }
+    auto startTag = parseNode(
+        R"(<SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">)");
+    auto endTag = parseNode("</SEND>");
 
-    void testResolvingEntityWithPipe()
-    {
-        TMxpStubContext ctx;
-        TMxpStubClient stub;
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("3091");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
-        ctx.getEntityResolver().registerEntity("&frontHint;", "");
-        ctx.getEntityResolver().registerEntity("&frontHref;", "");
+    QCOMPARE(stub.mHrefs.size(), 2);
+    QCOMPARE(stub.mHrefs[0], "send([[PROBE SUSPENDERS30901]])");
+    QCOMPARE(stub.mHrefs[1], "send([[BUY SUSPENDERS30901]])");
 
-        ctx.getEntityResolver().registerEntity("&backHints;", "");
-        ctx.getEntityResolver().registerEntity("&backHrefs;", "");
+    QCOMPARE(stub.mHints.size(), 2);
+    QCOMPARE(stub.mHints[0], "PROBE SUSPENDERS30901");
+    QCOMPARE(stub.mHints[1], "BUY SUSPENDERS30901");
+  }
 
-        TMxpSendTagHandler sendTagHandler;
-        TMxpTagHandler& tagHandler = sendTagHandler;
+  void testSendExpireHref() {
+    // Test case for issue #8383
+    // When EXPIRE comes before HREF, the tooltip should show the HREF value,
+    // not the literal string "HREF" <SEND EXPIRE="Exits"
+    // HREF="east">East</SEND>
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
 
-        // First check the SEND TAG with empty entities
-        auto startTag = parseNode("<SEND href=\"&frontHref;look|say hello&backHrefs;\" hint=\"&frontHint;LOOK AROUND|SAY HELLO&backHints;\">");
-        auto endTag = parseNode("</SEND>");
+    auto startTag = parseNode(R"(<SEND EXPIRE="Exits" HREF="east">)");
+    auto endTag = parseNode("</SEND>");
 
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("TAG CONTENT");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("East");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
-        QCOMPARE(stub.mHrefs.size(), 2);
-        QCOMPARE(stub.mHrefs[0], "send([[look]])");
-        QCOMPARE(stub.mHrefs[1], "send([[say hello]])");
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[east]])");
 
-        QCOMPARE(stub.mHints.size(), 2);
-        QCOMPARE(stub.mHints[0], "LOOK AROUND");
-        QCOMPARE(stub.mHints[1], "SAY HELLO");
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "east"); // Should be "east", not "HREF"
+  }
 
-        // Now add top menu entries
+  void testSendExpireHrefWithoutHint() {
+    // Test case for standard order: HREF then EXPIRE
+    // <SEND HREF="west" EXPIRE="Exits">West</SEND>
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
 
-        ctx.getEntityResolver().registerEntity("&frontHint;", "WHO IS ONLINE?|");
-        ctx.getEntityResolver().registerEntity("&frontHref;", "who|");
+    auto startTag = parseNode(R"(<SEND HREF="west" EXPIRE="Exits">)");
+    auto endTag = parseNode("</SEND>");
 
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("TAG CONTENT");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("West");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
-        QCOMPARE(stub.mHrefs.size(), 3);
-        QCOMPARE(stub.mHrefs[0], "send([[who]])");
-        QCOMPARE(stub.mHrefs[1], "send([[look]])");
-        QCOMPARE(stub.mHrefs[2], "send([[say hello]])");
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[west]])");
 
-        QCOMPARE(stub.mHints.size(), 3);
-        QCOMPARE(stub.mHints[0], "WHO IS ONLINE?");
-        QCOMPARE(stub.mHints[1], "LOOK AROUND");
-        QCOMPARE(stub.mHints[2], "SAY HELLO");
-
-        // Finally add something to the end of the menu
-
-        ctx.getEntityResolver().registerEntity("&backHints;", "|KNOCK AT THE DOOR|BREAK THE DOOR");
-        ctx.getEntityResolver().registerEntity("&backHrefs;", "|knock at door|break door");
-
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("TAG CONTENT");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
-
-        QCOMPARE(stub.mHrefs.size(), 5);
-        QCOMPARE(stub.mHrefs[0], "send([[who]])");
-        QCOMPARE(stub.mHrefs[1], "send([[look]])");
-        QCOMPARE(stub.mHrefs[2], "send([[say hello]])");
-        QCOMPARE(stub.mHrefs[3], "send([[knock at door]])");
-        QCOMPARE(stub.mHrefs[4], "send([[break door]])");
-
-        QCOMPARE(stub.mHints.size(), 5);
-        QCOMPARE(stub.mHints[0], "WHO IS ONLINE?");
-        QCOMPARE(stub.mHints[1], "LOOK AROUND");
-        QCOMPARE(stub.mHints[2], "SAY HELLO");
-        QCOMPARE(stub.mHints[3], "KNOCK AT THE DOOR");
-        QCOMPARE(stub.mHints[4], "BREAK THE DOOR");
-    }
-
-    void testSendHrefHintMismatch() {
-        // Example from starmourn on WARES command from NPCs
-        // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
-        TMxpStubContext ctx;
-        TMxpStubClient stub;
-
-        auto startTag = parseNode(R"(<SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">)");
-        auto endTag = parseNode("</SEND>");
-
-        TMxpSendTagHandler sendTagHandler;
-        TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("3091");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
-
-        QCOMPARE(stub.mHrefs.size(), 2);
-        QCOMPARE(stub.mHrefs[0], "send([[PROBE SUSPENDERS30901]])");
-        QCOMPARE(stub.mHrefs[1], "send([[BUY SUSPENDERS30901]])");
-
-        QCOMPARE(stub.mHints.size(), 2);
-        QCOMPARE(stub.mHints[0], "PROBE SUSPENDERS30901");
-        QCOMPARE(stub.mHints[1], "BUY SUSPENDERS30901");
-    }
-
-    void testSendExpireHref() {
-        // Test case for issue #8383
-        // When EXPIRE comes before HREF, the tooltip should show the HREF value, not the literal string "HREF"
-        // <SEND EXPIRE="Exits" HREF="east">East</SEND>
-        TMxpStubContext ctx;
-        TMxpStubClient stub;
-
-        auto startTag = parseNode(R"(<SEND EXPIRE="Exits" HREF="east">)");
-        auto endTag = parseNode("</SEND>");
-
-        TMxpSendTagHandler sendTagHandler;
-        TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("East");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
-
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[east]])");
-
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "east");  // Should be "east", not "HREF"
-    }
-
-    void testSendExpireHrefWithoutHint() {
-        // Test case for standard order: HREF then EXPIRE
-        // <SEND HREF="west" EXPIRE="Exits">West</SEND>
-        TMxpStubContext ctx;
-        TMxpStubClient stub;
-
-        auto startTag = parseNode(R"(<SEND HREF="west" EXPIRE="Exits">)");
-        auto endTag = parseNode("</SEND>");
-
-        TMxpSendTagHandler sendTagHandler;
-        TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
-        tagHandler.handleContent("West");
-        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
-
-        QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[west]])");
-
-        QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "west");  // Should be "west"
-    }
-
+    QCOMPARE(stub.mHints.size(), 1);
+    QCOMPARE(stub.mHints[0], "west"); // Should be "west"
+  }
 };
 
 #include "TMxpSendTagHandlerTest.moc"
 QTEST_MAIN(TMxpSendTagHandlerTest)
-
