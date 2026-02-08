@@ -224,7 +224,22 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
         lua_error(L);
         Q_UNREACHABLE();
     }
-    return lua_tointeger(L, pos);
+    // lua_tointeger(...) returns a ptrdiff_t which on 64-bit platforms is a
+    // signed 64 bit value, which is usually larger than an "int" a.k.a. an
+    // int32_t:
+    // We have to error out here otherwise we have to restructure every usage
+    // to handle such an over/under-flow - at least with a change to a
+    // std::optional<int>...
+    auto const result = lua_tointeger(L, pos);
+    if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
+        lua_pushfstring(L, "%s: integer over/under-flow in argument #%d type (%s as an integer is outside of valid range %d to %d!)",
+                        functionName, pos, publicName,
+                        std::numeric_limits<int>::min(),
+                        std::numeric_limits<int>::max());
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    return static_cast<int>(result);
 }
 
 // No documentation available in wiki - internal function
@@ -2181,7 +2196,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         }
     }
 
-    qint64 const luaLine = getVerifiedInt(L, __func__, s, "line number");
+    const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
     if (luaLine < 1) {
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }

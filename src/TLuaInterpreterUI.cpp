@@ -2178,7 +2178,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     const QString searchText = getVerifiedString(L, __func__, s++, "text to select");
     // CHECK: Do we need to qualify this for a non-blank string?
 
-    qint64 const numOfMatch = static_cast<qint64>(getVerifiedInt(L, __func__, s, "match count {1 for first}"));
+    const auto numOfMatch = getVerifiedInt(L, __func__, s, "match count {1 for first}");
 
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->select(searchText, numOfMatch));
