@@ -34,11 +34,17 @@ class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
 
-// MXP mode control codes sent via CSI n z sequences (per MXP 0.4 spec)
-// Modes 5-7 set both the current mode AND the persistent default mode
-constexpr int MXP_MODE_CODE_LOCK_OPEN = 5;   // Lock OPEN as default mode
-constexpr int MXP_MODE_CODE_LOCK_SECURE = 6; // Lock SECURE as default mode
-constexpr int MXP_MODE_CODE_LOCK_LOCKED = 7; // Lock LOCKED as default mode
+// MXP mode codes sent by the server via ESC[#z sequences.
+// Codes 0-4 only affect the current line; codes 5-7 also set the default mode.
+constexpr int MXP_MODE_CODE_OPEN = 0;
+constexpr int MXP_MODE_CODE_SECURE = 1;
+constexpr int MXP_MODE_CODE_LOCKED = 2;
+constexpr int MXP_MODE_CODE_RESET = 3;
+constexpr int MXP_MODE_CODE_TEMP_SECURE = 4;
+constexpr int MXP_MODE_CODE_LOCK_OPEN = 5;
+constexpr int MXP_MODE_CODE_LOCK_SECURE = 6;
+constexpr int MXP_MODE_CODE_LOCK_LOCKED = 7;
+
 enum TMxpProcessingResult {
     HANDLER_FALL_THROUGH,
     HANDLER_NEXT_CHAR,
@@ -79,16 +85,16 @@ public:
 
     // Tag recognition: checks if the tag name is a known MXP tag from the spec
     // or a user-defined element registered in the element registry
-    bool isRecognizedMxpTag(const QString& tagName);
+    bool isRecognizedMxpTag(const QString& tagName) const;
 
     // Mode-aware check: is this tag allowed given the current MXP mode?
     // In OPEN mode, only OPEN tags + OPEN user-defined elements are allowed
     // In SECURE/TEMP_SECURE mode, all recognized tags are allowed
-    bool isTagAllowedInCurrentMode(const QString& tagName);
+    bool isTagAllowedInCurrentMode(const QString& tagName) const;
 
     // Prefix check: could this partial tag name eventually match a known tag?
     // Used for early rejection during character-by-character tag building
-    bool couldBeValidMxpTag(const QString& partialName);
+    bool couldBeValidMxpTag(const QString& partialName) const;
 
     // All MXP tags defined in the specification (case-insensitive, stored uppercase)
     static const QSet<QString>& allMxpTags();

@@ -12,7 +12,7 @@ class TMxpSendTagHandlerTest : public QObject {
 private:
   QSharedPointer<MxpNode> parseNode(const QString &tagText) const {
     auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
-    return nodes.size() > 0 ? nodes.first() : nullptr;
+    return !nodes.isEmpty() ? nodes.first() : nullptr;
   }
 
 private slots:
@@ -20,7 +20,7 @@ private slots:
     // issue #4368
     TMxpStubClient stub;
     TMxpProcessor processor(&stub);
-    processor.setMode(6); // SEND is a SECURE tag
+    processor.setMode(MXP_MODE_CODE_LOCK_SECURE);
 
     std::string input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
     for (char &ch : input) {
@@ -61,6 +61,8 @@ private slots:
 
     auto startTag = parseNode("<SEND \"tell Zugg \" PROMPT>");
     auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
 
     TMxpSendTagHandler sendTagHandler;
     TMxpTagHandler &tagHandler = sendTagHandler;
@@ -104,6 +106,8 @@ private slots:
 
     auto startTag = parseNode("<SEND href=\"&text;\" PROMPT>");
     auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
 
     TMxpSendTagHandler sendTagHandler;
     TMxpTagHandler &tagHandler = sendTagHandler;
@@ -145,6 +149,8 @@ private slots:
 
     auto startTag = parseNode("<SEND href=\"say I am &charName;\">");
     auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
 
     TMxpSendTagHandler sendTagHandler;
     TMxpTagHandler &tagHandler = sendTagHandler;
@@ -177,6 +183,8 @@ private slots:
         parseNode("<SEND href=\"&frontHref;look|say hello&backHrefs;\" "
                   "hint=\"&frontHint;LOOK AROUND|SAY HELLO&backHints;\">");
     auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
 
     tagHandler.handleTag(ctx, stub, startTag->asStartTag());
     tagHandler.handleContent("TAG CONTENT");
@@ -245,6 +253,8 @@ private slots:
     auto startTag = parseNode(
         R"(<SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">)");
     auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
 
     TMxpSendTagHandler sendTagHandler;
     TMxpTagHandler &tagHandler = sendTagHandler;
@@ -271,6 +281,8 @@ private slots:
 
     auto startTag = parseNode(R"(<SEND EXPIRE="Exits" HREF="east">)");
     auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
 
     TMxpSendTagHandler sendTagHandler;
     TMxpTagHandler &tagHandler = sendTagHandler;
@@ -293,6 +305,8 @@ private slots:
 
     auto startTag = parseNode(R"(<SEND HREF="west" EXPIRE="Exits">)");
     auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
 
     TMxpSendTagHandler sendTagHandler;
     TMxpTagHandler &tagHandler = sendTagHandler;

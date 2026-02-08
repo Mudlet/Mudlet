@@ -172,6 +172,12 @@ TMxpElementRegistry& TMxpTagProcessor::getElementRegistry()
 {
     return mMxpElementRegistry;
 }
+
+const TMxpElementRegistry& TMxpTagProcessor::getElementRegistry() const
+{
+    return mMxpElementRegistry;
+}
+
 QMap<QString, QVector<QString>>& TMxpTagProcessor::getSupportedElements()
 {
     return mSupportedMxpElements;

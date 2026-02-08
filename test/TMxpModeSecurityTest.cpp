@@ -75,13 +75,13 @@ private slots:
 
     QCOMPARE(processor.mode(), MXP_MODE_OPEN);
 
-    processor.setMode(1); // SECURE line
+    processor.setMode(MXP_MODE_CODE_SECURE);
     QCOMPARE(processor.mode(), MXP_MODE_SECURE);
 
-    processor.setMode(0); // OPEN line
+    processor.setMode(MXP_MODE_CODE_OPEN);
     QCOMPARE(processor.mode(), MXP_MODE_OPEN);
 
-    processor.setMode(2); // LOCKED line
+    processor.setMode(MXP_MODE_CODE_LOCKED);
     QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
   }
 
@@ -193,7 +193,7 @@ private slots:
     TMxpStubClient client;
     TMxpProcessor processor(&client);
 
-    processor.setMode(1); // SECURE line
+    processor.setMode(MXP_MODE_CODE_SECURE);
     QCOMPARE(processor.mode(), MXP_MODE_SECURE);
 
     processAndCollectOutput(processor,
@@ -207,7 +207,7 @@ private slots:
     TMxpStubClient client;
     TMxpProcessor processor(&client);
 
-    processor.setMode(1); // SECURE line
+    processor.setMode(MXP_MODE_CODE_SECURE);
     QCOMPARE(processor.mode(), MXP_MODE_SECURE);
 
     // !ELEMENT is a SECURE tag
@@ -227,7 +227,7 @@ private slots:
     TMxpStubClient client;
     TMxpProcessor processor(&client);
 
-    processor.setMode(2); // LOCKED line
+    processor.setMode(MXP_MODE_CODE_LOCKED);
     QCOMPARE(processor.mode(), MXP_MODE_LOCKED);
 
     // In LOCKED mode, text passes through without parsing
@@ -296,12 +296,12 @@ private slots:
 
     // First, register a user-defined OPEN element (normally done in SECURE
     // mode)
-    processor.setMode(1); // SECURE
+    processor.setMode(MXP_MODE_CODE_SECURE);
     processAndCollectOutput(processor,
                             "<!ELEMENT Auction '<FONT COLOR=red>' OPEN>");
 
     // Switch back to OPEN mode
-    processor.setMode(0);
+    processor.setMode(MXP_MODE_CODE_OPEN);
     QCOMPARE(processor.mode(), MXP_MODE_OPEN);
 
     // The OPEN user-defined element should be recognized
@@ -313,12 +313,12 @@ private slots:
     TMxpProcessor processor(&client);
 
     // Register a SECURE user-defined element (no OPEN keyword)
-    processor.setMode(1); // SECURE
+    processor.setMode(MXP_MODE_CODE_SECURE);
     processAndCollectOutput(processor,
                             "<!ELEMENT ImmChan '<FONT COLOR=Red,Blink>'>");
 
     // Switch back to OPEN mode
-    processor.setMode(0);
+    processor.setMode(MXP_MODE_CODE_OPEN);
     QCOMPARE(processor.mode(), MXP_MODE_OPEN);
 
     // The SECURE user-defined element should NOT be allowed in OPEN mode
@@ -367,7 +367,7 @@ private slots:
     TMxpStubClient client;
     TMxpProcessor processor(&client);
 
-    processor.setMode(1); // SECURE
+    processor.setMode(MXP_MODE_CODE_SECURE);
     QCOMPARE(processor.mode(), MXP_MODE_SECURE);
 
     // "SE" starts "SEND" in SECURE mode

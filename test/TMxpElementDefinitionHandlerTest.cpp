@@ -139,7 +139,8 @@ private slots:
     TMxpProcessingResult lastResult = HANDLER_FALL_THROUGH;
     QFETCH(QString, messageWithAmpersand);
 
-    for (char c : messageWithAmpersand.toStdString()) {
+    const QByteArray utf8Data = messageWithAmpersand.toUtf8();
+    for (char c : utf8Data) {
       lastResult = mxpProcessor.processMxpInput(c, true);
     }
 
@@ -169,7 +170,7 @@ private slots:
     mxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
     QFETCH(QString, inputString);
 
-    for (char c : inputString.toStdString()) {
+    for (char c : inputString.toUtf8()) {
       mxpProcessor.processMxpInput(c, true);
     }
     QCOMPARE(

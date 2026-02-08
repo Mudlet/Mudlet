@@ -28,7 +28,6 @@ class TMxpEntityTagHandlerTest : public QObject {
   Q_OBJECT
 
 private:
-private slots:
   static QSharedPointer<MxpNode> parseNode(const QString &tagText) {
     auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
     return !nodes.empty() ? nodes.first() : nullptr;
@@ -40,6 +39,7 @@ private slots:
     }
   }
 
+private slots:
   void testPublish() {
     TMxpStubClient stub;
     TMxpTagProcessor processor;

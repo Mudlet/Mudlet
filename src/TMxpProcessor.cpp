@@ -118,7 +118,7 @@ const QSet<QString>& TMxpProcessor::allMxpTags()
     return tags;
 }
 
-bool TMxpProcessor::isRecognizedMxpTag(const QString& tagName)
+bool TMxpProcessor::isRecognizedMxpTag(const QString& tagName) const
 {
     const QString upper = tagName.toUpper();
     if (allMxpTags().contains(upper)) {
@@ -127,7 +127,7 @@ bool TMxpProcessor::isRecognizedMxpTag(const QString& tagName)
     return mMxpTagProcessor.getElementRegistry().containsElement(upper);
 }
 
-bool TMxpProcessor::isTagAllowedInCurrentMode(const QString& tagName)
+bool TMxpProcessor::isTagAllowedInCurrentMode(const QString& tagName) const
 {
     if (mMXP_MODE == MXP_MODE_LOCKED) {
         return false;
@@ -145,7 +145,7 @@ bool TMxpProcessor::isTagAllowedInCurrentMode(const QString& tagName)
     return mMxpTagProcessor.getElementRegistry().isOpenElement(upper);
 }
 
-bool TMxpProcessor::couldBeValidMxpTag(const QString& partialName)
+bool TMxpProcessor::couldBeValidMxpTag(const QString& partialName) const
 {
     if (partialName.isEmpty()) {
         return true;
@@ -413,9 +413,9 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
 QString TMxpProcessor::decodeRawBytes(const std::string& raw, const QByteArray& encoding) const
 {
-    if (encoding == qsl("UTF-8")) {
+    if (encoding == QByteArrayLiteral("UTF-8")) {
         return QString::fromStdString(raw);
-    } else if (encoding == qsl("ISO 8859-1")) {
+    } else if (encoding == QByteArrayLiteral("ISO-8859-1")) {
         return QString::fromLatin1(raw.c_str(), static_cast<int>(raw.length()));
     } else {
         return TEncodingHelper::decode(QByteArray::fromRawData(raw.c_str(), raw.length()), encoding);
