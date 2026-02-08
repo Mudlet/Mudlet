@@ -232,7 +232,7 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
     // std::optional<int>...
     auto const result = lua_tointeger(L, pos);
     if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
-        lua_pushfstring(L, "%s: integer over/under-flow in argument #%d type (%s as an integer is outside of valid range %d to %d!)",
+        lua_pushfstring(L, "%s: integer over/under-flow in argument #%d (%s as an integer is outside of valid range %d to %d!)",
                         functionName, pos, publicName,
                         std::numeric_limits<int>::min(),
                         std::numeric_limits<int>::max());
