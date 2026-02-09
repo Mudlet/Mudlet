@@ -96,6 +96,10 @@ add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandle
 
 add_executable(TMxpModeSecurityTest TMxpModeSecurityTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
 add_test(NAME TMxpModeSecurityTest COMMAND TMxpModeSecurityTest)
+
+add_executable(TMxpEdgeCasesTest TMxpEdgeCasesTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpEdgeCasesTest COMMAND TMxpEdgeCasesTest)
+
 add_executable(TMxpElementDefinitionHandlerTest TMxpElementDefinitionHandlerTest.cpp ${MXP_SOURCE})
 add_test(NAME TMxpElementDefinitionHandlerTest COMMAND TMxpElementDefinitionHandlerTest)
 

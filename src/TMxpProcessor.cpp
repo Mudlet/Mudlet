@@ -73,46 +73,46 @@ bool TMxpProcessor::setMode(int modeCode)
     mMXP = true;
     
     switch (modeCode) {
-    case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
+    case MXP_MODE_CODE_OPEN: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
         mMXP_MODE = MXP_MODE_OPEN;
         break;
-    case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+    case MXP_MODE_CODE_SECURE: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
         // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
         if (mMXP_MODE == MXP_MODE_OPEN) {
             mpMxpClient->resetTextProperties();
         }
         mMXP_MODE = MXP_MODE_SECURE;
         break;
-    case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+    case MXP_MODE_CODE_LOCKED: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
         // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
         if (mMXP_MODE == MXP_MODE_OPEN) {
             mpMxpClient->resetTextProperties();
         }
         mMXP_MODE = MXP_MODE_LOCKED;
         break;
-    case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
+    case MXP_MODE_CODE_RESET: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
         mMxpTagBuilder.reset();
         mpMxpClient->resetTextProperties();
         mMXP_MODE = mMXP_DEFAULT;
         break;
-    case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
+    case MXP_MODE_CODE_TEMP_SECURE: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
         mMXP_MODE = MXP_MODE_TEMP_SECURE;
         break;
-    case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
+    case MXP_MODE_CODE_LOCK_OPEN: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
         // When force MXP is enabled with secure mode locked, prevent server from changing default back to OPEN
         if (mMXP_DEFAULT == MXP_MODE_SECURE && mpMxpClient && mpMxpClient->shouldLockModeToSecure()) {
             return true; // Acknowledge but don't change mode
         }
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
         break;
-    case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
+    case MXP_MODE_CODE_LOCK_SECURE: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
         // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
         if (mMXP_MODE == MXP_MODE_OPEN) {
             mpMxpClient->resetTextProperties();
         }
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
         break;
-    case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
+    case MXP_MODE_CODE_LOCK_LOCKED: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
         // When force MXP is enabled with secure mode locked, prevent server from changing default to LOCKED
         if (mMXP_DEFAULT == MXP_MODE_SECURE && mpMxpClient && mpMxpClient->shouldLockModeToSecure()) {
             return true; // Acknowledge but don't change mode
@@ -134,6 +134,12 @@ TMXPMode TMxpProcessor::mode() const
 {
     return mMXP_MODE;
 }
+
+TMXPMode TMxpProcessor::defaultMode() const
+{
+    return mMXP_DEFAULT;
+}
+
 bool TMxpProcessor::isEnabled() const
 {
     return mMXP;

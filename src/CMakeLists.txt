@@ -163,6 +163,7 @@ set(mudlet_SRCS
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
+    TMxpStatTagHandler.cpp
     TMxpSupportTagHandler.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
@@ -351,7 +352,8 @@ set(mudlet_HDRS
     TMxpProcessor.h
     TMxpSendTagHandler.h
     TMxpSoundTagHandler.h
-    TMxpSupportTagHandler.cpp
+    TMxpStatTagHandler.h
+    TMxpSupportTagHandler.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h

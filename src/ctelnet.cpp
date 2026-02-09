@@ -32,6 +32,7 @@
 
 #include "Host.h"
 #include "TBuffer.h"
+#include "TMxpProcessor.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -2334,8 +2335,9 @@ void cTelnet::autoEnableMXPProcessor()
     // IRE-style implementation that doesn't send mode switches but uses
     // secure tags. Lock to secure mode for compatibility.
     // Properly-negotiated MXP games will use mode switches as needed.
-    mpHost->mMxpProcessor.setMode(6); // Lock secure mode
-    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings > Special Options."));
+    mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+    postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room "
+                   "info, and richer interactions. You can disable this setting in Settings > Special Options."));
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
@@ -3431,6 +3433,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             return;
         }
 
+        // Some servers require this subnegotiation before processing MXP escape sequences
+        if (option == OPT_MXP) {
+            if (mpHost->mEnableMXP) {
+                enableMXP = true;
+                qDebug() << "MXP enabled via subnegotiation";
+                mpHost->mMxpProcessor.enable();
+                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
+                raiseProtocolEvent("sysProtocolEnabled", "MXP");
+            }
+            return;
+        }
+
         if (option == OPT_102) {
             QByteArray payload = telnetCommand.c_str();
             if (payload.size() < 6) {
@@ -4344,7 +4358,7 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
             // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
             // Re-apply secure mode without showing the auto-enable message
             if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
-                mpHost->mMxpProcessor.setMode(6); // Re-lock to secure mode
+                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
                 return;
             }
             // Otherwise, this is the first time we're seeing MXP, so auto-enable it
