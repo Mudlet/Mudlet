@@ -71,7 +71,19 @@ public:
     using CredentialRetrievalCallback = std::function<void(bool success, const QString& password, const QString& errorMessage)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
-    // Asynchronous methods for credential management (preferred)
+    // Hybrid password management methods (preferred public API)
+    // These methods intelligently choose between keychain and SecureStringUtils based on availability and portable mode
+    void storePassword(const QString& profileName, const QString& key, const QString& password, CredentialCallback callback);
+    void retrievePassword(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
+    void removePassword(const QString& profileName, const QString& key, CredentialCallback callback);
+
+    // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
+    static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
+    static QString retrieveCredential(const QString& profileName, const QString& key);
+    static bool removeCredential(const QString& profileName, const QString& key);
+
+private:
+    // Low-level async keychain methods (internal use only - use hybrid *Password methods instead)
     void storeCredential(const QString& service, const QString& account, const QString& password, CredentialCallback callback);
     void retrieveCredential(const QString& service, const QString& account, CredentialRetrievalCallback callback);
     void removeCredential(const QString& service, const QString& account, CredentialCallback callback);
@@ -79,21 +91,8 @@ public:
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);
 
-    // Hybrid password management methods (preferred)
-    // These methods intelligently choose between keychain and SecureStringUtils based on availability and portable mode
-    void storePassword(const QString& profileName, const QString& key, const QString& password, CredentialCallback callback);
-    void retrievePassword(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
-    void removePassword(const QString& profileName, const QString& key, CredentialCallback callback);
-
     // Password migration method - migrates plaintext passwords to encrypted storage
     void migratePassword(const QString& profileName, const QString& key, const QString& plaintextPassword, CredentialCallback callback);
-
-    // Static fallback methods (for migration only - uses encrypted file storage)
-    static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
-    static QString retrieveCredential(const QString& profileName, const QString& key);
-    static bool removeCredential(const QString& profileName, const QString& key);
-
-private:
     static constexpr int OPERATION_TIMEOUT_MS = 30000; // 30 seconds
 
     // Portable mode detection

@@ -957,6 +957,15 @@ void Host::waitForProfileSave()
     if (mModuleFuture.isRunning()) {
         mModuleFuture.waitForFinished();
     }
+    int iterations = 0;
+    while (currentlySavingProfile()) {
+        if (++iterations > 1000) {
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. "
+                                 << "State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size() << ". Continuing without waiting.";
+            break;
+        }
+        qApp->processEvents();
+    }
 }
 
 void Host::setMmpMapLocation(const QString& data)
@@ -3154,15 +3163,14 @@ void Host::loadSecuredPassword()
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager(this);
 
-    credManager->retrieveCredential(getName(), "character",
-        [this, credManager](bool success, const QString& password, const QString& errorMessage) {
-            if (success && !password.isEmpty()) {
-                setPass(password);
-                QString passwordCopy = password; // Make a copy for secure clearing
-                SecureStringUtils::secureStringClear(passwordCopy);
-            } else if (!success && !errorMessage.isEmpty()) {
-                qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
-            }
+    credManager->retrievePassword(getName(), "character", [this, credManager](bool success, const QString& password, const QString& errorMessage) {
+        if (success && !password.isEmpty()) {
+            setPass(password);
+            QString passwordCopy = password; // Make a copy for secure clearing
+            SecureStringUtils::secureStringClear(passwordCopy);
+        } else if (!success && !errorMessage.isEmpty()) {
+            qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
+        }
 
             // Clean up the credential manager
             credManager->deleteLater();
