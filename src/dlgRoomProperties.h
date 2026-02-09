@@ -43,7 +43,7 @@ public:
         QHash<QString, int>& pSymbols,
         QHash<int, int>& pWeights,
         QHash<bool, int> lockStatus,
-        QHash<bool, int> hiddenStatus,
+        QSet<bool> hiddenStatus,
         QSet<TRoom*>& pRooms);
     void accept() override;
     void reject() override;

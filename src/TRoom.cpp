@@ -277,10 +277,12 @@ void TRoom::setWeight(int w)
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
-void TRoom::setHidden(bool isHidden)
+void TRoom::setHidden(const bool isHidden)
 {
-    hidden = isHidden;
-    mpRoomDB->mpMap->setUnsaved(__func__);
+    if (mHidden != isHidden) {
+        mHidden = isHidden;
+        mpRoomDB->mpMap->setUnsaved(__func__);
+    }
 }
 
 void TRoom::setExitWeight(const QString& cmd, int w)
@@ -832,7 +834,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     ifs >> name;
     ifs >> isLocked;
     if (version >= 22) {
-        ifs >> hidden;
+        ifs >> mHidden;
     }
     if (version >= 21) {
         ifs >> mSpecialExits;
@@ -876,8 +878,14 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
 
     if (version >= 10) {
         ifs >> userData;
+        // Recover and remove fallback values from the user data:
+        if (version < 22) {
+            const QString hiddenString = userData.take(QLatin1String("system.fallback_hidden"));
+            if (!hiddenString.compare(QLatin1String("true"), Qt::CaseInsensitive)) {
+                mHidden = true;
+            }
+        }
         if (version < 19) {
-            // Recover and remove backup values from the user data
             const QString symbolString = userData.take(QLatin1String("system.fallback_symbol"));
             if (!symbolString.isEmpty()) {
                 // There is a fallback in the user data
@@ -1741,7 +1749,7 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
         roomObj.insert(QLatin1String("locked"), true);
     }
 
-    if (hidden) {
+    if (mHidden) {
         roomObj.insert(QLatin1String("hidden"), true);
     }
 
@@ -1799,7 +1807,7 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     }
 
     if (roomObj.contains(QLatin1String("hidden")) && roomObj.value(QLatin1String("hidden")).toBool()) {
-        hidden = true;
+        mHidden = true;
     }
 
     if (roomObj.contains(QLatin1String("weight")) && roomObj.value(QLatin1String("weight")).isDouble()) {
