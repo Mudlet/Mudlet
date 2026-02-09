@@ -176,7 +176,6 @@ jobs:
           libxcb-render-util0-dev \
           libxcb-image0-dev \
           libyajl-dev \
-          libqt6texttospeech6-dev \
           libzip-dev \
           pcre2-utils \
           pkg-config \
