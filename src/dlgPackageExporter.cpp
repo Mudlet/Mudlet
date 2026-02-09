@@ -426,15 +426,26 @@ void dlgPackageExporter::populateDependencies()
 {
     ui->DependencyList->clear();
     ui->DependencyList->addItem(tr("add dependencies"));
+
+    // Block signals to prevent re-entrant slot_packageChanged calls while
+    // we clear and repopulate the combobox
+    const QSignalBlocker blocker(ui->packageList);
+    const QString previousSelection = ui->packageList->currentText();
     ui->packageList->clear();
     //: First item in package selection dropdown - when selected, allows updating an existing installed package
     ui->packageList->addItem(tr("update installed package"));
     ui->packageList->addItems(mpHost->mInstalledPackages);
+
     ui->DependencyList->addItems(mpHost->mInstalledPackages);
     auto modules = mpHost->mInstalledModules;
     for (const auto& [moduleName, moduleData] : modules.asKeyValueRange()) {
         ui->packageList->addItem(moduleName);
         ui->DependencyList->addItem(moduleName);
+    }
+
+    const int previousIndex = ui->packageList->findText(previousSelection);
+    if (previousIndex >= 0) {
+        ui->packageList->setCurrentIndex(previousIndex);
     }
 }
 
