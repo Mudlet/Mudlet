@@ -426,9 +426,6 @@ void dlgPackageExporter::populateDependencies()
 {
     ui->DependencyList->clear();
     ui->DependencyList->addItem(tr("add dependencies"));
-
-    // Block signals to prevent re-entrant slot_packageChanged calls while
-    // we clear and repopulate the combobox
     const QSignalBlocker blocker(ui->packageList);
     const QString previousSelection = ui->packageList->currentText();
     ui->packageList->clear();
