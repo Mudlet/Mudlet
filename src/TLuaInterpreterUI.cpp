@@ -2790,6 +2790,62 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgTint
+int TLuaInterpreter::setSvgTint(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+
+    QColor color;
+    if (lua_type(L, 2) == LUA_TSTRING) {
+        const QString colorStr = getVerifiedString(L, __func__, 2, "color string");
+        color = QColor(colorStr);
+        if (!color.isValid()) {
+            return warnArgumentValue(L, __func__, qsl("'%1' is not a valid color").arg(colorStr));
+        }
+    } else {
+        const int r = getVerifiedInt(L, __func__, 2, "red value 0-255");
+        const int g = getVerifiedInt(L, __func__, 3, "green value 0-255");
+        const int b = getVerifiedInt(L, __func__, 4, "blue value 0-255");
+
+        auto validRange = [](int number) {
+            return number >= 0 && number <= 255;
+        };
+
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+        }
+        if (!validRange(g)) {
+            return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+        }
+        if (!validRange(b)) {
+            return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+        }
+        color = QColor(r, g, b);
+    }
+
+    Host& host = getHostFromLua(L);
+    if (!host.setSvgTint(labelName, color)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgTint
+int TLuaInterpreter::resetSvgTint(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgTint(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelCursor
 int TLuaInterpreter::setLabelCursor(lua_State* L)
 {

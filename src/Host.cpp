@@ -4299,8 +4299,11 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
 
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        const QPixmap bgPixmap(imgPath);
-        pL->setPixmap(bgPixmap);
+        pL->clearSvgImage();
+        if (imgPath.endsWith(qsl(".svg"), Qt::CaseInsensitive) || imgPath.endsWith(qsl(".svgz"), Qt::CaseInsensitive)) {
+            return pL->setSvgImage(imgPath);
+        }
+        pL->setPixmap(QPixmap(imgPath));
         return true;
     }
 
@@ -4325,6 +4328,7 @@ bool Host::resetBackgroundImage(const QString& name)
 
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
+        pL->clearSvgImage();
         pL->clear();
         return true;
     }
@@ -4336,6 +4340,36 @@ bool Host::resetBackgroundImage(const QString& name)
     }
 
     return false;
+}
+
+bool Host::setSvgTint(const QString& name, const QColor& color)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+
+    pL->setSvgTint(color);
+    return true;
+}
+
+bool Host::resetSvgTint(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+
+    pL->clearSvgTint();
+    return true;
 }
 
 bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)

@@ -485,6 +485,7 @@ find_package(Qt6 6.4.0 REQUIRED
                MultimediaWidgets
                Network
                OpenGL
+               Svg
                UiTools
                Widgets
                Concurrent)
@@ -500,6 +501,7 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::Multimedia
               Qt6::MultimediaWidgets
               Qt6::OpenGL
+              Qt6::Svg
               Qt6::UiTools
               Qt6::Widgets
               qt6keychain)

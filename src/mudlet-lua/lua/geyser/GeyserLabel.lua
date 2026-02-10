@@ -490,6 +490,25 @@ function Geyser.Label:setBackgroundImage (imageFileName)
   self:autoAdjustSize()
 end
 
+--- Sets a tint color on the label's SVG background image.
+-- All opaque pixels in the SVG are replaced with the specified color.
+-- Only works when the label has an SVG background set via setBackgroundImage.
+-- Accepts any color format supported by Geyser.Color.parse:
+-- RGB integers (r, g, b), hex string ("#ff0000"), or named color ("red").
+-- @param r The red component (0-255), or a color string (e.g. "#ff0000", "red").
+-- @param g The green component (0-255). Omit when using a color string.
+-- @param b The blue component (0-255). Omit when using a color string.
+function Geyser.Label:setSvgTint (r, g, b)
+  local red, green, blue = Geyser.Color.parse(r, g, b)
+  setSvgTint(self.name, red, green, blue)
+end
+
+--- Resets the tint color on the label's SVG background image,
+-- restoring the original SVG colors.
+function Geyser.Label:resetSvgTint ()
+  resetSvgTint(self.name)
+end
+
 --- Sets a tiled background image for this label.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setTiledBackgroundImage (imageFileName)

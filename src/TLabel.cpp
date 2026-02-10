@@ -28,7 +28,9 @@
 #include "mudlet.h"
 
 #include <QDesktopServices>
+#include <QPainter>
 #include <QRegularExpression>
+#include <QSvgRenderer>
 #include <QTextCursor>
 #include <QTimer>
 #include <QUrl>
@@ -55,6 +57,10 @@ TLabel::~TLabel()
     if (mpMovie) {
         mpMovie->deleteLater();
         mpMovie = nullptr;
+    }
+    if (mpSvgRenderer) {
+        mpSvgRenderer->deleteLater();
+        mpSvgRenderer = nullptr;
     }
 }
 
@@ -279,10 +285,70 @@ void TLabel::enterEvent(TEnterEvent* event)
 
 void TLabel::resizeEvent(QResizeEvent* event)
 {
+    if (mpSvgRenderer && mpSvgRenderer->isValid()) {
+        QLabel::setPixmap(renderSvgPixmap(event->size()));
+    }
     emit resized();
     QWidget::resizeEvent(event);
 }
 
+
+bool TLabel::setSvgImage(const QString& path)
+{
+    clearSvgImage();
+
+    mpSvgRenderer = new QSvgRenderer(path, this);
+    if (!mpSvgRenderer->isValid()) {
+        delete mpSvgRenderer;
+        mpSvgRenderer = nullptr;
+        return false;
+    }
+
+    mSvgImagePath = path;
+    QLabel::setPixmap(renderSvgPixmap(size()));
+    return true;
+}
+
+QPixmap TLabel::renderSvgPixmap(const QSize& size) const
+{
+    QPixmap svgPixmap(size);
+    svgPixmap.fill(Qt::transparent);
+    QPainter painter(&svgPixmap);
+    mpSvgRenderer->render(&painter);
+
+    if (mSvgTintColor.isValid()) {
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(svgPixmap.rect(), mSvgTintColor);
+    }
+
+    return svgPixmap;
+}
+
+void TLabel::clearSvgImage()
+{
+    if (mpSvgRenderer) {
+        delete mpSvgRenderer;
+        mpSvgRenderer = nullptr;
+    }
+    mSvgImagePath.clear();
+    mSvgTintColor = QColor();
+}
+
+void TLabel::setSvgTint(const QColor& color)
+{
+    mSvgTintColor = color;
+    if (mpSvgRenderer && mpSvgRenderer->isValid()) {
+        QLabel::setPixmap(renderSvgPixmap(size()));
+    }
+}
+
+void TLabel::clearSvgTint()
+{
+    mSvgTintColor = QColor();
+    if (mpSvgRenderer && mpSvgRenderer->isValid()) {
+        QLabel::setPixmap(renderSvgPixmap(size()));
+    }
+}
 
 // This function deferences previous functions in the Lua registry.
 // This allows the functions to be safely overwritten.

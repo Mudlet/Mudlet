@@ -425,6 +425,8 @@ public:
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
+    bool setSvgTint(const QString& name, const QColor& color);
+    bool resetSvgTint(const QString& name);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();

@@ -27,6 +27,7 @@
 
 #include "utils.h"
 
+#include <QColor>
 #include <QLabel>
 #include <QMovie>
 #include <QPointer>
@@ -36,6 +37,7 @@
 
 class Host;
 class QMouseEvent;
+class QSvgRenderer;
 
 class TLabel : public QLabel
 {
@@ -66,6 +68,10 @@ public:
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
+    bool setSvgImage(const QString& path);
+    void clearSvgImage();
+    void setSvgTint(const QColor& color);
+    void clearSvgTint();
 
     QPointer<Host> mpHost;
     QString mName;
@@ -77,13 +83,17 @@ public:
     int mEnterFunction = 0;
     int mLeaveFunction = 0;
     QMovie* mpMovie = nullptr;
+    QSvgRenderer* mpSvgRenderer = nullptr;
+    QString mSvgImagePath;
+    QColor mSvgTintColor;
     QVideoWidget* mpVideoWidget = nullptr;
-    QString mLinkColor;        // Store link color for inline style injection
-    QString mLinkVisitedColor; // Store visited color for inline style injection
-    bool mLinkUnderline = true; // Store underline preference
+    QString mLinkColor;          // Store link color for inline style injection
+    QString mLinkVisitedColor;   // Store visited color for inline style injection
+    bool mLinkUnderline = true;  // Store underline preference
     QSet<QString> mVisitedLinks; // Track which link URLs have been clicked
 
 private:
+    QPixmap renderSvgPixmap(const QSize& size) const;
     void releaseFunc(const int existingFunction, const int newFunction);
 
 private slots:
