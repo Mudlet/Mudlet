@@ -4345,42 +4345,39 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
-// Telnet URI handling implementation
 // Parse a telnet:// URI according to RFC 4248
-mudlet::TelnetUriData mudlet::parseTelnetUri(const QString& uri)
+std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
 {
-    TelnetUriData data;
-    
     QUrl url(uri);
-    
-    // Validate scheme
-    if (url.scheme().toLower() != qsl("telnet")) {
-        qDebug() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << url.scheme() << "expected 'telnet'";
-        data.valid = false;
-        return data;
+
+    if (!url.isValid()) {
+        qWarning() << "mudlet::parseTelnetUri() - Malformed URI";
+        return std::nullopt;
     }
-    
-    // Extract host
+
+    if (url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) != 0) {
+        qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << url.scheme();
+        return std::nullopt;
+    }
+
+    TelnetUriData data;
     data.host = url.host();
     if (data.host.isEmpty()) {
-        qDebug() << "mudlet::parseTelnetUri() - URI missing host";
-        data.valid = false;
-        return data;
+        qWarning() << "mudlet::parseTelnetUri() - URI missing host";
+        return std::nullopt;
     }
-    
-    // Extract port (default to 23 per RFC 4248)
+
     data.port = url.port(23);
-    
-    // Extract optional username and password (rarely used per RFC 4248)
+    if (data.port < 1 || data.port > 65535) {
+        qWarning() << "mudlet::parseTelnetUri() - Port out of range:" << data.port;
+        return std::nullopt;
+    }
+
     if (!url.userName().isEmpty()) {
         data.username = url.userName();
     }
-    if (!url.password().isEmpty()) {
-        data.password = url.password();
-    }
-    
-    data.valid = true;
-    qDebug() << "mudlet::parseTelnetUri() - Parsed URI successfully: host=" << data.host << "port=" << data.port;
+
+    qDebug() << "mudlet::parseTelnetUri() - Parsed URI:" << url.toDisplayString(QUrl::RemoveUserInfo);
     return data;
 }
 
@@ -4389,96 +4386,71 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
 {
     QDir profilesDir(getMudletPath(enums::profilesPath));
     QStringList profileNames = profilesDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    
-    // Also check predefined game profiles
+
     profileNames += TGameDetails::keys();
     profileNames.removeDuplicates();
-    
+
     QString matchedProfile;
     QDateTime latestTime;
-    
+
     for (const auto& profileName : profileNames) {
         QString profileHost = readProfileData(profileName, qsl("url"));
         QString profilePort = readProfileData(profileName, qsl("port"));
-        
-        // Match based on host and port
+
         if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
-            // Found a match! If multiple matches, use the most recently modified one
             QString profilePath = getMudletPath(enums::profileHomePath, profileName);
             QFileInfo profileInfo(profilePath);
-            
+
             if (matchedProfile.isEmpty() || profileInfo.lastModified() > latestTime) {
                 matchedProfile = profileName;
                 latestTime = profileInfo.lastModified();
             }
         }
     }
-    
+
     if (!matchedProfile.isEmpty()) {
         qDebug() << "mudlet::findMatchingProfile() - Found matching profile:" << matchedProfile;
     }
-    
+
     return matchedProfile;
 }
 
-// Create a new profile for a telnet URI
+// Create profile metadata for a telnet URI (does NOT call addHost —
+// let doAutoLogin() → loadProfile() → slot_connectionDialogueFinished()
+// handle the full initialization pipeline)
 QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 {
-    if (!uriData.valid) {
-        return QString();
-    }
-    
-    // Generate a clean profile name from the hostname
-    // Extract the first part of the hostname (e.g., "aardmud" from "aardmud.org")
-    // and capitalize it for a nice display name
     QString profileName = uriData.host;
-    
-    // Remove common TLD suffixes to get a cleaner name
+
     int dotIndex = profileName.indexOf('.');
     if (dotIndex > 0) {
         profileName = profileName.left(dotIndex);
     }
-    
-    // Capitalize first letter for nice display (e.g., "aardmud" -> "Aardmud")
+
     if (!profileName.isEmpty()) {
         profileName[0] = profileName[0].toUpper();
     }
-    
-    // Handle name collisions by appending -2, -3, etc.
+
+    // Bounded loop to avoid hanging on unexpected collisions
     QString originalName = profileName;
-    int suffix = 2;
-    while (profileExists(profileName)) {
-        profileName = qsl("%1-%2").arg(originalName).arg(suffix++);
+    for (int suffix = 2; suffix < 100 && profileExists(profileName); ++suffix) {
+        profileName = qsl("%1-%2").arg(originalName).arg(suffix);
     }
-    
-    qDebug() << "mudlet::createProfileForUri() - Creating new profile:" << profileName;
-    
-    // Create the profile using HostManager
-    if (!mHostManager.addHost(profileName, QString::number(uriData.port), QString(), QString())) {
-        qDebug() << "mudlet::createProfileForUri() - ERROR: Failed to create host for profile:" << profileName;
+
+    if (profileExists(profileName)) {
+        qWarning() << "mudlet::createProfileForUri() - Could not find unique name for profile";
         return QString();
     }
-    
-    // Set URL and port on the Host object directly so connection works immediately
-    Host* pHost = mHostManager.getHost(profileName);
-    if (pHost) {
-        pHost->setUrl(uriData.host);
-        pHost->setPort(uriData.port);
-    }
-    
-    // Write profile settings (use same keys as dlgConnectionProfiles)
-    // Server address is the full hostname (e.g., "aardmud.org")
+
+    qDebug() << "mudlet::createProfileForUri() - Creating profile:" << profileName;
+
     writeProfileData(profileName, qsl("url"), uriData.host);
-    // Port is stored separately (e.g., "4000")
     writeProfileData(profileName, qsl("port"), QString::number(uriData.port));
-    
-    // Optionally write username if provided (though rarely used)
+
     if (!uriData.username.isEmpty()) {
         writeProfileData(profileName, qsl("login"), uriData.username);
     }
-    
-    qDebug() << "mudlet::createProfileForUri() - Profile created successfully:" << profileName
-             << "Server:" << uriData.host << "Port:" << uriData.port;
+
     return profileName;
 }
 
@@ -4486,7 +4458,6 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 // Main entry point for handling telnet:// URIs
 void mudlet::handleTelnetUri(const QString& uri)
 {
-    // Hide connection profiles dialog if it's open, as we are taking over connection handling
     if (mpConnectionDialog) {
         mpConnectionDialog->hide();
     }
@@ -4495,119 +4466,31 @@ void mudlet::handleTelnetUri(const QString& uri)
         qDebug() << "mudlet::handleTelnetUri() - Called with empty URI";
         return;
     }
-    
-    qDebug() << "mudlet::handleTelnetUri() - Processing telnet URI:" << uri;
-    
-    // Parse the URI
-    TelnetUriData uriData = parseTelnetUri(uri);
-    if (!uriData.valid) {
+
+    qDebug() << "mudlet::handleTelnetUri() - Processing URI:" << QUrl(uri).toDisplayString(QUrl::RemoveUserInfo);
+
+    auto uriData = parseTelnetUri(uri);
+    if (!uriData) {
         qWarning() << "mudlet::handleTelnetUri() - Invalid telnet URI (credentials redacted)";
-        // Fall back to showing connection dialog
         slot_showConnectionDialog();
         return;
     }
-    
-    // Try to find existing profile
-    QString profileName = findMatchingProfile(uriData.host, uriData.port);
-    
-    // If no match found, create a new profile
+
+    QString profileName = findMatchingProfile(uriData->host, uriData->port);
+
     if (profileName.isEmpty()) {
-        profileName = createProfileForUri(uriData);
+        profileName = createProfileForUri(*uriData);
         if (profileName.isEmpty()) {
-            qWarning() << "mudlet::handleTelnetUri() - Failed to create profile for URI:" << uri;
+            qWarning() << "mudlet::handleTelnetUri() - Failed to create profile";
             slot_showConnectionDialog();
             return;
         }
     }
-    
-    // Load profile and auto-connect
+
     qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
     doAutoLogin(profileName);
-    
-    // Fix for issue where doAutoLogin skips connection if it thinks the profile is "already loaded"
-    // (which happens because createProfileForUri adds the host to the manager)
-    Host* pHost = mHostManager.getHost(profileName);
-    if (pHost && pHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && 
-        pHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectingState) {
-        qDebug() << "mudlet::handleTelnetUri() - Forcing connection for profile:" << profileName;
-        // Ensure the host is set up with the correct URL/port (redundant but safe)
-        pHost->setUrl(uriData.host);
-        pHost->setPort(uriData.port);
-        
-        // Critical: Initialize UI if missing (replicates slot_connectionDialogueFinished logic)
-        // This is needed because doAutoLogin skips initialization if host exists
-        if (!pHost->mpConsole) {
-            pHost->mIsProfileLoadingSequence = true;
-            addConsoleForNewHost(pHost);
-            pHost->mBlockScriptCompile = false;
-            pHost->mLuaInterpreter.loadGlobal();
-            pHost->hideMudletsVariables();
-            
-            // Load modules (matching slot_connectionDialogueFinished)
-            QMapIterator<QString, int> it(pHost->mModulePriorities);
-            QMap<int, QStringList> moduleOrder;
-            while (it.hasNext()) {
-                it.next();
-                QStringList moduleEntry = moduleOrder[it.value()];
-                moduleEntry << it.key();
-                moduleOrder[it.value()] = moduleEntry;
-            }
-            
-            // First load modules with negative priority
-            QMapIterator<int, QStringList> it2(moduleOrder);
-            while (it2.hasNext() && it2.peekNext().key() < 0) {
-                it2.next();
-                installModulesList(pHost, it2.value());
-            }
-            
-            // Enable stopwatch creation and compile scripts
-            pHost->mBlockStopWatchCreation = false;
-            pHost->getScriptUnit()->compileAll(true);
-            pHost->updateAnsi16ColorsInTable();
-            pHost->updateExtendedAnsiColorsInTable();
-            
-            // Load remaining modules
-            while (it2.hasNext()) {
-                it2.next();
-                installModulesList(pHost, it2.value());
-            }
-            
-            // Install default packages
-            for (const auto& package : mPackagesToInstallList) {
-                pHost->installPackage(package, enums::PackageModuleType::Package);
-            }
-            mPackagesToInstallList.clear();
-            
-            // Load map
-            pHost->loadMap();
-        }
-
-        // Initiate connection
-        pHost->mTelnet.connectIt(uriData.host, uriData.port);
-        
-        // Raise sysLoadEvent
-        TEvent event {};
-        event.mArgumentList.append(QLatin1String("sysLoadEvent"));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(QString::number(1));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-        pHost->raiseEvent(event);
-        
-        // CRITICAL: Mark profile loading sequence as complete
-        // Without this, Close Profile will not work!
-        pHost->mIsProfileLoadingSequence = false;
-        emit signal_profileLoaded();
-        
-        // Update UI to reflect connection status
-        updateDetachedWindowToolbars();
-        updateMainWindowTabIndicators();
-        
-        // Bring window to focus
-        show();
-        raise();
-        activateWindow();
-    }
 }
+
 
 void mudlet::processEventLoopHack()
 {

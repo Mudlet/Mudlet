@@ -749,8 +749,6 @@ private:
     QString mAIModelPath;
     bool mAIAutoStart = true;
 
-    // Telnet URI handling - store URI until GUI is ready
-    QString mPendingTelnetUri;
 
     // Helper methods for AI integration
     void initializeAI();
@@ -762,12 +760,10 @@ private:
     struct TelnetUriData {
         QString host;
         int port = 23;
-        QString username;  // Optional, rarely used per RFC 4248
-        QString password;  // Optional, rarely used per RFC 4248
-        bool valid = false;
+        QString username;
     };
 
-    TelnetUriData parseTelnetUri(const QString& uri);
+    std::optional<TelnetUriData> parseTelnetUri(const QString& uri);
     QString findMatchingProfile(const QString& host, int port);
     QString createProfileForUri(const TelnetUriData& uriData);
 
