@@ -4248,7 +4248,7 @@ bool mudlet::consumeTelnetLaunchIntent()
     }
 
     pHost->setUrl(targetHost);
-    pHost->setPort(portString);
+    pHost->setPort(targetPort);
     qInfo().noquote().nospace() << "mudlet::consumeTelnetLaunchIntent() INFO - created profile: \"" << profileName
                                 << "\" for host=\"" << targetHost << "\", port=" << targetPort;
     slot_connectionDialogueFinished(profileName, true);
