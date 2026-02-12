@@ -39,6 +39,7 @@
 #include <QSplashScreen>
 #include <QStringList>
 #include <QTranslator>
+#include <QUrl>
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
@@ -439,14 +440,28 @@ int main(int argc, char* argv[])
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
-        const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        instanceCoordinator->queuePackage(absPath);
-        if (!firstInstanceOfMudlet) {
-            const bool successful = instanceCoordinator->installPackagesRemotely();
-            if (successful) {
-                return 0;
+        const QString firstPositionalArgument = positionalArguments.first().trimmed();
+        const QUrl parsedPositionalArgument(firstPositionalArgument);
+
+        if (parsedPositionalArgument.isValid() && parsedPositionalArgument.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) == 0) {
+            const QString host = parsedPositionalArgument.host().trimmed();
+            const int port = parsedPositionalArgument.port(-1);
+            if (host.isEmpty()) {
+                qWarning().noquote() << "main(...) WARNING - ignoring invalid telnet URL argument without host:" << firstPositionalArgument;
+            } else {
+                qInfo().noquote().nospace() << "main(...) INFO - detected telnet URL launch argument: host=\"" << host << "\""
+                                             << (port > 0 ? qsl(", port=%1").arg(port) : qsl(", port=<default>"));
             }
-            return 1;
+        } else {
+            const QString absPath = QDir(firstPositionalArgument).absolutePath();
+            instanceCoordinator->queuePackage(absPath);
+            if (!firstInstanceOfMudlet) {
+                const bool successful = instanceCoordinator->installPackagesRemotely();
+                if (successful) {
+                    return 0;
+                }
+                return 1;
+            }
         }
     }
 
