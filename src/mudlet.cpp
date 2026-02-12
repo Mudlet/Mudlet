@@ -4168,6 +4168,94 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
     }
 }
 
+void mudlet::setTelnetLaunchIntent(const TelnetLaunchIntent& intent)
+{
+    mTelnetLaunchIntent = intent;
+}
+
+bool mudlet::consumeTelnetLaunchIntent()
+{
+    if (!mTelnetLaunchIntent.valid()) {
+        return false;
+    }
+
+    const TelnetLaunchIntent intent = mTelnetLaunchIntent;
+    mTelnetLaunchIntent = TelnetLaunchIntent();
+
+    const QString targetHost = intent.host.trimmed();
+    if (targetHost.isEmpty()) {
+        return false;
+    }
+    const QString normalizedTargetHost = targetHost.toLower();
+    const int targetPort = intent.port > 0 ? intent.port : 23;
+
+    QStringList profileNames = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    profileNames += TGameDetails::keys();
+    profileNames << qsl("Mudlet self-test");
+    profileNames.removeDuplicates();
+
+    auto normalizePort = [](const QString& rawPort) {
+        const int parsed = rawPort.toInt();
+        if (parsed > 0 && parsed < 65536) {
+            return parsed;
+        }
+        return 23;
+    };
+
+    QString exactMatch;
+    QString hostOnlyMatch;
+    for (const auto& profileName : profileNames) {
+        const QString profileHost = readProfileData(profileName, qsl("url")).trimmed().toLower();
+        if (profileHost.isEmpty() || profileHost != normalizedTargetHost) {
+            continue;
+        }
+
+        const int profilePort = normalizePort(readProfileData(profileName, qsl("port")));
+        if (profilePort == targetPort) {
+            exactMatch = profileName;
+            break;
+        }
+
+        if (hostOnlyMatch.isEmpty()) {
+            hostOnlyMatch = profileName;
+        }
+    }
+
+    const QString matchedProfile = !exactMatch.isEmpty() ? exactMatch : hostOnlyMatch;
+    if (!matchedProfile.isEmpty()) {
+        qInfo().noquote().nospace() << "mudlet::consumeTelnetLaunchIntent() INFO - matched existing profile: \"" << matchedProfile
+                                    << "\" for host=\"" << targetHost << "\", port=" << targetPort;
+        doAutoLogin(matchedProfile);
+        return true;
+    }
+
+    QString profileName = targetHost;
+    int suffix = 2;
+    while (profileExists(profileName)) {
+        profileName = qsl("%1-%2").arg(targetHost).arg(suffix++);
+    }
+
+    const QString portString = QString::number(targetPort);
+    if (!getHostManager().addHost(profileName, portString, QString(), QString())) {
+        qWarning().noquote().nospace() << "mudlet::consumeTelnetLaunchIntent() WARNING - failed to create profile: \"" << profileName << "\"";
+        return false;
+    }
+
+    Host* pHost = getHostManager().getHost(profileName);
+    if (!pHost) {
+        qWarning().noquote().nospace() << "mudlet::consumeTelnetLaunchIntent() WARNING - failed to resolve newly created profile: \"" << profileName << "\"";
+        return false;
+    }
+
+    pHost->setUrl(targetHost);
+    pHost->setPort(portString);
+    qInfo().noquote().nospace() << "mudlet::consumeTelnetLaunchIntent() INFO - created profile: \"" << profileName
+                                << "\" for host=\"" << targetHost << "\", port=" << targetPort;
+    slot_connectionDialogueFinished(profileName, true);
+    enableToolbarButtons();
+    return true;
+}
+
 void mudlet::startAutoLogin(const QStringList& cliProfiles)
 {
     QElapsedTimer timer;
@@ -4201,7 +4289,9 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
         }
     }
 
-    if (loadedProfiles == 0) {
+    const bool consumedTelnetIntent = cliProfiles.isEmpty() && consumeTelnetLaunchIntent();
+
+    if (loadedProfiles == 0 && !consumedTelnetIntent) {
         slot_showConnectionDialog();
     } else {
         qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed() / 1000.0 << "seconds";

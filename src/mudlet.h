@@ -289,6 +289,16 @@ public:
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
+
+    struct TelnetLaunchIntent
+    {
+        QString host;
+        int port{-1};
+
+        bool valid() const { return !host.isEmpty(); }
+    };
+
+    void setTelnetLaunchIntent(const TelnetLaunchIntent&);
     void setupPreInstallPackages(const QString&, const QString&);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
@@ -313,6 +323,7 @@ public:
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     bool profileExists(const QString& profileName);
+    bool consumeTelnetLaunchIntent();
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
@@ -390,6 +401,7 @@ public:
     int mMinLengthForSpellCheck = 3;
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
+    TelnetLaunchIntent mTelnetLaunchIntent;
 
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }

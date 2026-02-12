@@ -438,6 +438,8 @@ int main(int argc, char* argv[])
     std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator = std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator");
     const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
 
+    mudlet::TelnetLaunchIntent telnetLaunchIntent;
+
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
         const QString firstPositionalArgument = positionalArguments.first().trimmed();
@@ -449,6 +451,8 @@ int main(int argc, char* argv[])
             if (host.isEmpty()) {
                 qWarning().noquote() << "main(...) WARNING - ignoring invalid telnet URL argument without host:" << firstPositionalArgument;
             } else {
+                telnetLaunchIntent.host = host;
+                telnetLaunchIntent.port = port;
                 qInfo().noquote().nospace() << "main(...) INFO - detected telnet URL launch argument: host=\"" << host << "\""
                                              << (port > 0 ? qsl(", port=%1").arg(port) : qsl(", port=<default>"));
             }
@@ -734,6 +738,7 @@ int main(int argc, char* argv[])
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
 
+    mudlet::self()->setTelnetLaunchIntent(telnetLaunchIntent);
     mudlet::self()->show();
     if (parser.isSet(startFullscreen)) {
         QTimer::singleShot(0, [=]() {
