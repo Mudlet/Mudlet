@@ -509,6 +509,36 @@ function Geyser.Label:resetSvgTint ()
   resetSvgTint(self.name)
 end
 
+--- Sets the rotation angle for the label's SVG background image.
+-- The SVG is rotated around its center; label text and background are unaffected.
+-- @param angle Rotation angle in degrees (positive = clockwise).
+function Geyser.Label:setSvgRotation (angle)
+  setSvgRotation(self.name, angle)
+end
+
+--- Resets the SVG background image rotation to 0 degrees.
+function Geyser.Label:resetSvgRotation ()
+  resetSvgRotation(self.name)
+end
+
+--- Sets the shear (skew) for the label's SVG background image.
+-- The SVG is sheared around its center; label text and background are unaffected.
+-- @param shearX Horizontal shear factor.
+-- @param shearY Vertical shear factor.
+function Geyser.Label:setSvgShear (shearX, shearY)
+  setSvgShear(self.name, shearX, shearY)
+end
+
+--- Resets the SVG background image shear to (0, 0).
+function Geyser.Label:resetSvgShear ()
+  resetSvgShear(self.name)
+end
+
+--- Resets all SVG transforms (rotation and shear) but preserves tint.
+function Geyser.Label:resetSvgTransform ()
+  resetSvgTransform(self.name)
+end
+
 --- Sets a tiled background image for this label.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setTiledBackgroundImage (imageFileName)

@@ -2846,6 +2846,79 @@ int TLuaInterpreter::resetSvgTint(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgRotation
+int TLuaInterpreter::setSvgRotation(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    const double angle = getVerifiedDouble(L, __func__, 2, "angle");
+    Host& host = getHostFromLua(L);
+
+    if (!host.setSvgRotation(labelName, angle)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgRotation
+int TLuaInterpreter::resetSvgRotation(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgRotation(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgShear
+int TLuaInterpreter::setSvgShear(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    const double shearX = getVerifiedDouble(L, __func__, 2, "shearX");
+    const double shearY = getVerifiedDouble(L, __func__, 3, "shearY");
+    Host& host = getHostFromLua(L);
+
+    if (!host.setSvgShear(labelName, shearX, shearY)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgShear
+int TLuaInterpreter::resetSvgShear(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgShear(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgTransform
+int TLuaInterpreter::resetSvgTransform(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgTransform(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelCursor
 int TLuaInterpreter::setLabelCursor(lua_State* L)
 {

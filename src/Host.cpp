@@ -4372,6 +4372,81 @@ bool Host::resetSvgTint(const QString& name)
     return true;
 }
 
+bool Host::setSvgRotation(const QString& name, double angle)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+
+    pL->setSvgRotation(angle);
+    return true;
+}
+
+bool Host::resetSvgRotation(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+
+    pL->setSvgRotation(0.0);
+    return true;
+}
+
+bool Host::setSvgShear(const QString& name, double shearX, double shearY)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+
+    pL->setSvgShear(shearX, shearY);
+    return true;
+}
+
+bool Host::resetSvgShear(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+
+    pL->setSvgShear(0.0, 0.0);
+    return true;
+}
+
+bool Host::resetSvgTransform(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+
+    pL->resetSvgTransform();
+    return true;
+}
+
 bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
     if (!mpConsole) {

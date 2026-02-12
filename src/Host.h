@@ -427,6 +427,11 @@ public:
     bool resetBackgroundImage(const QString& name);
     bool setSvgTint(const QString& name, const QColor& color);
     bool resetSvgTint(const QString& name);
+    bool setSvgRotation(const QString& name, double angle);
+    bool resetSvgRotation(const QString& name);
+    bool setSvgShear(const QString& name, double shearX, double shearY);
+    bool resetSvgShear(const QString& name);
+    bool resetSvgTransform(const QString& name);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();

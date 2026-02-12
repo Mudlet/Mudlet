@@ -5226,6 +5226,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
     lua_register(pGlobalLua, "setSvgTint", TLuaInterpreter::setSvgTint);
     lua_register(pGlobalLua, "resetSvgTint", TLuaInterpreter::resetSvgTint);
+    lua_register(pGlobalLua, "setSvgRotation", TLuaInterpreter::setSvgRotation);
+    lua_register(pGlobalLua, "resetSvgRotation", TLuaInterpreter::resetSvgRotation);
+    lua_register(pGlobalLua, "setSvgShear", TLuaInterpreter::setSvgShear);
+    lua_register(pGlobalLua, "resetSvgShear", TLuaInterpreter::resetSvgShear);
+    lua_register(pGlobalLua, "resetSvgTransform", TLuaInterpreter::resetSvgTransform);
     lua_register(pGlobalLua, "setUserWindowStyleSheet", TLuaInterpreter::setUserWindowStyleSheet);
     lua_register(pGlobalLua, "getTime", TLuaInterpreter::getTime);
     lua_register(pGlobalLua, "getEpoch", TLuaInterpreter::getEpoch);

@@ -72,6 +72,9 @@ public:
     void clearSvgImage();
     void setSvgTint(const QColor& color);
     void clearSvgTint();
+    void setSvgRotation(double angle);
+    void setSvgShear(double shearX, double shearY);
+    void resetSvgTransform();
 
     QPointer<Host> mpHost;
     QString mName;
@@ -86,6 +89,9 @@ public:
     QSvgRenderer* mpSvgRenderer = nullptr;
     QString mSvgImagePath;
     QColor mSvgTintColor;
+    double mSvgRotation = 0.0;
+    double mSvgShearX = 0.0;
+    double mSvgShearY = 0.0;
     QVideoWidget* mpVideoWidget = nullptr;
     QString mLinkColor;          // Store link color for inline style injection
     QString mLinkVisitedColor;   // Store visited color for inline style injection

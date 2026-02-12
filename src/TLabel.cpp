@@ -311,16 +311,30 @@ bool TLabel::setSvgImage(const QString& path)
 
 QPixmap TLabel::renderSvgPixmap(const QSize& size) const
 {
-    QPixmap svgPixmap(size);
+    const qreal dpr = devicePixelRatioF();
+    QPixmap svgPixmap(size * dpr);
     svgPixmap.fill(Qt::transparent);
     QPainter painter(&svgPixmap);
+
+    if (!qFuzzyIsNull(mSvgRotation) || !qFuzzyIsNull(mSvgShearX) || !qFuzzyIsNull(mSvgShearY)) {
+        const qreal cx = svgPixmap.width() / 2.0;
+        const qreal cy = svgPixmap.height() / 2.0;
+        painter.translate(cx, cy);
+        painter.rotate(mSvgRotation);
+        painter.shear(mSvgShearX, mSvgShearY);
+        painter.translate(-cx, -cy);
+    }
+
     mpSvgRenderer->render(&painter);
 
     if (mSvgTintColor.isValid()) {
+        painter.resetTransform();
         painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
         painter.fillRect(svgPixmap.rect(), mSvgTintColor);
     }
 
+    painter.end();
+    svgPixmap.setDevicePixelRatio(dpr);
     return svgPixmap;
 }
 
@@ -332,6 +346,9 @@ void TLabel::clearSvgImage()
     }
     mSvgImagePath.clear();
     mSvgTintColor = QColor();
+    mSvgRotation = 0.0;
+    mSvgShearX = 0.0;
+    mSvgShearY = 0.0;
 }
 
 void TLabel::setSvgTint(const QColor& color)
@@ -345,6 +362,33 @@ void TLabel::setSvgTint(const QColor& color)
 void TLabel::clearSvgTint()
 {
     mSvgTintColor = QColor();
+    if (mpSvgRenderer && mpSvgRenderer->isValid()) {
+        QLabel::setPixmap(renderSvgPixmap(size()));
+    }
+}
+
+void TLabel::setSvgRotation(double angle)
+{
+    mSvgRotation = angle;
+    if (mpSvgRenderer && mpSvgRenderer->isValid()) {
+        QLabel::setPixmap(renderSvgPixmap(size()));
+    }
+}
+
+void TLabel::setSvgShear(double shearX, double shearY)
+{
+    mSvgShearX = shearX;
+    mSvgShearY = shearY;
+    if (mpSvgRenderer && mpSvgRenderer->isValid()) {
+        QLabel::setPixmap(renderSvgPixmap(size()));
+    }
+}
+
+void TLabel::resetSvgTransform()
+{
+    mSvgRotation = 0.0;
+    mSvgShearX = 0.0;
+    mSvgShearY = 0.0;
     if (mpSvgRenderer && mpSvgRenderer->isValid()) {
         QLabel::setPixmap(renderSvgPixmap(size()));
     }
