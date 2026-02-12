@@ -192,13 +192,16 @@ void TDetachedWindow::setupUI()
 
         // Apply CDC identifier prefix if debug mode is active
         if (mudlet::smDebugMode) {
-            Host* pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+            auto pMudlet = mudlet::self();
+            if (pMudlet) {
+                Host* pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
 
-            if (pHost) {
-                QString debugTag = TDebug::getTag(pHost);
+                if (pHost) {
+                    QString debugTag = TDebug::getTag(pHost);
 
-                if (!debugTag.isEmpty()) {
-                    displayText = debugTag + mCurrentProfileName;
+                    if (!debugTag.isEmpty()) {
+                        displayText = debugTag + mCurrentProfileName;
+                    }
                 }
             }
         }
@@ -242,6 +245,11 @@ void TDetachedWindow::setupUI()
 
 void TDetachedWindow::createMenus()
 {
+    auto pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return;
+    }
+
     // Games menu with connection actions - matches main window order
     //: This is the name of a menu in the menubar of a detached Mudlet window.
     auto gamesMenu = menuBar()->addMenu(tr("&Games"));
@@ -282,7 +290,7 @@ void TDetachedWindow::createMenus()
     auto closeApplicationAction = new QAction(tr("Close &Mudlet"), this);
     //: This explains the "Close Mudlet" item in the "Games" menu in the menubar of a detached Mudlet window.
     closeApplicationAction->setStatusTip(tr("Close the entire Mudlet application"));
-    connect(closeApplicationAction, &QAction::triggered, mudlet::self(), &QWidget::close);
+    connect(closeApplicationAction, &QAction::triggered, pMudlet, &QWidget::close);
     gamesMenu->addAction(closeApplicationAction);
 
     // Toolbox menu with all scripting tools - matches main window order
@@ -472,14 +480,14 @@ void TDetachedWindow::createMenus()
     auto helpAction = new QAction(tr("&API Reference"), this);
     //: This explains the "API Reference" item in the "Help" menu in the menubar of a detached Mudlet window.
     helpAction->setStatusTip(tr("Opens the Mudlet manual in your web browser."));
-    connect(helpAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showHelpDialog);
+    connect(helpAction, &QAction::triggered, pMudlet, &mudlet::slot_showHelpDialog);
     helpMenu->addAction(helpAction);
 
     //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
     auto videoAction = new QAction(tr("&Video tutorials"), this);
     //: This explains the "Video tutorials" item in the "Help" menu in the menubar of a detached Mudlet window.
     videoAction->setStatusTip(tr("Opens an (on-line) collection of \"Educational Mudlet screencasts\" in your system web-browser."));
-    connect(videoAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showHelpDialogVideo);
+    connect(videoAction, &QAction::triggered, pMudlet, &mudlet::slot_showHelpDialogVideo);
     helpMenu->addAction(videoAction);
 
     //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
@@ -493,21 +501,21 @@ void TDetachedWindow::createMenus()
     auto mudletDiscordAction = new QAction(tr("Discord &help channel"), this);
     //: This explains the "Discord help channel" item in the "Help" menu in the menubar of a detached Mudlet window.
     mudletDiscordAction->setStatusTip(tr("Open a link to the Mudlet server on Discord."));
-    connect(mudletDiscordAction, &QAction::triggered, mudlet::self(), &mudlet::slot_mudletDiscord);
+    connect(mudletDiscordAction, &QAction::triggered, pMudlet, &mudlet::slot_mudletDiscord);
     helpMenu->addAction(mudletDiscordAction);
 
     //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
     auto liveHelpChatAction = new QAction(tr("&Live help chat"), this);
     //: This explains the "Live help chat" item in the "Help" menu in the menubar of a detached Mudlet window.
     liveHelpChatAction->setStatusTip(tr("Opens a connect to an IRC server (LiberaChat) in your system web-browser."));
-    connect(liveHelpChatAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showHelpDialogIrc);
+    connect(liveHelpChatAction, &QAction::triggered, pMudlet, &mudlet::slot_showHelpDialogIrc);
     helpMenu->addAction(liveHelpChatAction);
 
     //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
     auto forumAction = new QAction(tr("Online &forum"), this);
     //: This explains the "Online forum" item in the "Help" menu in the menubar of a detached Mudlet window.
     forumAction->setStatusTip(tr("Opens the (on-line) Mudlet Forum in your system web-browser."));
-    connect(forumAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showHelpDialogForum);
+    connect(forumAction, &QAction::triggered, pMudlet, &mudlet::slot_showHelpDialogForum);
     helpMenu->addAction(forumAction);
 
     // About menu - matches main window order
@@ -518,7 +526,7 @@ void TDetachedWindow::createMenus()
     auto aboutAction = new QAction(tr("About &Mudlet"), this);
     //: This explains the "About Mudlet" item in the "About" menu in the menubar of a detached Mudlet window.
     aboutAction->setStatusTip(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it."));
-    connect(aboutAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showAboutDialog);
+    connect(aboutAction, &QAction::triggered, pMudlet, &mudlet::slot_showAboutDialog);
     aboutMenu->addAction(aboutAction);
 
 #if defined(INCLUDE_UPDATER)
@@ -526,14 +534,14 @@ void TDetachedWindow::createMenus()
     auto updateAction = new QAction(tr("&Check for updates..."), this);
     //: This explains the "Check for updates..." item in the "About" menu in the menubar of a detached Mudlet window.
     updateAction->setStatusTip(tr("Check for newer versions of Mudlet"));
-    connect(updateAction, &QAction::triggered, mudlet::self(), &mudlet::slot_manualUpdateCheck);
+    connect(updateAction, &QAction::triggered, pMudlet, &mudlet::slot_manualUpdateCheck);
     aboutMenu->addAction(updateAction);
 
     //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
     auto changelogAction = new QAction(tr("Show &changelog"), this);
     //: This explains the "Show changelog" item in the "About" menu in the menubar of a detached Mudlet window.
     changelogAction->setStatusTip(tr("Show the changelog for this version"));
-    connect(changelogAction, &QAction::triggered, mudlet::self(), &mudlet::slot_showFullChangelog);
+    connect(changelogAction, &QAction::triggered, pMudlet, &mudlet::slot_showFullChangelog);
     aboutMenu->addAction(changelogAction);
 #endif
 
@@ -570,7 +578,9 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
 #endif
-            mudlet::self()->slot_closeProfileByName(profileName);
+            if (auto pMudlet = mudlet::self(); pMudlet) {
+                pMudlet->slot_closeProfileByName(profileName);
+            }
         }
 
         // Remove all consoles from the stacked widget and reset their parents
@@ -760,10 +770,13 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
     //: This is an item in the context menu when clicked on a detached tab.
     auto connectionIndicatorToggleAction = contextMenu.addAction(tr("Show Connection Indicators on Tabs"));
     connectionIndicatorToggleAction->setCheckable(true);
-    connectionIndicatorToggleAction->setChecked(mudlet::self()->showTabConnectionIndicators());
-    connect(connectionIndicatorToggleAction, &QAction::triggered, this, [this](bool checked) {
-        mudlet::self()->setShowTabConnectionIndicators(checked);
-    });
+    auto pMudlet = mudlet::self();
+    if (pMudlet) {
+        connectionIndicatorToggleAction->setChecked(pMudlet->showTabConnectionIndicators());
+        connect(connectionIndicatorToggleAction, &QAction::triggered, this, [pMudlet](bool checked) {
+            pMudlet->setShowTabConnectionIndicators(checked);
+        });
+    }
 
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
@@ -1177,8 +1190,9 @@ void TDetachedWindow::updateToolBarActions()
 {
     Host* pHost = nullptr;
 
-    if (!mCurrentProfileName.isEmpty()) {
-        pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+    auto pMudlet = mudlet::self();
+    if (!mCurrentProfileName.isEmpty() && pMudlet) {
+        pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
     }
 
     bool hasActiveProfile = (pHost != nullptr);
@@ -1347,12 +1361,17 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
         return;
     }
 
+    auto pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return;
+    }
+
     // Get the host and determine connection status
-    Host* pHost = mudlet::self()->getHostManager().getHost(profileName);
+    Host* pHost = pMudlet->getHostManager().getHost(profileName);
     QIcon tabIcon;
 
     // Only show connection indicators if the global setting is enabled
-    if (mudlet::self()->showTabConnectionIndicators()) {
+    if (pMudlet->showTabConnectionIndicators()) {
         if (pHost) {
             bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
             bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
@@ -1633,6 +1652,11 @@ void TDetachedWindow::updateWindowMenu()
         return;
     }
 
+    auto pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return;
+    }
+
     // Clean up existing window list actions
     for (QAction* action : mWindowListActions) {
         mpWindowMenu->removeAction(action);
@@ -1649,14 +1673,14 @@ void TDetachedWindow::updateWindowMenu()
     }
 
     // Get the detached windows from mudlet
-    const auto& detachedWindows = mudlet::self()->getDetachedWindows();
+    const auto& detachedWindows = pMudlet->getDetachedWindows();
 
     // Count total windows (main + detached)
     int totalWindows = 1; // Main window
     totalWindows += detachedWindows.size();
 
     // Only show window list if there are multiple windows OR if there are multiple profiles
-    bool hasMultipleProfiles = mudlet::self()->getHostManager().getHostCount() > 1;
+    bool hasMultipleProfiles = pMudlet->getHostManager().getHostCount() > 1;
 
     if (totalWindows > 1 || hasMultipleProfiles) {
         // Add separator before window list
@@ -1665,7 +1689,7 @@ void TDetachedWindow::updateWindowMenu()
         // Add main window profiles
         QStringList mainWindowProfiles;
 
-        for (const auto& host : mudlet::self()->getHostManager()) {
+        for (const auto& host : pMudlet->getHostManager()) {
             if (host && host->mpConsole) {
                 const QString profileName = host->getName();
                 // Only include profiles that are in the main window (not detached)
@@ -1682,7 +1706,7 @@ void TDetachedWindow::updateWindowMenu()
                 QString actionText = tr("%1 (Main Window)").arg(profileName);
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
-                profileAction->setChecked(mudlet::self()->isActiveWindow() && mudlet::self()->getActiveHost() && mudlet::self()->getActiveHost()->getName() == profileName);
+                profileAction->setChecked(pMudlet->isActiveWindow() && pMudlet->getActiveHost() && pMudlet->getActiveHost()->getName() == profileName);
                 profileAction->setData(profileName); // Store profile name for identification
                 connect(profileAction, &QAction::triggered, this, &TDetachedWindow::slot_activateMainWindowProfile);
                 mpWindowMenu->addAction(profileAction);
