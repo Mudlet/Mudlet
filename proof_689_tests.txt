@@ -1,0 +1,23 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Configuring done (0.4s)
+-- Generating done (2.2s)
+-- Build files have been written to: /tmp/mudlet-689-test
+[  0%] Built target TStringUtilsTelnetUrlTest_autogen_timestamp_deps
+[ 50%] Automatic MOC for target TStringUtilsTelnetUrlTest
+[ 50%] Built target TStringUtilsTelnetUrlTest_autogen
+[ 50%] Building CXX object CMakeFiles/TStringUtilsTelnetUrlTest.dir/TStringUtilsTelnetUrlTest_autogen/mocs_compilation.cpp.o
+[100%] Building CXX object CMakeFiles/TStringUtilsTelnetUrlTest.dir/TStringUtilsTelnetUrlTest.cpp.o
+[100%] Building CXX object CMakeFiles/TStringUtilsTelnetUrlTest.dir/Users/hamzashahid/.openclaw/workspace/bounties/mudlet-689/src/TStringUtils.cpp.o
+[100%] Linking CXX executable TStringUtilsTelnetUrlTest
+[100%] Built target TStringUtilsTelnetUrlTest
+********* Start testing of TStringUtilsTelnetUrlTest *********
+Config: Using QtTest library 6.10.2, Qt 6.10.2 (arm64-little_endian-lp64 shared (dynamic) release build; by Apple LLVM 17.0.0 (clang-1700.6.3.2)), macos 26.2.0
+PASS   : TStringUtilsTelnetUrlTest::initTestCase()
+PASS   : TStringUtilsTelnetUrlTest::testValidDefaultPort()
+PASS   : TStringUtilsTelnetUrlTest::testValidPortAndScheme()
+PASS   : TStringUtilsTelnetUrlTest::testValidIpv6()
+PASS   : TStringUtilsTelnetUrlTest::testRejectsInvalidInputs()
+PASS   : TStringUtilsTelnetUrlTest::cleanupTestCase()
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 2ms
+********* Finished testing of TStringUtilsTelnetUrlTest *********

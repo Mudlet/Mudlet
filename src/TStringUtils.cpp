@@ -18,6 +18,8 @@
  ***************************************************************************/
 #include "TStringUtils.h"
 
+#include <QUrl>
+
 
 bool TStringUtils::isQuote(QChar ch)
 {
@@ -33,4 +35,45 @@ bool TStringUtils::isOneOf(QChar inputCharacter, const QString& characterSet)
     }
 
     return false;
+}
+
+std::optional<TStringUtils::TelnetUrl> TStringUtils::parseTelnetUrl(const QString& input)
+{
+    if (input.isEmpty()) {
+        return std::nullopt;
+    }
+
+    const QUrl url(input, QUrl::TolerantMode);
+    if (!url.isValid()) {
+        return std::nullopt;
+    }
+
+    if (url.scheme().compare(qsl("telnet"), Qt::CaseInsensitive) != 0) {
+        return std::nullopt;
+    }
+
+    if (!url.userInfo().isEmpty() || url.hasQuery() || url.hasFragment()) {
+        return std::nullopt;
+    }
+
+    const QString host = url.host();
+    if (host.isEmpty()) {
+        return std::nullopt;
+    }
+
+    const QString path = url.path();
+    if (!path.isEmpty() && path != qsl("/")) {
+        return std::nullopt;
+    }
+
+    int port = url.port();
+    if (port == -1) {
+        port = 23;
+    }
+
+    if (port < 1 || port > 65535) {
+        return std::nullopt;
+    }
+
+    return TelnetUrl{host, static_cast<quint16>(port)};
 }

@@ -26,6 +26,7 @@
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
 #include <chrono>
+#include <optional>
 #include <QCommandLineParser>
 #include <QDir>
 #if defined(Q_OS_WINDOWS) && !defined(INCLUDE_UPDATER)
@@ -44,6 +45,8 @@
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 #include "SentryWrapper.h"
+#include "TGameDetails.h"
+#include "TStringUtils.h"
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -157,6 +160,71 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
     }
 }
 #endif
+
+static QString findMatchingProfileForTelnetUrl(const TStringUtils::TelnetUrl& telnetUrl)
+{
+    const QString targetHost = telnetUrl.host.trimmed();
+    const quint16 targetPort = telnetUrl.port;
+
+    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const auto& profile : profiles) {
+        const QString url = mudlet::self()->readProfileData(profile, qsl("url")).trimmed();
+        if (url.isEmpty()) {
+            continue;
+        }
+
+        quint16 profilePort = 23;
+        const QString portValue = mudlet::self()->readProfileData(profile, qsl("port"));
+        if (!portValue.isEmpty()) {
+            bool ok = false;
+            const int parsedPort = portValue.toInt(&ok);
+            if (!ok || parsedPort < 1 || parsedPort > 65535) {
+                continue;
+            }
+            profilePort = static_cast<quint16>(parsedPort);
+        }
+
+        if (profilePort != targetPort) {
+            continue;
+        }
+
+        if (url.compare(targetHost, Qt::CaseInsensitive) == 0) {
+            return profile;
+        }
+    }
+
+    for (const auto& game : TGameDetails::scmDefaultGames) {
+        if (game.port < 1 || game.port > 65535) {
+            continue;
+        }
+        if (game.port != targetPort) {
+            continue;
+        }
+        if (game.hostUrl.compare(targetHost, Qt::CaseInsensitive) == 0) {
+            return game.name;
+        }
+    }
+
+    return QString();
+}
+
+static QString createTelnetProfileName(const TStringUtils::TelnetUrl& telnetUrl)
+{
+    QString sanitizedHost = telnetUrl.host.trimmed();
+    sanitizedHost.replace(QLatin1Char('/'), QLatin1Char('_'));
+    sanitizedHost.replace(QLatin1Char('\\'), QLatin1Char('_'));
+    sanitizedHost.replace(QLatin1Char(':'), QLatin1Char('_'));
+
+    const QString baseName = qsl("Telnet %1 %2").arg(sanitizedHost, QString::number(telnetUrl.port));
+    QString candidate = baseName;
+    int suffix = 2;
+    while (mudlet::self()->profileExists(candidate)) {
+        candidate = qsl("%1 (%2)").arg(baseName).arg(suffix);
+        ++suffix;
+    }
+
+    return candidate;
+}
 
 int main(int argc, char* argv[])
 {
@@ -302,6 +370,7 @@ int main(int argc, char* argv[])
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
+    std::optional<TStringUtils::TelnetUrl> telnetTarget;
 
     const QString appendLF{qsl("%1\n")};
     const QString append2LF{qsl("%1\n\n")};
@@ -336,6 +405,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                           "                                    predefined game, may be repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       telnet://host[:port]         connect to a MUD via telnet URL."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -f, --fullscreen             start Mudlet in fullscreen mode."));
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --steammode                  adjusts Mudlet settings to match\n"
@@ -394,6 +464,7 @@ int main(int argc, char* argv[])
                                                            "                                    debugger connects to it."));
         texts << appendLF.arg(QCoreApplication::translate("main", "Arguments:"));
         texts << appendLF.arg(QCoreApplication::translate("main", "        [FILE]                       File to install as a package"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "        [TELNET_URL]                 telnet://host[:port]"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
@@ -437,9 +508,22 @@ int main(int argc, char* argv[])
     std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator = std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator");
     const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
 
-    const QStringList positionalArguments = parser.positionalArguments();
-    if (!positionalArguments.isEmpty()) {
-        const QString absPath = QDir(positionalArguments.first()).absolutePath();
+    QStringList positionalArguments = parser.positionalArguments();
+    QStringList packageArguments;
+    for (const auto& arg : positionalArguments) {
+        if (!telnetTarget.has_value()) {
+            telnetTarget = TStringUtils::parseTelnetUrl(arg);
+            if (telnetTarget.has_value()) {
+                continue;
+            }
+        } else if (TStringUtils::parseTelnetUrl(arg).has_value()) {
+            continue;
+        }
+        packageArguments << arg;
+    }
+
+    if (!packageArguments.isEmpty()) {
+        const QString absPath = QDir(packageArguments.first()).absolutePath();
         instanceCoordinator->queuePackage(absPath);
         if (!firstInstanceOfMudlet) {
             const bool successful = instanceCoordinator->installPackagesRemotely();
@@ -485,6 +569,25 @@ int main(int argc, char* argv[])
         if (!envProfiles.isEmpty()) {
             // : is not an allowed character in a profile name, so we can use it to split the list
             cliProfiles = envProfiles.split(':');
+        }
+    }
+
+    if (telnetTarget.has_value()) {
+        QString matchingProfile = findMatchingProfileForTelnetUrl(*telnetTarget);
+        if (matchingProfile.isEmpty()) {
+            const QString newProfileName = createTelnetProfileName(*telnetTarget);
+            const auto writeUrl = mudlet::self()->writeProfileData(newProfileName, qsl("url"), telnetTarget->host);
+            const auto writePort = mudlet::self()->writeProfileData(newProfileName, qsl("port"), QString::number(telnetTarget->port));
+            if (writeUrl.first && writePort.first) {
+                matchingProfile = newProfileName;
+            } else {
+                qWarning().noquote() << "main: failed to create telnet profile:" << newProfileName << "url:" << writeUrl.second << "port:" << writePort.second;
+            }
+        }
+
+        if (!matchingProfile.isEmpty()) {
+            cliProfiles.removeAll(matchingProfile);
+            cliProfiles.prepend(matchingProfile);
         }
     }
 

@@ -23,6 +23,7 @@
 #include <QString>
 #include <QStringList>
 #include <functional>
+#include <optional>
 #include "utils.h"
 
 #define CHAR_NEW_LINE '\n'
@@ -38,8 +39,15 @@
 class TStringUtils
 {
 public:
+    struct TelnetUrl
+    {
+        QString host;
+        quint16 port = 23;
+    };
+
     static bool isQuote(QChar ch);
     static bool isOneOf(QChar inputCharacter, const QString& characterSet);
+    static std::optional<TelnetUrl> parseTelnetUrl(const QString& input);
 };
 
 #endif //MUDLET_TSTRINGUTILS_H

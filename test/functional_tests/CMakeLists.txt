@@ -1,5 +1,9 @@
+# Functional tests optionally enable sanitizers when building from the full Mudlet build tree.
+# When building tests standalone (cmake -S test), the 3rdparty sanitizer helpers may not be available.
 if(NOT WIN32)
-    include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../src/cmake/EnableSanitizers.cmake" AND EXISTS "${CMAKE_CURRENT_LIST_DIR}/../3rdparty/cmake-scripts/sanitizers.cmake")
+        include(${CMAKE_CURRENT_LIST_DIR}/../../src/cmake/EnableSanitizers.cmake)
+    endif()
 endif()
 
 set(FUNCTIONAL_TEST_SOURCES

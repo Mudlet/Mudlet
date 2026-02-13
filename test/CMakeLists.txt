@@ -49,6 +49,9 @@ add_test(NAME TEntityResolverTest COMMAND TEntityResolverTest)
 add_executable(TEntityHandlerTest TEntityHandlerTest.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TEntityHandlerTest COMMAND TEntityHandlerTest)
 
+add_executable(TStringUtilsTelnetUrlTest TStringUtilsTelnetUrlTest.cpp ../src/TStringUtils.cpp)
+add_test(NAME TStringUtilsTelnetUrlTest COMMAND TStringUtilsTelnetUrlTest)
+
 add_executable(TLinkStoreTest TLinkStoreTest.cpp ../src/TLinkStore.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 
