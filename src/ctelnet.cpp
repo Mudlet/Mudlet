@@ -2507,7 +2507,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += MSDP_VAR;
                 output += "CLIENT_NAME";
                 output += MSDP_VAL;
-                output += "MUDLET";
+                output += "Mudlet";
                 output += MSDP_VAR;
                 output += "CLIENT_VERSION";
                 output += MSDP_VAL;
