@@ -279,8 +279,8 @@ void TRoom::setWeight(int w)
 
 void TRoom::setHidden(const bool isHidden)
 {
-    if (mHidden != isHidden) {
-        mHidden = isHidden;
+    if (hidden != isHidden) {
+        hidden = isHidden;
         mpRoomDB->mpMap->setUnsaved(__func__);
     }
 }
@@ -834,7 +834,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     ifs >> name;
     ifs >> isLocked;
     if (version >= 22) {
-        ifs >> mHidden;
+        ifs >> hidden;
     }
     if (version >= 21) {
         ifs >> mSpecialExits;
@@ -882,7 +882,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         if (version < 22) {
             const QString hiddenString = userData.take(QLatin1String("system.fallback_hidden"));
             if (!hiddenString.compare(QLatin1String("true"), Qt::CaseInsensitive)) {
-                mHidden = true;
+                hidden = true;
             }
         }
         if (version < 19) {
@@ -1749,7 +1749,7 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
         roomObj.insert(QLatin1String("locked"), true);
     }
 
-    if (mHidden) {
+    if (hidden) {
         roomObj.insert(QLatin1String("hidden"), true);
     }
 
@@ -1807,7 +1807,7 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     }
 
     if (roomObj.contains(QLatin1String("hidden")) && roomObj.value(QLatin1String("hidden")).toBool()) {
-        mHidden = true;
+        hidden = true;
     }
 
     if (roomObj.contains(QLatin1String("weight")) && roomObj.value(QLatin1String("weight")).isDouble()) {
