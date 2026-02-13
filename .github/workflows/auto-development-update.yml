@@ -1,0 +1,57 @@
+name: Auto-create development update PR after release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-development-update-pr:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'Mudlet-')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: ${{ github.event.release.target_commitish }}
+
+      - name: Extract version from release tag
+        id: extract-version
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          VERSION=$(echo "$TAG_NAME" | sed 's/^Mudlet-//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Create Pull Request to development
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Infrastructure: update development with release ${{ steps.extract-version.outputs.version }}"
+          title: "Infrastructure: update development with release ${{ steps.extract-version.outputs.version }}"
+          body: |
+            ## Brief overview of PR changes/additions
+            
+            Update development with release ${{ steps.extract-version.outputs.version }}
+            
+            ## Motivation for adding to Mudlet
+            
+            So PTBs are on the latest version
+            
+            **Automatically created after release:** ${{ github.event.release.tag_name }}
+            
+            This PR merges the release branch changes back to development to ensure:
+            - PTB builds use the latest release version
+            - Development branch stays in sync with releases
+            - Reduces manual maintenance burden
+            
+            /claim #6101
+          branch: auto-development-update-${{ steps.extract-version.outputs.version }}
+          base: development
+          delete-branch: true
