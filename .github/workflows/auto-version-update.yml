@@ -1,0 +1,64 @@
+name: Auto-update version on release
+
+on:
+  release:
+    types: [created, published]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'Mudlet-')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Extract version from release tag
+        id: extract-version
+        run: |
+          # Extract version from tag like "Mudlet-4.17.0"
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          VERSION=$(echo "$TAG_NAME" | sed 's/^Mudlet-//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Update CMakeLists.txt version
+        run: |
+          VERSION="${{ steps.extract-version.outputs.version }}"
+          
+          # Update APP_VERSION in CMakeLists.txt
+          sed -i "s/^set(APP_VERSION .*)$/set(APP_VERSION $VERSION)/" CMakeLists.txt
+          
+          # Verify the change
+          grep "set(APP_VERSION" CMakeLists.txt
+          
+          # Clear BUILD value for release (set to empty)
+          # This addresses the "strip out BUILD to be empty in release branch" requirement
+          sed -i 's/set(BUILD_VALUE.*)/set(BUILD_VALUE "")/' CMakeLists.txt
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update version to ${{ steps.extract-version.outputs.version }} for release ${{ github.event.release.tag_name }}"
+          title: "Auto-update version to ${{ steps.extract-version.outputs.version }}"
+          body: |
+            This PR automatically updates the version in CMakeLists.txt based on the new release.
+            
+            **Changes:**
+            - Updated APP_VERSION to ${{ steps.extract-version.outputs.version }}
+            - Cleared BUILD value for release branch
+            
+            **Triggered by:** Release ${{ github.event.release.tag_name }}
+            
+            /claim #5863
+          branch: auto-version-update-${{ steps.extract-version.outputs.version }}
+          base: development
+          delete-branch: true
