@@ -57,7 +57,7 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
                              QHash<QString, int>& pSymbols,
                              QHash<int, int>& pWeights,
                              QHash<bool, int> lockStatus,
-                             QSet<bool> hiddenStatus,
+                             QHash<bool, int> hiddenStatus,
                              QSet<TRoom*>& pRooms)
 {
     // Configure name display
@@ -158,13 +158,16 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
     initLockInstructions();
 
     // Configure hidden display
-    // Are both hidden statuses present? Then show dialog in tristate.
+    // Are all hidden statuses the same or mixed? Then show dialog in tristate.
     if (hiddenStatus.contains(true) && hiddenStatus.contains(false)) {
         checkBox_hidden->setTristate(true);
         checkBox_hidden->setCheckState(Qt::PartiallyChecked);
-    } else {
+    } else if (hiddenStatus.contains(true)) {
         checkBox_hidden->setTristate(false);
-        checkBox_hidden->setChecked(hiddenStatus.contains(true));
+        checkBox_hidden->setCheckState(Qt::Checked);
+    } else { // hiddenStatus.contains(false)
+        checkBox_hidden->setTristate(false);
+        checkBox_hidden->setCheckState(Qt::Unchecked);
     }
     initHiddenInstructions();
 
@@ -199,7 +202,7 @@ void dlgRoomProperties::initLockInstructions()
 void dlgRoomProperties::initHiddenInstructions()
 {
     //: room properties dialog, setting hidden status
-    const QString instructions = tr("Hide %1 room(s) from the map display",
+    const QString instructions = tr("Hide room(s) from the map display",
                                     // Intentional comment to separate arguments!
                                     "This text will be shown at a checkbox, where you can set/unset a number of room's hidden status.",
                                     mpRooms.size());
