@@ -26,6 +26,9 @@
 /**
  * Test the MXP mode security and tag validation implementation
  *
+ * This addresses issues #8150 and #8899: MXP "open mode" security and
+ * preventing false positives when < appears in normal game text.
+ *
  * According to the MXP spec (https://www.zuggsoft.com/zmud/mxp.htm):
  * - OPEN mode (default after negotiation): Only OPEN-category tags allowed
  * - SECURE mode: All MXP tags allowed

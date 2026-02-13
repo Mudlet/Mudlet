@@ -927,6 +927,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
+    //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
+    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables including OSC link support."));
     protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
@@ -962,6 +964,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
+    //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
+    mEnableNEWENVIRON->setToolTip(tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
@@ -1324,6 +1328,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableNAWS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableCHARSET, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableNEWENVIRON, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
+
+    // MNES and NEW-ENVIRON both use telnet option 39, so they are mutually exclusive
+    connect(mEnableMNES, &QAction::toggled, this, [this](bool checked) {
+        if (checked && mEnableNEWENVIRON->isChecked()) {
+            mEnableNEWENVIRON->setChecked(false);
+        }
+    });
+    connect(mEnableNEWENVIRON, &QAction::toggled, this, [this](bool checked) {
+        if (checked && mEnableMNES->isChecked()) {
+            mEnableMNES->setChecked(false);
+        }
+    });
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);

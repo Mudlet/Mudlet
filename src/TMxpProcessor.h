@@ -70,6 +70,7 @@ public:
     bool setMode(const QString& code);
     bool setMode(int modeCode);
     TMXPMode mode() const;
+    TMXPMode defaultMode() const;
 
     void enable();
     void disable();
