@@ -3923,7 +3923,7 @@ void T2DMap::slot_showPropertiesDialog()
     QHash<QString, int> usedSymbols;
     QHash<int, int> usedWeights; // key is weight, value is count of uses
     QHash<bool, int> usedLockStatus;
-    QHash<bool, int> usedHiddenStatus;
+    int hiddenRoomCount = 0;
 
     while (itRoom.hasNext()) {
         TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -3979,13 +3979,10 @@ void T2DMap::slot_showPropertiesDialog()
             usedLockStatus[thisLockStatus] = 1;
         }
 
-        // Scan and count all the different hidden status used
-        const bool thisHiddenStatus = room->isHidden();
-        if (usedHiddenStatus.contains(thisHiddenStatus)) {
-            (usedHiddenStatus[thisHiddenStatus])++;
-        } else {
-            usedHiddenStatus[thisHiddenStatus] = 1;
-        }
+        // Count the hidden rooms
+        if (room->isHidden()) {
+            ++hiddenRoomCount;
+        };
     }
 
     // No need to show dialog if no rooms were found
@@ -3994,7 +3991,7 @@ void T2DMap::slot_showPropertiesDialog()
     }
 
     mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, usedHiddenStatus, roomPtrsSet);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, roomPtrsSet);
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
