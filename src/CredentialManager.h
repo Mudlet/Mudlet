@@ -108,6 +108,7 @@ private:
     // Static utility methods for fallback storage
     static QString generateFilePath(const QString& profileName, const QString& key);
     static QString generateServiceName(const QString& profileName, const QString& key);
+    static QString generateLegacyServiceName(const QString& profileName, const QString& key);
     static bool isValidKeyName(const QString& key);
     static bool storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential);
     static QString retrieveCredentialFromFile(const QString& profileName, const QString& key);
