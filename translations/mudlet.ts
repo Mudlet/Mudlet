@@ -1535,17 +1535,17 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="1049"/>
+        <location filename="../src/T2DMap.cpp" line="1050"/>
         <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="1725"/>
+        <location filename="../src/T2DMap.cpp" line="1726"/>
         <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/T2DMap.cpp" line="1722"/>
+        <location filename="../src/T2DMap.cpp" line="1723"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation type="unfinished">
             <numerusform></numerusform>
@@ -1568,7 +1568,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="1720"/>
+        <location filename="../src/T2DMap.cpp" line="1721"/>
         <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3338,148 +3338,148 @@ Tried these locations:
 <context>
     <name>TMap</name>
     <message>
-        <location filename="../src/TMap.cpp" line="165"/>
+        <location filename="../src/TMap.cpp" line="179"/>
         <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="176"/>
+        <location filename="../src/TMap.cpp" line="190"/>
         <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="586"/>
+        <location filename="../src/TMap.cpp" line="600"/>
         <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="589"/>
+        <location filename="../src/TMap.cpp" line="603"/>
         <source>[ INFO ] - Converting old style label id: %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="594"/>
+        <location filename="../src/TMap.cpp" line="608"/>
         <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="597"/>
+        <location filename="../src/TMap.cpp" line="611"/>
         <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="624"/>
+        <location filename="../src/TMap.cpp" line="638"/>
         <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="69"/>
+        <location filename="../src/TMap.cpp" line="83"/>
         <source>Default Area</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="70"/>
+        <location filename="../src/TMap.cpp" line="84"/>
         <source>Unnamed Area</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="142"/>
+        <location filename="../src/TMap.cpp" line="156"/>
         <source>[MAP ERROR:]%1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="553"/>
+        <location filename="../src/TMap.cpp" line="567"/>
         <source>[ INFO ]  - Map audit starting...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1533"/>
+        <location filename="../src/TMap.cpp" line="1550"/>
         <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1598"/>
+        <location filename="../src/TMap.cpp" line="1615"/>
         <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1604"/>
+        <location filename="../src/TMap.cpp" line="1621"/>
         <source>[ INFO ]  - Ignoring this map file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1775"/>
+        <location filename="../src/TMap.cpp" line="1793"/>
         <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1865"/>
+        <location filename="../src/TMap.cpp" line="1884"/>
         <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1880"/>
+        <location filename="../src/TMap.cpp" line="1899"/>
         <source>No map found. Would you like to download the map or start your own?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1881"/>
+        <location filename="../src/TMap.cpp" line="1900"/>
         <source>Download the map</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1882"/>
+        <location filename="../src/TMap.cpp" line="1901"/>
         <source>Start my own</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2388"/>
+        <location filename="../src/TMap.cpp" line="2407"/>
         <source>Map issues</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2395"/>
+        <location filename="../src/TMap.cpp" line="2414"/>
         <source>Area issues</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2401"/>
+        <location filename="../src/TMap.cpp" line="2420"/>
         <source>Area id: %1 &quot;%2&quot;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2403"/>
+        <location filename="../src/TMap.cpp" line="2422"/>
         <source>Area id: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2412"/>
+        <location filename="../src/TMap.cpp" line="2431"/>
         <source>Room issues</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2419"/>
+        <location filename="../src/TMap.cpp" line="2438"/>
         <source>Room id: %1 &quot;%2&quot;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2421"/>
+        <location filename="../src/TMap.cpp" line="2440"/>
         <source>Room id: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2431"/>
+        <location filename="../src/TMap.cpp" line="2450"/>
         <source>End of report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2437"/>
+        <location filename="../src/TMap.cpp" line="2456"/>
         <source>[ ALERT ] - At least one thing was detected during that last map operation
 that it is recommended that you review the most recent report in
 the file:
@@ -3489,7 +3489,7 @@ the file:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2445"/>
+        <location filename="../src/TMap.cpp" line="2464"/>
         <source>[ INFO ]  - The equivalent to the above information about that last map
 operation has been saved for review as the most recent report in
 the file:
@@ -3499,21 +3499,21 @@ the file:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2466"/>
+        <location filename="../src/TMap.cpp" line="2485"/>
         <source>[ WARN ]  - Attempt made to download an XML map when one has already been
 requested or is being imported from a local file - wait for that
 operation to complete (if it cannot be canceled) before retrying!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2487"/>
+        <location filename="../src/TMap.cpp" line="2506"/>
         <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2501"/>
+        <location filename="../src/TMap.cpp" line="2520"/>
         <source>[ ERROR ] - Unable to use or create directory to store map.
 Please check that you have permissions/access to:
 &quot;%1&quot;
@@ -3521,234 +3521,234 @@ and there is enough space. The download operation has failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2527"/>
+        <location filename="../src/TMap.cpp" line="2546"/>
         <source>[ INFO ]  - Map download initiated, please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2687"/>
+        <location filename="../src/TMap.cpp" line="2706"/>
         <source>[ ERROR ] - Map download encountered an error:
 %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2921"/>
+        <location filename="../src/TMap.cpp" line="2940"/>
         <source>Map JSON export</source>
         <extracomment>This is a title of a progress window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3146"/>
+        <location filename="../src/TMap.cpp" line="3165"/>
         <source>Map JSON import</source>
         <extracomment>This is a title of a progress window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2905"/>
-        <location filename="../src/TMap.cpp" line="3377"/>
+        <location filename="../src/TMap.cpp" line="2924"/>
+        <location filename="../src/TMap.cpp" line="3396"/>
         <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3050"/>
+        <location filename="../src/TMap.cpp" line="3069"/>
         <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3077"/>
+        <location filename="../src/TMap.cpp" line="3096"/>
         <source>import or export already in progress</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3083"/>
+        <location filename="../src/TMap.cpp" line="3102"/>
         <source>could not open file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3092"/>
+        <location filename="../src/TMap.cpp" line="3111"/>
         <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3098"/>
+        <location filename="../src/TMap.cpp" line="3117"/>
         <source>empty Json file, no map data detected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3112"/>
+        <location filename="../src/TMap.cpp" line="3131"/>
         <source>invalid format version &quot;%1&quot; detected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3117"/>
+        <location filename="../src/TMap.cpp" line="3136"/>
         <source>no format version detected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3121"/>
+        <location filename="../src/TMap.cpp" line="3140"/>
         <source>no areas detected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3243"/>
+        <location filename="../src/TMap.cpp" line="3262"/>
         <source>aborted by user</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="3130"/>
-        <location filename="../src/TMap.cpp" line="3387"/>
+        <location filename="../src/TMap.cpp" line="3149"/>
+        <location filename="../src/TMap.cpp" line="3406"/>
         <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1089"/>
+        <location filename="../src/TMap.cpp" line="1103"/>
         <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1105"/>
+        <location filename="../src/TMap.cpp" line="1119"/>
         <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1115"/>
+        <location filename="../src/TMap.cpp" line="1129"/>
         <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1473"/>
-        <location filename="../src/TMap.cpp" line="1924"/>
+        <location filename="../src/TMap.cpp" line="1490"/>
+        <location filename="../src/TMap.cpp" line="1943"/>
         <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1495"/>
+        <location filename="../src/TMap.cpp" line="1512"/>
         <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1510"/>
+        <location filename="../src/TMap.cpp" line="1527"/>
         <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1517"/>
+        <location filename="../src/TMap.cpp" line="1534"/>
         <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1526"/>
+        <location filename="../src/TMap.cpp" line="1543"/>
         <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1540"/>
+        <location filename="../src/TMap.cpp" line="1557"/>
         <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1545"/>
+        <location filename="../src/TMap.cpp" line="1562"/>
         <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1940"/>
+        <location filename="../src/TMap.cpp" line="1959"/>
         <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2536"/>
+        <location filename="../src/TMap.cpp" line="2555"/>
         <source>Downloading map file for use in %1...</source>
         <extracomment>%1 is the name of the current Mudlet profile</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2536"/>
-        <location filename="../src/TMap.cpp" line="2914"/>
-        <location filename="../src/TMap.cpp" line="3139"/>
+        <location filename="../src/TMap.cpp" line="2555"/>
+        <location filename="../src/TMap.cpp" line="2933"/>
+        <location filename="../src/TMap.cpp" line="3158"/>
         <source>Abort</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1502"/>
+        <location filename="../src/TMap.cpp" line="1519"/>
         <source>[ INFO ]  - Ignoring this unlikely map file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2538"/>
+        <location filename="../src/TMap.cpp" line="2557"/>
         <source>Map download</source>
         <extracomment>This is a title of a progress window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2563"/>
+        <location filename="../src/TMap.cpp" line="2582"/>
         <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2594"/>
+        <location filename="../src/TMap.cpp" line="2613"/>
         <source>Importing XML map file for use in %1...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2596"/>
+        <location filename="../src/TMap.cpp" line="2615"/>
         <source>Map import</source>
         <extracomment>This is a title of a progress window.</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2624"/>
-        <location filename="../src/TMap.cpp" line="2631"/>
+        <location filename="../src/TMap.cpp" line="2643"/>
+        <location filename="../src/TMap.cpp" line="2650"/>
         <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2668"/>
+        <location filename="../src/TMap.cpp" line="2687"/>
         <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2726"/>
+        <location filename="../src/TMap.cpp" line="2745"/>
         <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2733"/>
+        <location filename="../src/TMap.cpp" line="2752"/>
         <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2749"/>
+        <location filename="../src/TMap.cpp" line="2768"/>
         <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2785"/>
+        <location filename="../src/TMap.cpp" line="2804"/>
         <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2765"/>
+        <location filename="../src/TMap.cpp" line="2784"/>
         <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
         <translation type="unfinished"></translation>
@@ -5028,37 +5028,37 @@ Would you like to update now?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="321"/>
+        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="272"/>
         <source>Automatically download future updates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="368"/>
+        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="319"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="388"/>
+        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="339"/>
         <source>Install update now</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="395"/>
+        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="346"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="405"/>
+        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="356"/>
         <source>Remind me later</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="410"/>
+        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="361"/>
         <source>Skip this version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="555"/>
+        <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="540"/>
         <source>Could not open downloaded file %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -8248,61 +8248,43 @@ Further reading material, e.g., links to documentation or forum posts.
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="65"/>
-        <location filename="../src/dlgPackageManager.cpp" line="246"/>
-        <source>Installed</source>
-        <extracomment>Package manager - status item showing installed packages
-----------
-Package manager - status item showing number of installed packages</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgPackageManager.cpp" line="67"/>
-        <location filename="../src/dlgPackageManager.cpp" line="209"/>
-        <source>Available</source>
-        <extracomment>Package manager - status item showing available packages
-----------
-Package manager - status item showing number of available packages</extracomment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgPackageManager.cpp" line="174"/>
+        <location filename="../src/dlgPackageManager.cpp" line="194"/>
         <source>Version </source>
         <extracomment>Package manager - label showing package version</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="257"/>
+        <location filename="../src/dlgPackageManager.cpp" line="318"/>
         <source>Import Mudlet Package</source>
         <extracomment>Package manager - import packages from file dialog (multi-select enabled) Package manager - file filter for supported package types (mpackage, zip, xml)</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="257"/>
+        <location filename="../src/dlgPackageManager.cpp" line="318"/>
         <source>Mudlet Packages (*.mpackage *.zip *.xml)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="282"/>
+        <location filename="../src/dlgPackageManager.cpp" line="343"/>
         <source>Failed to import: %1</source>
         <extracomment>Package manager - status message shown when some packages failed to import. %1 is a comma-separated list of package names</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="294"/>
+        <location filename="../src/dlgPackageManager.cpp" line="355"/>
         <source>Downloading packages...</source>
         <extracomment>Package manager - cancel button text for download progress dialog</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="294"/>
+        <location filename="../src/dlgPackageManager.cpp" line="355"/>
         <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="334"/>
-        <location filename="../src/dlgPackageManager.cpp" line="343"/>
-        <location filename="../src/dlgPackageManager.cpp" line="394"/>
+        <location filename="../src/dlgPackageManager.cpp" line="393"/>
+        <location filename="../src/dlgPackageManager.cpp" line="402"/>
+        <location filename="../src/dlgPackageManager.cpp" line="451"/>
         <source>Installation Failed</source>
         <extracomment>Package manager: package couldn&apos;t be downloaded
 ----------
@@ -8310,44 +8292,99 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="334"/>
-        <location filename="../src/dlgPackageManager.cpp" line="343"/>
+        <location filename="../src/dlgPackageManager.cpp" line="393"/>
+        <location filename="../src/dlgPackageManager.cpp" line="402"/>
         <source>Package &apos;%1&apos; not found in repository</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="394"/>
+        <location filename="../src/dlgPackageManager.cpp" line="451"/>
         <source>Package &apos;%1&apos; could not be downloaded due to a network error</source>
         <translation type="unfinished"></translation>
     </message>
-    <message numerus="yes">
-        <location filename="../src/dlgPackageManager.cpp" line="666"/>
-        <source>Install (%n)</source>
-        <extracomment>Message on button in package manager to install one or more (%n is the count of) selected package(s).</extracomment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-        </translation>
+    <message>
+        <location filename="../src/dlgPackageManager.cpp" line="551"/>
+        <source>Version %1 → %2</source>
+        <extracomment>Package manager - version update indicator showing old and new versions</extracomment>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="669"/>
-        <location filename="../src/dlgPackageManager.cpp" line="673"/>
-        <source>Install</source>
-        <extracomment>Message on button in package manager initially and when there is no packages to install</extracomment>
+        <location filename="../src/dlgPackageManager.cpp" line="762"/>
+        <source>All packages are up to date.</source>
+        <extracomment>Package manager - message shown in description area when no updates are available</extracomment>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/dlgPackageManager.cpp" line="688"/>
-        <source>Remove (%n)</source>
-        <extracomment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</extracomment>
+        <location filename="../src/dlgPackageManager.cpp" line="799"/>
+        <source>Update (%n)</source>
+        <extracomment>Message on button in package manager to update multiple (%n is the count of) selected packages.</extracomment>
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="691"/>
-        <location filename="../src/dlgPackageManager.cpp" line="695"/>
+        <location filename="../src/dlgPackageManager.cpp" line="802"/>
+        <source>Update</source>
+        <extracomment>Message on button in package manager for updates view when zero or one package is selected</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgPackageManager.cpp" line="805"/>
+        <source>Update selected packages</source>
+        <extracomment>Tooltip for button in package manager when in Updates view</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/dlgPackageManager.cpp" line="809"/>
+        <source>Install (%n)</source>
+        <extracomment>Message on button in package manager to install multiple (%n is the count of) selected packages.</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/dlgPackageManager.cpp" line="812"/>
+        <location filename="../src/dlgPackageManager.cpp" line="819"/>
+        <source>Install</source>
+        <extracomment>Message on button in package manager initially and when zero or one package is selected
+----------
+Message on button in package manager initially and when there is no packages to install</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgPackageManager.cpp" line="815"/>
+        <location filename="../src/dlgPackageManager.cpp" line="822"/>
+        <source>Install package from repository</source>
+        <extracomment>Tooltip for button in package manager when in Explore view</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/dlgPackageManager.cpp" line="834"/>
+        <source>Remove (%n)</source>
+        <extracomment>Message on button in package manager to remove multiple (%n is the count of) selected packages.</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/dlgPackageManager.cpp" line="837"/>
+        <location filename="../src/dlgPackageManager.cpp" line="841"/>
         <source>Remove</source>
-        <extracomment>Message on button in package manager initially and when there is no packages to remove</extracomment>
+        <extracomment>Message on button in package manager initially and when zero or one package is selected
+----------
+Message on button in package manager initially and when there is no packages to remove</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgPackageManager.cpp" line="859"/>
+        <source>Updates (%1)</source>
+        <extracomment>Package manager - navigation button showing number of available updates</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgPackageManager.cpp" line="862"/>
+        <source>Updates</source>
+        <extracomment>Package manager - navigation button for updates view</extracomment>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -14535,54 +14572,69 @@ try again when it has finished.</source>
 <context>
     <name>package_manager</name>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="62"/>
-        <location filename="../src/ui/package_manager.ui" line="65"/>
+        <location filename="../src/ui/package_manager.ui" line="87"/>
+        <source>Explore</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/package_manager.ui" line="97"/>
+        <source>Installed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/package_manager.ui" line="110"/>
+        <source>Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/package_manager.ui" line="174"/>
+        <location filename="../src/ui/package_manager.ui" line="177"/>
         <source>Search packages</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="143"/>
+        <location filename="../src/ui/package_manager.ui" line="236"/>
         <source>Install package from repository</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="146"/>
+        <location filename="../src/ui/package_manager.ui" line="239"/>
         <source>Install</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="156"/>
+        <location filename="../src/ui/package_manager.ui" line="249"/>
         <source>Install package from file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="159"/>
+        <location filename="../src/ui/package_manager.ui" line="252"/>
         <source>Install from file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="172"/>
+        <location filename="../src/ui/package_manager.ui" line="265"/>
         <source>Remove package from installed packages</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="175"/>
+        <location filename="../src/ui/package_manager.ui" line="268"/>
         <source>Remove</source>
         <comment>Message on button in package manager initially and when there is no packages to remove.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="228"/>
+        <location filename="../src/ui/package_manager.ui" line="321"/>
         <source>TextLabel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="330"/>
+        <location filename="../src/ui/package_manager.ui" line="423"/>
         <source>Open package repository website</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/package_manager.ui" line="343"/>
+        <location filename="../src/ui/package_manager.ui" line="436"/>
         <source>Report an issue with this package</source>
         <translation type="unfinished"></translation>
     </message>

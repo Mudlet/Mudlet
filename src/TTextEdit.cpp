@@ -823,7 +823,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter,
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
-    if (!textRect.isNull() && bgColor != mpConsole->getConsoleBgColor()) {
+    if (!textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole) || bgColor != mpConsole->getConsoleBgColor()) {
         painter.fillRect(textRect, bgColor);
     }
     return charWidth;

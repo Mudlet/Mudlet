@@ -294,11 +294,9 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         while (itSymbolUsed.hasNext()) {
             itSymbolUsed.next();
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                /*:
-                Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., "★" or "!"),
-                %2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
-                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
-                */
+                /*: Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., "★" or "!"),
+%2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
+The word "count" and the format can be translated, but ensure the numbers remain clearly associated.*/
                 displayStrings.append(tr("%1 (count: %2)").arg(itSymbolUsed.key(), QString::number(itSymbolUsed.value())));
             }
         }
@@ -331,11 +329,9 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
         while (itWeightUsed.hasNext()) {
             itWeightUsed.next();
             if (itWeightUsed.value() == weightCountsList.at(i)) {
-                /*:
-                Format for showing a room weight with its usage count. %1 is the weight value (e.g., "1" or "50"),
-                %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
-                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
-                */
+                /*: Format for showing a room weight with its usage count. %1 is the weight value (e.g., "1" or "50"),
+ %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
+ The word "count" and the format can be translated, but ensure the numbers remain clearly associated.*/
                 displayStrings.append(tr("%1 (count: %2)").arg(QString::number(itWeightUsed.key()), QString::number(itWeightUsed.value())));
             }
         }
