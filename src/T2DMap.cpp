@@ -3982,7 +3982,7 @@ void T2DMap::slot_showPropertiesDialog()
         // Count the hidden rooms
         if (room->isHidden()) {
             ++hiddenRoomCount;
-        };
+        }
     }
 
     // No need to show dialog if no rooms were found
