@@ -442,20 +442,19 @@ function Geyser.MiniConsole:resetAutoWrap()
   if not self.autoWrap then
     return nil, "Autowrap is not enabled for " .. self.name
   end
+
+  -- Skip auto-wrap adjustment when profile is in background (#8273)
+  -- When switching profiles, the main window reports width of 0, causing
+  -- miniconsoles to wrap at wrong widths. Skip adjustment if main window
+  -- is too small, which indicates profile is backgrounded.
+  local mainWidth = getMainWindowSize()
+  local minMainWindowWidth = 10
+  if mainWidth < minMainWindowWidth then
+    return nil, "main window too small (profile may be backgrounded)"
+  end
+
   local fontWidth, fontHeight = calcFontSize(self.name)
   local consoleWidth = self.get_width()
-
-  -- Cache width and use cached value if current drops significantly (indicates background profile, #8273)
-  local autoWrapShrinkThreshold = 0.6
-  local minCacheableWidth = 1
-  local cachedWidth = self.cachedAutoWrapWidth
-  local isShrunk = cachedWidth and consoleWidth < cachedWidth * autoWrapShrinkThreshold
-
-  if isShrunk then
-    consoleWidth = cachedWidth
-  elseif consoleWidth > minCacheableWidth then
-    self.cachedAutoWrapWidth = consoleWidth
-  end
 
   if self.scrollBar then
     consoleWidth = consoleWidth - 15
