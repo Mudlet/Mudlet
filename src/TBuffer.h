@@ -176,6 +176,10 @@ public:
         Blink = 0x40,                 // 0000 0000 0000 0000 0000 0000 0100 0000
         // Flashing at least 150 times a minute:
         FastBlink = 0x80,             // 0000 0000 0000 0000 0000 0000 1000 0000
+        // Mask for "is flashing" at any rate - will return a logical true
+        // should either of the above be set - should both be set then FastBlink
+        // should take preference over Blink:
+        BlinkMask = 0xC0,             // 0000 0000 0000 0000 0000 0000 1100 0000
         // Alternate fonts 1 to 9 from SGR 11 m to SGR 19 m; we flag each one
         // separately so that trigger processing can select them individually
         // which could not be done should they be rolled up into just 4 bits.
@@ -195,14 +199,12 @@ public:
         // From SGR 8 m; however there is no MUD standard protocol to control
         // when we should show concealed text.
         Concealed = 0x20000,          // 0000 0000 0000 0010 0000 0000 0000 0000
-        // Mask for "is flashing" at any rate - will return a logical true
-        // should either of the above be set - should both be set then FastBlink
-        // should take preference over Blink:
-        BlinkMask = 0xC0,             // 0000 0000 0000 0000 0000 0000 1100 0000
         // Mask for "any alternate font" - only the most significant one should
         // be used if more than one is set:
         AltFontMask = 0x1ff00,        // 0000 0000 0000 0001 1111 1111 0000 0000
-        TestMask = 0x1f3ffff,         // 0000 0001 1111 0011 1111 1111 1111 1111 (includes extended underline styles)
+        // Used to filter out flags that relate to the visible presentation of
+        // the text:
+        TestMask = 0x1f3ffff,         // 0000 0001 1100 0011 1111 1111 1111 1111 (includes extended underline styles)
         // The remainder are internal use ones that do not related to SGR codes
         // that have been parsed from the incoming text.
         // Has been found in a search operation (currently Main Console only)
@@ -210,6 +212,7 @@ public:
         Found = 0x100000,             // 0000 0000 0001 0000 0000 0000 0000 0000
         // Replaces TCHAR_ECHO 16
         Echo = 0x200000               // 0000 0000 0010 0000 0000 0000 0000 0000
+        // Currently unused/available:   1111 1110 0000 1100 0000 0000 0000 0000
     };
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
