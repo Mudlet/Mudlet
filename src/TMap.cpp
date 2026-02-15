@@ -63,6 +63,20 @@ void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, Q
         }
     }
 }
+
+// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
+void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
+    if (userData.contains(colorKey)) {
+        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
+        if (colorParts.size() == 4) {
+            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
+        } else {
+            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
+        }
+    }
+}
 } // anonymous namespace
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -1181,7 +1195,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         } else {
             pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
         }
-        // Store font info for labels in userData (avoids binary format version change)
+        // Store font and outline color info for labels in userData (avoids binary format version change)
         const auto permanentLabelsList{pA->getPermanentLabelIds()};
         for (const auto labelID : permanentLabelsList) {
             const auto label = pA->mMapLabels.value(labelID);
@@ -1193,6 +1207,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 const QString fontValue = qsl("%1|%2|%3|%4").arg(label.font.family()).arg(label.font.pointSize()).arg(label.font.weight()).arg(label.font.italic() ? 1 : 0);
                 pA->mUserData.insert(fontKey, fontValue);
             }
+            const QString outlineColorKey = qsl("system.labelOutlineColor_%1").arg(labelID);
+            const QString outlineColorValue = qsl("%1|%2|%3|%4").arg(label.outlineColor.red()).arg(label.outlineColor.green()).arg(label.outlineColor.blue()).arg(label.outlineColor.alpha());
+            pA->mUserData.insert(outlineColorKey, outlineColorValue);
         }
         ofs << pA->mUserData;
         if (mSaveVersion >= 21) {
@@ -1762,6 +1779,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
                         restoreLabelFontFromUserData(label, labelId, pA->mUserData);
+                        restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
@@ -1831,6 +1849,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                     }
                     if (pA) {
                         restoreLabelFontFromUserData(label, labelID, pA->mUserData);
+                        restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
                         pA->mMapLabels.insert(labelID, label);
                     }
                     ++areaLabelCounter;

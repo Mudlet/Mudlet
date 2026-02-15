@@ -124,10 +124,6 @@ echo ""
 echo "Running CMake to configure project ..."
 echo ""
 
-# Since we have this already installed as a package there is no need to build
-# it from a submodule - set as environment variable for CMake
-export WITH_OWN_QTKEYCHAIN=NO
-
 # Set Ninja status format for consistent build output
 export NINJA_STATUS='[%f/%t %o/sec] '
 

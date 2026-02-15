@@ -726,6 +726,7 @@ private:
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
     int mCharacterModeWarningsShown = 0; // Character-at-a-time mode detection
     int mEchoAbuseWarningsShown = 0;     // ECHO abuse detection
+
     // show the tutorial maximum 3 times on a new Mudlet
     static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
     static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media

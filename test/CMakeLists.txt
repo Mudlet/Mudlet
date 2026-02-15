@@ -34,28 +34,11 @@ link_libraries(
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
-# Include the same keychain configuration as main project
-include(IncludeOptionalModule)
-include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
-                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
-                        READABLE_NAME "own QtKeychain library")
-
-if(NOT DEFINED USE_OWN_QTKEYCHAIN)
-    # Check the parent project's setting
-    get_directory_property(parent_USE_OWN_QTKEYCHAIN PARENT_DIRECTORY USE_OWN_QTKEYCHAIN)
-    if(DEFINED parent_USE_OWN_QTKEYCHAIN)
-        set(USE_OWN_QTKEYCHAIN ${parent_USE_OWN_QTKEYCHAIN})
-    endif()
-endif()
-
 # Configure QtKeychain linking
-if(USE_OWN_QTKEYCHAIN)
-    # Link to the already built qt6keychain target from parent
-    set(KEYCHAIN_LIBRARY qt6keychain)
-else()
+if(NOT USE_OWN_QTKEYCHAIN)
     find_package(Qt6Keychain REQUIRED)
-    set(KEYCHAIN_LIBRARY qt6keychain)
 endif()
+set(KEYCHAIN_LIBRARY qt6keychain)
 
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
@@ -98,6 +81,10 @@ add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandle
 
 add_executable(TMxpModeSecurityTest TMxpModeSecurityTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
 add_test(NAME TMxpModeSecurityTest COMMAND TMxpModeSecurityTest)
+
+add_executable(TMxpEdgeCasesTest TMxpEdgeCasesTest.cpp ${MXP_SOURCE} ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpEdgeCasesTest COMMAND TMxpEdgeCasesTest)
+
 add_executable(TMxpElementDefinitionHandlerTest TMxpElementDefinitionHandlerTest.cpp ${MXP_SOURCE})
 add_test(NAME TMxpElementDefinitionHandlerTest COMMAND TMxpElementDefinitionHandlerTest)
 
