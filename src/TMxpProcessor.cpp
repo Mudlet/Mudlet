@@ -446,6 +446,15 @@ bool TMxpProcessor::isValidTagName(const std::string& tagName) const
     return true;
 }
 
+QString TMxpProcessor::abortCurrentTag()
+{
+    const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
+    const QString decoded = decodeRawBytes(rawBytes, mpMxpClient->getEncoding());
+    const QString result = qsl("<") + decoded;
+    mMxpTagBuilder.reset();
+    return result;
+}
+
 TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
 {
     const std::string rawBytes = mMxpTagBuilder.getRawTagContent();

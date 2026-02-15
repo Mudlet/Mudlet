@@ -97,6 +97,10 @@ public:
     // Used for early rejection during character-by-character tag building
     bool couldBeValidMxpTag(const QString& partialName) const;
 
+    // Abort the current tag being built (e.g., when ANSI escape interrupts it)
+    // Returns the literal text that should be output ("<" + accumulated content)
+    QString abortCurrentTag();
+
     // All MXP tags defined in the specification (case-insensitive, stored uppercase)
     static const QSet<QString>& allMxpTags();
     // MXP tags allowed in OPEN mode per the specification

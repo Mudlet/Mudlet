@@ -667,6 +667,22 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // '\\' so must not respond to an ESC here - though the code
                 // arrangement should avoid looping around this loop while
                 // seeking this character pair anyhow...
+
+                // If MXP is building a tag when we see ESC, the tag is invalid
+                // because ANSI escape sequences cannot be part of MXP tags.
+                // Output the partial tag as literal text before processing ESC.
+                if (mpHost->mMxpProcessor.isEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                    attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                    TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                    const QString literalText = mpHost->mMxpProcessor.abortCurrentTag();
+                    mMudLine.append(literalText);
+                    for (int i = 0; i < literalText.length(); ++i) {
+                        mMudBuffer.push_back(c);
+                    }
+                }
+
                 mGotESC = true;
                 ++localBufferPosition;
                 continue;
