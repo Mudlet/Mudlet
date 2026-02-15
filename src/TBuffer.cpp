@@ -1360,18 +1360,14 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         // line there should not be any changes to text before a line feed
         // which sort of seems to be implied by the current value of ch:
 
-        // Check if there's an active MXP DEST - route to destination frame
+        // Check if there's an active MXP DEST - capture state now, route AFTER triggers
+        // We need to let triggers process the line before routing to destination,
+        // otherwise triggers never see text sent to MXP destination frames
+        TConsole* mxpDestConsole = nullptr;
         if (mpHost->mMxpFrameManager.hasActiveDestination()) {
             TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
             if (destConsole && destConsole != mpHost->mpConsole) {
-                if (!mMudLine.isEmpty()) {
-                    destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
-                }
-                mMudLine.clear();
-                mMudBuffer.clear();
-                ++localBufferPosition;
-                // Skip creating lines in main console while destination is active
-                return true;
+                mxpDestConsole = destConsole;
             }
         }
 
@@ -1434,6 +1430,19 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition)
         const int line = lineBuffer.size() - 1;
         if (!mSkipTriggerProcessing) {
             mpHost->mpConsole->runTriggers(line);
+        }
+
+        // If MXP DEST was active when this line was committed, route to destination
+        // AFTER trigger processing so triggers can see/modify the text
+        if (mxpDestConsole) {
+            // Route the (potentially trigger-modified) line to destination console
+            if (!lineBuffer[line].isEmpty()) {
+                mxpDestConsole->printFormatted(lineBuffer[line], buffer[line], mLinkStore);
+            }
+            // Clear from main buffer so it doesn't display there
+            // (keep the line slot empty for line number stability)
+            lineBuffer[line].clear();
+            buffer[line].clear();
         }
 
         // Only use of TBuffer::wrap(), breaks up new text
@@ -1897,17 +1906,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -1947,7 +1956,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
@@ -1993,17 +2002,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2043,7 +2052,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
@@ -2342,17 +2351,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2394,7 +2403,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
@@ -2460,17 +2469,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2510,7 +2519,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
