@@ -439,12 +439,7 @@ bool TMxpProcessor::isValidTagName(const std::string& tagName) const
     }
     for (char ch : tagName) {
         // Valid tag name characters: A-Z, a-z, 0-9, hyphen, slash (for closing tags), exclamation mark (for !ELEMENT)
-        if (!((ch >= 'A' && ch <= 'Z') || 
-              (ch >= 'a' && ch <= 'z') || 
-              (ch >= '0' && ch <= '9') || 
-              ch == '-' || 
-              ch == '/' ||
-              ch == '!')) {
+        if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '/' || ch == '!')) {
             return false;
         }
     }
@@ -454,11 +449,33 @@ bool TMxpProcessor::isValidTagName(const std::string& tagName) const
 TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
 {
     const std::string rawBytes = mMxpTagBuilder.getRawTagContent();
-    const QString decoded = decodeRawBytes(rawBytes, mpMxpClient->getEncoding());
+
+    // Remove the last byte (the invalid character that triggered rejection).
+    // That character will be re-processed through HANDLER_INSERT_AND_REPROCESS,
+    // allowing ANSI escape sequences starting with ESC to be properly handled
+    // instead of being output as literal text.
+    std::string validPrefix = rawBytes.empty() ? "" : rawBytes.substr(0, rawBytes.length() - 1);
+
+    // Trim any trailing UTF-8 continuation bytes to avoid passing an incomplete
+    // multi-byte sequence to decodeRawBytes. UTF-8 continuation bytes have the
+    // pattern 10xxxxxx (0x80-0xBF). Walk backwards until we reach a valid
+    // sequence start (ASCII 0x00-0x7F or multi-byte start 0xC0+).
+    while (!validPrefix.empty()) {
+        unsigned char lastByte = static_cast<unsigned char>(validPrefix.back());
+        if ((lastByte & 0xC0) == 0x80) {
+            // This is a continuation byte (10xxxxxx), remove it
+            validPrefix.pop_back();
+        } else {
+            // This is either ASCII or a multi-byte start byte - valid ending
+            break;
+        }
+    }
+
+    const QString decoded = decodeRawBytes(validPrefix, mpMxpClient->getEncoding());
 
     lastEntityValue = qsl("<") + decoded;
     mMxpTagBuilder.reset();
-    return HANDLER_INSERT_ENTITY_SYS;
+    return HANDLER_INSERT_AND_REPROCESS;
 }
 
 void TMxpProcessor::processRawInput(char ch)

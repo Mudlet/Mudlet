@@ -45,13 +45,16 @@ private:
   /**
    * Helper: feed a string through the MXP processor character by character
    * and collect all entity values that are output (rejected/literal text).
+   * Handles both HANDLER_INSERT_ENTITY_SYS and HANDLER_INSERT_AND_REPROCESS
+   * which are used when tags are rejected as literal text.
    */
   static QString processAndCollectOutput(TMxpProcessor &processor,
                                          const std::string &input) {
     QString output;
     for (char ch : input) {
       TMxpProcessingResult result = processor.processMxpInput(ch, true);
-      if (result == HANDLER_INSERT_ENTITY_SYS) {
+      if (result == HANDLER_INSERT_ENTITY_SYS ||
+          result == HANDLER_INSERT_AND_REPROCESS) {
         output += processor.getEntityValue();
       }
     }
@@ -287,6 +290,73 @@ private slots:
 
     // Should be output as literal text
     QVERIFY(output.contains(qsl("<IMAGE")));
+  }
+
+  // ---------------------------------------------------------------
+  // ANSI escape sequences after < character (Issue #8899)
+  // When < is followed by ESC (0x1B), it should be rejected immediately
+  // and the ESC should be reprocessed as an ANSI sequence, not literal text.
+  // ---------------------------------------------------------------
+
+  void testAnsiEscapeAfterLessThanReprocessed() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // Input: < followed by ESC (which starts an ANSI escape sequence)
+    // The ESC character (0x1B) is not a valid MXP tag name character
+    std::string input = {'<', '\x1B'};
+    QString output;
+    TMxpProcessingResult lastResult = HANDLER_FALL_THROUGH;
+
+    for (size_t i = 0; i < input.size(); ++i) {
+      char ch = input[i];
+      lastResult = processor.processMxpInput(ch, true);
+      if (lastResult == HANDLER_INSERT_ENTITY_SYS ||
+          lastResult == HANDLER_INSERT_AND_REPROCESS) {
+        output += processor.getEntityValue();
+      }
+    }
+
+    // The result should be HANDLER_INSERT_AND_REPROCESS so ESC gets reprocessed
+    QCOMPARE(lastResult, HANDLER_INSERT_AND_REPROCESS);
+
+    // Output should only contain '<', not the ESC (which should be reprocessed)
+    QCOMPARE(output, qsl("<"));
+  }
+
+  void testAnsiEscapeSequenceInTextPreserved() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+
+    QCOMPARE(processor.mode(), MXP_MODE_OPEN);
+
+    // Simulate the problematic case from issue #8899:
+    // Text like "<\e[1m19" where \e is ESC (0x1B)
+    // After rejection, only '<' should be in entity value, and
+    // the ESC should be returned for reprocessing
+    std::string input = {'<', '\x1B', '[', '1', 'm', '1', '9'};
+    QString output;
+    std::vector<TMxpProcessingResult> results;
+
+    for (size_t i = 0; i < input.size(); ++i) {
+      char ch = input[i];
+      TMxpProcessingResult result = processor.processMxpInput(ch, true);
+      results.push_back(result);
+      if (result == HANDLER_INSERT_ENTITY_SYS ||
+          result == HANDLER_INSERT_AND_REPROCESS) {
+        output += processor.getEntityValue();
+      }
+    }
+
+    // When ESC is encountered after '<', we should get
+    // HANDLER_INSERT_AND_REPROCESS with entity value "<" (just the less-than,
+    // not the ESC)
+    QVERIFY(output == qsl("<"));
+
+    // The ESC triggers HANDLER_INSERT_AND_REPROCESS (results[1])
+    QCOMPARE(results[1], HANDLER_INSERT_AND_REPROCESS);
   }
 
   // ---------------------------------------------------------------
