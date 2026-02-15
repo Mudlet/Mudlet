@@ -389,8 +389,8 @@ void TLabel::slot_linkActivated(const QString& link)
 
         // Handle custom Mudlet URL schemes for Lua commands
         if (scheme == qsl("send")) {
-            // send: scheme - send the command to the MUD immediately
-            mpHost->send(payload);
+            // send: scheme - send the command to the MUD immediately, preferably without echoing in the command line
+            mpHost->send(payload, false);
             return;
         }
 
