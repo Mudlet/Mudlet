@@ -231,7 +231,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
     if (shouldUseKeychain(profileName)) {
         // Use keychain storage
         QString service = generateServiceName(profileName, key);
-        storeCredential(service, key, password, callback);
+        storeCredential(service, key, password, profileName, callback);
     } else {
         // Use SecureStringUtils for portable/test environments
         bool success = storeCredentialToFile(profileName, key, password);
@@ -274,11 +274,11 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
 
         // Helper to try old colliding format and migrate if found
         auto tryCollidingFormat = [this, profileName, key, legacyService, callback]() {
-            retrieveCredential(legacyService, key, [this, profileName, key, legacyService, callback](bool oldSuccess, const QString& oldPassword, const QString& oldError) {
+            retrieveCredential(legacyService, key, profileName, [this, profileName, key, legacyService, callback](bool oldSuccess, const QString& oldPassword, const QString& oldError) {
                 if (oldSuccess && !oldPassword.isEmpty()) {
                     qDebug() << "CredentialManager: Migrating password from colliding format for" << profileName;
                     // Migrate to new format
-                    storePassword(profileName, key, oldPassword, [this, legacyService, key, callback, oldPassword](bool migrationSuccess, const QString& migrationError) {
+                    storePassword(profileName, key, oldPassword, [this, legacyService, key, profileName, callback, oldPassword](bool migrationSuccess, const QString& migrationError) {
                         if (migrationSuccess) {
                             // Only clean up old colliding entry if version > 4.20.1
                             // The colliding format bug existed in 4.20.0 and 4.20.1
@@ -289,7 +289,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
                             const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
 
                             if (appVersion > collidingFormatVersion) {
-                                removeCredential(legacyService, key, [](bool, const QString&) {});
+                                removeCredential(legacyService, key, profileName, [](bool, const QString&) {});
                             }
 #endif
                         } else {
@@ -364,7 +364,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
             }
         };
 
-        retrieveCredential(service, key, newFormatCallback);
+        retrieveCredential(service, key, profileName, newFormatCallback);
     } else {
         // Use SecureStringUtils directly (portable/test mode)
         QString password = retrieveCredentialFromFile(profileName, key);
@@ -404,7 +404,7 @@ void CredentialManager::removePassword(const QString& profileName, const QString
 
         auto combinedCallback = [this, profileName, key, legacyService, callback](bool keychainSuccess, const QString& keychainError) {
             // Also remove from old colliding format (ignore result as it might not exist)
-            removeCredential(legacyService, key, [this, profileName, key, callback, keychainSuccess, keychainError](bool oldSuccess, const QString&) {
+            removeCredential(legacyService, key, profileName, [this, profileName, key, callback, keychainSuccess, keychainError](bool oldSuccess, const QString&) {
                 // Also remove from SecureStringUtils (ignore result as it might not exist there)
                 bool fileSuccess = removeCredentialFromFile(profileName, key);
 
@@ -418,7 +418,7 @@ void CredentialManager::removePassword(const QString& profileName, const QString
             });
         };
 
-        removeCredential(service, key, combinedCallback);
+        removeCredential(service, key, profileName, combinedCallback);
     } else {
         // Use SecureStringUtils
         bool success = removeCredentialFromFile(profileName, key);
@@ -455,11 +455,11 @@ void CredentialManager::migratePassword(const QString& profileName, const QStrin
     storePassword(profileName, key, plaintextPassword, callback);
 }
 
-void CredentialManager::storeCredential(const QString& service, const QString& account, const QString& password, CredentialCallback callback)
+void CredentialManager::storeCredential(const QString& service, const QString& account, const QString& password, const QString& profileName, CredentialCallback callback)
 {
-    if (service.isEmpty() || account.isEmpty()) {
+    if (service.isEmpty() || account.isEmpty() || profileName.isEmpty()) {
         if (callback) {
-            callback(false, qsl("Service and account cannot be empty"));
+            callback(false, qsl("Service, account, and profile name cannot be empty"));
         }
 
         return;
@@ -497,7 +497,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
             writeJob,
             &QKeychain::WritePasswordJob::finished,
             this,
-            [this, writeJob, service, account, password]() {
+            [this, writeJob, service, account, password, profileName]() {
                 // Early exit if operation is no longer valid
                 if (!isOperationValid()) {
                     qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
@@ -514,8 +514,8 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
                 if (!success) {
                     qDebug() << "CredentialManager: Keychain storage failed, using encrypted file storage:" << errorMessage;
 
-                    // Use service as profile name and account as key for file storage
-                    bool fileSuccess = storeCredentialToFile(service, account, password);
+                    // Use actual profile name (not service name) for file storage
+                    bool fileSuccess = storeCredentialToFile(profileName, account, password);
 
                     if (fileSuccess) {
                         success = true;
@@ -544,11 +544,11 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
     writeJob->start();
 }
 
-void CredentialManager::retrieveCredential(const QString& service, const QString& account, CredentialRetrievalCallback callback)
+void CredentialManager::retrieveCredential(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback)
 {
-    if (service.isEmpty() || account.isEmpty()) {
+    if (service.isEmpty() || account.isEmpty() || profileName.isEmpty()) {
         if (callback) {
-            callback(false, QString(), qsl("Service and account cannot be empty"));
+            callback(false, QString(), qsl("Service, account, and profile name cannot be empty"));
         }
 
         return;
@@ -583,7 +583,7 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
             readJob,
             &QKeychain::ReadPasswordJob::finished,
             this,
-            [this, readJob, service, account]() {
+            [this, readJob, service, account, profileName]() {
                 // Early exit if operation is no longer valid
                 if (!isOperationValid()) {
                     qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
@@ -702,8 +702,8 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                             } else {
                                 qDebug() << "CredentialManager: No legacy password found for profile" << profileName;
 
-                                // No legacy password, try file storage
-                                QString filePassword = retrieveCredentialFromFile(service, account);
+                                // No legacy password, try file storage using actual profile name
+                                QString filePassword = retrieveCredentialFromFile(profileName, account);
                                 bool fileSuccess = !filePassword.isNull();
                                 QString finalError = fileSuccess ? QString() : qsl("Both keychain and encrypted file storage failed for credentials. Keychain: %1").arg(keychainError);
 
@@ -727,7 +727,8 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     }
 
                     // Not a character password or not new format, try file storage directly
-                    password = retrieveCredentialFromFile(service, account);
+                    // Use actual profile name (not service name) for file storage path
+                    password = retrieveCredentialFromFile(profileName, account);
 
                     if (!password.isNull()) {
                         success = true;
@@ -754,11 +755,11 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
     readJob->start();
 }
 
-void CredentialManager::removeCredential(const QString& service, const QString& account, CredentialCallback callback)
+void CredentialManager::removeCredential(const QString& service, const QString& account, const QString& profileName, CredentialCallback callback)
 {
-    if (service.isEmpty() || account.isEmpty()) {
+    if (service.isEmpty() || account.isEmpty() || profileName.isEmpty()) {
         if (callback) {
-            callback(false, "Service and account cannot be empty");
+            callback(false, "Service, account, and profile name cannot be empty");
         }
 
         return;
@@ -793,7 +794,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
             deleteJob,
             &QKeychain::DeletePasswordJob::finished,
             this,
-            [this, deleteJob, service, account]() {
+            [this, deleteJob, service, account, profileName]() {
                 // Early exit if operation is no longer valid
                 if (!isOperationValid()) {
                     qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
@@ -806,7 +807,8 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
                 bool keychainSuccess = (deleteJob->error() == QKeychain::NoError || deleteJob->error() == QKeychain::EntryNotFound);
 
                 // Always try to remove from file storage as well (for cleanup)
-                bool fileSuccess = removeCredentialFromFile(service, account);
+                // Use actual profile name (not service name) for file storage path
+                bool fileSuccess = removeCredentialFromFile(profileName, account);
 
                 // Consider success if either method succeeded
                 bool success = keychainSuccess || fileSuccess;

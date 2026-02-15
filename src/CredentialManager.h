@@ -81,9 +81,10 @@ public:
 
 private:
     // Low-level async keychain methods (internal use only - use hybrid *Password methods instead)
-    void storeCredential(const QString& service, const QString& account, const QString& password, CredentialCallback callback);
-    void retrieveCredential(const QString& service, const QString& account, CredentialRetrievalCallback callback);
-    void removeCredential(const QString& service, const QString& account, CredentialCallback callback);
+    // profileName is used for file storage fallback (the service name is a hash that can't be reversed)
+    void storeCredential(const QString& service, const QString& account, const QString& password, const QString& profileName, CredentialCallback callback);
+    void retrieveCredential(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
+    void removeCredential(const QString& service, const QString& account, const QString& profileName, CredentialCallback callback);
 
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);
