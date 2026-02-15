@@ -276,76 +276,14 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         auto tryCollidingFormat = [this, profileName, key, legacyService, callback]() {
             retrieveCredential(legacyService, key, profileName, [this, profileName, key, legacyService, callback](bool oldSuccess, const QString& oldPassword, const QString& oldError) {
                 if (oldSuccess && !oldPassword.isEmpty()) {
-                    qDebug() << "CredentialManager: Migrating password from colliding format for" << profileName;
-                    // Migrate to new format
-                    storePassword(profileName, key, oldPassword, [this, legacyService, key, profileName, callback, oldPassword](bool migrationSuccess, const QString& migrationError) {
-                        if (migrationSuccess) {
-                            // Only clean up old colliding entry if version > 4.20.1
-                            // The colliding format bug existed in 4.20.0 and 4.20.1
-                            // Preserving the entry allows users to switch back to those versions
-#ifdef APP_VERSION
-                            const QString currentVersion = QString(APP_VERSION);
-                            const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
-                            const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
-
-                            if (appVersion > collidingFormatVersion) {
-                                removeCredential(legacyService, key, profileName, [](bool, const QString&) {});
-                            }
-#endif
-                        } else {
-                            qWarning() << "CredentialManager: Migration failed:" << migrationError;
-                        }
-                        if (callback) {
-                            callback(true, oldPassword, QString());
-                        }
-                    });
+                    attemptCollidingMigration(profileName, key, legacyService, oldPassword, callback);
                 } else {
                     // Old format not found, try legacy keychain format
                     if (key == "password" || key == "character") {
-                        checkLegacyKeychainFormat(profileName, [this, profileName, key, callback](bool legacySuccess, const QString& legacyPassword) {
-                            if (legacySuccess && !legacyPassword.isEmpty()) {
-                                qDebug() << "CredentialManager: Migrating password from legacy format for" << profileName;
-                                storePassword(profileName, key, legacyPassword, [this, profileName, callback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
-                                    if (!migrationSuccess) {
-                                        qWarning() << "CredentialManager: Migration failed:" << migrationError;
-                                    } else {
-                                        // Only clean up legacy entry after successful migration if this version is >= 4.20.0
-                                        // This prevents breaking compatibility with older Mudlet versions
-#ifdef APP_VERSION
-                                        const QString currentVersion = QString(APP_VERSION);
-                                        const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
-                                        const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
-                                        if (appVersion >= secureStorageVersion) {
-                                            deleteLegacyKeychainEntry(profileName);
-                                        }
-#endif
-                                    }
-                                    if (callback) {
-                                        callback(true, legacyPassword, QString());
-                                    }
-                                });
-                            } else {
-                                // Try encrypted file storage as final fallback
-                                QString fallbackPassword = retrieveCredentialFromFile(profileName, key);
-                                if (callback) {
-                                    if (!fallbackPassword.isEmpty()) {
-                                        callback(true, fallbackPassword, QString());
-                                    } else {
-                                        callback(false, QString(), qsl("No stored credentials found for profile %1").arg(profileName));
-                                    }
-                                }
-                            }
-                        });
+                        attemptLegacyKeychainMigration(profileName, key, callback);
                     } else {
                         // Not a password request, use encrypted file storage directly
-                        QString fallbackPassword = retrieveCredentialFromFile(profileName, key);
-                        if (callback) {
-                            if (!fallbackPassword.isEmpty()) {
-                                callback(true, fallbackPassword, QString());
-                            } else {
-                                callback(false, QString(), qsl("No stored credentials found for profile %1").arg(profileName));
-                            }
-                        }
+                        fallbackFileRetrieval(profileName, key, callback);
                     }
                 }
             });
@@ -353,7 +291,6 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
 
         // First try new hash-based format
         auto newFormatCallback = [this, profileName, key, callback, tryCollidingFormat](bool keychainSuccess, const QString& keychainPassword, const QString& keychainError) {
-
             if (keychainSuccess && !keychainPassword.isEmpty()) {
                 if (callback) {
                     callback(true, keychainPassword, QString());
@@ -373,6 +310,84 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         if (callback) {
             // Empty password is normal for first-time profiles - not an error
             callback(success, password, success ? QString() : qsl("No password stored in encrypted file storage"));
+        }
+    }
+}
+
+void CredentialManager::attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback)
+{
+    qDebug() << "CredentialManager: Migrating password from colliding format for" << profileName;
+
+    // Migrate to new format
+    storePassword(profileName, key, password, [this, legacyService, key, profileName, callback, password](bool migrationSuccess, const QString& migrationError) {
+        if (migrationSuccess) {
+            // Only clean up old colliding entry if version > 4.20.1
+            // The colliding format bug existed in 4.20.0 and 4.20.1
+            // Preserving the entry allows users to switch back to those versions
+#ifdef APP_VERSION
+            const QString currentVersion = QString(APP_VERSION);
+            const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
+            const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
+
+            if (appVersion > collidingFormatVersion) {
+                removeCredential(legacyService, key, profileName, [](bool, const QString&) {});
+            }
+#endif
+        } else {
+            qWarning() << "CredentialManager: Migration failed:" << migrationError;
+        }
+
+        // Return the recovered password even if migration failed
+        if (callback) {
+            callback(true, password, QString());
+        }
+    });
+}
+
+void CredentialManager::attemptLegacyKeychainMigration(const QString& profileName, const QString& key, CredentialRetrievalCallback callback)
+{
+    checkLegacyKeychainFormat(profileName, [this, profileName, key, callback](bool legacySuccess, const QString& legacyPassword) {
+        if (legacySuccess && !legacyPassword.isEmpty()) {
+            qDebug() << "CredentialManager: Migrating password from legacy format for" << profileName;
+
+            storePassword(profileName, key, legacyPassword, [this, profileName, callback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
+                if (!migrationSuccess) {
+                    qWarning() << "CredentialManager: Migration failed:" << migrationError;
+                } else {
+                    // Only clean up legacy entry after successful migration if this version is >= 4.20.0
+                    // This prevents breaking compatibility with older Mudlet versions
+#ifdef APP_VERSION
+                    const QString currentVersion = QString(APP_VERSION);
+                    const QVersionNumber appVersion = QVersionNumber::fromString(currentVersion);
+                    const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
+
+                    if (appVersion >= secureStorageVersion) {
+                        deleteLegacyKeychainEntry(profileName);
+                    }
+#endif
+                }
+
+                // Return the recovered password even if migration failed
+                if (callback) {
+                    callback(true, legacyPassword, QString());
+                }
+            });
+        } else {
+            // Try encrypted file storage as final fallback
+            fallbackFileRetrieval(profileName, key, callback);
+        }
+    });
+}
+
+void CredentialManager::fallbackFileRetrieval(const QString& profileName, const QString& key, CredentialRetrievalCallback callback)
+{
+    QString fallbackPassword = retrieveCredentialFromFile(profileName, key);
+
+    if (callback) {
+        if (!fallbackPassword.isEmpty()) {
+            callback(true, fallbackPassword, QString());
+        } else {
+            callback(false, QString(), qsl("No stored credentials found for profile %1").arg(profileName));
         }
     }
 }

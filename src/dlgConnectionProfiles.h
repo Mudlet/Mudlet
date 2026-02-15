@@ -153,6 +153,7 @@ private:
     QTimer mSearchTextTimer;
     QString mSearchText;
     QTimer* mPasswordSaveTimer = nullptr;
+    QString mPendingPasswordSaveProfile;  // Profile name for pending password save
 
     // Async connection handling
     QString mPendingProfileLoad;  // Profile name waiting for password load
