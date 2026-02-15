@@ -1178,6 +1178,15 @@ void TMainConsole::setProfileName(const QString& newName)
     }
 }
 
+void TMainConsole::refreshSubconsoles()
+{
+    for (const auto pC : std::as_const(mSubConsoleMap)) {
+        if (pC) {
+            pC->refreshView();
+        }
+    }
+}
+
 std::pair<bool, QString> TMainConsole::setUserWindowTitle(const QString& name, const QString& text)
 {
     if (name.isEmpty()) {
