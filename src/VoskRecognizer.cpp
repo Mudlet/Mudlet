@@ -67,6 +67,7 @@ qint64 AudioInputBuffer::writeData(const char* data, qint64 len)
     emit dataAvailable(newData);
     return len;
 }
+
 VoskRecognizer::VoskRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 {
@@ -273,9 +274,9 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     }
 
     // Apply optional settings if available
-    if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != 0) {
-        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, mEndpointerMode);
-        qDebug() << "VoskRecognizer: Applied endpointer mode" << mEndpointerMode;
+    if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
+        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
+        qDebug() << "VoskRecognizer: Applied endpointer mode" << static_cast<int>(mEndpointerMode);
     }
     if (s_vosk_recognizer_set_words && mWordsEnabled) {
         s_vosk_recognizer_set_words(mVoskRecognizer, 1);
@@ -994,15 +995,16 @@ void VoskRecognizer::setSelectedModelPath(const QString& modelPath)
     settings.endGroup();
 }
 
-void VoskRecognizer::setEndpointerMode(int mode)
+void VoskRecognizer::setEndpointerMode(EndpointerMode mode)
 {
-    // Clamp to valid range: 0 (DEFAULT) to 4 (VERY_LONG)
-    mEndpointerMode = qBound(0, mode, 4);
+    // Clamp to valid range: Default (0) to VeryLong (4)
+    int modeInt = qBound(0, static_cast<int>(mode), 4);
+    mEndpointerMode = static_cast<EndpointerMode>(modeInt);
 
     // Apply to recognizer if it exists
     if (mVoskRecognizer && s_vosk_recognizer_set_endpointer_mode) {
-        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, mEndpointerMode);
-        qDebug() << "VoskRecognizer: Set endpointer mode to" << mEndpointerMode;
+        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, modeInt);
+        qDebug() << "VoskRecognizer: Set endpointer mode to" << modeInt;
     }
 }
 

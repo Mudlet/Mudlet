@@ -2300,6 +2300,14 @@ void mudlet::disableToolbarButtons()
     dactionToggleLogging->setEnabled(false);
     dactionToggleEmergencyStop->setEnabled(false);
 
+    // Stop speech recognition if it's active before disabling the button
+    if (mSpeechRecognitionActive && mpSpeechRecognizer) {
+        mpSpeechRecognizer->stopListening();
+        mSpeechRecognitionActive = false;
+        mCurrentPartialResult.clear();
+        updateAllSpeechButtons();
+    }
+
     mpButtonSpeechToText->setEnabled(false);
 
     dactionInputLine->setEnabled(false);
@@ -4663,18 +4671,17 @@ void mudlet::initSpeechRecognition()
         // Apply global settings to the recognizer
         auto* voskRecognizer = qobject_cast<VoskRecognizer*>(mpSpeechRecognizer);
         if (voskRecognizer) {
-            // Map UI index (0=Default, 1=Short, 2=Long) to Vosk EndpointerMode
-            // Vosk: 0=DEFAULT, 1=VERY_SHORT, 2=SHORT, 3=LONG, 4=VERY_LONG
-            int voskMode = 0; // DEFAULT
+            // Map UI index to Vosk EndpointerMode
+            VoskRecognizer::EndpointerMode voskMode = VoskRecognizer::EndpointerMode::Default;
             switch (mSpeechDetectionTiming) {
-            case 1:
-                voskMode = 2; // SHORT
+            case SpeechDetectionTiming::Short:
+                voskMode = VoskRecognizer::EndpointerMode::Short;
                 break;
-            case 2:
-                voskMode = 3; // LONG
+            case SpeechDetectionTiming::Long:
+                voskMode = VoskRecognizer::EndpointerMode::Long;
                 break;
             default:
-                voskMode = 0; // DEFAULT
+                voskMode = VoskRecognizer::EndpointerMode::Default;
                 break;
             }
             voskRecognizer->setEndpointerMode(voskMode);
@@ -4725,7 +4732,6 @@ void mudlet::slot_toggleSpeechRecognition()
         if (setupDialog.exec() == QDialog::Accepted) {
             // Setup completed successfully, re-initialize and start listening
             delete mpSpeechRecognizer;
-            mpSpeechRecognizer = nullptr;
             initSpeechRecognition();
             if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
                 // Save current text from active command line before starting
@@ -4749,9 +4755,8 @@ void mudlet::slot_toggleSpeechRecognition()
         mSpeechRecognitionActive = false;
         mCurrentPartialResult.clear();
     } else {
-        // Save current text from active command line before starting speech recognition
-        Host* pHost = getActiveHost();
-        TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+        // Save current text from focused command line before starting speech recognition
+        TCommandLine* pCommandLine = focusedCommandLine();
         if (pCommandLine) {
             mTextBeforeSpeech = pCommandLine->toPlainText();
         } else {
@@ -4766,15 +4771,36 @@ void mudlet::slot_toggleSpeechRecognition()
     updateAllSpeechButtons();
 }
 
+void mudlet::setFocusedCommandLine(TCommandLine* pCommandLine)
+{
+    mpLastFocusedCommandLine = pCommandLine;
+}
+
+TCommandLine* mudlet::focusedCommandLine() const
+{
+    // Return the last focused command line if it's still valid,
+    // otherwise fall back to the active host's command line
+    if (mpLastFocusedCommandLine) {
+        return mpLastFocusedCommandLine;
+    }
+
+    // Fallback: use the active host's active command line
+    Host* pHost = mpCurrentActiveHost;
+    if (pHost) {
+        return pHost->activeCommandLine();
+    }
+
+    return nullptr;
+}
+
 void mudlet::slot_handlePartialSpeechResult(const QString& text)
 {
     if (!mSpeechRecognitionActive) {
         return;
     }
 
-    // Get the active command line to route the text to
-    Host* pHost = getActiveHost();
-    TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+    // Get the focused command line to route the text to (respects window focus)
+    TCommandLine* pCommandLine = focusedCommandLine();
     if (!pCommandLine) {
         return;
     }
@@ -4816,9 +4842,8 @@ void mudlet::slot_handleFinalSpeechResult(const QString& text)
         return;
     }
 
-    // Get the active command line to route the text to
-    Host* pHost = getActiveHost();
-    TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+    // Get the focused command line to route the text to (respects window focus)
+    TCommandLine* pCommandLine = focusedCommandLine();
     if (!pCommandLine) {
         return;
     }
@@ -4864,14 +4889,17 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
     updateAllSpeechButtons();
 
     // Restore original text if there was a partial result in progress
-    Host* pHost = getActiveHost();
-    TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+    TCommandLine* pCommandLine = focusedCommandLine();
+
     if (pCommandLine && (!mTextBeforeSpeech.isEmpty() || !pCommandLine->toPlainText().isEmpty())) {
         pCommandLine->setPlainText(mTextBeforeSpeech);
         QTextCursor cursor = pCommandLine->textCursor();
         cursor.movePosition(QTextCursor::End);
         pCommandLine->setTextCursor(cursor);
     }
+
+    // Get the host from the focused command line for the error message
+    Host* pHost = (pCommandLine && pCommandLine->console()) ? pCommandLine->console()->getHost() : getActiveHost();
 
     if (pHost) {
         pHost->postMessage(tr("[Speech Recognition] Error: %1").arg(errorMessage));
@@ -4880,10 +4908,11 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
 
 void mudlet::slot_handleSpeechStateChanged(int newState)
 {
-    updateAllSpeechButtons();
     if (newState == static_cast<int>(SpeechRecognizer::State::Error)) {
         mSpeechRecognitionActive = false;
     }
+
+    updateAllSpeechButtons();
 }
 
 void mudlet::updateSpeechButton()
@@ -4898,6 +4927,7 @@ void mudlet::updateSpeechButton()
     if (mSpeechRecognitionActive) {
         mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-on.png")));
         mpButtonSpeechToText->setToolTip(utils::richText(tr("Stop listening (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+
         if (mpSpeechPulseTimer && !mpSpeechPulseTimer->isActive()) {
             mSpeechPulseState = true;
             mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
@@ -4906,9 +4936,11 @@ void mudlet::updateSpeechButton()
     } else {
         mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
         mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+
         if (mpSpeechPulseTimer) {
             mpSpeechPulseTimer->stop();
         }
+
         mpButtonSpeechToText->setStyleSheet(QString());
     }
 }
@@ -4918,9 +4950,12 @@ void mudlet::updateAllSpeechButtons()
     // Update main window speech button
     updateSpeechButton();
 
-    // Update speech buttons in all detached windows
+    // Update speech buttons in all detached windows (dedupe to avoid multiple calls)
+    QSet<TDetachedWindow*> seen;
+
     for (TDetachedWindow* pWindow : mDetachedWindows) {
-        if (pWindow) {
+        if (pWindow && !seen.contains(pWindow)) {
+            seen.insert(pWindow);
             pWindow->updateSpeechButton();
         }
     }
@@ -6777,10 +6812,13 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 void mudlet::activateProfile(Host* pHost)
 {
     QMap<QString, int> hostNameToTabMap;
+
     for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
         hostNameToTabMap.insert(mpTabBar->tabData(i).toString(), i);
     }
+
     QString oldActiveHostName;
+
     if (mpCurrentActiveHost) {
         oldActiveHostName = mpCurrentActiveHost->getName();
     }
@@ -6796,6 +6834,12 @@ void mudlet::activateProfile(Host* pHost)
         // Nothing to do if the caller was the current foreground host, but on
         // the initial start up mpCurrentActiveHost WILL be a nullptr
         return;
+    }
+
+    // Clear speech recognition state when switching profiles to prevent text
+    // from the previous profile's command line being injected into the new one
+    if (mSpeechRecognitionActive) {
+        mTextBeforeSpeech.clear();
     }
 
     const QString newActiveHostName{pHost->getName()};

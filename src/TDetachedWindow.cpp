@@ -931,8 +931,10 @@ void TDetachedWindow::createToolBar()
     mpSpeechPulseTimer->setInterval(500);
     connect(mpSpeechPulseTimer, &QTimer::timeout, this, [this]() {
         if (mpButtonSpeechToText && !mCurrentProfileName.isEmpty()) {
-            if (mudlet::self()->isSpeechRecognitionActive()) {
+            auto* m = mudlet::self();
+            if (m && m->isSpeechRecognitionActive()) {
                 mSpeechPulseState = !mSpeechPulseState;
+
                 if (mSpeechPulseState) {
                     mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
                 } else {
@@ -1191,8 +1193,7 @@ void TDetachedWindow::updateMenuShortcuts()
     assignShortcut(mpMenuToggleTimeStampAction, qsl("Toggle Time Stamps"), QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T));
     assignShortcut(mpMenuMuteMediaAction, qsl("Mute all media"), QKeySequence(Qt::CTRL | Qt::Key_K));
     assignShortcut(mpMenuMultiViewAction, qsl("MultiView"), QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V));
-    // Speech to text uses Ctrl+Shift+M on all platforms
-    mpMenuSpeechToTextAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
+    assignShortcut(mpMenuSpeechToTextAction, qsl("Speech to text"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
 #else
     assignShortcut(mpMenuConnectAction, qsl("Play"), QKeySequence(Qt::ALT | Qt::Key_C));
     assignShortcut(mpMenuDisconnectAction, qsl("Disconnect"), QKeySequence(Qt::ALT | Qt::Key_D));
@@ -1211,8 +1212,7 @@ void TDetachedWindow::updateMenuShortcuts()
     assignShortcut(mpMenuToggleTimeStampAction, qsl("Toggle Time Stamps"), QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T));
     assignShortcut(mpMenuMuteMediaAction, qsl("Mute all media"), QKeySequence(Qt::ALT | Qt::Key_K));
     assignShortcut(mpMenuMultiViewAction, qsl("MultiView"), QKeySequence(Qt::ALT | Qt::Key_V));
-    // Speech to text uses Ctrl+Shift+M on all platforms
-    mpMenuSpeechToTextAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
+    assignShortcut(mpMenuSpeechToTextAction, qsl("Speech to text"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
 #endif
 }
 
@@ -3054,7 +3054,13 @@ void TDetachedWindow::slot_muteGame()
 void TDetachedWindow::slot_toggleSpeechRecognition()
 {
     // Delegate to the global speech recognition handler
-    mudlet::self()->slot_toggleSpeechRecognition();
+    auto* m = mudlet::self();
+
+    if (!m) {
+        return;
+    }
+
+    m->slot_toggleSpeechRecognition();
 }
 
 void TDetachedWindow::updateSpeechButton()
@@ -3063,8 +3069,8 @@ void TDetachedWindow::updateSpeechButton()
         return;
     }
 
-    // Use the global speech recognition state
-    const bool isActive = mudlet::self()->isSpeechRecognitionActive();
+    // Use the global speech recognition state, treating as inactive if mudlet singleton is unavailable
+    const bool isActive = mudlet::self() ? mudlet::self()->isSpeechRecognitionActive() : false;
 
     // Keep menu action in sync with speech state
     if (mpMenuSpeechToTextAction) {
@@ -3074,6 +3080,7 @@ void TDetachedWindow::updateSpeechButton()
     if (isActive) {
         mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-on.png")));
         mpButtonSpeechToText->setToolTip(utils::richText(tr("Stop listening (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+
         if (mpSpeechPulseTimer && !mpSpeechPulseTimer->isActive()) {
             mSpeechPulseState = true;
             mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
@@ -3082,9 +3089,11 @@ void TDetachedWindow::updateSpeechButton()
     } else {
         mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
         mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+
         if (mpSpeechPulseTimer) {
             mpSpeechPulseTimer->stop();
         }
+
         mpButtonSpeechToText->setStyleSheet(QString());
     }
 }

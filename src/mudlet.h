@@ -87,6 +87,7 @@ class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
 class ShortcutManager;
+class TCommandLine;
 class TConsole;
 class TDetachedWindow;
 class TDockWidget;
@@ -298,6 +299,11 @@ public:
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
+    bool isSpeechRecognitionActive() const { return mSpeechRecognitionActive; }
+    int speechDetectionTiming() const { return static_cast<int>(mSpeechDetectionTiming); }
+    void setSpeechDetectionTiming(int timing) { mSpeechDetectionTiming = static_cast<SpeechDetectionTiming>(timing); }
+    bool highlightLowConfidenceWords() const { return mHighlightLowConfidenceWords; }
+    void setHighlightLowConfidenceWords(bool enabled) { mHighlightLowConfidenceWords = enabled; }
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
     void showOptionsDialog(const QString&);
@@ -428,14 +434,11 @@ public slots:
     void slot_muteGame(const bool);
     void slot_toggleSpeechRecognition();
     void updateSpeechButton();
-    void updateAllSpeechButtons(); // Update speech button state across all windows
+    void updateAllSpeechButtons();
     void initSpeechRecognition();
-    bool isSpeechRecognitionActive() const { return mSpeechRecognitionActive; }
-    int speechDetectionTiming() const { return mSpeechDetectionTiming; }
-    void setSpeechDetectionTiming(int timing) { mSpeechDetectionTiming = timing; }
-    bool highlightLowConfidenceWords() const { return mHighlightLowConfidenceWords; }
-    void setHighlightLowConfidenceWords(bool enabled) { mHighlightLowConfidenceWords = enabled; }
     void setSpeechNeedsReset(bool reset) { mSpeechNeedsReset = reset; }
+    void setFocusedCommandLine(TCommandLine* pCommandLine);
+    TCommandLine* focusedCommandLine() const;
     void slot_handlePartialSpeechResult(const QString& text);
     void slot_handleFinalSpeechResult(const QString& text);
     void slot_handleSpeechError(const QString& errorMessage);
@@ -686,15 +689,19 @@ private:
     bool mSpeechPulseState = false;
 
     // Global speech-to-text singleton
-    SpeechRecognizer* mpSpeechRecognizer = nullptr;
+    QPointer<SpeechRecognizer> mpSpeechRecognizer;
     bool mSpeechRecognitionActive = false;
     QString mTextBeforeSpeech;
     QString mCurrentPartialResult;
     bool mSpeechNeedsReset = false;
 
     // Global speech settings (not per-profile)
-    int mSpeechDetectionTiming = 0; // 0=Default, 1=Short, 2=Long
+    enum class SpeechDetectionTiming { Default = 0, Short = 1, Long = 2 };
+    SpeechDetectionTiming mSpeechDetectionTiming = SpeechDetectionTiming::Default;
     bool mHighlightLowConfidenceWords = false;
+
+    // Tracks the last command line that received focus (for speech-to-text routing)
+    QPointer<TCommandLine> mpLastFocusedCommandLine;
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;

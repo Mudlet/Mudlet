@@ -642,6 +642,21 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
         mpHost->recordActiveCommandLine(this);
     }
 
+    // Record this as the globally focused command line for speech-to-text routing
+    mudlet::self()->setFocusedCommandLine(this);
+
+    // When speech recognition is active and this command line has text that
+    // isn't already selected, select all text so user knows it will be affected
+    if (mudlet::self()->isSpeechRecognitionActive()) {
+        const QString currentText = toPlainText();
+        if (!currentText.isEmpty() && mSelectedText != currentText) {
+            QTextCursor cursor = textCursor();
+            cursor.movePosition(QTextCursor::Start);
+            cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+            setTextCursor(cursor);
+        }
+    }
+
     QPlainTextEdit::focusInEvent(event);
 }
 

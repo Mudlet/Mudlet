@@ -882,6 +882,7 @@ void dlgSpeechRecognitionSetup::slot_libraryDownloadFinished()
 
     // Save downloaded data to file
     QFile file(mLibraryDownloadPath);
+
     if (!file.open(QIODevice::WriteOnly)) {
         mpLibraryDownloadStatusLabel->setText(tr("<span style='color: red;'>Failed to save download</span>"));
         mpDownloadLibraryButton->setEnabled(true);
@@ -889,6 +890,7 @@ void dlgSpeechRecognitionSetup::slot_libraryDownloadFinished()
         mpCurrentDownload = nullptr;
         return;
     }
+
     file.write(mpCurrentDownload->readAll());
     file.close();
 
@@ -923,6 +925,7 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
 {
     // Create destination directory if needed
     QDir destDir(destinationDir);
+
     if (!destDir.exists()) {
         if (!destDir.mkpath(qsl("."))) {
             qWarning() << "dlgSpeechRecognitionSetup: Failed to create directory:" << destinationDir;
@@ -932,6 +935,7 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
 
     // Check if we have write permission
     QFileInfo destInfo(destinationDir);
+
     if (!destInfo.isWritable()) {
         qWarning() << "dlgSpeechRecognitionSetup: No write permission to:" << destinationDir;
 
@@ -949,6 +953,7 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
 
     // Ensure destination ends with separator (mudlet::unzip concatenates paths directly)
     QString destination = destinationDir;
+
     if (!destination.endsWith(QDir::separator()) && !destination.endsWith(QLatin1Char('/'))) {
         destination += QDir::separator();
     }
@@ -973,12 +978,15 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
 
         // Check subdirectories (Vosk archives have a folder like "vosk-osx-0.3.45/")
         const QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
         for (const QString& subDir : subDirs) {
             QDir sub(dir.absoluteFilePath(subDir));
+
             if (sub.exists(fileName)) {
                 return sub.absoluteFilePath(fileName);
             }
         }
+
         return QString();
     };
 
@@ -987,24 +995,40 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
         if (srcPath.isEmpty()) {
             return false;
         }
+
         QString finalPath = QDir(destinationDir).filePath(fileName);
+
         if (srcPath == finalPath) {
             return true; // Already in place
         }
+
         // Remove existing file if present
         if (QFile::exists(finalPath)) {
-            QFile::remove(finalPath);
+            if (!QFile::remove(finalPath)) {
+                QFile existingFile(finalPath);
+                qWarning() << "dlgSpeechRecognitionSetup: Failed to remove existing file" << finalPath
+                           << "for" << fileName << "-" << existingFile.errorString();
+                return false;
+            }
         }
+
         if (!QFile::copy(srcPath, finalPath)) {
             qWarning() << "dlgSpeechRecognitionSetup: Failed to copy" << fileName << "to final location";
             return false;
         }
-        QFile::remove(srcPath);
+
+        if (!QFile::remove(srcPath)) {
+            QFile srcFile(srcPath);
+            qWarning() << "dlgSpeechRecognitionSetup: Failed to remove source file" << srcPath
+                       << "after copying" << fileName << "-" << srcFile.errorString();
+        }
+
         return true;
     };
 
     // Find and install the main library
     QString extractedLibPath = findFileInExtracted(destDir, libInfo.libraryName);
+
     if (extractedLibPath.isEmpty()) {
         qWarning() << "dlgSpeechRecognitionSetup: Could not find" << libInfo.libraryName << "in extracted archive";
         return false;
@@ -1027,19 +1051,41 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
 #endif
     };
 
+    QStringList installedDlls;
+    QStringList skippedDlls;
+    QStringList failedDlls;
+
     for (const QString& dllName : windowsRuntimeDlls) {
         QString dllPath = findFileInExtracted(destDir, dllName);
-        if (!dllPath.isEmpty()) {
-            copyFileToDestination(dllPath, dllName);
-            qDebug() << "dlgSpeechRecognitionSetup: Installed runtime DLL:" << dllName;
+
+        if (dllPath.isEmpty()) {
+            skippedDlls << QStringLiteral("%1 (not found in archive)").arg(dllName);
+        } else if (copyFileToDestination(dllPath, dllName)) {
+            installedDlls << dllName;
+        } else {
+            failedDlls << QStringLiteral("%1 (copy failed)").arg(dllName);
         }
-        // Note: Not failing if runtime DLLs aren't found - they may already be on the system
-        // or the user may have a newer Vosk build that statically links them
     }
+
+    // Emit summary of runtime DLL installation results
+    if (!installedDlls.isEmpty()) {
+        qDebug().noquote() << "dlgSpeechRecognitionSetup: Installed runtime DLLs:" << installedDlls.join(qsl(", "));
+    }
+
+    if (!skippedDlls.isEmpty()) {
+        qDebug().noquote() << "dlgSpeechRecognitionSetup: Skipped runtime DLLs:" << skippedDlls.join(qsl("; "));
+    }
+
+    if (!failedDlls.isEmpty()) {
+        qWarning().noquote() << "dlgSpeechRecognitionSetup: Failed to install runtime DLLs:" << failedDlls.join(qsl("; "));
+    }
+    // Note: Not failing if runtime DLLs aren't found or fail to copy - they may already be on the system
+    // or the user may have a newer Vosk build that statically links them
 #endif
 
     // Clean up extracted directory contents (but not the library we just installed)
     const QStringList subDirs = destDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
     for (const QString& subDir : subDirs) {
         if (subDir.startsWith(qsl("vosk-"))) {
             QDir sub(destDir.absoluteFilePath(subDir));

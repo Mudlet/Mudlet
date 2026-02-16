@@ -100,6 +100,15 @@ class VoskRecognizer : public SpeechRecognizer
     Q_OBJECT
 
 public:
+    // Endpointer mode controls how quickly Vosk detects end of speech
+    enum class EndpointerMode {
+        Default = 0,   // Balanced (default, good for most use)
+        VeryShort = 1, // Very fast detection (may cut off words)
+        Short = 2,     // Faster detection (good for commands)
+        Long = 3,      // Slower detection (good for dictation)
+        VeryLong = 4   // Very slow detection (continuous speech)
+    };
+
     explicit VoskRecognizer(QObject* parent = nullptr);
     ~VoskRecognizer() override;
 
@@ -119,14 +128,8 @@ public:
     QString backendVersion() const override;
     bool isBackendAvailable() const override;
 
-    // Endpointer mode controls how quickly Vosk detects end of speech
-    // 0 = DEFAULT - balanced (default, good for most use)
-    // 1 = VERY_SHORT - very fast detection (may cut off words)
-    // 2 = SHORT - faster detection (good for commands)
-    // 3 = LONG - slower detection (good for dictation)
-    // 4 = VERY_LONG - very slow detection (continuous speech)
-    void setEndpointerMode(int mode);
-    int endpointerMode() const { return mEndpointerMode; }
+    void setEndpointerMode(EndpointerMode mode);
+    EndpointerMode endpointerMode() const { return mEndpointerMode; }
 
     // Enable word-level confidence scores in results
     void setWordsEnabled(bool enabled);
@@ -262,7 +265,7 @@ private:
     static vosk_recognizer_set_words_fn s_vosk_recognizer_set_words;
 
     // Settings
-    int mEndpointerMode = 0; // DEFAULT
+    EndpointerMode mEndpointerMode = EndpointerMode::Default;
     bool mWordsEnabled = false;
 };
 
