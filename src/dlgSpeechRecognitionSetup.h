@@ -22,6 +22,7 @@
 
 #include <QComboBox>
 #include <QDialog>
+#include <QFile>
 #include <QLabel>
 #include <QNetworkAccessManager>
 #include <QPointer>
@@ -159,6 +160,7 @@ private:
     bool mDownloadingLibrary = false;
     QString mInstalledModelPath;
     QString mDownloadedFilePath;
+    QFile mDownloadFile;  // File handle for streaming download to disk
     QString mLibraryDownloadPath;
     QString mCurrentlyDownloadingModelId;  // Model identifier being downloaded
 };

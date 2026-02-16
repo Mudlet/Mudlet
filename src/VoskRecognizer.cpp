@@ -27,6 +27,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMediaDevices>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QTimer>
@@ -64,7 +65,7 @@ qint64 AudioInputBuffer::writeData(const char* data, qint64 len)
     return len;
 }
 VoskRecognizer::VoskRecognizer(QObject* parent)
-    : SpeechRecognizer(parent)
+: SpeechRecognizer(parent)
 {
     // Set up audio format for Vosk (16kHz, 16-bit, mono PCM)
     mAudioFormat.setSampleRate(VOSK_SAMPLE_RATE);
@@ -103,15 +104,12 @@ bool VoskRecognizer::loadVoskLibrary()
         QStringList searchPaths;
 
 #if defined(Q_OS_MACOS)
-        searchPaths << QStringLiteral("/usr/local/lib/libvosk.dylib")
-                    << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
+        searchPaths << QStringLiteral("/usr/local/lib/libvosk.dylib") << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
                     << QCoreApplication::applicationDirPath() + QStringLiteral("/../Frameworks/libvosk.dylib");
 #elif defined(Q_OS_WIN)
         searchPaths << QCoreApplication::applicationDirPath() + QStringLiteral("/vosk.dll");
 #else
-        searchPaths << QStringLiteral("/usr/lib/libvosk.so")
-                    << QStringLiteral("/usr/local/lib/libvosk.so")
-                    << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
+        searchPaths << QStringLiteral("/usr/lib/libvosk.so") << QStringLiteral("/usr/local/lib/libvosk.so") << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
 #endif
 
         for (const QString& path : searchPaths) {
@@ -140,10 +138,8 @@ bool VoskRecognizer::loadVoskLibrary()
     s_vosk_set_log_level = reinterpret_cast<vosk_set_log_level_fn>(sVoskLibrary.resolve("vosk_set_log_level"));
 
     // Check that essential functions were resolved
-    if (!s_vosk_model_new || !s_vosk_model_free || !s_vosk_recognizer_new ||
-        !s_vosk_recognizer_free || !s_vosk_recognizer_accept_waveform ||
-        !s_vosk_recognizer_result || !s_vosk_recognizer_partial_result ||
-        !s_vosk_recognizer_final_result) {
+    if (!s_vosk_model_new || !s_vosk_model_free || !s_vosk_recognizer_new || !s_vosk_recognizer_free || !s_vosk_recognizer_accept_waveform || !s_vosk_recognizer_result
+        || !s_vosk_recognizer_partial_result || !s_vosk_recognizer_final_result) {
         qWarning() << "VoskRecognizer: Failed to resolve required Vosk functions";
         sVoskLibrary.unload();
         return false;
@@ -203,15 +199,12 @@ QStringList VoskRecognizer::librarySearchPaths()
     QStringList paths;
 
 #if defined(Q_OS_MACOS)
-    paths << QStringLiteral("/usr/local/lib/libvosk.dylib")
-          << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
+    paths << QStringLiteral("/usr/local/lib/libvosk.dylib") << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
           << QCoreApplication::applicationDirPath() + QStringLiteral("/../Frameworks/libvosk.dylib");
 #elif defined(Q_OS_WIN)
     paths << QCoreApplication::applicationDirPath() + QStringLiteral("/vosk.dll");
 #else
-    paths << QStringLiteral("/usr/lib/libvosk.so")
-          << QStringLiteral("/usr/local/lib/libvosk.so")
-          << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
+    paths << QStringLiteral("/usr/lib/libvosk.so") << QStringLiteral("/usr/local/lib/libvosk.so") << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
 #endif
 
     return paths;
@@ -294,11 +287,11 @@ bool VoskRecognizer::setupAudioInput()
         emit errorOccurred(tr("No microphone available"));
         return false;
     }
-    
+
     // Always use the device's preferred format for reliable capture on macOS
     // We'll resample/convert to Vosk's format (16kHz mono Int16) later
     QAudioFormat formatToUse = inputDevice.preferredFormat();
-    
+
     // Store the format we're actually using for later conversion
     mActualAudioFormat = formatToUse;
 
@@ -327,23 +320,30 @@ void VoskRecognizer::startListening()
     // which development builds don't have, so we use AVFoundation directly.
 #if defined(Q_OS_MACOS)
     auto status = MacMicrophonePermission::checkStatus();
-    
+
     switch (status) {
-    case MacMicrophonePermission::NotDetermined:
+    case MacMicrophonePermission::NotDetermined: {
         // Request permission - callback is called on background thread
-        MacMicrophonePermission::requestAccess([this](bool granted) {
+        // Use QPointer to safely handle the case where VoskRecognizer is destroyed
+        // before the permission callback or timer fires
+        QPointer<VoskRecognizer> weakThis = this;
+        MacMicrophonePermission::requestAccess([weakThis](bool granted) {
             // Need to dispatch back to main thread
-            QTimer::singleShot(0, this, [this, granted]() {
+            QTimer::singleShot(0, [weakThis, granted]() {
+                if (!weakThis) {
+                    return; // VoskRecognizer was destroyed
+                }
                 if (granted) {
-                    startListeningInternal();
+                    weakThis->startListeningInternal();
                 } else {
                     qWarning() << "VoskRecognizer: Microphone permission denied by user";
-                    emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-                    setState(State::Error);
+                    emit weakThis->errorOccurred(QObject::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
+                    weakThis->setState(State::Error);
                 }
             });
         });
         return;
+    }
     case MacMicrophonePermission::Denied:
     case MacMicrophonePermission::Restricted:
         qWarning() << "VoskRecognizer: Microphone permission denied or restricted";
@@ -381,20 +381,20 @@ void VoskRecognizer::startListeningInternal()
 
     // Set volume to maximum
     mAudioSource->setVolume(1.0);
-    
+
     // Set a larger buffer size for more reliable capture
     mAudioSource->setBufferSize(32000);
 
     // Try PULL mode - start() returns a QIODevice we read from
     mAudioDevice = mAudioSource->start();
-    
+
     if (!mAudioDevice) {
         qWarning() << "VoskRecognizer: Failed to start audio source - start() returned null";
         emit errorOccurred(tr("Failed to start audio capture"));
         setState(State::Error);
         return;
     }
-    
+
     // Poll every 50ms for audio data
     mProcessTimer.start(50);
 
@@ -485,17 +485,17 @@ void VoskRecognizer::processAudioData()
 
     // Check available bytes
     const qint64 bytesAvailable = mAudioDevice->bytesAvailable();
-    
+
     if (bytesAvailable <= 0) {
         return;
     }
-    
+
     // Read all available data
     QByteArray audioData = mAudioDevice->read(bytesAvailable);
     if (audioData.isEmpty()) {
         return;
     }
-    
+
     // Process the audio
     processAudioDataFromBuffer(audioData);
 }
@@ -508,40 +508,55 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
 
     // Convert from device format to Vosk format (16kHz mono Int16)
     QByteArray convertedData;
-    
+
     const int srcRate = mActualAudioFormat.sampleRate();
     const int srcChannels = mActualAudioFormat.channelCount();
-    const int dstRate = VOSK_SAMPLE_RATE;  // 16000
-    
+    const int dstRate = VOSK_SAMPLE_RATE; // 16000
+
     if (mActualAudioFormat.sampleFormat() == QAudioFormat::Float) {
         // Convert Float32 to Int16 with proper resampling
         const float* src = reinterpret_cast<const float*>(audioData.constData());
         const int srcSamples = audioData.size() / (sizeof(float) * srcChannels);
-        
+
+        // Early return if no source samples
+        if (srcSamples <= 0) {
+            return;
+        }
+
         // Calculate output samples using proper ratio
         const int dstSamples = static_cast<int>(static_cast<double>(srcSamples) * dstRate / srcRate);
-        
+
+        if (dstSamples <= 0) {
+            return;
+        }
+
         convertedData.resize(dstSamples * sizeof(qint16));
         qint16* dst = reinterpret_cast<qint16*>(convertedData.data());
-        
+
         // Linear interpolation resampling
         const double ratio = static_cast<double>(srcRate) / dstRate;
         for (int i = 0; i < dstSamples; ++i) {
             double srcPos = i * ratio;
             int srcIdx = static_cast<int>(srcPos);
             double frac = srcPos - srcIdx;
-            
-            // Ensure we don't read past the end
-            if (srcIdx >= srcSamples - 1) {
-                srcIdx = srcSamples - 2;
-                frac = 1.0;
+
+            float sample;
+            if (srcSamples == 1) {
+                // Only one sample available, can't interpolate
+                sample = src[0];
+            } else {
+                // Ensure we don't read past the end
+                if (srcIdx >= srcSamples - 1) {
+                    srcIdx = srcSamples - 2;
+                    frac = 1.0;
+                }
+
+                // Take first channel only, interpolate between samples
+                float sample1 = src[srcIdx * srcChannels];
+                float sample2 = src[(srcIdx + 1) * srcChannels];
+                sample = sample1 + frac * (sample2 - sample1);
             }
-            
-            // Take first channel only, interpolate between samples
-            float sample1 = src[srcIdx * srcChannels];
-            float sample2 = src[(srcIdx + 1) * srcChannels];
-            float sample = sample1 + frac * (sample2 - sample1);
-            
+
             // Clamp and convert to int16
             sample = qBound(-1.0f, sample, 1.0f);
             dst[i] = static_cast<qint16>(sample * 32767.0f);
@@ -550,16 +565,27 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
         // Already Int16, just resample and take first channel
         const qint16* src = reinterpret_cast<const qint16*>(audioData.constData());
         const int srcSamples = audioData.size() / (sizeof(qint16) * srcChannels);
+
+        // Early return if no source samples
+        if (srcSamples <= 0) {
+            return;
+        }
+
         const int dstSamples = static_cast<int>(static_cast<double>(srcSamples) * dstRate / srcRate);
-        
+
+        if (dstSamples <= 0) {
+            return;
+        }
+
         convertedData.resize(dstSamples * sizeof(qint16));
         qint16* dst = reinterpret_cast<qint16*>(convertedData.data());
-        
+
         const double ratio = static_cast<double>(srcRate) / dstRate;
         for (int i = 0; i < dstSamples; ++i) {
             double srcPos = i * ratio;
             int srcIdx = static_cast<int>(srcPos);
-            if (srcIdx >= srcSamples) srcIdx = srcSamples - 1;
+            if (srcIdx >= srcSamples)
+                srcIdx = srcSamples - 1;
             dst[i] = src[srcIdx * srcChannels];
         }
     } else {
@@ -573,11 +599,11 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
 
     // Track recent audio level with smoothing (for silence detection)
     mRecentAudioLevel = mRecentAudioLevel * 0.7f + level * 0.3f;
-    
+
     // Track speech onset frames (for filtering initial hallucinations)
     const bool isSilent = mRecentAudioLevel < SILENCE_THRESHOLD;
     if (isSilent) {
-        mSpeechOnsetFrames = 0;  // Reset when silent
+        mSpeechOnsetFrames = 0; // Reset when silent
     } else {
         mSpeechOnsetFrames++;
     }
@@ -596,7 +622,7 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                 static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
                 text.replace(leadingHallucination, QString());
                 text = text.trimmed();
-                
+
                 if (!text.isEmpty()) {
                     qDebug() << "VoskRecognizer: Final result:" << text;
                     emit finalResult(text);
@@ -614,33 +640,28 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                 // Filter out common hallucination words
                 // Large Vosk models hallucinate words like "the" during silence and speech onset
                 static const QStringList hallucinationWords = {
-                    qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"),
-                    qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"),
-                    qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")
-                };
-                
+                        qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")};
+
                 // Check if this is a single-word hallucination during silence or speech onset
                 const bool isOnsetPhase = mSpeechOnsetFrames < SPEECH_ONSET_FRAMES;
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
                 const bool isHallucinationWord = hallucinationWords.contains(text.toLower());
                 const bool shouldFilter = (isSilent || isOnsetPhase) && isSingleWord && isHallucinationWord;
-                
+
                 // Also filter if the result is stuck on the same hallucination word
                 const bool isStuckHallucination = (text == mLastPartialResult) && isSingleWord && isHallucinationWord;
-                
+
                 if (shouldFilter || isStuckHallucination) {
-                    qDebug() << "VoskRecognizer: Filtered hallucination:" << text 
-                             << "(level:" << mRecentAudioLevel << ", onset:" << mSpeechOnsetFrames << ")";
+                    qDebug() << "VoskRecognizer: Filtered hallucination:" << text << "(level:" << mRecentAudioLevel << ", onset:" << mSpeechOnsetFrames << ")";
                 } else {
                     // Strip leading hallucination words from multi-word results
                     static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
                     QString cleanText = text;
                     cleanText.replace(leadingHallucination, QString());
                     cleanText = cleanText.trimmed();
-                    
+
                     if (!cleanText.isEmpty()) {
-                        qDebug() << "VoskRecognizer: Partial result:" << cleanText 
-                                 << "(level:" << mRecentAudioLevel << ", onset:" << mSpeechOnsetFrames << ")";
+                        qDebug() << "VoskRecognizer: Partial result:" << cleanText << "(level:" << mRecentAudioLevel << ", onset:" << mSpeechOnsetFrames << ")";
                         emit partialResult(cleanText);
                     }
                 }
@@ -712,26 +733,82 @@ QStringList VoskRecognizer::availableLanguages() const
 {
     // Return list of languages with available Vosk models
     // In a full implementation, this would scan for installed models
-    return {
-        QStringLiteral("en-US"),
-        QStringLiteral("en-GB"),
-        QStringLiteral("de-DE"),
-        QStringLiteral("fr-FR"),
-        QStringLiteral("es-ES"),
-        QStringLiteral("it-IT"),
-        QStringLiteral("pt-PT"),
-        QStringLiteral("ru-RU"),
-        QStringLiteral("zh-CN"),
-        QStringLiteral("ja-JP")
-    };
+    return {QStringLiteral("en-US"),
+            QStringLiteral("en-GB"),
+            QStringLiteral("de-DE"),
+            QStringLiteral("fr-FR"),
+            QStringLiteral("es-ES"),
+            QStringLiteral("it-IT"),
+            QStringLiteral("pt-PT"),
+            QStringLiteral("ru-RU"),
+            QStringLiteral("zh-CN"),
+            QStringLiteral("ja-JP")};
 }
 
 bool VoskRecognizer::setLanguage(const QString& languageCode)
 {
-    // Changing language requires loading a different model
-    // For now, just store the preference - the model would need to be reloaded
-    mCurrentLanguage = languageCode;
+    // If already using this language, nothing to do
+    if (mCurrentLanguage == languageCode) {
+        return true;
+    }
+
+    // Find a model that supports the requested language
+    const QString modelPath = findModelPathForLanguage(languageCode);
+    if (modelPath.isEmpty()) {
+        emit errorOccurred(tr("No installed model found for language: %1").arg(languageCode));
+        return false;
+    }
+
+    // Reinitialize with the new model
+    if (!initialize(modelPath)) {
+        // initialize() already emits errorOccurred and sets state
+        return false;
+    }
+
+    // mCurrentLanguage is updated by initialize() based on the model path
     return true;
+}
+
+QString VoskRecognizer::findModelPathForLanguage(const QString& languageCode) const
+{
+    // Extract the language portion from the code (e.g., "en" from "en-US")
+    QString langPart = languageCode.left(2).toLower();
+
+    // Scan installed models for one matching this language
+    const QStringList installed = getInstalledModels();
+    QString bestMatch;
+    int bestScore = -1;
+
+    for (const QString& model : installed) {
+        // Check if model name contains the language code pattern (e.g., "-en-" or "-en_")
+        if (!model.contains(QLatin1Char('-') + langPart + QLatin1Char('-'), Qt::CaseInsensitive) && !model.contains(QLatin1Char('-') + langPart + QLatin1Char('_'), Qt::CaseInsensitive)) {
+            continue;
+        }
+
+        // Score matching models - prefer larger models over small ones
+        int score = 0;
+        if (!model.contains(qsl("small"), Qt::CaseInsensitive)) {
+            score += 1000;
+        }
+
+        // Extract version number if present and add to score
+        QRegularExpression versionRx(qsl("(\\d+)\\.(\\d+)"));
+        QRegularExpressionMatch match = versionRx.match(model);
+        if (match.hasMatch()) {
+            score += match.captured(1).toInt() * 10 + match.captured(2).toInt();
+        }
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = model;
+        }
+    }
+
+    if (bestMatch.isEmpty()) {
+        return QString();
+    }
+
+    return modelsDirectoryPath() + QDir::separator() + bestMatch;
 }
 
 QString VoskRecognizer::defaultModelPath()
@@ -749,16 +826,14 @@ QString VoskRecognizer::defaultModelPath()
 QString VoskRecognizer::modelDownloadUrl(const QString& languageCode)
 {
     // Return download URL for small models based on language
-    static const QHash<QString, QString> modelUrls = {
-        {QStringLiteral("en-US"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip")},
-        {QStringLiteral("de-DE"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip")},
-        {QStringLiteral("fr-FR"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip")},
-        {QStringLiteral("es-ES"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip")},
-        {QStringLiteral("it-IT"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip")},
-        {QStringLiteral("ru-RU"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip")},
-        {QStringLiteral("zh-CN"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip")},
-        {QStringLiteral("ja-JP"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip")}
-    };
+    static const QHash<QString, QString> modelUrls = {{QStringLiteral("en-US"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip")},
+                                                      {QStringLiteral("de-DE"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip")},
+                                                      {QStringLiteral("fr-FR"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip")},
+                                                      {QStringLiteral("es-ES"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip")},
+                                                      {QStringLiteral("it-IT"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip")},
+                                                      {QStringLiteral("ru-RU"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip")},
+                                                      {QStringLiteral("zh-CN"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip")},
+                                                      {QStringLiteral("ja-JP"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip")}};
 
     return modelUrls.value(languageCode, modelUrls.value(QStringLiteral("en-US")));
 }
@@ -772,7 +847,7 @@ QStringList VoskRecognizer::getInstalledModels()
 {
     QStringList models;
     QDir modelsDir(modelsDirectoryPath());
-    
+
     if (!modelsDir.exists()) {
         return models;
     }
@@ -782,12 +857,11 @@ QStringList VoskRecognizer::getInstalledModels()
     for (const QString& entry : entries) {
         QString modelPath = modelsDir.absoluteFilePath(entry);
         QDir modelDir(modelPath);
-        
+
         // Check if this looks like a Vosk model directory
         // Vosk models typically have am/, conf/, graph/, ivector/ subdirectories
         // or at minimum an am/ directory
-        if (modelDir.exists(qsl("am")) || modelDir.exists(qsl("conf")) || 
-            modelDir.exists(qsl("graph")) || modelDir.exists(qsl("ivector"))) {
+        if (modelDir.exists(qsl("am")) || modelDir.exists(qsl("conf")) || modelDir.exists(qsl("graph")) || modelDir.exists(qsl("ivector"))) {
             models.append(entry);
         }
     }
@@ -809,15 +883,14 @@ QString VoskRecognizer::getBestAvailableModel()
 
     for (const QString& model : installed) {
         int score = 0;
-        
+
         // Large models are preferred (don't have "small" in name)
         if (!model.contains(qsl("small"), Qt::CaseInsensitive)) {
             score += 1000;
         }
 
         // English models get a small boost as default language
-        if (model.contains(qsl("-en-"), Qt::CaseInsensitive) || 
-            model.contains(qsl("-en_"), Qt::CaseInsensitive)) {
+        if (model.contains(qsl("-en-"), Qt::CaseInsensitive) || model.contains(qsl("-en_"), Qt::CaseInsensitive)) {
             score += 10;
         }
 

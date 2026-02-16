@@ -112,17 +112,16 @@ void dlgSpeechRecognitionSetup::setupWelcomePage()
 
     mpWelcomeLabel = new QLabel(page);
     mpWelcomeLabel->setWordWrap(true);
-    mpWelcomeLabel->setText(tr(
-        "<p>This wizard will help you set up speech-to-text functionality for Mudlet.</p>"
-        "<p>Speech recognition allows you to speak commands instead of typing them, "
-        "which can be helpful for accessibility or hands-free gaming.</p>"
-        "<p><b>What you'll need:</b></p>"
-        "<ul>"
-        "<li>The Vosk speech recognition library installed on your system</li>"
-        "<li>A language model for your preferred language (~40-50 MB for small models)</li>"
-        "<li>A working microphone</li>"
-        "</ul>"
-        "<p>Click <b>Next</b> to check your system and begin setup.</p>"));
+    mpWelcomeLabel->setText(tr("<p>This wizard will help you set up speech-to-text functionality for Mudlet.</p>"
+                               "<p>Speech recognition allows you to speak commands instead of typing them, "
+                               "which can be helpful for accessibility or hands-free gaming.</p>"
+                               "<p><b>What you'll need:</b></p>"
+                               "<ul>"
+                               "<li>The Vosk speech recognition library installed on your system</li>"
+                               "<li>A language model for your preferred language (~40-50 MB for small models)</li>"
+                               "<li>A working microphone</li>"
+                               "</ul>"
+                               "<p>Click <b>Next</b> to check your system and begin setup.</p>"));
     layout->addWidget(mpWelcomeLabel);
 
     layout->addStretch();
@@ -198,10 +197,9 @@ void dlgSpeechRecognitionSetup::setupModelSelectionPage()
     auto* titleLabel = new QLabel(tr("<h2>Select Language Model</h2>"), page);
     layout->addWidget(titleLabel);
 
-    auto* introLabel = new QLabel(tr(
-        "<p>Choose a language model for speech recognition. "
-        "Small models are faster and use less memory, while larger models are more accurate.</p>"),
-        page);
+    auto* introLabel = new QLabel(tr("<p>Choose a language model for speech recognition. "
+                                     "Small models are faster and use less memory, while larger models are more accurate.</p>"),
+                                  page);
     introLabel->setWordWrap(true);
     layout->addWidget(introLabel);
 
@@ -215,20 +213,18 @@ void dlgSpeechRecognitionSetup::setupModelSelectionPage()
     connect(mpModelComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
         if (index >= 0 && index < mAvailableModels.size()) {
             const auto& model = mAvailableModels[index];
-            mpModelDescriptionLabel->setText(model.isSmall 
-                ? tr("Lightweight model - faster, uses less memory")
-                : tr("Full model - more accurate, requires more resources"));
-            
+            mpModelDescriptionLabel->setText(model.isSmall ? tr("Lightweight model - faster, uses less memory") : tr("Full model - more accurate, requires more resources"));
+
             // Check if this model is already downloaded
             QStringList installedModels = VoskRecognizer::getInstalledModels();
             bool isInstalled = installedModels.contains(model.identifier);
-            
+
             if (isInstalled) {
                 mpModelSizeLabel->setText(tr("Already downloaded"));
             } else {
                 mpModelSizeLabel->setText(tr("Download size: %1").arg(formatSize(model.sizeBytes)));
             }
-            
+
             // Update button text based on whether model is downloaded
             updateNavigationButtons();
         }
@@ -305,76 +301,58 @@ void dlgSpeechRecognitionSetup::populateModelList()
     mAvailableModels.clear();
 
     // English models
-    mAvailableModels.append({tr("English (US) - Small"), qsl("vosk-model-small-en-us-0.15"), qsl("en"), 
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"), 40 * 1024 * 1024, true});
-    mAvailableModels.append({tr("English (US) - Large"), qsl("vosk-model-en-us-0.22"), qsl("en"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip"), 1800 * 1024 * 1024, false});
+    mAvailableModels.append(
+            {tr("English (US) - Small"), qsl("vosk-model-small-en-us-0.15"), qsl("en"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"), 40 * 1024 * 1024, true});
+    mAvailableModels.append({tr("English (US) - Large"), qsl("vosk-model-en-us-0.22"), qsl("en"), qsl("https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip"), 1800 * 1024 * 1024, false});
 
     // German models
-    mAvailableModels.append({tr("German - Small"), qsl("vosk-model-small-de-0.15"), qsl("de"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip"), 45 * 1024 * 1024, true});
-    mAvailableModels.append({tr("German - Large"), qsl("vosk-model-de-0.21"), qsl("de"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-de-0.21.zip"), 1900 * 1024 * 1024, false});
+    mAvailableModels.append({tr("German - Small"), qsl("vosk-model-small-de-0.15"), qsl("de"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip"), 45 * 1024 * 1024, true});
+    mAvailableModels.append({tr("German - Large"), qsl("vosk-model-de-0.21"), qsl("de"), qsl("https://alphacephei.com/vosk/models/vosk-model-de-0.21.zip"), 1900 * 1024 * 1024, false});
 
     // Spanish models
-    mAvailableModels.append({tr("Spanish - Small"), qsl("vosk-model-small-es-0.42"), qsl("es"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip"), 39 * 1024 * 1024, true});
+    mAvailableModels.append({tr("Spanish - Small"), qsl("vosk-model-small-es-0.42"), qsl("es"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip"), 39 * 1024 * 1024, true});
 
     // French models
-    mAvailableModels.append({tr("French - Small"), qsl("vosk-model-small-fr-0.22"), qsl("fr"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip"), 41 * 1024 * 1024, true});
-    mAvailableModels.append({tr("French - Large"), qsl("vosk-model-fr-0.22"), qsl("fr"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-fr-0.22.zip"), 1400 * 1024 * 1024, false});
+    mAvailableModels.append({tr("French - Small"), qsl("vosk-model-small-fr-0.22"), qsl("fr"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip"), 41 * 1024 * 1024, true});
+    mAvailableModels.append({tr("French - Large"), qsl("vosk-model-fr-0.22"), qsl("fr"), qsl("https://alphacephei.com/vosk/models/vosk-model-fr-0.22.zip"), 1400 * 1024 * 1024, false});
 
     // Italian models
-    mAvailableModels.append({tr("Italian - Small"), qsl("vosk-model-small-it-0.22"), qsl("it"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip"), 48 * 1024 * 1024, true});
+    mAvailableModels.append({tr("Italian - Small"), qsl("vosk-model-small-it-0.22"), qsl("it"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip"), 48 * 1024 * 1024, true});
 
     // Portuguese models
-    mAvailableModels.append({tr("Portuguese - Small"), qsl("vosk-model-small-pt-0.3"), qsl("pt"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip"), 31 * 1024 * 1024, true});
+    mAvailableModels.append({tr("Portuguese - Small"), qsl("vosk-model-small-pt-0.3"), qsl("pt"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip"), 31 * 1024 * 1024, true});
 
     // Russian models
-    mAvailableModels.append({tr("Russian - Small"), qsl("vosk-model-small-ru-0.22"), qsl("ru"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip"), 45 * 1024 * 1024, true});
+    mAvailableModels.append({tr("Russian - Small"), qsl("vosk-model-small-ru-0.22"), qsl("ru"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip"), 45 * 1024 * 1024, true});
 
     // Chinese models
-    mAvailableModels.append({tr("Chinese - Small"), qsl("vosk-model-small-cn-0.22"), qsl("zh"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip"), 42 * 1024 * 1024, true});
+    mAvailableModels.append({tr("Chinese - Small"), qsl("vosk-model-small-cn-0.22"), qsl("zh"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip"), 42 * 1024 * 1024, true});
 
     // Japanese models
-    mAvailableModels.append({tr("Japanese - Small"), qsl("vosk-model-small-ja-0.22"), qsl("ja"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip"), 48 * 1024 * 1024, true});
+    mAvailableModels.append({tr("Japanese - Small"), qsl("vosk-model-small-ja-0.22"), qsl("ja"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip"), 48 * 1024 * 1024, true});
 
     // Polish models
-    mAvailableModels.append({tr("Polish - Small"), qsl("vosk-model-small-pl-0.22"), qsl("pl"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip"), 47 * 1024 * 1024, true});
+    mAvailableModels.append({tr("Polish - Small"), qsl("vosk-model-small-pl-0.22"), qsl("pl"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip"), 47 * 1024 * 1024, true});
 
     // Dutch models
-    mAvailableModels.append({tr("Dutch - Small"), qsl("vosk-model-small-nl-0.22"), qsl("nl"),
-        qsl("https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip"), 39 * 1024 * 1024, true});
+    mAvailableModels.append({tr("Dutch - Small"), qsl("vosk-model-small-nl-0.22"), qsl("nl"), qsl("https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip"), 39 * 1024 * 1024, true});
 
     // Populate combo box
     mpModelComboBox->clear();
     for (const auto& model : mAvailableModels) {
-        QString displayText = model.name;
-        if (model.isSmall) {
-            displayText += tr(" (~%1)").arg(formatSize(model.sizeBytes));
-        } else {
-            displayText += tr(" (~%1)").arg(formatSize(model.sizeBytes));
-        }
+        QString displayText = model.name + tr(" (~%1)").arg(formatSize(model.sizeBytes));
         mpModelComboBox->addItem(displayText);
     }
 
     // Check for currently selected/used model from settings
     QString currentModelPath = VoskRecognizer::getSelectedModelPath();
     int selectedIndex = -1;
-    
+
     if (!currentModelPath.isEmpty()) {
         // Extract the model identifier from the path
         QDir modelDir(currentModelPath);
         QString currentModelId = modelDir.dirName();
-        
+
         // Find this model in our list
         for (int i = 0; i < mAvailableModels.size(); ++i) {
             if (mAvailableModels[i].identifier == currentModelId) {
@@ -383,7 +361,7 @@ void dlgSpeechRecognitionSetup::populateModelList()
             }
         }
     }
-    
+
     // If no current model found, fall back to small model matching interface language
     if (selectedIndex < 0) {
         QString defaultLang = getDefaultLanguageCode();
@@ -394,12 +372,12 @@ void dlgSpeechRecognitionSetup::populateModelList()
             }
         }
     }
-    
+
     // Default to first model if nothing matched
     if (selectedIndex < 0) {
         selectedIndex = 0;
     }
-    
+
     mpModelComboBox->setCurrentIndex(selectedIndex);
 }
 
@@ -417,9 +395,8 @@ bool dlgSpeechRecognitionSetup::checkVoskLibrary()
     if (available) {
         mpLibraryStatusIcon->setPixmap(style()->standardIcon(QStyle::SP_DialogApplyButton).pixmap(32, 32));
         mpLibraryStatusLabel->setText(tr("<b style='color: green;'>Vosk library is installed and ready!</b>"));
-        mpLibraryInstructions->setHtml(tr(
-            "<p>The Vosk speech recognition library was found on your system.</p>"
-            "<p>You can proceed to select a language model for speech recognition.</p>"));
+        mpLibraryInstructions->setHtml(tr("<p>The Vosk speech recognition library was found on your system.</p>"
+                                          "<p>You can proceed to select a language model for speech recognition.</p>"));
         mpDownloadLibraryButton->setVisible(false);
         mpOpenVoskWebsiteButton->setVisible(false);
         mpLibraryDownloadProgressBar->setVisible(false);
@@ -443,12 +420,12 @@ bool dlgSpeechRecognitionSetup::checkVoskLibrary()
         installLocation = qsl("/usr/local/lib/");
 #endif
 
-        mpLibraryInstructions->setHtml(tr(
-            "<p>The Vosk library needs to be installed before you can use speech recognition.</p>"
-            "<p><b>Recommended:</b> Click the <b>Download & Install</b> button below to automatically "
-            "download and install the Vosk library (~%1) for %2.</p>"
-            "<p>The library will be installed to:<br/><code>%3</code></p>"
-            "<p>Alternatively, click <b>Manual Install</b> for more options.</p>").arg(formatSize(libInfo.sizeBytes), platformName, installLocation));
+        mpLibraryInstructions->setHtml(tr("<p>The Vosk library needs to be installed before you can use speech recognition.</p>"
+                                          "<p><b>Recommended:</b> Click the <b>Download & Install</b> button below to automatically "
+                                          "download and install the Vosk library (~%1) for %2.</p>"
+                                          "<p>The library will be installed to:<br/><code>%3</code></p>"
+                                          "<p>Alternatively, click <b>Manual Install</b> for more options.</p>")
+                                               .arg(formatSize(libInfo.sizeBytes), platformName, installLocation));
 
         mpDownloadLibraryButton->setVisible(true);
         mpDownloadLibraryButton->setEnabled(!mDownloadingLibrary);
@@ -523,7 +500,7 @@ void dlgSpeechRecognitionSetup::slot_nextPage()
         if (index >= 0 && index < mAvailableModels.size()) {
             const auto& model = mAvailableModels[index];
             QStringList installedModels = VoskRecognizer::getInstalledModels();
-            
+
             if (installedModels.contains(model.identifier)) {
                 // Model is already downloaded - just select it and skip to completion
                 QString modelsDir = VoskRecognizer::modelsDirectoryPath();
@@ -531,14 +508,14 @@ void dlgSpeechRecognitionSetup::slot_nextPage()
                 mInstalledModelPath = modelPath;
                 VoskRecognizer::setSelectedModelPath(modelPath);
                 mSetupCompleted = true;
-                
+
                 mpCompletionIcon->setPixmap(style()->standardIcon(QStyle::SP_DialogApplyButton).pixmap(48, 48));
                 mpCompletionLabel->setText(tr("<b>Model selected!</b>"));
-                mpCompletionDetailsLabel->setText(tr(
-                    "<p>The speech recognition model is ready:</p>"
-                    "<p><code>%1</code></p>"
-                    "<p>You can now use the microphone button in the command line to speak commands.</p>").arg(mInstalledModelPath));
-                
+                mpCompletionDetailsLabel->setText(tr("<p>The speech recognition model is ready:</p>"
+                                                     "<p><code>%1</code></p>"
+                                                     "<p>You can now use the microphone button in the command line to speak commands.</p>")
+                                                          .arg(mInstalledModelPath));
+
                 goToPage(CompletionPage);
             } else {
                 // Model needs to be downloaded
@@ -576,7 +553,7 @@ void dlgSpeechRecognitionSetup::slot_downloadModel()
     }
 
     const auto& model = mAvailableModels[index];
-    mCurrentlyDownloadingModelId = model.identifier;  // Track which model is being downloaded
+    mCurrentlyDownloadingModelId = model.identifier; // Track which model is being downloaded
     mpDownloadStatusLabel->setText(tr("Downloading %1...").arg(model.name));
     mpDownloadProgressBar->setValue(0);
     mpDownloadDetailsLabel->setText(tr("Connecting to server..."));
@@ -585,11 +562,24 @@ void dlgSpeechRecognitionSetup::slot_downloadModel()
     QString downloadDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     mDownloadedFilePath = downloadDir + QDir::separator() + model.identifier + qsl(".zip");
 
+    // Open file for streaming download to disk (avoids loading entire payload into memory)
+    mDownloadFile.setFileName(mDownloadedFilePath);
+    if (!mDownloadFile.open(QIODevice::WriteOnly)) {
+        mpDownloadStatusLabel->setText(tr("Failed to create download file!"));
+        mpDownloadDetailsLabel->setText(tr("Could not open: %1").arg(mDownloadedFilePath));
+        return;
+    }
+
     QNetworkRequest request(QUrl(model.url));
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
     mpCurrentDownload = mpNetworkManager->get(request);
     connect(mpCurrentDownload, &QNetworkReply::downloadProgress, this, &dlgSpeechRecognitionSetup::slot_downloadProgress);
+    connect(mpCurrentDownload, &QNetworkReply::readyRead, this, [this]() {
+        if (mpCurrentDownload && mDownloadFile.isOpen()) {
+            mDownloadFile.write(mpCurrentDownload->readAll());
+        }
+    });
     connect(mpCurrentDownload, &QNetworkReply::finished, this, &dlgSpeechRecognitionSetup::slot_downloadFinished);
 }
 
@@ -598,9 +588,7 @@ void dlgSpeechRecognitionSetup::slot_downloadProgress(qint64 bytesReceived, qint
     if (bytesTotal > 0) {
         int progress = static_cast<int>((bytesReceived * 100) / bytesTotal);
         mpDownloadProgressBar->setValue(progress);
-        mpDownloadDetailsLabel->setText(tr("Downloaded %1 of %2")
-            .arg(formatSize(bytesReceived))
-            .arg(formatSize(bytesTotal)));
+        mpDownloadDetailsLabel->setText(tr("Downloaded %1 of %2").arg(formatSize(bytesReceived)).arg(formatSize(bytesTotal)));
     } else {
         mpDownloadDetailsLabel->setText(tr("Downloaded %1").arg(formatSize(bytesReceived)));
     }
@@ -608,6 +596,11 @@ void dlgSpeechRecognitionSetup::slot_downloadProgress(qint64 bytesReceived, qint
 
 void dlgSpeechRecognitionSetup::slot_downloadFinished()
 {
+    // Close the download file (data was written incrementally via readyRead)
+    if (mDownloadFile.isOpen()) {
+        mDownloadFile.close();
+    }
+
     if (!mpCurrentDownload) {
         return;
     }
@@ -619,22 +612,14 @@ void dlgSpeechRecognitionSetup::slot_downloadFinished()
         mpCompletionLabel->setText(tr("<b>Setup failed</b>"));
         mpCompletionDetailsLabel->setText(tr("The model could not be downloaded. Please check your internet connection and try again."));
 
+        // Clean up partial download file
+        QFile::remove(mDownloadedFilePath);
+
         mpCurrentDownload->deleteLater();
         mpCurrentDownload = nullptr;
         goToPage(CompletionPage);
         return;
     }
-
-    // Save downloaded data to file
-    QFile file(mDownloadedFilePath);
-    if (!file.open(QIODevice::WriteOnly)) {
-        mpDownloadStatusLabel->setText(tr("Failed to save download!"));
-        mpCurrentDownload->deleteLater();
-        mpCurrentDownload = nullptr;
-        return;
-    }
-    file.write(mpCurrentDownload->readAll());
-    file.close();
 
     mpCurrentDownload->deleteLater();
     mpCurrentDownload = nullptr;
@@ -647,7 +632,7 @@ void dlgSpeechRecognitionSetup::slot_downloadFinished()
     QString modelsDir = VoskRecognizer::modelsDirectoryPath();
     QString modelPath = modelsDir + QDir::separator() + mCurrentlyDownloadingModelId;
     QDir modelDir(modelPath);
-    
+
     // Create models directory if needed
     QDir parentDir(modelsDir);
     if (!parentDir.exists()) {
@@ -666,19 +651,19 @@ void dlgSpeechRecognitionSetup::slot_downloadFinished()
 
         mpCompletionIcon->setPixmap(style()->standardIcon(QStyle::SP_DialogApplyButton).pixmap(48, 48));
         mpCompletionLabel->setText(tr("<b>Setup completed successfully!</b>"));
-        mpCompletionDetailsLabel->setText(tr(
-            "<p>The speech recognition model has been installed to:</p>"
-            "<p><code>%1</code></p>"
-            "<p>You can now use the microphone button in the command line to speak commands.</p>").arg(mInstalledModelPath));
+        mpCompletionDetailsLabel->setText(tr("<p>The speech recognition model has been installed to:</p>"
+                                             "<p><code>%1</code></p>"
+                                             "<p>You can now use the microphone button in the command line to speak commands.</p>")
+                                                  .arg(mInstalledModelPath));
     } else {
         mpCompletionIcon->setPixmap(style()->standardIcon(QStyle::SP_MessageBoxCritical).pixmap(48, 48));
         mpCompletionLabel->setText(tr("<b>Extraction failed</b>"));
-        mpCompletionDetailsLabel->setText(tr(
-            "<p>The model archive could not be extracted.</p>"
-            "<p>You may need to manually extract the file:</p>"
-            "<p><code>%1</code></p>"
-            "<p>to:</p>"
-            "<p><code>%2</code></p>").arg(mDownloadedFilePath, modelPath));
+        mpCompletionDetailsLabel->setText(tr("<p>The model archive could not be extracted.</p>"
+                                             "<p>You may need to manually extract the file:</p>"
+                                             "<p><code>%1</code></p>"
+                                             "<p>to:</p>"
+                                             "<p><code>%2</code></p>")
+                                                  .arg(mDownloadedFilePath, modelPath));
     }
 
     goToPage(CompletionPage);
@@ -711,23 +696,23 @@ bool dlgSpeechRecognitionSetup::extractModel(const QString& archivePath, const Q
     for (const QString& subDirName : subDirs) {
         QString subDirPath = destDir.absoluteFilePath(subDirName);
         QDir subDir(subDirPath);
-        
+
         // Check if this subdirectory contains another directory with the same name
         QString nestedPath = subDirPath + QDir::separator() + subDirName;
         QFileInfo nestedInfo(nestedPath);
         qDebug() << "dlgSpeechRecognitionSetup: Checking for nested dir:" << nestedPath << "exists:" << nestedInfo.exists() << "isDir:" << nestedInfo.isDir();
-        
+
         if (nestedInfo.exists() && nestedInfo.isDir()) {
             QDir nestedDir(nestedPath);
             qDebug() << "dlgSpeechRecognitionSetup: Found nested directory, flattening:" << nestedPath;
-            
+
             // Move all contents from nested directory up one level
             const QStringList nestedEntries = nestedDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
             bool moveSuccess = true;
             for (const QString& entry : nestedEntries) {
                 QString sourcePath = nestedDir.absoluteFilePath(entry);
                 QString destPath = subDir.absoluteFilePath(entry);
-                
+
                 QFileInfo sourceInfo(sourcePath);
                 if (sourceInfo.isDir()) {
                     // For directories, rename the whole thing
@@ -743,7 +728,7 @@ bool dlgSpeechRecognitionSetup::extractModel(const QString& archivePath, const Q
                     }
                 }
             }
-            
+
             // Remove the now-empty nested directory
             if (moveSuccess) {
                 nestedDir.removeRecursively();
@@ -870,9 +855,7 @@ void dlgSpeechRecognitionSetup::slot_libraryDownloadProgress(qint64 bytesReceive
     if (bytesTotal > 0) {
         int progress = static_cast<int>((bytesReceived * 100) / bytesTotal);
         mpLibraryDownloadProgressBar->setValue(progress);
-        mpLibraryDownloadStatusLabel->setText(tr("Downloading: %1 of %2")
-            .arg(formatSize(bytesReceived))
-            .arg(formatSize(bytesTotal)));
+        mpLibraryDownloadStatusLabel->setText(tr("Downloading: %1 of %2").arg(formatSize(bytesReceived)).arg(formatSize(bytesTotal)));
     } else {
         mpLibraryDownloadStatusLabel->setText(tr("Downloading: %1").arg(formatSize(bytesReceived)));
     }
@@ -890,8 +873,7 @@ void dlgSpeechRecognitionSetup::slot_libraryDownloadFinished()
     mpRefreshLibraryButton->setEnabled(true);
 
     if (mpCurrentDownload->error() != QNetworkReply::NoError) {
-        mpLibraryDownloadStatusLabel->setText(tr("<span style='color: red;'>Download failed: %1</span>")
-            .arg(mpCurrentDownload->errorString()));
+        mpLibraryDownloadStatusLabel->setText(tr("<span style='color: red;'>Download failed: %1</span>").arg(mpCurrentDownload->errorString()));
         mpDownloadLibraryButton->setEnabled(true);
         mpCurrentDownload->deleteLater();
         mpCurrentDownload = nullptr;
@@ -929,10 +911,10 @@ void dlgSpeechRecognitionSetup::slot_libraryDownloadFinished()
         // Refresh the library status
         QTimer::singleShot(500, this, &dlgSpeechRecognitionSetup::slot_refreshLibraryStatus);
     } else {
-        mpLibraryDownloadStatusLabel->setText(tr(
-            "<span style='color: red;'>Installation failed. You may need to manually copy the library.</span><br/>"
-            "Downloaded file: <code>%1</code><br/>"
-            "Install to: <code>%2</code>").arg(mLibraryDownloadPath, libInfo.installPath));
+        mpLibraryDownloadStatusLabel->setText(tr("<span style='color: red;'>Installation failed. You may need to manually copy the library.</span><br/>"
+                                                 "Downloaded file: <code>%1</code><br/>"
+                                                 "Install to: <code>%2</code>")
+                                                      .arg(mLibraryDownloadPath, libInfo.installPath));
         mpDownloadLibraryButton->setEnabled(true);
     }
 }
@@ -955,11 +937,12 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
 
 #if !defined(Q_OS_WIN)
         // On Unix systems, try to show a message about needing elevated permissions
-        QMessageBox::warning(this, tr("Permission Required"),
-            tr("Installing the library to %1 requires administrator privileges.\n\n"
-               "Please manually copy the library file from the downloaded archive:\n%2\n\n"
-               "Or run Mudlet with administrator privileges to install automatically.")
-            .arg(destinationDir, archivePath));
+        QMessageBox::warning(this,
+                             tr("Permission Required"),
+                             tr("Installing the library to %1 requires administrator privileges.\n\n"
+                                "Please manually copy the library file from the downloaded archive:\n%2\n\n"
+                                "Or run Mudlet with administrator privileges to install automatically.")
+                                     .arg(destinationDir, archivePath));
 #endif
         return false;
     }
@@ -1005,20 +988,53 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
         return false;
     }
 
-    // Move the library to the final destination
-    QString finalPath = destinationDir + libInfo.libraryName;
+    // Move the library to the final destination using a safe replace sequence:
+    // Never delete the existing library until we have a successful replacement ready
+    QString finalPath = QDir(destinationDir).filePath(libInfo.libraryName);
     if (extractedLibPath != finalPath) {
-        // Remove existing file if present
-        if (QFile::exists(finalPath)) {
-            QFile::remove(finalPath);
-        }
-
-        if (!QFile::rename(extractedLibPath, finalPath)) {
-            // Try copy instead of rename
+        // First, try a direct rename (works if no existing file or same filesystem)
+        if (!QFile::exists(finalPath) && QFile::rename(extractedLibPath, finalPath)) {
+            // Direct rename succeeded, nothing more to do
+        } else if (!QFile::exists(finalPath)) {
+            // No existing file but rename failed - try copy
             if (!QFile::copy(extractedLibPath, finalPath)) {
-                qWarning() << "dlgSpeechRecognitionSetup: Failed to move library to final location";
+                qWarning() << "dlgSpeechRecognitionSetup: Failed to copy library to final location";
                 return false;
             }
+            QFile::remove(extractedLibPath);
+        } else {
+            // Existing file present - use safe replace sequence
+            // 1. Copy to temporary location first
+            QString tempPath = finalPath + qsl(".new");
+            if (QFile::exists(tempPath)) {
+                QFile::remove(tempPath); // Clean up any stale temp file
+            }
+
+            if (!QFile::copy(extractedLibPath, tempPath)) {
+                qWarning() << "dlgSpeechRecognitionSetup: Failed to copy library to temporary location";
+                return false;
+            }
+
+            // 2. Only now remove the existing library (we have a valid copy ready)
+            if (!QFile::remove(finalPath)) {
+                qWarning() << "dlgSpeechRecognitionSetup: Failed to remove existing library";
+                QFile::remove(tempPath); // Clean up temp file
+                return false;
+            }
+
+            // 3. Atomically rename temp to final
+            if (!QFile::rename(tempPath, finalPath)) {
+                qWarning() << "dlgSpeechRecognitionSetup: Failed to rename temporary library to final location";
+                // Note: We're in a bad state here - old file removed but temp not renamed
+                // Try to recover by attempting copy
+                if (!QFile::copy(tempPath, finalPath)) {
+                    qWarning() << "dlgSpeechRecognitionSetup: Recovery copy also failed - library may be missing!";
+                }
+                QFile::remove(tempPath);
+                return false;
+            }
+
+            // 4. Clean up the extracted source file
             QFile::remove(extractedLibPath);
         }
     }

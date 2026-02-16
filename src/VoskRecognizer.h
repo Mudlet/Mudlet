@@ -39,41 +39,46 @@ class AudioInputBuffer : public QIODevice
 {
     Q_OBJECT
 public:
-    explicit AudioInputBuffer(QObject* parent = nullptr) : QIODevice(parent) {}
-    
-    bool open(OpenMode mode) override {
+    explicit AudioInputBuffer(QObject* parent = nullptr)
+    : QIODevice(parent)
+    {
+    }
+
+    bool open(OpenMode mode) override
+    {
         setOpenMode(mode);
         mBuffer.clear();
         mTotalBytesWritten = 0;
         return true;
     }
-    
-    void close() override {
+
+    void close() override
+    {
         mBuffer.clear();
         QIODevice::close();
     }
-    
+
     // Sequential device - audio is a stream
     bool isSequential() const override { return true; }
-    
-    qint64 readData(char* data, qint64 maxlen) override {
+
+    qint64 readData(char* data, qint64 maxlen) override
+    {
         Q_UNUSED(data);
         Q_UNUSED(maxlen);
         return 0; // Push mode - we don't read from here
     }
-    
+
     qint64 writeData(const char* data, qint64 len) override;
-    
-    QByteArray takeAll() {
+
+    QByteArray takeAll()
+    {
         QByteArray result = mBuffer;
         mBuffer.clear();
         return result;
     }
-    
-    qint64 bytesAvailable() const override {
-        return mBuffer.size();
-    }
-    
+
+    qint64 bytesAvailable() const override { return mBuffer.size(); }
+
     qint64 totalBytesWritten() const { return mTotalBytesWritten; }
 
 signals:
@@ -171,6 +176,9 @@ private:
     // State management
     void setState(State newState);
 
+    // Find an installed model path for a given language code
+    QString findModelPathForLanguage(const QString& languageCode) const;
+
     // Member variables
     State mState = State::Uninitialized;
     QString mModelPath;
@@ -183,9 +191,9 @@ private:
     // Audio capture
     QPointer<QAudioSource> mAudioSource;
     QPointer<QIODevice> mAudioDevice;
-    QAudioFormat mAudioFormat;           // Vosk's expected format (16kHz mono Int16)
-    QAudioFormat mActualAudioFormat;     // Device's actual capture format
-    AudioInputBuffer* mAudioInputBuffer = nullptr;  // For push mode
+    QAudioFormat mAudioFormat;                     // Vosk's expected format (16kHz mono Int16)
+    QAudioFormat mActualAudioFormat;               // Device's actual capture format
+    AudioInputBuffer* mAudioInputBuffer = nullptr; // For push mode
 
     // Timer for periodic audio processing
     QTimer mProcessTimer;
@@ -195,12 +203,12 @@ private:
 
     // Track audio level for silence detection (filter hallucinations)
     float mRecentAudioLevel = 0.0f;
-    static constexpr float SILENCE_THRESHOLD = 0.01f;  // Below this is considered silence
-    
+    static constexpr float SILENCE_THRESHOLD = 0.01f; // Below this is considered silence
+
     // Track speech onset to filter initial hallucinations
-    int mSpeechOnsetFrames = 0;           // Frames since speech started
-    static constexpr int SPEECH_ONSET_FRAMES = 5;  // ~250ms at 50ms timer = require sustained speech
-    QString mLastPartialResult;           // Track last partial to detect stuck hallucinations
+    int mSpeechOnsetFrames = 0;                   // Frames since speech started
+    static constexpr int SPEECH_ONSET_FRAMES = 5; // ~250ms at 50ms timer = require sustained speech
+    QString mLastPartialResult;                   // Track last partial to detect stuck hallucinations
 
     // Vosk library and function pointers (for dynamic loading)
     static QLibrary sVoskLibrary;

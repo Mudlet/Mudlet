@@ -766,6 +766,9 @@
             <property name="text">
              <string>Speech recognition:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_speechRecognitionSetup</cstring>
+            </property>
            </widget>
           </item>
           <item>
@@ -4730,6 +4733,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_dictionary</tabstop>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
+  <tabstop>pushButton_speechRecognitionSetup</tabstop>
   <tabstop>fontComboBox_displayFont</tabstop>
   <tabstop>spinBox_displayFontSize</tabstop>
   <tabstop>checkBox_antiAlias</tabstop>
