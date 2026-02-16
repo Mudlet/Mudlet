@@ -122,8 +122,7 @@ void dlgSpeechRecognitionSetup::setupWelcomePage()
         "<li>A language model for your preferred language (~40-50 MB for small models)</li>"
         "<li>A working microphone</li>"
         "</ul>"
-        "<p>Click <b>Next</b> to check your system and begin setup.</p>"
-    ));
+        "<p>Click <b>Next</b> to check your system and begin setup.</p>"));
     layout->addWidget(mpWelcomeLabel);
 
     layout->addStretch();
@@ -201,8 +200,8 @@ void dlgSpeechRecognitionSetup::setupModelSelectionPage()
 
     auto* introLabel = new QLabel(tr(
         "<p>Choose a language model for speech recognition. "
-        "Small models are faster and use less memory, while larger models are more accurate.</p>"
-    ), page);
+        "Small models are faster and use less memory, while larger models are more accurate.</p>"),
+        page);
     introLabel->setWordWrap(true);
     layout->addWidget(introLabel);
 
@@ -420,8 +419,7 @@ bool dlgSpeechRecognitionSetup::checkVoskLibrary()
         mpLibraryStatusLabel->setText(tr("<b style='color: green;'>Vosk library is installed and ready!</b>"));
         mpLibraryInstructions->setHtml(tr(
             "<p>The Vosk speech recognition library was found on your system.</p>"
-            "<p>You can proceed to select a language model for speech recognition.</p>"
-        ));
+            "<p>You can proceed to select a language model for speech recognition.</p>"));
         mpDownloadLibraryButton->setVisible(false);
         mpOpenVoskWebsiteButton->setVisible(false);
         mpLibraryDownloadProgressBar->setVisible(false);
@@ -450,8 +448,7 @@ bool dlgSpeechRecognitionSetup::checkVoskLibrary()
             "<p><b>Recommended:</b> Click the <b>Download & Install</b> button below to automatically "
             "download and install the Vosk library (~%1) for %2.</p>"
             "<p>The library will be installed to:<br/><code>%3</code></p>"
-            "<p>Alternatively, click <b>Manual Install</b> for more options.</p>"
-        ).arg(formatSize(libInfo.sizeBytes), platformName, installLocation));
+            "<p>Alternatively, click <b>Manual Install</b> for more options.</p>").arg(formatSize(libInfo.sizeBytes), platformName, installLocation));
 
         mpDownloadLibraryButton->setVisible(true);
         mpDownloadLibraryButton->setEnabled(!mDownloadingLibrary);
@@ -540,8 +537,7 @@ void dlgSpeechRecognitionSetup::slot_nextPage()
                 mpCompletionDetailsLabel->setText(tr(
                     "<p>The speech recognition model is ready:</p>"
                     "<p><code>%1</code></p>"
-                    "<p>You can now use the microphone button in the command line to speak commands.</p>"
-                ).arg(mInstalledModelPath));
+                    "<p>You can now use the microphone button in the command line to speak commands.</p>").arg(mInstalledModelPath));
                 
                 goToPage(CompletionPage);
             } else {
@@ -673,8 +669,7 @@ void dlgSpeechRecognitionSetup::slot_downloadFinished()
         mpCompletionDetailsLabel->setText(tr(
             "<p>The speech recognition model has been installed to:</p>"
             "<p><code>%1</code></p>"
-            "<p>You can now use the microphone button in the command line to speak commands.</p>"
-        ).arg(mInstalledModelPath));
+            "<p>You can now use the microphone button in the command line to speak commands.</p>").arg(mInstalledModelPath));
     } else {
         mpCompletionIcon->setPixmap(style()->standardIcon(QStyle::SP_MessageBoxCritical).pixmap(48, 48));
         mpCompletionLabel->setText(tr("<b>Extraction failed</b>"));
@@ -683,8 +678,7 @@ void dlgSpeechRecognitionSetup::slot_downloadFinished()
             "<p>You may need to manually extract the file:</p>"
             "<p><code>%1</code></p>"
             "<p>to:</p>"
-            "<p><code>%2</code></p>"
-        ).arg(mDownloadedFilePath, modelPath));
+            "<p><code>%2</code></p>").arg(mDownloadedFilePath, modelPath));
     }
 
     goToPage(CompletionPage);
@@ -938,8 +932,7 @@ void dlgSpeechRecognitionSetup::slot_libraryDownloadFinished()
         mpLibraryDownloadStatusLabel->setText(tr(
             "<span style='color: red;'>Installation failed. You may need to manually copy the library.</span><br/>"
             "Downloaded file: <code>%1</code><br/>"
-            "Install to: <code>%2</code>"
-        ).arg(mLibraryDownloadPath, libInfo.installPath));
+            "Install to: <code>%2</code>").arg(mLibraryDownloadPath, libInfo.installPath));
         mpDownloadLibraryButton->setEnabled(true);
     }
 }
