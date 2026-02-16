@@ -24,8 +24,12 @@
 
 #include "TCommandLine.h"
 
+#include "dlgSpeechRecognitionSetup.h"
 #include "TEncodingHelper.h"
 #include "Host.h"
+#include "SpeechRecognizer.h"
+#include "SpeechRecognizerFactory.h"
+#include "VoskRecognizer.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TTabBar.h"
@@ -33,13 +37,17 @@
 #include "TEvent.h"
 #include "mudlet.h"
 
+#include <QDir>
+#include <QDesktopServices>
 #include <QKeyEvent>
+#include <QMessageBox>
 #include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>
 #include <QToolButton>
 #include <QIcon>
+#include <QUrl>
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
@@ -68,6 +76,32 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
         mpPasswordToggleButton->setToolTip(tr("Show password"));
         mpPasswordToggleButton->setVisible(false); // Hidden by default
         connect(mpPasswordToggleButton, &QToolButton::clicked, this, &TCommandLine::slot_togglePasswordVisibility);
+
+        // Create microphone button for speech-to-text
+        mpMicrophoneButton = new QToolButton(this);
+        mpMicrophoneButton->setMinimumSize(QSize(20, 20));
+        mpMicrophoneButton->setMaximumSize(QSize(20, 20));
+        mpMicrophoneButton->setFocusPolicy(Qt::NoFocus);
+        mpMicrophoneButton->setCursor(Qt::PointingHandCursor);
+        mpMicrophoneButton->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+        mpMicrophoneButton->setToolTip(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText)));
+        mpMicrophoneButton->setVisible(true);
+        connect(mpMicrophoneButton, &QToolButton::clicked, this, &TCommandLine::slot_toggleSpeechRecognition);
+
+        // Create pulse timer for visual feedback during speech recognition
+        mpMicrophonePulseTimer = new QTimer(this);
+        mpMicrophonePulseTimer->setInterval(500);  // Pulse every 500ms
+        connect(mpMicrophonePulseTimer, &QTimer::timeout, this, [this]() {
+            if (mpMicrophoneButton && mSpeechRecognitionActive) {
+                mMicrophonePulseState = !mMicrophonePulseState;
+                // Alternate between bright and dim red to create pulsing effect
+                if (mMicrophonePulseState) {
+                    mpMicrophoneButton->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
+                } else {
+                    mpMicrophoneButton->setStyleSheet(qsl("QToolButton { background-color: #cc0000; border-radius: 4px; }"));
+                }
+            }
+        });
     }
 
     if (mType & (MainCommandLine | ConsoleCommandLine)) {
@@ -218,6 +252,15 @@ bool TCommandLine::event(QEvent* event)
 
             ke->accept();
             return true;
+        }
+
+        // Ctrl+Shift+M for speech-to-text toggle
+        if (ke->key() == Qt::Key_M && (ke->modifiers() & Qt::ControlModifier) && (ke->modifiers() & Qt::ShiftModifier)) {
+            if (mpMicrophoneButton && mpMicrophoneButton->isVisible()) {
+                slot_toggleSpeechRecognition();
+                ke->accept();
+                return true;
+            }
         }
 
         // Shortcut for keypad keys
@@ -993,6 +1036,15 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
     // Emit signal for hyperlink visibility triggers before processing the command
     emit commandSubmitted();
+
+    // Mark that speech recognition should start fresh on the next input
+    // This ensures that after submitting a command, new speech starts with a clean slate
+    if (mSpeechRecognitionActive) {
+        mSpeechNeedsReset = true;
+        // Clear speech state immediately so any pending/in-flight results don't append to old text
+        mTextBeforeSpeech.clear();
+        mCurrentPartialResult.clear();
+    }
 
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
@@ -1864,16 +1916,42 @@ void TCommandLine::positionPasswordToggleButton()
     }
 
     // Position the button at the right side of the text edit
+    // Account for microphone button if visible
     const QRect viewportRect = viewport()->geometry();
     const int buttonWidth = mpPasswordToggleButton->width();
     const int buttonHeight = mpPasswordToggleButton->height();
+    const int margin = 5;
+
+    // Calculate offset if microphone button is visible
+    int microphoneOffset = 0;
+    if (mpMicrophoneButton && mpMicrophoneButton->isVisible()) {
+        microphoneOffset = mpMicrophoneButton->width() + margin;
+    }
+
+    // Position at the right edge (left of microphone if visible), vertically centered
+    const int x = viewportRect.width() - buttonWidth - margin - microphoneOffset;
+    const int y = (viewportRect.height() - buttonHeight) / 2;
+
+    mpPasswordToggleButton->move(x, y);
+}
+
+void TCommandLine::positionMicrophoneButton()
+{
+    if (!mpMicrophoneButton) {
+        return;
+    }
+
+    // Position the button at the far right side of the text edit
+    const QRect viewportRect = viewport()->geometry();
+    const int buttonWidth = mpMicrophoneButton->width();
+    const int buttonHeight = mpMicrophoneButton->height();
     const int margin = 5;
 
     // Position at the right edge, vertically centered
     const int x = viewportRect.width() - buttonWidth - margin;
     const int y = (viewportRect.height() - buttonHeight) / 2;
 
-    mpPasswordToggleButton->move(x, y);
+    mpMicrophoneButton->move(x, y);
 }
 
 void TCommandLine::resizeEvent(QResizeEvent* event)
@@ -1883,5 +1961,233 @@ void TCommandLine::resizeEvent(QResizeEvent* event)
     // Reposition the password toggle button when the widget is resized
     if (mpPasswordToggleButton && mpPasswordToggleButton->isVisible()) {
         positionPasswordToggleButton();
+    }
+
+    // Reposition the microphone button when the widget is resized
+    if (mpMicrophoneButton && mpMicrophoneButton->isVisible()) {
+        positionMicrophoneButton();
+    }
+}
+
+void TCommandLine::initSpeechRecognition()
+{
+    if (mpSpeechRecognizer) {
+        return; // Already initialized
+    }
+
+    mpSpeechRecognizer = SpeechRecognizerFactory::create(SpeechRecognizerFactory::Backend::Auto, this);
+    if (!mpSpeechRecognizer) {
+        qWarning() << "TCommandLine::initSpeechRecognition() - Failed to create speech recognizer";
+        return;
+    }
+
+    // Connect signals
+    connect(mpSpeechRecognizer, &SpeechRecognizer::partialResult, this, &TCommandLine::slot_handlePartialSpeechResult);
+    connect(mpSpeechRecognizer, &SpeechRecognizer::finalResult, this, &TCommandLine::slot_handleFinalSpeechResult);
+    connect(mpSpeechRecognizer, &SpeechRecognizer::errorOccurred, this, &TCommandLine::slot_handleSpeechError);
+    connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
+        updateMicrophoneButton();
+        if (newState == SpeechRecognizer::State::Error) {
+            mSpeechRecognitionActive = false;
+        }
+    });
+
+    // Initialize with default model path if available
+    // Note: In a full implementation, this would check for/download the model
+    const QString modelPath = VoskRecognizer::defaultModelPath();
+    QDir modelDir(modelPath);
+    if (modelDir.exists()) {
+        mpSpeechRecognizer->initialize(modelPath);
+    }
+}
+
+void TCommandLine::updateMicrophoneButton()
+{
+    if (!mpMicrophoneButton) {
+        return;
+    }
+
+    if (mSpeechRecognitionActive && mpSpeechRecognizer && mpSpeechRecognizer->isListening()) {
+        mpMicrophoneButton->setIcon(QIcon(qsl(":/icons/microphone-on.png")));
+        mpMicrophoneButton->setToolTip(tr("Stop listening (Ctrl+Shift+M)"));
+        // Start the pulsing animation
+        if (mpMicrophonePulseTimer && !mpMicrophonePulseTimer->isActive()) {
+            mMicrophonePulseState = true;
+            mpMicrophoneButton->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
+            mpMicrophonePulseTimer->start();
+        }
+    } else {
+        mpMicrophoneButton->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+        mpMicrophoneButton->setToolTip(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText)));
+        // Stop the pulsing animation and reset style
+        if (mpMicrophonePulseTimer) {
+            mpMicrophonePulseTimer->stop();
+        }
+        mpMicrophoneButton->setStyleSheet(QString());  // Reset to default style
+    }
+}
+
+void TCommandLine::slot_toggleSpeechRecognition()
+{
+    // Check if any backend is available first
+    if (!SpeechRecognizerFactory::isBackendAvailable(SpeechRecognizerFactory::Backend::Auto)) {
+        // Show the setup wizard
+        dlgSpeechRecognitionSetup setupDialog(this);
+        if (setupDialog.exec() == QDialog::Accepted) {
+            // Setup completed successfully, try to initialize and start listening
+            initSpeechRecognition();
+            if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
+                mpSpeechRecognizer->startListening();
+                mSpeechRecognitionActive = true;
+                updateMicrophoneButton();
+            }
+        }
+        return;
+    }
+
+    // Initialize speech recognizer on first use
+    if (!mpSpeechRecognizer) {
+        initSpeechRecognition();
+    }
+
+    if (!mpSpeechRecognizer) {
+        // Failed to initialize - show error to user
+        QMessageBox::warning(this, tr("Speech Recognition Error"),
+            tr("Failed to initialize speech recognition. The Vosk library may not be properly installed."));
+        return;
+    }
+
+    if (!mpSpeechRecognizer->isInitialized()) {
+        // Model not loaded - show the setup wizard
+        dlgSpeechRecognitionSetup setupDialog(this);
+        if (setupDialog.exec() == QDialog::Accepted) {
+            // Setup completed successfully, re-initialize and start listening
+            delete mpSpeechRecognizer;
+            mpSpeechRecognizer = nullptr;
+            initSpeechRecognition();
+            if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
+                mpSpeechRecognizer->startListening();
+                mSpeechRecognitionActive = true;
+                updateMicrophoneButton();
+            }
+        }
+        return;
+    }
+
+    if (mSpeechRecognitionActive) {
+        // Stop listening
+        mpSpeechRecognizer->stopListening();
+        mSpeechRecognitionActive = false;
+        mCurrentPartialResult.clear();
+    } else {
+        // Save current text before starting speech recognition
+        mTextBeforeSpeech = toPlainText();
+        mCurrentPartialResult.clear();
+        // Start listening
+        mpSpeechRecognizer->startListening();
+        mSpeechRecognitionActive = true;
+    }
+
+    updateMicrophoneButton();
+}
+
+void TCommandLine::slot_handlePartialSpeechResult(const QString& text)
+{
+    if (!mSpeechRecognitionActive) {
+        return;
+    }
+
+    // Check if we need to start fresh (command was submitted while listening)
+    // or if the command line was manually cleared
+    if (mSpeechNeedsReset) {
+        // Clear everything and start fresh
+        clear();
+        mTextBeforeSpeech.clear();
+        mCurrentPartialResult.clear();
+        mSpeechNeedsReset = false;
+    } else {
+        const QString currentText = toPlainText();
+        if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
+            // Command line was manually cleared, start fresh
+            mTextBeforeSpeech.clear();
+        }
+    }
+
+    mCurrentPartialResult = text;
+
+    // Show partial result with the original text preserved
+    // Format: [original text] [partial result in gray]
+    QString displayText = mTextBeforeSpeech;
+    if (!displayText.isEmpty() && !text.isEmpty()) {
+        displayText += QLatin1Char(' ');
+    }
+    displayText += text;
+
+    // Update the command line - partial results are shown but may change
+    setPlainText(displayText);
+    QTextCursor cursor = textCursor();
+    cursor.movePosition(QTextCursor::End);
+    setTextCursor(cursor);
+}
+
+void TCommandLine::slot_handleFinalSpeechResult(const QString& text)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+
+    // Check if we need to start fresh (command was submitted while listening)
+    // or if the command line was manually cleared
+    if (mSpeechNeedsReset) {
+        // Clear everything and start fresh
+        clear();
+        mTextBeforeSpeech.clear();
+        mCurrentPartialResult.clear();
+        mSpeechNeedsReset = false;
+    } else {
+        const QString currentText = toPlainText();
+        if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
+            // Command line was manually cleared, start fresh
+            mTextBeforeSpeech.clear();
+        }
+    }
+
+    // Append the final recognized text to any existing text
+    QString finalText = mTextBeforeSpeech;
+    if (!finalText.isEmpty() && !text.isEmpty()) {
+        finalText += QLatin1Char(' ');
+    }
+    finalText += text;
+
+    // Update the saved text so subsequent speech adds to it
+    mTextBeforeSpeech = finalText;
+    mCurrentPartialResult.clear();
+
+    // Set the final text
+    setPlainText(finalText);
+    QTextCursor cursor = textCursor();
+    cursor.movePosition(QTextCursor::End);
+    setTextCursor(cursor);
+
+    // Focus the command line
+    setFocus();
+}
+
+void TCommandLine::slot_handleSpeechError(const QString& errorMessage)
+{
+    mSpeechRecognitionActive = false;
+    mCurrentPartialResult.clear();
+    updateMicrophoneButton();
+
+    // Restore original text if there was a partial result in progress
+    if (!mTextBeforeSpeech.isEmpty() || !toPlainText().isEmpty()) {
+        setPlainText(mTextBeforeSpeech);
+        QTextCursor cursor = textCursor();
+        cursor.movePosition(QTextCursor::End);
+        setTextCursor(cursor);
+    }
+
+    if (mpHost) {
+        mpHost->postMessage(tr("[Speech Recognition] Error: %1").arg(errorMessage));
     }
 }

@@ -641,7 +641,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE "
                            "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>"));
 
-#if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     QString APACHE2_Body(
             qsl("<h4>Apache Licence</h4>"
                            "<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); "
@@ -653,7 +652,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the "
                            "License for the specific language governing permissions and limitations under "
                            "the License.</p>"));
-#endif // defined(INCLUDE_UPDATER)
 
     QString MIT_Body(
             qsl("<h4>The MIT License</h4>"
@@ -928,6 +926,10 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "All rights reserved.</h3>"));
 #endif
 
+    QString VoskHeader(tr("<h2><u>Vosk Speech Recognition Toolkit</u></h2>"
+                          "<h3>Copyright © 2019-2024 Alpha Cephei Inc.<br>"
+                          "<a href=\"https://alphacephei.com/vosk\">https://alphacephei.com/vosk</a></h3>"));
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(qsl("<html>%1<body>%2<hr>")
@@ -1041,6 +1043,10 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
     license_3rdParty_texts.append(qsl("<hr>%43")
                                   .arg(swordModelHeader));                      // 43 - sword model attribution - translatable
+
+    license_3rdParty_texts.append(qsl("<hr>%1%2")
+                                  .arg(VoskHeader,                             // Vosk header - translatable
+                                       APACHE2_Body));                         // Vosk body APACHE2 - not translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

@@ -66,6 +66,7 @@ set(mudlet_SRCS
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
     dlgSourceEditorFindArea.cpp
+    dlgSpeechRecognitionSetup.cpp
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
@@ -103,6 +104,7 @@ set(mudlet_SRCS
     SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
+    SpeechRecognizerFactory.cpp
     T2DMap.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
@@ -207,6 +209,7 @@ set(mudlet_SRCS
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
+    VoskRecognizer.cpp
     WideComboBox.cpp
     XMLexport.cpp
     XMLimport.cpp)
@@ -224,6 +227,17 @@ if(APPLE)
       COMPILE_OPTIONS "-fobjc-arc"
   )
   endif()
+
+  # Native macOS microphone permission handling for speech recognition
+  list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
+  list(APPEND mudlet_HDRS MacMicrophonePermission.h)
+  set_source_files_properties(
+    MacMicrophonePermission.mm
+    MacMicrophonePermission.h
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -283,6 +297,7 @@ set(mudlet_HDRS
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
     dlgSourceEditorFindArea.h
+    dlgSpeechRecognitionSetup.h
     dlgSystemMessageArea.h
     dlgTimersMainArea.h
     dlgTriggerEditor.h
@@ -317,6 +332,8 @@ set(mudlet_HDRS
     SecureStringUtils.h
     ShortcutsManager.h
     SingleLineTextEdit.h
+    SpeechRecognizer.h
+    SpeechRecognizerFactory.h
     T2DMap.h
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
@@ -416,6 +433,7 @@ set(mudlet_HDRS
     TVar.h
     utils.h
     VarUnit.h
+    VoskRecognizer.h
     widechar_width.h
     WideComboBox.h
     XMLexport.h
@@ -754,6 +772,13 @@ endif()
 
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+
+  # need to specifically call out macOS microphone permission sources
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/MacMicrophonePermission.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/MacMicrophonePermission.mm")
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.

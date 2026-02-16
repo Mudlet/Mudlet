@@ -32,10 +32,12 @@
 #include <QString>
 #include <QStringList>
 #include <QStringDecoder>
+#include <QTimer>
 #include <QToolButton>
 #include <QResizeEvent>
 
 class Host;
+class SpeechRecognizer;
 class KeyUnit;
 class TConsole;
 
@@ -123,6 +125,9 @@ private:
     void resizeEvent(QResizeEvent* event) override;
     void updatePasswordToggleButton();
     void positionPasswordToggleButton();
+    void initSpeechRecognition();
+    void updateMicrophoneButton();
+    void positionMicrophoneButton();
 
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
@@ -164,8 +169,22 @@ private:
     // Track whether user typed anything during echo suppression mode
     bool mUserTypedDuringEchoSuppression = false;
 
+    // Speech-to-text support
+    QToolButton* mpMicrophoneButton = nullptr;
+    SpeechRecognizer* mpSpeechRecognizer = nullptr;
+    bool mSpeechRecognitionActive = false;
+    QTimer* mpMicrophonePulseTimer = nullptr;
+    bool mMicrophonePulseState = false;
+    QString mTextBeforeSpeech;  // Preserve text when speech starts
+    QString mCurrentPartialResult;  // Track current partial result
+    bool mSpeechNeedsReset = false;  // Set when command submitted, next speech starts fresh
+
 private slots:
     void slot_togglePasswordVisibility();
+    void slot_toggleSpeechRecognition();
+    void slot_handlePartialSpeechResult(const QString& text);
+    void slot_handleFinalSpeechResult(const QString& text);
+    void slot_handleSpeechError(const QString& errorMessage);
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

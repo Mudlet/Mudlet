@@ -124,6 +124,9 @@ public slots:
     // Save.
     void slot_saveAndClose();
 
+    // Microphone.
+    void slot_openSpeechRecognitionSetup();
+
     void slot_hideActionLabel();
     void slot_setEncoding(const int);
 

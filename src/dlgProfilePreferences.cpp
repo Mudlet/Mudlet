@@ -40,6 +40,7 @@
 #include "TTrigger.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
+#include "dlgSpeechRecognitionSetup.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/models/textdocumentscopes.h"
@@ -1267,6 +1268,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // none are triggered by the setup operations...
     connect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setCommandLineFgColor);
     connect(pushButton_command_line_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setCommandLineBgColor);
+    connect(pushButton_speechRecognitionSetup, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_openSpeechRecognitionSetup);
 
     connect(pushButton_black, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorBlack);
     connect(pushButton_lBlack, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightBlack);
@@ -2887,6 +2889,12 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
     lineEdit_logFileName->setVisible(isShown);
     label_logFileName->setVisible(isShown);
     label_logFileNameExtension->setVisible(isShown);
+}
+
+void dlgProfilePreferences::slot_openSpeechRecognitionSetup()
+{
+    dlgSpeechRecognitionSetup setupDialog(this);
+    setupDialog.exec();
 }
 
 void dlgProfilePreferences::slot_saveAndClose()
