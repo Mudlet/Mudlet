@@ -60,6 +60,9 @@ private slots:
     void slot_downloadFinished();
     void slot_openVoskWebsite();
     void slot_refreshLibraryStatus();
+    void slot_downloadLibrary();
+    void slot_libraryDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void slot_libraryDownloadFinished();
 
 private:
     // Wizard pages
@@ -107,9 +110,6 @@ private:
 
     LibraryInfo getLibraryInfoForCurrentPlatform() const;
     void startLibraryDownload();
-    void slot_downloadLibrary();
-    void slot_libraryDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void slot_libraryDownloadFinished();
     bool extractLibrary(const QString& archivePath, const QString& destinationDir);
 
     // UI elements
