@@ -58,7 +58,11 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
+#include "dlgSpeechRecognitionSetup.h"
 #include "dlgTriggerEditor.h"
+#include "SpeechRecognizer.h"
+#include "SpeechRecognizerFactory.h"
+#include "VoskRecognizer.h"
 #include "TMediaData.h"
 #include "VarUnit.h"
 
@@ -70,6 +74,7 @@
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QJsonDocument>
@@ -375,6 +380,34 @@ void mudlet::init()
     mpActionVariables->setObjectName(qsl("variables_action"));
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
+    // Speech-to-text button
+    mpButtonSpeechToText = new QToolButton(this);
+    mpButtonSpeechToText->setText(tr("Speech"));
+    mpButtonSpeechToText->setObjectName(qsl("speech"));
+    mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+    mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+    mpButtonSpeechToText->setAutoRaise(true);
+    mpButtonSpeechToText->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    mpButtonSpeechToText->setEnabled(false);
+    mpMainToolBar->addWidget(mpButtonSpeechToText);
+    connect(mpButtonSpeechToText, &QToolButton::clicked, this, &mudlet::slot_toggleSpeechRecognition);
+
+    // Create pulse timer for visual feedback during speech recognition
+    mpSpeechPulseTimer = new QTimer(this);
+    mpSpeechPulseTimer->setInterval(500);
+    connect(mpSpeechPulseTimer, &QTimer::timeout, this, [this]() {
+        if (mpButtonSpeechToText) {
+            if (mSpeechRecognitionActive) {
+                mSpeechPulseState = !mSpeechPulseState;
+                if (mSpeechPulseState) {
+                    mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
+                } else {
+                    mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #cc0000; border-radius: 4px; }"));
+                }
+            }
+        }
+    });
+
     mpButtonMute = new QToolButton(this);
     mpButtonMute->setText(tr("Mute"));
     mpButtonMute->setObjectName(qsl("mute"));
@@ -645,6 +678,8 @@ void mudlet::init()
     connect(dactionMuteMedia, &QAction::triggered, this, &mudlet::slot_muteMedia);
     connect(dactionMuteAPI, &QAction::triggered, this, &mudlet::slot_muteAPI);
     connect(dactionMuteGame, &QAction::triggered, this, &mudlet::slot_muteGame);
+    connect(dactionSpeechToText, &QAction::triggered, this, &mudlet::slot_toggleSpeechRecognition);
+    dactionSpeechToText->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compactInputLine);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::slot_showTriggerDialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::slot_showEditorDialog);
@@ -2057,6 +2092,9 @@ void mudlet::slot_tabChanged(int tabID)
 
     // Update main window dock widget visibility for the new active profile
     updateMainWindowDockWidgetVisibilityForProfile(hostName);
+
+    // Update speech recognition button state
+    updateSpeechButton();
 }
 
 void mudlet::slot_refreshTabIndicatorsDelayed()
@@ -2262,6 +2300,8 @@ void mudlet::disableToolbarButtons()
     dactionToggleLogging->setEnabled(false);
     dactionToggleEmergencyStop->setEnabled(false);
 
+    mpButtonSpeechToText->setEnabled(false);
+
     dactionInputLine->setEnabled(false);
 
     mpActionReplay->setEnabled(false);
@@ -2446,6 +2486,9 @@ void mudlet::enableToolbarButtons()
     dactionToggleReplay->setEnabled(true);
     dactionToggleLogging->setEnabled(true);
     dactionToggleEmergencyStop->setEnabled(true);
+
+    mpButtonSpeechToText->setEnabled(true);
+    updateSpeechButton();
 
 
     dactionInputLine->setEnabled(true);
@@ -4591,6 +4634,298 @@ void mudlet::slot_muteMedia()
     }
 }
 
+void mudlet::initSpeechRecognition()
+{
+    if (mpSpeechRecognizer) {
+        return; // Already initialized
+    }
+
+    mpSpeechRecognizer = SpeechRecognizerFactory::create(SpeechRecognizerFactory::Backend::Auto, this);
+    if (!mpSpeechRecognizer) {
+        qWarning() << "mudlet::initSpeechRecognition() - Failed to create speech recognizer";
+        return;
+    }
+
+    // Connect signals
+    connect(mpSpeechRecognizer, &SpeechRecognizer::partialResult, this, &mudlet::slot_handlePartialSpeechResult);
+    connect(mpSpeechRecognizer, &SpeechRecognizer::finalResult, this, &mudlet::slot_handleFinalSpeechResult);
+    connect(mpSpeechRecognizer, &SpeechRecognizer::errorOccurred, this, &mudlet::slot_handleSpeechError);
+    connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
+        slot_handleSpeechStateChanged(static_cast<int>(newState));
+    });
+
+    // Initialize with default model path if available
+    const QString modelPath = VoskRecognizer::defaultModelPath();
+    QDir modelDir(modelPath);
+    if (modelDir.exists()) {
+        mpSpeechRecognizer->initialize(modelPath);
+
+        // Apply global settings to the recognizer
+        auto* voskRecognizer = qobject_cast<VoskRecognizer*>(mpSpeechRecognizer);
+        if (voskRecognizer) {
+            // Map UI index (0=Default, 1=Short, 2=Long) to Vosk EndpointerMode
+            // Vosk: 0=DEFAULT, 1=VERY_SHORT, 2=SHORT, 3=LONG, 4=VERY_LONG
+            int voskMode = 0; // DEFAULT
+            switch (mSpeechDetectionTiming) {
+            case 1:
+                voskMode = 2; // SHORT
+                break;
+            case 2:
+                voskMode = 3; // LONG
+                break;
+            default:
+                voskMode = 0; // DEFAULT
+                break;
+            }
+            voskRecognizer->setEndpointerMode(voskMode);
+            voskRecognizer->setWordsEnabled(mHighlightLowConfidenceWords);
+        }
+    }
+}
+
+void mudlet::slot_toggleSpeechRecognition()
+{
+    // Check if any backend is available first
+    if (!SpeechRecognizerFactory::isBackendAvailable(SpeechRecognizerFactory::Backend::Auto)) {
+        // Show the setup wizard
+        dlgSpeechRecognitionSetup setupDialog(this);
+        if (setupDialog.exec() == QDialog::Accepted) {
+            // Setup completed successfully, try to initialize and start listening
+            initSpeechRecognition();
+            if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
+                // Save current text from active command line before starting
+                Host* pHost = getActiveHost();
+                TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+                if (pCommandLine) {
+                    mTextBeforeSpeech = pCommandLine->toPlainText();
+                }
+                mCurrentPartialResult.clear();
+                mpSpeechRecognizer->startListening();
+                mSpeechRecognitionActive = true;
+                updateAllSpeechButtons();
+            }
+        }
+        return;
+    }
+
+    // Initialize speech recognizer on first use
+    if (!mpSpeechRecognizer) {
+        initSpeechRecognition();
+    }
+
+    if (!mpSpeechRecognizer) {
+        // Failed to initialize - show error to user
+        QMessageBox::warning(this, tr("Speech Recognition Error"), tr("Failed to initialize speech recognition. The Vosk library may not be properly installed."));
+        return;
+    }
+
+    if (!mpSpeechRecognizer->isInitialized()) {
+        // Model not loaded - show the setup wizard
+        dlgSpeechRecognitionSetup setupDialog(this);
+        if (setupDialog.exec() == QDialog::Accepted) {
+            // Setup completed successfully, re-initialize and start listening
+            delete mpSpeechRecognizer;
+            mpSpeechRecognizer = nullptr;
+            initSpeechRecognition();
+            if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
+                // Save current text from active command line before starting
+                Host* pHost = getActiveHost();
+                TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+                if (pCommandLine) {
+                    mTextBeforeSpeech = pCommandLine->toPlainText();
+                }
+                mCurrentPartialResult.clear();
+                mpSpeechRecognizer->startListening();
+                mSpeechRecognitionActive = true;
+                updateAllSpeechButtons();
+            }
+        }
+        return;
+    }
+
+    if (mSpeechRecognitionActive) {
+        // Stop listening
+        mpSpeechRecognizer->stopListening();
+        mSpeechRecognitionActive = false;
+        mCurrentPartialResult.clear();
+    } else {
+        // Save current text from active command line before starting speech recognition
+        Host* pHost = getActiveHost();
+        TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+        if (pCommandLine) {
+            mTextBeforeSpeech = pCommandLine->toPlainText();
+        } else {
+            mTextBeforeSpeech.clear();
+        }
+        mCurrentPartialResult.clear();
+        // Start listening
+        mpSpeechRecognizer->startListening();
+        mSpeechRecognitionActive = true;
+    }
+
+    updateAllSpeechButtons();
+}
+
+void mudlet::slot_handlePartialSpeechResult(const QString& text)
+{
+    if (!mSpeechRecognitionActive) {
+        return;
+    }
+
+    // Get the active command line to route the text to
+    Host* pHost = getActiveHost();
+    TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+    if (!pCommandLine) {
+        return;
+    }
+
+    // Check if we need to start fresh (command was submitted while listening)
+    // or if the command line was manually cleared
+    if (mSpeechNeedsReset) {
+        pCommandLine->clear();
+        mTextBeforeSpeech.clear();
+        mCurrentPartialResult.clear();
+        mSpeechNeedsReset = false;
+    } else {
+        const QString currentText = pCommandLine->toPlainText();
+        if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
+            // Command line was manually cleared, start fresh
+            mTextBeforeSpeech.clear();
+        }
+    }
+
+    mCurrentPartialResult = text;
+
+    // Show partial result with the original text preserved
+    QString displayText = mTextBeforeSpeech;
+    if (!displayText.isEmpty() && !text.isEmpty()) {
+        displayText += QLatin1Char(' ');
+    }
+    displayText += text;
+
+    // Update the command line
+    pCommandLine->setPlainText(displayText);
+    QTextCursor cursor = pCommandLine->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    pCommandLine->setTextCursor(cursor);
+}
+
+void mudlet::slot_handleFinalSpeechResult(const QString& text)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+
+    // Get the active command line to route the text to
+    Host* pHost = getActiveHost();
+    TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+    if (!pCommandLine) {
+        return;
+    }
+
+    // Check if we need to start fresh
+    if (mSpeechNeedsReset) {
+        pCommandLine->clear();
+        mTextBeforeSpeech.clear();
+        mCurrentPartialResult.clear();
+        mSpeechNeedsReset = false;
+    } else {
+        const QString currentText = pCommandLine->toPlainText();
+        if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
+            mTextBeforeSpeech.clear();
+        }
+    }
+
+    // Append the final recognized text to any existing text
+    QString finalText = mTextBeforeSpeech;
+    if (!finalText.isEmpty() && !text.isEmpty()) {
+        finalText += QLatin1Char(' ');
+    }
+    finalText += text;
+
+    // Update the saved text so subsequent speech adds to it
+    mTextBeforeSpeech = finalText;
+    mCurrentPartialResult.clear();
+
+    // Set the final text
+    pCommandLine->setPlainText(finalText);
+    QTextCursor cursor = pCommandLine->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    pCommandLine->setTextCursor(cursor);
+
+    // Focus the command line
+    pCommandLine->setFocus();
+}
+
+void mudlet::slot_handleSpeechError(const QString& errorMessage)
+{
+    mSpeechRecognitionActive = false;
+    mCurrentPartialResult.clear();
+    updateAllSpeechButtons();
+
+    // Restore original text if there was a partial result in progress
+    Host* pHost = getActiveHost();
+    TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+    if (pCommandLine && (!mTextBeforeSpeech.isEmpty() || !pCommandLine->toPlainText().isEmpty())) {
+        pCommandLine->setPlainText(mTextBeforeSpeech);
+        QTextCursor cursor = pCommandLine->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        pCommandLine->setTextCursor(cursor);
+    }
+
+    if (pHost) {
+        pHost->postMessage(tr("[Speech Recognition] Error: %1").arg(errorMessage));
+    }
+}
+
+void mudlet::slot_handleSpeechStateChanged(int newState)
+{
+    updateAllSpeechButtons();
+    if (newState == static_cast<int>(SpeechRecognizer::State::Error)) {
+        mSpeechRecognitionActive = false;
+    }
+}
+
+void mudlet::updateSpeechButton()
+{
+    if (!mpButtonSpeechToText) {
+        return;
+    }
+
+    // Keep menu action in sync with speech state
+    dactionSpeechToText->setChecked(mSpeechRecognitionActive);
+
+    if (mSpeechRecognitionActive) {
+        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-on.png")));
+        mpButtonSpeechToText->setToolTip(utils::richText(tr("Stop listening (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+        if (mpSpeechPulseTimer && !mpSpeechPulseTimer->isActive()) {
+            mSpeechPulseState = true;
+            mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
+            mpSpeechPulseTimer->start();
+        }
+    } else {
+        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+        mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+        if (mpSpeechPulseTimer) {
+            mpSpeechPulseTimer->stop();
+        }
+        mpButtonSpeechToText->setStyleSheet(QString());
+    }
+}
+
+void mudlet::updateAllSpeechButtons()
+{
+    // Update main window speech button
+    updateSpeechButton();
+
+    // Update speech buttons in all detached windows
+    for (TDetachedWindow* pWindow : mDetachedWindows) {
+        if (pWindow) {
+            pWindow->updateSpeechButton();
+        }
+    }
+}
+
 // Called by the short-cut to the menu item that doesn't pass the checked state
 // of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggleCompactInputLine()
@@ -4626,6 +4961,13 @@ mudlet::~mudlet()
     // application destruction...?
     delete (mpTimerReplay);
     mpTimerReplay = nullptr;
+
+    // Clean up global speech recognizer
+    if (mpSpeechRecognizer) {
+        mpSpeechRecognizer->stopListening();
+        delete mpSpeechRecognizer;
+        mpSpeechRecognizer = nullptr;
+    }
 
     if (mpHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);

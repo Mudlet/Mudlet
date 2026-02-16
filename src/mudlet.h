@@ -97,6 +97,7 @@ class TScrollBox;
 class TTabBar;
 class TTimer;
 class TToolBar;
+class SpeechRecognizer;
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -425,6 +426,20 @@ public slots:
     void slot_muteMedia();
     void slot_muteAPI(const bool);
     void slot_muteGame(const bool);
+    void slot_toggleSpeechRecognition();
+    void updateSpeechButton();
+    void updateAllSpeechButtons(); // Update speech button state across all windows
+    void initSpeechRecognition();
+    bool isSpeechRecognitionActive() const { return mSpeechRecognitionActive; }
+    int speechDetectionTiming() const { return mSpeechDetectionTiming; }
+    void setSpeechDetectionTiming(int timing) { mSpeechDetectionTiming = timing; }
+    bool highlightLowConfidenceWords() const { return mHighlightLowConfidenceWords; }
+    void setHighlightLowConfidenceWords(bool enabled) { mHighlightLowConfidenceWords = enabled; }
+    void setSpeechNeedsReset(bool reset) { mSpeechNeedsReset = reset; }
+    void slot_handlePartialSpeechResult(const QString& text);
+    void slot_handleFinalSpeechResult(const QString& text);
+    void slot_handleSpeechError(const QString& errorMessage);
+    void slot_handleSpeechStateChanged(int newState);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
     void slot_notes();
     void slot_openMappingScriptsPage();
@@ -666,6 +681,20 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
+    QPointer<QToolButton> mpButtonSpeechToText;
+    QPointer<QTimer> mpSpeechPulseTimer;
+    bool mSpeechPulseState = false;
+
+    // Global speech-to-text singleton
+    SpeechRecognizer* mpSpeechRecognizer = nullptr;
+    bool mSpeechRecognitionActive = false;
+    QString mTextBeforeSpeech;
+    QString mCurrentPartialResult;
+    bool mSpeechNeedsReset = false;
+
+    // Global speech settings (not per-profile)
+    int mSpeechDetectionTiming = 0; // 0=Default, 1=Short, 2=Long
+    bool mHighlightLowConfidenceWords = false;
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;

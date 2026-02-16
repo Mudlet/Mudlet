@@ -440,8 +440,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableNEWENVIRON") = pHost->mEnableNEWENVIRON ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
-    host.append_attribute("mSpeechDetectionTiming") = QString::number(pHost->mSpeechDetectionTiming).toUtf8().constData();
-    host.append_attribute("mHighlightLowConfidenceWords") = pHost->mHighlightLowConfidenceWords ? "yes" : "no";
+    // Note: Speech recognition settings (mSpeechDetectionTiming, mHighlightLowConfidenceWords) are now global app settings, not per-profile
     bool enableUserDictionary;
     bool useSharedDictionary;
     pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);

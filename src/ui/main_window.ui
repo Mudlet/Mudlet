@@ -114,6 +114,8 @@
     <addaction name="dactionOptions"/>
     <addaction name="dactionToggleTimeStamp"/>
     <addaction name="separator"/>
+    <addaction name="dactionSpeechToText"/>
+    <addaction name="separator"/>
     <addaction name="dactionMuteMedia"/>
     <addaction name="dactionMuteAPI"/>
     <addaction name="dactionMuteGame"/>
@@ -512,6 +514,20 @@
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Open an additional map view window for the current profile.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionSpeechToText">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Speech to text</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Toggle speech to text input (Ctrl+Shift+M).&lt;/p&gt;</string>
    </property>
   </action>
  </widget>

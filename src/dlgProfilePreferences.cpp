@@ -778,9 +778,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_highlightLowConfidenceWords->setToolTip(utils::richText(tr("Speech recognition library not installed. Use the Setup button to install it.")));
     }
 
-    // Set current values from host settings
-    comboBox_speechDetectionTiming->setCurrentIndex(pHost->mSpeechDetectionTiming);
-    checkBox_highlightLowConfidenceWords->setChecked(pHost->mHighlightLowConfidenceWords);
+    // Set current values from global settings (speech is app-wide, not per-profile)
+    comboBox_speechDetectionTiming->setCurrentIndex(mudlet::self()->speechDetectionTiming());
+    checkBox_highlightLowConfidenceWords->setChecked(mudlet::self()->highlightLowConfidenceWords());
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
@@ -2937,9 +2937,9 @@ void dlgProfilePreferences::slot_saveAndClose()
             pHost->setUserDictionaryOptions(true, false);
         }
 
-        // Save speech recognition settings
-        pHost->mSpeechDetectionTiming = comboBox_speechDetectionTiming->currentIndex();
-        pHost->mHighlightLowConfidenceWords = checkBox_highlightLowConfidenceWords->isChecked();
+        // Save speech recognition settings (global, not per-profile)
+        mudlet::self()->setSpeechDetectionTiming(comboBox_speechDetectionTiming->currentIndex());
+        mudlet::self()->setHighlightLowConfidenceWords(checkBox_highlightLowConfidenceWords->isChecked());
 
         const int priorWrapAt = pHost->mWrapAt;
         pHost->mWrapAt = wrap_at_spinBox->value();

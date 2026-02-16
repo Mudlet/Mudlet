@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "TDetachedWindow.h"
+#include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "TTabBar.h"
 #include "TDebug.h"
@@ -391,6 +392,16 @@ void TDetachedWindow::createMenus()
     mpMenuToggleTimeStampAction->setStatusTip(tr("Toggle time stamps on the main console."));
     connect(mpMenuToggleTimeStampAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleTimeStamp);
     optionsMenu->addAction(mpMenuToggleTimeStampAction);
+
+    optionsMenu->addSeparator();
+
+    //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
+    mpMenuSpeechToTextAction = new QAction(tr("Speech to text"), this);
+    //: This explains the "Speech to text" item in the "Options" menu in the menubar of a detached Mudlet window.
+    mpMenuSpeechToTextAction->setStatusTip(tr("Toggle speech to text input."));
+    mpMenuSpeechToTextAction->setCheckable(true);
+    connect(mpMenuSpeechToTextAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleSpeechRecognition);
+    optionsMenu->addAction(mpMenuSpeechToTextAction);
 
     optionsMenu->addSeparator();
 
@@ -903,6 +914,34 @@ void TDetachedWindow::createToolBar()
     mpToolBar->addAction(mpActionVariables);
     mpActionVariables->setObjectName(qsl("variables_action"));
 
+    // Speech-to-text button
+    mpButtonSpeechToText = new QToolButton(this);
+    mpButtonSpeechToText->setText(tr("Speech"));
+    mpButtonSpeechToText->setObjectName(qsl("speech"));
+    mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+    mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+    mpButtonSpeechToText->setAutoRaise(true);
+    mpButtonSpeechToText->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    mpButtonSpeechToText->setEnabled(true);
+    mpToolBar->addWidget(mpButtonSpeechToText);
+    connect(mpButtonSpeechToText, &QToolButton::clicked, this, &TDetachedWindow::slot_toggleSpeechRecognition);
+
+    // Create pulse timer for visual feedback during speech recognition
+    mpSpeechPulseTimer = new QTimer(this);
+    mpSpeechPulseTimer->setInterval(500);
+    connect(mpSpeechPulseTimer, &QTimer::timeout, this, [this]() {
+        if (mpButtonSpeechToText && !mCurrentProfileName.isEmpty()) {
+            if (mudlet::self()->isSpeechRecognitionActive()) {
+                mSpeechPulseState = !mSpeechPulseState;
+                if (mSpeechPulseState) {
+                    mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
+                } else {
+                    mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #cc0000; border-radius: 4px; }"));
+                }
+            }
+        }
+    });
+
     // Mute button with dropdown
     mpButtonMute = new QToolButton(this);
     mpButtonMute->setText(tr("Mute"));
@@ -1152,6 +1191,8 @@ void TDetachedWindow::updateMenuShortcuts()
     assignShortcut(mpMenuToggleTimeStampAction, qsl("Toggle Time Stamps"), QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T));
     assignShortcut(mpMenuMuteMediaAction, qsl("Mute all media"), QKeySequence(Qt::CTRL | Qt::Key_K));
     assignShortcut(mpMenuMultiViewAction, qsl("MultiView"), QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V));
+    // Speech to text uses Ctrl+Shift+M on all platforms
+    mpMenuSpeechToTextAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
 #else
     assignShortcut(mpMenuConnectAction, qsl("Play"), QKeySequence(Qt::ALT | Qt::Key_C));
     assignShortcut(mpMenuDisconnectAction, qsl("Disconnect"), QKeySequence(Qt::ALT | Qt::Key_D));
@@ -1170,6 +1211,8 @@ void TDetachedWindow::updateMenuShortcuts()
     assignShortcut(mpMenuToggleTimeStampAction, qsl("Toggle Time Stamps"), QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_T));
     assignShortcut(mpMenuMuteMediaAction, qsl("Mute all media"), QKeySequence(Qt::ALT | Qt::Key_K));
     assignShortcut(mpMenuMultiViewAction, qsl("MultiView"), QKeySequence(Qt::ALT | Qt::Key_V));
+    // Speech to text uses Ctrl+Shift+M on all platforms
+    mpMenuSpeechToTextAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
 #endif
 }
 
@@ -1237,6 +1280,9 @@ void TDetachedWindow::updateToolBarActions()
 
     // Keep menu shortcuts in sync with the active profile
     updateMenuShortcuts();
+
+    // Update speech-to-text button state
+    updateSpeechButton();
 }
 
 void TDetachedWindow::updateDiscordNamedIcon()
@@ -3003,6 +3049,44 @@ void TDetachedWindow::slot_muteGame()
         bool currentState = mudlet::self()->muteGame();
         mudlet::self()->slot_muteGame(!currentState);
     });
+}
+
+void TDetachedWindow::slot_toggleSpeechRecognition()
+{
+    // Delegate to the global speech recognition handler
+    mudlet::self()->slot_toggleSpeechRecognition();
+}
+
+void TDetachedWindow::updateSpeechButton()
+{
+    if (!mpButtonSpeechToText) {
+        return;
+    }
+
+    // Use the global speech recognition state
+    const bool isActive = mudlet::self()->isSpeechRecognitionActive();
+
+    // Keep menu action in sync with speech state
+    if (mpMenuSpeechToTextAction) {
+        mpMenuSpeechToTextAction->setChecked(isActive);
+    }
+
+    if (isActive) {
+        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-on.png")));
+        mpButtonSpeechToText->setToolTip(utils::richText(tr("Stop listening (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+        if (mpSpeechPulseTimer && !mpSpeechPulseTimer->isActive()) {
+            mSpeechPulseState = true;
+            mpButtonSpeechToText->setStyleSheet(qsl("QToolButton { background-color: #ff4444; border-radius: 4px; }"));
+            mpSpeechPulseTimer->start();
+        }
+    } else {
+        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+        mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+        if (mpSpeechPulseTimer) {
+            mpSpeechPulseTimer->stop();
+        }
+        mpButtonSpeechToText->setStyleSheet(QString());
+    }
 }
 
 void TDetachedWindow::changeEvent(QEvent* event)

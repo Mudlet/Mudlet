@@ -438,6 +438,7 @@ public:
     void setFocusOnHostActiveCommandLine();
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
+    TCommandLine* activeCommandLine();
     QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
@@ -717,12 +718,6 @@ public:
     bool mTimeStampStatus = false;
     bool mEnableSpellCheck = true;
 
-    // Speech recognition settings
-    // EndpointerMode: 0=Default, 1=Short (quick commands), 2=Long (dictation)
-    // Maps to Vosk's: 0=DEFAULT, 2=SHORT, 3=LONG
-    int mSpeechDetectionTiming = 0;
-    bool mHighlightLowConfidenceWords = false;
-
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
@@ -848,7 +843,6 @@ private:
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
-    TCommandLine* activeCommandLine();
     void closeChildren();
     void setupSandboxedLuaState(lua_State* L);
 
