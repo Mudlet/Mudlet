@@ -756,6 +756,10 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    setBoolAttribute(qsl("mHighlightLowConfidenceWords"), pHost->mHighlightLowConfidenceWords);
+    if (attributes().hasAttribute(qsl("mSpeechDetectionTiming"))) {
+        pHost->mSpeechDetectionTiming = attributes().value(qsl("mSpeechDetectionTiming")).toInt();
+    }
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);

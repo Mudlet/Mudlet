@@ -29,6 +29,7 @@
 #include <QPointer>
 #include <QString>
 #include <QTimer>
+#include <QVariantList>
 
 // Forward declarations for Vosk types (opaque pointers)
 struct VoskModel;
@@ -118,6 +119,19 @@ public:
     QString backendVersion() const override;
     bool isBackendAvailable() const override;
 
+    // Endpointer mode controls how quickly Vosk detects end of speech
+    // 0 = DEFAULT - balanced (default, good for most use)
+    // 1 = VERY_SHORT - very fast detection (may cut off words)
+    // 2 = SHORT - faster detection (good for commands)
+    // 3 = LONG - slower detection (good for dictation)
+    // 4 = VERY_LONG - very slow detection (continuous speech)
+    void setEndpointerMode(int mode);
+    int endpointerMode() const { return mEndpointerMode; }
+
+    // Enable word-level confidence scores in results
+    void setWordsEnabled(bool enabled);
+    bool wordsEnabled() const { return mWordsEnabled; }
+
     // Static method to check if Vosk library is available on this system
     static bool isVoskAvailable();
 
@@ -151,6 +165,11 @@ public:
 
     // Get the "best" available model (prefers larger models over smaller ones)
     static QString getBestAvailableModel();
+
+signals:
+    // Signal with word-level results including confidence scores
+    // Each word is a QVariantMap with "word", "start", "end", "conf" keys
+    void wordsResult(const QVariantList& words);
 
 private slots:
     void processAudioData();
@@ -226,6 +245,8 @@ private:
     using vosk_recognizer_final_result_fn = const char* (*)(::VoskRecognizer*);
     using vosk_recognizer_reset_fn = void (*)(::VoskRecognizer*);
     using vosk_set_log_level_fn = void (*)(int);
+    using vosk_recognizer_set_endpointer_mode_fn = void (*)(::VoskRecognizer*, int);
+    using vosk_recognizer_set_words_fn = void (*)(::VoskRecognizer*, int);
 
     static vosk_model_new_fn s_vosk_model_new;
     static vosk_model_free_fn s_vosk_model_free;
@@ -237,6 +258,12 @@ private:
     static vosk_recognizer_final_result_fn s_vosk_recognizer_final_result;
     static vosk_recognizer_reset_fn s_vosk_recognizer_reset;
     static vosk_set_log_level_fn s_vosk_set_log_level;
+    static vosk_recognizer_set_endpointer_mode_fn s_vosk_recognizer_set_endpointer_mode;
+    static vosk_recognizer_set_words_fn s_vosk_recognizer_set_words;
+
+    // Settings
+    int mEndpointerMode = 0; // DEFAULT
+    bool mWordsEnabled = false;
 };
 
 #endif // MUDLET_VOSKRECOGNIZER_H

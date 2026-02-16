@@ -24,6 +24,7 @@
 #include <QAudioDevice>
 #include <QCoreApplication>
 #include <QDir>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMediaDevices>
@@ -52,6 +53,8 @@ VoskRecognizer::vosk_recognizer_partial_result_fn VoskRecognizer::s_vosk_recogni
 VoskRecognizer::vosk_recognizer_final_result_fn VoskRecognizer::s_vosk_recognizer_final_result = nullptr;
 VoskRecognizer::vosk_recognizer_reset_fn VoskRecognizer::s_vosk_recognizer_reset = nullptr;
 VoskRecognizer::vosk_set_log_level_fn VoskRecognizer::s_vosk_set_log_level = nullptr;
+VoskRecognizer::vosk_recognizer_set_endpointer_mode_fn VoskRecognizer::s_vosk_recognizer_set_endpointer_mode = nullptr;
+VoskRecognizer::vosk_recognizer_set_words_fn VoskRecognizer::s_vosk_recognizer_set_words = nullptr;
 
 // Sample rate for Vosk - most models expect 16kHz
 static constexpr int VOSK_SAMPLE_RATE = 16000;
@@ -138,6 +141,10 @@ bool VoskRecognizer::loadVoskLibrary()
     s_vosk_recognizer_reset = reinterpret_cast<vosk_recognizer_reset_fn>(sVoskLibrary.resolve("vosk_recognizer_reset"));
     s_vosk_set_log_level = reinterpret_cast<vosk_set_log_level_fn>(sVoskLibrary.resolve("vosk_set_log_level"));
 
+    // Optional newer API functions (may not be available in all Vosk versions)
+    s_vosk_recognizer_set_endpointer_mode = reinterpret_cast<vosk_recognizer_set_endpointer_mode_fn>(sVoskLibrary.resolve("vosk_recognizer_set_endpointer_mode"));
+    s_vosk_recognizer_set_words = reinterpret_cast<vosk_recognizer_set_words_fn>(sVoskLibrary.resolve("vosk_recognizer_set_words"));
+
     // Check that essential functions were resolved
     if (!s_vosk_model_new || !s_vosk_model_free || !s_vosk_recognizer_new || !s_vosk_recognizer_free || !s_vosk_recognizer_accept_waveform || !s_vosk_recognizer_result
         || !s_vosk_recognizer_partial_result || !s_vosk_recognizer_final_result) {
@@ -193,6 +200,8 @@ void VoskRecognizer::resetLibraryLoadState()
     s_vosk_recognizer_final_result = nullptr;
     s_vosk_recognizer_reset = nullptr;
     s_vosk_set_log_level = nullptr;
+    s_vosk_recognizer_set_endpointer_mode = nullptr;
+    s_vosk_recognizer_set_words = nullptr;
 }
 
 QStringList VoskRecognizer::librarySearchPaths()
@@ -261,6 +270,16 @@ bool VoskRecognizer::initialize(const QString& modelPath)
         emit errorOccurred(tr("Failed to create Vosk recognizer"));
         setState(State::Error);
         return false;
+    }
+
+    // Apply optional settings if available
+    if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != 0) {
+        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, mEndpointerMode);
+        qDebug() << "VoskRecognizer: Applied endpointer mode" << mEndpointerMode;
+    }
+    if (s_vosk_recognizer_set_words && mWordsEnabled) {
+        s_vosk_recognizer_set_words(mVoskRecognizer, 1);
+        qDebug() << "VoskRecognizer: Enabled word-level results";
     }
 
     // Try to determine language from model path (convention: vosk-model-small-en-us-0.15)
@@ -618,7 +637,8 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
         const char* resultJson = s_vosk_recognizer_result(mVoskRecognizer);
         if (resultJson) {
             const QJsonDocument doc = QJsonDocument::fromJson(QByteArray(resultJson));
-            QString text = doc.object().value(QLatin1String("text")).toString().trimmed();
+            const QJsonObject obj = doc.object();
+            QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
                 // Strip leading hallucination words from final results too
                 static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
@@ -628,6 +648,24 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                 if (!text.isEmpty()) {
                     qDebug() << "VoskRecognizer: Final result:" << text;
                     emit finalResult(text);
+
+                    // Emit word-level results with confidence if available and enabled
+                    if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
+                        const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
+                        QVariantList wordsList;
+                        for (const QJsonValue& wordVal : wordsArray) {
+                            const QJsonObject wordObj = wordVal.toObject();
+                            QVariantMap wordData;
+                            wordData[qsl("word")] = wordObj.value(QLatin1String("word")).toString();
+                            wordData[qsl("conf")] = wordObj.value(QLatin1String("conf")).toDouble();
+                            wordData[qsl("start")] = wordObj.value(QLatin1String("start")).toDouble();
+                            wordData[qsl("end")] = wordObj.value(QLatin1String("end")).toDouble();
+                            wordsList.append(wordData);
+                        }
+                        if (!wordsList.isEmpty()) {
+                            emit wordsResult(wordsList);
+                        }
+                    }
                 }
             }
         }
@@ -954,4 +992,27 @@ void VoskRecognizer::setSelectedModelPath(const QString& modelPath)
     }
 
     settings.endGroup();
+}
+
+void VoskRecognizer::setEndpointerMode(int mode)
+{
+    // Clamp to valid range: 0 (DEFAULT) to 4 (VERY_LONG)
+    mEndpointerMode = qBound(0, mode, 4);
+
+    // Apply to recognizer if it exists
+    if (mVoskRecognizer && s_vosk_recognizer_set_endpointer_mode) {
+        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, mEndpointerMode);
+        qDebug() << "VoskRecognizer: Set endpointer mode to" << mEndpointerMode;
+    }
+}
+
+void VoskRecognizer::setWordsEnabled(bool enabled)
+{
+    mWordsEnabled = enabled;
+
+    // Apply to recognizer if it exists
+    if (mVoskRecognizer && s_vosk_recognizer_set_words) {
+        s_vosk_recognizer_set_words(mVoskRecognizer, mWordsEnabled ? 1 : 0);
+        qDebug() << "VoskRecognizer: Set words enabled to" << mWordsEnabled;
+    }
 }

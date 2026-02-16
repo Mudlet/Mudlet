@@ -38,6 +38,7 @@
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "VoskRecognizer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgSpeechRecognitionSetup.h"
@@ -766,6 +767,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     comboBox_dictionary->blockSignals(false);
 
+    // Initialize speech recognition settings
+    const bool voskAvailable = VoskRecognizer::isLibraryAvailable();
+    comboBox_speechDetectionTiming->setEnabled(voskAvailable);
+    checkBox_highlightLowConfidenceWords->setEnabled(voskAvailable);
+    label_speechDetectionTiming->setEnabled(voskAvailable);
+
+    if (!voskAvailable) {
+        comboBox_speechDetectionTiming->setToolTip(utils::richText(tr("Speech recognition library not installed. Use the Setup button to install it.")));
+        checkBox_highlightLowConfidenceWords->setToolTip(utils::richText(tr("Speech recognition library not installed. Use the Setup button to install it.")));
+    }
+
+    // Set current values from host settings
+    comboBox_speechDetectionTiming->setCurrentIndex(pHost->mSpeechDetectionTiming);
+    checkBox_highlightLowConfidenceWords->setChecked(pHost->mHighlightLowConfidenceWords);
+
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_downloadMap);
@@ -929,7 +945,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
     //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
-    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables including OSC link support."));
+    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables "
+                               "including OSC link support."));
     protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
@@ -966,7 +983,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
     //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
-    mEnableNEWENVIRON->setToolTip(tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
+    mEnableNEWENVIRON->setToolTip(
+            tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
@@ -1213,7 +1231,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -2918,6 +2936,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         } else {
             pHost->setUserDictionaryOptions(true, false);
         }
+
+        // Save speech recognition settings
+        pHost->mSpeechDetectionTiming = comboBox_speechDetectionTiming->currentIndex();
+        pHost->mHighlightLowConfidenceWords = checkBox_highlightLowConfidenceWords->isChecked();
 
         const int priorWrapAt = pHost->mWrapAt;
         pHost->mWrapAt = wrap_at_spinBox->value();

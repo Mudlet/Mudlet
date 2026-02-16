@@ -90,7 +90,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
         // Create pulse timer for visual feedback during speech recognition
         mpMicrophonePulseTimer = new QTimer(this);
-        mpMicrophonePulseTimer->setInterval(500);  // Pulse every 500ms
+        mpMicrophonePulseTimer->setInterval(500); // Pulse every 500ms
         connect(mpMicrophonePulseTimer, &QTimer::timeout, this, [this]() {
             if (mpMicrophoneButton && mSpeechRecognitionActive) {
                 mMicrophonePulseState = !mMicrophonePulseState;
@@ -1998,6 +1998,34 @@ void TCommandLine::initSpeechRecognition()
     QDir modelDir(modelPath);
     if (modelDir.exists()) {
         mpSpeechRecognizer->initialize(modelPath);
+
+        // Apply profile settings to the recognizer
+        if (mpHost) {
+            auto* voskRecognizer = qobject_cast<VoskRecognizer*>(mpSpeechRecognizer);
+            if (voskRecognizer) {
+                // Map UI index (0=Default, 1=Short, 2=Long) to Vosk EndpointerMode
+                // Vosk: 0=DEFAULT, 1=VERY_SHORT, 2=SHORT, 3=LONG, 4=VERY_LONG
+                int voskMode = 0; // DEFAULT
+                switch (mpHost->mSpeechDetectionTiming) {
+                case 1:
+                    voskMode = 2; // SHORT
+                    break;
+                case 2:
+                    voskMode = 3; // LONG
+                    break;
+                default:
+                    voskMode = 0; // DEFAULT
+                    break;
+                }
+                voskRecognizer->setEndpointerMode(voskMode);
+                voskRecognizer->setWordsEnabled(mpHost->mHighlightLowConfidenceWords);
+
+                // Connect to word results signal for confidence-based highlighting
+                if (mpHost->mHighlightLowConfidenceWords) {
+                    connect(voskRecognizer, &VoskRecognizer::wordsResult, this, &TCommandLine::slot_handleWordsResult);
+                }
+            }
+        }
     }
 }
 
@@ -2023,7 +2051,7 @@ void TCommandLine::updateMicrophoneButton()
         if (mpMicrophonePulseTimer) {
             mpMicrophonePulseTimer->stop();
         }
-        mpMicrophoneButton->setStyleSheet(QString());  // Reset to default style
+        mpMicrophoneButton->setStyleSheet(QString()); // Reset to default style
     }
 }
 
@@ -2052,8 +2080,7 @@ void TCommandLine::slot_toggleSpeechRecognition()
 
     if (!mpSpeechRecognizer) {
         // Failed to initialize - show error to user
-        QMessageBox::warning(this, tr("Speech Recognition Error"),
-            tr("Failed to initialize speech recognition. The Vosk library may not be properly installed."));
+        QMessageBox::warning(this, tr("Speech Recognition Error"), tr("Failed to initialize speech recognition. The Vosk library may not be properly installed."));
         return;
     }
 
@@ -2177,6 +2204,7 @@ void TCommandLine::slot_handleSpeechError(const QString& errorMessage)
 {
     mSpeechRecognitionActive = false;
     mCurrentPartialResult.clear();
+    mWordConfidences.clear();
     updateMicrophoneButton();
 
     // Restore original text if there was a partial result in progress
@@ -2190,4 +2218,60 @@ void TCommandLine::slot_handleSpeechError(const QString& errorMessage)
     if (mpHost) {
         mpHost->postMessage(tr("[Speech Recognition] Error: %1").arg(errorMessage));
     }
+}
+
+void TCommandLine::slot_handleWordsResult(const QVariantList& words)
+{
+    // Store word confidence data for highlighting
+    mWordConfidences.clear();
+    for (const QVariant& wordVar : words) {
+        const QVariantMap wordMap = wordVar.toMap();
+        WordConfidence wc;
+        wc.word = wordMap.value(qsl("word")).toString();
+        wc.confidence = wordMap.value(qsl("conf")).toDouble();
+        mWordConfidences.append(wc);
+    }
+
+    // Apply highlighting to the command line text
+    if (!mpHost || !mpHost->mHighlightLowConfidenceWords) {
+        return;
+    }
+
+    // Find and highlight low-confidence words
+    const QString currentText = toPlainText();
+    QTextCursor cursor(document());
+
+    // Create format for low-confidence words (orange wavy underline)
+    QTextCharFormat lowConfFormat;
+    lowConfFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+    lowConfFormat.setUnderlineColor(QColor(255, 140, 0)); // Orange
+
+    // Reset all formatting first
+    cursor.select(QTextCursor::Document);
+    QTextCharFormat normalFormat;
+    cursor.setCharFormat(normalFormat);
+
+    // Apply low-confidence highlighting to matching words
+    for (const WordConfidence& wc : mWordConfidences) {
+        if (wc.confidence < LOW_CONFIDENCE_THRESHOLD && !wc.word.isEmpty()) {
+            // Find this word in the text (case-insensitive)
+            int pos = 0;
+            while ((pos = currentText.indexOf(wc.word, pos, Qt::CaseInsensitive)) != -1) {
+                // Make sure it's a word boundary
+                const bool startOk = (pos == 0) || !currentText.at(pos - 1).isLetterOrNumber();
+                const bool endOk = (pos + wc.word.length() >= currentText.length()) || !currentText.at(pos + wc.word.length()).isLetterOrNumber();
+
+                if (startOk && endOk) {
+                    cursor.setPosition(pos);
+                    cursor.setPosition(pos + wc.word.length(), QTextCursor::KeepAnchor);
+                    cursor.mergeCharFormat(lowConfFormat);
+                }
+                pos += wc.word.length();
+            }
+        }
+    }
+
+    // Move cursor back to end
+    cursor.movePosition(QTextCursor::End);
+    setTextCursor(cursor);
 }

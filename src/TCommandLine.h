@@ -45,17 +45,14 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
-    enum MoveDirection {
-        MOVE_UP,
-        MOVE_DOWN
-    };
+    enum MoveDirection { MOVE_UP, MOVE_DOWN };
 
 public:
     enum CommandLineTypeFlag {
-        UnknownType = 0x0,     // Should not be encountered but left as a trap value
-        MainCommandLine = 0x1, // One per profile
-        SubCommandLine = 0x2,  // Overlaid on top of TMainConsole or TConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
-        ConsoleCommandLine = 0x4,  // Integrated in TConsoles other than those derived into a TMainConsole
+        UnknownType = 0x0,        // Should not be encountered but left as a trap value
+        MainCommandLine = 0x1,    // One per profile
+        SubCommandLine = 0x2,     // Overlaid on top of TMainConsole or TConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
+        ConsoleCommandLine = 0x4, // Integrated in TConsoles other than those derived into a TMainConsole
     };
 
     Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
@@ -175,9 +172,18 @@ private:
     bool mSpeechRecognitionActive = false;
     QTimer* mpMicrophonePulseTimer = nullptr;
     bool mMicrophonePulseState = false;
-    QString mTextBeforeSpeech;  // Preserve text when speech starts
+    QString mTextBeforeSpeech;      // Preserve text when speech starts
     QString mCurrentPartialResult;  // Track current partial result
-    bool mSpeechNeedsReset = false;  // Set when command submitted, next speech starts fresh
+    bool mSpeechNeedsReset = false; // Set when command submitted, next speech starts fresh
+
+    // Store word confidence data for highlighting
+    struct WordConfidence
+    {
+        QString word;
+        double confidence;
+    };
+    QList<WordConfidence> mWordConfidences;
+    static constexpr double LOW_CONFIDENCE_THRESHOLD = 0.85;
 
 private slots:
     void slot_togglePasswordVisibility();
@@ -185,6 +191,7 @@ private slots:
     void slot_handlePartialSpeechResult(const QString& text);
     void slot_handleFinalSpeechResult(const QString& text);
     void slot_handleSpeechError(const QString& errorMessage);
+    void slot_handleWordsResult(const QVariantList& words);
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
@@ -195,11 +202,20 @@ inline QDebug& operator<<(QDebug& debug, const TCommandLine::CommandLineType& ty
     QString text;
     QDebugStateSaver saver(debug);
     switch (type) {
-    case TCommandLine::UnknownType:        text = qsl("Unknown"); break;
-    case TCommandLine::SubCommandLine:     text = qsl("SubCommandLine"); break;
-    case TCommandLine::ConsoleCommandLine: text = qsl("ConsoleCommandLine"); break;
-    case TCommandLine::MainCommandLine:    text = qsl("MainCommandLine"); break;
-    default:                               text = qsl("Non-coded Type");
+    case TCommandLine::UnknownType:
+        text = qsl("Unknown");
+        break;
+    case TCommandLine::SubCommandLine:
+        text = qsl("SubCommandLine");
+        break;
+    case TCommandLine::ConsoleCommandLine:
+        text = qsl("ConsoleCommandLine");
+        break;
+    case TCommandLine::MainCommandLine:
+        text = qsl("MainCommandLine");
+        break;
+    default:
+        text = qsl("Non-coded Type");
     }
     debug.nospace() << text;
     return debug;

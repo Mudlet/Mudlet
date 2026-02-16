@@ -760,8 +760,8 @@
          <property name="title">
           <string>Microphone</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_groupBox_microphone">
-          <item>
+         <layout class="QGridLayout" name="gridLayout_groupBox_microphone">
+          <item row="0" column="0">
            <widget class="QLabel" name="label_speechRecognitionSetup">
             <property name="text">
              <string>Speech recognition:</string>
@@ -771,7 +771,7 @@
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_speechRecognitionSetup">
             <property name="toolTip">
              <string>&lt;p&gt;Opens the speech recognition setup wizard to configure or download speech recognition models for voice input.&lt;/p&gt;</string>
@@ -781,7 +781,7 @@
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="2">
            <spacer name="horizontalSpacer_microphone">
             <property name="orientation">
              <enum>Qt::Orientation::Horizontal</enum>
@@ -793,6 +793,65 @@
              </size>
             </property>
            </spacer>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_speechDetectionTiming">
+            <property name="text">
+             <string>Speech detection timing:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_speechDetectionTiming</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBox_speechDetectionTiming">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Controls how quickly speech recognition detects the end of speech:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;b&gt;Default&lt;/b&gt;: Balanced timing for most use cases&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Short&lt;/b&gt;: Faster detection, good for quick commands&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Long&lt;/b&gt;: Slower detection, better for longer dictation&lt;/li&gt;
+&lt;/ul&gt;</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>Default</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Short (quick commands)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Long (dictation)</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="3">
+           <widget class="QCheckBox" name="checkBox_highlightLowConfidenceWords">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;When enabled, words that the speech recognizer is uncertain about will be shown in a different color in the command line, allowing you to easily identify and correct potential errors.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Highlight uncertain words in command line</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -4734,6 +4793,8 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
   <tabstop>pushButton_speechRecognitionSetup</tabstop>
+  <tabstop>comboBox_speechDetectionTiming</tabstop>
+  <tabstop>checkBox_highlightLowConfidenceWords</tabstop>
   <tabstop>fontComboBox_displayFont</tabstop>
   <tabstop>spinBox_displayFontSize</tabstop>
   <tabstop>checkBox_antiAlias</tabstop>
