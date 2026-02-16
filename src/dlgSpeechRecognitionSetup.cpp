@@ -964,80 +964,79 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
     // The archive contains a folder structure, we need to find and move the library file
     LibraryInfo libInfo = getLibraryInfoForCurrentPlatform();
 
-    // Search for the library file in extracted contents
-    auto findLibrary = [](const QDir& dir, const QString& libName) -> QString {
+    // Search for a file in extracted contents (checks dest dir and subdirectories)
+    auto findFileInExtracted = [](const QDir& dir, const QString& fileName) -> QString {
         // Check current directory
-        if (dir.exists(libName)) {
-            return dir.absoluteFilePath(libName);
+        if (dir.exists(fileName)) {
+            return dir.absoluteFilePath(fileName);
         }
 
         // Check subdirectories (Vosk archives have a folder like "vosk-osx-0.3.45/")
         const QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
         for (const QString& subDir : subDirs) {
             QDir sub(dir.absoluteFilePath(subDir));
-            if (sub.exists(libName)) {
-                return sub.absoluteFilePath(libName);
+            if (sub.exists(fileName)) {
+                return sub.absoluteFilePath(fileName);
             }
         }
         return QString();
     };
 
-    QString extractedLibPath = findLibrary(destDir, libInfo.libraryName);
+    // Helper to copy a file to destination, replacing if exists
+    auto copyFileToDestination = [&destinationDir](const QString& srcPath, const QString& fileName) -> bool {
+        if (srcPath.isEmpty()) {
+            return false;
+        }
+        QString finalPath = QDir(destinationDir).filePath(fileName);
+        if (srcPath == finalPath) {
+            return true; // Already in place
+        }
+        // Remove existing file if present
+        if (QFile::exists(finalPath)) {
+            QFile::remove(finalPath);
+        }
+        if (!QFile::copy(srcPath, finalPath)) {
+            qWarning() << "dlgSpeechRecognitionSetup: Failed to copy" << fileName << "to final location";
+            return false;
+        }
+        QFile::remove(srcPath);
+        return true;
+    };
+
+    // Find and install the main library
+    QString extractedLibPath = findFileInExtracted(destDir, libInfo.libraryName);
     if (extractedLibPath.isEmpty()) {
         qWarning() << "dlgSpeechRecognitionSetup: Could not find" << libInfo.libraryName << "in extracted archive";
         return false;
     }
 
-    // Move the library to the final destination using a safe replace sequence:
-    // Never delete the existing library until we have a successful replacement ready
-    QString finalPath = QDir(destinationDir).filePath(libInfo.libraryName);
-    if (extractedLibPath != finalPath) {
-        // First, try a direct rename (works if no existing file or same filesystem)
-        if (!QFile::exists(finalPath) && QFile::rename(extractedLibPath, finalPath)) {
-            // Direct rename succeeded, nothing more to do
-        } else if (!QFile::exists(finalPath)) {
-            // No existing file but rename failed - try copy
-            if (!QFile::copy(extractedLibPath, finalPath)) {
-                qWarning() << "dlgSpeechRecognitionSetup: Failed to copy library to final location";
-                return false;
-            }
-            QFile::remove(extractedLibPath);
-        } else {
-            // Existing file present - use safe replace sequence
-            // 1. Copy to temporary location first
-            QString tempPath = finalPath + qsl(".new");
-            if (QFile::exists(tempPath)) {
-                QFile::remove(tempPath); // Clean up any stale temp file
-            }
-
-            if (!QFile::copy(extractedLibPath, tempPath)) {
-                qWarning() << "dlgSpeechRecognitionSetup: Failed to copy library to temporary location";
-                return false;
-            }
-
-            // 2. Only now remove the existing library (we have a valid copy ready)
-            if (!QFile::remove(finalPath)) {
-                qWarning() << "dlgSpeechRecognitionSetup: Failed to remove existing library";
-                QFile::remove(tempPath); // Clean up temp file
-                return false;
-            }
-
-            // 3. Atomically rename temp to final
-            if (!QFile::rename(tempPath, finalPath)) {
-                qWarning() << "dlgSpeechRecognitionSetup: Failed to rename temporary library to final location";
-                // Note: We're in a bad state here - old file removed but temp not renamed
-                // Try to recover by attempting copy
-                if (!QFile::copy(tempPath, finalPath)) {
-                    qWarning() << "dlgSpeechRecognitionSetup: Recovery copy also failed - library may be missing!";
-                }
-                QFile::remove(tempPath);
-                return false;
-            }
-
-            // 4. Clean up the extracted source file
-            QFile::remove(extractedLibPath);
-        }
+    if (!copyFileToDestination(extractedLibPath, libInfo.libraryName)) {
+        return false;
     }
+
+#if defined(Q_OS_WIN)
+    // Windows: Vosk archive includes MinGW runtime DLLs that must also be installed
+    // These are required dependencies for libvosk.dll to load
+    QStringList windowsRuntimeDlls = {
+            qsl("libstdc++-6.dll"),
+            qsl("libwinpthread-1.dll"),
+#if defined(_WIN64) || defined(__x86_64__)
+            qsl("libgcc_s_seh-1.dll") // 64-bit Windows
+#else
+            qsl("libgcc_s_sjlj-1.dll") // 32-bit Windows
+#endif
+    };
+
+    for (const QString& dllName : windowsRuntimeDlls) {
+        QString dllPath = findFileInExtracted(destDir, dllName);
+        if (!dllPath.isEmpty()) {
+            copyFileToDestination(dllPath, dllName);
+            qDebug() << "dlgSpeechRecognitionSetup: Installed runtime DLL:" << dllName;
+        }
+        // Note: Not failing if runtime DLLs aren't found - they may already be on the system
+        // or the user may have a newer Vosk build that statically links them
+    }
+#endif
 
     // Clean up extracted directory contents (but not the library we just installed)
     const QStringList subDirs = destDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
@@ -1048,6 +1047,6 @@ bool dlgSpeechRecognitionSetup::extractLibrary(const QString& archivePath, const
         }
     }
 
-    qDebug() << "dlgSpeechRecognitionSetup: Library installed to:" << finalPath;
+    qDebug() << "dlgSpeechRecognitionSetup: Library installed to:" << QDir(destinationDir).filePath(libInfo.libraryName);
     return true;
 }
