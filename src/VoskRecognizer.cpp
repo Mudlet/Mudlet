@@ -107,7 +107,8 @@ bool VoskRecognizer::loadVoskLibrary()
         searchPaths << QStringLiteral("/usr/local/lib/libvosk.dylib") << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
                     << QCoreApplication::applicationDirPath() + QStringLiteral("/../Frameworks/libvosk.dylib");
 #elif defined(Q_OS_WIN)
-        searchPaths << QCoreApplication::applicationDirPath() + QStringLiteral("/vosk.dll");
+        // Vosk releases include libvosk.dll (with "lib" prefix)
+        searchPaths << QCoreApplication::applicationDirPath() + QStringLiteral("/libvosk.dll");
 #else
         searchPaths << QStringLiteral("/usr/lib/libvosk.so") << QStringLiteral("/usr/local/lib/libvosk.so") << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
 #endif
@@ -202,7 +203,8 @@ QStringList VoskRecognizer::librarySearchPaths()
     paths << QStringLiteral("/usr/local/lib/libvosk.dylib") << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
           << QCoreApplication::applicationDirPath() + QStringLiteral("/../Frameworks/libvosk.dylib");
 #elif defined(Q_OS_WIN)
-    paths << QCoreApplication::applicationDirPath() + QStringLiteral("/vosk.dll");
+    // Vosk releases include libvosk.dll (with "lib" prefix)
+    paths << QCoreApplication::applicationDirPath() + QStringLiteral("/libvosk.dll");
 #else
     paths << QStringLiteral("/usr/lib/libvosk.so") << QStringLiteral("/usr/local/lib/libvosk.so") << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
 #endif
