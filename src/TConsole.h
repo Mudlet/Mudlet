@@ -162,7 +162,7 @@ class TSplitter;
 class dlgNotepad;
 
 
-class TConsole : public QWidget
+class TConsole : public QObject
 {
     Q_OBJECT
 

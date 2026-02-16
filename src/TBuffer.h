@@ -49,7 +49,7 @@ class TConsole;
 
 // Enhanced OSC 8 hyperlink styling support with CSS link states
 // Defined in Mudlet namespace to avoid circular dependencies
-namespace Mudlet {
+extern "C" {
 
 struct HyperlinkStyling {
     // Base styling properties

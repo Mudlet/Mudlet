@@ -50,9 +50,9 @@
 #include <QStack>
 #include <QTextStream>
 
-#include "TMxpMudlet.h"
-#include "TMxpProcessor.h"
-#include "TMxpFrameManager.h"
+// #include "TMxpMudlet.h"
+// #include "TMxpProcessor.h"
+// #include "TMxpFrameManager.h"
 
 class QDialog;
 class QDockWidget;
