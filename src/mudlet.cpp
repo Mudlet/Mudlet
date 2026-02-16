@@ -62,7 +62,6 @@
 #include "dlgTriggerEditor.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
-#include "VoskRecognizer.h"
 #include "TMediaData.h"
 #include "VarUnit.h"
 
@@ -384,7 +383,7 @@ void mudlet::init()
     mpButtonSpeechToText = new QToolButton(this);
     mpButtonSpeechToText->setText(tr("Speech"));
     mpButtonSpeechToText->setObjectName(qsl("speech"));
-    mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+    mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
     mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
     mpButtonSpeechToText->setAutoRaise(true);
     mpButtonSpeechToText->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -2867,6 +2866,8 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mAIModelPath = settings.value("AI/modelPath", "").toString();
     mAIAutoStart = settings.value("AI/autoStart", true).toBool();
+    mSpeechDetectionTiming = static_cast<SpeechDetectionTiming>(settings.value(qsl("speechDetectionTiming"), static_cast<int>(SpeechDetectionTiming::Default)).toInt());
+    mHighlightLowConfidenceWords = settings.value(qsl("highlightLowConfidenceWords"), false).toBool();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -3018,6 +3019,8 @@ void mudlet::writeSettings()
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
     mpSettings->setValue("AI/modelPath", mAIModelPath);
     mpSettings->setValue("AI/autoStart", mAIAutoStart);
+    settings.setValue(qsl("speechDetectionTiming"), static_cast<int>(mSpeechDetectionTiming));
+    settings.setValue(qsl("highlightLowConfidenceWords"), mHighlightLowConfidenceWords);
 
     settings.sync();
     switch (settings.status()) {
@@ -4663,30 +4666,29 @@ void mudlet::initSpeechRecognition()
     });
 
     // Initialize with default model path if available
-    const QString modelPath = VoskRecognizer::defaultModelPath();
+    const QString modelPath = SpeechRecognizerFactory::defaultModelPath();
     QDir modelDir(modelPath);
+
     if (modelDir.exists()) {
         mpSpeechRecognizer->initialize(modelPath);
 
-        // Apply global settings to the recognizer
-        auto* voskRecognizer = qobject_cast<VoskRecognizer*>(mpSpeechRecognizer);
-        if (voskRecognizer) {
-            // Map UI index to Vosk EndpointerMode
-            VoskRecognizer::EndpointerMode voskMode = VoskRecognizer::EndpointerMode::Default;
-            switch (mSpeechDetectionTiming) {
-            case SpeechDetectionTiming::Short:
-                voskMode = VoskRecognizer::EndpointerMode::Short;
-                break;
-            case SpeechDetectionTiming::Long:
-                voskMode = VoskRecognizer::EndpointerMode::Long;
-                break;
-            default:
-                voskMode = VoskRecognizer::EndpointerMode::Default;
-                break;
-            }
-            voskRecognizer->setEndpointerMode(voskMode);
-            voskRecognizer->setWordsEnabled(mHighlightLowConfidenceWords);
+        // Apply global settings to the recognizer using the abstract interface
+        SpeechRecognizer::Sensitivity sensitivity = SpeechRecognizer::Sensitivity::Default;
+
+        switch (mSpeechDetectionTiming) {
+        case SpeechDetectionTiming::Short:
+            sensitivity = SpeechRecognizer::Sensitivity::Short;
+            break;
+        case SpeechDetectionTiming::Long:
+            sensitivity = SpeechRecognizer::Sensitivity::Long;
+            break;
+        default:
+            sensitivity = SpeechRecognizer::Sensitivity::Default;
+            break;
         }
+
+        mpSpeechRecognizer->setSensitivity(sensitivity);
+        mpSpeechRecognizer->setWordsEnabled(mHighlightLowConfidenceWords);
     }
 }
 
@@ -4696,22 +4698,27 @@ void mudlet::slot_toggleSpeechRecognition()
     if (!SpeechRecognizerFactory::isBackendAvailable(SpeechRecognizerFactory::Backend::Auto)) {
         // Show the setup wizard
         dlgSpeechRecognitionSetup setupDialog(this);
+
         if (setupDialog.exec() == QDialog::Accepted) {
             // Setup completed successfully, try to initialize and start listening
             initSpeechRecognition();
+
             if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
                 // Save current text from active command line before starting
                 Host* pHost = getActiveHost();
                 TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+
                 if (pCommandLine) {
                     mTextBeforeSpeech = pCommandLine->toPlainText();
                 }
+
                 mCurrentPartialResult.clear();
                 mpSpeechRecognizer->startListening();
                 mSpeechRecognitionActive = true;
                 updateAllSpeechButtons();
             }
         }
+
         return;
     }
 
@@ -4722,30 +4729,35 @@ void mudlet::slot_toggleSpeechRecognition()
 
     if (!mpSpeechRecognizer) {
         // Failed to initialize - show error to user
-        QMessageBox::warning(this, tr("Speech Recognition Error"), tr("Failed to initialize speech recognition. The Vosk library may not be properly installed."));
+        QMessageBox::warning(this, tr("Speech Recognition Error"), tr("Failed to initialize speech recognition. The speech recognition library may not be properly installed."));
         return;
     }
 
     if (!mpSpeechRecognizer->isInitialized()) {
         // Model not loaded - show the setup wizard
         dlgSpeechRecognitionSetup setupDialog(this);
+
         if (setupDialog.exec() == QDialog::Accepted) {
             // Setup completed successfully, re-initialize and start listening
             delete mpSpeechRecognizer;
             initSpeechRecognition();
+
             if (mpSpeechRecognizer && mpSpeechRecognizer->isInitialized()) {
                 // Save current text from active command line before starting
                 Host* pHost = getActiveHost();
                 TCommandLine* pCommandLine = pHost ? pHost->activeCommandLine() : nullptr;
+
                 if (pCommandLine) {
                     mTextBeforeSpeech = pCommandLine->toPlainText();
                 }
+
                 mCurrentPartialResult.clear();
                 mpSpeechRecognizer->startListening();
                 mSpeechRecognitionActive = true;
                 updateAllSpeechButtons();
             }
         }
+
         return;
     }
 
@@ -4762,6 +4774,7 @@ void mudlet::slot_toggleSpeechRecognition()
         } else {
             mTextBeforeSpeech.clear();
         }
+
         mCurrentPartialResult.clear();
         // Start listening
         mpSpeechRecognizer->startListening();
@@ -4817,6 +4830,14 @@ void mudlet::slot_handlePartialSpeechResult(const QString& text)
         if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
             // Command line was manually cleared, start fresh
             mTextBeforeSpeech.clear();
+        } else {
+            // Check if there's a selection - if so, we should replace it
+            QTextCursor cursor = pCommandLine->textCursor();
+            if (cursor.hasSelection()) {
+                // Get the text before the selection - this becomes our new base text
+                const int selStart = cursor.selectionStart();
+                mTextBeforeSpeech = currentText.left(selStart);
+            }
         }
     }
 
@@ -4848,16 +4869,28 @@ void mudlet::slot_handleFinalSpeechResult(const QString& text)
         return;
     }
 
-    // Check if we need to start fresh
+    // Check if we need to start fresh - this handles the case where a "late"
+    // final result arrives after the user pressed Enter. We discard it since
+    // the user has already submitted and expects a fresh start.
     if (mSpeechNeedsReset) {
         pCommandLine->clear();
         mTextBeforeSpeech.clear();
         mCurrentPartialResult.clear();
         mSpeechNeedsReset = false;
+        // Discard this late final result - don't let it seed the next speech session
+        return;
+    }
+
+    const QString currentText = pCommandLine->toPlainText();
+    if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
+        mTextBeforeSpeech.clear();
     } else {
-        const QString currentText = pCommandLine->toPlainText();
-        if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
-            mTextBeforeSpeech.clear();
+        // Check if there's a selection - if so, we should replace it
+        QTextCursor cursor = pCommandLine->textCursor();
+        if (cursor.hasSelection()) {
+            // Get the text before the selection - this becomes our new base text
+            const int selStart = cursor.selectionStart();
+            mTextBeforeSpeech = currentText.left(selStart);
         }
     }
 
@@ -4925,7 +4958,7 @@ void mudlet::updateSpeechButton()
     dactionSpeechToText->setChecked(mSpeechRecognitionActive);
 
     if (mSpeechRecognitionActive) {
-        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-on.png")));
+        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
         mpButtonSpeechToText->setToolTip(utils::richText(tr("Stop listening (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
 
         if (mpSpeechPulseTimer && !mpSpeechPulseTimer->isActive()) {
@@ -4934,7 +4967,7 @@ void mudlet::updateSpeechButton()
             mpSpeechPulseTimer->start();
         }
     } else {
-        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
         mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
 
         if (mpSpeechPulseTimer) {
@@ -6840,6 +6873,11 @@ void mudlet::activateProfile(Host* pHost)
     // from the previous profile's command line being injected into the new one
     if (mSpeechRecognitionActive) {
         mTextBeforeSpeech.clear();
+        mCurrentPartialResult.clear();
+        // Reset the focused command line so results go to the new profile
+        mpLastFocusedCommandLine = nullptr;
+        // Signal that the next result should start fresh
+        mSpeechNeedsReset = true;
     }
 
     const QString newActiveHostName{pHost->getName()};

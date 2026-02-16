@@ -773,6 +773,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_highlightLowConfidenceWords->setEnabled(voskAvailable);
     label_speechDetectionTiming->setEnabled(voskAvailable);
 
+    // Initialize speech recognition engine selector
+    comboBox_speechRecognitionEngine->addItem(qsl("Vosk"));
+    comboBox_speechRecognitionEngine->setCurrentIndex(0);
+    comboBox_speechRecognitionEngine->setToolTip(utils::richText(tr("Select the speech recognition engine to use. Currently only Vosk is supported.")));
+
     if (!voskAvailable) {
         comboBox_speechDetectionTiming->setToolTip(utils::richText(tr("Speech recognition library not installed. Use the Setup button to install it.")));
         checkBox_highlightLowConfidenceWords->setToolTip(utils::richText(tr("Speech recognition library not installed. Use the Setup button to install it.")));

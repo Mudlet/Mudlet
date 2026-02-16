@@ -137,3 +137,34 @@ SpeechRecognizerFactory::Backend SpeechRecognizerFactory::backendFromIdentifier(
 
     return Backend::Auto;
 }
+
+QString SpeechRecognizerFactory::defaultModelPath(Backend backend)
+{
+    // Handle Auto selection - pick the first available backend
+    if (backend == Backend::Auto) {
+        const auto backends = availableBackends();
+        if (backends.isEmpty()) {
+            return QString();
+        }
+        backend = backends.first();
+    }
+
+    switch (backend) {
+    case Backend::Vosk:
+        return VoskRecognizer::defaultModelPath();
+
+    case Backend::Whisper:
+        // Future: return WhisperRecognizer::defaultModelPath();
+        return QString();
+
+    case Backend::Platform:
+        // Platform APIs typically don't use model paths
+        return QString();
+
+    case Backend::Auto:
+        // Already handled above
+        return QString();
+    }
+
+    return QString();
+}

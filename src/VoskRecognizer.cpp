@@ -387,9 +387,31 @@ void VoskRecognizer::startListeningInternal()
         return;
     }
 
-    // Reset the recognizer for a new session
-    if (s_vosk_recognizer_reset && mVoskRecognizer) {
-        s_vosk_recognizer_reset(mVoskRecognizer);
+    // Recreate the recognizer for a new session to ensure clean state
+    // Note: vosk_recognizer_reset() can leave the decoder in an inconsistent state
+    // after vosk_recognizer_final_result() has been called, causing crashes
+    // when accept_waveform() triggers internal CleanUp(). Recreating is safer.
+    if (mVoskRecognizer && s_vosk_recognizer_free) {
+        s_vosk_recognizer_free(mVoskRecognizer);
+        mVoskRecognizer = nullptr;
+    }
+
+    if (mVoskModel) {
+        mVoskRecognizer = s_vosk_recognizer_new(mVoskModel, static_cast<float>(VOSK_SAMPLE_RATE));
+        if (!mVoskRecognizer) {
+            qWarning() << "VoskRecognizer: Failed to recreate recognizer";
+            emit errorOccurred(tr("Failed to initialize speech recognition"));
+            setState(State::Error);
+            return;
+        }
+
+        // Reapply settings to the new recognizer
+        if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
+            s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
+        }
+        if (s_vosk_recognizer_set_words && mWordsEnabled) {
+            s_vosk_recognizer_set_words(mVoskRecognizer, 1);
+        }
     }
 
     // Clear any buffered audio
@@ -454,9 +476,41 @@ void VoskRecognizer::stopListening()
         const char* resultJson = s_vosk_recognizer_final_result(mVoskRecognizer);
         if (resultJson) {
             const QJsonDocument doc = QJsonDocument::fromJson(QByteArray(resultJson));
-            const QString text = doc.object().value(QLatin1String("text")).toString().trimmed();
+            const QJsonObject obj = doc.object();
+            QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
-                emit finalResult(text);
+                // Apply same hallucination filtering as in processAudioData
+                static const QStringList hallucinationWords = {
+                        qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")};
+
+                const bool isSingleWord = !text.contains(QLatin1Char(' '));
+                const bool isHallucinationWord = hallucinationWords.contains(text.toLower());
+
+                // Check confidence if word-level results are available
+                bool hasLowConfidence = false;
+                if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
+                    const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
+                    if (wordsArray.size() == 1) {
+                        const double conf = wordsArray.first().toObject().value(QLatin1String("conf")).toDouble();
+                        hasLowConfidence = conf < 0.8;
+                    }
+                }
+
+                // Filter single-word hallucinations on stop (always filter, since stopping often produces these)
+                const bool shouldFilter = isSingleWord && isHallucinationWord;
+
+                if (shouldFilter) {
+                    qDebug() << "VoskRecognizer: Filtered hallucination on stop:" << text;
+                } else {
+                    // Strip leading hallucination words from multi-word results
+                    static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
+                    text.replace(leadingHallucination, QString());
+                    text = text.trimmed();
+
+                    if (!text.isEmpty()) {
+                        emit finalResult(text);
+                    }
+                }
             }
         }
     }
@@ -641,30 +695,56 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
             const QJsonObject obj = doc.object();
             QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
-                // Strip leading hallucination words from final results too
-                static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
-                text.replace(leadingHallucination, QString());
-                text = text.trimmed();
+                // Common hallucination words that appear during silence
+                static const QStringList hallucinationWords = {
+                        qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")};
 
-                if (!text.isEmpty()) {
-                    qDebug() << "VoskRecognizer: Final result:" << text;
-                    emit finalResult(text);
+                // Filter single-word hallucination results
+                const bool isSingleWord = !text.contains(QLatin1Char(' '));
+                const bool isHallucinationWord = hallucinationWords.contains(text.toLower());
 
-                    // Emit word-level results with confidence if available and enabled
-                    if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
-                        const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
-                        QVariantList wordsList;
-                        for (const QJsonValue& wordVal : wordsArray) {
-                            const QJsonObject wordObj = wordVal.toObject();
-                            QVariantMap wordData;
-                            wordData[qsl("word")] = wordObj.value(QLatin1String("word")).toString();
-                            wordData[qsl("conf")] = wordObj.value(QLatin1String("conf")).toDouble();
-                            wordData[qsl("start")] = wordObj.value(QLatin1String("start")).toDouble();
-                            wordData[qsl("end")] = wordObj.value(QLatin1String("end")).toDouble();
-                            wordsList.append(wordData);
-                        }
-                        if (!wordsList.isEmpty()) {
-                            emit wordsResult(wordsList);
+                // Check confidence if word-level results are available
+                bool hasLowConfidence = false;
+                if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
+                    const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
+                    if (wordsArray.size() == 1) {
+                        const double conf = wordsArray.first().toObject().value(QLatin1String("conf")).toDouble();
+                        // Consider confidence below 0.8 as low for single hallucination words
+                        hasLowConfidence = conf < 0.8;
+                    }
+                }
+
+                // Filter if: single hallucination word AND (low audio level OR low confidence)
+                const bool shouldFilter = isSingleWord && isHallucinationWord && (mRecentAudioLevel < SILENCE_THRESHOLD * 5.0f || hasLowConfidence);
+
+                if (shouldFilter) {
+                    qDebug() << "VoskRecognizer: Filtered hallucination (final):" << text << "(level:" << mRecentAudioLevel << ", lowConf:" << hasLowConfidence << ")";
+                } else {
+                    // Strip leading hallucination words from multi-word results
+                    static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
+                    text.replace(leadingHallucination, QString());
+                    text = text.trimmed();
+
+                    if (!text.isEmpty()) {
+                        qDebug() << "VoskRecognizer: Final result:" << text;
+                        emit finalResult(text);
+
+                        // Emit word-level results with confidence if available and enabled
+                        if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
+                            const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
+                            QVariantList wordsList;
+                            for (const QJsonValue& wordVal : wordsArray) {
+                                const QJsonObject wordObj = wordVal.toObject();
+                                QVariantMap wordData;
+                                wordData[qsl("word")] = wordObj.value(QLatin1String("word")).toString();
+                                wordData[qsl("conf")] = wordObj.value(QLatin1String("conf")).toDouble();
+                                wordData[qsl("start")] = wordObj.value(QLatin1String("start")).toDouble();
+                                wordData[qsl("end")] = wordObj.value(QLatin1String("end")).toDouble();
+                                wordsList.append(wordData);
+                            }
+                            if (!wordsList.isEmpty()) {
+                                emit wordsResult(wordsList);
+                            }
                         }
                     }
                 }
@@ -1016,5 +1096,38 @@ void VoskRecognizer::setWordsEnabled(bool enabled)
     if (mVoskRecognizer && s_vosk_recognizer_set_words) {
         s_vosk_recognizer_set_words(mVoskRecognizer, mWordsEnabled ? 1 : 0);
         qDebug() << "VoskRecognizer: Set words enabled to" << mWordsEnabled;
+    }
+}
+
+void VoskRecognizer::setSensitivity(Sensitivity sensitivity)
+{
+    // Map generic Sensitivity to Vosk-specific EndpointerMode
+    switch (sensitivity) {
+    case Sensitivity::Short:
+        setEndpointerMode(EndpointerMode::Short);
+        break;
+    case Sensitivity::Long:
+        setEndpointerMode(EndpointerMode::Long);
+        break;
+    case Sensitivity::Default:
+    default:
+        setEndpointerMode(EndpointerMode::Default);
+        break;
+    }
+}
+
+SpeechRecognizer::Sensitivity VoskRecognizer::sensitivity() const
+{
+    // Map Vosk-specific EndpointerMode back to generic Sensitivity
+    switch (mEndpointerMode) {
+    case EndpointerMode::VeryShort:
+    case EndpointerMode::Short:
+        return Sensitivity::Short;
+    case EndpointerMode::Long:
+    case EndpointerMode::VeryLong:
+        return Sensitivity::Long;
+    case EndpointerMode::Default:
+    default:
+        return Sensitivity::Default;
     }
 }

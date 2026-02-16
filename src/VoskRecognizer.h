@@ -128,12 +128,17 @@ public:
     QString backendVersion() const override;
     bool isBackendAvailable() const override;
 
+    // SpeechRecognizer sensitivity interface (maps to EndpointerMode)
+    void setSensitivity(Sensitivity sensitivity) override;
+    Sensitivity sensitivity() const override;
+
+    // SpeechRecognizer words interface
+    void setWordsEnabled(bool enabled) override;
+    bool wordsEnabled() const override { return mWordsEnabled; }
+
+    // Vosk-specific: Finer-grained control over end-of-speech detection
     void setEndpointerMode(EndpointerMode mode);
     EndpointerMode endpointerMode() const { return mEndpointerMode; }
-
-    // Enable word-level confidence scores in results
-    void setWordsEnabled(bool enabled);
-    bool wordsEnabled() const { return mWordsEnabled; }
 
     // Static method to check if Vosk library is available on this system
     static bool isVoskAvailable();
@@ -168,11 +173,6 @@ public:
 
     // Get the "best" available model (prefers larger models over smaller ones)
     static QString getBestAvailableModel();
-
-signals:
-    // Signal with word-level results including confidence scores
-    // Each word is a QVariantMap with "word", "start", "end", "conf" keys
-    void wordsResult(const QVariantList& words);
 
 private slots:
     void processAudioData();

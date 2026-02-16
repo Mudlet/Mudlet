@@ -628,8 +628,13 @@ bool TCommandLine::event(QEvent* event)
 
 void TCommandLine::focusInEvent(QFocusEvent* event)
 {
-    textCursor().movePosition(QTextCursor::Start);
-    textCursor().movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, mSelectedText.length());
+    // Restore any previous selection - must use setTextCursor() to apply changes
+    if (!mSelectedText.isEmpty()) {
+        QTextCursor cursor = textCursor();
+        cursor.movePosition(QTextCursor::Start);
+        cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, mSelectedText.length());
+        setTextCursor(cursor);
+    }
 
     mpConsole->mUpperPane->forceUpdate();
     mpConsole->mLowerPane->forceUpdate();
@@ -645,11 +650,11 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // Record this as the globally focused command line for speech-to-text routing
     mudlet::self()->setFocusedCommandLine(this);
 
-    // When speech recognition is active and this command line has text that
-    // isn't already selected, select all text so user knows it will be affected
+    // When speech recognition is active and there's text that will be affected
+    // by the next speech input, select all text so user knows it will be replaced
     if (mudlet::self()->isSpeechRecognitionActive()) {
         const QString currentText = toPlainText();
-        if (!currentText.isEmpty() && mSelectedText != currentText) {
+        if (!currentText.isEmpty()) {
             QTextCursor cursor = textCursor();
             cursor.movePosition(QTextCursor::Start);
             cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);

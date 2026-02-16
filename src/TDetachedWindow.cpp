@@ -918,7 +918,7 @@ void TDetachedWindow::createToolBar()
     mpButtonSpeechToText = new QToolButton(this);
     mpButtonSpeechToText->setText(tr("Speech"));
     mpButtonSpeechToText->setObjectName(qsl("speech"));
-    mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+    mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
     mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
     mpButtonSpeechToText->setAutoRaise(true);
     mpButtonSpeechToText->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -1000,6 +1000,7 @@ void TDetachedWindow::createToolBar()
 
 
     mpButtonDiscord->addAction(mpActionDiscord);
+    mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     // Map and other tools
     mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);
@@ -3078,7 +3079,7 @@ void TDetachedWindow::updateSpeechButton()
     }
 
     if (isActive) {
-        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-on.png")));
+        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
         mpButtonSpeechToText->setToolTip(utils::richText(tr("Stop listening (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
 
         if (mpSpeechPulseTimer && !mpSpeechPulseTimer->isActive()) {
@@ -3087,7 +3088,7 @@ void TDetachedWindow::updateSpeechButton()
             mpSpeechPulseTimer->start();
         }
     } else {
-        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone-off.png")));
+        mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
         mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
 
         if (mpSpeechPulseTimer) {

@@ -35,10 +35,10 @@ class SpeechRecognizerFactory
 public:
     // Available speech recognition backends
     enum class Backend {
-        Vosk,       // Offline recognition using Vosk/Kaldi
-        Whisper,    // Offline recognition using whisper.cpp (future)
-        Platform,   // Platform-native APIs: macOS Speech, Windows SAPI (future)
-        Auto        // Automatically select best available backend
+        Vosk,     // Offline recognition using Vosk/Kaldi
+        Whisper,  // Offline recognition using whisper.cpp (future)
+        Platform, // Platform-native APIs: macOS Speech, Windows SAPI (future)
+        Auto      // Automatically select best available backend
     };
 
     // Create a speech recognizer with the specified backend.
@@ -64,6 +64,10 @@ public:
     // Parse a backend identifier string back to enum.
     // Returns Auto if the identifier is not recognized.
     static Backend backendFromIdentifier(const QString& identifier);
+
+    // Get the default model path for the specified backend (or Auto for first available).
+    // Returns empty string if no model path is configured for the backend.
+    static QString defaultModelPath(Backend backend = Backend::Auto);
 
 private:
     SpeechRecognizerFactory() = default;

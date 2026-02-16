@@ -23,6 +23,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QVariantList>
 
 // Abstract base class for speech recognition backends.
 // This abstraction allows swapping between different speech recognition
@@ -35,17 +36,18 @@ class SpeechRecognizer : public QObject
 public:
     // Recognition engine state
     enum class State {
-        Uninitialized,  // No model loaded
-        Ready,          // Model loaded, not listening
-        Listening,      // Actively capturing and processing audio
-        Processing,     // Processing final audio after stop
-        Error           // An error occurred
+        Uninitialized, // No model loaded
+        Ready,         // Model loaded, not listening
+        Listening,     // Actively capturing and processing audio
+        Processing,    // Processing final audio after stop
+        Error          // An error occurred
     };
     Q_ENUM(State)
 
     explicit SpeechRecognizer(QObject* parent = nullptr)
-        : QObject(parent)
-    {}
+    : QObject(parent)
+    {
+    }
     ~SpeechRecognizer() override = default;
 
     // Prevent copying
@@ -104,6 +106,28 @@ public:
     // Check if the backend is available (library loaded, etc.)
     virtual bool isBackendAvailable() const = 0;
 
+    // === Recognition Settings ===
+
+    // Sensitivity mode controls how quickly the recognizer detects end of speech.
+    // Short: Fast detection, good for commands (may cut off longer phrases)
+    // Default: Balanced for typical use
+    // Long: Slower detection, good for dictation (waits longer before ending)
+    enum class Sensitivity {
+        Short,   // Fast end-of-speech detection (commands)
+        Default, // Balanced (typical use)
+        Long     // Slow end-of-speech detection (dictation)
+    };
+    Q_ENUM(Sensitivity)
+
+    // Set how quickly end-of-speech is detected
+    virtual void setSensitivity(Sensitivity sensitivity) = 0;
+    virtual Sensitivity sensitivity() const = 0;
+
+    // Enable word-level results with confidence scores (if supported by backend).
+    // When enabled, wordsResult() signal may be emitted with per-word details.
+    virtual void setWordsEnabled(bool enabled) = 0;
+    virtual bool wordsEnabled() const = 0;
+
 signals:
     // Emitted during recognition with partial (non-final) text.
     // This text may change as more audio is processed.
@@ -111,6 +135,10 @@ signals:
 
     // Emitted when an utterance is complete with the final transcription.
     void finalResult(const QString& text);
+
+    // Emitted with word-level results including confidence scores (when wordsEnabled).
+    // Each word is a QVariantMap with keys like "word", "start", "end", "conf".
+    void wordsResult(const QVariantList& words);
 
     // Emitted when the recognizer state changes.
     void stateChanged(SpeechRecognizer::State newState);
