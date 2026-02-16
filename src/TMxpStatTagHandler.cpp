@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGMODULEMANAGER_H
-#define MUDLET_DLGMODULEMANAGER_H
-
 /***************************************************************************
- *   Copyright (C) 2011 by Chris Mitchell                                  *
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2026 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,42 +16,21 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#include "TMxpStatTagHandler.h"
 
-
-#include "ui_module_manager.h"
-#include <QDialog>
-
-class Host;
-class QCloseEvent;
-
-class dlgModuleManager : public QDialog, public Ui::module_manager
-{
-    Q_OBJECT
-
-public:
-    Q_DISABLE_COPY(dlgModuleManager)
-    explicit dlgModuleManager(QWidget* parent, Host*);
-    ~dlgModuleManager() override;
-
-    void layoutModules();
-
-private slots:
-    void slot_installModule();
-    void slot_uninstallModule();
-    void slot_helpModule();
-    void slot_moduleClicked(QTableWidgetItem*);
-    void slot_moduleChanged(QTableWidgetItem*);
-
-signals:
-    void moduleManagerClosing(const QString& profileName);
-
-protected:
-    void closeEvent(QCloseEvent* event) override;
-
-private:
-    void showImportStatus(const QString& message);
-
-    Host* mpHost = nullptr;
-};
-
+#ifdef DEBUG_MXP_PROCESSING
+#include <QDebug>
 #endif
+
+TMxpTagHandlerResult TMxpStatTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
+{
+    Q_UNUSED(ctx)
+    Q_UNUSED(client)
+    Q_UNUSED(tag)
+
+#ifdef DEBUG_MXP_PROCESSING
+    qDebug() << "  Handling" << tag->getName() << "tag (silently consumed)";
+#endif
+
+    return MXP_TAG_HANDLED;
+}

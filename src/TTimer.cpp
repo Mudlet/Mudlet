@@ -197,6 +197,13 @@ bool TTimer::checkRestart()
 
 void TTimer::execute()
 {
+    // Guard against re-entrancy: cleanup may have deleted this timer while
+    // execute() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TTimer::execute() called on destroyed timer - ID:" << mID << "Name:" << mName;
+        return;
+    }
+
     if (!isActive() || isFolder()) {
         mpQTimer->stop();
         return;

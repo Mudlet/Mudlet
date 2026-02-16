@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGMODULEMANAGER_H
-#define MUDLET_DLGMODULEMANAGER_H
-
 /***************************************************************************
- *   Copyright (C) 2011 by Chris Mitchell                                  *
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2026 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,42 +16,25 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#ifndef MUDLET_TMXPSTATTAGHANDLER_H
+#define MUDLET_TMXPSTATTAGHANDLER_H
 
+#include "TMxpClient.h"
+#include "TMxpContext.h"
+#include "TMxpTagHandler.h"
 
-#include "ui_module_manager.h"
-#include <QDialog>
-
-class Host;
-class QCloseEvent;
-
-class dlgModuleManager : public QDialog, public Ui::module_manager
+// Handles STAT/GAUGE tags - silently consumed since Mudlet has no built-in status bar
+class TMxpStatTagHandler : public TMxpTagHandler
 {
-    Q_OBJECT
-
 public:
-    Q_DISABLE_COPY(dlgModuleManager)
-    explicit dlgModuleManager(QWidget* parent, Host*);
-    ~dlgModuleManager() override;
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
+    {
+        Q_UNUSED(ctx)
+        Q_UNUSED(client)
+        return tag->isNamed(qsl("STAT")) || tag->isNamed(qsl("GAUGE"));
+    }
 
-    void layoutModules();
-
-private slots:
-    void slot_installModule();
-    void slot_uninstallModule();
-    void slot_helpModule();
-    void slot_moduleClicked(QTableWidgetItem*);
-    void slot_moduleChanged(QTableWidgetItem*);
-
-signals:
-    void moduleManagerClosing(const QString& profileName);
-
-protected:
-    void closeEvent(QCloseEvent* event) override;
-
-private:
-    void showImportStatus(const QString& message);
-
-    Host* mpHost = nullptr;
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
 
-#endif
+#endif // MUDLET_TMXPSTATTAGHANDLER_H

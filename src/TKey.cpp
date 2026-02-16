@@ -68,6 +68,13 @@ void TKey::setName(const QString& name)
 
 bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const bool isToMatchAll)
 {
+    // Guard against re-entrancy: cleanup may have deleted this key while
+    // match() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TKey::match() called on destroyed key - ID:" << mID << "Name:" << mName;
+        return false;
+    }
+
     bool isAMatch = false;
     if (isActive()) {
         if (!isFolder()) {

@@ -179,6 +179,7 @@ set(mudlet_SRCS
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
+    TMxpStatTagHandler.cpp
     TMxpSupportTagHandler.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
@@ -386,7 +387,8 @@ set(mudlet_HDRS
     TMxpProcessor.h
     TMxpSendTagHandler.h
     TMxpSoundTagHandler.h
-    TMxpSupportTagHandler.cpp
+    TMxpStatTagHandler.h
+    TMxpSupportTagHandler.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
@@ -435,6 +437,8 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS CameraController.h)
   list(APPEND mudlet_SRCS GeometryManager.cpp)
   list(APPEND mudlet_HDRS GeometryManager.h)
+  list(APPEND mudlet_SRCS LabelTextureCache.cpp)
+  list(APPEND mudlet_HDRS LabelTextureCache.h)
   list(APPEND mudlet_SRCS RenderCommand.cpp)
   list(APPEND mudlet_HDRS RenderCommand.h)
   list(APPEND mudlet_SRCS RenderCommandQueue.cpp)
@@ -528,11 +532,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
 endif()
 
 if(NOT USE_OWN_QTKEYCHAIN)
-  # Only use this when we are using a system package and NOT our own local build
   find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
-
-  # No need to test for it being found as the REQUIRED will make it error out
-  # if it is NOT found!
   message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
 endif()
 

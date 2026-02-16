@@ -1304,6 +1304,8 @@ void mudlet::loadMaps()
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"MACINTOSH", tr("MACINTOSH")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"MEDIEVIA", tr("Medievia {Custom codec for that MUD}")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"M_MEDIEVIA", qsl("m ") % tr("Medievia {Custom codec for that MUD}")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"WINDOWS-1250", tr("WINDOWS-1250 (Central European)")},
@@ -1325,15 +1327,13 @@ void mudlet::loadMaps()
             {"WINDOWS-1258", tr("WINDOWS-1258 (Vietnamese)")}};
 
     /*: This represents the format of the timestamps shown alongside the texts
-     * in a console and might require translation for a few locales; the content
-     * is as per QDateTime::toString(...) and needs to follow the rules for that
-     * function as well as being suitable for the translation locale.
-     */
+ in a console and might require translation for a few locales; the content
+ is as per QDateTime::toString(...) and needs to follow the rules for that
+ function as well as being suitable for the translation locale.*/
     smTimeStampFormat = tr("hh:mm:ss.zzz ");
     /*: This represents the format of the timestamps shown for lines that do not
-     * have a timestamp in a console that is showing them. If localised this
-     * should be set to the same format and length as the smTimeStampFormat:
-     */
+ have a timestamp in a console that is showing them. If localised this
+ should be set to the same format and length as the smTimeStampFormat:*/
     smBlankTimeStamp = tr("------------ ");
 }
 
@@ -2211,7 +2211,9 @@ void mudlet::slot_timerFires()
         //        qDebug().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
         //        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
         pTT->execute();
-        if (pTT->checkRestart()) {
+        // Re-verify timer still exists after execute (script may have killed it)
+        pTT = pHost->getTimerUnit()->getTimer(id);
+        if (pTT && pTT->checkRestart()) {
             pTT->start();
         }
 
@@ -5846,9 +5848,7 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 
 bool mudlet::needsCustomDarkTheme()
 {
-#if defined(Q_OS_WINDOWS)
-    return QSysInfo::productVersion() == qsl("10");
-#elif defined(Q_OS_LINUX)
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
     return true;
 #else
     return false;

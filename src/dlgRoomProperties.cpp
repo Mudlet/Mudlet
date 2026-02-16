@@ -52,7 +52,13 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, QHash<bool, int> lockStatus, QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(QHash<QString, int> usedNames,
+                             QHash<int, int>& pColors,
+                             QHash<QString, int>& pSymbols,
+                             QHash<int, int>& pWeights,
+                             QHash<bool, int> lockStatus,
+                             QHash<bool, int> hiddenStatus,
+                             QSet<TRoom*>& pRooms)
 {
     // Configure name display
     if (usedNames.size() > 1) {
@@ -151,6 +157,20 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
     }
     initLockInstructions();
 
+    // Configure hidden display
+    // Are all hidden statuses the same or mixed? Then show dialog in tristate.
+    if (hiddenStatus.contains(true) && hiddenStatus.contains(false)) {
+        checkBox_hidden->setTristate(true);
+        checkBox_hidden->setCheckState(Qt::PartiallyChecked);
+    } else if (hiddenStatus.contains(true)) {
+        checkBox_hidden->setTristate(false);
+        checkBox_hidden->setCheckState(Qt::Checked);
+    } else { // hiddenStatus.contains(false)
+        checkBox_hidden->setTristate(false);
+        checkBox_hidden->setCheckState(Qt::Unchecked);
+    }
+    initHiddenInstructions();
+
     // Configure border display
     selectedBorderColor = pFirstRoom->mBorderColor;
     mBorderThickness = pFirstRoom->mBorderThickness;
@@ -171,11 +191,22 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
 
 void dlgRoomProperties::initLockInstructions()
 {
+    //: room properties dialog, setting lock status
     const QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
                                     // Intentional comment to separate arguments!
                                     "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
                                     mpRooms.size());
     checkBox_locked->setText(instructions);
+}
+
+void dlgRoomProperties::initHiddenInstructions()
+{
+    //: room properties dialog, setting hidden status
+    const QString instructions = tr("Hide room(s) from the map display",
+                                    // Intentional comment to separate arguments!
+                                    "This text will be shown at a checkbox, where you can set/unset a number of room's hidden status.",
+                                    mpRooms.size());
+    checkBox_hidden->setText(instructions);
 }
 
 
@@ -263,11 +294,9 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         while (itSymbolUsed.hasNext()) {
             itSymbolUsed.next();
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                /*:
-                Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., "★" or "!"),
-                %2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
-                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
-                */
+                /*: Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., "★" or "!"),
+%2 is the number of rooms using this symbol. Example output: "★ (count: 5)" or "! (count: 12)".
+The word "count" and the format can be translated, but ensure the numbers remain clearly associated.*/
                 displayStrings.append(tr("%1 (count: %2)").arg(itSymbolUsed.key(), QString::number(itSymbolUsed.value())));
             }
         }
@@ -300,11 +329,9 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
         while (itWeightUsed.hasNext()) {
             itWeightUsed.next();
             if (itWeightUsed.value() == weightCountsList.at(i)) {
-                /*:
-                Format for showing a room weight with its usage count. %1 is the weight value (e.g., "1" or "50"),
-                %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
-                The word "count" and the format can be translated, but ensure the numbers remain clearly associated.
-                */
+                /*: Format for showing a room weight with its usage count. %1 is the weight value (e.g., "1" or "50"),
+ %2 is the number of rooms with this weight. Example output: "5 (count: 3)" or "100 (count: 7)".
+ The word "count" and the format can be translated, but ensure the numbers remain clearly associated.*/
                 displayStrings.append(tr("%1 (count: %2)").arg(QString::number(itWeightUsed.key()), QString::number(itWeightUsed.value())));
             }
         }
@@ -364,6 +391,21 @@ void dlgRoomProperties::accept()
         }
     }
 
+    // Find hidden status to return back
+    Qt::CheckState const newHiddenCheckState = checkBox_hidden->checkState();
+    bool changeHiddenStatus = true;
+    std::optional<bool> newHiddenStatus;
+    if (newHiddenCheckState == Qt::PartiallyChecked) {
+        // We don't want to change then
+        changeHiddenStatus = false;
+    } else {
+        if (newHiddenCheckState == Qt::Checked) {
+            newHiddenStatus = true;
+        } else { // Qt::Unchecked
+            newHiddenStatus = false;
+        }
+    }
+
     // Find border settings to return back
     bool changeBorderColor = mBorderColorWasChanged;
     QColor newBorderColor = selectedBorderColor;
@@ -382,6 +424,8 @@ void dlgRoomProperties::accept()
                             newWeight,
                             changeLockStatus,
                             newLockStatus,
+                            changeHiddenStatus,
+                            newHiddenStatus,
                             changeBorderColor,
                             newBorderColor,
                             changeBorderThickness,
