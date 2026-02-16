@@ -157,6 +157,20 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     }
 }
 
+TCommandLine::~TCommandLine()
+{
+    // Proactively stop speech recognition and disconnect signals before
+    // Qt's parent-child cleanup destroys the VoskRecognizer. If we don't
+    // do this, the VoskRecognizer destructor will emit stateChanged which
+    // tries to update UI on a partially destroyed widget, causing a crash.
+    if (mpSpeechRecognizer) {
+        disconnect(mpSpeechRecognizer, nullptr, this, nullptr);
+        if (mpSpeechRecognizer->isListening()) {
+            mpSpeechRecognizer->cancel();
+        }
+    }
+}
+
 void TCommandLine::processNormalKey(QEvent* event)
 {
     QPlainTextEdit::event(event);

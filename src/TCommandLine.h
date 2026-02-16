@@ -59,6 +59,7 @@ public:
 
     Q_DISABLE_COPY(TCommandLine)
     explicit TCommandLine(Host*, const QString&, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
+    ~TCommandLine();
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
