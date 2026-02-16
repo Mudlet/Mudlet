@@ -238,6 +238,7 @@ public:
     }
     static bool isRawIPv4Address(const QString&);
     static bool isRawIPv6Address(const QString&);
+    std::tuple<std::bitset<256>, std::bitset<256>, std::bitset<256>, std::bitset<256>> getTelnetOptionStatus() const;
 
 
     QMap<int, bool> supportedTelnetOptions;
@@ -391,16 +392,16 @@ private:
     bool iac2 = false;
     bool insb = false;
     // Set if we have negotiated the use of the option by us:
-    bool myOptionState[256];
+    std::bitset<256> myOptionState;
     // Set if he has negotiated the use of the option by him:
-    bool hisOptionState[256];
+    std::bitset<256> hisOptionState;
     // Set if we have tried to negotiate the use of the option by us:
-    bool announcedState[256];
+    std::bitset<256> announcedState;
     // Set if the Server tried to negotiate the use of the option by him:
-    bool heAnnouncedState[256];
+    std::bitset<256> heAnnouncedState;
     // BUG: never set to be true - but seems to hold our intention to want to
     // enable our use of the option!
-    bool triedToEnable[256];
+    std::bitset<256> triedToEnable;
     bool recvdGA = false;
 
     QString termType;

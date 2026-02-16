@@ -5568,6 +5568,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "aiPrompt", TLuaInterpreter::aiPrompt);
     lua_register(pGlobalLua, "aiPromptStream", TLuaInterpreter::aiPromptStream);
     lua_register(pGlobalLua, "setActiveProfile", TLuaInterpreter::setActiveProfile);
+    lua_register(pGlobalLua, "getTelnetOptionsStatus", TLuaInterpreter::getTelnetOptionsStatus);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

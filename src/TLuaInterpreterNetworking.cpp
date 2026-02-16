@@ -725,3 +725,48 @@ int TLuaInterpreter::customHTTP(lua_State* L)
     auto customMethod = getVerifiedString(L, __func__, 1, "http method");
     return performHttpRequest(L, __func__, 1, QNetworkAccessManager::CustomOperation, customMethod);
 }
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTelnetOptionsStatus
+int TLuaInterpreter::getTelnetOptionsStatus(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    const auto [heAnnounced, hisOptionState, myAnnounced, myOptionState] = host.mTelnet.getTelnetOptionStatus();
+
+    lua_newtable(L);
+    // qDebug().nospace().noquote() << "TLuaInterpreter::getTelnetOptionsStatus() INFO - bitset values:";
+    for (size_t i; i < heAnnounced.size(); ++i) {
+        // The options start at zero which is not ideal for an index table
+        // but since we are producting an associative array here with lots of
+        // gaps in the keys that isn't really a problem:
+        const auto name = host.mTelnet.decodeOption(static_cast<unsigned char>(i));
+        // qDebug("   Bit %3i %20s: HeAnnounced: %3s HisState: %3s - MyAnnounced: %3s MyState: %3s",
+        //        static_cast<int>(i), name.toUtf8().constData(),
+        //        (heAnnounced.test(i) ? "YES" : "no "),
+        //        (hisOptionState.test(i) ? "YES" : "no "),
+        //        (myAnnounced.test(i) ? "YES" : "no "),
+        //        (myOptionState.test(i) ? "YES" : "no "));
+        if (heAnnounced.test(i) || myAnnounced.test(i)) {
+            lua_pushnumber(L, i);
+            lua_newtable(L);
+
+            lua_pushstring(L, "Name");
+            lua_pushstring(L, name.toUtf8().constData());
+            lua_settable(L, -3);
+
+            if (heAnnounced.test(i)) {
+                lua_pushstring(L, "Server");
+                lua_pushboolean(L, hisOptionState.test(i));
+                lua_settable(L, -3);
+            }
+
+            if (myAnnounced.test(i)) {
+                lua_pushstring(L, "Mudlet");
+                lua_pushboolean(L, myOptionState.test(i));
+                lua_settable(L, -3);
+            }
+
+            lua_settable(L, -3);
+        }
+    }
+    return 1;
+}

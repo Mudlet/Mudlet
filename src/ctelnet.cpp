@@ -126,13 +126,11 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 void cTelnet::reset()
 {
     //reset telnet options state
-    for (int i = 0; i < 256; ++i) {
-        myOptionState[i] = false;
-        hisOptionState[i] = false;
-        announcedState[i] = false;
-        heAnnouncedState[i] = false;
-        triedToEnable[i] = false;
-    }
+    myOptionState.reset();
+    hisOptionState.reset();
+    announcedState.reset();
+    heAnnouncedState.reset();
+    triedToEnable.reset();
     iac = false;
     iac2 = false;
     insb = false;
@@ -1271,7 +1269,7 @@ void cTelnet::checkNAWS()
     // width of the time stamps if they are showing:
     int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
-    if ((naws_y > 0) && (myOptionState[static_cast<size_t>(OPT_NAWS)]) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
+    if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
         mNaws_x = naws_x;
         mNaws_y = naws_y;
@@ -1560,6 +1558,10 @@ QString cTelnet::decodeOption(const unsigned char ch) const
         return QLatin1String("MCCP (85)");
     case 86:
         return QLatin1String("MCCP2 (86)");
+    case 87:
+        return QLatin1String("MCCP3 (87)");
+    case 88:
+        return QLatin1String("MCCP4 (88)");
 
     case 90:
         return QLatin1String("MSP (90)");
@@ -1590,7 +1592,7 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     case 255:
         return QLatin1String("EXTENDED_OPTIONS_LIST (255)");
     default:
-        return qsl("UNKNOWN (%1)").arg(ch, 3);
+        return qsl("UNKNOWN (%1)").arg(ch);
     }
 }
 
@@ -2676,19 +2678,19 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             break;
         }
 
-        heAnnouncedState[idxOption] = true;
-        if (triedToEnable[idxOption]) {
-            hisOptionState[idxOption] = true;
-            triedToEnable[idxOption] = false;
+        heAnnouncedState.set(idxOption);
+        if (triedToEnable.test(idxOption)) {
+            hisOptionState.set(idxOption);
+            triedToEnable.reset(idxOption);
         } else {
-            if (!hisOptionState[idxOption]) {
+            if (!hisOptionState.test(idxOption)) {
                 //only if this is not set; if it's set, something's wrong with the server
                 //(according to telnet specification, option announcement may not be
                 //unless explicitly requested)
 
                 if (option == OPT_ECHO) {
                     sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
+                    hisOptionState.set(idxOption) = true;
                     mpHost->setRemoteEchoingActive(true);
                     qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
 
@@ -2715,32 +2717,32 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     }
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
+                    hisOptionState.set(idxOption);
                 } else if (option == OPT_NAWS) {
                     if (mpHost->mEnableNAWS) {
                         sendTelnetOption(TN_DO, option);
-                        hisOptionState[idxOption] = true;
+                        hisOptionState.set(idxOption);
                         qDebug() << "NAWS enabled";
                         raiseProtocolEvent("sysProtocolEnabled", "NAWS");
                     } else {
                         sendTelnetOption(TN_DONT, option);
-                        hisOptionState[idxOption] = false;
+                        hisOptionState.reset(idxOption);
                         raiseProtocolEvent("sysProtocolDisabled", "NAWS");
                     }
                 } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
                     //these are handled separately, as they're a bit special
                     if (mpHost->mFORCE_NO_COMPRESSION) {
                         sendTelnetOption(TN_DONT, option);
-                        hisOptionState[idxOption] = false;
+                        hisOptionState.reset(idxOption);
                         qDebug().nospace().noquote() << "Rejecting MCCP v" << (option == OPT_COMPRESS ? "1" : "2") << ", because the 'Force compression off' option is enabled.";
-                    } else if ((option == OPT_COMPRESS) && (hisOptionState[static_cast<int>(OPT_COMPRESS2)])) {
+                    } else if ((option == OPT_COMPRESS) && (hisOptionState.test(static_cast<size_t>(OPT_COMPRESS2)))) {
                         //protocol says: reject MCCP v1 if you have previously accepted MCCP v2...
                         sendTelnetOption(TN_DONT, option);
-                        hisOptionState[idxOption] = false;
+                        hisOptionState.reset(idxOption);
                         qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated.";
                     } else {
                         sendTelnetOption(TN_DO, option);
-                        hisOptionState[idxOption] = true;
+                        hisOptionState.set(idxOption);
                         //inform MCCP object about the change
                         if (option == OPT_COMPRESS) {
                             mMCCP_version_1 = true;
@@ -2752,10 +2754,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     }
                 } else if (supportedTelnetOptions.contains(option)) {
                     sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
+                    hisOptionState.set(idxOption);
                 } else {
                     sendTelnetOption(TN_DONT, option);
-                    hisOptionState[idxOption] = false;
+                    hisOptionState.reset(idxOption);
                 }
             }
         }
@@ -2774,10 +2776,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
         qDebug().nospace().noquote() << "Server sent telnet IAC WONT " << decodeOption(option);
 #endif
-        if (triedToEnable[idxOption]) {
-            hisOptionState[idxOption] = false;
-            triedToEnable[idxOption] = false;
-            heAnnouncedState[idxOption] = true;
+        if (triedToEnable.test(idxOption)) {
+            hisOptionState.reset(idxOption);
+            triedToEnable.reset(idxOption);
+            heAnnouncedState.reset(idxOption);
         } else {
             if (option == OPT_NEW_ENVIRON) {
                 // NEW_ENVIRON got turned off
@@ -2839,9 +2841,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             }
 
             //send DONT if needed (see RFC 854 for details)
-            if (hisOptionState[idxOption] || (heAnnouncedState[idxOption])) {
+            if (hisOptionState.test(idxOption) || (heAnnouncedState.test(idxOption))) {
                 sendTelnetOption(TN_DONT, option);
-                hisOptionState[idxOption] = false;
+                hisOptionState.reset(idxOption);
 
                 if (option == OPT_ECHO) {
                     // Cancel any pending password mode timeout since we got the proper WONT ECHO
@@ -2861,7 +2863,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     qDebug() << "MCCP v2 disabled !";
                 }
             }
-            heAnnouncedState[idxOption] = true;
+            heAnnouncedState.set(idxOption);
         }
         break;
     }
@@ -3039,7 +3041,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             // See https://www.rfc-editor.org/rfc/rfc860.txt
             qDebug() << "We have received a DO TIMING_MARK request, sending a WONT as we do not actually do anything with it but even that can be useful to the sender.";
             sendTelnetOption(TN_WONT, option);
-        } else if (!myOptionState[idxOption]) {
+        } else if (!myOptionState.test(idxOption)) {
             // only if the option is currently disabled
 
             if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE || (option == OPT_NAWS && mpHost->mEnableNAWS)) {
@@ -3057,20 +3059,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 sendTelnetOption(TN_WILL, option);
-                myOptionState[idxOption] = true;
-                announcedState[idxOption] = true;
+                myOptionState.set(idxOption);
             } else if (option == OPT_NAWS && !mpHost->mEnableNAWS) {
                 qDebug() << "NAWS disabled (user preference)";
                 sendTelnetOption(TN_WONT, option);
-                myOptionState[idxOption] = false;
-                announcedState[idxOption] = true;
+                myOptionState.reset(idxOption);
                 raiseProtocolEvent("sysProtocolDisabled", "NAWS");
             } else {
                 qDebug() << "We are NOT WILLING to enable this telnet option.";
                 sendTelnetOption(TN_WONT, option);
-                myOptionState[idxOption] = false;
-                announcedState[idxOption] = true;
+                myOptionState.reset(idxOption);
             }
+            announcedState.set(idxOption);
         }
         if (option == OPT_NAWS) {
             //NAWS
@@ -3156,11 +3156,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             raiseProtocolEvent("sysProtocolDisabled", "channel102");
         }
 
-        if (myOptionState[idxOption] || (!announcedState[idxOption])) {
+        if (myOptionState.test(idxOption) || (!announcedState.test(idxOption))) {
             sendTelnetOption(TN_WONT, option);
-            announcedState[idxOption] = true;
+            announcedState.set(idxOption);
         }
-        myOptionState[idxOption] = false;
+        myOptionState.reset(idxOption) = false;
         break;
     }
 
@@ -3470,7 +3470,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 cmd += OPT_STATUS;
                 cmd += TNSB_IS;
                 for (size_t i = 0; i < 256; ++i) {
-                    if (myOptionState[i]) {
+                    if (myOptionState.test(i)) {
                         cmd += TN_WILL;
                         cmd += i;
                         if (i == static_cast<unsigned char>(TN_SE)) {
@@ -3478,7 +3478,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             cmd += i;
                         }
                     }
-                    if (hisOptionState[i]) {
+                    if (hisOptionState.test(i)) {
                         cmd += TN_DO;
                         cmd += i;
                         if (i == static_cast<unsigned char>(TN_SE)) {
@@ -3501,7 +3501,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         case OPT_TERMINAL_TYPE: {
             if (telnetCommand.length() >= 6 && telnetCommand[3] == TNSB_SEND && telnetCommand[4] == TN_IAC && telnetCommand[5] == TN_SE) {
-                if (myOptionState[static_cast<size_t>(OPT_TERMINAL_TYPE)]) {
+                if (myOptionState.test(static_cast<size_t>(OPT_TERMINAL_TYPE))) {
                     std::string cmd;
                     cmd += TN_IAC;
                     cmd += TN_SB;
@@ -4466,8 +4466,8 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
 
-        hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
-        hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
+        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
+        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
 
         // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
         initStreamDecompressor();
@@ -5193,4 +5193,9 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     static const QRegularExpression isRawIPv6AddressRegExp(qsl("^[0-9a-f:]+$"));
 
     return isRawIPv6AddressRegExp.match(text).hasMatch();
+}
+
+std::tuple<std::bitset<256>, std::bitset<256>, std::bitset<256>, std::bitset<256>> cTelnet::getTelnetOptionStatus() const
+{
+    return {heAnnouncedState, hisOptionState, announcedState, myOptionState};
 }
