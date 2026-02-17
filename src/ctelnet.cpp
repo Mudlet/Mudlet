@@ -2690,7 +2690,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 if (option == OPT_ECHO) {
                     sendTelnetOption(TN_DO, option);
-                    hisOptionState.set(idxOption) = true;
+                    hisOptionState.set(idxOption);
                     mpHost->setRemoteEchoingActive(true);
                     qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
 
@@ -3160,7 +3160,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             sendTelnetOption(TN_WONT, option);
             announcedState.set(idxOption);
         }
-        myOptionState.reset(idxOption) = false;
+        myOptionState.reset(idxOption);
         break;
     }
 
