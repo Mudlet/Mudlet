@@ -4805,6 +4805,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_dictionary</tabstop>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
+  <tabstop>comboBox_speechRecognitionEngine</tabstop>
   <tabstop>pushButton_speechRecognitionSetup</tabstop>
   <tabstop>comboBox_speechDetectionTiming</tabstop>
   <tabstop>checkBox_highlightLowConfidenceWords</tabstop>

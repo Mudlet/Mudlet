@@ -4667,28 +4667,31 @@ void mudlet::initSpeechRecognition()
 
     // Initialize with default model path if available
     const QString modelPath = SpeechRecognizerFactory::defaultModelPath();
-    QDir modelDir(modelPath);
 
-    if (modelDir.exists()) {
-        mpSpeechRecognizer->initialize(modelPath);
+    if (!modelPath.isEmpty()) {
+        QDir modelDir(modelPath);
 
-        // Apply global settings to the recognizer using the abstract interface
-        SpeechRecognizer::Sensitivity sensitivity = SpeechRecognizer::Sensitivity::Default;
+        if (modelDir.exists()) {
+            mpSpeechRecognizer->initialize(modelPath);
 
-        switch (mSpeechDetectionTiming) {
-        case SpeechDetectionTiming::Short:
-            sensitivity = SpeechRecognizer::Sensitivity::Short;
-            break;
-        case SpeechDetectionTiming::Long:
-            sensitivity = SpeechRecognizer::Sensitivity::Long;
-            break;
-        default:
-            sensitivity = SpeechRecognizer::Sensitivity::Default;
-            break;
+            // Apply global settings to the recognizer using the abstract interface
+            SpeechRecognizer::Sensitivity sensitivity = SpeechRecognizer::Sensitivity::Default;
+
+            switch (mSpeechDetectionTiming) {
+            case SpeechDetectionTiming::Short:
+                sensitivity = SpeechRecognizer::Sensitivity::Short;
+                break;
+            case SpeechDetectionTiming::Long:
+                sensitivity = SpeechRecognizer::Sensitivity::Long;
+                break;
+            default:
+                sensitivity = SpeechRecognizer::Sensitivity::Default;
+                break;
+            }
+
+            mpSpeechRecognizer->setSensitivity(sensitivity);
+            mpSpeechRecognizer->setWordsEnabled(mHighlightLowConfidenceWords);
         }
-
-        mpSpeechRecognizer->setSensitivity(sensitivity);
-        mpSpeechRecognizer->setWordsEnabled(mHighlightLowConfidenceWords);
     }
 }
 
@@ -4823,32 +4826,44 @@ void mudlet::slot_handlePartialSpeechResult(const QString& text)
     if (mSpeechNeedsReset) {
         pCommandLine->clear();
         mTextBeforeSpeech.clear();
+        mTextAfterSpeech.clear();
         mCurrentPartialResult.clear();
         mSpeechNeedsReset = false;
     } else {
         const QString currentText = pCommandLine->toPlainText();
+
         if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
             // Command line was manually cleared, start fresh
             mTextBeforeSpeech.clear();
+            mTextAfterSpeech.clear();
         } else {
             // Check if there's a selection - if so, we should replace it
             QTextCursor cursor = pCommandLine->textCursor();
+
             if (cursor.hasSelection()) {
-                // Get the text before the selection - this becomes our new base text
+                // Preserve text before and after the selection
                 const int selStart = cursor.selectionStart();
+                const int selEnd = cursor.selectionEnd();
                 mTextBeforeSpeech = currentText.left(selStart);
+                mTextAfterSpeech = currentText.mid(selEnd);
             }
         }
     }
 
     mCurrentPartialResult = text;
 
-    // Show partial result with the original text preserved
+    // Show partial result with the original text preserved (before and after selection)
     QString displayText = mTextBeforeSpeech;
     if (!displayText.isEmpty() && !text.isEmpty()) {
         displayText += QLatin1Char(' ');
     }
     displayText += text;
+    if (!mTextAfterSpeech.isEmpty()) {
+        if (!text.isEmpty()) {
+            displayText += QLatin1Char(' ');
+        }
+        displayText += mTextAfterSpeech;
+    }
 
     // Update the command line
     pCommandLine->setPlainText(displayText);
@@ -4875,6 +4890,7 @@ void mudlet::slot_handleFinalSpeechResult(const QString& text)
     if (mSpeechNeedsReset) {
         pCommandLine->clear();
         mTextBeforeSpeech.clear();
+        mTextAfterSpeech.clear();
         mCurrentPartialResult.clear();
         mSpeechNeedsReset = false;
         // Discard this late final result - don't let it seed the next speech session
@@ -4884,25 +4900,35 @@ void mudlet::slot_handleFinalSpeechResult(const QString& text)
     const QString currentText = pCommandLine->toPlainText();
     if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
         mTextBeforeSpeech.clear();
+        mTextAfterSpeech.clear();
     } else {
         // Check if there's a selection - if so, we should replace it
         QTextCursor cursor = pCommandLine->textCursor();
         if (cursor.hasSelection()) {
-            // Get the text before the selection - this becomes our new base text
+            // Preserve text before and after the selection
             const int selStart = cursor.selectionStart();
+            const int selEnd = cursor.selectionEnd();
             mTextBeforeSpeech = currentText.left(selStart);
+            mTextAfterSpeech = currentText.mid(selEnd);
         }
     }
 
-    // Append the final recognized text to any existing text
+    // Append the final recognized text to any existing text (before and after selection)
     QString finalText = mTextBeforeSpeech;
     if (!finalText.isEmpty() && !text.isEmpty()) {
         finalText += QLatin1Char(' ');
     }
     finalText += text;
+    if (!mTextAfterSpeech.isEmpty()) {
+        if (!text.isEmpty()) {
+            finalText += QLatin1Char(' ');
+        }
+        finalText += mTextAfterSpeech;
+    }
 
     // Update the saved text so subsequent speech adds to it
     mTextBeforeSpeech = finalText;
+    mTextAfterSpeech.clear(); // Suffix has been incorporated into the final text
     mCurrentPartialResult.clear();
 
     // Set the final text

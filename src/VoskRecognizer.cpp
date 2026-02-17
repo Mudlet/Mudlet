@@ -59,9 +59,19 @@ VoskRecognizer::vosk_recognizer_set_words_fn VoskRecognizer::s_vosk_recognizer_s
 // Sample rate for Vosk - most models expect 16kHz
 static constexpr int VOSK_SAMPLE_RATE = 16000;
 
+// Common hallucination words that Vosk models generate during silence or speech onset
+static const QStringList kHallucinationWords = {
+        qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")};
+
+// Regex to strip leading hallucination words from multi-word results
+Q_GLOBAL_STATIC_WITH_ARGS(QRegularExpression, kLeadingHallucinationRx, (qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption))
+
 // AudioInputBuffer implementation
 qint64 AudioInputBuffer::writeData(const char* data, qint64 len)
 {
+    if (!data && len > 0) {
+        return 0;
+    }
     QByteArray newData(data, len);
     mTotalBytesWritten += len;
     emit dataAvailable(newData);
@@ -396,22 +406,27 @@ void VoskRecognizer::startListeningInternal()
         mVoskRecognizer = nullptr;
     }
 
-    if (mVoskModel) {
-        mVoskRecognizer = s_vosk_recognizer_new(mVoskModel, static_cast<float>(VOSK_SAMPLE_RATE));
-        if (!mVoskRecognizer) {
-            qWarning() << "VoskRecognizer: Failed to recreate recognizer";
-            emit errorOccurred(tr("Failed to initialize speech recognition"));
-            setState(State::Error);
-            return;
-        }
+    if (!mVoskModel) {
+        emit errorOccurred(tr("Failed to initialize speech recognition"));
+        setState(State::Error);
+        return;
+    }
 
-        // Reapply settings to the new recognizer
-        if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
-            s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
-        }
-        if (s_vosk_recognizer_set_words && mWordsEnabled) {
-            s_vosk_recognizer_set_words(mVoskRecognizer, 1);
-        }
+    mVoskRecognizer = s_vosk_recognizer_new(mVoskModel, static_cast<float>(VOSK_SAMPLE_RATE));
+    if (!mVoskRecognizer) {
+        qWarning() << "VoskRecognizer: Failed to recreate recognizer";
+        emit errorOccurred(tr("Failed to initialize speech recognition"));
+        setState(State::Error);
+        return;
+    }
+
+    // Reapply settings to the new recognizer
+    if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
+        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
+    }
+
+    if (s_vosk_recognizer_set_words && mWordsEnabled) {
+        s_vosk_recognizer_set_words(mVoskRecognizer, 1);
     }
 
     // Clear any buffered audio
@@ -480,31 +495,28 @@ void VoskRecognizer::stopListening()
             QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
                 // Apply same hallucination filtering as in processAudioData
-                static const QStringList hallucinationWords = {
-                        qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")};
-
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
-                const bool isHallucinationWord = hallucinationWords.contains(text.toLower());
+                const bool isHallucinationWord = kHallucinationWords.contains(text.toLower());
 
                 // Check confidence if word-level results are available
-                bool hasLowConfidence = false;
+                bool hasHighConfidence = false;
+
                 if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
                     const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
                     if (wordsArray.size() == 1) {
                         const double conf = wordsArray.first().toObject().value(QLatin1String("conf")).toDouble();
-                        hasLowConfidence = conf < 0.8;
+                        hasHighConfidence = conf >= 0.8;
                     }
                 }
 
-                // Filter single-word hallucinations on stop (always filter, since stopping often produces these)
-                const bool shouldFilter = isSingleWord && isHallucinationWord;
+                // Filter single-word hallucinations on stop, unless confidence is high
+                const bool shouldFilter = isSingleWord && isHallucinationWord && !hasHighConfidence;
 
                 if (shouldFilter) {
                     qDebug() << "VoskRecognizer: Filtered hallucination on stop:" << text;
                 } else {
                     // Strip leading hallucination words from multi-word results
-                    static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
-                    text.replace(leadingHallucination, QString());
+                    text.replace(*kLeadingHallucinationRx, QString());
                     text = text.trimmed();
 
                     if (!text.isEmpty()) {
@@ -695,13 +707,9 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
             const QJsonObject obj = doc.object();
             QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
-                // Common hallucination words that appear during silence
-                static const QStringList hallucinationWords = {
-                        qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")};
-
                 // Filter single-word hallucination results
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
-                const bool isHallucinationWord = hallucinationWords.contains(text.toLower());
+                const bool isHallucinationWord = kHallucinationWords.contains(text.toLower());
 
                 // Check confidence if word-level results are available
                 bool hasLowConfidence = false;
@@ -721,8 +729,7 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                     qDebug() << "VoskRecognizer: Filtered hallucination (final):" << text << "(level:" << mRecentAudioLevel << ", lowConf:" << hasLowConfidence << ")";
                 } else {
                     // Strip leading hallucination words from multi-word results
-                    static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
-                    text.replace(leadingHallucination, QString());
+                    text.replace(*kLeadingHallucinationRx, QString());
                     text = text.trimmed();
 
                     if (!text.isEmpty()) {
@@ -758,15 +765,10 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
             const QJsonDocument doc = QJsonDocument::fromJson(QByteArray(partialJson));
             QString text = doc.object().value(QLatin1String("partial")).toString().trimmed();
             if (!text.isEmpty()) {
-                // Filter out common hallucination words
-                // Large Vosk models hallucinate words like "the" during silence and speech onset
-                static const QStringList hallucinationWords = {
-                        qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")};
-
                 // Check if this is a single-word hallucination during silence or speech onset
                 const bool isOnsetPhase = mSpeechOnsetFrames < SPEECH_ONSET_FRAMES;
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
-                const bool isHallucinationWord = hallucinationWords.contains(text.toLower());
+                const bool isHallucinationWord = kHallucinationWords.contains(text.toLower());
                 const bool shouldFilter = (isSilent || isOnsetPhase) && isSingleWord && isHallucinationWord;
 
                 // Also filter if the result is stuck on the same hallucination word
@@ -776,9 +778,8 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                     qDebug() << "VoskRecognizer: Filtered hallucination:" << text << "(level:" << mRecentAudioLevel << ", onset:" << mSpeechOnsetFrames << ")";
                 } else {
                     // Strip leading hallucination words from multi-word results
-                    static const QRegularExpression leadingHallucination(qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption);
                     QString cleanText = text;
-                    cleanText.replace(leadingHallucination, QString());
+                    cleanText.replace(*kLeadingHallucinationRx, QString());
                     cleanText = cleanText.trimmed();
 
                     if (!cleanText.isEmpty()) {

@@ -692,6 +692,7 @@ private:
     QPointer<SpeechRecognizer> mpSpeechRecognizer;
     bool mSpeechRecognitionActive = false;
     QString mTextBeforeSpeech;
+    QString mTextAfterSpeech;
     QString mCurrentPartialResult;
     bool mSpeechNeedsReset = false;
 
