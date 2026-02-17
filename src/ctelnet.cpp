@@ -1,8 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2021-2022, 2025 by Stephen Lyons  *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021-2022, 2025-2026              *
+ *                              by Stephen Lyons - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *

@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019, 2021-2022, 2025 by Stephen Lyons       *
+ *   Copyright (C) 2015, 2017-2019, 2021-2022, 2025-2026 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -43,13 +43,14 @@
 #include <QSslSocket>
 #endif
 #include <QTime>
+#include <QVector>
 
 #include <zlib.h>
 
+#include <bitset>
 #include <iostream>
 #include <queue>
 #include <string>
-#include <QVector>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
