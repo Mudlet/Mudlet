@@ -5529,6 +5529,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
+    lua_register(pGlobalLua, "getMapInfo", TLuaInterpreter::getMapInfo);
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
     lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
@@ -7802,6 +7803,16 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapShowRoomBorders"),
              [&]() {
                  lua_pushboolean(L, host.mMapperShowRoomBorders);
+             }},
+            {qsl("mapInfo"),
+             [&]() {
+                 const auto& contributors = host.mMapInfoContributors;
+                 lua_createtable(L, contributors.size(), 0);
+                 int i = 1;
+                 for (const auto& name : contributors) {
+                     lua_pushstring(L, name.toUtf8().constData());
+                     lua_rawseti(L, -2, i++);
+                 }
              }},
             {qsl("mapInfoColor"),
              [&]() {

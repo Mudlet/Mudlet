@@ -1034,10 +1034,6 @@ void XMLimport::readHost(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
-    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
-        mpHost->mMapInfoContributors.clear();
-    }
-
     QMargins borders;
 
     while (!atEnd()) {

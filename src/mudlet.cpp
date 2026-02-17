@@ -5457,6 +5457,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     if (entries.isEmpty()) {
         preInstallPackages = true;
         pHost->mLoadedOk = true;
+        pHost->mMapInfoContributors.insert(qsl("Short"));
     } else {
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
         if (!file.open(QFile::ReadOnly | QFile::Text)) {
