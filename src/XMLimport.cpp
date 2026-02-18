@@ -756,8 +756,6 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
-    // Note: Speech recognition settings (mSpeechDetectionTiming, mHighlightLowConfidenceWords) are now global app settings, not per-profile
-    // Legacy attributes are ignored for backwards compatibility
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);

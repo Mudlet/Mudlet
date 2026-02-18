@@ -4668,30 +4668,26 @@ void mudlet::initSpeechRecognition()
     // Initialize with default model path if available
     const QString modelPath = SpeechRecognizerFactory::defaultModelPath();
 
-    if (!modelPath.isEmpty()) {
-        QDir modelDir(modelPath);
+    if (!modelPath.isEmpty() && QFileInfo::exists(modelPath)) {
+        mpSpeechRecognizer->initialize(modelPath);
 
-        if (modelDir.exists()) {
-            mpSpeechRecognizer->initialize(modelPath);
+        // Apply global settings to the recognizer using the abstract interface
+        SpeechRecognizer::Sensitivity sensitivity = SpeechRecognizer::Sensitivity::Default;
 
-            // Apply global settings to the recognizer using the abstract interface
-            SpeechRecognizer::Sensitivity sensitivity = SpeechRecognizer::Sensitivity::Default;
-
-            switch (mSpeechDetectionTiming) {
-            case SpeechDetectionTiming::Short:
-                sensitivity = SpeechRecognizer::Sensitivity::Short;
-                break;
-            case SpeechDetectionTiming::Long:
-                sensitivity = SpeechRecognizer::Sensitivity::Long;
-                break;
-            default:
-                sensitivity = SpeechRecognizer::Sensitivity::Default;
-                break;
-            }
-
-            mpSpeechRecognizer->setSensitivity(sensitivity);
-            mpSpeechRecognizer->setWordsEnabled(mHighlightLowConfidenceWords);
+        switch (mSpeechDetectionTiming) {
+        case SpeechDetectionTiming::Short:
+            sensitivity = SpeechRecognizer::Sensitivity::Short;
+            break;
+        case SpeechDetectionTiming::Long:
+            sensitivity = SpeechRecognizer::Sensitivity::Long;
+            break;
+        default:
+            sensitivity = SpeechRecognizer::Sensitivity::Default;
+            break;
         }
+
+        mpSpeechRecognizer->setSensitivity(sensitivity);
+        mpSpeechRecognizer->setWordsEnabled(mHighlightLowConfidenceWords);
     }
 }
 
