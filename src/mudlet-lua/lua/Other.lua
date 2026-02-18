@@ -952,9 +952,12 @@ function timeframe(vname, true_time, nil_time, ...)
   local timerlist = {
     {0, nil},
     (type(true_time) == "number" and {true_time, true}) or (type(true_time) == "table" and true_time),
-    ...,
-    (type(nil_time) == "number" and {nil_time, nil}) or (type(nil_time) == "table" and nil_time) or nil,
+    ...
   }
+  table.insert(
+    timerlist,
+    (type(nil_time) == "number" and {nil_time, nil}) or (type(nil_time) == "table" and nil_time) or nil
+  )
 
   -- reinitialise timeframe for vname
   killtimeframe(vname)
