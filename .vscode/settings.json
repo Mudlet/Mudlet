@@ -10,7 +10,6 @@
   "files.exclude": {
     "3rdparty/": true,
     ".cache": true,
-    "src/mudlet-lua/library": true,
   },
   "files.associations": {
     "typeindex": "cpp",
@@ -41,5 +40,6 @@
     "editor.tabSize": 2
   },
   "Lua.runtime.version": "Lua 5.1",
+	"Lua.workspace.checkThirdParty": false,
   "Lua.workspace.library": ["src/mudlet-lua/library"],
 }
