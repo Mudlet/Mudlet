@@ -1,6 +1,5 @@
 {
   "cmake.configureOnOpen": true,
-  "Lua.runtime.version": "Lua 5.1",
   // files to exclude from clang-tidy code analysis
   "C_Cpp.files.exclude": {
     "**/3rdparty": true,
@@ -11,6 +10,7 @@
   "files.exclude": {
     "3rdparty/": true,
     ".cache": true,
+    "src/mudlet-lua/library": true,
   },
   "files.associations": {
     "typeindex": "cpp",
@@ -39,5 +39,7 @@
   ],
   "[lua]": {
     "editor.tabSize": 2
-  }
+  },
+	"Lua.runtime.version": "Lua 5.1",
+	"Lua.workspace.library": ["src/mudlet-lua/library"],
 }
