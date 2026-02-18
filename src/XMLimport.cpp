@@ -756,6 +756,16 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    if (attributes().hasAttribute(QLatin1String("mShowInfo"))) {
+        // Old - pre Map Info versions of Mudlet (those before
+        // https://github.com/Mudlet/Mudlet/pull/4718) used the above
+        // setting to control the showing of what is now the "Full"
+        // map info display. So treat it as that to reproduce that
+        // behaviour:
+        if (attributes().value(qsl("mShowInfo")).toString() == YES) {
+            mpHost->mMapInfoContributors.insert(qsl("Full"));
+        }
+    }
     setBoolAttribute(qsl("mAcceptServerGUI"), pHost->mAcceptServerGUI);
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);

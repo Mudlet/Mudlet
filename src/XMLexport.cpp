@@ -445,9 +445,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
-    if (pHost->mMapInfoContributors.isEmpty()) {
-        host.append_attribute("mShowInfo") = "no";
-    }
+    // This is to reproduce the behaviour for Mudlet versions prior to the
+    // introduction of the Map Info system https://github.com/Mudlet/Mudlet/pull/4718
+    // where having the info showing would produce what is now the "Full" map info,
+    // this does duplicate the action, for the "Full" item, in later code which
+    // that handles all enabled Map Info items but as the container is a set that
+    // isn't a problem:
+    host.append_attribute("mShowInfo") = pHost->mMapInfoContributors.contains(qsl("Full")) ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
