@@ -41,30 +41,57 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported MSYS2/MINGGW shell type
+# 2 - Unsupported MSYS2/MINGW shell type
 # 3 - Unsupported build type
 # 4 - Directory to be used to assemble the package is NOT empty
-# 6 - No Mudlet.exe file found to work with
+# 8 - No Mudlet.exe file found to work with
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
-else
+elif [ "${MSYSTEM}" != "MINGW64" ]; then
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
-BUILD_CONFIG="release"
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
-GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g' | sed 's|C:|/c|g')
+# These should be set by the build-mudlet-for-windows script:
+if [ "${BUILD_ACTION}" != "Release" ]; then
+  if [ -z "${BUILD_COMMIT}" ]; then
+    # Error out if not set:
+    echo "BUILD_COMMIT not set in environment and this isn't a \"Release\" build, check preceding steps!"
+    exit 10
+  fi
+  if [ -z "${MUDLET_VERSION_BUILD}" ]; then
+    echo "MUDLET_VERSION_BUILD not set in environment and this isn't a \"Release\" build, check preceding steps!"
+    exit 10
+  fi
+fi
+
+if [ -z "${BUILD_CONFIG}" ]; then
+  # Error out if not set:
+  echo "BUILD_CONFIG not set in environment, check preceding steps!"
+  exit 10
+fi
+
+if [ -z "${VERSION}" ]; then
+  # Error out if not set:
+  echo "VERSION not set in environment, check preceding steps!"
+  exit 10
+fi
+
+GITHUB_WORKSPACE_UNIX_PATH="$(cygpath -au "${GITHUB_WORKSPACE}")"
+
+if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" ]; then
+  echo "ERROR: no Mudlet executable found - did the previous build"
+  echo "complete sucessfully?"
+  exit 6
+fi
+
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
+export PACKAGE_DIR
 
 echo "MSYSTEM is: ${MSYSTEM}"
 echo ""
@@ -92,7 +119,7 @@ fi
 cd "${PACKAGE_DIR}" || exit 1
 echo ""
 
-echo "Copying wanted compiled files from ${GITHUB_WORKSPACE}/build-${MSYSTEM} to ${GITHUB_WORKSPACE}/package-${MSYSTEM} ..."
+echo "Copying wanted compiled files from ${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM} to ${PACKAGE_DIR} ..."
 echo ""
 
 if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" ]; then
@@ -164,9 +191,9 @@ cp -v -p -t . \
     "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll"
 
 mkdir ./luasql
-cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sqlite3.dll
+cp -v -p "${MINGW_PREFIX}/lib/lua/5.1/luasql/sqlite3.dll" ./luasql/sqlite3.dll
 mkdir ./brimworks
-cp -v -p "${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
+cp -v -p "${MINGW_PREFIX}/lib/lua/5.1/brimworks/zip.dll" ./brimworks/zip.dll
 echo ""
 
 echo "Copying OpenSSL libraries in..."
@@ -255,58 +282,16 @@ echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
-
 echo ""
 
-# Create portable version
-echo "Creating portable ZIP package..."
-PORTABLE_ZIP_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/portable-${MSYSTEM}-${BUILD_CONFIG}"
-if [ -d "${PORTABLE_ZIP_DIR}" ]; then
-  rm -rf "${PORTABLE_ZIP_DIR}"
-fi
-mkdir -p "${PORTABLE_ZIP_DIR}"
-
-# Copy all packaged files to portable directory
-cp -r "${PACKAGE_DIR}"/* "${PORTABLE_ZIP_DIR}/"
-
-# Create portable.txt file to enable portable mode (empty file)
-touch "${PORTABLE_ZIP_DIR}/portable.txt"
-echo "Created portable.txt file in: ${PORTABLE_ZIP_DIR}/portable.txt"
-
-# Verify portable.txt was created
-if [ -f "${PORTABLE_ZIP_DIR}/portable.txt" ]; then
-  echo "portable.txt file exists and is ready for packaging"
-  ls -la "${PORTABLE_ZIP_DIR}/portable.txt"
-else
-  echo "ERROR: portable.txt file was not created!"
-  exit 1
-fi
-
-# Create the portable ZIP archive
 cd "${GITHUB_WORKSPACE_UNIX_PATH}" || exit 1
-PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
-
-echo "Creating ZIP from directory: $(basename "${PORTABLE_ZIP_DIR}")"
-echo "Contents of portable directory before ZIP creation:"
-ls -la "${PORTABLE_ZIP_DIR}/" | head -20
-
-zip -r "${PORTABLE_ZIP_NAME}" "$(basename "${PORTABLE_ZIP_DIR}")"
-
-# Verify portable.txt is in the ZIP
-echo "Verifying portable.txt is in the ZIP:"
-unzip -l "${PORTABLE_ZIP_NAME}" | grep portable.txt || echo "WARNING: portable.txt not found in ZIP!"
-
-echo ""
-echo "Created portable ZIP: ${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
-echo ""
 
 # For debugging purposes:
-# echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows "~/src/mudlet/package"):"
-# /usr/bin/ls -aRl
+# echo "The recursive contents of the Project build sub-directory $(cygpath --windows "~/src/mudlet/package"):"
+# /usr/bin/ls -laR
 # echo ""
 
-FINAL_DIR=$(/usr/bin/cygpath --windows "${PACKAGE_DIR}")
-echo "${FINAL_DIR} should contain everything needed to run Mudlet!"
+echo "$(cygpath --windows "${PACKAGE_DIR}") should contain everything needed to run Mudlet!"
 echo ""
 echo "   ... package-mudlet-for-windows.sh shell script finished."
 echo ""

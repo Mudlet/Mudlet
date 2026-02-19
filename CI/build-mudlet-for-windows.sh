@@ -31,7 +31,8 @@
 #          1.0.0    Original version
 
 # Script to build the Mudlet code currently checked out in
-# ${GITHUB_WORKSPACE} in a MINGW64 shell
+# ${GITHUB_WORKSPACE} in a MINGW64 shell, further work is needed for this file
+# to be useable by end-users/developers.
 
 # To be used AFTER setup-windows-sdk.sh has been run; once this has completed
 # successfully, package-mudlet-for-windows.sh is run by the workflow
@@ -46,64 +47,110 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
-else
+elif [ "${MSYSTEM}" != "MINGW64" ]; then
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
-# Check if GITHUB_REPO_TAG is "false"
-if [[ "${GITHUB_REPO_TAG}" == "false" ]]; then
-  echo "=== GITHUB_REPO_TAG is FALSE ==="
+# In some cases we might want to change this to "debug" but that is not
+# currently handled:
+if [ -z "${BUILD_CONFIG}" ]; then
+  BUILD_CONFIG="release"
+fi
 
-  # Check if this is a scheduled build
-  if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
-    echo "=== GITHUB_SCHEDULED_BUILD is TRUE, this is a PTB ==="
-    MUDLET_VERSION_BUILD="-ptb"
-  else
-    MUDLET_VERSION_BUILD="-testing"
-  fi
+# Work out what we are doing - and export this eventually so that later scripts
+# don't have to repeat the process:
+BUILD_ACTION="Unknown"
 
-  # Check if this is a pull request
-  if [[ -n "${GITHUB_PULL_REQUEST_NUMBER}" ]]; then
-    # Use the specific commit SHA from the pull request head, since GitHub Actions merges the PR
-    BUILD_COMMIT=$(git rev-parse --short "${GITHUB_PULL_REQUEST_HEAD_SHA}")
-    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${GITHUB_PULL_REQUEST_NUMBER}"
-  else
-    BUILD_COMMIT=$(git rev-parse --short HEAD)
+# We'll need this later on so grab it now - lifted from travis.set-build-info.sh:
+VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${GITHUB_WORKSPACE}/src/mudlet.pro" | tr '[:upper:]' '[:lower:]')
+export VERSION
 
-    if [[ "${MUDLET_VERSION_BUILD}" == "-ptb" ]]; then
+MAKE_PORTABLE='false'
+export MAKE_PORTABLE
+# Check that we are running on Mudlet's own GH infrastructure:
+if [[ "${GITHUB_REPO_NAME}" == "Mudlet/Mudlet" ]]; then
+  # Check if GITHUB_REPO_TAG is "false"
+  if [[ "${GITHUB_REPO_TAG}" == "false" ]]; then
+    # This is NOT a tagged build - so is NOT a "Release" build!
+
+    # Check if this is a scheduled build
+    if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
+      # See whether we need to actually do this type of build:
+
+      # Get the commit date of the last commit
+      COMMIT_DATE=$(git show -s --format="%cs")
+      # Get yesterday's date in the same format
+      YESTERDAY_DATE=$(date --date="yesterday" +%f)
+      if [[ "${COMMIT_DATE}" < "${YESTERDAY_DATE}" ]]; then
+        echo "=== No new commits, aborting public test build generation ==="
+        echo "ABORT_WORKFLOW='true'" >> ${GITHUB_ENV}
+        # This only terminates this script (sucessfully), the above will be used
+        # to stop the remaining steps in the workflow from happening:
+        exit 0
+      fi
+
+      BUILD_COMMIT=$(git rev-parse --short HEAD)
       # Get current date in YYYY-MM-DD format
-      DATE=$(date +%F)
-      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}"
+      CURRENT_DATE=$(date +%F)
+      MUDLET_VERSION_BUILD="-ptb-${CURRENT_DATE}"
+      BUILD_ACTION="PublicTest"
+      MAKE_PORTABLE='true'
+
+    else
+      # Either a PR build or a testing (PR merged into development branch) build
+      if [[ -n "${GITHUB_PULL_REQUEST_NUMBER}" ]]; then
+        # Use the specific commit SHA from the pull request head, since GitHub Actions merges the PR
+        BUILD_COMMIT=$(git rev-parse --short "${GITHUB_PULL_REQUEST_HEAD_SHA}")
+        MUDLET_VERSION_BUILD="-pr${GITHUB_PULL_REQUEST_NUMBER}"
+        BUILD_ACTION="PullRequest"
+        # TODO: remove before merging the PR that adds this
+        MAKE_PORTABLE='true'
+      else
+        BUILD_COMMIT=$(git rev-parse --short HEAD)
+        BUILD_ACTION="Testing"
+        MUDLET_VERSION_BUILD="-testing"
+      fi
     fi
+  else
+    # Could be a release build - although this will not happen without manual
+    # intervention by Vadi to adjust the QMake/CMake project meta-build files
+    # in a way that is known to him!
+
+    BUILD_ACTION="Release"
+    MAKE_PORTABLE='true'
   fi
+
+else
+  # Not running on Mudlet's own GH infrastructure so just build archive file(s)
+  BUILD_ACTION="Archive"
+  BUILD_COMMIT=$(git rev-parse --short --short HEAD)
+  # Unlike the Mudlet GHA builds this will merely inherit the MUDLET_VERSION_BUILD
+  # variable from the environment - which will normally have the Git SHA1
+  # appended by the QMake/CMake project meta-build files
 fi
 
 # Convert to lowercase, not all systems deal with uppercase ASCII characters
-export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
-export BUILD_COMMIT="${BUILD_COMMIT,,}"
+export MUDLET_VERSION_BUILD="$(echo "${MUDLET_VERSION_BUILD}" | tr '[:upper:]' '[:lower:]')"
+export BUILD_COMMIT="$(echo "${BUILD_COMMIT}" | tr '[:upper:]' '[:lower:]')"
 
-MINGW_BASE_DIR="${GHCUP_MSYS2}\mingw32"
-export MINGW_BASE_DIR
-MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
-export MINGW_INTERNAL_BASE_DIR
-PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+# Extend the path to include directories we need at the front:
+PATH="${MINGW_PREFIX}/usr/local/bin:${MINGW_PREFIX}/bin:/usr/bin:${PATH}"
 export PATH
-RUNNER_WORKSPACE_UNIX_PATH=$(echo "${RUNNER_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
-export CCACHE_DIR=${RUNNER_WORKSPACE_UNIX_PATH}/ccache
+export CCACHE_DIR="$(cygpath -au "${RUNNER_WORKSPACE}")/ccache"
 
 echo "MSYSTEM is: ${MSYSTEM}"
 echo "CCACHE_DIR is: ${CCACHE_DIR}"
-echo "PATH is now:"
-echo "${PATH}"
+echo "PATH is now: ${PATH}"
 echo ""
 
+# This is specific to GH Actions based builds - will need reworking for end-user
+# developer usage:
 cd "${GITHUB_WORKSPACE}" || exit 1
+# Technically we don't need the $MSYSTEM here but it will aid porting for use
+# by end-users/developers on their own systems:
 mkdir -p "build-${MSYSTEM}"
 
 cd "${GITHUB_WORKSPACE}"/build-"${MSYSTEM}" || exit 1
@@ -184,4 +231,16 @@ echo " ... CMake build finished"
 echo ""
 
 cd ~ || exit 1
+
+# Append these variables to the GITHUB_ENV to make them available in
+# subsequent steps
+{
+  echo "BUILD_ACTION=$BUILD_ACTION"
+  echo "BUILD_COMMIT=$BUILD_COMMIT"
+  echo "BUILD_CONFIG=$BUILD_CONFIG"
+  echo "MUDLET_VERSION_BUILD=$MUDLET_VERSION_BUILD"
+  echo "VERSION=$VERSION"
+  echo "MAKE_PORTABLE=$MAKE_PORTABLE"
+} >> "${GITHUB_ENV}"
+
 exit 0

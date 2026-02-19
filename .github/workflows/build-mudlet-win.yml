@@ -50,6 +50,7 @@ jobs:
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
       env:
+        # Used to flag a "release" build - when a Git "tagged" commit is pushed
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
       run: |
@@ -86,6 +87,7 @@ jobs:
     - name: (Windows) Build
       shell: msys2 {0}
       env:
+        GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -116,6 +118,7 @@ jobs:
         QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
+      if: env.ABORT_WORKFLOW != 'true'
       timeout-minutes: 5
       shell: msys2 {0}
       env:
@@ -127,11 +130,11 @@ jobs:
         export LUA_PATH
         LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
         export LUA_CPATH
-
         $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
 
-    - name: Passed Lua tests
+    - name: Check that Lua tests were passed
       shell: msys2 {0}
+      if: env.ABORT_WORKFLOW != 'true'
       run: |
         if [ -e $TEMP/busted-tests-failed ]
         then
@@ -213,12 +216,15 @@ jobs:
         echo "Binary signing complete."
 
     - name: (Windows) Package
+      if: env.ABORT_WORKFLOW != 'true'
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
       env:
         WITH_SENTRY: "ON"
-  
+
+
     - name: (Windows) Deploy
+      if: env.ABORT_WORKFLOW != 'true'
       shell: msys2 {0}
       env:
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
@@ -288,29 +294,47 @@ jobs:
       with:
         name: ${{env.INTERMEDIATE_ARTIFACT_NAME}}
         path: ${{env.INTERMEDIATE_ARTIFACT_WINPATHORFILE}}
-        compression-level: ${{env.INTERMEDIATE_ARTIFACT_COMPRESSION}}
+        # Maximumal compression to minimise space needed:
+        compression-level: 9
         if-no-files-found: ignore
 
-    - name: Create artifact for later uploading
-      # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
-      # the given name - the Environmental variables are created by the
+    - name: Create main artifact for uploading
+      # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact"
+      # with the above name - the Environmental variables are created by the
       # deploy-mudlet-for-windows.sh script:
       uses: actions/upload-artifact@v6
       if: env.ARTIFACT_NAME
       with:
+        # The name presented in the "artifacts" listing for the (zip) file created
         name: ${{env.ARTIFACT_NAME}}
+        # One (or more if the "path: |" is used) to a path to a directory - or a
+        # (possibly wildcarded) file name to identify what to include in the
+        # archive - if a directory all files in and below that directory are
+        # included (except for hidden files unless:
+        # include-hidden-files: true
+        # is specified:
         path: ${{env.ARTIFACT_WINPATHORFILE}}
         compression-level: ${{env.ARTIFACT_COMPRESSION}}
 
-    - name: Upload artifact to make.mudlet.org
-      shell: msys2 {0}
+    - name: Upload main artifact to make.mudlet.org
       if: env.ARTIFACT_NAME
+      shell: msys2 {0}
+      # Depending on the type (see BUILD_ACTION) of workflow this may or may not
+      # need unzipping once it gets to our own website:
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+
+    - name: Upload portable artifact to make.mudlet.org
+      if: env.MAKE_PORTABLE == 'true' && env.PORTABLE_ARTIFACT_NAME
+      shell: msys2 {0}
+      # The artifact creation process zipped (well "stored", as there is no
+      # compression) the self-extracting archive which does need "unzipping" but
+      # only to get the archive file back once we've uploaded it:
+      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.PORTABLE_ARTIFACT_NAME}}&unzip=1"
 
     - name: Register PTB Release
       shell: msys2 {0}
       if: ${{ (github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && env.VERSION_STRING != '' }}
       env:
-        VERSION_STRING: ${{env.VERSION_STRING}}
-        BUILD_COMMIT: ${{env.BUILD_COMMIT}}
+        BUILD_COMMIT: ${{ env.BUILD_COMMIT }}
+        VERSION_STRING: ${{ env.VERSION_STRING }}
       run: $GITHUB_WORKSPACE/CI/register-windows-release.sh

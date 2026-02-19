@@ -29,24 +29,53 @@ set -x
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
-# 2 - Unsupported fork
-# 3 - Not used
-# 4 - nuget error
-# 5 - squirrel error
+# 2 - Unsupported MSYS2/MINGGW shell type
+# 5 - Invalid configuration
+# 9 - squirrel error
+
+# Check if we're building from the Mudlet/Mudlet repository and not a fork
+if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
+  echo "This is not the main Mudlet repository - aborting!"
+  exit 5
+fi
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILDCOMPONENT="x86_64"
-  # We only support "x86_64" architecture now but we used to do "x86" (32-bit)
-  # as well and exported this value as ARCH for use here and in other scripts
-else
+elif [ "${MSYSTEM}" != "MINGW64" ]; then
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
+fi
+
+if [ -z "${BUILD_ACTION}" ]; then
+  # Error out if not set:
+  echo "BUILD_ACTION not set in environment, check preceding steps!"
+  exit 10
+elif [ "${BUILD_ACTION}" == "Unknown" ] || [ "${BUILD_ACTION}" == "Archive" ]; then
+  # Don't proceed further in this step - but abort in a "successful" manner
+  echo "BUILD_ACTION being \"${BUILD_ACTION}\" means no deployment so exiting this step in the workflow immediately!"
+  exit 0
+fi
+
+if [ -z "${VERSION}" ]; then
+  # Error out if not set:
+  echo "VERSION not set in environment, check preceding steps!"
+  exit 10
+fi
+
+if [ "${BUILD_ACTION}" != "Release" ]; then
+  if [ -z "${BUILD_COMMIT}" ]; then
+    # Error out if not set:
+    echo "BUILD_COMMIT not set in environment and this isn't a \"Release\" build, check preceding steps!"
+    exit 10
+  fi
+  if [ -z "${MUDLET_VERSION_BUILD}" ]; then
+    echo "MUDLET_VERSION_BUILD not set in environment and this isn't a \"Release\" build, check preceding steps!"
+    exit 10
+  fi
 fi
 
 cd "${GITHUB_WORKSPACE}" || exit 1
@@ -135,40 +164,87 @@ if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
   #    "BUILDING MUDLET 4.19.1
   echo "BUILDING MUDLET ${VERSION}"
 else
-  # Include Git SHA1 in the build information
+  # Include Git SHA1 in the display of the build information
   # Probably a PTB - so typical output could be:
   #    "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678
   # Or with build counter: "BUILDING MUDLET 4.19.1-ptb-2025-01-01-012345678rebuild2
   echo "BUILDING MUDLET ${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}"
 fi
-
-# Check if we're building from the Mudlet/Mudlet repository and not a fork
-if [[ "${GITHUB_REPO_NAME}" != "Mudlet/Mudlet" ]]; then
-  exit 2
+if [ "${MAKE_PORTABLE}" == 'true' ]; then
+  echo "Also producing a portable version of the above."
 fi
 
-# This will change to end in "-debug" if we ever do that type of build:
-PACKAGE_PATH="$(cygpath -au "${GITHUB_WORKSPACE}/package-${MSYSTEM}-release")"
+PACKAGE_PATH="$(cygpath -au "${GITHUB_WORKSPACE}/package-${MSYSTEM}-${BUILD_CONFIG}")"
 PACKAGE_WINPATH="$(cygpath -aw "${PACKAGE_PATH}")"
 cd "${PACKAGE_PATH}" || exit 1
 
-# Check if GITHUB_REPO_TAG and GITHUB_SCHEDULED_BUILD are not "true" for a snapshot build
-if [[ "${GITHUB_REPO_TAG}" != "true" ]] && [[ "${GITHUB_SCHEDULED_BUILD}" != "true" ]]; then
+if [ "${BUILD_ACTION}" == "PullRequest" ] || [ "${BUILD_ACTION}" == "Testing" ]; then
   echo "=== Creating a snapshot build ==="
   PACKAGE_EXE="Mudlet.exe"
+  echo "Renaming mudlet.exe to ${PACKAGE_EXE}"
   mv "${PACKAGE_PATH}/mudlet.exe" "${PACKAGE_PATH}/${PACKAGE_EXE}"
 
+  if [ "${MAKE_PORTABLE}" == 'true' ]; then
+    # Although the "portable" version is also a compressed archive it is a self
+    # extracting executable one - which we have to make ourselves and include
+    # the "portable.txt" sentinel file. By putting that file into
+    # ${PACKAGE_PATH} and creating the self-extracting archive file then
+    # removing the sentinel we do not have to copy all the files in
+    # ${PACKAGE_PATH} to another location to make the portable one. Note that
+    # the creation of the original (zip) artifact is done by the GH action using
+    # the files placed in ${PACKAGE_PATH} as a separate workflow step.
+    echo "=== Preparing Portable artifact for upload to make.mudlet.org ==="
+
+    # Create portable.txt file to enable portable mode (empty file) - meaning
+    # store the game data and settings under the directory where the executable
+    # is located when it is extracted:
+    touch "${PACKAGE_PATH}/portable.txt"
+    echo "Created empty portable.txt file: ${PACKAGE_PATH}/portable.txt"
+
+    # This name is more specific than originally coded but that was only
+    # targeting "Release" builds
+    if [ "${BUILD_ACTION}" == "PullRequest" ]; then
+      PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-pr${GITHUB_PULL_REQUEST_NUMBER}-${BUILD_COMMIT}-windows-64-portable.exe"
+    else
+      PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-testing-${BUILD_COMMIT}-windows-64-portable.exe"
+    fi
+    PORTABLE_ARTIFACT_WINPATHORFILE="$(cygpath -aw "${GITHUB_WORKSPACE}/${PORTABLE_ARTIFACT_NAME}")"
+
+    echo "Creating self-extracting archive from directory: $(basename "${PACKAGE_PATH}")"
+    # Actually create the portable ZIP archive - put it in the root of our
+    # working area:
+    7z a -mx9 -bt -sfx "$(cygpath -au "${PORTABLE_ARTIFACT_WINPATHORFILE}")"
+
+    # Make the detail available to the workflow file so it can be passed to the
+    # upload action
+    {
+      echo "PORTABLE_ARTIFACT_NAME=${PORTABLE_ARTIFACT_NAME}"
+      echo "PORTABLE_ARTIFACT_WINPATHORFILE=${PORTABLE_ARTIFACT_WINPATHORFILE}"
+    } >> "${GITHUB_ENV}"
+
+    echo ""
+    echo "Created portable self-extracting archive: ${PORTABLE_FILENAME}"
+
+    # Remove sentinel file:
+    rm "${PACKAGE_PATH}/portable.txt"
+    echo ""
+    echo "Removed portable.txt sentinel file"
+  fi
+
   # Define the upload filename - MUDLET_VERSION_BUILD will at least be something
-  # like "-testing" or "-testing-pr####" but NOT "-ptb-*"
+  # like "-testing" or "-pr####" but NOT "-ptb-*" {PR commits did previously
+  # start with "-testing-pr####" but that was confusing and has been changed}
   # THIS IS THE NAME GIVEN TO THE GHA "artifact" which is automagically made
   # as a zip archive file.
   ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64"
+  # As a path this causes everything there to be zipped up into an archive which
+  # is subsequently uploaded to our website as is (and NOT unzipped)
   ARTIFACT_WINPATHORFILE="$(cygpath -aw "${PACKAGE_PATH}")"
   # Append these variables to the GITHUB_ENV to make them available in
   # subsequent steps, the fourth one being 0 means "don't unzip the archive when
   # it is uploaded to the Mudlet website". In this place and further down when
   # appending to the GH Actions environment DO NOT add escaped double-quotes
-  # around the string after the '=' such extra double quotes
+  # around the string after the '=' such extra double quotes break things!
   {
     echo "ARTIFACT_NAME=${ARTIFACT_NAME}"
     echo "ARTIFACT_WINPATHORFILE=${ARTIFACT_WINPATHORFILE}"
@@ -198,12 +274,49 @@ else
       fi
     fi
 
+  # Set parameters for Clowd.Squirrel and other stages
+  if [ "${BUILD_ACTION}" == "PublicTest" ]; then
+    echo "=== Creating a Public Test build ==="
     # Squirrel uses the name of the binary for the Start menu, so need to rename
-    # it:
+    # it so it doesn't get mixed up with the Release one:
     PACKAGE_EXE="Mudlet PTB.exe"
+    INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64"
+    if [ "${MAKE_PORTABLE}" == 'true' ]; then
+      PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64-portable.exe"
+    fi
+    # Allow public test builds to be installed side by side with the release
+    # builds by renaming the app as well
+    # No dots in the <id>: according to the guidelines by Squirrel
+    NAME_SUFFIX='_64_-PublicTestBuild'
+    INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet_ptb.ico")
+    ID='Mudlet_64_-PublicTestBuild'
+    TITLE='Mudlet x64 (Public Test Build)'
+    LOADING_GIF="$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/splash-installing-ptb-2x.png")"
+    INSTALLER_VERSION="${VERSION}-ptb-${BUILD_COMMIT,,}"
+    # The name we want to use for the installer;
+    # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64.exe"
+    DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+    # The name that has to be passed as the artifact so that the Mudlet website
+    # will accept it as a PTB:
+    ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-64-installer.exe"
   else
     echo "=== Creating a release build ==="
     PACKAGE_EXE="Mudlet.exe"
+    INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64"
+    if [ "${MAKE_PORTABLE}" == 'true' ]; then
+      PORTABLE_ARTIFACT_NAME="Mudlet-${VERSION}-windows-64-portable.exe"
+    fi
+    NAME_SUFFIX='_64_'
+    INSTALLER_ICON_WINFILE=$(cygpath -aw "${GITHUB_WORKSPACE}/src/icons/mudlet.ico")
+    ID='Mudlet_64_'
+    TITLE='Mudlet x64'
+    LOADING_GIF=$(cygpath -aw "${GITHUB_WORKSPACE}/installers/windows/splash-installing-2x.png")
+    # Typically       '4.19.1'
+    INSTALLER_VERSION="${VERSION}"
+    # Typically of form: 'Mudlet-4.19.1-windows-64-installer.exe'
+    INSTALLER_EXE="Mudlet-${VERSION}-windows-64-installer.exe"
+    DBLSQD_VERSION_STRING="${VERSION}"
   fi
 
   echo "Renaming mudlet.exe to ${PACKAGE_EXE}"
@@ -227,13 +340,14 @@ else
   else
     INTERMEDIATE_ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64"
   fi
+
+  echo "=== Preparing an intermediate artifact of the (signed) code ==="
   # This intermediate will NOT be uploaded but will remain on the GH server as
   # an artifact for a default (90?) days
-  INTERMEDIATE_ARTIFACT_WINPATHORFILE="$(cygpath -aw "${PACKAGE_PATH}\\")"
+  INTERMEDIATE_ARTIFACT_WINPATH="$(cygpath -aw "${PACKAGE_PATH}")"
   {
     echo "INTERMEDIATE_ARTIFACT_NAME=${INTERMEDIATE_ARTIFACT_NAME}"
-    echo "INTERMEDIATE_ARTIFACT_WINPATHORFILE=${INTERMEDIATE_ARTIFACT_WINPATHORFILE}"
-    echo "INTERMEDIATE_ARTIFACT_COMPRESSION=9"
+    echo "INTERMEDIATE_ARTIFACT_WINPATH=${INTERMEDIATE_ARTIFACT_WINPATH}"
   } >> "${GITHUB_ENV}"
 
   echo "=== Installing Clowd.Squirrel for Windows ==="
@@ -318,7 +432,7 @@ else
     fi
     echo "=== End of SquirrelSetup.log ==="
 
-    exit 5
+    exit 9
   fi
 
   echo "=== Renaming installer ==="
@@ -329,18 +443,12 @@ else
 
   if [[ "${GITHUB_SCHEDULED_BUILD}" == "true" ]]; then
     echo "=== Preparing artifact for PTB for upload to make.mudlet.org ==="
-    # Copy the signed installer to a separate directory - as ${RELEASE_WINDIR}
-    # will contain other files we do not want to upload:
-    UPLOAD_PATH=$(cygpath -au "${GITHUB_WORKSPACE}/upload")
-    mkdir -p "${UPLOAD_PATH}"
-    cp -vp "${INSTALLER_EXE_PATHFILE}" "${UPLOAD_PATH}"
     # Append these variables to the GITHUB_ENV to make them available in
     # subsequent steps, the fourth one being 1 means "unzip the archive when
     # it is uploaded to the Mudlet website":
-    ARTIFACT_WINPATHORFILE="$(cygpath -aw "${UPLOAD_PATH}")"
     {
       echo "ARTIFACT_NAME=${ARTIFACT_NAME}"
-      echo "ARTIFACT_WINPATHORFILE=${ARTIFACT_WINPATHORFILE}"
+      echo "ARTIFACT_WINPATHORFILE=${INSTALLER_EXE_WINPATHFILE}"
       echo "ARTIFACT_COMPRESSION=0"
       echo "ARTIFACT_UNZIP=1"
     } >> "${GITHUB_ENV}"
@@ -350,7 +458,7 @@ else
     DBLSQD_CHANNEL="public-test-build"
     CHANGELOG_MODE="ptb"
   else
-
+    # This is a Release
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
     echo "${DEPLOY_SSH_KEY}" > temp_key_file
 
@@ -375,18 +483,11 @@ EOF
     SHA256SUM=$(shasum -a 256 "${INSTALLER_EXE_PATHFILE}" | awk '{print $1}')
 
     current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-    read -r day month year hour minute second <<< "${current_timestamp}"
-
-    # blank echo to remove the stray 'PS D:\a\Mudlet\Mudlet\installers\windows> ' that shows up otherwise
+    read -r DAY MONTH YEAR HOUR MINUTE SECOND <<< "${current_timestamp}"
 
     echo ""
     echo "=== Updating WP-Download-Manager ==="
     echo "sha256 of installer: ${SHA256SUM}"
-
-    FILE_CATEGORY="2"
-
-    current_timestamp=$(date "+%-d %-m %Y %-H %-M %-S")
-    read -r day month year hour minute second <<< "${current_timestamp}"
 
     curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
     -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
@@ -394,43 +495,37 @@ EOF
     -F "file_remote=${DEPLOY_URL}" \
     -F "file_name=Mudlet ${VERSION} (windows-64)" \
     -F "file_des=sha256: ${SHA256SUM}" \
-    -F "file_cat=${FILE_CATEGORY}" \
+    -F "file_cat=2" \
     -F "file_permission=-1" \
-    -F "file_timestamp_day=${day}" \
-    -F "file_timestamp_month=${month}" \
-    -F "file_timestamp_year=${year}" \
-    -F "file_timestamp_hour=${hour}" \
-    -F "file_timestamp_minute=${minute}" \
-    -F "file_timestamp_second=${second}" \
+    -F "file_timestamp_day=${DAY}" \
+    -F "file_timestamp_month=${MONTH}" \
+    -F "file_timestamp_year=${YEAR}" \
+    -F "file_timestamp_hour=${HOUR}" \
+    -F "file_timestamp_minute=${MINUTE}" \
+    -F "file_timestamp_second=${SECOND}" \
     -F "output=json" \
     -F "do=Add File"
 
     echo "=== Uploading portable ZIP to mudlet.org ==="
-    # Define portable ZIP paths
-    PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
-    PORTABLE_ZIP_PATH="${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
-
     # Check if portable ZIP exists
-    if [[ -f "${PORTABLE_ZIP_PATH}" ]]; then
-      echo "Found portable ZIP at: ${PORTABLE_ZIP_PATH}"
-
+    if [ "${MAKE_PORTABLE}" == 'true' ] && [ -f "${PORTABLE_ARTIFACT_PATHORFILE}" ]; then
       # Create SSH key file for portable upload
       echo "${DEPLOY_SSH_KEY}" > temp_key_file_portable
       powershell.exe -Command "icacls.exe temp_key_file_portable /inheritance:r"
 
       # Upload portable ZIP via SCP with proper naming
-      PORTABLE_REMOTE_NAME="Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
       powershell.exe <<EOF
-\$portableZipPath = "${PORTABLE_ZIP_PATH}"
+\$PORTABLE_ARTIFACT_WINPATHORFILE = "${PORTABLE_ARTIFACT_WINPATHORFILE}"
 \$DEPLOY_PATH = "${DEPLOY_PATH}"
-\$remoteFileName = "${PORTABLE_REMOTE_NAME}"
-scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$portableZipPath mudmachine@mudlet.org:\${DEPLOY_PATH}/\$remoteFileName
+\$PORTABLE_ARTIFACT_NAME = "${PORTABLE_ARTIFACT_NAME}"
+scp.exe -i temp_key_file_portable -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$PORTABLE_ARTIFACT_WINPATHORFILE mudmachine@mudlet.org:\$DEPLOY_PATH/\$PORTABLE_ARTIFACT_NAME
 EOF
 
       shred -u temp_key_file_portable
 
-      # Define portable ZIP URL - should match the naming convention
-      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-${BUILD_BITNESS}-portable.zip"
+      # Define portable self-extracting archive URL - should match the naming
+      # convention:
+      PORTABLE_DEPLOY_URL="https://www.mudlet.org/wp-content/files/${PORTABLE_ARTIFACT_NAME}"
 
       # Verify portable ZIP was uploaded
       if ! curl --output /dev/null --silent --head --fail "${PORTABLE_DEPLOY_URL}"; then
@@ -439,32 +534,32 @@ EOF
       fi
 
       # Calculate SHA256 for portable ZIP
-      PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_ZIP_PATH}" | awk '{print $1}')
+      PORTABLE_SHA256SUM=$(shasum -a 256 "${PORTABLE_ARTIFACT_PATHORFILE}" | awk '{print $1}')
 
       echo "=== Registering portable ZIP with WP-Download-Manager ==="
-      echo "sha256 of portable ZIP: ${PORTABLE_SHA256SUM}"
+      echo "SHA256 of portable self-extracting archive: ${PORTABLE_SHA256SUM}"
 
-      # Register portable ZIP with download manager
+      # Register portable self-extracting archive with download manager
       curl --retry 5 -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
       -F "file_type=2" \
       -F "file_remote=${PORTABLE_DEPLOY_URL}" \
-      -F "file_name=Mudlet ${VERSION} Portable (windows-${BUILD_BITNESS})" \
+      -F "file_name=Mudlet ${VERSION} Portable (windows-64)" \
       -F "file_des=sha256: ${PORTABLE_SHA256SUM}" \
-      -F "file_cat=${FILE_CATEGORY}" \
+      -F "file_cat=2" \
       -F "file_permission=-1" \
-      -F "file_timestamp_day=${day}" \
-      -F "file_timestamp_month=${month}" \
-      -F "file_timestamp_year=${year}" \
-      -F "file_timestamp_hour=${hour}" \
-      -F "file_timestamp_minute=${minute}" \
-      -F "file_timestamp_second=${second}" \
+      -F "file_timestamp_day=${DAY}" \
+      -F "file_timestamp_month=${MONTH}" \
+      -F "file_timestamp_year=${YEAR}" \
+      -F "file_timestamp_hour=${HOUR}" \
+      -F "file_timestamp_minute=${MINUTE}" \
+      -F "file_timestamp_second=${SECOND}" \
       -F "output=json" \
       -F "do=Add File"
 
-      echo "Portable ZIP uploaded and registered successfully"
+      echo "Portable self-extracting archive uploaded and registered successfully"
     else
-      echo "Warning: Portable ZIP not found at ${PORTABLE_ZIP_PATH}, skipping portable upload"
+      echo "Warning: Portable self-extracting archive not found at ${PORTABLE_ARTIFACT_PATHORFILE}, skipping portable upload"
     fi
 
     DBLSQD_CHANNEL="release"
@@ -502,9 +597,11 @@ EOF
   echo "DBLSQD_VERSION_STRING=\"${DBLSQD_VERSION_STRING}\""
   export DBLSQD_VERSION_STRING
 
-  # This may fail as a build from another architecture may have already registered a release with dblsqd,
-  # if so, that is OK. Don't reproduce the changelog contents in the following
-  # echo - we've already shown them:
+  # This could once have failed as a build from another architecture (32 vs 64
+  # bits) may have already registered a release with dblsqd, if so, that was OK
+  # but is no longer an issue as we don't do 32 bits anymore.
+  # Don't reproduce the changelog contents in the following echo - we've already
+  # shown them:
   echo "dblsqd release -a mudlet -c ${DBLSQD_CHANNEL} -m \${CHANGELOG} \"${DBLSQD_VERSION_STRING}\""
   dblsqd release -a mudlet -c "${DBLSQD_CHANNEL}" -m "${CHANGELOG}" "${DBLSQD_VERSION_STRING}" || true
 
@@ -519,7 +616,7 @@ fi
 
 # Make VERSION_STRING and BUILD_COMMIT available to the
 # GHA "build-mudlet-win.yml" workflow so they can be passed to the
-# "Register Release" step:
+# "Register PTB Release" step:
 {
   echo "VERSION_STRING=${DBLSQD_VERSION_STRING}"
   echo "BUILD_COMMIT=${BUILD_COMMIT}"
@@ -528,8 +625,7 @@ fi
 echo ""
 echo "******************************************************"
 echo ""
-if [[ -z "${MUDLET_VERSION_BUILD}" ]]; then
-  # A release build
+if [[ "${BUILD_ACTION}" == "Release" ]]; then
   echo "Finished deploying Mudlet ${VERSION}"
 else
   # Not a release build so include the Git SHA1 in the message
@@ -537,7 +633,10 @@ else
 fi
 
 if [[ -n "${DEPLOY_URL}" ]]; then
-  echo "Deployed the output to ${DEPLOY_URL}"
+  echo "Deployed the installer to ${DEPLOY_URL}"
+fi
+if [[ -n "${PORTABLE_DEPLOY_URL}" ]]; then
+  echo "Deployed the portable self-executable archive to ${PORTABLE_DEPLOY_URL}"
 fi
 
 echo ""

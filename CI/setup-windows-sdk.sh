@@ -56,25 +56,19 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a MINGW64 type bash terminal as the MSYS one"
   echo "does not supported what is needed."
   exit 2
-elif [ "${MSYSTEM}" = "MINGW64" ]; then
-  export BUILD_BITNESS="64"
-  export BUILDCOMPONENT="x86_64"
-else
+elif [ "${MSYSTEM}" != "MINGW64" ]; then
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only"
   echo "MINGW64 is currently supported. Please rerun this in a bash terminal of"
   echo "that type."
   exit 2
 fi
 
-# We use this internally - but it is actually the same as ${MINGW_PREFIX}
-export MINGW_BASE_DIR=${MSYSTEM_PREFIX}
-# A more compact - but not necessarily understood by other than MSYS/MINGW
-# executables - path:
-export MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
+# Set up some environmental variables if they haven't been already:
+
 #
 # FIXME: don't add duplicates but rearrange instead to put them in the "right" order:
 #
-export PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+export PATH="${MINGW_PREFIX}/usr/local/bin:${MINGW_PREFIX}/bin:/usr/bin:${PATH}"
 echo "MSYSTEM is: ${MSYSTEM}"
 echo "PATH is now: ${PATH}"
 echo ""
@@ -138,13 +132,13 @@ while true; do
 
   pacman_attempts=$((pacman_attempts +1))
 
-  if [ ${pacman_attempts} -lt 10 ]; then
-    echo "=== Some packages failed to install, waiting and trying again ==="
-    sleep 10
-  else
+  if [[ ${pacman_attempts} -ge 10 ]]; then
     echo "=== Some packages failed to install after ${pacman_attempts} attempts, giving up ==="
     exit 7
   fi
+
+  echo "=== Some packages failed to install, waiting and trying again ==="
+  sleep 10
 done
 
 echo ""
@@ -181,29 +175,28 @@ if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
   echo ""
 fi
 
-if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
+if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_PREFIX}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
   # The luarocks config file has not been tweaked to put the compiled rocks in
   # a location that is different for each different MSYS2 environment
-  echo "  Tweaking location for constructed Luarocks so 32 and 64 bits ones do"
-  echo "  not end up in the same place when --tree \"user\" is used..."
+  echo "  Tweaking location for constructed Luarocks so the modules for different Mingw-w64 "
+  echo "  environments do not end up in the same place when --tree \"user\" is used..."
   echo ""
 
-  cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig"
-  cp "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig"
-  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua"
-  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.4.lua"
+  cp "${MINGW_PREFIX}/etc/luarocks/config-5.1.lua" "${MINGW_PREFIX}/etc/luarocks/config-5.1.lua.orig"
+  cp "${MINGW_PREFIX}/etc/luarocks/config-5.4.lua" "${MINGW_PREFIX}/etc/luarocks/config-5.4.lua.orig"
+  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_PREFIX}/etc/luarocks/config-5.1.lua.orig" > "${MINGW_PREFIX}/etc/luarocks/config-5.1.lua"
+  /usr/bin/sed "s|.. \"/.luarocks\"|.. \"/.luarocks-${MSYSTEM}\"|" "${MINGW_PREFIX}/etc/luarocks/config-5.4.lua.orig" > "${MINGW_PREFIX}/etc/luarocks/config-5.4.lua"
   echo "    Completed"
 else
-  echo "  Things have already been setup for Luarocks so 32 and 64 bits ones"
-  echo "  do not end up in the same place"
+  echo "  Things have already been setup for Luarocks so the modules for different"
+  echo "  Mingw-w64 environments do not end up in the same place"
 fi
 echo "For per-user Lua modules from LuaRocks:"
 echo "- Use '--tree \"user\"' (literally) instead of '--local'"
 echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
-
-ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
+ROCKCOMMAND="${MINGW_PREFIX}/bin/luarocks --lua-version 5.1"
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
@@ -252,8 +245,6 @@ echo ""
 echo "Copy the following lines into the build environment for a project in Qt Creator:"
 echo "See https://doc.qt.io/qtcreator/creator-how-set-project-environment.html#change-the-environment-for-a-project"
 echo ""
-MSYS_ROOT=$(cygpath -aw /)
-echo "MINGW_BASE_DIR=${MSYS_ROOT}$(echo "${MSYSTEM_PREFIX}" | sed 's/\//\\/g')"
 echo "LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)"
 echo "LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)"
 

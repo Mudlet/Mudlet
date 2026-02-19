@@ -2,19 +2,21 @@
 
 MUDLET_VERSION_BUILD=""
 
-if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
-  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] || [[ "$GITHUB_EVENT_NAME" = "schedule" ]] || [[ "$GITHUB_EVENT_INPUTS_SCHEDULED" = "true" ]]; then
+# The travis case is now dead in the water as we stopped using it years ago so
+# we can elminated testing for its values/variables!
+
+if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
+  # This is NOT a "release" build!
+  if [[ "$GITHUB_EVENT_NAME" = "schedule" ]] || [[ "$GITHUB_EVENT_INPUTS_SCHEDULED" = "true" ]]; then
     MUDLET_VERSION_BUILD="-ptb"
-  else
+  elif [[ "${GITHUB_EVENT_NAME}" != "pull_request" ]]; then
+    # We don't put "-testing" as a prefix to PR builds as the "-pr####" is
+    # enough to identify the latter; so a "-testing" build now is only the
+    # development branch after a PR is merged into it:
     MUDLET_VERSION_BUILD="-testing"
   fi
 
-  if [ -n "$TRAVIS_PULL_REQUEST" ]; then # building for a PR
-    BUILD_COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
-    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}"
-    PR_NUMBER=${TRAVIS_PULL_REQUEST}
-    export PR_NUMBER
-  elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+  if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
     # GITHUB_SHA identifies the commitish that results from merging the PR's
     # state onto the development branch and the ^2 to that returns the HEAD
     # of the PR before that happened.
@@ -24,11 +26,11 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
     echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
   else
     BUILD_COMMIT=$(git rev-parse --short HEAD)
+  fi
 
-    if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
-      DATE=$(date +'%Y-%m-%d')
-      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}"
-    fi
+  if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
+    DATE=$(date +'%Y-%m-%d')
+    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}"
   fi
 fi
 
