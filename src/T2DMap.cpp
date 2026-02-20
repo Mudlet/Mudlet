@@ -1813,9 +1813,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
     mRoomWidth = widgetWidth / xspan;
     mRoomHeight = widgetHeight / yspan;
 
-    static float oldRoomWidth = 0;
-    static float oldRoomHeight = 0;
-    if (oldRoomWidth != mRoomWidth || oldRoomHeight != mRoomHeight) {
+    static float oldRoomWidth = 0.0f;
+    static float oldRoomHeight = 0.0f;
+    if (!qFuzzyCompare(1.0f + oldRoomWidth, 1.0f + mRoomWidth) || !qFuzzyCompare(1.0f + oldRoomHeight, 1.0f + mRoomHeight)) {
         flushSymbolPixmapCache();
         flushTextLabelPixmapCache();
         oldRoomWidth = mRoomWidth;
