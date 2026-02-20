@@ -175,6 +175,7 @@ public:
     void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
+    static QGradientStops buildPlayerRoomGradientStops(int style, quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor);
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
@@ -229,6 +230,8 @@ public:
     // coordinates):
     float mRoomWidth = 0.0f;
     float mRoomHeight = 0.0f;
+    float mPrevRoomWidth = 0.0f;
+    float mPrevRoomHeight = 0.0f;
     float xspan = 0.0f;
     float yspan = 0.0f;
 

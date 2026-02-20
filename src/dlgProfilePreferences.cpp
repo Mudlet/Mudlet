@@ -1109,11 +1109,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         // Initialize room and exit size controls
         spinBox_roomSize->setValue(pHost->mRoomSize * 10);
         // mLineSize/mBorderSize are inversely proportional to thickness
-        // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale using
-        // a quadratic mapping so each step produces a visible change:
-        // mLineSize = 250 / spinner^2, spinner = sqrt(250 / mLineSize)
-        spinBox_exitSize->setValue(qBound(1, qRound(std::sqrt(250.0 / pHost->mLineSize)), 11));
-        spinBox_borderSize->setValue(qBound(1, qRound(std::sqrt(250.0 / pHost->mBorderSize)), 11));
+        // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
+        // using a simple reciprocal: mLineSize = 50 / spinner, spinner = 50 / mLineSize
+        spinBox_exitSize->setValue(qBound(1, qRound(50.0 / pHost->mLineSize), 11));
+        spinBox_borderSize->setValue(qBound(1, qRound(50.0 / pHost->mBorderSize), 11));
         doubleSpinBox_gridSize->setValue(pHost->mMapGridLineSize);
         connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_roomSizeChanged);
         connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_exitSizeChanged);
@@ -1542,6 +1541,9 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(doubleSpinBox_gridSize, qOverload<double>(&QDoubleSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(checkbox_mMapperShowRoomBorders, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(checkBox_drawUpperLowerLevels, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(mMapperUseAntiAlias, &QCheckBox::toggled, nullptr, nullptr);
 
     // Console buffer settings
     disconnect(checkBox_useMaxBufferSize, &QCheckBox::toggled, nullptr, nullptr);
@@ -4538,71 +4540,9 @@ void dlgProfilePreferences::updatePlayerRoomPreview()
     // Draw center room on top
     drawRoom(center.x(), center.y(), QColor(96, 96, 96));
 
-    // Build gradient stops replicating T2DMap::setPlayerRoomStyle()
     const int style = comboBox_playerRoomStyle->currentIndex();
-    const double factor = pHost->mpMap->mPlayerRoomInnerDiameterPercentage / 100.0;
-    const bool solid = (pHost->mpMap->mPlayerRoomInnerDiameterPercentage == 0);
-    QGradientStops stops;
-
-    switch (style) {
-    case 1:
-        if (solid) {
-            stops = {{0.000, QColor(255, 0, 0, 255)},
-                     {0.990, QColor(255, 0, 0, 255)},
-                     {1.000, QColor(255, 0, 0, 0)}};
-        } else {
-            stops = {{0.000, QColor(255, 0, 0, 0)},
-                     {factor * 0.980, QColor(255, 0, 0, 0)},
-                     {factor * 1.020, QColor(255, 0, 0, 255)},
-                     {0.980, QColor(255, 0, 0, 255)},
-                     {1.000, QColor(255, 0, 0, 0)}};
-        }
-        break;
-
-    case 2:
-        if (solid) {
-            stops = {{0.000, QColor(255, 255, 0, 255)},
-                     {0.990, QColor(0, 0, 255, 255)},
-                     {1.000, QColor(0, 0, 255, 0)}};
-        } else {
-            stops = {{0.000, QColor(255, 255, 0, 0)},
-                     {factor * 0.980, QColor(255, 255, 0, 0)},
-                     {factor * 1.020, QColor(255, 255, 0, 255)},
-                     {0.980, QColor(0, 0, 255, 255)},
-                     {1.000, QColor(0, 0, 255, 0)}};
-        }
-        break;
-
-    case 3: {
-        const QColor outerColor = pHost->mpMap->mPlayerRoomOuterColor;
-        const QColor innerColor = pHost->mpMap->mPlayerRoomInnerColor;
-        if (solid) {
-            QColor transparentOuter(outerColor);
-            transparentOuter.setAlpha(0);
-            stops = {{0.000, innerColor},
-                     {0.990, outerColor},
-                     {1.000, transparentOuter}};
-        } else {
-            QColor transparentInner(innerColor);
-            transparentInner.setAlpha(0);
-            QColor transparentOuter(outerColor);
-            transparentOuter.setAlpha(0);
-            stops = {{0.000, transparentInner},
-                     {factor * 0.980, transparentInner},
-                     {factor * 1.020, innerColor},
-                     {0.980, outerColor},
-                     {1.000, transparentOuter}};
-        }
-        break;
-    }
-
-    default:
-        stops = {{0, Qt::white},
-                 {0.7, QColor(255, 0, 0, 200)},
-                 {0.799, QColor(150, 100, 100, 100)},
-                 {0.80, QColor(150, 100, 100, 150)},
-                 {0.95, QColor(255, 0, 0, 150)}};
-    }
+    const QGradientStops stops = T2DMap::buildPlayerRoomGradientStops(
+            style, pHost->mpMap->mPlayerRoomInnerDiameterPercentage, pHost->mpMap->mPlayerRoomInnerColor, pHost->mpMap->mPlayerRoomOuterColor);
 
     const double roomRadius = (pHost->mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
     QRadialGradient gradient(center, roomRadius);
@@ -4884,9 +4824,7 @@ void dlgProfilePreferences::slot_crashReportPolicyChanged(int index)
 void dlgProfilePreferences::slot_exitSizeChanged(int size)
 {
     if (mpHost) {
-        // Quadratic mapping: mLineSize = 250 / spinner^2
-        // This gives visible per-step changes comparable to room size
-        const double internalSize = 250.0 / (size * size);
+        const double internalSize = 50.0 / size;
         mpHost->mLineSize = internalSize;
         updatePlayerRoomPreview();
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
@@ -4898,7 +4836,7 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
 void dlgProfilePreferences::slot_borderSizeChanged(int size)
 {
     if (mpHost) {
-        const double internalSize = 250.0 / (size * size);
+        const double internalSize = 50.0 / size;
         mpHost->mBorderSize = internalSize;
         updatePlayerRoomPreview();
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
