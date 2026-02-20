@@ -2884,3 +2884,21 @@ function hecho2html(str, resetFormat)
   assert(type(str) == "string", "hecho2html: bad argument #1 type (string expected, got " .. type(str) .. ")")
   return echoConverter(str, "Hex", "html", resetFormat)
 end
+
+-- selects every instance of a string on the cursor's current line, and executes a provided function for each one
+-- @tparam string str the string to select every instance of.
+-- @tparam function func the function to run for every selected instance of the string.
+function selectAll(str, func)
+  local strType = type(str)
+  local funcType = type(func)
+  if strType ~= "string" then
+    printError("selectAll: bad argument #1 type (string expected, got " .. strType .. "!)", true, true)
+  elseif funcType ~= "function" then
+    printError("selectAll: bad argument #2 type (function expected, got " .. funcType .. "!)", true, true)
+  end
+  local count = 1
+  while selectString(str, count) > -1 do
+    func()
+    count = count + 1
+  end
+end
