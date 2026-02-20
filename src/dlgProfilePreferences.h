@@ -171,6 +171,7 @@ private slots:
     void slot_loadHistoryMap();
     void slot_roomSizeChanged(int size);
     void slot_exitSizeChanged(int size);
+    void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();
@@ -193,6 +194,7 @@ private:
     void setColors2();
     void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
+    void updatePlayerRoomPreview();
     void setButtonColor(QPushButton*, const QColor&, const bool hasAlpha = false);
     void loadEditorTab();
     void populateThemesList();

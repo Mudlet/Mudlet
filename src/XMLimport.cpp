@@ -960,6 +960,14 @@ void XMLimport::readHost(Host* pHost)
         pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
     }
 
+    pHost->mBorderSize = attributes().value(qsl("mBorderSize")).toString().toDouble();
+
+    if (qFuzzyCompare(1.0 + pHost->mBorderSize, 1.0)) {
+        // For old profiles without mBorderSize, use mLineSize to preserve
+        // the previous behavior where border and exit shared the same size
+        pHost->mBorderSize = pHost->mLineSize;
+    }
+
     pHost->mMapGridLineSize = attributes().value(qsl("mMapGridLineSize")).toString().toDouble();
 
     if (qFuzzyCompare(1.0 + pHost->mMapGridLineSize, 1.0)) {
