@@ -1891,8 +1891,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QColor gridColor = mpHost->mMapGridColor;
 
         QPen gridPen(gridColor);
-        const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize);
+        const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize) * mRoomWidth / 50.0;
         gridPen.setWidthF(gridWidth);
+        gridPen.setCosmetic(mMapperUseAntiAlias);
         painter.setPen(gridPen);
 
         const qreal visibleMinX = mMapCenterX - xspan / 2.0;
