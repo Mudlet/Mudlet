@@ -1812,6 +1812,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mRoomWidth = widgetWidth / xspan;
     mRoomHeight = widgetHeight / yspan;
+
+    static float oldRoomWidth = 0;
+    static float oldRoomHeight = 0;
+    if (oldRoomWidth != mRoomWidth || oldRoomHeight != mRoomHeight) {
+        flushSymbolPixmapCache();
+        flushTextLabelPixmapCache();
+        oldRoomWidth = mRoomWidth;
+        oldRoomHeight = mRoomHeight;
+    }
+
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
     mRY = qRound(mRoomHeight * ((yspan / 2.0) - mMapCenterY));
     QFont roomVNumFont = mpMap->mMapSymbolFont;
