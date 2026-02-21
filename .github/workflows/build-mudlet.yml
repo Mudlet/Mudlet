@@ -201,6 +201,7 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Build xcb-util-cursor 0.1.5
+      timeout-minutes: 1
       if: runner.os == 'Linux'
       run: |
         # Download and extract xcb-util-cursor 0.1.5
