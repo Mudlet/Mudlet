@@ -779,6 +779,12 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="accessibleName">
+             <string>Speech recognition engine</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Select the speech recognition engine to use for voice input.</string>
+            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Select the speech recognition engine to use for voice input.&lt;/p&gt;</string>
             </property>
@@ -786,6 +792,12 @@
           </item>
           <item row="0" column="2">
            <widget class="QPushButton" name="pushButton_speechRecognitionSetup">
+            <property name="accessibleName">
+             <string>Speech recognition setup</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Opens the speech recognition setup wizard to configure or download speech recognition models for voice input.</string>
+            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Opens the speech recognition setup wizard to configure or download speech recognition models for voice input.&lt;/p&gt;</string>
             </property>
@@ -825,6 +837,12 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="accessibleName">
+             <string>Speech detection timing</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Controls how quickly speech recognition detects the end of speech. Default provides balanced timing for most use cases, Short enables faster detection for quick commands, and Long uses slower detection better suited for longer dictation.</string>
+            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Controls how quickly speech recognition detects the end of speech:&lt;/p&gt;
 &lt;ul&gt;
@@ -857,6 +875,12 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
+            </property>
+            <property name="accessibleName">
+             <string>Highlight uncertain words</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When enabled, words that the speech recognizer is uncertain about will be shown in a different color in the command line, allowing you to easily identify and correct potential errors.</string>
             </property>
             <property name="toolTip">
              <string>&lt;p&gt;When enabled, words that the speech recognizer is uncertain about will be shown in a different color in the command line, allowing you to easily identify and correct potential errors.&lt;/p&gt;</string>

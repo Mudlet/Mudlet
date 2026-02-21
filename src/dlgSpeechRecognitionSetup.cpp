@@ -86,15 +86,21 @@ void dlgSpeechRecognitionSetup::setupUi()
 
     mpBackButton = new QPushButton(tr("&Back"), this);
     mpBackButton->setEnabled(false);
+    mpBackButton->setAccessibleName(tr("Back"));
+    mpBackButton->setAccessibleDescription(tr("Go back to the previous step in the speech recognition setup wizard."));
     connect(mpBackButton, &QPushButton::clicked, this, &dlgSpeechRecognitionSetup::slot_previousPage);
     buttonLayout->addWidget(mpBackButton);
 
     mpNextButton = new QPushButton(tr("&Next"), this);
     mpNextButton->setDefault(true);
+    mpNextButton->setAccessibleName(tr("Next"));
+    mpNextButton->setAccessibleDescription(tr("Proceed to the next step in the speech recognition setup wizard."));
     connect(mpNextButton, &QPushButton::clicked, this, &dlgSpeechRecognitionSetup::slot_nextPage);
     buttonLayout->addWidget(mpNextButton);
 
     mpCancelButton = new QPushButton(tr("&Cancel"), this);
+    mpCancelButton->setAccessibleName(tr("Cancel"));
+    mpCancelButton->setAccessibleDescription(tr("Cancel the speech recognition setup and close this wizard."));
     connect(mpCancelButton, &QPushButton::clicked, this, &QDialog::reject);
     buttonLayout->addWidget(mpCancelButton);
 
@@ -144,6 +150,8 @@ void dlgSpeechRecognitionSetup::setupLibraryPage()
 
     mpLibraryStatusLabel = new QLabel(page);
     mpLibraryStatusLabel->setWordWrap(true);
+    mpLibraryStatusLabel->setAccessibleName(tr("Vosk library status"));
+    mpLibraryStatusLabel->setAccessibleDescription(tr("Status information about whether the Vosk speech recognition library is installed and available."));
     statusLayout->addWidget(mpLibraryStatusLabel, 1);
     layout->addLayout(statusLayout);
 
@@ -151,6 +159,8 @@ void dlgSpeechRecognitionSetup::setupLibraryPage()
     mpLibraryInstructions = new QTextEdit(page);
     mpLibraryInstructions->setReadOnly(true);
     mpLibraryInstructions->setMinimumHeight(120);
+    mpLibraryInstructions->setAccessibleName(tr("Installation instructions"));
+    mpLibraryInstructions->setAccessibleDescription(tr("Detailed instructions for installing the Vosk speech recognition library on your system."));
     layout->addWidget(mpLibraryInstructions);
 
     // Download progress (initially hidden)
@@ -163,6 +173,8 @@ void dlgSpeechRecognitionSetup::setupLibraryPage()
     mpLibraryDownloadProgressBar->setRange(0, 100);
     mpLibraryDownloadProgressBar->setValue(0);
     mpLibraryDownloadProgressBar->setVisible(false);
+    mpLibraryDownloadProgressBar->setAccessibleName(tr("Library download progress"));
+    mpLibraryDownloadProgressBar->setAccessibleDescription(tr("Shows the progress of downloading the Vosk speech recognition library."));
     layout->addWidget(mpLibraryDownloadProgressBar);
 
     // Buttons
@@ -170,15 +182,21 @@ void dlgSpeechRecognitionSetup::setupLibraryPage()
 
     mpDownloadLibraryButton = new QPushButton(tr("Download && Install Vosk Library"), page);
     mpDownloadLibraryButton->setToolTip(tr("Automatically download and install the Vosk library for your platform"));
+    mpDownloadLibraryButton->setAccessibleName(tr("Download and install Vosk library"));
+    mpDownloadLibraryButton->setAccessibleDescription(tr("Automatically download and install the Vosk speech recognition library for your platform."));
     connect(mpDownloadLibraryButton, &QPushButton::clicked, this, &dlgSpeechRecognitionSetup::slot_downloadLibrary);
     buttonLayout->addWidget(mpDownloadLibraryButton);
 
     mpOpenVoskWebsiteButton = new QPushButton(tr("Manual Install..."), page);
     mpOpenVoskWebsiteButton->setToolTip(tr("Open the Vosk website for manual installation instructions"));
+    mpOpenVoskWebsiteButton->setAccessibleName(tr("Manual install"));
+    mpOpenVoskWebsiteButton->setAccessibleDescription(tr("Open the Vosk website for manual installation instructions."));
     connect(mpOpenVoskWebsiteButton, &QPushButton::clicked, this, &dlgSpeechRecognitionSetup::slot_openVoskWebsite);
     buttonLayout->addWidget(mpOpenVoskWebsiteButton);
 
     mpRefreshLibraryButton = new QPushButton(tr("Refresh Status"), page);
+    mpRefreshLibraryButton->setAccessibleName(tr("Refresh library status"));
+    mpRefreshLibraryButton->setAccessibleDescription(tr("Check again if the Vosk library is installed and available."));
     connect(mpRefreshLibraryButton, &QPushButton::clicked, this, &dlgSpeechRecognitionSetup::slot_refreshLibraryStatus);
     buttonLayout->addWidget(mpRefreshLibraryButton);
 
@@ -210,6 +228,8 @@ void dlgSpeechRecognitionSetup::setupModelSelectionPage()
     modelLayout->addWidget(new QLabel(tr("Language Model:")), 0, 0);
     mpModelComboBox = new QComboBox(page);
     mpModelComboBox->setMinimumWidth(300);
+    mpModelComboBox->setAccessibleName(tr("Language model"));
+    mpModelComboBox->setAccessibleDescription(tr("Select the language model to download for speech recognition. Small models are faster and use less memory, while larger models are more accurate."));
     connect(mpModelComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
         if (index >= 0 && index < mAvailableModels.size()) {
             const auto& model = mAvailableModels[index];
@@ -233,6 +253,8 @@ void dlgSpeechRecognitionSetup::setupModelSelectionPage()
 
     mpModelDescriptionLabel = new QLabel(page);
     mpModelDescriptionLabel->setWordWrap(true);
+    mpModelDescriptionLabel->setAccessibleName(tr("Model description"));
+    mpModelDescriptionLabel->setAccessibleDescription(tr("Description of the selected language model."));
     modelLayout->addWidget(mpModelDescriptionLabel, 1, 0, 1, 2);
 
     mpModelSizeLabel = new QLabel(page);
@@ -258,6 +280,8 @@ void dlgSpeechRecognitionSetup::setupDownloadPage()
     mpDownloadProgressBar = new QProgressBar(page);
     mpDownloadProgressBar->setRange(0, 100);
     mpDownloadProgressBar->setValue(0);
+    mpDownloadProgressBar->setAccessibleName(tr("Model download progress"));
+    mpDownloadProgressBar->setAccessibleDescription(tr("Shows the progress of downloading the selected language model."));
     layout->addWidget(mpDownloadProgressBar);
 
     mpDownloadDetailsLabel = new QLabel(page);
@@ -283,6 +307,8 @@ void dlgSpeechRecognitionSetup::setupCompletionPage()
 
     mpCompletionLabel = new QLabel(page);
     mpCompletionLabel->setWordWrap(true);
+    mpCompletionLabel->setAccessibleName(tr("Setup completion status"));
+    mpCompletionLabel->setAccessibleDescription(tr("Status message indicating whether the speech recognition setup was completed successfully."));
     statusLayout->addWidget(mpCompletionLabel, 1);
     layout->addLayout(statusLayout);
 
