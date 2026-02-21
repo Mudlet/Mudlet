@@ -502,7 +502,7 @@ describe("should always pass", function()
   if quitMudlet then
     ioprint("All tests complete, shutting down Mudlet")
     -- closeMudlet on its own inside an event handler causes a crash
-    tempTimer(0, closeMudlet)
+    tempTimer(1, closeMudlet)
   end
 end</script>
 			<eventHandlerList>
@@ -558,9 +558,15 @@ function autoRunTests()
     end
   )
 
+  busted.subscribe(
+    {'exit'},
+    function(element, parent, message)
+      raiseEvent("testsComplete")
+    end
+  )
+
   bustedState.setup({testLocation})
   bustedState.runTests()
-  raiseEvent("testsComplete")
 end
 
 local errorLogged = false
