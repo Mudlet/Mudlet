@@ -1108,11 +1108,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         // Initialize room and exit size controls
         spinBox_roomSize->setValue(pHost->mRoomSize * 10);
-        // mLineSize/mBorderSize are inversely proportional to thickness
+        // mLineSize/mRoomBorderSize are inversely proportional to thickness
         // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
         // using a simple reciprocal: mLineSize = 50 / spinner, spinner = 50 / mLineSize
         spinBox_exitSize->setValue(qBound(1, qRound(50.0 / pHost->mLineSize), 11));
-        spinBox_borderSize->setValue(qBound(1, qRound(50.0 / pHost->mBorderSize), 11));
+        spinBox_borderSize->setValue(qBound(1, qRound(50.0 / pHost->mRoomBorderSize), 11));
         doubleSpinBox_gridSize->setValue(pHost->mMapGridLineSize);
         connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_roomSizeChanged);
         connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_exitSizeChanged);
@@ -4494,7 +4494,7 @@ void dlgProfilePreferences::updatePlayerRoomPreview()
     const double rSize = pHost->mRoomSize;
     const double roomFillSize = cellSize * rSize;
     const double eSize = pHost->mLineSize;
-    const double bSize = pHost->mBorderSize;
+    const double bSize = pHost->mRoomBorderSize;
     const int borderWidth = qMax(1, static_cast<int>(1.0 / bSize * cellSize * rSize));
     const double roomVisualSize = roomFillSize + 2.0 * borderWidth;
     const bool showBorder = pHost->mMapperShowRoomBorders;
@@ -4837,7 +4837,7 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
 {
     if (mpHost) {
         const double internalSize = 50.0 / size;
-        mpHost->mBorderSize = internalSize;
+        mpHost->mRoomBorderSize = internalSize;
         updatePlayerRoomPreview();
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
             mpHost->mpMap->mpMapper->mp2dMap->setBorderSize(internalSize);

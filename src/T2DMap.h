@@ -254,7 +254,7 @@ public:
     QMap<int, QPixmap> mPixMap;
     double rSize = 0.5;
     double eSize = 3.0;
-    double bSize = 3.0;
+    double mBSize = 3.0;
     // When a Lua centerview(...) is called this assigns the room ID value to
     // this member and (switching areas if necessary) pans the map to be
     // centered on this room:

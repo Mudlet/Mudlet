@@ -466,7 +466,7 @@ void T2DMap::init()
     }
 
     eSize = mpHost->mLineSize;
-    bSize = mpHost->mBorderSize;
+    mBSize = mpHost->mRoomBorderSize;
     rSize = mpHost->mRoomSize;
     mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
     mShowGrid = mpHost->mMapperShowGrid;
@@ -1083,9 +1083,9 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     double realHeight;
     int borderWidth;
     if (pRoom->mBorderThickness > 0) {
-        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / bSize * mRoomWidth * rSize));
+        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / mBSize * mRoomWidth * rSize));
     } else {
-        borderWidth = qMax(1, static_cast<int>(1 / bSize * mRoomWidth * rSize));
+        borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
     }
     const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
     bool showThisRoomName = showRoomName;
@@ -2096,7 +2096,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QPainterPath myPath;
         // Use the room+border diagonal so 100% fully encompasses the square
         // (including corners), not just touching the midpoints of the sides
-        const int borderWidth = qMax(1, static_cast<int>(1.0 / bSize * mRoomWidth * rSize));
+        const int borderWidth = qMax(1, static_cast<int>(1.0 / mBSize * mRoomWidth * rSize));
         const double roomVisualSize = static_cast<double>(mRoomWidth) * rSize + 2.0 * borderWidth;
         const double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
         QRadialGradient gradient(playerRoomOnWidgetCoordinates, roomRadius);
@@ -4659,9 +4659,9 @@ void T2DMap::setExitSize(double f)
 
 void T2DMap::setBorderSize(double f)
 {
-    bSize = f;
+    mBSize = f;
     if (mpHost) {
-        mpHost->mBorderSize = f;
+        mpHost->mRoomBorderSize = f;
     }
     update();
 }

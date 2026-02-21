@@ -460,7 +460,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
-    host.append_attribute("mBorderSize") = QString::number(pHost->mBorderSize, 'f', 1).toUtf8().constData();
+    host.append_attribute("mRoomRoomBorderSize") = QString::number(pHost->mRoomBorderSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mMapGridLineSize") = QString::number(pHost->mMapGridLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
     host.append_attribute("mMapViewOnly") = pHost->mMapViewOnly ? "yes" : "no";
