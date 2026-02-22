@@ -7346,6 +7346,15 @@ int TLuaInterpreter::setConfig(lua_State* L)
             host.mpMap->mpMapper->slot_setShowGrid(showGrid);
             return success();
         }
+        if (key == qsl("mapCenterSmallAreas")) {
+            host.mMapCenterOnArea = getVerifiedBool(L, __func__, 2, "value");
+
+            if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+                host.mpMap->mpMapper->mp2dMap->update();
+            }
+
+            return success();
+        }
         if (key == qsl("showUpperLowerLevels")) {
             mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
 
@@ -7818,6 +7827,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapShowGrid"),
              [&]() {
                  lua_pushboolean(L, host.mMapperShowGrid);
+             }},
+            {qsl("mapCenterSmallAreas"),
+             [&]() {
+                 lua_pushboolean(L, host.mMapCenterOnArea);
              }},
             {qsl("editorAutoComplete"),
              [&]() {
