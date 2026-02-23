@@ -393,7 +393,7 @@ public:
 
     // Global blink timer for SGR codes 5 and 6 (flashing text)
     // Shared across all TTextEdit instances for synchronized blinking
-    // Uses 150ms base interval: fast blink toggles every tick, slow blink every 3rd tick
+    // Uses 200ms base interval (WCAG 2.3.1 compliant - max 3 Hz)
     bool slowBlinkState() const { return mSlowBlinkState; }
     bool fastBlinkState() const { return mFastBlinkState; }
     void registerBlinkClient();
