@@ -2663,7 +2663,7 @@ void Host::refreshPackageFonts()
     }
 }
 
-void Host::setEnableBlinkText(bool enabled)
+void Host::setEnableBlinkText(const bool enabled)
 {
     if (mEnableBlinkText != enabled) {
         mEnableBlinkText = enabled;
