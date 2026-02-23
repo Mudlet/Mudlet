@@ -511,6 +511,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
+    checkBox_enableBlinkText->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -625,6 +626,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
+    checkBox_enableBlinkText->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -1593,6 +1595,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
+    checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
