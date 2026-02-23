@@ -688,7 +688,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
-    checkBox_enableBlinkText->setChecked(pHost->getEnableBlinkText());
 
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
@@ -800,6 +799,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_f3SearchEnabled->blockSignals(false);
     // Now connect the signal
     connect(checkBox_f3SearchEnabled, &QCheckBox::toggled, pHost, &Host::setF3SearchEnabled);
+
+    checkBox_enableBlinkText->setChecked(pHost->getEnableBlinkText());
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();

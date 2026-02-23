@@ -910,7 +910,7 @@ private:
     bool mWideAmbigousWidthGlyphs = false;
 
     // Whether to animate blinking text (SGR codes 5 and 6) - if false, displays as italics
-    bool mEnableBlinkText = true;
+    bool mEnableBlinkText = false;
 
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, std::shared_ptr<XMLexport>> writers;

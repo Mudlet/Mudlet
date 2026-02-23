@@ -707,6 +707,7 @@ private:
     bool mSlowBlinkState = true;
     bool mFastBlinkState = true;
     int mBlinkTickCount = 0;
+    // Count of TTextEdit instances with blinking content (invariant: >= 0, guarded in unregisterBlinkClient)
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;

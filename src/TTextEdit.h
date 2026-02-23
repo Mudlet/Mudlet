@@ -222,7 +222,7 @@ private:
     QElapsedTimer mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
-    bool mEnableBlinkText = true;
+    bool mEnableBlinkText = false;
     // Tracks whether we have any blinking content to animate (mutable for use in const drawing methods)
     mutable bool mHasBlinkingContent = false;
     // Tracks whether this TTextEdit is registered as a blink client with the global timer
