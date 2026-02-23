@@ -394,8 +394,13 @@ public:
     // Global blink timer for SGR codes 5 and 6 (flashing text)
     // Shared across all TTextEdit instances for synchronized blinking
     // Uses 200ms base interval (WCAG 2.3.1 compliant - max 3 Hz)
-    bool slowBlinkState() const { return mSlowBlinkState; }
-    bool fastBlinkState() const { return mFastBlinkState; }
+    // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
+    //   state 0: slow=on,  fast=on
+    //   state 1: slow=on,  fast=off
+    //   state 2: slow=off, fast=on
+    //   state 3: slow=off, fast=off
+    bool slowBlinkState() const { return mBlinkState < 2; }
+    bool fastBlinkState() const { return (mBlinkState % 2) == 0; }
     void registerBlinkClient();
     void unregisterBlinkClient();
 
@@ -704,9 +709,7 @@ private:
     QPointer<QTimer> mpTimerReplay;
     // Blink timer state - see documentation above slowBlinkState()/fastBlinkState()
     QPointer<QTimer> mpBlinkTimer;
-    bool mSlowBlinkState = true;
-    bool mFastBlinkState = true;
-    int mBlinkTickCount = 0;
+    int mBlinkState = 0;
     // Count of TTextEdit instances with blinking content (invariant: >= 0, guarded in unregisterBlinkClient)
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;

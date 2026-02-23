@@ -788,20 +788,14 @@ void mudlet::init()
 
     // Initialize global blink timer for SGR codes 5 and 6 (flashing text)
     // Uses 200ms base interval to comply with WCAG 2.3.1 (max 3 Hz):
-    // - Fast blink (SGR 6) toggles every tick = 2.5 Hz
-    // - Slow blink (SGR 5) toggles every 3rd tick = ~0.83 Hz
+    // 4-state counter per ISO/IEC 8613-6:
+    // - Fast blink (SGR 6) toggles every tick = 2.5 Hz (> 150 cycles/min)
+    // - Slow blink (SGR 5) toggles every 2nd tick = 1.25 Hz (< 150 cycles/min)
     mpBlinkTimer = new QTimer(this);
     mpBlinkTimer->setInterval(200);
     connect(mpBlinkTimer, &QTimer::timeout, this, [this]() {
-        ++mBlinkTickCount;
-        // Fast blink toggles every tick
-        mFastBlinkState = !mFastBlinkState;
-        // Slow blink toggles every 3rd tick
-        if (mBlinkTickCount >= 3) {
-            mSlowBlinkState = !mSlowBlinkState;
-            mBlinkTickCount = 0;
-        }
-        emit signal_blinkStateChanged(mSlowBlinkState, mFastBlinkState);
+        mBlinkState = (mBlinkState + 1) % 4;
+        emit signal_blinkStateChanged(slowBlinkState(), fastBlinkState());
     });
 
     // Initialize the window menu on startup
@@ -6618,9 +6612,7 @@ void mudlet::unregisterBlinkClient()
     }
     if (mBlinkClientCount == 0 && mpBlinkTimer && mpBlinkTimer->isActive()) {
         mpBlinkTimer->stop();
-        mSlowBlinkState = true;
-        mFastBlinkState = true;
-        mBlinkTickCount = 0;
+        mBlinkState = 0;
     }
 }
 
