@@ -391,6 +391,14 @@ public:
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = true; // Global preference for showing connection status indicators on tabs
 
+    // Global blink timer for SGR codes 5 and 6 (flashing text)
+    // Shared across all TTextEdit instances for synchronized blinking
+    // Uses 150ms base interval: fast blink toggles every tick, slow blink every 3rd tick
+    bool slowBlinkState() const { return mSlowBlinkState; }
+    bool fastBlinkState() const { return mFastBlinkState; }
+    void registerBlinkClient();
+    void unregisterBlinkClient();
+
     // AI integration methods
     LlamafileManager* getAIManager() const { return mpLlamafileManager.get(); }
     bool aiModelAvailable() const;
@@ -526,6 +534,7 @@ signals:
     void signal_aiStatusChanged(bool running);
     void signal_aiModelChanged(const QString& modelPath);
     void signal_showTabConnectionIndicatorsChanged(bool);
+    void signal_blinkStateChanged(bool slowState, bool fastState);
     void signal_profileLoaded();
 
 private slots:
@@ -693,6 +702,14 @@ private:
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
+    // Global blink timer for SGR codes 5 and 6 (flashing text)
+    // Shared by all TTextEdit instances for synchronized blinking
+    // Uses 150ms base interval: fast blink toggles every tick, slow blink every 3rd tick
+    QPointer<QTimer> mpBlinkTimer;
+    bool mSlowBlinkState = true;
+    bool mFastBlinkState = true;
+    int mBlinkTickCount = 0;
+    int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,

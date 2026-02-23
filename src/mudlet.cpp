@@ -786,6 +786,24 @@ void mudlet::init()
 
     initializeAI();
 
+    // Initialize global blink timer for SGR codes 5 and 6 (flashing text)
+    // Uses 150ms base interval:
+    // - Fast blink (SGR 6) toggles every tick = 150ms (~200 flashes/min)
+    // - Slow blink (SGR 5) toggles every 3rd tick = 450ms (~67 flashes/min)
+    mpBlinkTimer = new QTimer(this);
+    mpBlinkTimer->setInterval(150);
+    connect(mpBlinkTimer, &QTimer::timeout, this, [this]() {
+        ++mBlinkTickCount;
+        // Fast blink toggles every tick
+        mFastBlinkState = !mFastBlinkState;
+        // Slow blink toggles every 3rd tick
+        if (mBlinkTickCount >= 3) {
+            mSlowBlinkState = !mSlowBlinkState;
+            mBlinkTickCount = 0;
+        }
+        emit signal_blinkStateChanged(mSlowBlinkState, mFastBlinkState);
+    });
+
     // Initialize the window menu on startup
     updateWindowMenu();
 
@@ -6583,6 +6601,27 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     mpMainToolBar->setStyleSheet(styleSheet);
     mpTabBar->setStyleSheet(styleSheet);
     menuBar()->setStyleSheet(styleSheet);
+}
+
+void mudlet::registerBlinkClient()
+{
+    ++mBlinkClientCount;
+    if (mBlinkClientCount == 1 && mpBlinkTimer && !mpBlinkTimer->isActive()) {
+        mpBlinkTimer->start();
+    }
+}
+
+void mudlet::unregisterBlinkClient()
+{
+    if (mBlinkClientCount > 0) {
+        --mBlinkClientCount;
+    }
+    if (mBlinkClientCount == 0 && mpBlinkTimer && mpBlinkTimer->isActive()) {
+        mpBlinkTimer->stop();
+        mSlowBlinkState = true;
+        mFastBlinkState = true;
+        mBlinkTickCount = 0;
+    }
 }
 
 void mudlet::setupTrayIcon()

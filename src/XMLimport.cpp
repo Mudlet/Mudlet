@@ -852,6 +852,13 @@ void XMLimport::readHost(Host* pHost)
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
 
+    if (attributes().hasAttribute("mEnableBlinkText")) {
+        pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == YES);
+    } else {
+        // Default to enabled for backwards compatibility
+        pHost->setEnableBlinkText(true);
+    }
+
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
         // which is slightly different {always use 24-hour clock even if AM/PM is

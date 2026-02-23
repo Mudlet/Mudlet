@@ -2663,6 +2663,14 @@ void Host::refreshPackageFonts()
     }
 }
 
+void Host::setEnableBlinkText(bool enabled)
+{
+    if (mEnableBlinkText != enabled) {
+        mEnableBlinkText = enabled;
+        emit signal_changeEnableBlinkText(enabled);
+    }
+}
+
 void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;

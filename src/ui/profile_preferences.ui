@@ -1471,6 +1471,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="3" column="1">
+           <widget class="QCheckBox" name="checkBox_enableBlinkText">
+            <property name="toolTip">
+             <string>&lt;p&gt;When enabled, text with blinking attribute (SGR codes 5 and 6) will flash on and off. When disabled, blinking text will display as italics.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable blinking text</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -4709,6 +4719,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>comboBox_controlCharacterHandling</tabstop>
+  <tabstop>checkBox_enableBlinkText</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>

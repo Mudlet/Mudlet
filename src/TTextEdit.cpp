@@ -68,6 +68,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpConsole(pC)
 , mpHost(pH)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
+, mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
     mLastClickTimer.start();
@@ -100,11 +101,32 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
+    // Connect to the shared blink timer in the mudlet singleton for SGR 5/6 flashing text
+    connect(mudlet::self(), &mudlet::signal_blinkStateChanged, this, &TTextEdit::slot_blinkStateChanged);
+
+    // Setup a timer to detect when scrolling has stopped, for re-checking blinking content
+    // This is needed because scroll optimizations may use cached screen data without
+    // redrawing lines, which could miss blinking content detection
+    mpScrollStoppedTimer = new QTimer(this);
+    mpScrollStoppedTimer->setSingleShot(true);
+    mpScrollStoppedTimer->setInterval(150);
+    connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
+
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
 
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
+    connect(mpHost, &Host::signal_changeEnableBlinkText, this, &TTextEdit::slot_changeEnableBlinkText, Qt::UniqueConnection);
+}
+
+TTextEdit::~TTextEdit()
+{
+    // Ensure we unregister from the global blink timer when this widget is destroyed
+    if (mIsBlinkClientRegistered) {
+        mudlet::self()->unregisterBlinkClient();
+        mIsBlinkClientRegistered = false;
+    }
 }
 
 void TTextEdit::forceUpdate()
@@ -367,6 +389,12 @@ void TTextEdit::scrollTo(int line)
 
         mScrollVector = 0;
         update();
+
+        // Start/restart timer to detect when scrolling has stopped
+        // so we can check for blinking content
+        if (mpScrollStoppedTimer) {
+            mpScrollStoppedTimer->start();
+        }
     }
 }
 
@@ -387,6 +415,12 @@ void TTextEdit::scrollUp(int lines)
     mIsTailMode = false;
     updateScrollBar(mpBuffer->mCursorY);
     update();
+
+    // Start/restart timer to detect when scrolling has stopped
+    // so we can check for blinking content
+    if (mpScrollStoppedTimer) {
+        mpScrollStoppedTimer->start();
+    }
 }
 
 void TTextEdit::scrollDown(int lines)
@@ -399,6 +433,12 @@ void TTextEdit::scrollDown(int lines)
         mScrollVector = 0;
         updateScrollBar(mpBuffer->mCursorY);
         update();
+
+        // Start/restart timer to detect when scrolling has stopped
+        // so we can check for blinking content
+        if (mpScrollStoppedTimer) {
+            mpScrollStoppedTimer->start();
+        }
     }
 }
 
@@ -833,11 +873,32 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 {
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
-    // At present we cannot display flashing text - and we just make it italic
-    // (we ought to eventually add knobs for them so they can be shown in a user
-    // preferred style - which might be static for some users) - anyhow Mudlet
-    // will still detect the difference between the options:
-    const bool isItalics = attributes & (TChar::Italic | TChar::Blink | TChar::FastBlink);
+    const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
+
+    // Handle blinking text: if blinking is enabled and we're in the invisible phase,
+    // don't draw the text. If blinking is disabled, fall back to showing as italics.
+    bool isItalics = attributes & TChar::Italic;
+    if (isBlinking) {
+        mHasBlinkingContent = true;
+        if (mEnableBlinkText) {
+            // Blinking is enabled - check visibility state from global timer
+            // Use appropriate blink state based on SGR code (5 = slow, 6 = fast)
+            const bool isFastBlink = attributes & TChar::FastBlink;
+            const bool isVisible = isFastBlink ? mudlet::self()->fastBlinkState() : mudlet::self()->slowBlinkState();
+            if (!isVisible) {
+                // Invisible phase - don't draw the character
+                // Still draw custom decorations but skip the text itself
+                if (!textRect.isNull()) {
+                    drawCustomDecorations(painter, fgColor, textRect, charStyle);
+                }
+                return;
+            }
+        } else {
+            // Blinking is disabled - display as italics instead
+            isItalics = true;
+        }
+    }
+
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
@@ -1064,6 +1125,9 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 }
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
+    // Reset blink content tracking - will be set to true if we draw any blinking text
+    mHasBlinkingContent = false;
+
     qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, mScreenHeight * mFontHeight * dpr);
@@ -1153,6 +1217,16 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
+
+    // Manage the blink registration based on whether we have blinking content
+    const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
+    if (shouldBeRegistered && !mIsBlinkClientRegistered) {
+        mudlet::self()->registerBlinkClient();
+        mIsBlinkClientRegistered = true;
+    } else if (!shouldBeRegistered && mIsBlinkClientRegistered) {
+        mudlet::self()->unregisterBlinkClient();
+        mIsBlinkClientRegistered = false;
+    }
 }
 
 void TTextEdit::paintEvent(QPaintEvent* e)
@@ -3145,6 +3219,36 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
         mWideAmbigousWidthGlyphs = state;
         update();
     }
+}
+
+void TTextEdit::slot_changeEnableBlinkText(const bool state)
+{
+    if (mEnableBlinkText != state) {
+        mEnableBlinkText = state;
+        if (!mEnableBlinkText && mIsBlinkClientRegistered) {
+            // Unregister from the global timer when blinking is disabled
+            mudlet::self()->unregisterBlinkClient();
+            mIsBlinkClientRegistered = false;
+        }
+        update();
+    }
+}
+
+void TTextEdit::slot_blinkStateChanged(bool slowState, bool fastState)
+{
+    Q_UNUSED(slowState);
+    Q_UNUSED(fastState);
+    // Must use forceUpdate() to bypass the screen caching optimization,
+    // otherwise blinking text may not be redrawn
+    forceUpdate();
+}
+
+void TTextEdit::slot_scrollStoppedTimeout()
+{
+    // When scrolling stops, force a full redraw to properly detect any blinking
+    // content that may now be visible. This is necessary because scroll
+    // optimizations can use cached screen data without redrawing all lines.
+    forceUpdate();
 }
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)

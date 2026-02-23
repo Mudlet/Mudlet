@@ -686,6 +686,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
+    checkBox_enableBlinkText->setChecked(pHost->getEnableBlinkText());
 
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
@@ -928,7 +929,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
     //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
-    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables including OSC link support."));
+    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables "
+                               "including OSC link support."));
     protocolMenu->addAction(mEnableMNES);
 
     mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
@@ -965,7 +967,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
     //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
-    mEnableNEWENVIRON->setToolTip(tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
+    mEnableNEWENVIRON->setToolTip(
+            tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     protocolMenu->addAction(mEnableNEWENVIRON);
 
     pushButton_chooseProtocols->setMenu(protocolMenu);
@@ -1212,7 +1215,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -3046,6 +3049,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
+        pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
