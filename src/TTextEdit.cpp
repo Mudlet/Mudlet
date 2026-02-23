@@ -124,7 +124,9 @@ TTextEdit::~TTextEdit()
 {
     // Ensure we unregister from the global blink timer when this widget is destroyed
     if (mIsBlinkClientRegistered) {
-        mudlet::self()->unregisterBlinkClient();
+        if (auto* pMudlet = mudlet::self()) {
+            pMudlet->unregisterBlinkClient();
+        }
         mIsBlinkClientRegistered = false;
     }
 }

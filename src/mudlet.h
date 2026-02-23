@@ -702,9 +702,7 @@ private:
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
     QPointer<QTimer> mpTimerReplay;
-    // Global blink timer for SGR codes 5 and 6 (flashing text)
-    // Shared by all TTextEdit instances for synchronized blinking
-    // Uses 150ms base interval: fast blink toggles every tick, slow blink every 3rd tick
+    // Blink timer state - see documentation above slowBlinkState()/fastBlinkState()
     QPointer<QTimer> mpBlinkTimer;
     bool mSlowBlinkState = true;
     bool mFastBlinkState = true;
