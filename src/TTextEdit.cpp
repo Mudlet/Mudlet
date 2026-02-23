@@ -122,11 +122,11 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 
 TTextEdit::~TTextEdit()
 {
-    // Ensure we unregister from the global blink timer when this widget is destroyed
     if (mIsBlinkClientRegistered) {
         if (auto* pMudlet = mudlet::self()) {
             pMudlet->unregisterBlinkClient();
         }
+
         mIsBlinkClientRegistered = false;
     }
 }
