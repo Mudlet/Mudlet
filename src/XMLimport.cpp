@@ -855,8 +855,9 @@ void XMLimport::readHost(Host* pHost)
     if (attributes().hasAttribute("mEnableBlinkText")) {
         pHost->setEnableBlinkText(attributes().value(qsl("mEnableBlinkText")) == YES);
     } else {
-        // Default to enabled for backwards compatibility
-        pHost->setEnableBlinkText(true);
+        // Default to disabled for safety in a backwards compatible manner
+        // - so it doesn't start flashing unexpectedly:
+        pHost->setEnableBlinkText(false);
     }
 
     if (attributes().hasAttribute("logFileNameFormat")) {

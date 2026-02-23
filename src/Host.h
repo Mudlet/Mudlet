@@ -805,7 +805,7 @@ signals:
     // width characters:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     // Tells TTextEdit instances for this profile whether to animate blinking text:
-    void signal_changeEnableBlinkText(bool);
+    void signal_changeEnableBlinkText(const bool);
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
