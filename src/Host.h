@@ -194,7 +194,7 @@ public:
     // Is used to set preference dialog control directly:
     Qt::CheckState getWideAmbiguousEAsianGlyphsControlState() { return mAutoAmbigousWidthGlyphsSetting ? Qt::PartiallyChecked : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     bool getEnableBlinkText() const { return mEnableBlinkText; }
-    void setEnableBlinkText(bool enabled);
+    void setEnableBlinkText(const bool enabled);
     void setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
     bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
