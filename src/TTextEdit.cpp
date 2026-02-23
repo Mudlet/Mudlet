@@ -392,8 +392,6 @@ void TTextEdit::scrollTo(int line)
         mScrollVector = 0;
         update();
 
-        // Start/restart timer to detect when scrolling has stopped
-        // so we can check for blinking content
         if (mpScrollStoppedTimer) {
             mpScrollStoppedTimer->start();
         }
@@ -418,8 +416,6 @@ void TTextEdit::scrollUp(int lines)
     updateScrollBar(mpBuffer->mCursorY);
     update();
 
-    // Start/restart timer to detect when scrolling has stopped
-    // so we can check for blinking content
     if (mpScrollStoppedTimer) {
         mpScrollStoppedTimer->start();
     }
@@ -436,8 +432,6 @@ void TTextEdit::scrollDown(int lines)
         updateScrollBar(mpBuffer->mCursorY);
         update();
 
-        // Start/restart timer to detect when scrolling has stopped
-        // so we can check for blinking content
         if (mpScrollStoppedTimer) {
             mpScrollStoppedTimer->start();
         }
@@ -1220,7 +1214,6 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
 
-    // Manage the blink registration based on whether we have blinking content
     const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
     if (shouldBeRegistered && !mIsBlinkClientRegistered) {
         mudlet::self()->registerBlinkClient();
@@ -3228,7 +3221,6 @@ void TTextEdit::slot_changeEnableBlinkText(const bool state)
     if (mEnableBlinkText != state) {
         mEnableBlinkText = state;
         if (!mEnableBlinkText && mIsBlinkClientRegistered) {
-            // Unregister from the global timer when blinking is disabled
             mudlet::self()->unregisterBlinkClient();
             mIsBlinkClientRegistered = false;
         }
