@@ -2008,7 +2008,16 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     text.append(",");
     text.append(QString::number(mpHost->mBgColor.blue()));
     text.append(");}\n");
-    text.append("        span { white-space: pre-wrap; } -->\n");
+    text.append("        span { white-space: pre-wrap; }\n");
+
+    if (mEnableBlinkText) {
+        text.append("        @keyframes blink-slow { 50% { opacity: 0; } }\n");
+        text.append("        @keyframes blink-fast { 50% { opacity: 0; } }\n");
+        text.append("        .blink-slow { animation: blink-slow 0.8s step-end infinite; }\n");
+        text.append("        .blink-fast { animation: blink-fast 0.4s step-end infinite; }\n");
+    }
+
+    text.append("     -->\n");
     text.append("  </style>\n");
     text.append("  </head>\n");
     text.append("  <body><div>");
