@@ -567,6 +567,7 @@ function autoRunTests()
 
   bustedState.setup({testLocation})
   bustedState.runTests()
+  raiseEvent("testsComplete")
 end
 
 local errorLogged = false
