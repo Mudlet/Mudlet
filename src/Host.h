@@ -401,6 +401,8 @@ public:
     bool showWindow(const QString&);
     bool hideWindow(const QString&);
     bool resizeWindow(const QString&, int, int);
+    bool setUserWindowMinSize(const QString&, int, int);
+    bool resetUserWindowMinSize(const QString&);
     bool moveWindow(const QString& name, int, int);
     std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);

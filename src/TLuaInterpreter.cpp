@@ -5098,6 +5098,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getStopWatchBrokenDownTime", TLuaInterpreter::getStopWatchBrokenDownTime);
     lua_register(pGlobalLua, "closeUserWindow", TLuaInterpreter::closeUserWindow);
     lua_register(pGlobalLua, "resizeWindow", TLuaInterpreter::resizeWindow);
+    lua_register(pGlobalLua, "setUserWindowMinSize", TLuaInterpreter::setUserWindowMinSize);
+    lua_register(pGlobalLua, "resetUserWindowMinSize", TLuaInterpreter::resetUserWindowMinSize);
     lua_register(pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer);
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
     lua_register(pGlobalLua, "resetBackgroundImage", TLuaInterpreter::resetBackgroundImage);

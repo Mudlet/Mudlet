@@ -2048,6 +2048,26 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowMinSize
+int TLuaInterpreter::setUserWindowMinSize(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "windowName");
+    const double w = getVerifiedDouble(L, __func__, 2, "minWidth");
+    const double h = getVerifiedDouble(L, __func__, 3, "minHeight");
+    Host& host = getHostFromLua(L);
+    lua_pushboolean(L, host.setUserWindowMinSize(name, static_cast<int>(w), static_cast<int>(h)));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetUserWindowMinSize
+int TLuaInterpreter::resetUserWindowMinSize(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "windowName");
+    Host& host = getHostFromLua(L);
+    lua_pushboolean(L, host.resetUserWindowMinSize(name));
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {

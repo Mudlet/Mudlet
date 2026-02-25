@@ -3764,6 +3764,36 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     return false;
 }
 
+bool Host::setUserWindowMinSize(const QString& name, int w, int h)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pD = mpConsole->mDockWidgetMap.value(name);
+    if (pD) {
+        pD->setMinimumSize(w, h);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::resetUserWindowMinSize(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pD = mpConsole->mDockWidgetMap.value(name);
+    if (pD) {
+        pD->setMinimumSize(0, 0);
+        return true;
+    }
+
+    return false;
+}
+
 bool Host::moveWindow(const QString& name, int x1, int y1)
 {
     if (!mpConsole) {
