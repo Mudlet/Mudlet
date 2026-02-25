@@ -408,7 +408,6 @@ jobs:
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
-      shell: bash
 
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
@@ -422,7 +421,6 @@ jobs:
         fi
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
-      shell: bash
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
@@ -438,7 +436,6 @@ jobs:
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
-      shell: bash
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -465,7 +462,6 @@ jobs:
     - name: (macOS) Run C++ undo/redo tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
-      shell: bash
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
       env:
         ASAN_OPTIONS: detect_leaks=0
