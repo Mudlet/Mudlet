@@ -1278,4 +1278,61 @@ describe("Tests UI functions", function()
       assert.is_true(setLabelReleaseCallback(testLabelName, nil))
     end)
   end)
+
+  describe("setUserWindowMinSize and resetUserWindowMinSize", function()
+    -- getUserWindowSize returns the inner widget size, which is slightly smaller
+    -- than the dock widget size due to border/frame (typically 2px per axis)
+    local borderTolerance = 5
+
+    setup(function()
+      openUserWindow("testMinSizeWindow")
+    end)
+
+    teardown(function()
+      resetUserWindowMinSize("testMinSizeWindow")
+      hideWindow("testMinSizeWindow")
+    end)
+
+    it("Should set minimum size on an existing user window", function()
+      assert.is_true(setUserWindowMinSize("testMinSizeWindow", 400, 300))
+    end)
+
+    it("Should return false for a non-existing user window", function()
+      assert.is_false(setUserWindowMinSize("nonExistentWindow", 400, 300))
+    end)
+
+    it("Should reset minimum size on an existing user window", function()
+      setUserWindowMinSize("testMinSizeWindow", 400, 300)
+      assert.is_true(resetUserWindowMinSize("testMinSizeWindow"))
+    end)
+
+    it("Should return false when resetting a non-existing user window", function()
+      assert.is_false(resetUserWindowMinSize("nonExistentWindow"))
+    end)
+
+    it("Should enforce minimum size when resizing smaller", function()
+      setUserWindowMinSize("testMinSizeWindow", 400, 300)
+      resizeWindow("testMinSizeWindow", 200, 200)
+      local w, h = getUserWindowSize("testMinSizeWindow")
+      assert.is_true(w >= 400 - borderTolerance, "width should be at least ~400, got " .. tostring(w))
+      assert.is_true(h >= 300 - borderTolerance, "height should be at least ~300, got " .. tostring(h))
+    end)
+
+    it("Should allow resizing larger than minimum", function()
+      setUserWindowMinSize("testMinSizeWindow", 400, 300)
+      resizeWindow("testMinSizeWindow", 600, 500)
+      local w, h = getUserWindowSize("testMinSizeWindow")
+      assert.is_true(w >= 400, "width should be at least 400, got " .. tostring(w))
+      assert.is_true(h >= 300, "height should be at least 300, got " .. tostring(h))
+    end)
+
+    it("Should allow resizing below original minimum after reset", function()
+      setUserWindowMinSize("testMinSizeWindow", 400, 300)
+      resetUserWindowMinSize("testMinSizeWindow")
+      resizeWindow("testMinSizeWindow", 200, 200)
+      local w, h = getUserWindowSize("testMinSizeWindow")
+      assert.is_true(w <= 200 + borderTolerance, "width should be at most ~200 after reset, got " .. tostring(w))
+      assert.is_true(h <= 200 + borderTolerance, "height should be at most ~200 after reset, got " .. tostring(h))
+    end)
+  end)
 end)
