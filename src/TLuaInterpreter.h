@@ -434,6 +434,7 @@ public:
     static int setTextEditStyleSheet(lua_State*);
     static int setTextEditFont(lua_State*);
     static int setTextEditFontSize(lua_State*);
+    static int setTextEditTabMovesFocus(lua_State*);
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);

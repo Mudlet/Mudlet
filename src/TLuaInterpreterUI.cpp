@@ -704,6 +704,23 @@ int TLuaInterpreter::setTextEditFontSize(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextEditTabMovesFocus
+int TLuaInterpreter::setTextEditTabMovesFocus(lua_State* L)
+{
+    const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
+    const bool tabMovesFocus = getVerifiedBool(L, __func__, 2, "tab moves focus state");
+
+    const Host& host = getHostFromLua(L);
+    auto pT = host.mpConsole->mTextBoxMap.value(textEditName);
+    if (!pT) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
+
+    pT->setTabChangesFocus(tabMovesFocus);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteScrollBox
 int TLuaInterpreter::deleteScrollBox(lua_State* L)
 {

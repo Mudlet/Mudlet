@@ -59,6 +59,12 @@ function Geyser.TextEdit:setFontSize(size)
   setTextEditFontSize(self.name, size)
 end
 
+--- Sets whether pressing Tab moves focus to the next widget instead of inserting a tab character.
+-- @param bool true to have Tab move focus, false to insert tab characters
+function Geyser.TextEdit:setTabMovesFocus(bool)
+  setTextEditTabMovesFocus(self.name, bool)
+end
+
 -- Overridden constructor
 function Geyser.TextEdit:new(cons, container)
   cons = cons or {}

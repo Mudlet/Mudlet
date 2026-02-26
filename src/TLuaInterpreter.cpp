@@ -5086,6 +5086,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setTextEditStyleSheet", TLuaInterpreter::setTextEditStyleSheet);
     lua_register(pGlobalLua, "setTextEditFont", TLuaInterpreter::setTextEditFont);
     lua_register(pGlobalLua, "setTextEditFontSize", TLuaInterpreter::setTextEditFontSize);
+    lua_register(pGlobalLua, "setTextEditTabMovesFocus", TLuaInterpreter::setTextEditTabMovesFocus);
     lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
