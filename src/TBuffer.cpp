@@ -4486,15 +4486,15 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             boundaryFinder.setPosition(indexOfChar);
             continue;
         }
-        // handle embedded linefeed
+        // handle embedded linefeed, hitting this before passing maxWidth -> no indent needed
         if (c == QChar::LineFeed) {
             hasLineFeed = true;
+            needsIndent = false;
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             indexOfChar++;
             boundaryFinder.setPosition(indexOfChar);
             firstChar = indexOfChar;
             isNewline = true;
-            needsIndent = false;
             continue;
         }
         int nextBoundary = boundaryFinder.toNextBoundary();
